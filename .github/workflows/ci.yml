@@ -60,14 +60,13 @@ jobs:
       - name: Install pinned toolchain
         run: rustup show
 
-      - name: Install cargo-deny
-        run: cargo install cargo-deny --version 0.18.9 --locked
+      - name: Install dependency policy tools
+        uses: taiki-e/install-action@07b4745e0c39a41822af610387492e3e53aa222b # v2.83.4
+        with:
+          tool: cargo-deny@0.18.9,cargo-audit@0.22.0
 
       - name: Check dependency policy
         run: cargo deny check
-
-      - name: Install cargo-audit
-        run: cargo install cargo-audit --version 0.22.0 --locked
 
       - name: Check security advisories
         run: cargo audit
