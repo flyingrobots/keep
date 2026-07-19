@@ -1,0 +1,66 @@
+name: Bug report
+description: Report behavior that may violate a Keep invariant
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include plaintext content, keys, credentials, private paths, or
+        exploit details in a public issue. Use a private security advisory for
+        vulnerabilities.
+
+  - type: input
+    id: revision
+    attributes:
+      label: Affected revision or version
+      placeholder: Commit SHA, tag, or crate version
+    validations:
+      required: true
+
+  - type: textarea
+    id: invariant
+    attributes:
+      label: Invariant at risk
+      description: Which identity, verification, durability, or recovery law appears violated?
+    validations:
+      required: true
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: Describe exact typed errors, identities, generations, and state where safe.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Deterministic reproduction
+      description: Include the smallest sequence that reproduces the failure without sensitive data.
+    validations:
+      required: true
+
+  - type: textarea
+    id: recovery
+    attributes:
+      label: Recovery and integrity impact
+      description: State whether bytes, roots, generations, or recovery behavior may be affected.
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system, filesystem, architecture, and Rust version.
+    validations:
+      required: true

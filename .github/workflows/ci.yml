@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Rust quality gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pinned toolchain
+        run: rustup show
+
+      - name: Check formatting
+        run: cargo fmt --all --check
+
+      - name: Check all features
+        run: cargo check --workspace --all-targets --all-features --locked
+
+      - name: Check minimal features
+        run: cargo check --workspace --all-targets --no-default-features --locked
+
+      - name: Lint all features
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+      - name: Lint minimal features
+        run: cargo clippy --workspace --all-targets --no-default-features --locked -- -D warnings
+
+      - name: Test debug profile
+        run: cargo test --workspace --all-features --locked
+
+      - name: Test release profile
+        run: cargo test --workspace --all-features --release --locked
+
+      - name: Test documentation
+        run: cargo test --workspace --doc --locked
+
+      - name: Check MSRV contract
+        run: cargo +1.96.0 check --workspace --all-targets --all-features --locked
+
+  dependency-policy:
+    name: Dependency policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install pinned toolchain
+        run: rustup show
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --version 0.18.9 --locked
+
+      - name: Check dependency policy
+        run: cargo deny check
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --version 0.22.0 --locked
+
+      - name: Check security advisories
+        run: cargo audit

@@ -1,0 +1,51 @@
+name: Feature request
+description: Propose a bounded capability or contract change
+title: "proposal: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What demonstrated consumer or failure mode requires this capability?
+    validations:
+      required: true
+
+  - type: textarea
+    id: invariant
+    attributes:
+      label: Invariant impact
+      description: Which identity, format, durability, recovery, or API invariants are affected?
+    validations:
+      required: true
+
+  - type: textarea
+    id: boundary
+    attributes:
+      label: Proposed boundary
+      description: What should Keep own, and what must remain application policy?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and acceptance criteria
+      description: Include fixtures, tests, benchmarks, or a concrete consumer requirement.
+    validations:
+      required: true
+
+  - type: textarea
+    id: failure_modes
+    attributes:
+      label: Failure modes
+      description: Consider malformed input, interruption, corruption, resource exhaustion, and migration.
+    validations:
+      required: true
