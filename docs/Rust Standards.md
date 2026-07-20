@@ -352,6 +352,8 @@ keep/
 │   ├── recovery/
 │   ├── verify/
 │   ├── gc/
+│   ├── ports/
+│   ├── adapters/
 │   └── error.rs
 ├── tests/
 │   ├── conformance/
@@ -407,6 +409,39 @@ Lower layers MUST NOT import:
 - higher-level error enums.
 
 Cycles disguised through traits are still cycles.
+
+## **5.3 Hexagonal architecture**
+
+Keep MUST use hexagonal architecture.
+
+The domain core owns storage laws, validated domain types, state transitions,
+and policy-free orchestration. Inbound ports name use cases offered by Keep.
+Outbound ports name capabilities the core requires from its environment.
+Adapters implement those ports for concrete technologies.
+
+Dependency arrows point inward:
+
+```text
+CLI / API / foreign protocol                 filesystem / clock / randomness
+              │                                           │
+        inbound adapters                             outbound adapters
+              │                                           │
+        inbound ports ────────── domain core ─────── outbound ports
+```
+
+Core and port modules MUST NOT import adapter modules or dependency-owned wire
+types. Ports speak in semantic requests, validated domain values, staged work,
+and typed failures. They do not expose JSON values, CBOR values, filesystem
+paths as identity, CLI argument structures, async-runtime handles, or vendor
+SDK types.
+
+An adapter may depend on the core and its ports. The core MUST NOT depend on an
+adapter. A trait is justified here only when it expresses a real port with at
+least one concrete environmental substitution or deterministic test double.
+
+Tests SHOULD exercise the core through ports using deterministic in-memory
+adapters. Integration tests separately prove that concrete adapters preserve
+the port contract.
 
 ---
 
@@ -1171,6 +1206,56 @@ Required:
 - mutation tests;
 - canonicalization tests;
 - alternate implementation tests eventually.
+
+## **14.5 Codecs are boundary adapters**
+
+Encoding and decoding belong only at ingress and egress boundaries.
+
+The core may own a format's semantic law, canonical schema, and validated
+domain representation. Codec code that translates bytes, text, JSON, CBOR, or
+dependency-owned values MUST remain in a boundary adapter. An outer public
+facade may delegate to that adapter; domain constructors accept validated
+semantic components and must not acquire wire-format logic.
+
+Inbound adapters MUST:
+
+1. enforce byte, depth, collection, and allocation bounds;
+2. decode into untrusted raw forms;
+3. validate canonical form and cross-field invariants;
+4. construct validated domain types through checked admission APIs.
+
+Outbound adapters MUST accept validated semantic values and produce one
+canonical representation. Ports MUST NOT traffic serializer-owned value trees
+or make Serde, JSON, CBOR, compression, encryption, or framing dependencies
+part of the domain API.
+
+## **14.6 Deterministic JSON and CBOR**
+
+Determinism is a correctness requirement, not a testing convenience.
+
+Any JSON or CBOR that crosses a trust boundary, is persisted, is compared, is
+signed, enters a hash preimage, or appears in a golden fixture MUST name a
+canonical encoding profile in its format specification or ADR. “Whatever the
+current serializer emits” is not a profile.
+
+At minimum:
+
+- JSON profiles define UTF-8, object-key ordering, number rendering, string
+  escaping, Unicode treatment, duplicate-key refusal, and whitespace posture;
+- CBOR profiles define deterministic map-key ordering, definite versus
+  indefinite lengths, shortest integer and length encodings, floating-point
+  posture, tag posture, and duplicate-key refusal;
+- encoders produce exactly one byte representation for one semantic value;
+- identity-bearing decoders reject noncanonical encodings rather than silently
+  repairing or normalizing them;
+- non-identity ingress may canonicalize only when the port contract explicitly
+  permits normalization and the resulting evidence records that translation;
+- maps and sets are ordered explicitly before encoding;
+- golden bytes and mutation vectors prove the selected profile independently.
+
+Never hash arbitrary JSON/CBOR serializer output. Parse, validate, canonicalize
+at the adapter boundary, frame the result with its type and version, then hash
+the canonical bytes.
 
 ---
 
