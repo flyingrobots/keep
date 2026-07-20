@@ -150,7 +150,8 @@ M1 is complete when:
 - the checked-in corpus passes its independent checker;
 - public `BlobId` calculation matches every vector under every required
   partition plan;
-- canonical text and binary codecs strictly reject the named mutations;
+- canonical text and binary codecs refuse the original identity or decode to a
+  distinct supported identity exactly as each named mutation declares;
 - the bounded reference model executes `steps.tsv` exactly;
 - tests prove nearby state preservation, side-effect-free substitution refusal,
   and distinct absence/mismatch outcomes;
