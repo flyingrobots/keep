@@ -25,10 +25,5 @@ fuzz_target!(|bytes: &[u8]| {
         }
         remainder = next;
     }
-    let final_update = hasher.update(remainder);
-    assert!(final_update.is_ok());
-    if final_update.is_err() {
-        return;
-    }
     assert_eq!(hasher.finish(), expected);
 });

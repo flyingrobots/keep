@@ -78,7 +78,7 @@ Version and algorithm are explicit on the wire. The Rust version-1 type may
 store them implicitly because no other values are admissible.
 
 The empty byte sequence is valid and distinct from raw `BLAKE3("")` because
-the typed prefix and zero length suffix participate.
+the typed prefix and zero-length suffix participate.
 
 ### Canonical text representation
 

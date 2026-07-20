@@ -227,8 +227,8 @@ const fn fixture_nibble(value: u8) -> Result<u8, HarnessFailure> {
         b'd' => Ok(13),
         b'e' => Ok(14),
         b'f' => Ok(15),
-        _ => Err(HarnessFailure::Corpus {
-            fact: "fixture hex is not lowercase hexadecimal",
-        }),
+        _ => Err(HarnessFailure::corpus(
+            "fixture hex is not lowercase hexadecimal",
+        )),
     }
 }
