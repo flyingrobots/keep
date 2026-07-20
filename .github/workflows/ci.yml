@@ -23,6 +23,14 @@ jobs:
       - name: Install pinned toolchain
         run: rustup show
 
+      - name: Install independent vector tool
+        uses: taiki-e/install-action@07b4745e0c39a41822af610387492e3e53aa222b # v2.83.4
+        with:
+          tool: b3sum@1.8.5
+
+      - name: Check Golden File Worldline corpus
+        run: python3 conformance/golden-file-worldline/v1/check_vectors.py
+
       - name: Check formatting
         run: cargo fmt --all --check
 
@@ -50,6 +58,12 @@ jobs:
       - name: Check MSRV contract
         run: cargo +1.96.0 check --workspace --all-targets --all-features --locked
 
+      - name: Check fuzz targets
+        run: |
+          cargo fmt --manifest-path fuzz/Cargo.toml --all --check
+          cargo check --manifest-path fuzz/Cargo.toml --bins --locked
+          cargo clippy --manifest-path fuzz/Cargo.toml --bins --locked -- -D warnings
+
   dependency-policy:
     name: Dependency policy
     runs-on: ubuntu-latest
@@ -68,5 +82,11 @@ jobs:
       - name: Check dependency policy
         run: cargo deny check
 
+      - name: Check fuzz dependency policy
+        run: cargo deny --manifest-path fuzz/Cargo.toml check --config deny.toml
+
       - name: Check security advisories
         run: cargo audit
+
+      - name: Check fuzz security advisories
+        run: cargo audit --file fuzz/Cargo.lock

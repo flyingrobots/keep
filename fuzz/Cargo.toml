@@ -1,0 +1,93 @@
+[package]
+name = "keep-fuzz"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.96"
+license = "Apache-2.0"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+keep = { path = "..", version = "=0.0.0" }
+libfuzzer-sys = { version = "=0.4.13", default-features = false, features = ["link_libfuzzer"] }
+
+[lints.rust]
+warnings = "deny"
+unsafe_code = "forbid"
+unused_must_use = "deny"
+unreachable_pub = "deny"
+unexpected_cfgs = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+rust_2024_compatibility = { level = "deny", priority = -1 }
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+dbg_macro = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+exit = "deny"
+
+indexing_slicing = "deny"
+integer_division = "deny"
+arithmetic_side_effects = "deny"
+float_arithmetic = "deny"
+
+cast_possible_truncation = "deny"
+cast_possible_wrap = "deny"
+cast_sign_loss = "deny"
+cast_precision_loss = "deny"
+as_conversions = "deny"
+
+mem_forget = "deny"
+large_stack_arrays = "deny"
+large_types_passed_by_value = "deny"
+needless_pass_by_value = "deny"
+needless_collect = "deny"
+implicit_clone = "deny"
+clone_on_ref_ptr = "deny"
+
+string_slice = "deny"
+str_to_string = "deny"
+inefficient_to_string = "deny"
+
+wildcard_imports = "deny"
+enum_glob_use = "deny"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+missing_errors_doc = "deny"
+missing_panics_doc = "deny"
+
+[[bin]]
+name = "blob_id_binary"
+path = "fuzz_targets/blob_id_binary.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "blob_id_text"
+path = "fuzz_targets/blob_id_text.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "blob_hasher"
+path = "fuzz_targets/blob_hasher.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
+members = ["."]
+resolver = "3"

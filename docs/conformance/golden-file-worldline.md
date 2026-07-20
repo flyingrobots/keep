@@ -18,7 +18,9 @@ Version 1 establishes these semantic laws:
    bytes or refuses;
 5. admitting nearby state B does not mutate previously admitted state A;
 6. claimed A identity with B bytes is a content mismatch;
-7. absence, malformed identity, unsupported rules, and content mismatch remain
+7. refusing that substitution has no model side effect, and A remains exactly
+   readable afterward;
+8. absence, malformed identity, unsupported rules, and content mismatch remain
    distinct outcomes.
 
 The ordered semantic worldline is:
@@ -33,6 +35,7 @@ empty model
   -> read exact state A again
   -> read exact state B
   -> refuse state B bytes claimed as state A
+  -> read exact state A again after refusal
   -> report a well-formed but absent identity as absent
 ```
 
@@ -149,9 +152,10 @@ M1 is complete when:
   partition plan;
 - canonical text and binary codecs strictly reject the named mutations;
 - the bounded reference model executes `steps.tsv` exactly;
-- tests prove nearby state preservation, substitution refusal, and distinct
-  absence/mismatch outcomes;
-- debug, release, doctest, lint, dependency, and audit gates are green.
+- tests prove nearby state preservation, side-effect-free substitution refusal,
+  and distinct absence/mismatch outcomes;
+- debug, release, doctest, lint, fuzz-target compilation, dependency, and audit
+  gates are green.
 
 M1 does not establish chunk reuse, production ingest, exact range I/O,
 durability, restart recovery, physical corruption refusal, retention,
