@@ -12,6 +12,9 @@ keywords = ["cas", "storage", "content-addressed", "deduplication"]
 categories = ["data-structures", "filesystem"]
 publish = false
 
+[dependencies]
+blake3 = { version = "=1.8.5", default-features = false, features = ["pure", "std"] }
+
 [workspace]
 members = ["."]
 resolver = "3"

@@ -223,6 +223,36 @@ If the catalog still points to segment 12 after generation 18 is published,
 Keep reports a stale-generation or missing-representation error. It does not
 read whatever happens to occupy that offset and call it `B`.
 
+## Adversarial examples
+
+### Stale catalog generation
+
+A reader resolves representation `R1` at segment 12 under catalog generation
+17. Generation 18 is published before the reader admits that coordinate. The
+reader must return `StaleCatalogGeneration`; the continued existence of segment
+12 cannot revive the superseded coordinate. It may resolve `R1` again under
+generation 18, but it may not silently use the stale result.
+
+### Representation substitution
+
+A catalog lookup for `R1` reaches bytes whose canonical representation identity
+is `R2`. Even if `R2` is valid, decodable, and reconstructs the same `BlobId`,
+it is not the representation the lookup named. Keep must return
+`RepresentationMismatch` with the expected and observed identities. It must not
+substitute `R2`, reinterpret the lookup as a blob request, or return decoded
+bytes before the mismatch is settled.
+
+### Identity-preserving compaction
+
+Compaction copies the exact representation `R1` from generation 17, segment 12
+to generation 18, segment 18. It verifies the copied representation before
+publishing the new catalog generation. `BlobId`, `LayoutId`, and
+`RepresentationId` remain unchanged; only physical location changes. After
+publication, the generation-17 coordinate is stale even if its bytes have not
+yet been collected. A crash before publication leaves generation 17
+authoritative; a crash after publication recovers according to generation 18's
+future durability protocol.
+
 ## Alternatives considered
 
 ### Use `BlobId` for chunks, layouts, and encoded representations

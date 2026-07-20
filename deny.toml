@@ -11,6 +11,10 @@ confidence-threshold = 0.93
 allow = [
   "Apache-2.0",
 ]
+exceptions = [
+  # `arrayref` is a required transitive dependency of locked BLAKE3 1.8.5.
+  { allow = ["BSD-2-Clause"], crate = "arrayref@0.3.9" },
+]
 
 [sources]
 unknown-git = "deny"

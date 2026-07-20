@@ -188,9 +188,18 @@ original bytes as the original identity.
 
 BLAKE3 was selected for high software throughput, tree-hash parallelism when a
 future measured path warrants it, wide platform support, and an established
-Rust implementation. Version 1 deliberately uses the ordinary portable
-streaming API; SIMD selection remains an implementation detail and cannot move
-identity.
+Rust implementation. Version 1 deliberately uses the ordinary streaming API.
+Keep admits BLAKE3 1.8.5 with default features disabled and only `std` and
+`pure` enabled. The `pure` feature excludes upstream's C and handwritten
+assembly paths; it does not mean that the dependency contains no unsafe Rust.
+Keep-owned crates continue to forbid unsafe code.
+
+The complete dependency, unsafe-code, feature, license, MSRV, transitive, and
+exit-strategy review is recorded in the
+[BLAKE3 1.8.5 dependency admission](../dependencies/blake3-1.8.5.md). Feature or
+implementation selection remains outside content identity and cannot move a
+version-1 result. Any faster path must first reproduce the independent vectors
+and then justify itself with measurements.
 
 ## Compatibility law
 

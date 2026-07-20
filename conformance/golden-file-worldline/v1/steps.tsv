@@ -8,4 +8,5 @@ step	operation	input_case	identity_case	expected_outcome
 6	read-exact	state-a	state-a	keep.content.exact
 7	read-exact	state-b	state-b	keep.content.exact
 8	verify-claimed-content	state-b	state-a	keep.content.mismatch
-9	read-absent	-	empty	keep.content.absent
+9	read-exact	state-a	state-a	keep.content.exact
+10	read-absent	-	empty	keep.content.absent

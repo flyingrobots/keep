@@ -10,4 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Canonical version-1 `BlobId` calculation over exact logical bytes using a
+  one-pass, length-committing BLAKE3-256 preimage.
+- Strict, allocation-bounded text and fixed-width binary `BlobId` codecs with
+  typed refusal for malformed and unsupported encodings.
+- The implementation-independent Golden File Worldline v1 conformance corpus,
+  independent vector checker, mutation cases, and bounded reference model.
 - Initial repository foundation.

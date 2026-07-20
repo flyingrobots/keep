@@ -7,5 +7,5 @@ binary-bad-magic	identity-binary	state-a	xor-byte	0	01	keep.identity.invalid_mag
 binary-unsupported-version	identity-binary	state-a	set-u16-be	16	0002	keep.identity.unsupported_version
 binary-unsupported-algorithm	identity-binary	state-a	set-u8	18	02	keep.identity.unsupported_algorithm
 binary-digest-bit	identity-binary	state-a	xor-byte	27	01	keep.identity.different_supported_identity
-binary-truncated	identity-binary	state-a	truncate	58	-	keep.identity.invalid_binary_length
-binary-trailing	identity-binary	state-a	append	59	00	keep.identity.invalid_binary_length
+binary-truncated	identity-binary	state-a	truncate	58	-	keep.identity.truncated
+binary-trailing	identity-binary	state-a	append	59	00	keep.identity.trailing_data
