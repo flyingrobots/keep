@@ -1,0 +1,6 @@
+keep.cdc-mutations/v1
+case	base_case	operation	offset	span_length	value_hex	logical_length
+early-insert	edit-base	insert-v1	97	0	494e5345525445440a	524297
+early-delete	edit-base	delete-v1	97	17	-	524271
+early-xor	edit-base	xor-v1	97	8	ffffffffffffffff	524288
+target-long-transition	edit-base	xor-v1	65536	1	fd	524288

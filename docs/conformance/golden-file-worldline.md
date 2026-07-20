@@ -103,9 +103,11 @@ on ADR-0001's cryptographic contract for the broader security argument.
 
 ### `capabilities.tsv`
 
-Capabilities are either `required` in M1 or `declared-future`. A future
-declaration is not a skipped or passing test. It records the first milestone
-that may honestly promote the assertion and its owning GitHub issues.
+Capabilities record the first milestone in which an assertion may become
+`required`, together with its owning GitHub issues. A `declared-future` row is
+not a skipped or passing test. Promotion to `required` needs separate
+executable evidence at the named milestone; it does not enlarge M1's proof
+boundary retroactively.
 
 ## Partition plans
 

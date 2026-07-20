@@ -1,0 +1,4 @@
+pub fn retain_basis(input: &[u8]) -> Result<Receipt, KeepError> {
+    let witness = Witness::from_bytes(input)?;
+    commit_exact(witness)
+}

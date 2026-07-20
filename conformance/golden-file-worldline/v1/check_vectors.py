@@ -86,6 +86,7 @@ CAPABILITY_CONTRACTS = {
     "keep.identity.canonical/v1": ("required", 1, (2, 6)),
     "keep.identity.partition-invariant/v1": ("required", 1, (6,)),
     "keep.model.exact-immutable-map/v1": ("required", 1, (5,)),
+    "keep.cdc.profile.canonical/v1": ("required", 2, (7,)),
     "keep.content.exact-public-read/v1": ("declared-future", 2, (13,)),
     "keep.cdc.nearby-state-reuse/v1": ("declared-future", 2, (7, 8, 13)),
     "keep.ingest.bounded-stream/v1": ("declared-future", 2, (13,)),

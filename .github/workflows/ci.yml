@@ -31,6 +31,9 @@ jobs:
       - name: Check Golden File Worldline corpus
         run: python3 conformance/golden-file-worldline/v1/check_vectors.py
 
+      - name: Check CDC profile corpus
+        run: python3 conformance/cdc-profile/v1/check_vectors.py
+
       - name: Check formatting
         run: cargo fmt --all --check
 

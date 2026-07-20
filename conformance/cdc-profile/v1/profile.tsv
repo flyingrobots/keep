@@ -1,0 +1,3 @@
+keep.cdc-profile-fixture/v1
+profile	gear_table	gear_checksum_hex	profile_record	storage_profile_id
+fastcdc-64k-v1	gear-table.bin	4194fca74d7987cb8243f26dd6496e8ffc55ba2b139737476add84cc5bc69da7	profile-record.bin	keep:storage-profile:v1:blake3-256:aafa6f05bdc8894306abd41ec6f2b3b76cde995f2598fa3fd547d81fbe1a34eb

@@ -16,4 +16,6 @@ after its public API and format compatibility policies are established.
   typed refusal for malformed and unsupported encodings.
 - The implementation-independent Golden File Worldline v1 conformance corpus,
   independent vector checker, mutation cases, and bounded reference model.
+- A versioned Gear64/FastCDC content-defined chunking profile, canonical
+  `StorageProfileId`, and language-neutral golden boundary corpus.
 - Initial repository foundation.

@@ -19,10 +19,16 @@ pass from exact bytes or a blocking stream, and parsed from canonical text or
 binary form. The language-neutral Golden File Worldline corpus independently
 checks those identity rules.
 
-Keep does **not** expose a storage API yet. Chunking, physical storage,
-durability, retention, recovery, and garbage collection remain planned work.
-Calculating or parsing a `BlobId` does not claim that Keep possesses, retained,
-or verified the named bytes.
+The first M2 design slice freezes a deterministic, implementation-independent
+content-defined chunking profile and its golden boundary corpus. That profile
+defines physical layout only: rechunking exact bytes may move a future layout
+identity, but cannot move their `BlobId`.
+
+Keep does **not** expose a storage or chunking API yet. Production chunking,
+physical storage, durability, retention, recovery, and garbage collection
+remain planned work. Calculating or parsing a `BlobId`, or validating a storage
+profile, does not claim that Keep possesses, retained, or verified the named
+bytes.
 
 ```rust
 use keep::BlobId;
@@ -89,7 +95,9 @@ The complete Golden File Worldline is planned to demonstrate that Keep can:
 Items 1 through 6 describe the multi-milestone destination, not current
 storage behavior. See the
 [M1 conformance contract](docs/conformance/golden-file-worldline.md) for the
-implemented proof boundary and explicit nonclaims.
+implemented proof boundary and explicit nonclaims. The separate
+[CDC profile corpus](conformance/cdc-profile/v1/README.md) freezes M2 boundary
+semantics without claiming that the production chunker has shipped.
 
 ## Contributing
 
