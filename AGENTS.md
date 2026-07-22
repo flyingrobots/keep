@@ -152,7 +152,7 @@ Documentation
 * Explain invariants, errors, allocation, blocking, I/O, verification, complexity, and durability implications.
 * Comments explain why, ordering, invariants, and recovery—not syntax.
 * Important public examples must compile as doctests.
-* Decisions affecting identity, format, durability, recovery, concurrency, GC, encryption, or public compatibility require an ADR.
+* Decisions affecting identity, format, durability, recovery, concurrency, GC, encryption, or public compatibility require a written decision record: a colocated rationale.md next to the concept for a decision scoped to one page, or a slugged ADR under docs/adr/ (never a bare number) for one that cuts across subsystems.
 
 Pull Requests
 

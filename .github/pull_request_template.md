@@ -41,7 +41,9 @@
 # Checklist
 
 - [ ] I read `AGENTS.md` and the Keep Rust Engineering Standard.
-- [ ] I added an ADR for any decision affecting a governed boundary.
+- [ ] I recorded any decision affecting a governed boundary — as that
+      concept's colocated `rationale.md`, or as a slugged ADR under
+      `docs/adr/` if it cuts across subsystems.
 - [ ] I added tests appropriate to the actual failure modes.
 - [ ] I ran the relevant formatting, linting, testing, and policy checks.
 - [ ] I did not mix unrelated refactoring with the semantic change.

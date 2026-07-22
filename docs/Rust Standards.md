@@ -1235,8 +1235,8 @@ Determinism is a correctness requirement, not a testing convenience.
 
 Any JSON or CBOR that crosses a trust boundary, is persisted, is compared, is
 signed, enters a hash preimage, or appears in a golden fixture MUST name a
-canonical encoding profile in its format specification or ADR. “Whatever the
-current serializer emits” is not a profile.
+canonical encoding profile in its format specification, rationale, or ADR.
+“Whatever the current serializer emits” is not a profile.
 
 At minimum:
 
@@ -1444,7 +1444,18 @@ Any decision affecting:
 - public API compatibility;
 - threat model;
 
-requires an ADR.
+requires a written decision record.
+
+A decision scoped to one format, invariant, or architecture page MUST be
+recorded as that page's colocated `rationale.md`: the decision, the
+alternatives rejected, and why. A reader following the concept should find
+its rationale without leaving the concept's own documentation.
+
+A decision that cuts across subsystems, or predates a colocated home for it
+(such as choosing hexagonal architecture itself), MUST be recorded as an ADR
+under `docs/adr/`. Every ADR filename MUST carry a descriptive slug after its
+number — `0001-hexagonal-boundary-architecture.md`, never `0001.md` or
+`001-foo.md` — so the directory can be scanned by name alone.
 
 ---
 

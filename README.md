@@ -42,6 +42,11 @@ Development is governed by the normative
 recoverability, auditability, and maintainability outrank performance and
 convenience.
 
+Documentation is governed by the
+[Keep Documentation Standard](docs/Documentation%20Standards.md), which maps
+reader tasks onto Keep's architecture, invariant, format, and recovery
+corpus.
+
 The initial implementation will use:
 
 - stable Rust 1.96.0;
