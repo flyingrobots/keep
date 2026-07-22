@@ -13,7 +13,7 @@ impl BlobLength {
     /// The length of the empty byte sequence.
     pub const ZERO: Self = Self(0);
 
-    pub(super) const fn new(value: u64) -> Self {
+    pub(crate) const fn new(value: u64) -> Self {
         Self(value)
     }
 

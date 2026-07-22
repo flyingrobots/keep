@@ -3,9 +3,8 @@
 use std::fmt;
 use std::str::FromStr;
 
-use super::id::BlobId;
-use super::id_text_error::BlobIdTextParseError;
-use super::length::BlobLength;
+use super::blob_id_text_error::BlobIdTextParseError;
+use crate::blob::{BlobId, BlobLength};
 
 const SCHEME: &str = "keep";
 const KIND: &str = "blob";

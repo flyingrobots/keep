@@ -8,6 +8,14 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+### Changed
+
+- Moved the canonical text and binary `BlobId` codecs out of the `blob`
+  identity module into a new `adapters` boundary layer, per
+  [ADR-0004](docs/adr/0004-hexagonal-boundary-architecture.md). `blob` now
+  owns only identity calculation; encoding and decoding live at the
+  boundary. No public API or format change.
+
 ### Added
 
 - Canonical version-1 `BlobId` calculation over exact logical bytes using a

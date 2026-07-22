@@ -36,7 +36,7 @@ pub struct BlobId {
 }
 
 impl BlobId {
-    pub(super) const fn from_validated_parts(logical_length: BlobLength, digest: [u8; 32]) -> Self {
+    pub(crate) const fn from_validated_parts(logical_length: BlobLength, digest: [u8; 32]) -> Self {
         Self {
             logical_length,
             digest,
@@ -96,7 +96,7 @@ impl BlobId {
         self.logical_length.is_empty()
     }
 
-    pub(super) const fn digest(&self) -> &[u8; 32] {
+    pub(crate) const fn digest(&self) -> &[u8; 32] {
         &self.digest
     }
 }
