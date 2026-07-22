@@ -1,10 +1,9 @@
 //! Canonical identity codecs.
 //!
-//! This module owns the canonical binary and text wire representations for
-//! domain identities: parsing raw input into validated domain types, and
-//! encoding validated domain types back into their canonical bytes. It does
-//! not own identity calculation, storage, layout, representation, location,
-//! or retention.
+//! This module owns codecs at Keep's ingress and egress boundaries: decoding
+//! raw input into validated domain types, encoding validated domain types
+//! into canonical bytes. It does not own identity calculation, storage,
+//! layout, representation, location, or retention.
 
 mod blob_id_binary;
 mod blob_id_binary_error;

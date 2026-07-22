@@ -29,12 +29,26 @@ alone, without opening every file to see what it's about.
 
 ## Contents
 
-Each ADR states:
+Each ADR follows the template established by ADR-0001–0003:
 
-- the decision;
-- the alternatives rejected, and why;
-- the invariant, format, durability, recovery, GC, encryption, concurrency,
-  or public-API surface it governs.
+```text
+# ADR-NNNN: Title Case Name
+
+- Status: ...
+- Date: ...
+- Owners: ...
+- Related issue: ... (or: none — explain why)
+- Depends on: ... (omit if there is no dependency)
+
+## Context
+## Decision
+## Alternatives considered
+## Consequences
+```
+
+Every ADR states the decision, the alternatives considered and why they
+were rejected, and the invariant, format, durability, recovery, GC,
+encryption, concurrency, or public-API surface it governs.
 
 ## Index
 

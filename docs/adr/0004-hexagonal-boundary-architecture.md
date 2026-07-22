@@ -1,8 +1,29 @@
-# 0004: Hexagonal boundary architecture
+# ADR-0004: Hexagonal Boundary Architecture
 
-**Status:** Accepted (`b9d3f30`, 2026-07-19).
-**Governs:** dependency direction, public API compatibility, format
-encoding, determinism.
+- Status: Accepted
+- Date: 2026-07-19
+- Owners: Keep architecture and all core/port/adapter boundaries
+- Related issue: none — introduced directly via commit `b9d3f30`, not
+  through the issue-driven ADR workflow used by ADR-0001–0003
+
+## Context
+
+Keep's core law requires that identity, format, and durability claims be
+exactly as strong as their physical evidence. That guarantee is easy to
+state and easy to erode in normal Rust development: a domain type that
+derives `Serialize` for convenience, a parser that lives next to the value
+it decodes because that felt tidy, an error path that stringifies early —
+each is individually small, and each quietly weakens what identity and
+format claims can be trusted to mean once storage, layout, representation,
+segments, catalog, retention, recovery, and GC all exist as real modules.
+
+`BlobId` (ADR-0001) already needed both a canonical text codec and a
+canonical binary codec. Without an explicit rule, nothing stops a codec from
+being implemented as inherent methods colocated with the domain type it
+encodes — which is exactly what happened before this decision was enforced
+in code: `blob_id_binary.rs` and `blob_id_text.rs` lived inside the `blob`
+identity module itself, and `blob/mod.rs` claimed ownership of both identity
+calculation and canonical identity codecs in one module.
 
 ## Decision
 
@@ -43,7 +64,7 @@ The full rule set is normative in `docs/Rust Standards.md` §5.3, §14.5, and
 §14.6, and summarized in `AGENTS.md`'s "Hexagonal Architecture and
 Determinism" section.
 
-## Alternatives rejected
+## Alternatives considered
 
 - **Direct Serde-as-format**, where the durable or wire format is whatever a
   derived `Serialize`/`Deserialize` implementation happens to emit. Rejected
@@ -63,6 +84,11 @@ Determinism" section.
   Rejected because it hashes an implementation detail instead of a typed,
   domain-separated canonical preimage; a serializer change would silently
   change content identity.
+- **Leaving codecs colocated with domain types**, on the reasoning that a
+  small crate does not yet need the separation. Rejected because it was the
+  as-shipped state this ADR corrects: `blob/mod.rs` claimed ownership of
+  both identity calculation and canonical codecs, and nothing distinguished
+  domain law from wire format as more modules were added.
 
 ## Consequences
 
@@ -73,3 +99,7 @@ Determinism" section.
 - New ports are justified only when they express a real substitution
   boundary with a concrete environmental implementation or deterministic
   test double — not for hypothetical flexibility.
+- `BlobId`'s canonical binary and text codecs moved out of `blob` into a new
+  `adapters` module; `blob` now owns only identity calculation. This is a
+  pure internal reorganization — no public API, format, or golden-vector
+  change.

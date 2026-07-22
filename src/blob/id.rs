@@ -36,6 +36,16 @@ pub struct BlobId {
 }
 
 impl BlobId {
+    /// Constructs a `BlobId` from parts a caller has already validated.
+    ///
+    /// # Preconditions
+    ///
+    /// This performs no validation of its own. `digest` MUST be the exact
+    /// ADR-0001 preimage output for `logical_length`, and both MUST already
+    /// come from a boundary adapter that decoded and validated a canonical
+    /// representation (or from [`BlobHasher`], which computes them
+    /// directly). Calling this with unvalidated or mismatched parts creates
+    /// a `BlobId` that does not name the bytes it claims to.
     pub(crate) const fn from_validated_parts(logical_length: BlobLength, digest: [u8; 32]) -> Self {
         Self {
             logical_length,
@@ -96,6 +106,12 @@ impl BlobId {
         self.logical_length.is_empty()
     }
 
+    /// Returns the raw ADR-0001 digest for encoding by a boundary adapter.
+    ///
+    /// This exposes physical digest bytes with no framing. Callers outside
+    /// the canonical binary and text codecs MUST NOT treat this as a stable
+    /// public representation; use [`BlobId::encode_binary`] or the `Display`
+    /// impl instead.
     pub(crate) const fn digest(&self) -> &[u8; 32] {
         &self.digest
     }
