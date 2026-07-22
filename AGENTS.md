@@ -24,6 +24,25 @@ Rust Standards
 * Prefer synchronous core APIs. Do not introduce async without a demonstrated consumer need.
 * Do not use HashMap iteration where order can affect identity, serialization, tests, or behavior.
 
+Hexagonal Architecture and Determinism
+
+* Use hexagonal architecture. The domain core owns invariants and policy; ports
+  name semantic capabilities; adapters own technologies and protocols.
+* Dependencies point inward. Core and port modules must not import adapters,
+  filesystems, networks, CLIs, runtimes, or application policy.
+* Codecs exist only at ingress and egress boundaries. Ports exchange semantic
+  or validated types, never serializer-owned JSON, CBOR, or wire values.
+* Boundary adapters parse, validate, canonicalize where the protocol permits
+  it, then admit validated domain types. They invert that translation on egress.
+* Determinism is a correctness property. Identity, persistence, comparison,
+  tests, and protocol behavior must not depend on iteration order, host state,
+  clocks, locale, or serializer defaults.
+* JSON and CBOR that cross a boundary, persist, or affect identity must use a
+  named canonical profile with golden fixtures. Reject duplicate fields and
+  noncanonical identity-bearing encodings.
+* Never hash arbitrary serializer output. Hash only typed, domain-separated
+  canonical bytes.
+
 Structure and Findability
 
 * Target file size: 200 lines.
@@ -133,7 +152,7 @@ Documentation
 * Explain invariants, errors, allocation, blocking, I/O, verification, complexity, and durability implications.
 * Comments explain why, ordering, invariants, and recovery—not syntax.
 * Important public examples must compile as doctests.
-* Decisions affecting identity, format, durability, recovery, concurrency, GC, encryption, or public compatibility require an ADR.
+* Decisions affecting identity, format, durability, recovery, concurrency, GC, encryption, or public compatibility require a written decision record: a colocated rationale.md next to the concept for a decision scoped to one page, or a slugged ADR under docs/adr/ (never a bare number) for one that cuts across subsystems.
 
 Pull Requests
 
@@ -165,6 +184,9 @@ Before approving, ask:
 * Is arithmetic checked?
 * Is allocation bounded?
 * Is ordering deterministic?
+* Does dependency flow point inward through explicit ports?
+* Is every codec confined to an ingress or egress adapter?
+* Are identity-bearing JSON and CBOR bytes canonical under a named profile?
 * Can invalid state be represented?
 * Is the error precise?
 * Is identity stable across migration and compaction?

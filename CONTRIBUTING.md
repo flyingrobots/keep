@@ -12,12 +12,22 @@ Read:
 
 1. [AGENTS.md](AGENTS.md);
 2. the normative [Keep Rust Engineering Standard](docs/Rust%20Standards.md);
-3. any architecture decision records governing the affected identity, format,
-   durability, recovery, concurrency, garbage-collection, encryption, or API
-   boundary.
+3. any ADR under [docs/adr/](docs/adr/), or colocated `rationale.md`,
+   governing the affected identity, format, durability, recovery,
+   concurrency, garbage-collection, encryption, or API boundary.
 
-Create an ADR before implementing a decision that changes one of those
-boundaries.
+Record your decision before implementing a change to one of those
+boundaries: as that concept's colocated `rationale.md` when the decision is
+scoped to one format, invariant, or architecture page, or as a slugged ADR
+under `docs/adr/` when it cuts across subsystems. State the decision, the
+alternatives rejected, and why.
+
+## Before changing documentation
+
+Read the [Keep Documentation Standard](docs/Documentation%20Standards.md)
+before creating documentation or substantially changing an existing page. It
+does not require rewriting pages that are merely below the bar; apply it when
+a change would otherwise add new documentation debt.
 
 ## Development checks
 
