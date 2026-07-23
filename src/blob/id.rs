@@ -36,16 +36,27 @@ pub struct BlobId {
 }
 
 impl BlobId {
-    /// Constructs a `BlobId` from parts a caller has already validated.
+    /// Constructs a `BlobId` from parts a caller has already handled
+    /// correctly for its own path.
     ///
     /// # Preconditions
     ///
-    /// This performs no validation of its own. `digest` MUST be the exact
-    /// ADR-0001 preimage output for `logical_length`, and both MUST already
-    /// come from a boundary adapter that decoded and validated a canonical
-    /// representation (or from [`BlobHasher`], which computes them
-    /// directly). Calling this with unvalidated or mismatched parts creates
-    /// a `BlobId` that does not name the bytes it claims to.
+    /// This performs no validation of its own, and callers reach it through
+    /// two distinct paths with two distinct guarantees:
+    ///
+    /// - [`BlobHasher`] calls this with a digest it just computed, so
+    ///   `digest` genuinely is the ADR-0001 preimage output for
+    ///   `logical_length`.
+    /// - A boundary adapter calls this with `logical_length` and `digest`
+    ///   decoded from a structurally canonical representation. Per
+    ///   ADR-0001, parsing proves only that the representation is
+    ///   canonical and supported; it does NOT prove that `digest` was
+    ///   produced by hashing `logical_length` bytes of any real content.
+    ///   Content verification requires independently hashing candidate
+    ///   bytes and comparing the result.
+    ///
+    /// Do not call this with `logical_length`/`digest` pairs that came from
+    /// neither path.
     pub(crate) const fn from_validated_parts(logical_length: BlobLength, digest: [u8; 32]) -> Self {
         Self {
             logical_length,
