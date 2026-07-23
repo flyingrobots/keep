@@ -13,7 +13,15 @@ impl BlobLength {
     /// The length of the empty byte sequence.
     pub const ZERO: Self = Self(0);
 
-    pub(super) const fn new(value: u64) -> Self {
+    /// Constructs a `BlobLength` from a value a caller has already validated.
+    ///
+    /// # Preconditions
+    ///
+    /// This performs no validation of its own. `value` MUST already be
+    /// known-lawful for its context — canonical decimal text with no
+    /// leading zeroes when decoded from the text codec, or a raw
+    /// accumulated byte count from [`BlobHasher`](super::BlobHasher).
+    pub(crate) const fn new(value: u64) -> Self {
         Self(value)
     }
 

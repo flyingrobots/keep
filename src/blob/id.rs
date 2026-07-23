@@ -36,7 +36,28 @@ pub struct BlobId {
 }
 
 impl BlobId {
-    pub(super) const fn from_validated_parts(logical_length: BlobLength, digest: [u8; 32]) -> Self {
+    /// Constructs a `BlobId` from parts a caller has already handled
+    /// correctly for its own path.
+    ///
+    /// # Preconditions
+    ///
+    /// This performs no validation of its own, and callers reach it through
+    /// two distinct paths with two distinct guarantees:
+    ///
+    /// - [`BlobHasher`] calls this with a digest it just computed, so
+    ///   `digest` genuinely is the ADR-0001 preimage output for
+    ///   `logical_length`.
+    /// - A boundary adapter calls this with `logical_length` and `digest`
+    ///   decoded from a structurally canonical representation. Per
+    ///   ADR-0001, parsing proves only that the representation is
+    ///   canonical and supported; it does NOT prove that `digest` was
+    ///   produced by hashing `logical_length` bytes of any real content.
+    ///   Content verification requires independently hashing candidate
+    ///   bytes and comparing the result.
+    ///
+    /// Do not call this with `logical_length`/`digest` pairs that came from
+    /// neither path.
+    pub(crate) const fn from_validated_parts(logical_length: BlobLength, digest: [u8; 32]) -> Self {
         Self {
             logical_length,
             digest,
@@ -96,13 +117,41 @@ impl BlobId {
         self.logical_length.is_empty()
     }
 
-    pub(super) const fn digest(&self) -> &[u8; 32] {
+    /// Returns the raw ADR-0001 digest for encoding by a boundary adapter.
+    ///
+    /// This exposes physical digest bytes with no framing. Callers outside
+    /// the canonical binary and text codecs MUST NOT treat this as a stable
+    /// public representation; use [`BlobId::encode_binary`] or the `Display`
+    /// impl instead.
+    pub(crate) const fn digest(&self) -> &[u8; 32] {
         &self.digest
     }
 }
 
 impl fmt::Debug for BlobId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "BlobId({self})")
+        formatter
+            .debug_struct("BlobId")
+            .field("logical_length", &self.logical_length)
+            .field("digest", &self.digest)
+            .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BlobId;
+    use crate::blob::length::BlobLength;
+
+    #[test]
+    fn debug_does_not_depend_on_the_text_codec() {
+        let subject = BlobId::from_validated_parts(BlobLength::new(3), [7_u8; 32]);
+        let observed = format!("{subject:?}");
+        assert_eq!(
+            observed,
+            "BlobId { logical_length: BlobLength(3), digest: [7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, \
+             7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7] }"
+        );
+        assert_ne!(observed, subject.to_string());
     }
 }

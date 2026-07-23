@@ -1,0 +1,22 @@
+keep.cdc-sources/v1
+case	recipe	parameter	count	logical_length
+empty	empty-v1	-	0	0
+tiny	repeated-byte-v1	6b	13	13
+min-minus-one	repeated-byte-v1	00	16383	16383
+min-exact	repeated-byte-v1	00	16384	16384
+min-plus-one	repeated-byte-v1	00	16385	16385
+target-minus-one	repeated-byte-v1	00	65535	65535
+target-exact	repeated-byte-v1	00	65536	65536
+target-plus-one	repeated-byte-v1	00	65537	65537
+max-minus-one	repeated-byte-v1	00	262143	262143
+max-exact	repeated-byte-v1	00	262144	262144
+max-plus-one	repeated-byte-v1	00	262145	262145
+zeros-long	repeated-byte-v1	00	1048576	1048576
+ff-long	repeated-byte-v1	ff	1048576	1048576
+alternating-long	alternating-v1	00ff	524288	1048576
+random-long	xorshift64-v1	0123456789abcdef	1048576	1048576
+source-like	file-repeat-v1	inputs/source-block.txt	4096	577536
+probe-byte-carry	xorshift64-v1	0123456789abcdef	150000	150000
+short-mask-match	xorshift64-v1	0000000000000009	60000	60000
+natural-cut-runt	xorshift64-v1	0000000000000009	45626	45626
+edit-base	xorshift64-v1	000000000000001e	524288	524288
