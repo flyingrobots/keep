@@ -127,8 +127,8 @@ No random seed participates in a golden value.
 The M1 model is a deterministic, single-threaded, capacity-bounded
 `BTreeMap<BlobId, Vec<u8>>`. It is an oracle for logical behavior only.
 
-It materializes bounded fixtures by design and therefore must name its methods
-accordingly. It is test-only and is not a production streaming API. It has no:
+By design, its explicitly named methods materialize bounded fixtures. This
+test-only oracle is not a production streaming API and provides no:
 
 - filesystem;
 - chunking or physical deduplication;

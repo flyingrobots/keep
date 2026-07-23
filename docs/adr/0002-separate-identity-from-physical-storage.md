@@ -65,7 +65,7 @@ Every layout identity version uses this envelope:
 ```text
 layout_digest(C, P) = BLAKE3-256(
     layout_magic     ||
-    identity_version||
+    identity_version ||
     layout_codec     ||
     P                ||
     plan_length
@@ -101,7 +101,7 @@ Every representation identity version uses this envelope:
 representation_digest(C, R) = BLAKE3-256(
     representation_magic ||
     identity_version     ||
-    representation_codec||
+    representation_codec ||
     R                    ||
     representation_length
 )

@@ -17,67 +17,17 @@ impl BlobId {
     /// The operation is allocation-free.
     #[must_use]
     pub const fn encode_binary(self) -> [u8; BINARY_BYTES] {
-        let [
-            m00,
-            m01,
-            m02,
-            m03,
-            m04,
-            m05,
-            m06,
-            m07,
-            m08,
-            m09,
-            m10,
-            m11,
-            m12,
-            m13,
-            m14,
-            m15,
-        ] = BINARY_MAGIC;
-        let [v00, v01] = IDENTITY_VERSION.to_be_bytes();
-        let [a00] = [HASH_ALGORITHM];
-        let [l00, l01, l02, l03, l04, l05, l06, l07] = self.logical_length().get().to_be_bytes();
-        let [
-            d00,
-            d01,
-            d02,
-            d03,
-            d04,
-            d05,
-            d06,
-            d07,
-            d08,
-            d09,
-            d10,
-            d11,
-            d12,
-            d13,
-            d14,
-            d15,
-            d16,
-            d17,
-            d18,
-            d19,
-            d20,
-            d21,
-            d22,
-            d23,
-            d24,
-            d25,
-            d26,
-            d27,
-            d28,
-            d29,
-            d30,
-            d31,
-        ] = *self.digest();
-        [
-            m00, m01, m02, m03, m04, m05, m06, m07, m08, m09, m10, m11, m12, m13, m14, m15, v00,
-            v01, a00, l00, l01, l02, l03, l04, l05, l06, l07, d00, d01, d02, d03, d04, d05, d06,
-            d07, d08, d09, d10, d11, d12, d13, d14, d15, d16, d17, d18, d19, d20, d21, d22, d23,
-            d24, d25, d26, d27, d28, d29, d30, d31,
-        ]
+        let mut encoded = [0_u8; BINARY_BYTES];
+        let (magic_slot, rest) = encoded.split_at_mut(BINARY_MAGIC.len());
+        magic_slot.copy_from_slice(&BINARY_MAGIC);
+        let (version_slot, rest) = rest.split_at_mut(2);
+        version_slot.copy_from_slice(&IDENTITY_VERSION.to_be_bytes());
+        let (algorithm_slot, rest) = rest.split_at_mut(1);
+        algorithm_slot.copy_from_slice(&[HASH_ALGORITHM]);
+        let (length_slot, digest_slot) = rest.split_at_mut(8);
+        length_slot.copy_from_slice(&self.logical_length().get().to_be_bytes());
+        digest_slot.copy_from_slice(self.digest());
+        encoded
     }
 
     /// Parses the exact canonical binary representation.

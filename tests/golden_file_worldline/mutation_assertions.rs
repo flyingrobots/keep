@@ -20,7 +20,12 @@ pub(super) fn apply_mutation(target: &mut Vec<u8>, mutation: &MutationCase) -> T
                 .ok_or_else(|| HarnessFailure::corpus("xor mutation offset escaped"))?;
             *byte ^= mask;
         }
-        "truncate" => target.truncate(mutation.offset),
+        "truncate" => {
+            if mutation.offset >= target.len() {
+                return Err(HarnessFailure::corpus("truncate mutation offset escaped"));
+            }
+            target.truncate(mutation.offset);
+        }
         "append" => {
             if mutation.offset != target.len() {
                 return Err(HarnessFailure::corpus("append mutation offset moved"));
@@ -40,6 +45,28 @@ pub(super) fn apply_mutation(target: &mut Vec<u8>, mutation: &MutationCase) -> T
         _ => return Err(HarnessFailure::corpus("unknown mutation operation")),
     }
     Ok(())
+}
+
+#[test]
+fn truncate_mutation_must_remove_at_least_one_byte() {
+    for offset in [3, 4] {
+        let mutation = MutationCase {
+            target_kind: "content",
+            target_case: "synthetic",
+            operation: "truncate",
+            offset,
+            value: Vec::new(),
+            expected_outcome: "keep.content.mismatch",
+        };
+        let mut target = vec![1, 2, 3];
+        assert!(matches!(
+            apply_mutation(&mut target, &mutation),
+            Err(HarnessFailure::Corpus {
+                fact: "truncate mutation offset escaped"
+            })
+        ));
+        assert_eq!(target, [1, 2, 3]);
+    }
 }
 
 pub(super) fn assert_binary_mutation(

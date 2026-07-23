@@ -81,8 +81,8 @@ impl BlobId {
     /// Calculates an identity by synchronously reading until EOF.
     ///
     /// This blocking operation uses a fixed 8 KiB buffer. It neither stores nor
-    /// allocates memory proportional to the input size. `Interrupted` reads are
-    /// retried.
+    /// allocates memory proportional to the input size. Reads returning
+    /// [`Interrupted`](std::io::ErrorKind::Interrupted) are retried.
     ///
     /// ```
     /// use std::io::Cursor;

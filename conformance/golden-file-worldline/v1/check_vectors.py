@@ -220,9 +220,9 @@ def digest(payload: bytes) -> bytes:
     completed = subprocess.run(
         ["b3sum", "--no-names"],
         input=preimage,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
         check=False,
+        timeout=30,
     )
     if completed.returncode != 0:
         fail(f"b3sum failed: {completed.stderr.decode(errors='replace').strip()}")
@@ -493,6 +493,8 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
+    except subprocess.TimeoutExpired as error:
+        fail(f"b3sum exceeded {error.timeout} seconds")
     except FileNotFoundError as error:
         fail(f"required file or b3sum executable not found: {error.filename}")
     except OSError as error:
