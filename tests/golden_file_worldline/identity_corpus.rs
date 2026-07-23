@@ -118,9 +118,7 @@ pub(super) fn decode_hex(encoded: &str) -> Result<Vec<u8>, HarnessFailure> {
             .get(1)
             .copied()
             .ok_or_else(|| HarnessFailure::corpus("fixture hex pair is truncated"))?;
-        let shifted = fixture_nibble(high)?
-            .checked_shl(4)
-            .ok_or_else(|| HarnessFailure::corpus("fixture hex shift failed"))?;
+        let shifted = fixture_nibble(high)? << 4;
         decoded.push(shifted | fixture_nibble(low)?);
     }
     Ok(decoded)
