@@ -14,6 +14,8 @@ allow = [
 exceptions = [
   # `arrayref` is a required transitive dependency of locked BLAKE3 1.8.5.
   { allow = ["BSD-2-Clause"], crate = "arrayref@0.3.9" },
+  # `libfuzzer-sys` is confined to this non-published fuzz workspace.
+  { allow = ["MIT", "NCSA"], crate = "libfuzzer-sys@0.4.13" },
 ]
 
 [sources]

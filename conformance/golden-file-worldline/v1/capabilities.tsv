@@ -1,0 +1,17 @@
+# keep.golden-file-worldline.capabilities/v1
+capability	posture	first_milestone	owning_issues	claim
+keep.identity.canonical/v1	required	M1	2,6	exact bytes have one canonical versioned BlobId
+keep.identity.partition-invariant/v1	required	M1	6	input read partitioning does not move BlobId
+keep.model.exact-immutable-map/v1	required	M1	5	the bounded reference model returns exact admitted bytes or refuses
+keep.content.exact-public-read/v1	declared-future	M2	13	a production public read returns exact reconstructed bytes or refuses
+keep.cdc.nearby-state-reuse/v1	declared-future	M2	7,8,13	nearby states reuse chunks under one canonical profile
+keep.ingest.bounded-stream/v1	declared-future	M2	13	production ingest memory remains bounded independently of blob size
+keep.range.minimal-overlap/v1	declared-future	M2	11	only chunks overlapping an exact requested range are loaded
+keep.segment.verified-read/v1	declared-future	M3	14,15	sealed segment reads authenticate framing and content
+keep.restart.lawful-recovery/v1	declared-future	M3	17	restart recovery reaches one documented lawful state
+keep.retention.both-states/v1	declared-future	M4	18,19	retention evidence keeps both worldline states live
+keep.verification.precise-refusal/v1	declared-future	M4	20	corruption produces precise verification refusal
+keep.compaction.identity-stable/v1	declared-future	M4	21	compaction cannot move logical BlobId
+keep.echo.identity-agreement/v1	declared-future	M5	22,23	Echo and Keep agree on the exact logical identity boundary
+keep.graft.golden-worldline/v1	declared-future	M5	24	Graft executes the Golden File Worldline through Keep
+keep.git-cas.import/v1	declared-future	M5	25	imported git-cas material retains explicit identity posture

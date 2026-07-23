@@ -4,6 +4,13 @@
 
 //! Correctness-first content-addressed storage.
 //!
-//! Keep is at the repository-foundation stage. Its public storage API will be
-//! introduced only after the content-identity, durable-format, and recovery
-//! invariants have executable specifications.
+//! Keep currently exposes exact logical byte identity. Storage, retention,
+//! durability, and recovery APIs remain intentionally absent until their
+//! contracts have executable specifications.
+
+mod blob;
+
+pub use blob::{
+    BlobHashError, BlobHasher, BlobId, BlobIdBinaryParseError, BlobIdTextParseError, BlobLength,
+    BlobReadError,
+};

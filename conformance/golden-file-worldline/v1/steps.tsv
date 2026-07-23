@@ -1,0 +1,12 @@
+# keep.golden-file-worldline.steps/v1
+step	operation	input_case	identity_case	expected_outcome
+1	identify	state-a	state-a	keep.identity.identified
+2	admit-exact	state-a	state-a	keep.content.admitted
+3	read-exact	state-a	state-a	keep.content.exact
+4	identify	state-b	state-b	keep.identity.identified
+5	admit-exact	state-b	state-b	keep.content.admitted
+6	read-exact	state-a	state-a	keep.content.exact
+7	read-exact	state-b	state-b	keep.content.exact
+8	verify-claimed-content	state-b	state-a	keep.content.mismatch
+9	read-exact	state-a	state-a	keep.content.exact
+10	read-absent	-	empty	keep.content.absent

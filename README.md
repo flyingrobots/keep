@@ -13,9 +13,25 @@ in the storage path.
 
 ## Status
 
-Keep is at the repository-foundation stage. The crate intentionally exposes no
-storage API yet. Identity, format, durability, and recovery contracts will be
-specified and tested before implementation claims are made.
+Keep has completed the implementation portion of its first identity milestone.
+The crate exposes a strict, versioned `BlobId` that can be calculated in one
+pass from exact bytes or a blocking stream, and parsed from canonical text or
+binary form. The language-neutral Golden File Worldline corpus independently
+checks those identity rules.
+
+Keep does **not** expose a storage API yet. Chunking, physical storage,
+durability, retention, recovery, and garbage collection remain planned work.
+Calculating or parsing a `BlobId` does not claim that Keep possesses, retained,
+or verified the named bytes.
+
+```rust
+use keep::BlobId;
+
+let identity = BlobId::hash_bytes(b"exact bytes")?;
+let canonical = identity.to_string();
+assert_eq!(canonical.parse::<BlobId>()?, identity);
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
 
 ## Design boundary
 
@@ -49,12 +65,19 @@ The initial implementation will use:
 - one writer and many readers unless a stronger concurrency model is designed;
 - synchronous core APIs until a demonstrated consumer requires otherwise;
 - versioned, canonical, independently testable durable formats;
-- no unsafe Rust in version 1.
+- no unsafe Rust in Keep-owned version-1 crates; dependency unsafe requires an
+  explicit review and cannot alter canonical identity.
 
-## Planned first proof
+## Golden File Worldline
 
-The first executable vertical will be a Golden File Worldline demonstrating
-that Keep can:
+The first executable vertical is split into deliberately narrow milestones. M1
+proves that exact finite logical bytes have one canonical versioned identity,
+that calculation is invariant to tested input partitioning, that malformed or
+unsupported identity encodings are refused precisely, and that a bounded
+reference model returns exactly the bytes named by an admitted identity or
+refuses.
+
+The complete Golden File Worldline is planned to demonstrate that Keep can:
 
 1. ingest exact logical bytes;
 2. retain and recover multiple nearby versions;
@@ -63,7 +86,10 @@ that Keep can:
 5. refuse corrupted or ambiguous storage;
 6. recover to a documented lawful state after interruption.
 
-This list is a plan, not a claim of implemented behavior.
+Items 1 through 6 describe the multi-milestone destination, not current
+storage behavior. See the
+[M1 conformance contract](docs/conformance/golden-file-worldline.md) for the
+implemented proof boundary and explicit nonclaims.
 
 ## Contributing
 

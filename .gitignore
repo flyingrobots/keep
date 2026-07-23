@@ -1,6 +1,13 @@
 # Rust build output
 /target/
+/fuzz/target/
+/fuzz/artifacts/
+/fuzz/corpus/
 **/*.rs.bk
+
+# Python checker bytecode
+__pycache__/
+*.py[cod]
 
 # macOS
 .DS_Store
