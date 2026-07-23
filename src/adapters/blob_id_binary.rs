@@ -1,8 +1,7 @@
 //! Canonical binary `BlobId` codec.
 
-use super::id::BlobId;
-use super::id_binary_error::BlobIdBinaryParseError;
-use super::length::BlobLength;
+use super::blob_id_binary_error::BlobIdBinaryParseError;
+use crate::blob::{BlobId, BlobLength};
 
 const BINARY_MAGIC: [u8; 16] = *b"KEEP:BLOB:ID\0\0\0\0";
 const IDENTITY_VERSION: u16 = 1;

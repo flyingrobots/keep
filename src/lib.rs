@@ -8,9 +8,8 @@
 //! durability, and recovery APIs remain intentionally absent until their
 //! contracts have executable specifications.
 
+mod adapters;
 mod blob;
 
-pub use blob::{
-    BlobHashError, BlobHasher, BlobId, BlobIdBinaryParseError, BlobIdTextParseError, BlobLength,
-    BlobReadError,
-};
+pub use adapters::{BlobIdBinaryParseError, BlobIdTextParseError};
+pub use blob::{BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError};
