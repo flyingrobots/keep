@@ -129,8 +129,16 @@ fn parse_case(line: &'static str) -> Result<IdentityCase, HarnessFailure> {
     let name = field(&mut fields)?;
     let kind = field(&mut fields)?;
     let parameter = field(&mut fields)?;
-    let repetitions = decimal(field(&mut fields)?)?;
-    let logical_length = decimal(field(&mut fields)?)?;
+    let repetitions = canonical_decimal(
+        field(&mut fields)?,
+        "fixture decimal is noncanonical",
+        "fixture decimal is invalid",
+    )?;
+    let logical_length = canonical_decimal(
+        field(&mut fields)?,
+        "fixture decimal is noncanonical",
+        "fixture decimal is invalid",
+    )?;
     let canonical_text = field(&mut fields)?;
     let canonical_binary_hex = field(&mut fields)?;
     if fields.next().is_some() {
@@ -186,17 +194,23 @@ fn field(fields: &mut std::str::Split<'static, char>) -> Result<&'static str, Ha
         .ok_or_else(|| HarnessFailure::corpus("identity row is missing a field"))
 }
 
-fn decimal(value: &str) -> Result<usize, HarnessFailure> {
+/// Parses a canonical unsigned decimal: `0`, or a nonzero digit followed by
+/// zero or more digits. No leading zeroes, signs, or whitespace.
+pub(super) fn canonical_decimal(
+    value: &str,
+    noncanonical_context: &'static str,
+    invalid_context: &'static str,
+) -> Result<usize, HarnessFailure> {
     if value != "0"
         && (value.is_empty()
             || value.starts_with('0')
             || !value.as_bytes().iter().all(u8::is_ascii_digit))
     {
-        return Err(HarnessFailure::corpus("fixture decimal is noncanonical"));
+        return Err(HarnessFailure::corpus(noncanonical_context));
     }
     value
         .parse::<usize>()
-        .map_err(|_source| HarnessFailure::corpus("fixture decimal is invalid"))
+        .map_err(|_source| HarnessFailure::corpus(invalid_context))
 }
 
 fn validate_header(observed: Option<&str>, expected: &str) -> Result<(), HarnessFailure> {

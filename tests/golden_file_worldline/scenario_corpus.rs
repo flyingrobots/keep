@@ -3,7 +3,7 @@
 use std::collections::BTreeSet;
 
 use super::harness_failure::HarnessFailure;
-use super::identity_corpus::decode_hex;
+use super::identity_corpus::{canonical_decimal, decode_hex};
 
 const STEPS: &str = include_str!("../../conformance/golden-file-worldline/v1/steps.tsv");
 const INVALID_TEXT: &str =
@@ -119,7 +119,11 @@ fn parse_mutation(line: &'static str) -> Result<(&'static str, MutationCase), Ha
     let target_kind = field(&mut fields)?;
     let target_case = field(&mut fields)?;
     let operation = field(&mut fields)?;
-    let offset = canonical_usize(field(&mut fields)?)?;
+    let offset = canonical_decimal(
+        field(&mut fields)?,
+        "mutation offset is noncanonical",
+        "mutation offset is invalid",
+    )?;
     let value_field = field(&mut fields)?;
     let value = if value_field == "-" {
         Vec::new()
@@ -201,19 +205,6 @@ fn validate_mutation(mutation: &MutationCase) -> Result<(), HarnessFailure> {
     } else {
         Err(HarnessFailure::corpus("invalid mutation value width"))
     }
-}
-
-fn canonical_usize(value: &str) -> Result<usize, HarnessFailure> {
-    if value != "0"
-        && (value.is_empty()
-            || value.starts_with('0')
-            || !value.as_bytes().iter().all(u8::is_ascii_digit))
-    {
-        return Err(HarnessFailure::corpus("mutation offset is noncanonical"));
-    }
-    value
-        .parse::<usize>()
-        .map_err(|_source| HarnessFailure::corpus("mutation offset is invalid"))
 }
 
 fn field(fields: &mut std::str::Split<'static, char>) -> Result<&'static str, HarnessFailure> {
