@@ -15,6 +15,10 @@ after its public API and format compatibility policies are established.
   [ADR-0004](docs/adr/0004-hexagonal-boundary-architecture.md). `blob` now
   owns only identity calculation; encoding and decoding live at the
   boundary. No public API or format change.
+- `BlobId`'s `Debug` output changed from `BlobId(<canonical text>)` to
+  `BlobId { logical_length: ..., digest: [..] }` so core's `Debug` impl no
+  longer depends on the adapter-owned `Display` impl. `Debug` output carries
+  no stability contract; this is not a format change.
 
 ### Added
 

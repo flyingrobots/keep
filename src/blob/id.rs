@@ -119,6 +119,28 @@ impl BlobId {
 
 impl fmt::Debug for BlobId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "BlobId({self})")
+        formatter
+            .debug_struct("BlobId")
+            .field("logical_length", &self.logical_length)
+            .field("digest", &self.digest)
+            .finish()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::BlobId;
+    use crate::blob::length::BlobLength;
+
+    #[test]
+    fn debug_does_not_depend_on_the_text_codec() {
+        let subject = BlobId::from_validated_parts(BlobLength::new(3), [7_u8; 32]);
+        let observed = format!("{subject:?}");
+        assert_eq!(
+            observed,
+            "BlobId { logical_length: BlobLength(3), digest: [7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, \
+             7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7] }"
+        );
+        assert_ne!(observed, subject.to_string());
     }
 }
