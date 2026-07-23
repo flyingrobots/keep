@@ -81,11 +81,13 @@ docs/RELEASING.md
 ```
 
 Do not create empty placeholder directories ahead of a real reader job.
-`docs/architecture/`, `docs/invariants/`, `docs/formats/`, `docs/threat-model/`,
-`docs/recovery/`, and `docs/adr/` are the exception: they were scaffolded
-deliberately by `AGENTS.md` §5 to make the corpus's shape visible before
-content exists. Treat that as a one-time exception, not a precedent for
-scaffolding further empty directories.
+`docs/architecture/`, `docs/invariants/`, `docs/formats/`,
+`docs/threat-model/`, and `docs/recovery/` are recommended locations named
+in `docs/Rust Standards.md` §5 and the corpus map above — create each one
+when it has a real page to hold, the same as any other location in this
+standard, not preemptively. `docs/adr/` already holds real content
+(ADR-0001 through ADR-0004); it is not an exception to this rule, it
+simply has pages in it already.
 
 ---
 
