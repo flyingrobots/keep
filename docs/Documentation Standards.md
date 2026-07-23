@@ -164,9 +164,9 @@ A how-to guide MUST:
 - explain how to verify success;
 - link to reference or explanation instead of reproducing it.
 
-Keep's core library exposes no CLI (`AGENTS.md` §5.2). A how-to guide for an
-adapter or tool built on Keep belongs with that adapter, not with the core
-library's documentation.
+Keep's core library exposes no CLI (`docs/Rust Standards.md` §5.2). A
+how-to guide for an adapter or tool built on Keep belongs with that
+adapter, not with the core library's documentation.
 
 ## **3.5 Reference**
 
@@ -366,16 +366,18 @@ execution, compaction, or a forced recovery override:
 
 # **6. Diagrams and accessibility**
 
-Keep's core library has no CLI, LSP, or editor surface (`AGENTS.md` §5.2), so
-this standard scopes visual material to diagrams rather than screenshots or
-terminal captures: dependency-direction diagrams, hexagonal-boundary
-diagrams, on-disk byte-layout diagrams, and publication or crash-state
-diagrams. Reinstate screenshot- and recording-specific guidance if Keep ever
-ships an adapter with an interactive surface.
+Keep's core library has no CLI, LSP, or editor surface
+(`docs/Rust Standards.md` §5.2), so this standard scopes visual material to
+diagrams rather than screenshots or terminal captures: dependency-direction
+diagrams, hexagonal-boundary diagrams, on-disk byte-layout diagrams, and
+publication or crash-state diagrams. Reinstate screenshot- and
+recording-specific guidance if Keep ever ships an adapter with an
+interactive surface.
 
-Use a diagram when it answers a reader question that prose alone would bury
-in detail, such as the dependency-direction diagrams already used in
-`AGENTS.md` §5.2 and §5.3. Do not add a diagram as ornamentation.
+Use a diagram when it answers a reader question that prose alone would
+bury in detail, such as the dependency-direction diagrams already used in
+`docs/Rust Standards.md` §5.2 and §5.3. Do not add a diagram as
+ornamentation.
 
 Every nontrivial diagram MUST:
 
