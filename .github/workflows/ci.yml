@@ -34,6 +34,9 @@ jobs:
       - name: Check CDC profile corpus
         run: python3 conformance/cdc-profile/v1/check_vectors.py
 
+      - name: Check chunk identity corpus
+        run: python3 conformance/chunk-id/v1/check_vectors.py
+
       - name: Check formatting
         run: cargo fmt --all --check
 

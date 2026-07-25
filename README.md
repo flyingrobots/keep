@@ -24,10 +24,15 @@ content-defined chunking profile and its golden boundary corpus. That profile
 defines physical layout only: rechunking exact bytes may move a future layout
 identity, but cannot move their `BlobId`.
 
-Keep does **not** expose a storage or chunking API yet. Production chunking,
-physical storage, durability, retention, recovery, and garbage collection
-remain planned work. Calculating or parsing a `BlobId`, or validating a storage
-profile, does not claim that Keep possesses, retained, or verified the named
+The first M2 implementation slice exposes a constant-memory `FastCdc` detector
+for that profile and a domain-separated `ChunkId`. The detector consumes
+arbitrary borrowed feed partitions, emits identified spans without retaining
+candidate bytes, and flushes a final runt only when the caller declares EOF.
+
+Keep does **not** expose ingestion, layouts, or physical storage yet.
+Durability, retention, recovery, verification of stored structures, and
+garbage collection remain planned work. Calculating a `BlobId` or `ChunkId`
+does not claim that Keep possesses, retained, or durably verified the named
 bytes.
 
 ```rust
@@ -98,11 +103,14 @@ The complete Golden File Worldline is planned to demonstrate that Keep can:
 6. recover to a documented lawful state after interruption.
 
 Items 1 through 6 describe the multi-milestone destination, not current
-storage behavior. See the
+storage behavior. Deterministic chunk detection now exists, but ingestion and
+storage do not. See the
 [M1 conformance contract](docs/conformance/golden-file-worldline.md) for the
 implemented proof boundary and explicit nonclaims. The separate
 [CDC profile corpus](conformance/cdc-profile/v1/README.md) freezes M2 boundary
-semantics without claiming that the production chunker has shipped.
+semantics, and the
+[chunk identity invariant](docs/invariants/chunk-identity/README.md) defines
+the implemented `ChunkId` and `FastCdc` proof boundary.
 
 ## Contributing
 

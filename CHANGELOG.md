@@ -22,6 +22,13 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Canonical version-1 `ChunkId` calculation in a domain distinct from
+  `BlobId`, with independent golden vectors.
+- A constant-memory `FastCdc` detector for `fastcdc-64k-v1` that preserves
+  boundaries and chunk identities across arbitrary feed partitioning.
+- Typed `ChunkLength`, `ChunkOffset`, and `ChunkSpan` values, corpus-driven
+  property and adversarial tests, retained-memory evidence, and a streaming
+  CDC fuzz target.
 - Canonical version-1 `BlobId` calculation over exact logical bytes using a
   one-pass, length-committing BLAKE3-256 preimage.
 - Strict, allocation-bounded text and fixed-width binary `BlobId` codecs with
