@@ -93,6 +93,9 @@ jobs:
             "$documentation_tools/bin" \
             "$documentation_tools/npm/bin" >> "$GITHUB_PATH"
 
+      - name: Verify documentation integrity laws
+        run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
+
       - name: Check Markdown and internal links
         run: python3 scripts/check_markdown.py
 
