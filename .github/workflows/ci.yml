@@ -26,7 +26,7 @@ jobs:
         run: rustup show
 
       - name: Install independent vector tool
-        uses: taiki-e/install-action@07b4745e0c39a41822af610387492e3e53aa222b # v2.83.4
+        uses: taiki-e/install-action@3d7d7cd5ac7f994c1892ae0c06165095b9139094 # v2.85.1
         with:
           tool: b3sum@1.8.5
 
@@ -167,7 +167,7 @@ jobs:
         run: rustup show
 
       - name: Install dependency policy tools
-        uses: taiki-e/install-action@07b4745e0c39a41822af610387492e3e53aa222b # v2.83.4
+        uses: taiki-e/install-action@3d7d7cd5ac7f994c1892ae0c06165095b9139094 # v2.85.1
         with:
           tool: cargo-deny@0.18.9,cargo-audit@0.22.0
 
