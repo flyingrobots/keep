@@ -92,6 +92,22 @@ class MarkdownCorpusLaws(unittest.TestCase):
         ):
             self.assertEqual(source_markdown(), ["new.md", "tracked.md"])
 
+    def test_symlinked_markdown_is_refused(self) -> None:
+        self.write("target/generated.md", "# Generated\n")
+        (self.root / "linked.md").symlink_to("target/generated.md")
+
+        with self.assertRaisesRegex(RuntimeError, "not a regular file"):
+            source_markdown()
+
+    def test_fifo_markdown_is_refused(self) -> None:
+        self.write("blocking.md", "# Initially regular\n")
+        self.run_git("add", "blocking.md")
+        (self.root / "blocking.md").unlink()
+        os.mkfifo(self.root / "blocking.md")
+
+        with self.assertRaisesRegex(RuntimeError, "not a regular file"):
+            source_markdown()
+
 
 class DocumentationCommandLaws(unittest.TestCase):
     """Contributor commands inspect changes that have not been committed."""

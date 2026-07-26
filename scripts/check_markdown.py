@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import stat
 import subprocess
 import sys
 
@@ -38,6 +39,21 @@ def verify_version(executable: str) -> None:
         )
 
 
+def admit_source_path(path: str) -> bool:
+    """Admit one existing regular file without following links."""
+    try:
+        mode = os.lstat(path).st_mode
+    except FileNotFoundError:
+        return False
+    except OSError as error:
+        raise RuntimeError(
+            f"cannot inspect Markdown source {path!r}: {error}"
+        ) from error
+    if not stat.S_ISREG(mode):
+        raise RuntimeError(f"Markdown source is not a regular file: {path!r}")
+    return True
+
+
 def source_markdown() -> list[str]:
     """Return tracked and nonignored new Markdown in deterministic order."""
     completed = subprocess.run(
@@ -60,7 +76,7 @@ def source_markdown() -> list[str]:
     for raw_path in completed.stdout.split(b"\0"):
         if raw_path:
             path = os.fsdecode(raw_path)
-            if os.path.lexists(path):
+            if admit_source_path(path):
                 paths.append(path)
     paths.sort()
     if not paths:
