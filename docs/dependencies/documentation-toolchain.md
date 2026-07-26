@@ -1,0 +1,74 @@
+# Documentation Validation Toolchain
+
+## Purpose
+
+Keep uses three development-only tools to enforce deterministic documentation
+and GitHub Actions facts:
+
+- `markdownlint-cli2` 0.19.1 validates Markdown structure;
+- `lychee` 0.21.0 validates local links and fragments with network access
+  disabled;
+- `actionlint` 1.7.12 validates GitHub Actions syntax and expressions.
+
+These tools execute only in contributor environments and the unprivileged,
+read-only `documentation` CI job. They do not enter the Rust dependency graph,
+production binaries, public APIs, durable formats, or content identity.
+
+## Admission boundary
+
+The CI job pins Node.js 24.18.0 and installs exact tool releases.
+`scripts/install_documentation_tools.sh` verifies the downloaded release
+archives before extraction:
+
+| Tool archive | SHA-256 |
+| --- | --- |
+| `markdownlint-cli2-0.19.1.tgz` | `0cd73cfbc8e0c3d2656945a8b0ad8b48a83904222032da30a3f4cd8b801260ef` |
+| `actionlint_1.7.12_linux_amd64.tar.gz` | `8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8` |
+| `lychee-x86_64-unknown-linux-gnu.tar.gz` | `a06547250f10021dcafc6ed5bb20fca75835b65711745b63cfdda34c29ff6a73` |
+
+The repository checkers then verify each executable's reported version before
+admitting its output as evidence. A missing tool, changed archive, unexpected
+version, empty input corpus, or tool failure refuses the check.
+
+## Determinism and network posture
+
+The Markdown checker derives its inputs from Git's tracked and nonignored
+source paths. Generated Rustdoc, build outputs, ignored fuzz artifacts, and
+ignored vendor trees cannot enter the input set.
+
+Lychee runs with `--offline` and `--include-fragments`. It checks local
+destinations and anchors while excluding external network requests. External
+website availability, DNS, redirects, rate limits, and certificates therefore
+cannot decide whether a pull request passes.
+
+Tool installation requires HTTPS access to the pinned npm and GitHub release
+artifacts. Runtime validation performs no authenticated or mutating network
+operation.
+
+## Alternatives rejected
+
+- Mutable action tags or unversioned package installs do not provide a stable
+  reviewed tool boundary.
+- Online external-link validation makes required pull-request CI depend on
+  systems outside Keep's authority.
+- Scanning every filesystem Markdown path admits ignored and generated state.
+- Reimplementing Markdown, GitHub anchor, and workflow parsers locally would
+  add a larger and less reviewed parser surface.
+
+## Failure and recovery
+
+The documentation job has read-only repository permissions and disables
+checkout credential persistence. It writes tools only beneath
+`RUNNER_TEMP`. A failed or interrupted installation leaves no authoritative
+state and requires no recovery; a subsequent job starts from a fresh runner.
+
+## Review triggers
+
+Repeat this admission review when any of these changes:
+
+- Node.js, `markdownlint-cli2`, `lychee`, or `actionlint` version;
+- archive URL or checksum;
+- Markdown or workflow input boundary;
+- link checking gains network access;
+- job permissions or credential handling;
+- a tool crosses into production code, a public API, or a durable format.

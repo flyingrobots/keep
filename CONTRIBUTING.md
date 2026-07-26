@@ -29,18 +29,24 @@ before creating documentation or substantially changing an existing page. It
 does not require rewriting pages that are merely below the bar; apply it when
 a change would otherwise add new documentation debt.
 
-Documentation linting uses `markdownlint-cli2` 0.19.1. Install the pinned
-version, then run the repository-owned configuration from the repository root:
+Documentation validation uses `markdownlint-cli2` 0.19.1, `lychee` 0.21.0,
+and `actionlint` 1.7.12. Install those exact versions, then run the
+repository-owned checks from the repository root:
 
 ```bash
 npm install --global markdownlint-cli2@0.19.1
+cargo install lychee --version 0.21.0 --locked
+go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
 python3 scripts/check_markdown.py
+python3 scripts/check_workflows.py
 git diff --check "$(git hash-object -t tree /dev/null)" HEAD
 ```
 
 The checker admits tracked Markdown plus nonignored new Markdown and refuses
 any other tool version. Build products, generated Rustdoc, fuzz artifacts,
-and other ignored files therefore cannot change the result.
+and other ignored files therefore cannot change the result. Link validation
+checks local files and fragments with network access disabled; external-site
+availability cannot change the result.
 
 ## Development checks
 
