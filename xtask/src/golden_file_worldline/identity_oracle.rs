@@ -1,7 +1,7 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 
-use super::canonical_value::{EmptyHex, case_name, decimal, decoded_hex};
+use super::canonical_value::{EmptyHex, case_name, decimal, decoded_hex, unique};
 use super::corpus_protocol::{MAX_SOURCE_BYTES, TableRow, bounded_file_bytes};
 use super::{Corpus, GoldenError};
 
@@ -37,9 +37,12 @@ pub(super) fn check_identities(
         &IDENTITY_COLUMNS,
     )?;
     let mut fixtures = BTreeMap::new();
+    let mut seen = BTreeSet::new();
     let mut total = 0_u64;
     for row in rows {
-        let (name, fixture, length) = identity_fixture(corpus, &row)?;
+        let name = case_name(row.field("case")?, "identities.tsv")?.to_owned();
+        unique(&name, &mut seen, "identities.tsv")?;
+        let (fixture, length) = identity_fixture(corpus, &row, &name)?;
         total = total
             .checked_add(length)
             .ok_or_else(|| GoldenError::violation("total materialized corpus overflow"))?;
@@ -50,7 +53,7 @@ pub(super) fn check_identities(
         }
         if fixtures.insert(name.clone(), fixture).is_some() {
             return Err(GoldenError::violation(format!(
-                "identities.tsv: duplicate identifier {name:?}"
+                "identities.tsv: admitted identifier was displaced {name:?}"
             )));
         }
     }
@@ -62,8 +65,8 @@ pub(super) fn check_identities(
 fn identity_fixture(
     corpus: &Corpus,
     row: &TableRow,
-) -> Result<(String, IdentityFixture, u64), GoldenError> {
-    let name = case_name(row.field("case")?, "identities.tsv")?;
+    name: &str,
+) -> Result<(IdentityFixture, u64), GoldenError> {
     let repetitions = source_number(row, "repetitions", name)?;
     let length = source_number(row, "logical_length", name)?;
     let content = source_bytes(corpus, row, repetitions, length)?;
@@ -86,7 +89,6 @@ fn identity_fixture(
         )));
     }
     Ok((
-        name.to_owned(),
         IdentityFixture {
             content,
             canonical_text,
@@ -251,3 +253,6 @@ fn check_state_insertion(fixtures: &BTreeMap<String, IdentityFixture>) -> Result
         ))
     }
 }
+
+#[cfg(test)]
+mod tests;

@@ -39,8 +39,9 @@ pub(super) fn check(
     let mut seen = BTreeSet::new();
     let mut covered = BTreeSet::new();
     for row in rows {
-        let (name, target_kind, operation) = check_mutation(fixtures, &row)?;
+        let name = case_name(row.field("case")?, "mutations.tsv")?.to_owned();
         unique(&name, &mut seen, "mutations.tsv")?;
+        let (target_kind, operation) = check_mutation(fixtures, &row, &name)?;
         covered.insert((target_kind, operation));
     }
     if REQUIRED_OPERATIONS
@@ -58,8 +59,8 @@ pub(super) fn check(
 fn check_mutation(
     fixtures: &BTreeMap<String, IdentityFixture>,
     row: &TableRow,
-) -> Result<(String, String, String), GoldenError> {
-    let name = case_name(row.field("case")?, "mutations.tsv")?;
+    name: &str,
+) -> Result<(String, String), GoldenError> {
     let target_kind = row.field("target_kind")?;
     if !matches!(target_kind, "content" | "identity-binary") {
         return Err(GoldenError::violation(format!(
@@ -80,11 +81,7 @@ fn check_mutation(
         row.field("expected_outcome")?,
         name,
     )?;
-    Ok((
-        name.to_owned(),
-        target_kind.to_owned(),
-        operation.to_owned(),
-    ))
+    Ok((target_kind.to_owned(), operation.to_owned()))
 }
 
 fn mutation_offset(value: &str, target_length: usize, name: &str) -> Result<usize, GoldenError> {
