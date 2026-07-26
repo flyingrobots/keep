@@ -1,6 +1,7 @@
 #![no_main]
 
-use keep::{ChunkId, ChunkSpan, ChunkingError, FastCdc};
+use keep::{ChunkSpan, ChunkingError, FastCdc};
+use keep_fuzz::validate_spans;
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|bytes: &[u8]| {
@@ -17,12 +18,7 @@ fuzz_target!(|bytes: &[u8]| {
         let irregular = require_detection(bytes, &widths, "irregular");
         assert_eq!(irregular, expected);
     }
-    for span in expected {
-        let start = require_usize(span.offset().get(), "span start");
-        let end = require_usize(span.end().get(), "span end");
-        let chunk = require_span(bytes, start, end);
-        assert_eq!(ChunkId::hash_bytes(chunk), Ok(span.id()));
-    }
+    require_valid_coverage(bytes, &expected);
 });
 
 fn require_detection(bytes: &[u8], widths: &[usize], schedule: &str) -> Vec<ChunkSpan> {
@@ -61,23 +57,16 @@ fn detect(bytes: &[u8], widths: &[usize]) -> Result<Vec<ChunkSpan>, FuzzFailure>
     Ok(spans)
 }
 
-fn require_usize(value: u64, coordinate: &str) -> usize {
-    let result = usize::try_from(value);
-    assert!(result.is_ok(), "{coordinate} {value} does not fit usize");
-    match result {
-        Ok(converted) => converted,
-        Err(_error) => std::process::abort(),
-    }
-}
-
-fn require_span(bytes: &[u8], start: usize, end: usize) -> &[u8] {
-    let result = bytes.get(start..end);
+fn require_valid_coverage(bytes: &[u8], spans: &[ChunkSpan]) {
+    let result = validate_spans(bytes, spans);
     assert!(
-        result.is_some(),
-        "emitted span {start}..{end} escaped {} input bytes",
-        bytes.len()
+        result.is_ok(),
+        "emitted spans violated exact input coverage: {:?}",
+        result.as_ref().err()
     );
-    result.map_or_else(|| -> &[u8] { std::process::abort() }, |span| span)
+    if result.is_err() {
+        std::process::abort();
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
