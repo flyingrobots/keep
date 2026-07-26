@@ -29,6 +29,19 @@ before creating documentation or substantially changing an existing page. It
 does not require rewriting pages that are merely below the bar; apply it when
 a change would otherwise add new documentation debt.
 
+Documentation linting uses `markdownlint-cli2` 0.19.1. Install the pinned
+version, then run the repository-owned configuration from the repository root:
+
+```bash
+npm install --global markdownlint-cli2@0.19.1
+python3 scripts/check_markdown.py
+git diff --check "$(git hash-object -t tree /dev/null)" HEAD
+```
+
+The checker admits tracked Markdown plus nonignored new Markdown and refuses
+any other tool version. Build products, generated Rustdoc, fuzz artifacts,
+and other ignored files therefore cannot change the result.
+
 ## Development checks
 
 The minimum local checks are:

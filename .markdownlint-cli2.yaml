@@ -1,0 +1,10 @@
+globs:
+  - "**/*.md"
+
+# Generated and ignored files are not part of the documentation contract.
+gitignore: true
+
+config:
+  # Source-line length is an editorial signal, not a universal merge gate.
+  # Tables, links, and literal commands must remain exact.
+  MD013: false

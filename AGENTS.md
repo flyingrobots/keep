@@ -1,14 +1,14 @@
-AGENTS.md — Keep
+# Keep agent instructions
 
 Keep is foundational storage infrastructure. Optimize for correctness, recoverability, auditability, and maintainability before performance or convenience.
 
-Core Law
+## Core Law
 
 For a given content identity, Keep must return exactly the bytes named by that identity—or refuse.
 
 Never silently repair, approximate, substitute, weaken verification, or continue from ambiguous state.
 
-Rust Standards
+## Rust Standards
 
 * Use stable, pinned Rust with edition 2024.
 * cargo fmt --check and Clippy with -D warnings must pass.
@@ -24,7 +24,7 @@ Rust Standards
 * Prefer synchronous core APIs. Do not introduce async without a demonstrated consumer need.
 * Do not use HashMap iteration where order can affect identity, serialization, tests, or behavior.
 
-Hexagonal Architecture and Determinism
+## Hexagonal Architecture and Determinism
 
 * Use hexagonal architecture. The domain core owns invariants and policy; ports
   name semantic capabilities; adapters own technologies and protocols.
@@ -43,7 +43,7 @@ Hexagonal Architecture and Determinism
 * Never hash arbitrary serializer output. Hash only typed, domain-separated
   canonical bytes.
 
-Structure and Findability
+## Structure and Findability
 
 * Target file size: 200 lines.
 * Review threshold: 300 lines.
@@ -61,7 +61,7 @@ Structure and Findability
 * Public concepts should be locatable by filename search within two attempts.
 * Keep lower layers independent of Echo, Git, Graft, WARP, CLI, and application policy.
 
-API and Type Design
+## API and Type Design
 
 * Everything is private by default.
 * Use pub(crate) unless external consumers require more.
@@ -74,7 +74,7 @@ API and Type Design
 * Never expose physical storage locations as stable public identity.
 * Keep logical identity separate from layout, representation, and physical location.
 
-Storage and Durability
+## Storage and Durability
 
 * Treat filesystem operations as adversarial and fallible.
 * Never infer completeness, identity, retention, or durability from file existence alone.
@@ -90,7 +90,7 @@ Storage and Durability
 * Channels must be bounded.
 * Do not hold locks across external I/O, callbacks, long computation, or other locks without documented ordering.
 
-Formats
+## Formats
 
 * On-disk formats are protocols, not private implementation details.
 * Every format needs magic bytes, versioning, canonical encoding, explicit endianness, bounds, checksums, and golden fixtures.
@@ -99,11 +99,11 @@ Formats
 * Hash typed, domain-separated canonical preimages.
 * Round-trip tests alone are insufficient.
 
-Testing
+## Testing
 
 Every meaningful change must include tests appropriate to its failure modes.
 
-Required test classes:
+### Required test classes
 
 * unit tests;
 * public API integration tests;
@@ -117,7 +117,7 @@ Required test classes:
 * fuzz tests for all parsers and decoders;
 * benchmark regression tests for performance-sensitive changes.
 
-Testing rules:
+### Testing rules
 
 * Test names describe laws, not functions.
 * Do not use sleeps for synchronization.
@@ -127,7 +127,7 @@ Testing rules:
 * Test debug and release builds.
 * Coverage is evidence, not proof. Do not add meaningless tests to satisfy metrics.
 
-Performance
+## Performance
 
 * Measure before optimizing.
 * Preserve bounded memory and streaming behavior.
@@ -137,7 +137,7 @@ Performance
 * Performance improvements must not weaken verification, durability, recovery, or diagnostics.
 * No clone, allocation, Arc, mmap, unsafe, async, compression, or caching optimization without evidence that it solves a measured problem.
 
-Dependencies
+## Dependencies
 
 * Dependencies require justification.
 * Disable default features unless explicitly needed.
@@ -146,7 +146,7 @@ Dependencies
 * Run dependency audit and policy checks.
 * Features must be additive and must not alter identity, canonical encoding, verification, or durability semantics.
 
-Documentation
+## Documentation
 
 * Document all public items.
 * Explain invariants, errors, allocation, blocking, I/O, verification, complexity, and durability implications.
@@ -154,7 +154,7 @@ Documentation
 * Important public examples must compile as doctests.
 * Decisions affecting identity, format, durability, recovery, concurrency, GC, encryption, or public compatibility require a written decision record: a colocated rationale.md next to the concept for a decision scoped to one page, or a slugged ADR under docs/adr/ (never a bare number) for one that cuts across subsystems.
 
-Pull Requests
+## Pull Requests
 
 Prefer small, single-purpose PRs.
 
@@ -173,7 +173,7 @@ Each PR must state:
 
 Do not mix semantic changes with unrelated refactoring.
 
-Review Questions
+## Review Questions
 
 Before approving, ask:
 
@@ -193,7 +193,7 @@ Before approving, ask:
 * Does recovery agree with the write protocol?
 * Is the abstraction simpler than the code it replaced?
 
-Final Standard
+## Final Standard
 
 Keep should be boring, explicit, searchable, bounded, deterministic, and difficult to misuse.
 
