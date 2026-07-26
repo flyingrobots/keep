@@ -55,6 +55,14 @@ class MarkdownCorpusLaws(unittest.TestCase):
 
         self.assertEqual(source_markdown(), ["alpha.md", "zulu.md"])
 
+    def test_deleted_tracked_markdown_is_not_forwarded(self) -> None:
+        self.write("deleted.md", "# Deleted\n")
+        self.write("remaining.md", "# Remaining\n")
+        self.run_git("add", "deleted.md", "remaining.md")
+        (self.root / "deleted.md").unlink()
+
+        self.assertEqual(source_markdown(), ["remaining.md"])
+
 
 class DocumentationCommandLaws(unittest.TestCase):
     """Contributor commands inspect changes that have not been committed."""

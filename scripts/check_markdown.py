@@ -56,11 +56,13 @@ def source_markdown() -> list[str]:
     )
     if completed.returncode != 0:
         raise RuntimeError("git ls-files failed while selecting Markdown")
-    paths = sorted(
-        os.fsdecode(path)
-        for path in completed.stdout.split(b"\0")
-        if path
-    )
+    paths = []
+    for raw_path in completed.stdout.split(b"\0"):
+        if raw_path:
+            path = os.fsdecode(raw_path)
+            if os.path.lexists(path):
+                paths.append(path)
+    paths.sort()
     if not paths:
         raise RuntimeError("the source Markdown corpus is empty")
     return paths
