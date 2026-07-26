@@ -6,11 +6,13 @@ by [the Golden File Worldline specification](../../../docs/conformance/golden-fi
 Run the independent vector checker with:
 
 ```bash
-python3 conformance/golden-file-worldline/v1/check_vectors.py
+cargo xtask golden-file-worldline-check
 ```
 
-The checker requires `b3sum` 1.8.5 or a compatible implementation on `PATH`.
-It does not import or execute Keep's Rust implementation.
+The `xtask` crate has no dependency on Keep. It independently implements the
+corpus grammar, identity preimage, invalid-input classifications, scenario
+state machine, and capability contract without importing or executing
+production `BlobId` code.
 
 The TSV files are protocol inputs. Do not reorder rows, normalize source files,
 or regenerate expected values with production `BlobId` code.

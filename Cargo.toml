@@ -24,7 +24,7 @@ name = "streaming_cdc"
 harness = false
 
 [workspace]
-members = ["."]
+members = [".", "xtask"]
 resolver = "3"
 
 [lints]

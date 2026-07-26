@@ -10,6 +10,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Golden File Worldline verification now runs through a dependency-isolated
+  Rust `xtask`, and CI refuses Rust, Python, or shell source modules that exceed
+  the documented 500-line hard maximum.
 - Scheduled and manually dispatched fuzz campaigns now exercise every
   registered target under centralized bounded policy, retain failures, and
   preserve minimized evolving corpora as non-authoritative test state.
