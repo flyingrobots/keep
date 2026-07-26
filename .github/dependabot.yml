@@ -4,6 +4,7 @@ updates:
     directories:
       - /
       - /fuzz
+      - /xtask
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
