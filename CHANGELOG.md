@@ -10,6 +10,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- CI now runs every registered fuzz target with pinned `cargo-fuzz` and
+  nightly versions, deterministic deep-state seeds, bounded per-target
+  resources, and retained failure artifacts.
 - Moved the canonical text and binary `BlobId` codecs out of the `blob`
   identity module into a new `adapters` boundary layer, per
   [ADR-0004](docs/adr/0004-hexagonal-boundary-architecture.md). `blob` now
@@ -22,6 +25,15 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Canonical version-1 `ChunkId` calculation in a domain distinct from
+  `BlobId`, with independent golden vectors.
+- A constant-memory `FastCdc` detector for `fastcdc-64k-v1` that preserves
+  boundaries and chunk identities across arbitrary feed partitioning, batches
+  contiguous identity-hash updates, and enters an explicit failed state after
+  a typed refusal.
+- Typed `ChunkLength`, `ChunkOffset`, and `ChunkSpan` values, corpus-driven
+  property and adversarial tests, measured allocation and throughput evidence,
+  and a fail-closed streaming CDC fuzz target.
 - Canonical version-1 `BlobId` calculation over exact logical bytes using a
   one-pass, length-committing BLAKE3-256 preimage.
 - Strict, allocation-bounded text and fixed-width binary `BlobId` codecs with

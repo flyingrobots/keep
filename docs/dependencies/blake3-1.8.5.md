@@ -1,17 +1,19 @@
 # Dependency Admission: BLAKE3 1.8.5
 
-- Status: Accepted for `BlobId` version 1
+- Status: Accepted for `BlobId` and `ChunkId` version 1
 - Date: 2026-07-19
 - Owner: Keep identity layer
 - Governing decision:
-  [ADR-0001](../adr/0001-exact-logical-byte-identity.md)
+  [ADR-0001](../adr/0001-exact-logical-byte-identity.md) and the
+  [chunk identity rationale](../invariants/chunk-identity/rationale.md)
 - Upstream: [BLAKE3 official Rust implementation][blake3]
 
 ## Admitted use
 
 Keep admits the `blake3` crate at locked version 1.8.5 to calculate the
-32-byte digest in the `BlobId` version-1 preimage. Keep uses the incremental
-`Hasher` API only. No dependency-owned type appears in Keep's public API.
+32-byte digests in the `BlobId` and `ChunkId` version-1 preimages. Keep uses
+the incremental `Hasher` API only. No dependency-owned type appears in Keep's
+public API.
 
 The manifest disables default features and enables exactly:
 
@@ -20,11 +22,11 @@ The manifest disables default features and enables exactly:
 - `pure`, which forces upstream's pure-Rust build path instead of its
   handwritten assembly or C implementations.
 
-The current Keep call path uses only `Hasher::new`, `Hasher::update`, and
-`Hasher::finalize`. The `std` feature is not part of content identity and may be
-removed in a dedicated dependency-policy change if Keep adopts a `no_std`
-lower layer. The `pure` feature is also not part of identity. Any future change
-to either feature must reproduce every identity vector exactly.
+The current Keep call paths use only `Hasher::new`, `Hasher::update`, and
+`Hasher::finalize`. The `std` feature is not part of content identity and may
+be removed in a dedicated dependency-policy change if Keep adopts a `no_std`
+lower layer. The `pure` feature is also not part of identity. Any future
+change to either feature must reproduce every identity vector exactly.
 
 `pure` does not mean “free of unsafe code.” It selects Rust implementations,
 including platform intrinsics and dispatch that contain upstream-audited unsafe
@@ -33,8 +35,9 @@ environment update. Keep-owned crates remain `unsafe_code = "forbid"`.
 
 ## Why this dependency is needed
 
-ADR-0001 makes BLAKE3-256 part of the permanent version-1 identity contract.
-Keep therefore needs an implementation that supports:
+ADR-0001 and the chunk identity rationale make BLAKE3-256 part of Keep's
+permanent version-1 identity contracts. Keep therefore needs an implementation
+that supports:
 
 - exact incremental hashing without content-sized allocation;
 - stable, independently specified output;
@@ -113,21 +116,23 @@ of implementation defects.
 
 ## Public API and compatibility
 
-Keep exposes `BlobHasher`, `BlobId`, and typed Keep errors. It does not expose
-`blake3::Hasher`, `blake3::Hash`, or a dependency error type. Consequently a
-compatible implementation can replace the crate without breaking the Rust API.
+Keep exposes `BlobHasher`, `BlobId`, `ChunkId`, `FastCdc`, and typed Keep
+errors. It does not expose `blake3::Hasher`, `blake3::Hash`, or a dependency
+error type. Consequently a compatible implementation can replace the crate
+without breaking the Rust API.
 
 It cannot silently change the algorithm. Lawful exit paths are:
 
 1. upgrade or replace the implementation while reproducing all BLAKE3-256
-   vectors and canonical `BlobId` encodings exactly;
+   vectors, canonical `BlobId` encodings, and `ChunkId` digests exactly;
 2. maintain a small audited internal BLAKE3 implementation after independent
    differential and conformance evidence justifies the maintenance burden;
 3. introduce a new explicit identity version or algorithm coordinate through a
    new ADR and compatibility plan.
 
-Existing version-1 identities remain BLAKE3-256 identities forever. A migration
-may add another coordinate, but it may not reinterpret or rewrite version 1.
+Existing version-1 blob and chunk identities remain BLAKE3-256 identities
+forever. A migration may add another coordinate, but it may not reinterpret or
+rewrite version 1.
 
 ## Rejected alternatives
 

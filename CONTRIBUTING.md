@@ -29,6 +29,28 @@ before creating documentation or substantially changing an existing page. It
 does not require rewriting pages that are merely below the bar; apply it when
 a change would otherwise add new documentation debt.
 
+Documentation validation uses `markdownlint-cli2` 0.23.1, `lychee` 0.21.0,
+and `actionlint` 1.7.12. Install those exact versions, then run the
+repository-owned checks from the repository root:
+
+```bash
+npm ci --prefix scripts/documentation-tools --ignore-scripts --no-audit --no-fund
+cargo install lychee --version 0.21.0 --locked
+go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+export PATH="$PWD/scripts/documentation-tools/node_modules/.bin:$PATH"
+python3 scripts/check_markdown.py
+python3 scripts/check_workflows.py
+git diff --check
+git diff --cached --check
+```
+
+The checker admits tracked Markdown plus nonignored new Markdown and refuses
+any other tool version. Build products, generated Rustdoc, fuzz artifacts,
+and other ignored files therefore cannot change the result. Link validation
+checks local files and fragments with network access disabled; external-site
+availability cannot change the result. The two Git commands check unstaged
+and staged whitespace errors separately.
+
 ## Development checks
 
 The minimum local checks are:
@@ -45,6 +67,42 @@ cargo test --workspace --doc --locked
 cargo deny check
 cargo audit
 ```
+
+Runtime fuzzing uses `cargo-fuzz` 0.13.2 with
+`nightly-2026-07-24`. Install those pinned tools without changing the
+repository's stable default:
+
+```bash
+rustup toolchain install nightly-2026-07-24 --profile minimal
+cargo install cargo-fuzz --version 0.13.2 --locked
+```
+
+Run the same bounded smoke campaign as CI:
+
+```bash
+set -euo pipefail
+python3 fuzz/prepare_corpus.py
+fuzz_targets="$(cargo +nightly-2026-07-24 fuzz list)"
+test -n "$fuzz_targets"
+fuzz_failed=false
+while IFS= read -r fuzz_target; do
+  if ! cargo +nightly-2026-07-24 fuzz run "$fuzz_target" -- \
+      -max_total_time=15 \
+      -timeout=5 \
+      -max_len=1048576 \
+      -rss_limit_mb=1024 \
+      -print_final_stats=1; then
+    fuzz_failed=true
+  fi
+done <<< "$fuzz_targets"
+test "$fuzz_failed" = false
+```
+
+The deterministic seeds make every parser success path and the registered CDC
+boundary transitions reachable before mutation begins. The 15-second budget
+remains a startup and shallow-exploration gate, not evidence of exhaustive
+coverage. Preserve any input under `fuzz/artifacts/` that finds a defect and
+add it as a permanent regression test.
 
 Every meaningful change also needs tests appropriate to its actual failure
 modes. Round-trip tests alone are not sufficient for durable formats.
