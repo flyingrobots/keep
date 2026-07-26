@@ -3,11 +3,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
 import re
 import shutil
 import subprocess
+from dataclasses import dataclass
+from pathlib import Path
+from typing import NoReturn
 
 ROOT = Path(__file__).resolve().parent
 IDENTITIES = ROOT / "identities.tsv"
@@ -34,7 +35,7 @@ class IdentityCase:
     expected_digest: str
 
 
-def fail(message: str) -> None:
+def fail(message: str) -> NoReturn:
     raise SystemExit(f"chunk identity corpus check failed: {message}")
 
 
