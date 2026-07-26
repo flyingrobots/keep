@@ -8,8 +8,13 @@ from pathlib import Path
 
 REPOSITORY_ROOT = Path(__file__).parent.parent
 WORKFLOW_DIRECTORY = REPOSITORY_ROOT / ".github" / "workflows"
+CI_WORKFLOW = WORKFLOW_DIRECTORY / "ci.yml"
 SCHEDULED_WORKFLOW = WORKFLOW_DIRECTORY / "fuzz-scheduled.yml"
 ACTION_REFERENCE = re.compile(r"^\s*uses:\s*[^@\s]+@([^\s]+)", re.MULTILINE)
+CHECKOUT_REFERENCE = re.compile(
+    r"^\s*uses:\s*actions/checkout@([0-9a-f]{40})",
+    re.MULTILINE,
+)
 COMMIT_SHA = re.compile(r"[0-9a-f]{40}")
 
 
@@ -27,7 +32,14 @@ class WorkflowLaws(unittest.TestCase):
     """The scheduled boundary remains pinned, bounded, and fail-closed."""
 
     def setUp(self) -> None:
+        self.ci_workflow = CI_WORKFLOW.read_text(encoding="utf-8")
         self.workflow = SCHEDULED_WORKFLOW.read_text(encoding="utf-8")
+
+    def test_checkout_pin_is_consistent_across_workflows(self) -> None:
+        ci_references = set(CHECKOUT_REFERENCE.findall(self.ci_workflow))
+        scheduled_references = set(CHECKOUT_REFERENCE.findall(self.workflow))
+        self.assertEqual(len(ci_references), 1)
+        self.assertEqual(scheduled_references, ci_references)
 
     def test_every_third_party_action_uses_an_immutable_commit(self) -> None:
         workflow_paths = sorted(WORKFLOW_DIRECTORY.glob("*.yml"))
