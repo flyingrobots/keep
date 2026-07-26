@@ -1,0 +1,129 @@
+name: Scheduled fuzz campaign
+
+on:
+  schedule:
+    - cron: "23 7 * * 6"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scheduled-fuzz-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  fuzz:
+    name: Deep bounded fuzz campaign
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify fuzz campaign laws
+        run: python3 -m unittest discover -s fuzz -p 'test_*.py' -v
+
+      - name: Load bounded fuzz policy
+        run: |
+          python3 fuzz/run_campaign.py github-env --profile scheduled \
+            >> "$GITHUB_ENV"
+
+      - name: Install pinned fuzz toolchain
+        run: rustup toolchain install "$FUZZ_TOOLCHAIN" --profile minimal
+
+      - name: Install pinned fuzz runner
+        run: cargo install cargo-fuzz --version "$CARGO_FUZZ_VERSION" --locked
+
+      - name: Restore non-authoritative evolving corpus
+        id: fuzz_corpus
+        continue-on-error: true
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: fuzz/corpus/
+          key: keep-fuzz-corpus-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            keep-fuzz-corpus-${{ runner.os }}-
+
+      - name: Validate restored corpus
+        id: restored_corpus
+        continue-on-error: true
+        run: python3 fuzz/check_corpus.py
+
+      - name: Discard a refused corpus restore
+        if: >-
+          steps.fuzz_corpus.outcome == 'failure' ||
+          steps.restored_corpus.outcome == 'failure'
+        run: |
+          if test -e fuzz/corpus || test -L fuzz/corpus; then
+            find -P fuzz/corpus -depth -delete
+          fi
+          mkdir -p fuzz/corpus
+
+      - name: Prepare deterministic fuzz seeds
+        run: python3 fuzz/prepare_corpus.py
+
+      - name: Validate prepared corpus
+        run: python3 fuzz/check_corpus.py
+
+      - name: Build every fuzz target
+        run: python3 fuzz/run_campaign.py build --profile scheduled
+
+      - name: Exercise every fuzz target
+        id: campaign
+        continue-on-error: true
+        run: python3 fuzz/run_campaign.py run --profile scheduled
+
+      - name: Minimize evolving corpora
+        id: minimize
+        if: steps.campaign.outcome == 'success'
+        run: python3 fuzz/run_campaign.py minimize --profile scheduled
+
+      - name: Validate retained corpus bounds
+        id: retained_corpus
+        if: >-
+          always() && !cancelled() &&
+          steps.campaign.outcome != 'skipped'
+        run: python3 fuzz/check_corpus.py
+
+      - name: Retain fuzz failures
+        if: always() && steps.campaign.outcome == 'failure'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scheduled-fuzz-failures-${{ github.run_id }}-${{ github.run_attempt }}
+          path: fuzz/artifacts/
+          if-no-files-found: error
+          retention-days: ${{ env.FUZZ_SCHEDULED_FAILURE_RETENTION_DAYS }}
+
+      - name: Save non-authoritative evolving corpus
+        if: >-
+          always() && !cancelled() &&
+          steps.campaign.outcome == 'success' &&
+          steps.minimize.outcome == 'success' &&
+          steps.retained_corpus.outcome == 'success'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: fuzz/corpus/
+          key: keep-fuzz-corpus-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Retain minimized corpus evidence
+        if: >-
+          always() && !cancelled() &&
+          steps.campaign.outcome == 'success' &&
+          steps.minimize.outcome == 'success' &&
+          steps.retained_corpus.outcome == 'success'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scheduled-fuzz-corpus-${{ github.run_id }}-${{ github.run_attempt }}
+          path: fuzz/corpus/
+          if-no-files-found: error
+          retention-days: ${{ env.FUZZ_CORPUS_RETENTION_DAYS }}
+
+      - name: Report campaign failure
+        if: always() && steps.campaign.outcome == 'failure'
+        run: |
+          printf 'One or more fuzz targets failed; inspect retained artifacts.\n'
+          exit 1
