@@ -511,7 +511,8 @@ Run for documentation changes:
 
 ```bash
 python3 scripts/check_markdown.py
-git diff --check "$(git hash-object -t tree /dev/null)" HEAD
+git diff --check
+git diff --cached --check
 ```
 
 Use `markdownlint-cli2` 0.19.1. The repository-owned configuration defines
@@ -520,7 +521,8 @@ rule choices. The checker admits tracked Markdown plus nonignored new
 Markdown, disables config globs for that invocation, and refuses a different
 tool version. It also runs `lychee` 0.21.0 offline with fragment checking, so
 external-site availability cannot affect the result. Run it from the
-repository root.
+repository root. The two Git commands inspect unstaged and staged whitespace
+errors separately.
 
 When workflows change, also run:
 
