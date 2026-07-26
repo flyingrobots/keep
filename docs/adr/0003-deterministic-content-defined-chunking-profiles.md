@@ -57,10 +57,9 @@ value `1` means BLAKE3-256. The canonical checksum is:
 4194fca74d7987cb8243f26dd6496e8ffc55ba2b139737476add84cc5bc69da7
 ```
 
-An independent generator reproduced the table bytes and checksum with Python's
-standard-library MD5 plus `b3sum` 1.8.5. An implementation must refuse an
-unknown table checksum; it must not swap in a convenient table with the same
-dimensions.
+Python's standard-library MD5 plus `b3sum` 1.8.5 independently reproduced the
+table bytes and checksum. Implementations must refuse unknown checksums rather
+than swap in a convenient table with the same dimensions.
 
 ### Scalar boundary algorithm
 
@@ -90,19 +89,18 @@ If the mask does not match, append the probe byte. When the candidate reaches
 `maximum`, emit it immediately without reading or hashing another byte. This is
 a hard maximum, including for adversarial inputs that never satisfy a mask.
 
-At end of stream, empty input emits zero chunks and every positive residual
-candidate is emitted, including a final runt shorter than `minimum`. A
-zero-length chunk is never emitted.
+At EOF, empty input emits zero chunks; every positive residual candidate is
+emitted, including a final runt shorter than `minimum`. No chunk is empty.
 
-The result is an ordered partition of the input: concatenating emitted chunks
-must reproduce every input byte exactly once. Every non-final chunk has length
+The ordered partition must reproduce every input byte exactly once when its
+chunks are concatenated. Every non-final chunk has length
 in `[minimum, maximum]`; the final chunk has length in `[1, maximum]`.
 
 ### Source-partition invariance
 
-Streaming implementations must preserve the candidate, hash, and carried byte
-across reads. They may not treat a short read as EOF. EOF is a separate input
-event, and only EOF may flush a runt. Processing the same bytes as one read,
+Streaming implementations must preserve candidate, hash, and carried byte across
+reads. They may not treat a short read as EOF. Only EOF may flush a runt.
+Processing the same bytes as one read,
 one-byte reads, irregular reads, or reads split at every expected boundary must
 produce identical chunk offsets and lengths.
 
@@ -237,9 +235,12 @@ The executable corpus freezes:
 After minimum skipping, the scalar hot path performs one table lookup, one
 wrapping shift/add, one mask test, and checked cursor movement per probe byte.
 There is no eviction window, division, allocation, or cryptographic hash in the
-boundary loop. The selected 64 KiB target trades metadata volume against
-nearby-state reuse; M2 benchmarks must measure throughput, allocation, peak
-memory, boundary distribution, and reuse before any “optimal” claim.
+boundary-decision loop. The production detector batches chunk-identity hashing
+over contiguous feed ranges at feed and boundary edges. The selected 64 KiB
+target trades metadata volume against nearby-state reuse; the
+`streaming_cdc` benchmark and isolated allocator test measure throughput and
+working memory without making an “optimal” claim. Later M2 benchmarks must
+still measure boundary distribution and reuse in an integrated storage path.
 
 The [2020 FastCDC paper](https://doi.org/10.1109/TPDS.2020.2984632) describes
 additional two-byte-at-a-time optimization. It is not part of this scalar
@@ -296,5 +297,4 @@ evidence and, where identity or format changes, their own ADRs.
 - Streaming reads remain partition-invariant and memory-bounded.
 - Malicious no-match input cannot exceed the profile's hard maximum chunk.
 - Profile evolution is explicit and cannot silently move logical identity.
-- The accepted profile and independent vectors are a durable compatibility
-  obligation.
+- The accepted profile and vectors form a durable compatibility obligation.

@@ -46,6 +46,42 @@ cargo deny check
 cargo audit
 ```
 
+Runtime fuzzing uses `cargo-fuzz` 0.13.2 with
+`nightly-2026-07-24`. Install those pinned tools without changing the
+repository's stable default:
+
+```bash
+rustup toolchain install nightly-2026-07-24 --profile minimal
+cargo install cargo-fuzz --version 0.13.2 --locked
+```
+
+Run the same bounded smoke campaign as CI:
+
+```bash
+set -euo pipefail
+python3 fuzz/prepare_corpus.py
+fuzz_targets="$(cargo +nightly-2026-07-24 fuzz list)"
+test -n "$fuzz_targets"
+fuzz_failed=false
+while IFS= read -r fuzz_target; do
+  if ! cargo +nightly-2026-07-24 fuzz run "$fuzz_target" -- \
+      -max_total_time=15 \
+      -timeout=5 \
+      -max_len=1048576 \
+      -rss_limit_mb=1024 \
+      -print_final_stats=1; then
+    fuzz_failed=true
+  fi
+done <<< "$fuzz_targets"
+test "$fuzz_failed" = false
+```
+
+The deterministic seeds make every parser success path and the registered CDC
+boundary transitions reachable before mutation begins. The 15-second budget
+remains a startup and shallow-exploration gate, not evidence of exhaustive
+coverage. Preserve any input under `fuzz/artifacts/` that finds a defect and
+add it as a permanent regression test.
+
 Every meaningful change also needs tests appropriate to its actual failure
 modes. Round-trip tests alone are not sufficient for durable formats.
 

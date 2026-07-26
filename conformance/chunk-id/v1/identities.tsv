@@ -1,0 +1,5 @@
+keep.chunk-identities/v1
+case	recipe	parameter	count	chunk_length	digest_hex
+one-zero	repeated-byte-v1	00	1	1	9b9c9a42912a0efdcd41e83ea024d72f10f2627d239e4eb240dd53f39ce0ff62
+sample-text	hex-repeat-v1	4b656570206578616374206368756e6b2e0a	1	18	5ab139bf9c7975e87b9d5ccd9feb089d754c22afa78f51cee75f3b753a027368
+maximum-zeros	repeated-byte-v1	00	262144	262144	c7794a07d017e900d37c3a874f1dd9fd4783a3ead2fb176755ae42a4ce65f87b
