@@ -209,7 +209,15 @@ fn apply_fixed_width(
     value_field: &str,
     name: &str,
 ) -> Result<(), GoldenError> {
-    let width = if operation == "set-u16-be" { 2 } else { 1 };
+    let width: usize = if operation == "set-u16-be" { 2 } else { 1 };
+    let expected_digits = width
+        .checked_mul(2)
+        .ok_or_else(|| GoldenError::violation(format!("{name}: mutation width overflow")))?;
+    if value_field.len() != expected_digits {
+        return Err(GoldenError::violation(format!(
+            "{name}: mutation value must be exactly {width} bytes"
+        )));
+    }
     let value = decoded_hex(
         value_field,
         &format!("{name} value"),
@@ -274,3 +282,6 @@ fn binary_outcome(encoded: &[u8]) -> Result<&'static str, GoldenError> {
     }
     Ok("keep.identity.different_supported_identity")
 }
+
+#[cfg(test)]
+mod tests;
