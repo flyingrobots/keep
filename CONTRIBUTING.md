@@ -35,12 +35,14 @@ version, then run the repository-owned configuration from the repository root:
 ```bash
 npm install --global markdownlint-cli2@0.19.1
 python3 scripts/check_markdown.py
-git diff --check "$(git hash-object -t tree /dev/null)" HEAD
+git diff --check
+git diff --cached --check
 ```
 
 The checker admits tracked Markdown plus nonignored new Markdown and refuses
 any other tool version. Build products, generated Rustdoc, fuzz artifacts,
-and other ignored files therefore cannot change the result.
+and other ignored files therefore cannot change the result. The two Git
+commands check unstaged and staged whitespace errors separately.
 
 ## Development checks
 

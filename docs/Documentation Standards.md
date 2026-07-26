@@ -511,14 +511,16 @@ Run for documentation changes:
 
 ```bash
 python3 scripts/check_markdown.py
-git diff --check "$(git hash-object -t tree /dev/null)" HEAD
+git diff --check
+git diff --cached --check
 ```
 
 Use `markdownlint-cli2` 0.19.1. The repository-owned configuration defines
 the default Markdown input set, imports `.gitignore`, and records deliberate
 rule choices. The checker admits tracked Markdown plus nonignored new
 Markdown, disables config globs for that invocation, and refuses a different
-tool version. Run it from the repository root.
+tool version. Run it from the repository root. The two Git commands inspect
+unstaged and staged whitespace errors separately.
 
 When workflows change, also run:
 

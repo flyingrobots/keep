@@ -10,6 +10,8 @@ from pathlib import Path
 
 from check_markdown import source_markdown
 
+REPOSITORY_ROOT = Path(__file__).parent.parent
+
 
 class MarkdownCorpusLaws(unittest.TestCase):
     """The selected Markdown corpus depends only on admitted source files."""
@@ -52,6 +54,25 @@ class MarkdownCorpusLaws(unittest.TestCase):
         self.run_git("add", "zulu.md", "alpha.md")
 
         self.assertEqual(source_markdown(), ["alpha.md", "zulu.md"])
+
+
+class DocumentationCommandLaws(unittest.TestCase):
+    """Contributor commands inspect changes that have not been committed."""
+
+    def test_whitespace_checks_cover_the_index_and_working_tree(self) -> None:
+        for relative_path in (
+            "CONTRIBUTING.md",
+            "docs/Documentation Standards.md",
+        ):
+            source = (REPOSITORY_ROOT / relative_path).read_text(
+                encoding="utf-8"
+            )
+            self.assertNotIn(
+                'git diff --check "$(git hash-object -t tree /dev/null)" HEAD',
+                source,
+            )
+            self.assertIn("git diff --check\n", source)
+            self.assertIn("git diff --cached --check\n", source)
 
 
 if __name__ == "__main__":
