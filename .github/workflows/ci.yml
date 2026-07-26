@@ -72,6 +72,41 @@ jobs:
           cargo check --manifest-path fuzz/Cargo.toml --bins --locked
           cargo clippy --manifest-path fuzz/Cargo.toml --bins --locked -- -D warnings
 
+  documentation:
+    name: Documentation and workflow integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.18.0
+
+      - name: Install pinned documentation tools
+        run: |
+          documentation_tools="$RUNNER_TEMP/documentation-tools"
+          scripts/install_documentation_tools.sh "$documentation_tools"
+          printf '%s\n' \
+            "$documentation_tools/bin" \
+            "$documentation_tools/npm/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Verify documentation integrity laws
+        run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
+
+      - name: Check Markdown and internal links
+        run: python3 scripts/check_markdown.py
+
+      - name: Check workflow syntax
+        run: python3 scripts/check_workflows.py
+
+      - name: Check repository whitespace
+        run: git diff --check "$(git hash-object -t tree /dev/null)" HEAD
+
   fuzz-smoke:
     name: Runtime fuzz smoke
     runs-on: ubuntu-latest
