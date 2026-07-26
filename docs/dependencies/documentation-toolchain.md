@@ -39,6 +39,10 @@ The Markdown checker derives its inputs from Git's tracked and nonignored
 source paths. Generated Rustdoc, build outputs, ignored fuzz artifacts, and
 ignored vendor trees cannot enter the input set.
 
+The workflow checker disables `actionlint`'s optional `shellcheck` and
+`pyflakes` integrations. Neither auxiliary executable is admitted or pinned by
+this toolchain, so ambient PATH contents cannot expand the validation boundary.
+
 Lychee runs with `--offline` and `--include-fragments`. It checks local
 destinations and anchors while excluding external network requests. External
 website availability, DNS, redirects, rate limits, and certificates therefore
@@ -72,6 +76,7 @@ Repeat this admission review when any of these changes:
 - Node.js, `markdownlint-cli2`, `lychee`, or `actionlint` version;
 - archive URL, checksum, or npm lock graph;
 - Markdown or workflow input boundary;
+- `actionlint` auxiliary linter policy;
 - link checking gains network access;
 - job permissions or credential handling;
 - a tool crosses into production code, a public API, or a durable format.

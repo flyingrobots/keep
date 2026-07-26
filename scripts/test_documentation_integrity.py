@@ -116,6 +116,38 @@ class WorkflowContractLaws(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn(LAW_COMMAND, workflow)
 
+    def test_actionlint_disables_unadmitted_auxiliary_linters(self) -> None:
+        completed = SimpleNamespace(returncode=0)
+        with (
+            patch.object(
+                check_workflows,
+                "find_actionlint",
+                return_value="actionlint",
+            ),
+            patch.object(check_workflows, "verify_version"),
+            patch.object(
+                check_workflows,
+                "workflow_paths",
+                return_value=[".github/workflows/ci.yml"],
+            ),
+            patch.object(
+                check_workflows.subprocess,
+                "run",
+                return_value=completed,
+            ) as run,
+        ):
+            self.assertEqual(check_workflows.main(), 0)
+
+        run.assert_called_once_with(
+            [
+                "actionlint",
+                "-shellcheck=",
+                "-pyflakes=",
+                ".github/workflows/ci.yml",
+            ],
+            check=False,
+        )
+
 
 class ToolInstallerLaws(unittest.TestCase):
     """The Markdown tool graph is fully locked before network installation."""

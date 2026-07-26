@@ -59,7 +59,10 @@ def main() -> int:
         print(f"Workflow check refused: {error}", file=sys.stderr)
         return 1
 
-    completed = subprocess.run([executable, *paths], check=False)
+    completed = subprocess.run(
+        [executable, "-shellcheck=", "-pyflakes=", *paths],
+        check=False,
+    )
     return completed.returncode
 
 
