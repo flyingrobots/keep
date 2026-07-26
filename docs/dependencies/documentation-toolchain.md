@@ -35,9 +35,12 @@ version, empty input corpus, or tool failure refuses the check.
 
 ## Determinism and network posture
 
-The Markdown checker derives its inputs from Git's tracked and nonignored
-source paths. Generated Rustdoc, build outputs, ignored fuzz artifacts, and
-ignored vendor trees cannot enter the input set.
+The Markdown and workflow checkers derive their inputs from Git's tracked and
+repository-nonignored source paths. Generated Rustdoc, build outputs, ignored
+fuzz artifacts, ignored vendor trees, and user-global ignore policy cannot
+enter either input set. Missing tracked paths are treated as pending deletions;
+Git-trackable nonregular paths such as symlinks are refused. Non-trackable
+special files such as FIFOs cannot enter the Git-selected corpus.
 
 The workflow checker disables `actionlint`'s optional `shellcheck` and
 `pyflakes` integrations. Neither auxiliary executable is admitted or pinned by

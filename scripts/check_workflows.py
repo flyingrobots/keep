@@ -3,10 +3,11 @@
 
 from __future__ import annotations
 
+import os
 import shutil
+import stat
 import subprocess
 import sys
-from pathlib import Path
 
 EXPECTED_VERSION = "1.7.12"
 
@@ -36,14 +37,47 @@ def verify_version(executable: str) -> None:
         )
 
 
+def admit_workflow_path(path: str) -> bool:
+    """Admit one existing regular workflow without following links."""
+    try:
+        mode = os.lstat(path).st_mode
+    except FileNotFoundError:
+        return False
+    except OSError as error:
+        raise RuntimeError(
+            f"cannot inspect workflow source {path!r}: {error}"
+        ) from error
+    if not stat.S_ISREG(mode):
+        raise RuntimeError(f"workflow source is not a regular file: {path!r}")
+    return True
+
+
 def workflow_paths() -> list[str]:
-    """Return every YAML workflow path in deterministic order."""
-    workflow_dir = Path(".github/workflows")
-    paths = sorted(
-        str(path)
-        for pattern in ("*.yml", "*.yaml")
-        for path in workflow_dir.glob(pattern)
+    """Return Git-admitted workflow paths in deterministic order."""
+    completed = subprocess.run(
+        [
+            "git",
+            "ls-files",
+            "-z",
+            "--cached",
+            "--others",
+            "--exclude-per-directory=.gitignore",
+            "--",
+            ".github/workflows/*.yml",
+            ".github/workflows/*.yaml",
+        ],
+        check=False,
+        stdout=subprocess.PIPE,
     )
+    if completed.returncode != 0:
+        raise RuntimeError("git ls-files failed while selecting workflows")
+    paths = []
+    for raw_path in completed.stdout.split(b"\0"):
+        if raw_path:
+            path = os.fsdecode(raw_path)
+            if admit_workflow_path(path):
+                paths.append(path)
+    paths.sort()
     if not paths:
         raise RuntimeError("the GitHub Actions workflow corpus is empty")
     return paths
