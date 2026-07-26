@@ -6,6 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import re
+import shutil
 import subprocess
 
 ROOT = Path(__file__).resolve().parent
@@ -35,6 +36,22 @@ class IdentityCase:
 
 def fail(message: str) -> None:
     raise SystemExit(f"chunk identity corpus check failed: {message}")
+
+
+def resolve_b3sum() -> str:
+    candidate = shutil.which("b3sum")
+    if candidate is None:
+        fail("b3sum was not found on PATH")
+    try:
+        resolved = Path(candidate).resolve(strict=True)
+    except OSError as error:
+        fail(f"cannot resolve b3sum: {error}")
+    if not resolved.is_file():
+        fail("resolved b3sum path is not a file")
+    return str(resolved)
+
+
+B3SUM = resolve_b3sum()
 
 
 def bounded_bytes(path: Path) -> bytes:
@@ -121,7 +138,7 @@ def digest(payload: bytes) -> str:
     preimage = DATA_MAGIC + VERSION + ALGORITHM + payload + len(payload).to_bytes(4, "big")
     try:
         completed = subprocess.run(
-            ["b3sum", "--no-names"],
+            [B3SUM, "--no-names"],
             input=preimage,
             capture_output=True,
             check=False,
