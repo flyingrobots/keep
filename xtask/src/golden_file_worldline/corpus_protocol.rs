@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::io::{Read, Take};
-use std::path::{Component, Path, PathBuf};
+use std::path::{Path, PathBuf};
 
 use super::GoldenError;
 
@@ -32,18 +32,10 @@ impl Corpus {
     }
 
     pub(super) fn source_path(&self, parameter: &str) -> Result<PathBuf, GoldenError> {
-        let relative = Path::new(parameter);
-        if !relative
-            .components()
-            .all(|component| matches!(component, Component::Normal(_)))
-        {
-            return Err(GoldenError::violation(format!(
-                "unsafe source path: {parameter}"
-            )));
-        }
+        let relative = protocol_source_path(parameter)?;
         let root = fs::canonicalize(&self.root)
             .map_err(|source| GoldenError::io("canonicalize corpus root", &self.root, source))?;
-        let unresolved = self.root.join(relative);
+        let unresolved = self.root.join(&relative);
         let path = fs::canonicalize(&unresolved)
             .map_err(|source| GoldenError::io("canonicalize corpus source", &unresolved, source))?;
         let metadata = fs::metadata(&path)
@@ -55,6 +47,28 @@ impl Corpus {
         }
         Ok(path)
     }
+}
+
+fn protocol_source_path(parameter: &str) -> Result<PathBuf, GoldenError> {
+    if parameter.is_empty()
+        || parameter.contains('\\')
+        || parameter.contains(':')
+        || parameter.contains('\0')
+    {
+        return Err(GoldenError::violation(format!(
+            "unsafe source path: {parameter}"
+        )));
+    }
+    let mut relative = PathBuf::new();
+    for segment in parameter.split('/') {
+        if segment.is_empty() || matches!(segment, "." | "..") {
+            return Err(GoldenError::violation(format!(
+                "unsafe source path: {parameter}"
+            )));
+        }
+        relative.push(segment);
+    }
+    Ok(relative)
 }
 
 fn table_rows(
