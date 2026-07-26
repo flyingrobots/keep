@@ -3,6 +3,7 @@
 /fuzz/target/
 /fuzz/artifacts/
 /fuzz/corpus/
+/scripts/documentation-tools/node_modules/
 **/*.rs.bk
 
 # Python checker bytecode

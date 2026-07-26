@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the Git-admitted Markdown corpus with the pinned lint tool."""
+"""Check the Git-admitted Markdown corpus and its internal links."""
 
 from __future__ import annotations
 
@@ -9,7 +9,8 @@ import stat
 import subprocess
 import sys
 
-EXPECTED_VERSION = "markdownlint-cli2 v0.19.1 (markdownlint v0.39.0)"
+EXPECTED_LINTER_VERSION = "markdownlint-cli2 v0.23.1 (markdownlint v0.41.1)"
+EXPECTED_LINK_CHECKER_VERSION = "lychee 0.21.0"
 
 
 def find_linter() -> str:
@@ -17,12 +18,20 @@ def find_linter() -> str:
     executable = shutil.which("markdownlint-cli2")
     if executable is None:
         raise RuntimeError(
-            "markdownlint-cli2 is unavailable; install version 0.19.1"
+            "markdownlint-cli2 is unavailable; install version 0.23.1"
         )
     return executable
 
 
-def verify_version(executable: str) -> None:
+def find_link_checker() -> str:
+    """Return the link checker path or report a precise setup failure."""
+    executable = shutil.which("lychee")
+    if executable is None:
+        raise RuntimeError("lychee is unavailable; install version 0.21.0")
+    return executable
+
+
+def verify_linter_version(executable: str) -> None:
     """Refuse a Markdown linter version outside the reviewed tool boundary."""
     completed = subprocess.run(
         [executable, "--no-globs", "--version"],
@@ -32,10 +41,28 @@ def verify_version(executable: str) -> None:
     )
     first_line = completed.stdout.splitlines()[:1]
     observed = first_line[0] if first_line else "<missing>"
-    if completed.returncode != 0 or observed != EXPECTED_VERSION:
+    if completed.returncode != 0 or observed != EXPECTED_LINTER_VERSION:
         raise RuntimeError(
             f"markdownlint-cli2 version mismatch: "
-            f"expected {EXPECTED_VERSION!r}, observed {observed!r}"
+            f"expected {EXPECTED_LINTER_VERSION!r}, observed {observed!r}"
+        )
+
+
+def verify_link_checker_version(executable: str) -> None:
+    """Refuse a link checker version outside the reviewed tool boundary."""
+    completed = subprocess.run(
+        [executable, "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    first_line = completed.stdout.splitlines()[:1]
+    observed = first_line[0] if first_line else "<missing>"
+    if completed.returncode != 0 or observed != EXPECTED_LINK_CHECKER_VERSION:
+        raise RuntimeError(
+            f"lychee version mismatch: "
+            f"expected {EXPECTED_LINK_CHECKER_VERSION!r}, "
+            f"observed {observed!r}"
         )
 
 
@@ -85,20 +112,35 @@ def source_markdown() -> list[str]:
 
 
 def main() -> int:
-    """Run Markdownlint against the deterministic source input boundary."""
+    """Run deterministic Markdown and internal-link checks."""
     try:
-        executable = find_linter()
-        verify_version(executable)
+        linter = find_linter()
+        link_checker = find_link_checker()
+        verify_linter_version(linter)
+        verify_link_checker_version(link_checker)
         paths = source_markdown()
     except RuntimeError as error:
         print(f"Markdown check refused: {error}", file=sys.stderr)
         return 1
 
-    completed = subprocess.run(
-        [executable, "--no-globs", "--", *paths],
+    lint_result = subprocess.run(
+        [linter, "--no-globs", "--", *paths],
         check=False,
     )
-    return completed.returncode
+    link_result = subprocess.run(
+        [
+            link_checker,
+            "--offline",
+            "--include-fragments",
+            "--no-progress",
+            "--format",
+            "detailed",
+            "--",
+            *paths,
+        ],
+        check=False,
+    )
+    return lint_result.returncode or link_result.returncode
 
 
 if __name__ == "__main__":
