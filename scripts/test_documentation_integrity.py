@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import tempfile
@@ -114,6 +115,34 @@ class WorkflowContractLaws(unittest.TestCase):
             REPOSITORY_ROOT / ".github" / "workflows" / "ci.yml"
         ).read_text(encoding="utf-8")
         self.assertIn(LAW_COMMAND, workflow)
+
+
+class ToolInstallerLaws(unittest.TestCase):
+    """The Markdown tool graph is fully locked before network installation."""
+
+    def test_markdown_dependency_graph_is_lockfile_admitted(self) -> None:
+        tool_directory = (
+            REPOSITORY_ROOT / "scripts" / "documentation-tools"
+        )
+        lock_path = tool_directory / "package-lock.json"
+        self.assertTrue(lock_path.is_file())
+        lock = json.loads(lock_path.read_text(encoding="utf-8"))
+        self.assertEqual(lock["lockfileVersion"], 3)
+        self.assertEqual(
+            lock["packages"][""]["dependencies"]["markdownlint-cli2"],
+            "0.19.1",
+        )
+        for path, package in lock["packages"].items():
+            if path:
+                self.assertIn("resolved", package, path)
+                self.assertIn("integrity", package, path)
+
+        installer = (
+            REPOSITORY_ROOT / "scripts" / "install_documentation_tools.sh"
+        ).read_text(encoding="utf-8")
+        self.assertIn("npm ci", installer)
+        self.assertIn("package-lock.json", installer)
+        self.assertNotIn("npm install \\", installer)
 
 
 if __name__ == "__main__":

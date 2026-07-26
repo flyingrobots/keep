@@ -16,13 +16,16 @@ production binaries, public APIs, durable formats, or content identity.
 
 ## Admission boundary
 
-The CI job pins Node.js 24.18.0 and installs exact tool releases.
-`scripts/install_documentation_tools.sh` verifies the downloaded release
-archives before extraction:
+The CI job pins Node.js 24.18.0 and installs exact tool releases. The committed
+`scripts/documentation-tools/package-lock.json` pins every Markdownlint
+transitive archive and Subresource Integrity digest. The installer uses
+`npm ci` with lifecycle scripts disabled and refuses lockfile drift.
+
+`scripts/install_documentation_tools.sh` verifies the native release archives
+before extraction:
 
 | Tool archive | SHA-256 |
 | --- | --- |
-| `markdownlint-cli2-0.19.1.tgz` | `0cd73cfbc8e0c3d2656945a8b0ad8b48a83904222032da30a3f4cd8b801260ef` |
 | `actionlint_1.7.12_linux_amd64.tar.gz` | `8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8` |
 | `lychee-x86_64-unknown-linux-gnu.tar.gz` | `a06547250f10021dcafc6ed5bb20fca75835b65711745b63cfdda34c29ff6a73` |
 
@@ -41,9 +44,9 @@ destinations and anchors while excluding external network requests. External
 website availability, DNS, redirects, rate limits, and certificates therefore
 cannot decide whether a pull request passes.
 
-Tool installation requires HTTPS access to the pinned npm and GitHub release
-artifacts. Runtime validation performs no authenticated or mutating network
-operation.
+Tool installation requires HTTPS access to the integrity-locked npm and pinned
+GitHub release artifacts. Runtime validation performs no authenticated or
+mutating network operation.
 
 ## Alternatives rejected
 
@@ -67,7 +70,7 @@ state and requires no recovery; a subsequent job starts from a fresh runner.
 Repeat this admission review when any of these changes:
 
 - Node.js, `markdownlint-cli2`, `lychee`, or `actionlint` version;
-- archive URL or checksum;
+- archive URL, checksum, or npm lock graph;
 - Markdown or workflow input boundary;
 - link checking gains network access;
 - job permissions or credential handling;

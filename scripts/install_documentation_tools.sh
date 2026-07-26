@@ -4,7 +4,8 @@ set -euo pipefail
 readonly install_root="${1:?usage: install_documentation_tools.sh INSTALL_ROOT}"
 readonly actionlint_version="1.7.12"
 readonly lychee_version="0.21.0"
-readonly markdownlint_version="0.19.1"
+readonly script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+readonly npm_manifest_dir="$script_dir/documentation-tools"
 
 if [[ "$(uname -s)" != "Linux" || "$(uname -m)" != "x86_64" ]]; then
   printf 'documentation CI tools require Linux x86_64\n' >&2
@@ -62,15 +63,12 @@ tar --extract --gzip --file "$lychee_archive" \
   --directory "$scratch_dir/lychee"
 install --mode 0755 "$scratch_dir/lychee/lychee" "$binary_dir/lychee"
 
-readonly markdownlint_archive="$scratch_dir/markdownlint-cli2.tgz"
-download_and_verify \
-  "https://registry.npmjs.org/markdownlint-cli2/-/markdownlint-cli2-${markdownlint_version}.tgz" \
-  "0cd73cfbc8e0c3d2656945a8b0ad8b48a83904222032da30a3f4cd8b801260ef" \
-  "$markdownlint_archive"
-npm install \
-  --global \
+install --mode 0644 "$npm_manifest_dir/package.json" "$npm_dir/package.json"
+install --mode 0644 \
+  "$npm_manifest_dir/package-lock.json" \
+  "$npm_dir/package-lock.json"
+npm ci \
   --prefix "$npm_dir" \
   --ignore-scripts \
   --no-audit \
-  --no-fund \
-  "$markdownlint_archive"
+  --no-fund

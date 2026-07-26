@@ -34,9 +34,10 @@ and `actionlint` 1.7.12. Install those exact versions, then run the
 repository-owned checks from the repository root:
 
 ```bash
-npm install --global markdownlint-cli2@0.19.1
+npm ci --prefix scripts/documentation-tools --ignore-scripts --no-audit --no-fund
 cargo install lychee --version 0.21.0 --locked
 go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+export PATH="$PWD/scripts/documentation-tools/node_modules/.bin:$PATH"
 python3 scripts/check_markdown.py
 python3 scripts/check_workflows.py
 git diff --check

@@ -91,7 +91,7 @@ jobs:
           scripts/install_documentation_tools.sh "$documentation_tools"
           printf '%s\n' \
             "$documentation_tools/bin" \
-            "$documentation_tools/npm/bin" >> "$GITHUB_PATH"
+            "$documentation_tools/npm/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Verify documentation integrity laws
         run: python3 -m unittest discover -s scripts -p 'test_*.py' -v

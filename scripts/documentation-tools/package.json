@@ -1,0 +1,7 @@
+{
+  "name": "keep-documentation-tools",
+  "private": true,
+  "dependencies": {
+    "markdownlint-cli2": "0.19.1"
+  }
+}
