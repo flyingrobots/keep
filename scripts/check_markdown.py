@@ -47,7 +47,7 @@ def source_markdown() -> list[str]:
             "-z",
             "--cached",
             "--others",
-            "--exclude-standard",
+            "--exclude-per-directory=.gitignore",
             "--",
             "*.md",
         ],

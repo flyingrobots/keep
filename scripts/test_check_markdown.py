@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from check_markdown import source_markdown
 
@@ -62,6 +63,34 @@ class MarkdownCorpusLaws(unittest.TestCase):
         (self.root / "deleted.md").unlink()
 
         self.assertEqual(source_markdown(), ["remaining.md"])
+
+    def test_user_global_ignores_cannot_change_the_corpus(self) -> None:
+        self.write("tracked.md", "# Tracked\n")
+        self.write("new.md", "# New\n")
+        self.write("global-ignore", "*.md\n")
+        self.run_git("add", "tracked.md")
+        global_config = self.root / "global.gitconfig"
+        subprocess.run(
+            [
+                "git",
+                "config",
+                "--file",
+                str(global_config),
+                "core.excludesFile",
+                str(self.root / "global-ignore"),
+            ],
+            check=True,
+            capture_output=True,
+        )
+
+        with patch.dict(
+            os.environ,
+            {
+                "GIT_CONFIG_GLOBAL": str(global_config),
+                "GIT_CONFIG_NOSYSTEM": "1",
+            },
+        ):
+            self.assertEqual(source_markdown(), ["new.md", "tracked.md"])
 
 
 class DocumentationCommandLaws(unittest.TestCase):
