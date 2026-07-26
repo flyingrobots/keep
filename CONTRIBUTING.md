@@ -58,17 +58,22 @@ cargo install cargo-fuzz --version 0.13.2 --locked
 Run the same bounded smoke campaign as CI:
 
 ```bash
+set -euo pipefail
 python3 fuzz/prepare_corpus.py
 fuzz_targets="$(cargo +nightly-2026-07-24 fuzz list)"
 test -n "$fuzz_targets"
+fuzz_failed=false
 while IFS= read -r fuzz_target; do
-  cargo +nightly-2026-07-24 fuzz run "$fuzz_target" -- \
-    -max_total_time=15 \
-    -timeout=5 \
-    -max_len=1048576 \
-    -rss_limit_mb=1024 \
-    -print_final_stats=1
+  if ! cargo +nightly-2026-07-24 fuzz run "$fuzz_target" -- \
+      -max_total_time=15 \
+      -timeout=5 \
+      -max_len=1048576 \
+      -rss_limit_mb=1024 \
+      -print_final_stats=1; then
+    fuzz_failed=true
+  fi
 done <<< "$fuzz_targets"
+test "$fuzz_failed" = false
 ```
 
 The deterministic seeds make every parser success path and the registered CDC
