@@ -28,29 +28,7 @@ impl Corpus {
     ) -> Result<Vec<TableRow>, GoldenError> {
         let path = self.root.join(table);
         let lines = protocol_lines(&path)?;
-        let mut lines = lines.into_iter();
-        if lines.next().as_deref() != Some(schema) {
-            return Err(GoldenError::violation(format!(
-                "{table}: unsupported schema or empty table"
-            )));
-        }
-        let observed_columns = lines.next().ok_or_else(|| {
-            GoldenError::violation(format!("{table}: unsupported schema or empty table"))
-        })?;
-        if observed_columns.split('\t').ne(columns.iter().copied()) {
-            return Err(GoldenError::violation(format!(
-                "{table}: unexpected columns"
-            )));
-        }
-        lines
-            .enumerate()
-            .map(|(offset, line)| {
-                let line_number = offset.checked_add(3).ok_or_else(|| {
-                    GoldenError::violation(format!("{table}: row number overflow"))
-                })?;
-                TableRow::parse(table, line_number, &line, columns)
-            })
-            .collect()
+        table_rows(table, schema, columns, lines)
     }
 
     pub(super) fn source_path(&self, parameter: &str) -> Result<PathBuf, GoldenError> {
@@ -76,6 +54,44 @@ impl Corpus {
             )));
         }
         Ok(path)
+    }
+}
+
+fn table_rows(
+    table: &str,
+    schema: &str,
+    columns: &[&'static str],
+    lines: Vec<String>,
+) -> Result<Vec<TableRow>, GoldenError> {
+    let mut lines = lines.into_iter();
+    if lines.next().as_deref() != Some(schema) {
+        return Err(GoldenError::violation(format!(
+            "{table}: unsupported schema or empty table"
+        )));
+    }
+    let observed_columns = lines.next().ok_or_else(|| {
+        GoldenError::violation(format!("{table}: unsupported schema or empty table"))
+    })?;
+    if observed_columns.split('\t').ne(columns.iter().copied()) {
+        return Err(GoldenError::violation(format!(
+            "{table}: unexpected columns"
+        )));
+    }
+    let rows = lines
+        .enumerate()
+        .map(|(offset, line)| {
+            let line_number = offset
+                .checked_add(3)
+                .ok_or_else(|| GoldenError::violation(format!("{table}: row number overflow")))?;
+            TableRow::parse(table, line_number, &line, columns)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    if rows.is_empty() {
+        Err(GoldenError::violation(format!(
+            "{table}: table has no data rows"
+        )))
+    } else {
+        Ok(rows)
     }
 }
 
@@ -181,3 +197,6 @@ fn display_name(path: &Path) -> String {
         .and_then(|name| name.to_str())
         .map_or_else(|| path.display().to_string(), str::to_owned)
 }
+
+#[cfg(test)]
+mod tests;
