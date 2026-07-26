@@ -1,4 +1,4 @@
-"""Independent Golden File Worldline scenario and capability laws."""
+"""Independent Golden File Worldline mutation and scenario laws."""
 
 from __future__ import annotations
 
@@ -68,6 +68,8 @@ REQUIRED_MUTATION_OPERATIONS = {
     ("identity-binary", "set-u8"),
     ("identity-binary", "set-u16-be"),
 }
+
+
 def mutate(
     target: bytes,
     operation: str,
