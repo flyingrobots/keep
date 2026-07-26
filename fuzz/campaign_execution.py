@@ -117,22 +117,31 @@ def minimize_target(
     target: str,
 ) -> bool:
     """Minimize one corpus and detect cargo-fuzz's swallowed failure marker."""
-    completed = subprocess.run(
-        [
-            cargo,
-            f"+{policy.toolchain}",
-            "fuzz",
-            "cmin",
-            target,
-            "--",
-            f"-max_total_time={policy.cmin_seconds_per_target}",
-            *common_fuzzer_arguments(policy),
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-        errors="replace",
-    )
+    try:
+        completed = subprocess.run(
+            [
+                cargo,
+                f"+{policy.toolchain}",
+                "fuzz",
+                "cmin",
+                target,
+                "--",
+                f"-max_total_time={policy.cmin_seconds_per_target}",
+                *common_fuzzer_arguments(policy),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+            errors="replace",
+            timeout=policy.cmin_seconds_per_target,
+        )
+    except subprocess.TimeoutExpired:
+        print(
+            f"cargo fuzz cmin timed out after "
+            f"{policy.cmin_seconds_per_target} seconds: {target}",
+            file=sys.stderr,
+        )
+        return False
     sys.stdout.write(completed.stdout)
     sys.stderr.write(completed.stderr)
     combined = completed.stdout + completed.stderr
