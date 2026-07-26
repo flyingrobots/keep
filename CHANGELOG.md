@@ -13,8 +13,6 @@ after its public API and format compatibility policies are established.
 - CI now runs every registered fuzz target with pinned `cargo-fuzz` and
   nightly versions, deterministic deep-state seeds, bounded per-target
   resources, and retained failure artifacts.
-- `FastCdc::finish` now returns `Result<Option<ChunkSpan>, ChunkingError>` so a
-  detector that refused a prior feed cannot silently produce a partial result.
 - Moved the canonical text and binary `BlobId` codecs out of the `blob`
   identity module into a new `adapters` boundary layer, per
   [ADR-0004](docs/adr/0004-hexagonal-boundary-architecture.md). `blob` now
