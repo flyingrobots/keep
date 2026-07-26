@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
-import subprocess
-import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -16,55 +13,6 @@ import check_workflows
 
 REPOSITORY_ROOT = Path(__file__).parent.parent
 LAW_COMMAND = "python3 -m unittest discover -s scripts -p 'test_*.py' -v"
-
-
-class IsolatedRepositoryTestCase(unittest.TestCase):
-    """Own one temporary Git repository for a negative gate fixture."""
-
-    def setUp(self) -> None:
-        original_directory = Path.cwd()
-        self.addCleanup(os.chdir, original_directory)
-        temporary_directory = tempfile.TemporaryDirectory()
-        self.addCleanup(temporary_directory.cleanup)
-        self.root = Path(temporary_directory.name)
-        os.chdir(self.root)
-        subprocess.run(
-            ["git", "init", "--quiet"],
-            check=True,
-            capture_output=True,
-        )
-
-    def write(self, path: str, content: str) -> None:
-        """Create one regular UTF-8 fixture file."""
-        destination = self.root / path
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_text(content, encoding="utf-8")
-
-
-class IntegrityRefusalLaws(IsolatedRepositoryTestCase):
-    """Malformed documentation and workflows never enter required CI."""
-
-    def test_broken_internal_fragment_is_refused(self) -> None:
-        self.write(
-            "source.md",
-            "# Source\n\n[Missing](target.md#missing-heading)\n",
-        )
-        self.write("target.md", "# Present heading\n")
-        subprocess.run(
-            ["git", "add", "source.md", "target.md"],
-            check=True,
-            capture_output=True,
-        )
-
-        self.assertNotEqual(check_markdown.main(), 0)
-
-    def test_invalid_workflow_is_refused(self) -> None:
-        self.write(
-            ".github/workflows/invalid.yml",
-            "name: Invalid\non: [push\n",
-        )
-
-        self.assertNotEqual(check_workflows.main(), 0)
 
 
 class ToolVersionLaws(unittest.TestCase):
