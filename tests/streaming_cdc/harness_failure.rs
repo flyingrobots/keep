@@ -5,7 +5,7 @@ use std::fmt;
 
 use keep::{ChunkHashError, ChunkingError};
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub(super) enum HarnessFailure {
     Corpus { fact: &'static str },
     ChunkHash(ChunkHashError),

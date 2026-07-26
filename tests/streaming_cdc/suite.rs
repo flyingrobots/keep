@@ -139,6 +139,16 @@ fn chunk_identity_refuses_the_only_invalid_length_edge() {
     assert_eq!(keep::ChunkId::hash_bytes(&[]), Err(ChunkHashError::Empty));
 }
 
+#[test]
+fn boundary_plan_refuses_coordinates_beyond_the_source() {
+    assert_eq!(
+        boundary_adjacent_widths(3, &[4]),
+        Err(HarnessFailure::Corpus {
+            fact: "boundary exceeds source length",
+        })
+    );
+}
+
 fn all_sources() -> Result<BTreeMap<&'static str, Vec<u8>>, HarnessFailure> {
     let mut sources = primitive_sources()?;
     add_mutations(&mut sources)?;

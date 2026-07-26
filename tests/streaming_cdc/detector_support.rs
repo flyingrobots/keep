@@ -42,9 +42,18 @@ pub(super) fn boundary_adjacent_widths(
     for boundary in boundaries {
         let coordinate = usize::try_from(*boundary)
             .map_err(|_source| HarnessFailure::corpus("boundary does not fit usize"))?;
-        points.insert(coordinate.saturating_sub(1));
-        points.insert(coordinate.min(logical_length));
-        points.insert(coordinate.saturating_add(1).min(logical_length));
+        if coordinate > logical_length {
+            return Err(HarnessFailure::corpus("boundary exceeds source length"));
+        }
+        if let Some(before) = coordinate.checked_sub(1) {
+            points.insert(before);
+        }
+        points.insert(coordinate);
+        if let Some(after) = coordinate.checked_add(1)
+            && after <= logical_length
+        {
+            points.insert(after);
+        }
     }
     let ordered: Vec<_> = points.into_iter().collect();
     let mut widths = Vec::new();

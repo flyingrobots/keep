@@ -21,10 +21,10 @@ fn stream_overflow_poisoning_preserves_the_original_failure() {
 fn candidate_overflow_reports_attempted_length_and_poisoning() {
     let mut subject = FastCdc::new();
     subject.candidate_length = MAXIMUM;
-    let attempted = u64::from(MAXIMUM).saturating_add(1);
+    assert_eq!(MAXIMUM, 262_144);
     let expected = ChunkingError::ChunkLengthOverflow {
         maximum: ChunkLength::from_validated(MAXIMUM),
-        attempted,
+        attempted: 262_145,
         call_bytes_accepted: 0,
     };
 
@@ -47,13 +47,14 @@ fn later_failure_reports_partial_progress_after_an_emission() {
     subject.chunk_start = ChunkOffset::from_validated(chunk_start);
     subject.accepted = ChunkOffset::from_validated(accepted_before_call);
     subject.candidate_length = existing_length;
-    let mut emitted = 0_usize;
+    let mut emitted = false;
 
     let observed = subject.feed(&[7, 8], |_span| {
-        emitted = emitted.saturating_add(1);
+        assert!(!emitted, "failed feed emitted more than one chunk");
+        emitted = true;
     });
 
-    assert_eq!(emitted, 1);
+    assert!(emitted);
     assert_eq!(
         observed,
         Err(ChunkingError::StreamLengthOverflow {
@@ -67,13 +68,14 @@ fn later_failure_reports_partial_progress_after_an_emission() {
 fn successful_feed_keeps_hash_state_consistent_before_callbacks() -> Result<(), ChunkingError> {
     let mut subject = FastCdc::new();
     let bytes: Vec<_> = (0..MAXIMUM).map(|_| 0_u8).collect();
-    let mut callbacks = 0_usize;
+    let mut called = false;
 
     subject.feed(&bytes, |_span| {
-        callbacks = callbacks.saturating_add(1);
+        assert!(!called, "single maximum chunk emitted more than once");
+        called = true;
     })?;
 
-    assert_eq!(callbacks, 1);
+    assert!(called);
     assert!(subject.finish()?.is_none());
     Ok(())
 }

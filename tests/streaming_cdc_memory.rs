@@ -15,21 +15,21 @@ fn detector_peak_heap_allocation_is_independent_of_input_length() -> Result<(), 
         LARGE_INPUT_BYTES,
     ] {
         let bytes = deterministic_bytes(length);
-        let mut emitted = 0_usize;
+        let mut emitted = false;
         let mut feed_result = Ok(());
         let mut finish_result = Ok(None);
 
         let observed = measure(|| {
             let mut detector = FastCdc::new();
             feed_result = detector.feed(&bytes, |_span| {
-                emitted = emitted.saturating_add(1);
+                emitted = true;
             });
             finish_result = detector.finish();
         });
 
         feed_result?;
         let final_span = finish_result?;
-        assert!(emitted > 0 || final_span.is_some());
+        assert!(emitted || final_span.is_some());
         assert_eq!(
             observed,
             AllocationInfo::default(),

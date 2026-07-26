@@ -9,17 +9,23 @@ fuzz_target!(|bytes: &[u8]| {
     let bytewise = require_detection(bytes, &[1], "bytewise");
     assert_eq!(bytewise, expected);
 
-    let widths: Vec<_> = bytes
-        .iter()
-        .copied()
-        .map(|value| usize::from(value).saturating_add(1))
-        .collect();
+    let widths: Vec<_> = bytes.iter().copied().map(schedule_width).collect();
     if !widths.is_empty() {
         let irregular = require_detection(bytes, &widths, "irregular");
         assert_eq!(irregular, expected);
     }
     require_valid_coverage(bytes, &expected);
 });
+
+fn schedule_width(value: u8) -> usize {
+    usize::from(value)
+        .checked_add(1)
+        .unwrap_or_else(abort_schedule_width_overflow)
+}
+
+fn abort_schedule_width_overflow() -> usize {
+    std::process::abort();
+}
 
 fn require_detection(bytes: &[u8], widths: &[usize], schedule: &str) -> Vec<ChunkSpan> {
     let result = detect(bytes, widths);
