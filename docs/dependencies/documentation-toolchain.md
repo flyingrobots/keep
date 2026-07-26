@@ -5,7 +5,7 @@
 Keep uses three development-only tools to enforce deterministic documentation
 and GitHub Actions facts:
 
-- `markdownlint-cli2` 0.19.1 validates Markdown structure;
+- `markdownlint-cli2` 0.23.1 validates Markdown structure;
 - `lychee` 0.21.0 validates local links and fragments with network access
   disabled;
 - `actionlint` 1.7.12 validates GitHub Actions syntax and expressions.
@@ -19,7 +19,9 @@ production binaries, public APIs, durable formats, or content identity.
 The CI job pins Node.js 24.18.0 and installs exact tool releases. The committed
 `scripts/documentation-tools/package-lock.json` pins every Markdownlint
 transitive archive and Subresource Integrity digest. The installer uses
-`npm ci` with lifecycle scripts disabled and refuses lockfile drift.
+`npm ci` with lifecycle scripts disabled and refuses lockfile drift. The
+manifest overrides `markdownlint-cli2`'s vulnerable exact `js-yaml` 5.2.1
+dependency with the compatible patched 5.2.2 release.
 
 `scripts/install_documentation_tools.sh` verifies the native release archives
 before extraction:
@@ -78,6 +80,7 @@ Repeat this admission review when any of these changes:
 
 - Node.js, `markdownlint-cli2`, `lychee`, or `actionlint` version;
 - archive URL, checksum, or npm lock graph;
+- npm dependency override;
 - Markdown or workflow input boundary;
 - `actionlint` auxiliary linter policy;
 - link checking gains network access;

@@ -152,6 +152,25 @@ class WorkflowContractLaws(unittest.TestCase):
 class ToolInstallerLaws(unittest.TestCase):
     """The Markdown tool graph is fully locked before network installation."""
 
+    def test_known_parser_denial_of_service_versions_are_refused(self) -> None:
+        lock_path = (
+            REPOSITORY_ROOT
+            / "scripts"
+            / "documentation-tools"
+            / "package-lock.json"
+        )
+        packages = json.loads(lock_path.read_text(encoding="utf-8"))[
+            "packages"
+        ]
+        self.assertEqual(
+            packages["node_modules/js-yaml"]["version"],
+            "5.2.2",
+        )
+        self.assertEqual(
+            packages["node_modules/markdown-it"]["version"],
+            "14.3.0",
+        )
+
     def test_markdown_dependency_graph_is_lockfile_admitted(self) -> None:
         tool_directory = (
             REPOSITORY_ROOT / "scripts" / "documentation-tools"
@@ -162,7 +181,7 @@ class ToolInstallerLaws(unittest.TestCase):
         self.assertEqual(lock["lockfileVersion"], 3)
         self.assertEqual(
             lock["packages"][""]["dependencies"]["markdownlint-cli2"],
-            "0.19.1",
+            "0.23.1",
         )
         for path, package in lock["packages"].items():
             if path:

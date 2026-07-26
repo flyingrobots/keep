@@ -29,7 +29,7 @@ before creating documentation or substantially changing an existing page. It
 does not require rewriting pages that are merely below the bar; apply it when
 a change would otherwise add new documentation debt.
 
-Documentation validation uses `markdownlint-cli2` 0.19.1, `lychee` 0.21.0,
+Documentation validation uses `markdownlint-cli2` 0.23.1, `lychee` 0.21.0,
 and `actionlint` 1.7.12. Install those exact versions, then run the
 repository-owned checks from the repository root:
 

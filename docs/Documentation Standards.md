@@ -515,7 +515,7 @@ git diff --check
 git diff --cached --check
 ```
 
-Use `markdownlint-cli2` 0.19.1. The repository-owned configuration defines
+Use `markdownlint-cli2` 0.23.1. The repository-owned configuration defines
 the default Markdown input set, imports `.gitignore`, and records deliberate
 rule choices. The checker admits tracked Markdown plus nonignored new
 Markdown, disables config globs for that invocation, and refuses a different
