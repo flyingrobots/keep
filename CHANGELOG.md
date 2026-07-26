@@ -10,6 +10,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- CI now runs every registered fuzz target with pinned `cargo-fuzz` and
+  nightly versions, bounded per-target resources, and retained failure
+  artifacts.
 - Moved the canonical text and binary `BlobId` codecs out of the `blob`
   identity module into a new `adapters` boundary layer, per
   [ADR-0004](docs/adr/0004-hexagonal-boundary-architecture.md). `blob` now
