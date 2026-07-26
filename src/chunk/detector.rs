@@ -3,9 +3,11 @@
 use std::mem;
 
 use super::error::ChunkingError;
-use super::gear_table::GEAR_TABLE;
 use super::hasher::ChunkHasher;
 use super::{ChunkLength, ChunkOffset, ChunkSpan};
+
+#[path = "detector_feed.rs"]
+mod feed;
 
 const MINIMUM: u32 = 16_384;
 const TARGET: u32 = 65_536;
@@ -22,9 +24,9 @@ const LONG_MASK: u64 = 0x0000_d903_1353_0000;
 /// stream length and remains below [`RETAINED_STATE_LIMIT_BYTES`](Self::RETAINED_STATE_LIMIT_BYTES).
 ///
 /// The callback may allocate or perform I/O; those effects belong to the
-/// caller. Emitted [`ChunkId`](super::ChunkId) values verify the bytes observed
-/// by this detector, but do not prove storage, retention, or membership in a
-/// validated layout.
+/// caller. Emitted [`ChunkId`](super::ChunkId) values commit to the bytes
+/// observed by this detector. They do not compare against an expected identity
+/// or prove storage, retention, or membership in a validated layout.
 ///
 /// Call [`finish`](Self::finish) exactly once to declare EOF and emit a final
 /// runt. Dropping the detector does not imply EOF or durability.
@@ -38,7 +40,7 @@ const LONG_MASK: u64 = 0x0000_d903_1353_0000;
 /// let mut spans = Vec::<ChunkSpan>::new();
 /// let mut detector = FastCdc::new();
 /// detector.feed(bytes, |span| spans.push(span))?;
-/// if let Some(final_span) = detector.finish() {
+/// if let Some(final_span) = detector.finish()? {
 ///     spans.push(final_span);
 /// }
 /// assert_eq!(spans.len(), 1);
@@ -53,6 +55,7 @@ pub struct FastCdc {
     accepted: ChunkOffset,
     candidate_length: u32,
     fingerprint: u64,
+    failure: Option<ChunkingError>,
 }
 
 impl FastCdc {
@@ -73,105 +76,24 @@ impl FastCdc {
             accepted: ChunkOffset::ZERO,
             candidate_length: 0,
             fingerprint: SEED,
+            failure: None,
         }
-    }
-
-    /// Synchronously incorporates the next source bytes.
-    ///
-    /// Empty feeds are lawful and are not EOF. Every nonempty byte is accepted
-    /// exactly once unless this method returns an error. For each completed
-    /// non-final chunk, `emit` receives its identity and half-open stream span.
-    ///
-    /// Keep does not allocate or perform I/O. The method invokes `emit`
-    /// synchronously before it returns; callback memory, I/O, and failure policy
-    /// remain the caller's responsibility.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`ChunkingError`] before accepting the byte that would overflow
-    /// a typed coordinate or expose an impossible compiled-profile invariant.
-    pub fn feed<F>(&mut self, bytes: &[u8], mut emit: F) -> Result<(), ChunkingError>
-    where
-        F: FnMut(ChunkSpan),
-    {
-        for byte in bytes.iter().copied() {
-            if let Some(span) = self.accept_byte(byte)? {
-                emit(span);
-            }
-        }
-        Ok(())
     }
 
     /// Declares EOF and returns the final chunk, including a sub-minimum runt.
     ///
-    /// Empty input returns `None`. This consumes the detector, allocates no
+    /// Empty input returns `Ok(None)`. This consumes the detector, allocates no
     /// memory, performs no I/O, and does not persist the returned identity.
-    #[must_use]
-    pub fn finish(mut self) -> Option<ChunkSpan> {
-        self.emit_current()
-    }
-
-    fn accept_byte(&mut self, byte: u8) -> Result<Option<ChunkSpan>, ChunkingError> {
-        let next_offset =
-            self.accepted
-                .checked_increment()
-                .ok_or(ChunkingError::StreamLengthOverflow {
-                    accepted: self.accepted,
-                })?;
-        let next_length =
-            self.candidate_length
-                .checked_add(1)
-                .ok_or(ChunkingError::ChunkLengthOverflow {
-                    maximum: Self::MAXIMUM_CHUNK_LENGTH,
-                })?;
-        if next_length > MAXIMUM {
-            return Err(ChunkingError::ChunkLengthOverflow {
-                maximum: Self::MAXIMUM_CHUNK_LENGTH,
-            });
+    ///
+    /// # Errors
+    ///
+    /// Returns the original error when a prior [`feed`](Self::feed) failed.
+    #[must_use = "finish returns the final identified span or the original detector failure"]
+    pub fn finish(mut self) -> Result<Option<ChunkSpan>, ChunkingError> {
+        if let Some(error) = self.failure {
+            return Err(error);
         }
-        if self.candidate_length < MINIMUM {
-            self.incorporate(byte, next_offset, next_length, self.fingerprint);
-            return Ok(None);
-        }
-        let gear = GEAR_TABLE
-            .get(usize::from(byte))
-            .copied()
-            .ok_or(ChunkingError::MissingGearEntry { byte })?;
-        let fingerprint = self.fingerprint.wrapping_shl(1).wrapping_add(gear);
-        let mask = if self.candidate_length < TARGET {
-            SHORT_MASK
-        } else {
-            LONG_MASK
-        };
-        if fingerprint & mask == 0 {
-            let span = self.emit_nonempty()?;
-            self.incorporate(byte, next_offset, 1, SEED);
-            return Ok(Some(span));
-        }
-        self.incorporate(byte, next_offset, next_length, fingerprint);
-        if next_length == MAXIMUM {
-            return self.emit_nonempty().map(Some);
-        }
-        Ok(None)
-    }
-
-    fn incorporate(
-        &mut self,
-        byte: u8,
-        next_offset: ChunkOffset,
-        next_length: u32,
-        fingerprint: u64,
-    ) {
-        self.chunk_hasher.update(&[byte]);
-        self.accepted = next_offset;
-        self.candidate_length = next_length;
-        self.fingerprint = fingerprint;
-    }
-
-    fn emit_nonempty(&mut self) -> Result<ChunkSpan, ChunkingError> {
-        self.emit_current().ok_or(ChunkingError::EmptyBoundary {
-            offset: self.accepted,
-        })
+        Ok(self.emit_current())
     }
 
     fn emit_current(&mut self) -> Option<ChunkSpan> {
@@ -193,39 +115,5 @@ impl Default for FastCdc {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{FastCdc, MAXIMUM, SEED};
-    use crate::{ChunkLength, ChunkOffset, ChunkingError};
-
-    #[test]
-    fn stream_overflow_refuses_before_mutating_detector_state() {
-        let mut subject = FastCdc::new();
-        subject.accepted = ChunkOffset::from_validated(u64::MAX);
-
-        assert_eq!(
-            subject.feed(&[7], |_span| {}),
-            Err(ChunkingError::StreamLengthOverflow {
-                accepted: ChunkOffset::from_validated(u64::MAX),
-            })
-        );
-        assert_eq!(subject.accepted.get(), u64::MAX);
-        assert_eq!(subject.candidate_length, 0);
-        assert_eq!(subject.fingerprint, SEED);
-    }
-
-    #[test]
-    fn candidate_overflow_refuses_before_mutating_detector_state() {
-        let mut subject = FastCdc::new();
-        subject.candidate_length = MAXIMUM;
-
-        assert_eq!(
-            subject.feed(&[7], |_span| {}),
-            Err(ChunkingError::ChunkLengthOverflow {
-                maximum: ChunkLength::from_validated(MAXIMUM),
-            })
-        );
-        assert_eq!(subject.accepted, ChunkOffset::ZERO);
-        assert_eq!(subject.candidate_length, MAXIMUM);
-        assert_eq!(subject.fingerprint, SEED);
-    }
-}
+#[path = "detector_tests.rs"]
+mod tests;

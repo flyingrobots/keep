@@ -21,6 +21,11 @@ The first public surface is deliberately small:
 It emits `ChunkSpan` values through a synchronous callback so Keep does not
 allocate a result collection proportional to blob length.
 
+The detector hashes contiguous feed ranges rather than calling BLAKE3 once per
+byte. A typed detector failure is terminal: the detector retains the original
+error, and both later `feed` calls and the consuming `finish` call return it.
+This makes partial progress visible without permitting an ambiguous retry.
+
 ## Alternatives rejected
 
 ### Reuse `BlobId`

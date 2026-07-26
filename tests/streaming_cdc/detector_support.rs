@@ -28,7 +28,7 @@ pub(super) fn detect(bytes: &[u8], widths: &[usize]) -> Result<Vec<ChunkSpan>, H
         detector.feed(&[], |span| spans.push(span))?;
         remaining = next;
     }
-    if let Some(span) = detector.finish() {
+    if let Some(span) = detector.finish()? {
         spans.push(span);
     }
     Ok(spans)

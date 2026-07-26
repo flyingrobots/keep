@@ -35,19 +35,33 @@ Changing a profile may move chunk boundaries and therefore produce a
 different ordered set of chunk identities. It cannot move `BlobId` when the
 complete logical bytes remain unchanged.
 
-## Verification boundary
+## Calculation boundary
 
-`ChunkId::hash_bytes` verifies only that the supplied bytes produce the
-returned identity. `FastCdc` verifies the bytes observed while detecting a
-span. Neither operation proves:
+`ChunkId::hash_bytes` calculates the identity produced by the supplied bytes.
+`FastCdc` calculates identities for the bytes observed while detecting spans.
+Neither operation compares against an independently supplied expected identity
+or proves:
 
 - that a span belongs to a validated layout;
 - that the complete blob identity matches;
 - that bytes are stored, retained, durable, or recoverable;
 - that a later read still returns the same bytes.
 
-Those claims require future layout, storage, retention, and verification
-evidence.
+Integrity verification requires recomputing an identity and comparing it with
+an independently obtained expected `ChunkId`. The remaining claims require
+future layout, storage, retention, and verification evidence.
+
+## Failure transition
+
+`FastCdc::feed` processes incrementally. A typed failure may occur after a
+prefix of the feed was accepted and callbacks for that prefix ran. The error
+reports that prefix length, and the detector records the original failure.
+Later `feed` and `finish` calls return the same error without accepting or
+emitting anything; the caller must discard the failed detector.
+
+A callback panic is outside this typed transition because Keep cannot observe
+caller unwinding. A caller that catches such a panic must also discard the
+detector.
 
 ## Bounds and allocation
 
@@ -55,14 +69,28 @@ evidence.
 no heap memory. It refuses lengths that do not fit `u32`.
 
 `FastCdc` borrows feed slices and retains no candidate bytes. Its state is one
-BLAKE3 hasher, a Gear fingerprint, typed stream coordinates, and fixed
-counters. `FastCdc::RETAINED_STATE_LIMIT_BYTES` bounds that state at 4 KiB,
-independent of the total input length. Caller-owned input and callback memory
-are outside that bound.
+BLAKE3 hasher, a Gear fingerprint, typed stream coordinates, fixed counters,
+and an optional typed failure. `FastCdc::RETAINED_STATE_LIMIT_BYTES` bounds
+that inline state at 4 KiB, independent of the total input length. Caller-owned
+input and callback memory are outside that bound.
 
-The integration suite measures `size_of::<FastCdc>()`, processes the
-one-mebibyte zero witness, and proves the retained state does not grow. This
-is deterministic retained-memory evidence, not a process-RSS claim.
+The integration suite separately checks the inline type-size ceiling and uses
+an instrumented allocator in an isolated test binary. The allocator observes
+zero total, live, and peak heap allocation while `FastCdc` processes 16 KiB,
+1 MiB, and 4 MiB deterministic inputs. This bounds detector-owned working
+memory without treating process RSS, caller input, or callback output as
+detector state.
+
+## Performance evidence
+
+`FastCdc` evaluates the registered scalar boundary rule one byte at a time but
+batches BLAKE3 updates over contiguous feed ranges. The
+`streaming_cdc` benchmark records whole-slice and one-byte-feed throughput for
+minimum and one-mebibyte inputs:
+
+```bash
+cargo bench --bench streaming_cdc
+```
 
 ## Executable evidence
 
@@ -70,9 +98,14 @@ is deterministic retained-memory evidence, not a process-RSS claim.
 - `conformance/cdc-profile/v1/` freezes every expected boundary.
 - `tests/streaming_cdc.rs` checks golden boundaries, exact identities,
   reconstruction, partition invariance, profile bounds, adversarial inputs,
-  and retained memory.
+  and the inline state bound.
+- `tests/streaming_cdc_memory.rs` measures zero detector-owned heap allocation
+  over increasing representative input lengths.
 - `fuzz/fuzz_targets/fast_cdc.rs` compares whole, bytewise, and irregular
-  partitions and rehashes every emitted span.
+  partitions, fails on every unexpected refusal, and rehashes every emitted
+  span.
+- `benches/streaming_cdc.rs` provides repeatable whole-feed and bytewise-feed
+  throughput evidence.
 
 The choice of identity grammar and public surface is recorded in
 [the colocated rationale](rationale.md).

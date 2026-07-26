@@ -12,9 +12,10 @@ use super::length::ChunkLength;
 /// `KEEP:CHUNK:DATA` domain distinct from [`crate::BlobId`]. It is independent
 /// of the CDC profile, blob, layout, representation, and physical location.
 ///
-/// Calculating a `ChunkId` verifies only the bytes supplied to that
-/// calculation. It does not prove that the bytes form a lawful boundary,
-/// belong to a blob, or remain stored.
+/// Calculating a `ChunkId` commits to only the bytes supplied to that
+/// calculation. It does not compare against an independently supplied
+/// identity or prove that the bytes form a lawful boundary, belong to a
+/// blob, or remain stored.
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ChunkId {
     length: ChunkLength,

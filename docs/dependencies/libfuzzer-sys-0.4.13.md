@@ -69,9 +69,12 @@ renewed review.
 
 Every target declared by `cargo fuzz list` receives a 15-second smoke campaign
 with a five-second per-input timeout, a one-mebibyte input bound, and a
-one-gibibyte RSS limit. The job itself has a 20-minute hard timeout. These
-bounds prove that every harness starts and receives coverage-guided inputs;
-they do not claim exhaustive state-space coverage.
+one-gibibyte RSS limit. Before mutation starts, a bounded preparation script
+materializes canonical parser encodings plus minimum, natural-boundary,
+probe-carry, hard-maximum, and multi-chunk CDC witnesses. The job itself has a
+20-minute hard timeout. These bounds prove that every harness starts and that
+its registered success or boundary states are reachable; they do not claim
+exhaustive state-space coverage.
 
 GitHub-hosted runners execute the campaigns with only read-only GitHub
 contents permission; corpus and artifact writes remain in the ephemeral

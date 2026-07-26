@@ -32,8 +32,8 @@ candidate bytes, and flushes a final runt only when the caller declares EOF.
 Keep does **not** expose ingestion, layouts, or physical storage yet.
 Durability, retention, recovery, verification of stored structures, and
 garbage collection remain planned work. Calculating a `BlobId` or `ChunkId`
-does not claim that Keep possesses, retained, or durably verified the named
-bytes.
+does not claim that Keep possesses, has retained, or has durably verified the
+named bytes.
 
 ```rust
 use keep::BlobId;

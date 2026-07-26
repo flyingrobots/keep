@@ -58,6 +58,7 @@ cargo install cargo-fuzz --version 0.13.2 --locked
 Run the same bounded smoke campaign as CI:
 
 ```bash
+python3 fuzz/prepare_corpus.py
 fuzz_targets="$(cargo +nightly-2026-07-24 fuzz list)"
 test -n "$fuzz_targets"
 while IFS= read -r fuzz_target; do
@@ -70,9 +71,11 @@ while IFS= read -r fuzz_target; do
 done <<< "$fuzz_targets"
 ```
 
-The 15-second budget is a startup and shallow-exploration gate, not evidence
-of exhaustive coverage. Preserve any input under `fuzz/artifacts/` that finds
-a defect and add it as a permanent regression test.
+The deterministic seeds make every parser success path and the registered CDC
+boundary transitions reachable before mutation begins. The 15-second budget
+remains a startup and shallow-exploration gate, not evidence of exhaustive
+coverage. Preserve any input under `fuzz/artifacts/` that finds a defect and
+add it as a permanent regression test.
 
 Every meaningful change also needs tests appropriate to its actual failure
 modes. Round-trip tests alone are not sufficient for durable formats.

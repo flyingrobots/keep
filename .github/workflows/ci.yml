@@ -90,6 +90,9 @@ jobs:
       - name: Install pinned fuzz runner
         run: cargo install cargo-fuzz --version "$CARGO_FUZZ_VERSION" --locked
 
+      - name: Prepare deterministic fuzz seeds
+        run: python3 fuzz/prepare_corpus.py
+
       - name: Exercise every fuzz target
         run: |
           fuzz_targets="$(cargo +"$FUZZ_TOOLCHAIN" fuzz list)"
