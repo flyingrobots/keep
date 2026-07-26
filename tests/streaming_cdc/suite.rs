@@ -4,6 +4,8 @@
 mod boundary_corpus;
 #[path = "detector_support.rs"]
 mod detector_support;
+#[path = "fixture_syntax.rs"]
+mod fixture_syntax;
 #[path = "harness_failure.rs"]
 mod harness_failure;
 #[path = "mutation_corpus.rs"]

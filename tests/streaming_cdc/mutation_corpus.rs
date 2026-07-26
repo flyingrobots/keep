@@ -2,8 +2,8 @@
 
 use std::collections::BTreeMap;
 
+use super::fixture_syntax::{canonical_decimal, decode_hex, field, header};
 use super::harness_failure::HarnessFailure;
-use super::source_corpus::{canonical_decimal, decode_hex, field, header};
 
 const MUTATIONS: &str = include_str!("../../conformance/cdc-profile/v1/mutations.tsv");
 const SCHEMA: &str = "keep.cdc-mutations/v1";

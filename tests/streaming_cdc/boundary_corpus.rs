@@ -2,8 +2,8 @@
 
 use std::collections::BTreeMap;
 
+use super::fixture_syntax::canonical_decimal;
 use super::harness_failure::HarnessFailure;
-use super::source_corpus::canonical_decimal;
 
 const BOUNDARIES: &str = include_str!("../../conformance/cdc-profile/v1/boundaries.tsv");
 const SCHEMA: &str = "keep.cdc-boundaries/v1";
