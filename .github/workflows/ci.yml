@@ -18,13 +18,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install pinned toolchain
         run: rustup show
 
       - name: Install independent vector tool
-        uses: taiki-e/install-action@07b4745e0c39a41822af610387492e3e53aa222b # v2.83.4
+        uses: taiki-e/install-action@3d7d7cd5ac7f994c1892ae0c06165095b9139094 # v2.85.1
         with:
           tool: b3sum@1.8.5
 
@@ -70,13 +72,48 @@ jobs:
           cargo check --manifest-path fuzz/Cargo.toml --bins --locked
           cargo clippy --manifest-path fuzz/Cargo.toml --bins --locked -- -D warnings
 
+  documentation:
+    name: Documentation and workflow integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.18.0
+
+      - name: Install pinned documentation tools
+        run: |
+          documentation_tools="$RUNNER_TEMP/documentation-tools"
+          scripts/install_documentation_tools.sh "$documentation_tools"
+          printf '%s\n' \
+            "$documentation_tools/bin" \
+            "$documentation_tools/npm/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Verify documentation integrity laws
+        run: python3 -m unittest discover -s scripts -p 'test_*.py' -v
+
+      - name: Check Markdown and internal links
+        run: python3 scripts/check_markdown.py
+
+      - name: Check workflow syntax
+        run: python3 scripts/check_workflows.py
+
+      - name: Check repository whitespace
+        run: git diff --check "$(git hash-object -t tree /dev/null)" HEAD
+
   fuzz-smoke:
     name: Runtime fuzz smoke
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - name: Check out repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -114,13 +151,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install pinned toolchain
         run: rustup show
 
       - name: Install dependency policy tools
-        uses: taiki-e/install-action@07b4745e0c39a41822af610387492e3e53aa222b # v2.83.4
+        uses: taiki-e/install-action@3d7d7cd5ac7f994c1892ae0c06165095b9139094 # v2.85.1
         with:
           tool: cargo-deny@0.18.9,cargo-audit@0.22.0
 

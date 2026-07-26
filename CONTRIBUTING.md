@@ -29,6 +29,28 @@ before creating documentation or substantially changing an existing page. It
 does not require rewriting pages that are merely below the bar; apply it when
 a change would otherwise add new documentation debt.
 
+Documentation validation uses `markdownlint-cli2` 0.23.1, `lychee` 0.21.0,
+and `actionlint` 1.7.12. Install those exact versions, then run the
+repository-owned checks from the repository root:
+
+```bash
+npm ci --prefix scripts/documentation-tools --ignore-scripts --no-audit --no-fund
+cargo install lychee --version 0.21.0 --locked
+go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+export PATH="$PWD/scripts/documentation-tools/node_modules/.bin:$PATH"
+python3 scripts/check_markdown.py
+python3 scripts/check_workflows.py
+git diff --check
+git diff --cached --check
+```
+
+The checker admits tracked Markdown plus nonignored new Markdown and refuses
+any other tool version. Build products, generated Rustdoc, fuzz artifacts,
+and other ignored files therefore cannot change the result. Link validation
+checks local files and fragments with network access disabled; external-site
+availability cannot change the result. The two Git commands check unstaged
+and staged whitespace errors separately.
+
 ## Development checks
 
 The minimum local checks are:
