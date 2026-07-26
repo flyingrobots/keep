@@ -74,17 +74,19 @@ jobs:
     name: Runtime fuzz smoke
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      CARGO_FUZZ_VERSION: 0.13.2
-      FUZZ_TOOLCHAIN: nightly-2026-07-24
-      FUZZ_SECONDS_PER_TARGET: 15
-      FUZZ_MAX_INPUT_BYTES: 1048576
-      FUZZ_RSS_LIMIT_MB: 1024
     steps:
       - name: Check out repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
+
+      - name: Verify fuzz campaign laws
+        run: python3 -m unittest discover -s fuzz -p 'test_*.py' -v
+
+      - name: Load bounded fuzz policy
+        run: |
+          python3 fuzz/run_campaign.py github-env --profile smoke \
+            >> "$GITHUB_ENV"
 
       - name: Install pinned fuzz toolchain
         run: rustup toolchain install "$FUZZ_TOOLCHAIN" --profile minimal
@@ -96,17 +98,7 @@ jobs:
         run: python3 fuzz/prepare_corpus.py
 
       - name: Exercise every fuzz target
-        run: |
-          fuzz_targets="$(cargo +"$FUZZ_TOOLCHAIN" fuzz list)"
-          test -n "$fuzz_targets"
-          while IFS= read -r fuzz_target; do
-            cargo +"$FUZZ_TOOLCHAIN" fuzz run "$fuzz_target" -- \
-              -max_total_time="$FUZZ_SECONDS_PER_TARGET" \
-              -timeout=5 \
-              -max_len="$FUZZ_MAX_INPUT_BYTES" \
-              -rss_limit_mb="$FUZZ_RSS_LIMIT_MB" \
-              -print_final_stats=1
-          done <<< "$fuzz_targets"
+        run: python3 fuzz/run_campaign.py run --profile smoke
 
       - name: Retain fuzz failures
         if: failure()
@@ -115,7 +107,7 @@ jobs:
           name: fuzz-failures
           path: fuzz/artifacts/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: ${{ env.FUZZ_SMOKE_FAILURE_RETENTION_DAYS }}
 
   dependency-policy:
     name: Dependency policy

@@ -10,6 +10,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Scheduled and manually dispatched fuzz campaigns now exercise every
+  registered target under centralized bounded policy, retain failures, and
+  preserve minimized evolving corpora as non-authoritative test state.
 - CI now runs every registered fuzz target with pinned `cargo-fuzz` and
   nightly versions, deterministic deep-state seeds, bounded per-target
   resources, and retained failure artifacts.

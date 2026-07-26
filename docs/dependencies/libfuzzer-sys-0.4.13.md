@@ -54,32 +54,35 @@ production workspace. Any resolution change must repeat this review.
 
 ## Runtime execution
 
-The runtime gate installs `cargo-fuzz` 0.13.2 from crates.io with its published
-lockfile and invokes it with `nightly-2026-07-24`. That nightly identifies as
-Rust 1.99.0-nightly and is isolated from Keep's stable Rust 1.96.0 production
-and MSRV gates. The runner is CI tooling; it is not part of either Keep
-lockfile, public API, or durable format.
+The runtime gates read the exact `cargo-fuzz` version, dated nightly, and
+resource bounds from `fuzz/campaign.env`. They install the runner from
+crates.io with its published lockfile. The nightly remains isolated from
+Keep's stable Rust 1.96.0 production and MSRV gates. The runner is CI tooling;
+it is not part of either Keep lockfile, public API, or durable format.
 
 `cargo-fuzz` is licensed as `MIT OR Apache-2.0`. Its installer graph is fixed
-by the published 0.13.2 lockfile rather than either Keep lockfile, so Keep's
+by its published lockfile rather than either Keep lockfile, so Keep's
 `cargo deny` and `cargo audit` jobs do not inspect that tool graph. The exact
 version, locked installation, ephemeral runner, and read-only repository
 permission bound that separate supply-chain surface; an upgrade requires
 renewed review.
 
-Every target declared by `cargo fuzz list` receives a 15-second smoke campaign
-with a five-second per-input timeout, a one-mebibyte input bound, and a
-one-gibibyte RSS limit. Before mutation starts, a bounded preparation script
-materializes canonical parser encodings plus minimum, natural-boundary,
-probe-carry, hard-maximum, and multi-chunk CDC witnesses. The job itself has a
-20-minute hard timeout. These bounds prove that every harness starts and that
-its registered success or boundary states are reachable; they do not claim
-exhaustive state-space coverage.
+Every target declared by `cargo fuzz list` must exactly match a checked-in
+harness. The pull-request smoke profile uses a short startup budget; the
+scheduled profile uses a larger bounded exploration budget. Both share exact
+per-input timeout, input-length, and RSS limits. Before mutation starts, a
+bounded preparation script materializes canonical parser encodings plus
+minimum, natural-boundary, probe-carry, hard-maximum, and multi-chunk CDC
+witnesses. Neither profile claims exhaustive state-space coverage.
 
 GitHub-hosted runners execute the campaigns with only read-only GitHub
-contents permission; corpus and artifact writes remain in the ephemeral
-checkout. On failure, the workflow retains `fuzz/artifacts/` for 14 days so
-the exact crashing input can become a permanent regression test.
+contents permission. `fuzz/campaign.env` defines finite retention periods for
+pull-request failures, scheduled failures, and minimized corpus evidence. The
+evolving cache is disposable, non-authoritative acceleration and may be absent
+or evicted without changing the campaign's validity. Restored and retained
+corpora must remain regular-file trees beneath recognized target directories
+and within the file, byte, and input limits in the campaign policy. A
+confirmed failure must become a committed deterministic regression test.
 
 ## Maintenance and exit strategy
 
@@ -100,7 +103,7 @@ Reopen this admission when any of these changes:
 
 - package version, enabled features, or transitive graph;
 - compiler, sanitizer, host, or target requirements;
-- `cargo-fuzz` version, pinned nightly, or smoke resource bounds;
+- `cargo-fuzz` version, pinned nightly, or campaign resource bounds;
 - unsafe or native-code boundary;
 - license or advisory posture;
 - a dependency-owned type crosses into production code;
