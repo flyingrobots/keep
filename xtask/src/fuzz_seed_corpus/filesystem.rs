@@ -141,8 +141,8 @@ fn write_seed(directory: &Dir, seed: &Seed, root: &Path) -> Result<(), FuzzSeedE
     }
     file.write_all(&seed.content)
         .map_err(|source| FuzzSeedError::io("write temporary seed", &temporary_path, source))?;
-    file.flush()
-        .map_err(|source| FuzzSeedError::io("flush temporary seed", &temporary_path, source))?;
+    file.sync_all()
+        .map_err(|source| FuzzSeedError::io("sync temporary seed", &temporary_path, source))?;
     drop(file);
     directory
         .rename(&temporary, directory, seed.name)

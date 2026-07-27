@@ -12,6 +12,7 @@ const TABLES: [&str; 5] = [
     "steps.tsv",
     "capabilities.tsv",
 ];
+const FILESYSTEM_SOURCE: &str = include_str!("filesystem.rs");
 
 #[test]
 fn golden_protocol_seeds_reach_every_production_parser() -> Result<(), FuzzSeedError> {
@@ -62,6 +63,14 @@ fn fuzz_seed_diagnostics_escape_terminal_controls() {
         "fuzz seed preparation failed: first\\nError: forged\\rrewrite\\u{1b}[31m"
     );
     assert_eq!(diagnostic.lines().count(), 1);
+}
+
+#[test]
+fn staged_seed_bytes_are_synced_before_publication() {
+    let sync = FILESYSTEM_SOURCE.find("file.sync_all()");
+    let publish = FILESYSTEM_SOURCE.find(".rename(&temporary, directory, seed.name)");
+    assert!(matches!((sync, publish), (Some(sync), Some(publish)) if sync < publish));
+    assert!(!FILESYSTEM_SOURCE.contains("file.flush()"));
 }
 
 #[test]
