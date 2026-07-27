@@ -1,3 +1,5 @@
+//! This module owns independent identity materialization, hashing, and vectors.
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 

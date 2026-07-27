@@ -1,3 +1,5 @@
+//! This module owns capability-relative, no-follow source-file admission.
+
 use std::fs::File;
 use std::io;
 use std::path::Path;

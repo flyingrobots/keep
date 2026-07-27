@@ -1,3 +1,5 @@
+//! This module owns the ordered exact-content reference-model scenario.
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::canonical_value::decimal;

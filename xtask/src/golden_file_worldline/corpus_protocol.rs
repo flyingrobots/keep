@@ -1,3 +1,5 @@
+//! This module owns bounded TSV framing, row admission, and corpus file paths.
+
 use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::io::{Read, Take};

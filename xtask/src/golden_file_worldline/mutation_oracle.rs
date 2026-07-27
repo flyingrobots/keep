@@ -1,3 +1,5 @@
+//! This module owns bounded corruption mutations and their expected outcomes.
+
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::canonical_value::{EmptyHex, case_name, decimal, decoded_hex, unique};

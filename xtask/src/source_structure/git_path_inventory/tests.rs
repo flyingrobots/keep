@@ -1,3 +1,5 @@
+//! This module owns adversarial Git stream and diagnostic-bound tests.
+
 use std::io::Cursor;
 
 use super::{GitOutputLimits, SourceStructureError, bounded_bytes, git_failure, read_paths};

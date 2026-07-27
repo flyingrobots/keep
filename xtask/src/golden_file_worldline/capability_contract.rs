@@ -1,3 +1,5 @@
+//! This module owns the immovable version-1 capability roadmap contract.
+
 use std::collections::BTreeSet;
 
 use super::canonical_value::{decimal, unique};

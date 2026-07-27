@@ -1,3 +1,5 @@
+//! This module owns mutation-width and case-admission regression evidence.
+
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;

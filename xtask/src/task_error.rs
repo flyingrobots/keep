@@ -1,3 +1,5 @@
+//! This module owns command-level error aggregation and stable diagnostics.
+
 use std::error::Error;
 use std::fmt;
 

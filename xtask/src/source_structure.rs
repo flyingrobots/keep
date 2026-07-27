@@ -1,3 +1,5 @@
+//! This module owns source inventory orchestration and the 500-line law.
+
 mod git_path_inventory;
 mod source_file;
 

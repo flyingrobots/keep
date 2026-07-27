@@ -1,3 +1,5 @@
+//! This module owns corpus framing, table-boundary, and path grammar tests.
+
 use std::path::PathBuf;
 
 use super::{Corpus, GoldenError, protocol_source_path, table_rows};

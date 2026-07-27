@@ -1,3 +1,5 @@
+//! This module owns ordered execution of the independent conformance oracles.
+
 mod canonical_value;
 mod capability_contract;
 mod corpus_protocol;

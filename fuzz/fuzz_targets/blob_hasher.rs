@@ -1,5 +1,7 @@
 #![no_main]
 
+//! This target owns streaming blob-identity state-machine fuzzing.
+
 use keep::{BlobHasher, BlobId};
 use libfuzzer_sys::fuzz_target;
 

@@ -1,3 +1,5 @@
+//! This module owns version-1 malformed identity-text outcome classification.
+
 use std::collections::BTreeSet;
 
 use super::canonical_value::{EmptyHex, case_name, decoded_hex, unique};

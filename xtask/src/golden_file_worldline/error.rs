@@ -1,3 +1,5 @@
+//! This module owns typed Golden File Worldline failures and source chaining.
+
 use std::error::Error;
 use std::fmt;
 use std::io;

@@ -1,3 +1,5 @@
+//! This module owns canonical scalar parsing and identifier uniqueness checks.
+
 use std::collections::BTreeSet;
 
 use super::GoldenError;

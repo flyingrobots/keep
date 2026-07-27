@@ -1,5 +1,7 @@
 #![no_main]
 
+//! This target owns bounded repository-protocol admission fuzzing.
+
 use libfuzzer_sys::fuzz_target;
 use xtask::protocol_admission::{
     EmptyHex, decode_lower_hex, framed_lines, posix_relative_path, tab_fields,

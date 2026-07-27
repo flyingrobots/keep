@@ -1,3 +1,5 @@
+//! This module owns source-line, selection, and replacement-race tests.
+
 use std::io::{self, BufReader, Cursor, Read};
 use std::path::Path;
 

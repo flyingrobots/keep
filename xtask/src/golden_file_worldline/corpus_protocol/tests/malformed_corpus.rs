@@ -1,3 +1,5 @@
+//! This module owns table-driven refusal evidence for malformed corpus bytes.
+
 use std::path::Path;
 
 use super::super::{GoldenError, MAX_TABLE_BYTES, protocol_lines_from_bytes, table_rows};

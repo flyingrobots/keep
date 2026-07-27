@@ -1,3 +1,5 @@
+//! This module owns bounded Git path streaming and diagnostic collection.
+
 use std::collections::BTreeSet;
 use std::io::{self, Read};
 use std::path::Path;

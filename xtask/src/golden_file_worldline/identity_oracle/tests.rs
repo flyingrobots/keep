@@ -1,3 +1,5 @@
+//! This module owns identity-case admission-order regression evidence.
+
 use std::env;
 use std::fs;
 use std::process;
