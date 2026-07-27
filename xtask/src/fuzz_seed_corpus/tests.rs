@@ -136,6 +136,35 @@ fn seed_publication_does_not_mutate_a_hard_link_target() -> Result<(), Box<dyn s
     Ok(())
 }
 
+#[test]
+fn interrupted_seed_stage_is_recovered() -> Result<(), Box<dyn std::error::Error>> {
+    use std::fs;
+
+    let directory = TestDirectory::create("fuzz-seed-recovery")?;
+    let root = directory.path();
+    let target = root.join("fuzz/corpus/blob_hasher");
+    fs::create_dir_all(&target)
+        .map_err(|source| FuzzSeedError::io("create test corpus", &target, source))?;
+    let staged = target.join(".empty.keep-tmp");
+    fs::write(&staged, b"interrupted")
+        .map_err(|source| FuzzSeedError::io("write interrupted seed stage", &staged, source))?;
+
+    RepositoryFiles::open(root)?.write_seeds(&[Seed {
+        target: "blob_hasher",
+        name: "empty",
+        content: b"derived".to_vec(),
+    }])?;
+
+    assert_eq!(
+        fs::read(target.join("empty"))?,
+        b"derived",
+        "the recovered publication must contain the requested seed"
+    );
+    assert!(!staged.exists());
+    directory.close()?;
+    Ok(())
+}
+
 fn seed_contents(
     root: &Path,
 ) -> Result<std::collections::BTreeMap<String, Vec<u8>>, FuzzSeedError> {

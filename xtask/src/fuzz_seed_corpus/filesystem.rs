@@ -112,6 +112,7 @@ fn write_seed(directory: &Dir, seed: &Seed, root: &Path) -> Result<(), FuzzSeedE
     let path = root.join(seed.target).join(seed.name);
     let temporary = format!(".{}.keep-tmp", seed.name);
     let temporary_path = root.join(seed.target).join(&temporary);
+    remove_stale_stage(directory, &temporary, &temporary_path)?;
     let mut options = OpenOptions::new();
     options
         .write(true)
@@ -139,6 +140,20 @@ fn write_seed(directory: &Dir, seed: &Seed, root: &Path) -> Result<(), FuzzSeedE
     directory
         .rename(&temporary, directory, seed.name)
         .map_err(|source| FuzzSeedError::io("publish seed", path, source))
+}
+
+fn remove_stale_stage(directory: &Dir, temporary: &str, path: &Path) -> Result<(), FuzzSeedError> {
+    match directory.symlink_metadata(temporary) {
+        Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(source) => Err(FuzzSeedError::io("inspect temporary seed", path, source)),
+        Ok(metadata) if metadata.is_file() || metadata.file_type().is_symlink() => directory
+            .remove_file(temporary)
+            .map_err(|source| FuzzSeedError::io("remove stale temporary seed", path, source)),
+        Ok(_) => Err(FuzzSeedError::violation(format!(
+            "temporary seed is not a removable file: {}",
+            path.display()
+        ))),
+    }
 }
 
 fn bounded_bytes(
