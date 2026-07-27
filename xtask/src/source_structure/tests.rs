@@ -21,6 +21,13 @@ fn source_scan_stops_at_the_first_violating_line() {
     assert_eq!(line_count(BufReader::new(reader)).ok(), Some(501));
 }
 
+#[test]
+fn source_read_options_refuse_blocking_io() {
+    let options = format!("{:?}", super::source_file::nonblocking_read_options());
+    assert!(options.contains("read: true"));
+    assert!(options.contains("nonblock: true"));
+}
+
 #[cfg(unix)]
 #[test]
 fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructureError> {

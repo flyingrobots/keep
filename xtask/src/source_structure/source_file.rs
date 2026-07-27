@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io;
 use std::path::Path;
 
-use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt};
+use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions};
 
@@ -19,10 +19,8 @@ pub(super) fn open_source_file(
 ) -> Result<File, OpenSourceError> {
     let directory =
         Dir::open_ambient_dir(repository_root, ambient_authority()).map_err(OpenSourceError::Io)?;
-    let mut options = OpenOptions::new();
-    options.read(true).follow(FollowSymlinks::No);
     let file = directory
-        .open_with(relative, &options)
+        .open_with(relative, &nonblocking_read_options())
         .map_err(OpenSourceError::Io)?
         .into_std();
     let metadata = file.metadata().map_err(OpenSourceError::Io)?;
@@ -31,4 +29,10 @@ pub(super) fn open_source_file(
     } else {
         Err(OpenSourceError::NonRegular)
     }
+}
+
+pub(super) fn nonblocking_read_options() -> OpenOptions {
+    let mut options = OpenOptions::new();
+    options.read(true).follow(FollowSymlinks::No).nonblock(true);
+    options
 }
