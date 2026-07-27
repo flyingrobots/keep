@@ -74,6 +74,20 @@ fn staged_seed_bytes_are_synced_before_publication() {
 }
 
 #[test]
+fn repository_file_boundary_documents_its_io_contracts() {
+    for required in [
+        "/// Capability-bound repository access for derived fuzz seed material.",
+        "/// Open and retain the repository directory capability.",
+        "/// Read one no-follow regular file under an explicit allocation bound.",
+        "/// Publish deterministic seeds through synced per-file stages.",
+    ] {
+        assert!(FILESYSTEM_SOURCE.contains(required));
+    }
+    assert!(FILESYSTEM_SOURCE.contains("batch-atomic"));
+    assert!(FILESYSTEM_SOURCE.contains("The containing directory is not synced"));
+}
+
+#[test]
 fn seed_preparation_materializes_the_complete_deterministic_set()
 -> Result<(), Box<dyn std::error::Error>> {
     use std::fs;

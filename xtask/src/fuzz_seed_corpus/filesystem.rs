@@ -12,6 +12,12 @@ use super::{FuzzSeedError, Seed};
 
 const CORPUS_PATH: &str = "fuzz/corpus";
 
+/// Capability-bound repository access for derived fuzz seed material.
+///
+/// The opened [`Dir`] is the authority for subsequent relative I/O; `root` is
+/// retained only to render diagnostics. Operations are synchronous and may
+/// block on ordinary filesystem latency, while no-follow, nonblocking opens
+/// prevent links and special files from introducing ambiguous reads.
 pub(super) struct RepositoryFiles {
     directory: Dir,
     root: PathBuf,
@@ -24,6 +30,13 @@ struct SeedStage<'a> {
 }
 
 impl RepositoryFiles {
+    /// Open and retain the repository directory capability.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FuzzSeedError`] when the ambient repository directory cannot
+    /// be opened. Opening performs filesystem I/O but allocates no content
+    /// buffer and establishes no durability transition.
     pub(super) fn open(root: &Path) -> Result<Self, FuzzSeedError> {
         let directory = Dir::open_ambient_dir(root, ambient_authority())
             .map_err(|source| FuzzSeedError::io("open repository", root, source))?;
@@ -33,6 +46,18 @@ impl RepositoryFiles {
         })
     }
 
+    /// Read one no-follow regular file under an explicit allocation bound.
+    ///
+    /// The source is opened capability-relative and nonblocking, must be a
+    /// regular file, and is read through a `maximum + 1` byte ceiling. The
+    /// observed length must equal the pre-read metadata length; same-length
+    /// concurrent rewrites are outside this derived-seed verification layer.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FuzzSeedError`] for open, metadata, or read failures; links or
+    /// non-regular files; arithmetic overflow; bound violations; or a detected
+    /// length change. Allocation is bounded by `maximum + 1`.
     pub(super) fn read_bounded(
         &self,
         relative: &Path,
@@ -47,6 +72,22 @@ impl RepositoryFiles {
         bounded_bytes(file, expected, maximum, &path)
     }
 
+    /// Publish deterministic seeds through synced per-file stages.
+    ///
+    /// Each seed removes a recoverable fixed-name stage, creates a no-follow
+    /// regular stage, writes and `sync_all`s its bytes, then atomically renames
+    /// that stage over the derived destination. Post-create failures receive
+    /// best-effort stage cleanup. Publication is one-writer, per-file, and not
+    /// batch-atomic. The containing directory is not synced, so rename
+    /// persistence across power loss is not claimed; the ignored corpus remains
+    /// regenerable derived state.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FuzzSeedError`] when destination directories are links or
+    /// non-directories, a stale stage is not removable, staging I/O or sync
+    /// fails, or the atomic rename cannot publish a seed. Prior seeds from the
+    /// same call may already be published when a later seed fails.
     pub(super) fn write_seeds(&self, seeds: &[Seed]) -> Result<(), FuzzSeedError> {
         let corpus = self.corpus_directory()?;
         for seed in seeds {
