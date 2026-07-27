@@ -3,8 +3,8 @@
 use std::collections::BTreeSet;
 use std::io::{self, Read};
 use std::path::Path;
-use std::process::{Child, Command, Stdio};
-use std::thread;
+use std::process::{Child, ChildStdout, Command, Stdio};
+use std::thread::{self, JoinHandle};
 
 use super::SourceStructureError;
 
@@ -23,11 +23,33 @@ struct GitOutputLimits {
     paths: usize,
 }
 
+struct GitProcess {
+    child: Child,
+    diagnostic_worker: JoinHandle<Result<BoundedBytes, io::Error>>,
+    stdout: ChildStdout,
+}
+
+/// Lists repository paths without allowing either child pipe to block.
+///
+/// Standard error is drained concurrently before standard output is read.
+/// Collection reads standard output before requesting termination, waits for
+/// the child before joining the diagnostic reader, and then preserves the
+/// established error precedence.
 pub(super) fn git_paths(
     repository_root: &Path,
     arguments: &[&str],
     operation: &'static str,
 ) -> Result<BTreeSet<String>, SourceStructureError> {
+    let process = start_git(repository_root, arguments, operation)?;
+    let paths = read_paths(process.stdout, operation, GIT_OUTPUT_LIMITS);
+    collect_git_result(process.child, process.diagnostic_worker, paths, operation)
+}
+
+fn start_git(
+    repository_root: &Path,
+    arguments: &[&str],
+    operation: &'static str,
+) -> Result<GitProcess, SourceStructureError> {
     let mut child = Command::new("git")
         .args(arguments)
         .current_dir(repository_root)
@@ -67,8 +89,19 @@ pub(super) fn git_paths(
             });
         }
     };
+    Ok(GitProcess {
+        child,
+        diagnostic_worker,
+        stdout,
+    })
+}
 
-    let paths = read_paths(stdout, operation, GIT_OUTPUT_LIMITS);
+fn collect_git_result(
+    mut child: Child,
+    diagnostic_worker: JoinHandle<Result<BoundedBytes, io::Error>>,
+    paths: Result<BTreeSet<String>, SourceStructureError>,
+    operation: &'static str,
+) -> Result<BTreeSet<String>, SourceStructureError> {
     let stop = if paths.is_err() {
         request_stop(&mut child, operation)
     } else {
