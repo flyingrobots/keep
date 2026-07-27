@@ -5,6 +5,7 @@ const RATIONALE: &str = include_str!("../../docs/formats/flat-chunk-layout-v1/ra
 const CONFORMANCE_GUIDE: &str = include_str!("../../conformance/layout/v1/README.md");
 const LAYOUT_DECODE_ERROR_DISPLAY: &str =
     include_str!("../../src/adapters/layout_decode_error_display.rs");
+const LAYOUT_MUTATION_TESTS: &str = include_str!("../../tests/layout_mutations.rs");
 const INVALID_LAYOUT_ID_BINARY: &str =
     include_str!("../../conformance/layout/v1/invalid-layout-id-binary.tsv");
 const INVALID_LAYOUT_ID_TEXT: &str =
@@ -24,6 +25,14 @@ fn layout_decode_error_formatter_stays_below_the_hard_function_limit() -> Result
         "LayoutDecodeError::fmt exceeds the 60-line hard limit"
     );
     Ok(())
+}
+
+#[test]
+fn layout_mutation_classifiers_name_every_unclassified_variant() {
+    assert!(
+        !LAYOUT_MUTATION_TESTS.contains("_ => None"),
+        "layout mutation classifiers must not hide future error variants"
+    );
 }
 
 #[test]

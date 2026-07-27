@@ -189,7 +189,13 @@ const fn classify(error: &LayoutDecodeError) -> Option<&'static str> {
             Some("layout.record-length-limit-exceeded")
         }
         LayoutDecodeError::Validation { source } => classify_validation(source),
-        _ => None,
+        LayoutDecodeError::TruncatedHeader { .. }
+        | LayoutDecodeError::ConfiguredEntryLimitExceeded { .. }
+        | LayoutDecodeError::RecordLengthArithmetic { .. }
+        | LayoutDecodeError::HostRecordLengthOutOfRange { .. }
+        | LayoutDecodeError::EntryCountHostWidth { .. }
+        | LayoutDecodeError::Allocation { .. }
+        | LayoutDecodeError::LayoutIdentity { .. } => None,
     }
 }
 
@@ -223,7 +229,13 @@ const fn classify_validation(error: &LayoutValidationError) -> Option<&'static s
         LayoutValidationError::AggregateLengthMismatch { .. } => {
             Some("layout.aggregate-length-mismatch")
         }
-        _ => None,
+        LayoutValidationError::EntryLimitExceeded { .. }
+        | LayoutValidationError::EntryLimitHostWidth { .. }
+        | LayoutValidationError::Allocation { .. }
+        | LayoutValidationError::ZeroChunkLength { .. }
+        | LayoutValidationError::EntryCountMismatch { .. }
+        | LayoutValidationError::OffsetOverflow { .. }
+        | LayoutValidationError::EntryIndexOutOfRange { .. } => None,
     }
 }
 
