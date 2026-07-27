@@ -3,13 +3,23 @@ name = "xtask"
 version = "0.0.0"
 edition = "2024"
 rust-version = "1.96"
+license = "Apache-2.0"
 publish = false
 
+[features]
+default = ["repository-tasks"]
+repository-tasks = ["dep:blake3", "dep:cap-fs-ext", "dep:cap-std"]
+
 [dependencies]
-blake3 = { version = "=1.8.5", default-features = false, features = ["pure", "std"] }
+blake3 = { version = "=1.8.5", default-features = false, features = ["pure", "std"], optional = true }
 # Capability-relative, no-follow opens close source-scan replacement races.
-cap-fs-ext = { version = "=4.0.2", default-features = false, features = ["std"] }
-cap-std = { version = "=4.0.2", default-features = false }
+cap-fs-ext = { version = "=4.0.2", default-features = false, features = ["std"], optional = true }
+cap-std = { version = "=4.0.2", default-features = false, optional = true }
+
+[[bin]]
+name = "xtask"
+path = "src/main.rs"
+required-features = ["repository-tasks"]
 
 [lints]
 workspace = true

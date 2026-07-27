@@ -2,6 +2,8 @@ use std::path::PathBuf;
 
 use super::{Corpus, GoldenError, protocol_source_path, table_rows};
 
+mod malformed_corpus;
+
 #[test]
 fn tables_require_at_least_one_data_row() {
     let result = rows(&["# keep.cases/v1", "case"]);

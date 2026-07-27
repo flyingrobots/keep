@@ -4,6 +4,7 @@ use std::io::{Read, Take};
 use std::path::{Path, PathBuf};
 
 use super::GoldenError;
+use xtask::protocol_admission::{FramedLinesError, framed_lines, posix_relative_path, tab_fields};
 
 pub(super) const MAX_SOURCE_BYTES: usize = 1_048_576;
 pub(super) const MAX_MUTATION_VALUE_BYTES: usize = 64;
@@ -50,25 +51,8 @@ impl Corpus {
 }
 
 fn protocol_source_path(parameter: &str) -> Result<PathBuf, GoldenError> {
-    if parameter.is_empty()
-        || parameter.contains('\\')
-        || parameter.contains(':')
-        || parameter.contains('\0')
-    {
-        return Err(GoldenError::violation(format!(
-            "unsafe source path: {parameter}"
-        )));
-    }
-    let mut relative = PathBuf::new();
-    for segment in parameter.split('/') {
-        if segment.is_empty() || matches!(segment, "." | "..") {
-            return Err(GoldenError::violation(format!(
-                "unsafe source path: {parameter}"
-            )));
-        }
-        relative.push(segment);
-    }
-    Ok(relative)
+    posix_relative_path(parameter)
+        .map_err(|_| GoldenError::violation(format!("unsafe source path: {parameter}")))
 }
 
 fn table_rows(
@@ -120,12 +104,9 @@ impl TableRow {
         line: &str,
         columns: &[&'static str],
     ) -> Result<Self, GoldenError> {
-        let values = line.split('\t').collect::<Vec<_>>();
-        if values.len() != columns.len() {
-            return Err(GoldenError::violation(format!(
-                "{table}:{line_number}: malformed field count"
-            )));
-        }
+        let values = tab_fields(line, columns.len()).map_err(|_| {
+            GoldenError::violation(format!("{table}:{line_number}: malformed field count"))
+        })?;
         let fields = columns
             .iter()
             .copied()
@@ -184,26 +165,27 @@ pub(super) fn bounded_file_bytes(
 
 fn protocol_lines(path: &Path) -> Result<Vec<String>, GoldenError> {
     let raw = bounded_file_bytes(path, MAX_TABLE_BYTES, &display_name(path))?;
+    protocol_lines_from_bytes(path, &raw)
+}
+
+fn protocol_lines_from_bytes(path: &Path, raw: &[u8]) -> Result<Vec<String>, GoldenError> {
     let table = display_name(path);
-    if raw.is_empty() || !raw.ends_with(b"\n") || raw.contains(&b'\r') {
-        return Err(GoldenError::violation(format!(
-            "{table}: protocol must use final-LF-only framing"
-        )));
-    }
-    let text = String::from_utf8(raw).map_err(|source| GoldenError::Utf8 {
-        path: path.to_path_buf(),
-        source,
-    })?;
-    let framed = text.strip_suffix('\n').ok_or_else(|| {
-        GoldenError::violation(format!("{table}: protocol must use final-LF-only framing"))
-    })?;
-    let lines = framed.split('\n').map(str::to_owned).collect::<Vec<_>>();
-    if lines.iter().any(String::is_empty) {
-        return Err(GoldenError::violation(format!(
+    match framed_lines(raw, MAX_TABLE_BYTES) {
+        Ok(lines) => Ok(lines),
+        Err(FramedLinesError::Utf8(source)) => Err(GoldenError::Utf8 {
+            path: path.to_path_buf(),
+            source,
+        }),
+        Err(FramedLinesError::BlankLine) => Err(GoldenError::violation(format!(
             "{table}: protocol contains a blank line"
-        )));
+        ))),
+        Err(FramedLinesError::ExceedsMaximum { maximum }) => Err(GoldenError::violation(format!(
+            "{table}: file exceeds {maximum} bytes"
+        ))),
+        Err(FramedLinesError::FinalLfOnly) => Err(GoldenError::violation(format!(
+            "{table}: protocol must use final-LF-only framing"
+        ))),
     }
-    Ok(lines)
 }
 
 fn display_name(path: &Path) -> String {

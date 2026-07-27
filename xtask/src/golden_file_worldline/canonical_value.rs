@@ -1,6 +1,9 @@
 use std::collections::BTreeSet;
 
 use super::GoldenError;
+use xtask::protocol_admission::{HexError, decode_lower_hex};
+
+pub(super) use xtask::protocol_admission::EmptyHex;
 
 pub(super) fn case_name<'a>(value: &'a str, table: &str) -> Result<&'a str, GoldenError> {
     let bytes = value.as_bytes();
@@ -57,51 +60,21 @@ pub(super) fn decoded_hex(
     maximum_bytes: usize,
     empty: EmptyHex,
 ) -> Result<Vec<u8>, GoldenError> {
-    if value.is_empty() && empty == EmptyHex::Refuse {
-        return Err(GoldenError::violation(format!(
-            "{field}: empty hexadecimal value"
-        )));
-    }
-    let maximum_digits = maximum_bytes
-        .checked_mul(2)
-        .ok_or_else(|| GoldenError::violation(format!("{field}: hexadecimal bound overflow")))?;
-    if value.len() > maximum_digits || !value.len().is_multiple_of(2) {
-        return Err(GoldenError::violation(format!(
+    decode_lower_hex(value, maximum_bytes, empty).map_err(|error| match error {
+        HexError::Empty => GoldenError::violation(format!("{field}: empty hexadecimal value")),
+        HexError::BoundOverflow => {
+            GoldenError::violation(format!("{field}: hexadecimal bound overflow"))
+        }
+        HexError::InvalidLength => GoldenError::violation(format!(
             "{field}: hexadecimal length is invalid or unbounded"
-        )));
-    }
-    value
-        .as_bytes()
-        .chunks_exact(2)
-        .map(|pair| decode_hex_pair(pair, field))
-        .collect()
-}
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-pub(super) enum EmptyHex {
-    Allow,
-    Refuse,
-}
-
-fn decode_hex_pair(pair: &[u8], field: &str) -> Result<u8, GoldenError> {
-    let [high_byte, low_byte] = pair else {
-        return Err(GoldenError::violation(format!(
-            "{field}: hexadecimal length is invalid"
-        )));
-    };
-    let high = hex_nibble(*high_byte).ok_or_else(|| {
-        GoldenError::violation(format!(
+        )),
+        HexError::NonCanonicalAlphabet => GoldenError::violation(format!(
             "{field}: hexadecimal value is not canonical lowercase"
-        ))
-    })?;
-    let low = hex_nibble(*low_byte).ok_or_else(|| {
-        GoldenError::violation(format!(
-            "{field}: hexadecimal value is not canonical lowercase"
-        ))
-    })?;
-    high.checked_mul(16)
-        .and_then(|shifted| shifted.checked_add(low))
-        .ok_or_else(|| GoldenError::violation(format!("{field}: hexadecimal byte overflow")))
+        )),
+        HexError::ByteOverflow => {
+            GoldenError::violation(format!("{field}: hexadecimal byte overflow"))
+        }
+    })
 }
 
 fn canonical_decimal(value: &str) -> bool {
@@ -117,14 +90,4 @@ fn canonical_decimal(value: &str) -> bool {
 fn decimal_exceeds(value: &str, maximum: u64) -> bool {
     let maximum = maximum.to_string();
     value.len() > maximum.len() || (value.len() == maximum.len() && value > maximum.as_str())
-}
-
-fn hex_nibble(byte: u8) -> Option<u8> {
-    match byte {
-        b'0'..=b'9' => byte.checked_sub(b'0'),
-        b'a'..=b'f' => byte
-            .checked_sub(b'a')
-            .and_then(|offset| offset.checked_add(10)),
-        _ => None,
-    }
 }

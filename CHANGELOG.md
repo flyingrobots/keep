@@ -17,6 +17,8 @@ after its public API and format compatibility policies are established.
   opens so a path replaced with a symlink is refused before any bytes are read.
 - The Rust `xtask` command contract is now explicitly silent on success and
   emits one typed `Error:` diagnostic with exit status 1 on refusal.
+- Golden protocol framing, field, hexadecimal, and path decoders now share a
+  bounded fuzz surface backed by table-driven malformed-corpus refusals.
 - Scheduled and manually dispatched fuzz campaigns now exercise every
   registered target under centralized bounded policy, retain failures, and
   preserve minimized evolving corpora as non-authoritative test state.

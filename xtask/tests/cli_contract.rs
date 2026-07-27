@@ -1,5 +1,7 @@
 //! Subprocess-level contract tests for repository maintenance commands.
 
+#![cfg(feature = "repository-tasks")]
+
 use std::io;
 use std::process::{Command, Output};
 
