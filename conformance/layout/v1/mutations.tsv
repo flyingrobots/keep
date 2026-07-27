@@ -14,7 +14,7 @@ unsupported-chunk-identity-version	one-zero	replace-v1	42	2	0002	recompute-v1	de
 wrong-blob-id-magic	one-zero	xor-v1	44	1	01	recompute-v1	validation	layout.blob-id-wrong-magic	KEEP-LAYOUT-003
 unsupported-blob-id-version	one-zero	replace-v1	60	2	0002	recompute-v1	validation	layout.blob-id-unsupported-version	KEEP-LAYOUT-003
 unsupported-blob-id-algorithm	one-zero	replace-v1	62	1	02	recompute-v1	validation	layout.blob-id-unsupported-algorithm	KEEP-LAYOUT-003
-blob-logical-length-mismatch	one-zero	replace-v1	63	8	0000000000000000	recompute-v1	validation	layout.aggregate-length-mismatch	KEEP-LAYOUT-007
+blob-logical-length-mismatch	one-zero	replace-v1	63	8	0000000000000000	recompute-v1	validation	layout.empty-blob-has-entries	KEEP-LAYOUT-007
 blob-digest-substitution	one-zero	xor-v1	71	1	01	recompute-v1	verification	layout.reconstruction-mismatch	KEEP-LAYOUT-014
 unsupported-profile-identity-version	one-zero	replace-v1	103	2	0002	recompute-v1	admission	layout.unsupported-storage-profile-version	KEEP-LAYOUT-004
 unsupported-profile-hash-algorithm	one-zero	replace-v1	105	1	02	recompute-v1	admission	layout.unsupported-storage-profile-algorithm	KEEP-LAYOUT-004

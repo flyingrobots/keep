@@ -28,6 +28,10 @@ fn mutation_outcomes_follow_first_failure_precedence() {
         expected_mutation_outcome("entry-order-swap"),
         Some("layout.gap")
     );
+    assert_eq!(
+        expected_mutation_outcome("blob-logical-length-mismatch"),
+        Some("layout.empty-blob-has-entries")
+    );
 }
 
 #[test]
