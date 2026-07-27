@@ -1,23 +1,13 @@
 //! Canonical version-1 flat-layout record encoder.
 
+use super::layout_record_format::{
+    CHECKSUM_ALGORITHM, CHECKSUM_LENGTH, CHUNK_HASH_ALGORITHM, CHUNK_IDENTITY_VERSION,
+    ENTRY_LENGTH, FLAGS, FORMAT_VERSION, HEADER_LENGTH, LAYOUT_CODEC, MAGIC,
+    PROFILE_HASH_ALGORITHM, PROFILE_IDENTITY_VERSION, RESERVED, calculate_layout_id,
+    record_checksum, record_length,
+};
 use super::{CanonicalLayoutRecord, LayoutEncodeError};
-use crate::layout::{AdmittedLayout, LayoutId, LayoutRecordLength};
-
-const MAGIC: &[u8; 16] = b"KEEP:LAYOUT:PLAN";
-const FORMAT_VERSION: u16 = 1;
-const LAYOUT_CODEC: u16 = 1;
-const FLAGS: u32 = 0;
-const HEADER_LENGTH: u16 = 144;
-const ENTRY_LENGTH: u16 = 44;
-const CHECKSUM_LENGTH: u64 = 32;
-const CHECKSUM_ALGORITHM: u8 = 1;
-const CHUNK_HASH_ALGORITHM: u8 = 1;
-const CHUNK_IDENTITY_VERSION: u16 = 1;
-const PROFILE_IDENTITY_VERSION: u16 = 1;
-const PROFILE_HASH_ALGORITHM: u8 = 1;
-const RESERVED: [u8; 6] = [0_u8; 6];
-const CHECKSUM_DOMAIN: &[u8; 16] = b"KEEP:LAYOUT:SUM\0";
-const LAYOUT_ID_DOMAIN: &[u8; 16] = b"KEEP:LAYOUT:ID\0\0";
+use crate::layout::{AdmittedLayout, LayoutRecordLength};
 
 pub(super) fn encode_layout(
     layout: &AdmittedLayout,
@@ -28,7 +18,8 @@ pub(super) fn encode_layout(
             source,
         }
     })?;
-    let record_length = record_length(entry_count)?;
+    let record_length = record_length(entry_count)
+        .ok_or(LayoutEncodeError::RecordLengthOutOfRange { entry_count })?;
     let capacity = usize::try_from(record_length.get()).map_err(|source| {
         LayoutEncodeError::HostLengthOutOfRange {
             observed: record_length.get(),
@@ -55,27 +46,13 @@ pub(super) fn encode_layout(
     Ok(CanonicalLayoutRecord::from_parts(bytes, id))
 }
 
-fn record_length(entry_count: u32) -> Result<LayoutRecordLength, LayoutEncodeError> {
-    let entry_bytes = u64::from(entry_count)
-        .checked_mul(u64::from(ENTRY_LENGTH))
-        .ok_or(LayoutEncodeError::RecordLengthOutOfRange { entry_count })?;
-    let with_header = u64::from(HEADER_LENGTH)
-        .checked_add(entry_bytes)
-        .ok_or(LayoutEncodeError::RecordLengthOutOfRange { entry_count })?;
-    let raw = with_header
-        .checked_add(CHECKSUM_LENGTH)
-        .ok_or(LayoutEncodeError::RecordLengthOutOfRange { entry_count })?;
-    LayoutRecordLength::from_wire(raw)
-        .ok_or(LayoutEncodeError::RecordLengthOutOfRange { entry_count })
-}
-
 fn append_header(
     bytes: &mut Vec<u8>,
     layout: &AdmittedLayout,
     record_length: LayoutRecordLength,
     entry_count: u32,
 ) {
-    bytes.extend_from_slice(MAGIC);
+    bytes.extend_from_slice(&MAGIC);
     bytes.extend_from_slice(&FORMAT_VERSION.to_be_bytes());
     bytes.extend_from_slice(&LAYOUT_CODEC.to_be_bytes());
     bytes.extend_from_slice(&FLAGS.to_be_bytes());
@@ -99,29 +76,6 @@ fn append_entries(bytes: &mut Vec<u8>, layout: &AdmittedLayout) {
         bytes.extend_from_slice(&entry.chunk_id().length().get().to_be_bytes());
         bytes.extend_from_slice(entry.chunk_id().digest());
     }
-}
-
-pub(super) fn record_checksum(
-    record_without_checksum: &[u8],
-    record_without_checksum_length: u64,
-) -> [u8; 32] {
-    let mut state = blake3::Hasher::new();
-    state.update(CHECKSUM_DOMAIN);
-    state.update(&FORMAT_VERSION.to_be_bytes());
-    state.update(&[CHECKSUM_ALGORITHM]);
-    state.update(record_without_checksum);
-    state.update(&record_without_checksum_length.to_be_bytes());
-    *state.finalize().as_bytes()
-}
-
-pub(super) fn calculate_layout_id(record: &[u8], record_length: LayoutRecordLength) -> LayoutId {
-    let mut state = blake3::Hasher::new();
-    state.update(LAYOUT_ID_DOMAIN);
-    state.update(&FORMAT_VERSION.to_be_bytes());
-    state.update(&LAYOUT_CODEC.to_be_bytes());
-    state.update(record);
-    state.update(&record_length.get().to_be_bytes());
-    LayoutId::from_validated_parts(record_length, *state.finalize().as_bytes())
 }
 
 fn verify_emitted_length(

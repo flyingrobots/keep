@@ -13,6 +13,10 @@ pub struct LayoutEntry {
 }
 
 impl LayoutEntry {
+    pub(crate) const fn from_validated_parts(offset: ChunkOffset, id: ChunkId) -> Self {
+        Self { offset, id }
+    }
+
     /// Returns the absolute logical byte offset.
     #[must_use]
     pub const fn offset(self) -> ChunkOffset {

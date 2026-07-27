@@ -23,7 +23,7 @@ pub struct ChunkId {
 }
 
 impl ChunkId {
-    pub(super) const fn from_validated_parts(length: ChunkLength, digest: [u8; 32]) -> Self {
+    pub(crate) const fn from_validated_parts(length: ChunkLength, digest: [u8; 32]) -> Self {
         Self { length, digest }
     }
 

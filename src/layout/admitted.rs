@@ -47,6 +47,20 @@ impl AdmittedLayout {
         })
     }
 
+    pub(crate) fn from_decoded_entries(
+        target: BlobId,
+        profile: RegisteredStorageProfile,
+        entries: Vec<LayoutEntry>,
+        entry_limit: LayoutEntryLimit,
+    ) -> Result<Self, LayoutValidationError> {
+        validate_entries(target, profile, &entries, entry_limit)?;
+        Ok(Self {
+            target,
+            profile,
+            entries: entries.into_boxed_slice(),
+        })
+    }
+
     /// Returns the exact target logical blob identity.
     #[must_use]
     pub const fn target(&self) -> BlobId {

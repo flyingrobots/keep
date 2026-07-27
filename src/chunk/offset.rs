@@ -26,8 +26,7 @@ impl ChunkOffset {
         }
     }
 
-    #[cfg(test)]
-    pub(super) const fn from_validated(value: u64) -> Self {
+    pub(crate) const fn from_validated(value: u64) -> Self {
         Self(value)
     }
 }

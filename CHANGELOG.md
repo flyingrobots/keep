@@ -57,6 +57,9 @@ after its public API and format compatibility policies are established.
 - Validated flat-layout admission with explicit entry caps and an exact
   canonical version-1 encoder backed by every frozen record and `LayoutId`
   witness.
+- Bounded flat-layout decoding through explicit parse, validate, and admit
+  stages with deterministic first-failure errors for every frozen structural
+  mutation and optional final expected-`LayoutId` verification.
 - Canonical `StorageProfileId` text coordinates and explicit admission of the
   frozen `fastcdc-64k-v1` profile through `RegisteredStorageProfile`.
 - Canonical binary and text `LayoutId` coordinates with typed plan-length and
@@ -65,8 +68,8 @@ after its public API and format compatibility policies are established.
   `LayoutId` grammar, checked flat-plan bounds, domain-separated checksum,
   exact golden records, field-complete `LayoutId` refusal tables and
   cardinality-before-aggregate first-failure plan mutation ledger, and
-  verified storage-profile boundary replay law. Production encoding, decoding,
-  admission, ingestion, and reconstruction remain assigned to issue #10.
+  verified storage-profile boundary replay law. Ingestion and verified
+  reconstruction remain outside the current implementation.
 - Canonical version-1 `ChunkId` calculation in a domain distinct from
   `BlobId`, with independent golden vectors.
 - A constant-memory `FastCdc` detector for `fastcdc-64k-v1` that preserves
