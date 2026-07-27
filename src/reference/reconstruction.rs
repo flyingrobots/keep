@@ -3,7 +3,8 @@
 use std::io::{ErrorKind, Write};
 
 use crate::{
-    AdmittedLayout, BlobHasher, BlobId, BlobLength, ChunkId, LayoutEntry, LayoutId, ReferenceStore,
+    AdmittedLayout, BlobHasher, BlobId, BlobLength, ChunkId, LayoutDecodePolicy, LayoutEntry,
+    LayoutId, ReferenceStore,
 };
 
 use super::{ReconstructionError, ReconstructionReceipt};
@@ -90,6 +91,31 @@ impl ReferenceStore {
             .map_err(ReconstructionError::LayoutEncoding)?
             .id();
         reconstruct_admitted(self, layout_id, layout, output)
+    }
+
+    /// Decodes and reconstructs one exact canonical layout record.
+    ///
+    /// Bounded decoding and semantic admission complete before chunk lookup or
+    /// output. Authentication and emission then follow
+    /// [`ReferenceStore::reconstruct_admitted_layout`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ReconstructionError`] for malformed, noncanonical, or
+    /// policy-exceeding layout bytes; absent or mismatched content; broken
+    /// writer behavior; accounting failure; or output I/O failure.
+    pub fn reconstruct_record<W>(
+        &self,
+        encoded: &[u8],
+        policy: LayoutDecodePolicy,
+        output: &mut W,
+    ) -> Result<ReconstructionReceipt, ReconstructionError>
+    where
+        W: Write + ?Sized,
+    {
+        let layout = AdmittedLayout::decode_record(encoded, policy)
+            .map_err(ReconstructionError::LayoutDecode)?;
+        self.reconstruct_admitted_layout(&layout, output)
     }
 }
 
@@ -252,4 +278,50 @@ fn checked_written(
             bytes_written: written,
             incoming,
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use std::error::Error;
+    use std::io::Cursor;
+
+    use crate::{LayoutEntryLimit, ReconstructionError, ReferenceStore, ReferenceStoreCapacity};
+
+    #[test]
+    fn corrupted_stored_chunk_refuses_before_output() -> Result<(), Box<dyn Error>> {
+        let source = b"stored bytes must continue to match their chunk identity";
+        let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+        let mut reader = Cursor::new(source);
+        let published = store
+            .stage(&mut reader, LayoutEntryLimit::MAXIMUM)?
+            .commit(&mut store)?;
+        let layout = store
+            .layout(published.layout_id())
+            .ok_or("published layout is absent")?;
+        let identity = layout
+            .entries()
+            .first()
+            .ok_or("published layout has no chunk")?
+            .chunk_id();
+        let byte = store
+            .chunks
+            .get_mut(&identity)
+            .and_then(|bytes| bytes.first_mut())
+            .ok_or("published chunk is absent")?;
+        *byte ^= 1;
+        let mut output = Vec::new();
+
+        let error = store
+            .reconstruct(published.target(), &mut output)
+            .err()
+            .ok_or("corrupt chunk unexpectedly reconstructed")?;
+
+        assert!(matches!(
+            error,
+            ReconstructionError::ChunkIdentityMismatch { expected, .. }
+                if expected == identity
+        ));
+        assert!(output.is_empty());
+        Ok(())
+    }
 }

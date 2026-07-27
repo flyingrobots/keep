@@ -57,6 +57,9 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Bounded canonical layout-record reconstruction with typed pre-output refusal
+  for malformed records, zero-progress and over-reporting writers, output I/O
+  failures, conflicting stored chunks, and corrupted chunk content.
 - Exact synchronous reference-store reconstruction that authenticates every
   chunk and the complete named blob before output, reverifies chunks during
   emission, completes short writes, retries interruptions, and reports

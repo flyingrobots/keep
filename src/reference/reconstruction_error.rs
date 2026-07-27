@@ -4,7 +4,8 @@ use std::error::Error;
 use std::io;
 
 use crate::{
-    BlobHashError, BlobId, BlobLength, ChunkHashError, ChunkId, LayoutEncodeError, LayoutId,
+    BlobHashError, BlobId, BlobLength, ChunkHashError, ChunkId, LayoutDecodeError,
+    LayoutEncodeError, LayoutId,
 };
 
 /// Failure while verifying or emitting a committed logical blob.
@@ -20,6 +21,8 @@ pub enum ReconstructionError {
         /// Requested canonical layout identity.
         requested: LayoutId,
     },
+    /// Supplied canonical layout bytes failed bounded decoding or admission.
+    LayoutDecode(LayoutDecodeError),
     /// A supplied admitted layout could not produce its canonical identity.
     LayoutEncoding(LayoutEncodeError),
     /// A committed layout references an absent chunk.
@@ -116,6 +119,7 @@ impl Error for ReconstructionError {
         match self {
             Self::ChunkHash { source, .. } => Some(source),
             Self::BlobHash(source) => Some(source),
+            Self::LayoutDecode(source) => Some(source),
             Self::LayoutEncoding(source) => Some(source),
             Self::Write { source, .. } => Some(source),
             Self::BlobMissing { .. }

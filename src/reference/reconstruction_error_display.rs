@@ -31,6 +31,7 @@ impl<'a> From<&'a ReconstructionError> for DisplayGroup<'a> {
         match error {
             ReconstructionError::BlobMissing { .. }
             | ReconstructionError::LayoutMissing { .. }
+            | ReconstructionError::LayoutDecode(_)
             | ReconstructionError::LayoutEncoding(_) => Self::Presence(error),
             ReconstructionError::ChunkMissing { .. }
             | ReconstructionError::ChunkHash { .. }
@@ -54,6 +55,7 @@ fn format_presence(formatter: &mut fmt::Formatter<'_>, error: &ReconstructionErr
         ReconstructionError::LayoutMissing { requested } => {
             write!(formatter, "layout {requested} is absent")
         }
+        ReconstructionError::LayoutDecode(source) => source.fmt(formatter),
         ReconstructionError::LayoutEncoding(source) => source.fmt(formatter),
         ReconstructionError::ChunkMissing { .. }
         | ReconstructionError::ChunkHash { .. }
@@ -110,6 +112,7 @@ fn format_verification(
         ),
         ReconstructionError::BlobMissing { .. }
         | ReconstructionError::LayoutMissing { .. }
+        | ReconstructionError::LayoutDecode(_)
         | ReconstructionError::LayoutEncoding(_)
         | ReconstructionError::WriteZero { .. }
         | ReconstructionError::InvalidWriteCount { .. }
@@ -165,6 +168,7 @@ fn format_output(formatter: &mut fmt::Formatter<'_>, error: &ReconstructionError
         ),
         ReconstructionError::BlobMissing { .. }
         | ReconstructionError::LayoutMissing { .. }
+        | ReconstructionError::LayoutDecode(_)
         | ReconstructionError::LayoutEncoding(_)
         | ReconstructionError::ChunkMissing { .. }
         | ReconstructionError::ChunkHash { .. }

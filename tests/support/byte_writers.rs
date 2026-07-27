@@ -9,6 +9,51 @@ pub struct PartitionWriter<'a> {
     interrupt_next: bool,
 }
 
+/// Writer that deterministically refuses every byte.
+pub struct FailingWriter;
+
+impl Write for FailingWriter {
+    fn write(&mut self, _buffer: &[u8]) -> io::Result<usize> {
+        Err(io::Error::new(
+            ErrorKind::PermissionDenied,
+            "fixture refusal",
+        ))
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+/// Broken writer that reports one byte beyond the supplied buffer.
+pub struct LyingWriter;
+
+impl Write for LyingWriter {
+    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+        buffer
+            .len()
+            .checked_add(1)
+            .ok_or_else(|| io::Error::other("fixture count overflow"))
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+/// Writer that lawfully reports no progress for nonempty input.
+pub struct ZeroWriter;
+
+impl Write for ZeroWriter {
+    fn write(&mut self, _buffer: &[u8]) -> io::Result<usize> {
+        Ok(0)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
 impl<'a> PartitionWriter<'a> {
     /// Constructs an empty sink with a repeated nonempty width plan.
     #[must_use]

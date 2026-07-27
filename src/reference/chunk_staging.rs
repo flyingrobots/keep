@@ -96,3 +96,43 @@ const fn capacity_error(store: &ReferenceStore) -> IngestionError {
         attempted: usize::MAX,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::error::Error;
+    use std::io::Cursor;
+
+    use crate::{
+        ChunkId, IngestionError, LayoutEntryLimit, ReferenceStore, ReferenceStoreCapacity,
+    };
+
+    #[test]
+    fn conflicting_existing_chunk_bytes_are_never_repaired() -> Result<(), Box<dyn Error>> {
+        let source = b"the exact bytes named by the chunk";
+        let identity = ChunkId::hash_bytes(source)?;
+        let conflicting = b"different bytes under the same map key";
+        let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+        store
+            .chunks
+            .insert(identity, conflicting.to_vec().into_boxed_slice());
+        store.materialized_bytes = conflicting.len();
+        let mut reader = Cursor::new(source);
+
+        let error = store
+            .stage(&mut reader, LayoutEntryLimit::MAXIMUM)
+            .err()
+            .ok_or("conflicting chunk unexpectedly staged")?;
+
+        assert!(matches!(
+            error,
+            IngestionError::ConflictingChunk {
+                identity: observed
+            } if observed == identity
+        ));
+        assert_eq!(
+            store.chunks.get(&identity).map(Box::as_ref),
+            Some(conflicting.as_slice())
+        );
+        Ok(())
+    }
+}
