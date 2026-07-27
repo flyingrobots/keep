@@ -69,6 +69,12 @@ valid layout. Those cases remain admitted until verified content proves
 `layout.reconstruction-mismatch` or `layout.chunk-mismatch`. The ledger names
 that later phase explicitly.
 
+The `profile-boundary-mismatch` mutation replaces the natural 262,144-byte
+hard-maximum boundary for 262,145 zero bytes with structurally valid
+262,143-byte and 2-byte chunks. Both replacement `ChunkId` values and the
+target `BlobId` match the same exact source bytes. Verification MUST refuse
+the plan because replaying `fastcdc-64k-v1` emits the original boundary.
+
 ## `LayoutId` coordinate mutations
 
 Issue #10 also derives these mutations from every `layout_id_binary_hex` value

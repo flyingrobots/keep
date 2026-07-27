@@ -38,6 +38,10 @@ Node.js assembled bytes but did not supply a BLAKE3 implementation. `b3sum`
 was the only digest oracle. No Keep production type, serializer, encoder,
 decoder, or chunk detector generated expected layout bytes.
 
+The `profile-boundary-mismatch` mutation's replacement `ChunkId` digests were
+independently calculated from 262,143 and 2 zero bytes through the same typed
+version-1 preimage and external `b3sum` oracle.
+
 ## Review controls
 
 The checked-in tables expose every source recipe, identity, entry coordinate,

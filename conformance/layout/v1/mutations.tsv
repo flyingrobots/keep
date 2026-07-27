@@ -24,6 +24,7 @@ first-offset-not-zero	one-zero	replace-v1	144	8	0000000000000001	recompute-v1	va
 zero-chunk-length	one-zero	replace-v1	152	4	00000000	recompute-v1	validation	layout.zero-chunk-length	KEEP-LAYOUT-005
 final-chunk-over-profile-maximum	one-zero	replace-v1	152	4	00040001	recompute-v1	validation	layout.profile-length-out-of-bounds	KEEP-LAYOUT-005
 chunk-digest-substitution	one-zero	xor-v1	156	1	01	recompute-v1	verification	layout.chunk-mismatch	KEEP-LAYOUT-014
+profile-boundary-mismatch	max-plus-one-zeros	replace-v1	144	88	00000000000000000003ffff8f47b6632dfd6f015c4aede5d2b0fa50cbe5aad2b341b12c4b02074f4555d9cd000000000003ffff00000002e5c15b25f3fa2cd56fdccd7725224d897100420231e94e33ef1771c644d73be7	recompute-v1	verification	layout.profile-boundary-mismatch	KEEP-LAYOUT-016
 record-checksum-bit-flip	one-zero	xor-v1	188	1	01	preserve-v1	validation	layout.checksum-mismatch	KEEP-LAYOUT-012
 truncated-record	one-zero	delete-v1	219	1	-	preserve-v1	decoding	layout.truncated-record	KEEP-LAYOUT-011
 trailing-byte	one-zero	insert-v1	220	0	00	preserve-v1	decoding	layout.trailing-data	KEEP-LAYOUT-011

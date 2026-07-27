@@ -35,6 +35,9 @@ Concatenating the exact verified bytes named by the entries in order MUST
 produce the exact bytes named by the target `BlobId`, or reconstruction MUST
 refuse. Structural layout validation cannot prove that content claim without
 the chunk bytes; verified reconstruction performs that final comparison.
+Verified reconstruction MUST also reproduce the declared spans by replaying
+the bound storage profile over those bytes, or it MUST refuse the profile
+claim.
 
 Repeated `ChunkId` values are valid when equal bytes occur more than once.
 Entry order and logical offsets belong to the layout. They do not become part
@@ -277,6 +280,7 @@ For a nonempty target blob:
 The structural checks prove contiguity and aggregate length. They do not prove
 that chunk digests match bytes, that content-derived boundaries are natural
 for the profile, or that concatenated bytes match the target `BlobId`.
+Verified reconstruction proves all three content-dependent claims.
 
 ## Parse, validate, admit, verify
 
@@ -292,9 +296,10 @@ Implementations MUST keep these states distinct:
    `BlobId`, `ChunkId`, and registered `StorageProfileId` coordinates within
    the configured resource cap.
 4. **Verified reconstruction** has loaded every named chunk through a
-   verification boundary, compared each observed `ChunkId`, concatenated
-   exactly the declared spans, and compared the complete observed `BlobId`
-   with the target.
+   verification boundary, compared each observed `ChunkId`, replayed the
+   registered profile's boundary detector over the exact reconstructed byte
+   stream, compared its emitted spans with the declared entries, and compared
+   the complete observed `BlobId` with the target.
 
 Parsing, structural validation, or admission alone MUST NOT be reported as
 content verification.
@@ -340,6 +345,7 @@ silently canonicalize malformed bytes.
 | `KEEP-LAYOUT-013` | Physical locations never participate | Header and entry grammar | Specified |
 | `KEEP-LAYOUT-014` | Decoded, validated, admitted, and verified states remain distinct | State model | Planned in #10 |
 | `KEEP-LAYOUT-015` | Flat v1 never silently becomes hierarchical | Compatibility section and rationale | Specified |
+| `KEEP-LAYOUT-016` | Verified reconstruction reproduces the declared spans under the bound storage profile | Verification state and profile-boundary mutation | Planned in #10 |
 
 <!-- markdownlint-enable MD013 -->
 
@@ -401,7 +407,7 @@ The implementation-independent
 - a mutation ledger covering every fixed header field, entry field, checksum,
   truncation, trailing bytes, duplicate-field insertion, ordering, gap,
   overlap, aggregate mismatch, allocation limit, and later content
-  verification failure.
+  or storage-profile verification failure.
 
 The reasons for the flat grammar, explicit offsets, checksum, bounds, and
 hierarchy posture are recorded in the

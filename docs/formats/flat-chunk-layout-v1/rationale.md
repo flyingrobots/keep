@@ -62,6 +62,11 @@ stores the exact length and digest that form that typed value. Repeating the
 chunk magic, version, and algorithm in every entry would add bytes without
 adding a new validation boundary.
 
+Verified reconstruction replays the registered profile's deterministic
+boundary detector over the reconstructed stream and compares its emitted
+spans with the entries. Chunk and blob digest agreement alone cannot prove
+that the declared profile produced the plan.
+
 Any future identity kind, version, or algorithm requires a new layout codec.
 No version-1 field is reinterpreted.
 
@@ -146,6 +151,8 @@ entries and the empty `BlobId`.
 - A layout is independently reproducible from exact typed inputs.
 - Rechunking can move `LayoutId` without moving `BlobId`.
 - Range planning can validate logical continuity before storage lookup.
+- Verified reconstruction refuses a content-correct plan that falsely claims
+  a storage profile whose deterministic boundaries it does not reproduce.
 - Large plans remain bounded but may still warrant streaming APIs.
 - Blobs above the flat codec's capacity are precisely unsupported rather than
   partially represented.
