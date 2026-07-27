@@ -64,7 +64,7 @@ jobs:
           mkdir -p fuzz/corpus
 
       - name: Prepare deterministic fuzz seeds
-        run: python3 fuzz/prepare_corpus.py
+        run: cargo xtask prepare-fuzz-corpus
 
       - name: Validate prepared corpus
         run: python3 fuzz/check_corpus.py

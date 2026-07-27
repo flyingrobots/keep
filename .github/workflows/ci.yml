@@ -135,7 +135,7 @@ jobs:
         run: cargo install cargo-fuzz --version "$CARGO_FUZZ_VERSION" --locked
 
       - name: Prepare deterministic fuzz seeds
-        run: python3 fuzz/prepare_corpus.py
+        run: cargo xtask prepare-fuzz-corpus
 
       - name: Exercise every fuzz target
         run: python3 fuzz/run_campaign.py run --profile smoke

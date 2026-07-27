@@ -19,6 +19,8 @@ after its public API and format compatibility policies are established.
   emits one typed `Error:` diagnostic with exit status 1 on refusal.
 - Golden protocol framing, field, hexadecimal, and path decoders now share a
   bounded fuzz surface backed by table-driven malformed-corpus refusals.
+- Deterministic fuzz seed materialization now uses a capability-bound Rust
+  `xtask`; `golden_protocol` seeds reach every table and semantic parser.
 - Scheduled and manually dispatched fuzz campaigns now exercise every
   registered target under centralized bounded policy, retain failures, and
   preserve minimized evolving corpora as non-authoritative test state.

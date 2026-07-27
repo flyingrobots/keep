@@ -3,10 +3,12 @@
 use std::error::Error;
 use std::fmt;
 
+use crate::fuzz_seed_corpus::FuzzSeedError;
 use crate::golden_file_worldline::GoldenError;
 use crate::source_structure::SourceStructureError;
 
 pub(super) enum TaskError {
+    FuzzSeed(FuzzSeedError),
     Golden(GoldenError),
     InvalidCommandEncoding,
     InvalidExtraArgumentEncoding,
@@ -26,6 +28,7 @@ impl fmt::Debug for TaskError {
 impl fmt::Display for TaskError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::FuzzSeed(error) => write!(formatter, "{error}"),
             Self::Golden(error) => write!(formatter, "{error}"),
             Self::InvalidCommandEncoding => {
                 formatter.write_str("xtask command is not valid Unicode")
@@ -43,7 +46,8 @@ impl fmt::Display for TaskError {
             }
             Self::Usage => formatter.write_str(
                 "usage: cargo xtask \
-                 <golden-file-worldline-check|source-structure-check|verify>",
+                 <golden-file-worldline-check|prepare-fuzz-corpus|\
+                 source-structure-check|verify>",
             ),
         }
     }
@@ -52,6 +56,7 @@ impl fmt::Display for TaskError {
 impl Error for TaskError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::FuzzSeed(error) => Some(error),
             Self::Golden(error) => Some(error),
             Self::SourceStructure(error) => Some(error),
             Self::InvalidCommandEncoding
@@ -61,6 +66,12 @@ impl Error for TaskError {
             | Self::UnknownCommand(_)
             | Self::Usage => None,
         }
+    }
+}
+
+impl From<FuzzSeedError> for TaskError {
+    fn from(error: FuzzSeedError) -> Self {
+        Self::FuzzSeed(error)
     }
 }
 

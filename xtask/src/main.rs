@@ -7,6 +7,11 @@
     clippy::redundant_pub_crate,
     reason = "the parent command dispatcher is the only consumer"
 )]
+mod fuzz_seed_corpus;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "the parent command dispatcher is the only consumer"
+)]
 mod golden_file_worldline;
 #[allow(
     clippy::redundant_pub_crate,
@@ -43,6 +48,9 @@ fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
     }
     let repository_root = repository_root()?;
     match command.as_str() {
+        "prepare-fuzz-corpus" => {
+            fuzz_seed_corpus::prepare(repository_root)?;
+        }
         "golden-file-worldline-check" => {
             golden_file_worldline::check(repository_root)?;
         }
