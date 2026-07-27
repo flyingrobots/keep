@@ -4,6 +4,7 @@ use std::collections::BTreeSet;
 use std::io::Read;
 
 use super::SourceStructureError;
+use super::repository_path::RepositoryPath;
 
 const GIT_PATH_LIMITS: GitPathLimits = GitPathLimits {
     path_bytes: 4_096,
@@ -21,7 +22,7 @@ struct GitPathLimits {
 pub(super) fn read_paths(
     reader: impl Read,
     operation: &'static str,
-) -> Result<BTreeSet<String>, SourceStructureError> {
+) -> Result<BTreeSet<RepositoryPath>, SourceStructureError> {
     read_paths_with(reader, operation, GIT_PATH_LIMITS)
 }
 
@@ -29,7 +30,7 @@ fn read_paths_with(
     mut reader: impl Read,
     operation: &'static str,
     limits: GitPathLimits,
-) -> Result<BTreeSet<String>, SourceStructureError> {
+) -> Result<BTreeSet<RepositoryPath>, SourceStructureError> {
     let mut decoder = GitPathDecoder::new(operation, limits);
     let mut buffer = [0_u8; 4_096];
     loop {
@@ -61,7 +62,7 @@ struct GitPathDecoder {
     observed_bytes: usize,
     observed_paths: usize,
     operation: &'static str,
-    paths: BTreeSet<String>,
+    paths: BTreeSet<RepositoryPath>,
 }
 
 impl GitPathDecoder {
@@ -133,20 +134,23 @@ impl GitPathDecoder {
                 maximum: self.limits.paths,
             });
         }
-        let path = String::from_utf8(std::mem::take(&mut self.current)).map_err(|source| {
+        let text = String::from_utf8(std::mem::take(&mut self.current)).map_err(|source| {
             SourceStructureError::GitPathEncoding {
                 operation: self.operation,
                 source,
             }
         })?;
+        let path = RepositoryPath::admit(text)?;
         if self.paths.insert(path.clone()) {
             Ok(())
         } else {
-            Err(SourceStructureError::DuplicatePath(path))
+            Err(SourceStructureError::DuplicatePath(
+                path.as_str().to_owned(),
+            ))
         }
     }
 
-    fn finish(self) -> Result<BTreeSet<String>, SourceStructureError> {
+    fn finish(self) -> Result<BTreeSet<RepositoryPath>, SourceStructureError> {
         if self.current.is_empty() {
             Ok(self.paths)
         } else {

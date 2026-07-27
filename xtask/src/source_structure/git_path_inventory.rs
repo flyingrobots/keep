@@ -8,6 +8,7 @@ use std::thread::{self, JoinHandle};
 
 use super::SourceStructureError;
 use super::git_path_stream::read_paths;
+use super::repository_path::RepositoryPath;
 
 const GIT_DIAGNOSTIC_LIMIT_BYTES: usize = 65_536;
 
@@ -27,7 +28,7 @@ pub(super) fn git_paths(
     repository_root: &Path,
     arguments: &[&str],
     operation: &'static str,
-) -> Result<BTreeSet<String>, SourceStructureError> {
+) -> Result<BTreeSet<RepositoryPath>, SourceStructureError> {
     let process = start_git(repository_root, arguments, operation)?;
     let paths = read_paths(process.stdout, operation);
     collect_git_result(process.child, process.diagnostic_worker, paths, operation)
@@ -87,9 +88,9 @@ fn start_git(
 fn collect_git_result(
     mut child: Child,
     diagnostic_worker: JoinHandle<Result<BoundedBytes, io::Error>>,
-    paths: Result<BTreeSet<String>, SourceStructureError>,
+    paths: Result<BTreeSet<RepositoryPath>, SourceStructureError>,
     operation: &'static str,
-) -> Result<BTreeSet<String>, SourceStructureError> {
+) -> Result<BTreeSet<RepositoryPath>, SourceStructureError> {
     let stop = if paths.is_err() {
         request_stop(&mut child, operation)
     } else {

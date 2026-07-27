@@ -73,6 +73,7 @@ fn source_scan_keeps_the_admitted_repository_root() -> Result<(), Box<dyn std::e
     use std::fs;
     use std::process;
 
+    use super::repository_path::RepositoryPath;
     use super::source_file::SourceRoot;
     use super::source_line_count;
 
@@ -81,12 +82,13 @@ fn source_scan_keeps_the_admitted_repository_root() -> Result<(), Box<dyn std::e
     fs::create_dir(&root)?;
     fs::write(root.join("source.rs"), "safe\n")?;
     let source_root = SourceRoot::open(&root)?;
+    let relative = RepositoryPath::admit(String::from("source.rs"))?;
 
     fs::rename(&root, &retained_root)?;
     fs::create_dir(&root)?;
     fs::write(root.join("source.rs"), "replacement\n".repeat(501))?;
 
-    let line_count = source_line_count(&source_root, "source.rs")?;
+    let line_count = source_line_count(&source_root, &relative)?;
     fs::remove_dir_all(&root)?;
     fs::remove_dir_all(&retained_root)?;
 
@@ -102,6 +104,7 @@ fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructur
     use std::os::unix::fs::symlink;
     use std::process;
 
+    use super::repository_path::RepositoryPath;
     use super::source_file::SourceRoot;
     use super::source_line_count_with;
 
@@ -128,8 +131,9 @@ fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructur
             path: root.clone(),
             source,
         })?;
+    let relative = RepositoryPath::admit(String::from("source.rs"))?;
 
-    let result = source_line_count_with(&source_root, "source.rs", |source_root, relative| {
+    let result = source_line_count_with(&source_root, &relative, |source_root, relative| {
         let admitted = source_root.display_path(relative);
         fs::rename(&admitted, &retained_path).map_err(super::OpenSourceError::Io)?;
         symlink(&target_path, &admitted).map_err(super::OpenSourceError::Io)?;
@@ -170,7 +174,7 @@ fn source_module_classification_is_explicit() {
 #[test]
 fn source_paths_refuse_host_dependent_spellings() {
     for path in [r"src\host.rs", "C:/drive.rs", "src//empty.rs"] {
-        let result = super::admitted_relative_path(path);
+        let result = super::repository_path::RepositoryPath::admit(path.to_owned());
         assert!(matches!(
             result,
             Err(super::SourceStructureError::InvalidPath(ref observed)) if observed == path

@@ -83,6 +83,15 @@ fn git_path_stream_refuses_duplicate_records() {
 }
 
 #[test]
+fn git_path_stream_refuses_unsafe_records_before_inventory() {
+    let result = read_paths_with(Cursor::new(b"..\0"), "test paths", TEST_LIMITS);
+    assert!(matches!(
+        result,
+        Err(SourceStructureError::InvalidPath(ref path)) if path == ".."
+    ));
+}
+
+#[test]
 fn git_path_encoding_failure_names_the_path_stream() {
     let result = read_paths_with(Cursor::new([u8::MAX, 0]), "test paths", TEST_LIMITS);
     assert!(matches!(
