@@ -57,6 +57,10 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Capacity-bounded streaming ingestion into a non-durable in-memory reference
+  adapter, with exact blob, chunk, and layout identity calculation, typed
+  source and capacity refusals, identity-based chunk deduplication, and an
+  explicit staged-to-visible commit transition.
 - An independent field-by-field flat-layout fixture oracle that verifies every
   fixed offset, checksum, and `LayoutId` before cross-checking the production
   encoder.
@@ -77,8 +81,8 @@ after its public API and format compatibility policies are established.
   `LayoutId` grammar, checked flat-plan bounds, domain-separated checksum,
   exact golden records, field-complete `LayoutId` refusal tables and
   cardinality-before-aggregate first-failure plan mutation ledger, and
-  verified storage-profile boundary replay law. Ingestion and verified
-  reconstruction remain outside the current implementation.
+  verified storage-profile boundary replay law. Verified reconstruction
+  remains outside the current implementation.
 - Canonical version-1 `ChunkId` calculation in a domain distinct from
   `BlobId`, with independent golden vectors.
 - A constant-memory `FastCdc` detector for `fastcdc-64k-v1` that preserves

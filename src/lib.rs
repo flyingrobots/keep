@@ -15,6 +15,7 @@ mod blob;
 mod chunk;
 mod layout;
 mod profile;
+mod reference;
 
 pub use adapters::{
     BlobIdBinaryParseError, BlobIdTextParseError, CanonicalLayoutRecord, LayoutDecodeError,
@@ -30,3 +31,7 @@ pub use layout::{
     LayoutIdMismatch, LayoutRecordLength, LayoutValidationError,
 };
 pub use profile::{RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId};
+pub use reference::{
+    IngestionAllocation, IngestionError, PublishError, PublishedBlob, ReferenceStore,
+    ReferenceStoreCapacity, StagedBlob,
+};

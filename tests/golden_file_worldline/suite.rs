@@ -8,8 +8,6 @@ mod identity_assertions;
 mod identity_corpus;
 #[path = "mutation_assertions.rs"]
 mod mutation_assertions;
-#[path = "partition_reader.rs"]
-mod partition_reader;
 #[path = "reference_model.rs"]
 mod reference_model;
 #[path = "scenario_corpus.rs"]
@@ -18,6 +16,7 @@ mod scenario_corpus;
 use std::error::Error;
 use std::io::ErrorKind;
 
+use crate::support::{FailingReader, LyingReader, PartitionReader};
 use harness_failure::HarnessFailure;
 use identity_assertions::{
     assert_named_bytes, generated_bytes, hash_partitioned, text_error_class,
@@ -25,7 +24,6 @@ use identity_assertions::{
 use identity_corpus::{find_case, identity_cases};
 use keep::{BlobId, BlobIdTextParseError, BlobReadError};
 use mutation_assertions::{apply_mutation, assert_binary_mutation};
-use partition_reader::{FailingReader, LyingReader, PartitionReader};
 use reference_model::{MODEL_CAPACITY_BYTES, ReferenceModel, ReferenceModelError};
 use scenario_corpus::{invalid_text_cases, mutation_cases, scenario_steps};
 
