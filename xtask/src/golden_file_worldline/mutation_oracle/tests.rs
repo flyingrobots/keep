@@ -4,11 +4,12 @@ use std::collections::BTreeMap;
 use std::fs;
 
 use super::{
-    Corpus, GoldenError, IdentityFixture, apply_fixed_width, check, copy_fixed_width,
-    expected_text, mutate,
+    Corpus, GoldenError, IdentityFixture, MutationTarget, apply_fixed_width, check,
+    copy_fixed_width, expected_text, mutate,
 };
 use crate::golden_file_worldline::digest_port::IdentityDigestOracle;
 use crate::golden_file_worldline::identity_oracle::digest;
+use crate::golden_file_worldline::mutation_value::MutationOperation;
 use crate::test_directory::TestDirectory;
 
 struct InProcessOracle;
@@ -23,7 +24,13 @@ impl IdentityDigestOracle for InProcessOracle {
 fn fixed_width_mutations_require_the_declared_value_width() {
     for value in ["", "02", "000203"] {
         let mut changed = [0_u8; 2];
-        let result = apply_fixed_width(&mut changed, "set-u16-be", 0, value, "set-version");
+        let result = apply_fixed_width(
+            &mut changed,
+            MutationOperation::SetU16Be,
+            0,
+            value,
+            "set-version",
+        );
         assert!(matches!(
             result,
             Err(GoldenError::Violation(ref message))
@@ -35,7 +42,13 @@ fn fixed_width_mutations_require_the_declared_value_width() {
 #[test]
 fn fixed_width_mutations_admit_the_declared_value_width() {
     let mut changed = [0_u8; 2];
-    let result = apply_fixed_width(&mut changed, "set-u16-be", 0, "0002", "set-version");
+    let result = apply_fixed_width(
+        &mut changed,
+        MutationOperation::SetU16Be,
+        0,
+        "0002",
+        "set-version",
+    );
     assert!(result.is_ok());
     assert_eq!(changed, [0_u8, 2]);
 }
@@ -43,13 +56,12 @@ fn fixed_width_mutations_admit_the_declared_value_width() {
 #[test]
 fn fixed_width_mutations_refuse_unknown_operations() {
     for operation in ["set-u32-be", "set-u64-le", "set-u8-typo"] {
-        let mut changed = [0_u8; 4];
-        let result = apply_fixed_width(&mut changed, operation, 0, "01", "set-value");
+        let result = MutationOperation::admit(operation, "set-value");
         assert!(matches!(
             result,
             Err(GoldenError::Violation(ref message))
                 if message == &format!(
-                    "set-value: unknown fixed-width mutation operation {operation:?}"
+                    "set-value: unknown mutation operation {operation:?}"
                 )
         ));
     }
@@ -68,7 +80,7 @@ fn fixed_width_copy_refuses_a_width_mismatch() {
 
 #[test]
 fn no_op_mutation_has_an_exact_refusal() {
-    let result = mutate(&[1_u8], "xor-byte", 0, "00", "zero-xor");
+    let result = mutate(&[1_u8], MutationOperation::XorByte, 0, "00", "zero-xor");
     assert!(matches!(
         result,
         Err(GoldenError::Violation(ref message))
@@ -79,12 +91,43 @@ fn no_op_mutation_has_an_exact_refusal() {
 #[test]
 fn mutation_bound_refusal_reports_observed_and_maximum_bytes() {
     let target = vec![0_u8; 1_048_640];
-    let result = mutate(&target, "append", target.len(), "01", "oversized-append");
+    let result = mutate(
+        &target,
+        MutationOperation::Append,
+        target.len(),
+        "01",
+        "oversized-append",
+    );
     assert!(matches!(
         result,
         Err(GoldenError::Violation(ref message))
             if message
                 == "oversized-append: mutation produced 1048641 bytes, exceeding 1048640"
+    ));
+}
+
+#[test]
+fn mutation_application_requires_an_admitted_operation() -> Result<(), GoldenError> {
+    let operation = MutationOperation::admit("xor-byte", "typed-operation")?;
+    let changed = mutate(&[0_u8], operation, 0, "01", "typed-operation")?;
+    assert_eq!(changed, [1_u8]);
+    Ok(())
+}
+
+#[test]
+fn mutation_target_vocabulary_is_closed_at_admission() {
+    assert_eq!(
+        MutationTarget::admit("content", "target").ok(),
+        Some(MutationTarget::Content)
+    );
+    assert_eq!(
+        MutationTarget::admit("identity-binary", "target").ok(),
+        Some(MutationTarget::IdentityBinary)
+    );
+    assert!(matches!(
+        MutationTarget::admit("identity-text", "target"),
+        Err(GoldenError::Violation(ref message))
+            if message == "target: unknown mutation target kind \"identity-text\""
     ));
 }
 

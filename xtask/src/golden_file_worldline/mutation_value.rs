@@ -4,6 +4,15 @@ use super::GoldenError;
 use super::canonical_value::{EmptyHex, decimal, decoded_hex};
 use super::corpus_protocol::{MAX_MUTATION_VALUE_BYTES, MAX_SOURCE_BYTES};
 
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub(super) enum MutationOperation {
+    Truncate,
+    Append,
+    XorByte,
+    SetU8,
+    SetU16Be,
+}
+
 #[derive(Clone, Copy)]
 enum FixedWidthOperation {
     SetU8,
@@ -31,22 +40,17 @@ pub(super) fn mutation_offset(
 
 pub(super) fn mutate(
     target: &[u8],
-    operation: &str,
+    operation: MutationOperation,
     offset: usize,
     value_field: &str,
     name: &str,
 ) -> Result<Vec<u8>, GoldenError> {
     let mut changed = target.to_vec();
     match operation {
-        "truncate" => truncate(&mut changed, offset, value_field, name)?,
-        "append" => append(&mut changed, offset, value_field, name)?,
-        "xor-byte" | "set-u8" | "set-u16-be" => {
+        MutationOperation::Truncate => truncate(&mut changed, offset, value_field, name)?,
+        MutationOperation::Append => append(&mut changed, offset, value_field, name)?,
+        MutationOperation::XorByte | MutationOperation::SetU8 | MutationOperation::SetU16Be => {
             apply_fixed_width(&mut changed, operation, offset, value_field, name)?;
-        }
-        _ => {
-            return Err(GoldenError::violation(format!(
-                "{name}: unknown mutation operation {operation:?}"
-            )));
         }
     }
     let maximum = MAX_SOURCE_BYTES
@@ -104,12 +108,12 @@ fn append(
 
 pub(super) fn apply_fixed_width(
     changed: &mut [u8],
-    operation: &str,
+    operation: MutationOperation,
     offset: usize,
     value_field: &str,
     name: &str,
 ) -> Result<(), GoldenError> {
-    let operation = FixedWidthOperation::admit(operation, name)?;
+    let operation = operation.fixed_width(name)?;
     let width = operation.width();
     let expected_digits = width
         .checked_mul(2)
@@ -155,18 +159,33 @@ pub(super) fn copy_fixed_width(
     }
 }
 
-impl FixedWidthOperation {
-    fn admit(value: &str, name: &str) -> Result<Self, GoldenError> {
+impl MutationOperation {
+    pub(super) fn admit(value: &str, name: &str) -> Result<Self, GoldenError> {
         match value {
+            "truncate" => Ok(Self::Truncate),
+            "append" => Ok(Self::Append),
+            "xor-byte" => Ok(Self::XorByte),
             "set-u8" => Ok(Self::SetU8),
             "set-u16-be" => Ok(Self::SetU16Be),
-            "xor-byte" => Ok(Self::XorByte),
             _ => Err(GoldenError::violation(format!(
-                "{name}: unknown fixed-width mutation operation {value:?}"
+                "{name}: unknown mutation operation {value:?}"
             ))),
         }
     }
 
+    fn fixed_width(self, name: &str) -> Result<FixedWidthOperation, GoldenError> {
+        match self {
+            Self::SetU8 => Ok(FixedWidthOperation::SetU8),
+            Self::SetU16Be => Ok(FixedWidthOperation::SetU16Be),
+            Self::XorByte => Ok(FixedWidthOperation::XorByte),
+            Self::Truncate | Self::Append => Err(GoldenError::violation(format!(
+                "{name}: mutation operation is not fixed-width"
+            ))),
+        }
+    }
+}
+
+impl FixedWidthOperation {
     const fn width(self) -> usize {
         match self {
             Self::SetU8 | Self::XorByte => 1,

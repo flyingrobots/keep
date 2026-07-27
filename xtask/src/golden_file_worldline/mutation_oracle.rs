@@ -8,7 +8,7 @@ use super::digest_port::IdentityDigestOracle;
 use super::identity_oracle::{
     ALGORITHM, BINARY_LENGTH, ID_MAGIC, IdentityFixture, VERSION, expected_text, verified_digest,
 };
-use super::mutation_value::{mutate, mutation_offset};
+use super::mutation_value::{MutationOperation, mutate, mutation_offset};
 use super::{Corpus, GoldenError};
 
 #[cfg(test)]
@@ -23,16 +23,22 @@ const MUTATION_COLUMNS: [&str; 7] = [
     "value_hex",
     "expected_outcome",
 ];
-const REQUIRED_OPERATIONS: [(&str, &str); 8] = [
-    ("content", "xor-byte"),
-    ("content", "truncate"),
-    ("content", "append"),
-    ("identity-binary", "xor-byte"),
-    ("identity-binary", "truncate"),
-    ("identity-binary", "append"),
-    ("identity-binary", "set-u8"),
-    ("identity-binary", "set-u16-be"),
+const REQUIRED_OPERATIONS: [(MutationTarget, MutationOperation); 8] = [
+    (MutationTarget::Content, MutationOperation::XorByte),
+    (MutationTarget::Content, MutationOperation::Truncate),
+    (MutationTarget::Content, MutationOperation::Append),
+    (MutationTarget::IdentityBinary, MutationOperation::XorByte),
+    (MutationTarget::IdentityBinary, MutationOperation::Truncate),
+    (MutationTarget::IdentityBinary, MutationOperation::Append),
+    (MutationTarget::IdentityBinary, MutationOperation::SetU8),
+    (MutationTarget::IdentityBinary, MutationOperation::SetU16Be),
 ];
+
+#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+enum MutationTarget {
+    Content,
+    IdentityBinary,
+}
 
 pub(super) fn check(
     corpus: &Corpus,
@@ -54,7 +60,7 @@ pub(super) fn check(
     }
     if REQUIRED_OPERATIONS
         .iter()
-        .all(|(kind, operation)| covered.contains(&(String::from(*kind), String::from(*operation))))
+        .all(|operation| covered.contains(operation))
     {
         Ok(())
     } else {
@@ -69,57 +75,67 @@ fn check_mutation(
     row: &TableRow,
     name: &str,
     oracle: &impl IdentityDigestOracle,
-) -> Result<(String, String), GoldenError> {
-    let target_kind = row.field("target_kind")?;
-    if !matches!(target_kind, "content" | "identity-binary") {
-        return Err(GoldenError::violation(format!(
-            "{name}: unknown mutation target kind"
-        )));
-    }
+) -> Result<(MutationTarget, MutationOperation), GoldenError> {
+    let target_kind = MutationTarget::admit(row.field("target_kind")?, name)?;
+    let operation = MutationOperation::admit(row.field("operation")?, name)?;
     let fixture = fixtures
         .get(row.field("target_case")?)
         .ok_or_else(|| GoldenError::violation(format!("{name}: mutation target case is absent")))?;
     let target = target_bytes(fixture, target_kind);
     let offset = mutation_offset(row.field("offset")?, target.len(), name)?;
-    let operation = row.field("operation")?;
     let changed = mutate(target, operation, offset, row.field("value_hex")?, name)?;
     check_outcome(fixture, target_kind, &changed, row, oracle)?;
-    Ok((target_kind.to_owned(), operation.to_owned()))
+    Ok((target_kind, operation))
 }
 
-fn target_bytes<'a>(fixture: &'a IdentityFixture, target_kind: &str) -> &'a [u8] {
-    if target_kind == "content" {
-        &fixture.content
-    } else {
-        &fixture.canonical_binary
+fn target_bytes(fixture: &IdentityFixture, target_kind: MutationTarget) -> &[u8] {
+    match target_kind {
+        MutationTarget::Content => &fixture.content,
+        MutationTarget::IdentityBinary => &fixture.canonical_binary,
     }
 }
 
 fn check_outcome(
     fixture: &IdentityFixture,
-    target_kind: &str,
+    target_kind: MutationTarget,
     changed: &[u8],
     row: &TableRow,
     oracle: &impl IdentityDigestOracle,
 ) -> Result<(), GoldenError> {
     let expected_outcome = row.field("expected_outcome")?;
     let name = row.field("case")?;
-    if target_kind == "content" {
-        let length = u64::try_from(changed.len()).map_err(|source| {
-            GoldenError::violation(format!(
-                "{name}: mutation length cannot be represented: {source}"
-            ))
-        })?;
-        let observed = expected_text(length, &verified_digest(changed, oracle)?);
-        if expected_outcome == "keep.content.mismatch" && observed != fixture.canonical_text {
+    match target_kind {
+        MutationTarget::Content => {
+            let length = u64::try_from(changed.len()).map_err(|source| {
+                GoldenError::violation(format!(
+                    "{name}: mutation length cannot be represented: {source}"
+                ))
+            })?;
+            let observed = expected_text(length, &verified_digest(changed, oracle)?);
+            if expected_outcome == "keep.content.mismatch" && observed != fixture.canonical_text {
+                return Ok(());
+            }
+        }
+        MutationTarget::IdentityBinary if expected_outcome == binary_outcome(changed)? => {
             return Ok(());
         }
-    } else if expected_outcome == binary_outcome(changed)? {
-        return Ok(());
+        MutationTarget::IdentityBinary => {}
     }
     Err(GoldenError::violation(format!(
         "{name}: mutation outcome is incorrect"
     )))
+}
+
+impl MutationTarget {
+    fn admit(value: &str, name: &str) -> Result<Self, GoldenError> {
+        match value {
+            "content" => Ok(Self::Content),
+            "identity-binary" => Ok(Self::IdentityBinary),
+            _ => Err(GoldenError::violation(format!(
+                "{name}: unknown mutation target kind {value:?}"
+            ))),
+        }
+    }
 }
 
 fn binary_outcome(encoded: &[u8]) -> Result<&'static str, GoldenError> {

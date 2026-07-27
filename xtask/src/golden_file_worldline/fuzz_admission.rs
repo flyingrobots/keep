@@ -6,7 +6,7 @@ use super::GoldenError;
 use super::canonical_value::{EmptyHex, case_name, decimal, decoded_hex};
 use super::corpus_protocol::{MAX_SOURCE_BYTES, protocol_lines_from_bytes, table_rows};
 use super::invalid_text_oracle::text_outcome;
-use super::mutation_value::{mutate, mutation_offset};
+use super::mutation_value::{MutationOperation, mutate, mutation_offset};
 use crate::protocol_admission::tab_fields;
 
 const PARSER_COUNT: u8 = 9;
@@ -119,6 +119,7 @@ fn admit_mutation(input: &[u8]) -> Result<(), GoldenError> {
         EmptyHex::Refuse,
     )?;
     let parsed_offset = mutation_offset(offset, target.len(), "fuzz mutation")?;
+    let operation = MutationOperation::admit(operation, "fuzz mutation")?;
     mutate(
         &target,
         operation,
