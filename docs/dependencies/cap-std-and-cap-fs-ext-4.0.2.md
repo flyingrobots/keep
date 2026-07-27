@@ -13,9 +13,12 @@ only behind the `xtask` crate's `repository-tasks` feature.
 
 `cap-std::fs::Dir` pins the admitted repository or corpus directory and opens
 entries relative to that capability. `cap-fs-ext` supplies no-follow and
-nonblocking open options. Together, those operations let repository checks
-refuse path substitution, symlinked protocol tables, FIFOs, sockets, devices,
-and other ambiguous filesystem state before reading bytes.
+nonblocking open options plus cross-platform device and file identifiers.
+After Git inventory, the source check compares the retained repository
+directory's identity with a fresh open of the configured pathname. Together,
+these operations let repository checks refuse persistent root replacement,
+path substitution, symlinked protocol tables, FIFOs, sockets, devices, and
+other ambiguous filesystem state before reading source or protocol bytes.
 
 These packages are absent from Keep's published library graph, public API,
 content identities, durable formats, and production behavior. No

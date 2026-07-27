@@ -14,13 +14,18 @@ after its public API and format compatibility policies are established.
   Rust `xtask`, and CI refuses Rust, Python, or shell source modules that exceed
   the documented 500-line hard maximum.
 - Repository source verification now uses capability-relative, no-follow file
-  opens so a path replaced with a symlink is refused before any bytes are read.
+  opens and verifies repository-root identity after Git inventory, so a
+  persistent root replacement or source path replaced with a symlink is
+  refused before source bytes are read.
 - The Rust `xtask` command contract is now explicitly silent on success and
-  emits one typed `Error:` diagnostic with exit status 1 on refusal.
+  emits one typed `Error:` diagnostic with exit status 1 on refusal; untrusted
+  control characters are escaped so the diagnostic remains one physical line.
 - Golden protocol framing, field, hexadecimal, and path decoders now share a
   bounded fuzz surface backed by table-driven malformed-corpus refusals.
 - Deterministic fuzz seed materialization now uses a capability-bound Rust
-  `xtask`; `golden_protocol` seeds reach every table and semantic parser.
+  `xtask`, atomically publishes derived seed files without mutating hard-link
+  targets, and gives `golden_protocol` seeds that reach every table and
+  semantic parser.
 - Golden File Worldline source paths now have a named version-1 lexical
   profile with an explicit portability rationale.
 - Scheduled and manually dispatched fuzz campaigns now exercise every
