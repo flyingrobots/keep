@@ -27,9 +27,11 @@ impl fmt::Display for TaskError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Golden(error) => write!(formatter, "{error}"),
-            Self::InvalidCommandEncoding => formatter.write_str("xtask command is not valid UTF-8"),
+            Self::InvalidCommandEncoding => {
+                formatter.write_str("xtask command is not valid Unicode")
+            }
             Self::InvalidExtraArgumentEncoding => {
-                formatter.write_str("unexpected xtask argument is not valid UTF-8")
+                formatter.write_str("unexpected xtask argument is not valid Unicode")
             }
             Self::RepositoryRoot => formatter.write_str("xtask manifest has no repository parent"),
             Self::SourceStructure(error) => write!(formatter, "{error}"),

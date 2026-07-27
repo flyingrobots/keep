@@ -59,7 +59,7 @@ fn non_utf8_arguments_are_typed_refusals() -> Result<(), io::Error> {
     assert!(command_output.stdout.is_empty());
     assert_eq!(
         command_output.stderr,
-        b"Error: xtask command is not valid UTF-8\n"
+        b"Error: xtask command is not valid Unicode\n"
     );
 
     let extra_output = invoke_os(&[OsString::from("verify"), invalid])?;
@@ -67,7 +67,7 @@ fn non_utf8_arguments_are_typed_refusals() -> Result<(), io::Error> {
     assert!(extra_output.stdout.is_empty());
     assert_eq!(
         extra_output.stderr,
-        b"Error: unexpected xtask argument is not valid UTF-8\n"
+        b"Error: unexpected xtask argument is not valid Unicode\n"
     );
     Ok(())
 }
