@@ -12,8 +12,9 @@ const KIND: &str = "storage-profile";
 const VERSION: &str = "v1";
 const ALGORITHM: &str = "blake3-256";
 const DIGEST_HEX_BYTES: usize = 64;
+const MAX_VERSION_BYTES: usize = 6;
 const MAX_TEXT_BYTES: usize =
-    SCHEME.len() + KIND.len() + VERSION.len() + ALGORITHM.len() + DIGEST_HEX_BYTES + 4;
+    SCHEME.len() + KIND.len() + MAX_VERSION_BYTES + ALGORITHM.len() + DIGEST_HEX_BYTES + 4;
 
 impl fmt::Display for StorageProfileId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -87,13 +88,23 @@ fn validate_version(field: &str) -> Result<(), StorageProfileIdParseError> {
     let Some(decimal) = field.strip_prefix('v') else {
         return Err(StorageProfileIdParseError::MalformedVersion);
     };
-    if decimal.is_empty() || !decimal.as_bytes().iter().all(u8::is_ascii_digit) {
+    if !is_canonical_decimal(decimal) {
         return Err(StorageProfileIdParseError::MalformedVersion);
     }
     let observed = decimal
         .parse::<u16>()
         .map_err(|_source| StorageProfileIdParseError::MalformedVersion)?;
     Err(StorageProfileIdParseError::UnsupportedVersion { observed })
+}
+
+fn is_canonical_decimal(field: &str) -> bool {
+    if field == "0" {
+        return true;
+    }
+    let Some(first) = field.as_bytes().first() else {
+        return false;
+    };
+    (b'1'..=b'9').contains(first) && field.as_bytes().iter().all(u8::is_ascii_digit)
 }
 
 fn parse_digest(field: &str) -> Result<[u8; 32], StorageProfileIdParseError> {

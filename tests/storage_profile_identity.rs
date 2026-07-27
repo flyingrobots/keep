@@ -51,3 +51,37 @@ fn storage_profile_identity_refuses_noncanonical_digest_text() {
         Err(StorageProfileIdParseError::NonCanonicalDigestCase)
     );
 }
+
+#[test]
+fn storage_profile_identity_refuses_zero_padded_version() {
+    let zero_padded = concat!(
+        "keep:storage-profile:v01:blake3-256:",
+        "aafa6f05bdc8894306abd41ec6f2b3b76cde995f2598fa3fd547d81fbe1a34eb"
+    );
+
+    assert_eq!(
+        zero_padded.parse::<StorageProfileId>(),
+        Err(StorageProfileIdParseError::MalformedVersion)
+    );
+}
+
+#[test]
+fn storage_profile_version_bound_classifies_every_u16_spelling() {
+    let largest_u16 = concat!(
+        "keep:storage-profile:v65535:blake3-256:",
+        "aafa6f05bdc8894306abd41ec6f2b3b76cde995f2598fa3fd547d81fbe1a34eb"
+    );
+    let overflowing_u16 = concat!(
+        "keep:storage-profile:v65536:blake3-256:",
+        "aafa6f05bdc8894306abd41ec6f2b3b76cde995f2598fa3fd547d81fbe1a34eb"
+    );
+
+    assert_eq!(
+        largest_u16.parse::<StorageProfileId>(),
+        Err(StorageProfileIdParseError::UnsupportedVersion { observed: 65_535 })
+    );
+    assert_eq!(
+        overflowing_u16.parse::<StorageProfileId>(),
+        Err(StorageProfileIdParseError::MalformedVersion)
+    );
+}
