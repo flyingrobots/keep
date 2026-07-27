@@ -32,6 +32,17 @@ const CAPABILITY_CONTRACTS: [CapabilityContract; 16] = [
     CapabilityContract::future("keep.git-cas.import/v1", 5, &[25]),
 ];
 
+/// Validates the immutable version-1 capability roadmap in `capabilities.tsv`.
+///
+/// The check performs one bounded, blocking corpus read and allocates bounded
+/// row and set state. It verifies canonical coordinates, postures, milestones,
+/// ordered owning issues, nonblank claims, uniqueness, and completeness against
+/// [`CAPABILITY_CONTRACTS`]. It does not write repository or durable state.
+///
+/// # Errors
+///
+/// Returns [`GoldenError`] for corpus I/O or when any row is malformed,
+/// duplicate, missing, noncanonical, or moved from its declared contract.
 pub(super) fn check(corpus: &Corpus) -> Result<(), GoldenError> {
     let rows = corpus.rows(
         "capabilities.tsv",
