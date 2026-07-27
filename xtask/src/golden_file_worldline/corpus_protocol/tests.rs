@@ -144,6 +144,7 @@ fn corpus_tables_refuse_symlink_substitution() -> Result<(), GoldenError> {
     let table_path = root.join("cases.tsv");
     symlink(&outside, &table_path)
         .map_err(|source| GoldenError::io("link substituted table", &table_path, source))?;
+    let loop_code = filesystem_loop_error_code(directory.path())?;
 
     let result = Corpus::open(root.clone())?.rows("cases.tsv", "# keep.cases/v1", &["case"]);
     let refused = matches!(
@@ -151,8 +152,8 @@ fn corpus_tables_refuse_symlink_substitution() -> Result<(), GoldenError> {
         Err(GoldenError::Io {
             action: "open corpus table",
             ref path,
-            source: _,
-        }) if path == &table_path
+            ref source,
+        }) if path == &table_path && source.raw_os_error() == Some(loop_code)
     );
     assert!(refused);
     directory
