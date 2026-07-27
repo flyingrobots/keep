@@ -17,7 +17,7 @@ pub(super) use source_error::{GitOutputUnit, SourceStructureError};
 use source_file::{OpenSourceError, SourceRoot};
 
 const SOURCE_MODULE_HARD_LIMIT_LINES: u64 = 500;
-const SOURCE_SUFFIXES: [&str; 3] = ["py", "rs", "sh"];
+const SOURCE_SUFFIXES: [[u8; 2]; 3] = [*b"py", *b"rs", *b"sh"];
 const PRESENT_PATH_ARGUMENTS: [&str; 5] = [
     "ls-files",
     "-z",
@@ -81,9 +81,19 @@ fn select_source_paths(
 ) -> Result<Vec<RepositoryPath>, SourceStructureError> {
     present
         .difference(deleted)
-        .filter(|path| is_source_module(path.as_str()))
-        .map(|path| RepositoryPath::admit(path.as_str().to_owned()))
+        .filter(|path| is_source_module(path.as_bytes()))
+        .map(admit_source_path)
         .collect()
+}
+
+fn admit_source_path(path: &GitPathRecord) -> Result<RepositoryPath, SourceStructureError> {
+    let text = String::from_utf8(path.as_bytes().to_vec()).map_err(|source| {
+        SourceStructureError::GitPathEncoding {
+            operation: "source path admission",
+            source,
+        }
+    })?;
+    RepositoryPath::admit(text)
 }
 
 fn source_violations(
@@ -124,14 +134,18 @@ fn source_line_count_with(
         .map_err(|source| SourceStructureError::Inspect { path, source })
 }
 
-fn is_source_module(path: &str) -> bool {
-    let Some(file_name) = path.rsplit('/').next() else {
+fn is_source_module(path: &[u8]) -> bool {
+    let Some(file_name) = path.rsplit(|byte| *byte == b'/').next() else {
         return false;
     };
-    let Some((stem, suffix)) = file_name.rsplit_once('.') else {
+    let mut components = file_name.rsplitn(2, |byte| *byte == b'.');
+    let Some(suffix) = components.next() else {
         return false;
     };
-    !stem.is_empty() && SOURCE_SUFFIXES.contains(&suffix)
+    let Some(stem) = components.next() else {
+        return false;
+    };
+    !stem.is_empty() && SOURCE_SUFFIXES.iter().any(|candidate| suffix == candidate)
 }
 
 const fn exceeds_hard_limit(lines: u64) -> bool {

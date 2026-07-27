@@ -66,14 +66,14 @@ struct GitPathDecoder {
 }
 
 #[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub(super) struct GitPathRecord(String);
+pub(super) struct GitPathRecord(Vec<u8>);
 
 impl GitPathRecord {
-    pub(super) const fn new(text: String) -> Self {
-        Self(text)
+    pub(super) const fn new(bytes: Vec<u8>) -> Self {
+        Self(bytes)
     }
 
-    pub(super) fn as_str(&self) -> &str {
+    pub(super) fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 }
@@ -152,18 +152,12 @@ impl GitPathDecoder {
                 unit: GitOutputUnit::Items,
             });
         }
-        let text = String::from_utf8(std::mem::take(&mut self.current)).map_err(|source| {
-            SourceStructureError::GitPathEncoding {
-                operation: self.operation,
-                source,
-            }
-        })?;
-        let path = GitPathRecord::new(text);
+        let path = GitPathRecord::new(std::mem::take(&mut self.current));
         if self.paths.insert(path.clone()) {
             Ok(())
         } else {
             Err(SourceStructureError::DuplicatePath(
-                path.as_str().to_owned(),
+                path.as_bytes().to_vec(),
             ))
         }
     }

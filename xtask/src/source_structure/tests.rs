@@ -261,12 +261,12 @@ fn source_module_limit_accepts_five_hundred_and_refuses_five_hundred_one() {
 
 #[test]
 fn source_module_classification_is_explicit() {
-    assert!(is_source_module("src/lib.rs"));
-    assert!(is_source_module("scripts/check.py"));
-    assert!(is_source_module("scripts/check.sh"));
-    assert!(!is_source_module("README.md"));
-    assert!(!is_source_module("src/lib.RS"));
-    assert!(!is_source_module(".rs"));
+    assert!(is_source_module(b"src/lib.rs"));
+    assert!(is_source_module(b"scripts/check.py"));
+    assert!(is_source_module(b"scripts/check.sh"));
+    assert!(!is_source_module(b"README.md"));
+    assert!(!is_source_module(b"src/lib.RS"));
+    assert!(!is_source_module(b".rs"));
 }
 
 #[test]
@@ -287,13 +287,30 @@ fn source_selection_refuses_an_unsafe_source_record() {
     use super::git_path_stream::GitPathRecord;
 
     let present = BTreeSet::from([
-        GitPathRecord::new(String::from("../escape.rs")),
-        GitPathRecord::new(String::from("notes/x:y")),
+        GitPathRecord::new(b"../escape.rs".to_vec()),
+        GitPathRecord::new(b"notes/x:y".to_vec()),
     ]);
     let result = super::select_source_paths(&present, &BTreeSet::new());
     assert!(matches!(
         result,
         Err(super::SourceStructureError::InvalidPath(ref path)) if path == "../escape.rs"
+    ));
+}
+
+#[test]
+fn source_selection_refuses_a_non_utf8_source_record() {
+    use std::collections::BTreeSet;
+
+    use super::git_path_stream::GitPathRecord;
+
+    let present = BTreeSet::from([GitPathRecord::new(b"bad\xff.rs".to_vec())]);
+    let result = super::select_source_paths(&present, &BTreeSet::new());
+    assert!(matches!(
+        result,
+        Err(super::SourceStructureError::GitPathEncoding {
+            operation: "source path admission",
+            ..
+        })
     ));
 }
 

@@ -1,7 +1,7 @@
 //! This module owns typed source-structure failures and stable diagnostics.
 
 use std::error::Error;
-use std::fmt;
+use std::fmt::{self, Write as _};
 use std::io;
 use std::path::PathBuf;
 use std::string::FromUtf8Error;
@@ -15,7 +15,7 @@ pub(crate) enum GitOutputUnit {
 }
 
 pub(crate) enum SourceStructureError {
-    DuplicatePath(String),
+    DuplicatePath(Vec<u8>),
     GitFailed {
         operation: &'static str,
         code: Option<i32>,
@@ -75,7 +75,7 @@ impl fmt::Display for SourceStructureError {
         match self {
             Self::DuplicatePath(path) => {
                 formatter.write_str("git returned duplicate path `")?;
-                escaped_controls(formatter, path)?;
+                escaped_bytes(formatter, path)?;
                 formatter.write_str("`")
             }
             Self::GitFailed {
@@ -183,6 +183,20 @@ fn git_failed(
 ) -> fmt::Result {
     write!(formatter, "`{operation}` failed with code {code:?}: ")?;
     escaped_controls(formatter, stderr.trim())
+}
+
+fn escaped_bytes(formatter: &mut fmt::Formatter<'_>, bytes: &[u8]) -> fmt::Result {
+    if let Ok(text) = std::str::from_utf8(bytes) {
+        return escaped_controls(formatter, text);
+    }
+    for byte in bytes {
+        if byte.is_ascii_graphic() || *byte == b' ' {
+            formatter.write_char(char::from(*byte))?;
+        } else {
+            write!(formatter, "\\x{byte:02x}")?;
+        }
+    }
+    Ok(())
 }
 
 fn violations_display(
