@@ -3,11 +3,28 @@
 const SPECIFICATION: &str = include_str!("../../docs/formats/flat-chunk-layout-v1/README.md");
 const RATIONALE: &str = include_str!("../../docs/formats/flat-chunk-layout-v1/rationale.md");
 const CONFORMANCE_GUIDE: &str = include_str!("../../conformance/layout/v1/README.md");
+const LAYOUT_DECODE_ERROR_DISPLAY: &str =
+    include_str!("../../src/adapters/layout_decode_error_display.rs");
 const INVALID_LAYOUT_ID_BINARY: &str =
     include_str!("../../conformance/layout/v1/invalid-layout-id-binary.tsv");
 const INVALID_LAYOUT_ID_TEXT: &str =
     include_str!("../../conformance/layout/v1/invalid-layout-id-text.tsv");
 const MUTATIONS: &str = include_str!("../../conformance/layout/v1/mutations.tsv");
+
+#[test]
+fn layout_decode_error_formatter_stays_below_the_hard_function_limit() -> Result<(), &'static str> {
+    let (_, after_signature) = LAYOUT_DECODE_ERROR_DISPLAY
+        .split_once("    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {")
+        .ok_or("display implementation must retain its formatter")?;
+    let (body, _) = after_signature
+        .split_once("\n    }\n}\n\nfn ")
+        .ok_or("display formatter must remain a directly inspectable function")?;
+    assert!(
+        body.lines().count() <= 59,
+        "LayoutDecodeError::fmt exceeds the 60-line hard limit"
+    );
+    Ok(())
+}
 
 #[test]
 fn verified_reconstruction_proves_the_bound_storage_profile() {

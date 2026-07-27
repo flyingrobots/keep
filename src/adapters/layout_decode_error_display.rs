@@ -5,97 +5,165 @@ use std::fmt;
 
 use super::LayoutDecodeError;
 
+enum DisplayGroup {
+    Header,
+    Record,
+    Admission,
+}
+
 impl fmt::Display for LayoutDecodeError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::TruncatedHeader { expected, observed } => {
-                length_error("layout header", expected, observed, formatter)
-            }
-            Self::InvalidMagic { .. } => formatter.write_str("invalid layout record magic"),
-            Self::UnsupportedFormatVersion { expected, observed } => {
-                unsupported("layout format version", expected, observed, formatter)
-            }
-            Self::UnsupportedCodec { expected, observed } => {
-                unsupported("layout codec", expected, observed, formatter)
-            }
-            Self::UnknownFlags { expected, observed } => {
-                unknown_flags(*expected, *observed, formatter)
-            }
-            Self::WrongHeaderLength { expected, observed } => {
-                wrong_value("layout header length", expected, observed, formatter)
-            }
-            Self::WrongEntryLength { expected, observed } => {
-                wrong_value("layout entry length", expected, observed, formatter)
-            }
-            Self::UnsupportedChecksumAlgorithm { expected, observed } => {
-                unsupported("layout checksum algorithm", expected, observed, formatter)
-            }
-            Self::UnsupportedChunkHashAlgorithm { expected, observed } => {
-                unsupported("chunk hash algorithm", expected, observed, formatter)
-            }
-            Self::UnsupportedChunkIdentityVersion { expected, observed } => {
-                unsupported("chunk identity version", expected, observed, formatter)
-            }
-            Self::NonzeroReserved {
-                offset, observed, ..
-            } => reserved_byte(*offset, *observed, formatter),
-            Self::EntryCountLimitExceeded { maximum, observed } => {
-                entry_limit(*maximum, *observed, "protocol", formatter)
-            }
-            Self::ConfiguredEntryLimitExceeded { maximum, observed } => {
-                entry_limit(*maximum, *observed, "configured", formatter)
-            }
-            Self::RecordLengthLimitExceeded { maximum, observed } => {
-                record_limit(*maximum, *observed, formatter)
-            }
-            Self::RecordLengthArithmetic { entry_count } => {
-                record_arithmetic(*entry_count, formatter)
-            }
-            Self::RecordLengthMismatch { expected, observed } => {
-                wrong_value("layout record length", expected, observed, formatter)
-            }
-            Self::EntryCountLengthMismatch {
-                entry_count,
-                expected,
-                observed,
-            } => entry_count_length(*entry_count, *expected, *observed, formatter),
-            Self::TruncatedRecord { expected, observed } => {
-                length_error("layout record", expected, observed, formatter)
-            }
-            Self::TrailingData { expected, observed } => {
-                trailing_data(*expected, *observed, formatter)
-            }
-            Self::HostRecordLengthOutOfRange { observed, .. } => {
-                host_width("layout record length", observed, formatter)
-            }
-            Self::ChecksumMismatch { .. } => formatter.write_str("layout checksum mismatch"),
-            Self::BlobId { source } => write!(formatter, "invalid layout target: {source}"),
-            Self::UnsupportedStorageProfileVersion { expected, observed } => {
-                unsupported("storage-profile version", expected, observed, formatter)
-            }
-            Self::UnsupportedStorageProfileAlgorithm { expected, observed } => {
-                unsupported("storage-profile algorithm", expected, observed, formatter)
-            }
-            Self::StorageProfile { source } => {
-                write!(
-                    formatter,
-                    "layout storage profile was not admitted: {source}"
-                )
-            }
-            Self::EntryCountHostWidth { observed, .. } => {
-                host_width("layout entry count", observed, formatter)
-            }
-            Self::Allocation { requested, .. } => {
-                write!(formatter, "allocation of {requested} layout entries failed")
-            }
-            Self::ZeroChunkLength { index } => {
-                write!(formatter, "layout entry {index} has zero chunk length")
-            }
-            Self::Validation { source } => write!(formatter, "invalid layout: {source}"),
-            Self::LayoutIdentity { source } => {
-                write!(formatter, "layout identity mismatch: {source}")
-            }
+        match display_group(self) {
+            DisplayGroup::Header => format_header(self, formatter),
+            DisplayGroup::Record => format_record(self, formatter),
+            DisplayGroup::Admission => format_admission(self, formatter),
         }
+    }
+}
+
+const fn display_group(error: &LayoutDecodeError) -> DisplayGroup {
+    match error {
+        LayoutDecodeError::TruncatedHeader { .. }
+        | LayoutDecodeError::InvalidMagic { .. }
+        | LayoutDecodeError::UnsupportedFormatVersion { .. }
+        | LayoutDecodeError::UnsupportedCodec { .. }
+        | LayoutDecodeError::UnknownFlags { .. }
+        | LayoutDecodeError::WrongHeaderLength { .. }
+        | LayoutDecodeError::WrongEntryLength { .. }
+        | LayoutDecodeError::UnsupportedChecksumAlgorithm { .. }
+        | LayoutDecodeError::UnsupportedChunkHashAlgorithm { .. }
+        | LayoutDecodeError::UnsupportedChunkIdentityVersion { .. }
+        | LayoutDecodeError::NonzeroReserved { .. } => DisplayGroup::Header,
+        LayoutDecodeError::EntryCountLimitExceeded { .. }
+        | LayoutDecodeError::ConfiguredEntryLimitExceeded { .. }
+        | LayoutDecodeError::RecordLengthLimitExceeded { .. }
+        | LayoutDecodeError::RecordLengthArithmetic { .. }
+        | LayoutDecodeError::RecordLengthMismatch { .. }
+        | LayoutDecodeError::EntryCountLengthMismatch { .. }
+        | LayoutDecodeError::TruncatedRecord { .. }
+        | LayoutDecodeError::TrailingData { .. }
+        | LayoutDecodeError::HostRecordLengthOutOfRange { .. }
+        | LayoutDecodeError::ChecksumMismatch { .. } => DisplayGroup::Record,
+        LayoutDecodeError::BlobId { .. }
+        | LayoutDecodeError::UnsupportedStorageProfileVersion { .. }
+        | LayoutDecodeError::UnsupportedStorageProfileAlgorithm { .. }
+        | LayoutDecodeError::StorageProfile { .. }
+        | LayoutDecodeError::EntryCountHostWidth { .. }
+        | LayoutDecodeError::Allocation { .. }
+        | LayoutDecodeError::ZeroChunkLength { .. }
+        | LayoutDecodeError::Validation { .. }
+        | LayoutDecodeError::LayoutIdentity { .. } => DisplayGroup::Admission,
+    }
+}
+
+fn format_header(error: &LayoutDecodeError, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match error {
+        LayoutDecodeError::TruncatedHeader { expected, observed } => {
+            length_error("layout header", expected, observed, formatter)
+        }
+        LayoutDecodeError::InvalidMagic { .. } => {
+            formatter.write_str("invalid layout record magic")
+        }
+        LayoutDecodeError::UnsupportedFormatVersion { expected, observed } => {
+            unsupported("layout format version", expected, observed, formatter)
+        }
+        LayoutDecodeError::UnsupportedCodec { expected, observed } => {
+            unsupported("layout codec", expected, observed, formatter)
+        }
+        LayoutDecodeError::UnknownFlags { expected, observed } => {
+            unknown_flags(*expected, *observed, formatter)
+        }
+        LayoutDecodeError::WrongHeaderLength { expected, observed } => {
+            wrong_value("layout header length", expected, observed, formatter)
+        }
+        LayoutDecodeError::WrongEntryLength { expected, observed } => {
+            wrong_value("layout entry length", expected, observed, formatter)
+        }
+        LayoutDecodeError::UnsupportedChecksumAlgorithm { expected, observed } => {
+            unsupported("layout checksum algorithm", expected, observed, formatter)
+        }
+        LayoutDecodeError::UnsupportedChunkHashAlgorithm { expected, observed } => {
+            unsupported("chunk hash algorithm", expected, observed, formatter)
+        }
+        LayoutDecodeError::UnsupportedChunkIdentityVersion { expected, observed } => {
+            unsupported("chunk identity version", expected, observed, formatter)
+        }
+        LayoutDecodeError::NonzeroReserved {
+            offset, observed, ..
+        } => reserved_byte(*offset, *observed, formatter),
+        _ => Err(fmt::Error),
+    }
+}
+
+fn format_record(error: &LayoutDecodeError, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match error {
+        LayoutDecodeError::EntryCountLimitExceeded { maximum, observed } => {
+            entry_limit(*maximum, *observed, "protocol", formatter)
+        }
+        LayoutDecodeError::ConfiguredEntryLimitExceeded { maximum, observed } => {
+            entry_limit(*maximum, *observed, "configured", formatter)
+        }
+        LayoutDecodeError::RecordLengthLimitExceeded { maximum, observed } => {
+            record_limit(*maximum, *observed, formatter)
+        }
+        LayoutDecodeError::RecordLengthArithmetic { entry_count } => {
+            record_arithmetic(*entry_count, formatter)
+        }
+        LayoutDecodeError::RecordLengthMismatch { expected, observed } => {
+            wrong_value("layout record length", expected, observed, formatter)
+        }
+        LayoutDecodeError::EntryCountLengthMismatch {
+            entry_count,
+            expected,
+            observed,
+        } => entry_count_length(*entry_count, *expected, *observed, formatter),
+        LayoutDecodeError::TruncatedRecord { expected, observed } => {
+            length_error("layout record", expected, observed, formatter)
+        }
+        LayoutDecodeError::TrailingData { expected, observed } => {
+            trailing_data(*expected, *observed, formatter)
+        }
+        LayoutDecodeError::HostRecordLengthOutOfRange { observed, .. } => {
+            host_width("layout record length", observed, formatter)
+        }
+        LayoutDecodeError::ChecksumMismatch { .. } => {
+            formatter.write_str("layout checksum mismatch")
+        }
+        _ => Err(fmt::Error),
+    }
+}
+
+fn format_admission(error: &LayoutDecodeError, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match error {
+        LayoutDecodeError::BlobId { source } => {
+            write!(formatter, "invalid layout target: {source}")
+        }
+        LayoutDecodeError::UnsupportedStorageProfileVersion { expected, observed } => {
+            unsupported("storage-profile version", expected, observed, formatter)
+        }
+        LayoutDecodeError::UnsupportedStorageProfileAlgorithm { expected, observed } => {
+            unsupported("storage-profile algorithm", expected, observed, formatter)
+        }
+        LayoutDecodeError::StorageProfile { source } => {
+            write!(
+                formatter,
+                "layout storage profile was not admitted: {source}"
+            )
+        }
+        LayoutDecodeError::EntryCountHostWidth { observed, .. } => {
+            host_width("layout entry count", observed, formatter)
+        }
+        LayoutDecodeError::Allocation { requested, .. } => {
+            write!(formatter, "allocation of {requested} layout entries failed")
+        }
+        LayoutDecodeError::ZeroChunkLength { index } => {
+            write!(formatter, "layout entry {index} has zero chunk length")
+        }
+        LayoutDecodeError::Validation { source } => write!(formatter, "invalid layout: {source}"),
+        LayoutDecodeError::LayoutIdentity { source } => {
+            write!(formatter, "layout identity mismatch: {source}")
+        }
+        _ => Err(fmt::Error),
     }
 }
 
