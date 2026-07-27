@@ -238,8 +238,8 @@ Version 1 defines:
 
 With the registered profile's 262,144-byte hard chunk maximum, a flat
 version-1 plan can describe at most 256 GiB of logical bytes. Larger blobs
-require a future bounded hierarchical codec; they MUST NOT bypass the entry
-limit or reinterpret codec `1`.
+require a future hierarchical codec with explicit bounds; they MUST NOT bypass
+the entry limit or reinterpret codec `1`.
 
 Depth is exactly one record. Entries can name only chunks; they cannot name
 another layout, record, collection, or indirect node. A decoder therefore

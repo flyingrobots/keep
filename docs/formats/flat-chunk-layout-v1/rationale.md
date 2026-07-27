@@ -118,7 +118,7 @@ format needs neither.
 ### Use variable-width integers
 
 Rejected because fixed-width fields are small relative to chunk digests and
-have one byte representation. Varints add overlong encodings and parsing
+have a one-byte representation. Varints add overlong encodings and parsing
 branches without meaningful layout-size savings.
 
 ### Omit the checksum and rely only on `LayoutId`

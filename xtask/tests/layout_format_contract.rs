@@ -1,6 +1,8 @@
 //! Written-contract regression evidence for the flat chunk layout format.
 
 const SPECIFICATION: &str = include_str!("../../docs/formats/flat-chunk-layout-v1/README.md");
+const RATIONALE: &str = include_str!("../../docs/formats/flat-chunk-layout-v1/rationale.md");
+const CONFORMANCE_GUIDE: &str = include_str!("../../conformance/layout/v1/README.md");
 const INVALID_LAYOUT_ID_BINARY: &str =
     include_str!("../../conformance/layout/v1/invalid-layout-id-binary.tsv");
 const INVALID_LAYOUT_ID_TEXT: &str =
@@ -32,6 +34,13 @@ fn mutation_outcomes_follow_first_failure_precedence() {
         expected_mutation_outcome("blob-logical-length-mismatch"),
         Some("layout.empty-blob-has-entries")
     );
+}
+
+#[test]
+fn format_prose_uses_unambiguous_compound_phrases() {
+    assert!(!CONFORMANCE_GUIDE.contains("same exact"));
+    assert!(!RATIONALE.contains("one byte representation"));
+    assert!(!SPECIFICATION.contains("future bounded hierarchical codec"));
 }
 
 #[test]

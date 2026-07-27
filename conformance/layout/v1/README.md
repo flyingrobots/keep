@@ -82,14 +82,14 @@ that later phase explicitly.
 The `profile-boundary-mismatch` mutation replaces the natural 262,144-byte
 hard-maximum boundary for 262,145 zero bytes with structurally valid
 262,143-byte and 2-byte chunks. Both replacement `ChunkId` values and the
-target `BlobId` match the same exact source bytes. Verification MUST refuse
-the plan because replaying `fastcdc-64k-v1` emits the original boundary.
+target `BlobId` name the exact source bytes. Verification MUST refuse the plan
+because replaying `fastcdc-64k-v1` emits the original boundary.
 
 ## `LayoutId` coordinate mutations
 
 Issue #10 applies every row in `invalid-layout-id-binary.tsv` to the named
-case's `layout_id_binary_hex` value. Operations have the same exact semantics
-as the plan mutation protocol. Wider replacements deliberately distinguish an
+case's `layout_id_binary_hex` value. Operations have semantics identical to the
+plan mutation protocol. Wider replacements deliberately distinguish an
 out-of-bounds plan length, an in-bounds but incongruent length, and a different
 valid record length that mismatches the named record.
 
