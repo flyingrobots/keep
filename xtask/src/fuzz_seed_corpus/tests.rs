@@ -165,6 +165,35 @@ fn interrupted_seed_stage_is_recovered() -> Result<(), Box<dyn std::error::Error
     Ok(())
 }
 
+#[test]
+fn failed_seed_publication_removes_its_stage() -> Result<(), Box<dyn std::error::Error>> {
+    use std::fs;
+
+    let directory = TestDirectory::create("fuzz-seed-failed-publication")?;
+    let root = directory.path();
+    let target = root.join("fuzz/corpus/blob_hasher");
+    fs::create_dir_all(target.join("empty"))
+        .map_err(|source| FuzzSeedError::io("create blocking destination", &target, source))?;
+    let staged = target.join(".empty.keep-tmp");
+
+    let result = RepositoryFiles::open(root)?.write_seeds(&[Seed {
+        target: "blob_hasher",
+        name: "empty",
+        content: b"derived".to_vec(),
+    }]);
+
+    assert!(matches!(
+        result,
+        Err(FuzzSeedError::Io {
+            action: "publish seed",
+            ..
+        })
+    ));
+    assert!(!staged.exists());
+    directory.close()?;
+    Ok(())
+}
+
 fn seed_contents(
     root: &Path,
 ) -> Result<std::collections::BTreeMap<String, Vec<u8>>, FuzzSeedError> {

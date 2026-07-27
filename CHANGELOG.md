@@ -26,8 +26,8 @@ after its public API and format compatibility policies are established.
   bounded fuzz surface backed by table-driven malformed-corpus refusals.
 - Deterministic fuzz seed materialization now uses a capability-bound Rust
   `xtask`, atomically publishes derived seed files without mutating hard-link
-  targets, recovers interrupted fixed-name staging files, and gives
-  `golden_protocol` seeds that reach every table and semantic parser.
+  targets, recovers interrupted fixed-name staging files, cleans failed stages,
+  and gives `golden_protocol` seeds that reach every table and semantic parser.
 - Golden File Worldline source paths now have a named version-1 lexical
   profile with an explicit portability rationale.
 - Filesystem-backed `xtask` tests now use collision-resistant scoped

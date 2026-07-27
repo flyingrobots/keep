@@ -17,6 +17,12 @@ pub(super) struct RepositoryFiles {
     root: PathBuf,
 }
 
+struct SeedStage<'a> {
+    directory: &'a Dir,
+    relative: PathBuf,
+    active: bool,
+}
+
 impl RepositoryFiles {
     pub(super) fn open(root: &Path) -> Result<Self, FuzzSeedError> {
         let directory = Dir::open_ambient_dir(root, ambient_authority())
@@ -123,6 +129,7 @@ fn write_seed(directory: &Dir, seed: &Seed, root: &Path) -> Result<(), FuzzSeedE
         .open_with(&temporary, &options)
         .map(cap_std::fs::File::into_std)
         .map_err(|source| FuzzSeedError::io("create temporary seed", &temporary_path, source))?;
+    let stage = SeedStage::new(directory, &temporary);
     let metadata = file
         .metadata()
         .map_err(|source| FuzzSeedError::io("inspect temporary seed", &temporary_path, source))?;
@@ -139,7 +146,9 @@ fn write_seed(directory: &Dir, seed: &Seed, root: &Path) -> Result<(), FuzzSeedE
     drop(file);
     directory
         .rename(&temporary, directory, seed.name)
-        .map_err(|source| FuzzSeedError::io("publish seed", path, source))
+        .map_err(|source| FuzzSeedError::io("publish seed", path, source))?;
+    stage.published();
+    Ok(())
 }
 
 fn remove_stale_stage(directory: &Dir, temporary: &str, path: &Path) -> Result<(), FuzzSeedError> {
@@ -153,6 +162,28 @@ fn remove_stale_stage(directory: &Dir, temporary: &str, path: &Path) -> Result<(
             "temporary seed is not a removable file: {}",
             path.display()
         ))),
+    }
+}
+
+impl<'a> SeedStage<'a> {
+    fn new(directory: &'a Dir, relative: impl Into<PathBuf>) -> Self {
+        Self {
+            directory,
+            relative: relative.into(),
+            active: true,
+        }
+    }
+
+    fn published(mut self) {
+        self.active = false;
+    }
+}
+
+impl Drop for SeedStage<'_> {
+    fn drop(&mut self) {
+        if self.active {
+            drop(self.directory.remove_file(&self.relative));
+        }
     }
 }
 
