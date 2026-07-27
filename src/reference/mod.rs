@@ -8,6 +8,8 @@ mod capacity;
 mod chunk_staging;
 mod ingestion;
 mod ingestion_error;
+mod profile_boundary;
+mod profile_verification;
 mod publish_error;
 mod published_blob;
 mod reconstruction;
@@ -19,6 +21,7 @@ mod store;
 
 pub use capacity::ReferenceStoreCapacity;
 pub use ingestion_error::{IngestionAllocation, IngestionError};
+pub use profile_boundary::ProfileBoundary;
 pub use publish_error::PublishError;
 pub use published_blob::PublishedBlob;
 pub use reconstruction_error::ReconstructionError;

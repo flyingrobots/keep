@@ -7,6 +7,7 @@ use crate::{
     LayoutId, ReferenceStore,
 };
 
+use super::profile_verification::ProfileVerifier;
 use super::{ReconstructionError, ReconstructionReceipt};
 
 impl ReferenceStore {
@@ -151,12 +152,15 @@ fn verify_complete_blob(
     layout: &AdmittedLayout,
 ) -> Result<(), ReconstructionError> {
     let mut hasher = BlobHasher::new();
+    let mut profile = ProfileVerifier::new(layout_id, layout)?;
     for (index, entry) in layout.entries().iter().copied().enumerate() {
         let bytes = verified_chunk(store, layout_id, index, entry)?;
+        profile.feed(bytes)?;
         hasher
             .update(bytes)
             .map_err(ReconstructionError::BlobHash)?;
     }
+    profile.finish()?;
     let observed = hasher.finish();
     let expected = layout.target();
     if observed != expected {

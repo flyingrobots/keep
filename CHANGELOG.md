@@ -68,9 +68,10 @@ after its public API and format compatibility policies are established.
   for malformed records, zero-progress and over-reporting writers, output I/O
   failures, conflicting stored chunks, and corrupted chunk content.
 - Exact synchronous reference-store reconstruction that authenticates every
-  chunk and the complete named blob before output, reverifies chunks during
-  emission, completes short writes, retries interruptions, and reports
-  missing or mismatched content with typed expected and observed identities.
+  chunk, the registered storage-profile boundaries, and the complete named
+  blob before output, reverifies chunks during emission, completes short
+  writes, retries interruptions, and reports missing or mismatched content
+  with typed expected and observed identities.
 - Capacity-bounded streaming ingestion into a non-durable in-memory reference
   adapter, with exact blob, chunk, and layout identity calculation, typed
   source and capacity refusals, identity-based chunk deduplication, and an

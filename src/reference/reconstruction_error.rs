@@ -4,8 +4,8 @@ use std::error::Error;
 use std::io;
 
 use crate::{
-    BlobHashError, BlobId, BlobLength, ChunkHashError, ChunkId, LayoutDecodeError,
-    LayoutEncodeError, LayoutId,
+    BlobHashError, BlobId, BlobLength, ChunkHashError, ChunkId, ChunkingError, LayoutDecodeError,
+    LayoutEncodeError, LayoutId, ProfileBoundary, StorageProfileId,
 };
 
 /// Failure while verifying or emitting a committed logical blob.
@@ -67,6 +67,31 @@ pub enum ReconstructionError {
         /// Logical identity calculated from all verified chunks.
         observed: BlobId,
     },
+    /// No verifier is implemented for the admitted storage profile.
+    ProfileVerifierUnavailable {
+        /// Layout whose registered profile could not be verified.
+        layout: LayoutId,
+        /// Registered profile without a reconstruction verifier.
+        profile: StorageProfileId,
+    },
+    /// Replaying the registered storage profile failed.
+    ProfileChunking {
+        /// Layout whose registered profile was replayed.
+        layout: LayoutId,
+        /// Exact detector failure.
+        source: ChunkingError,
+    },
+    /// Replayed profile boundaries differ from the committed layout entries.
+    ProfileBoundaryMismatch {
+        /// Layout whose registered profile was replayed.
+        layout: LayoutId,
+        /// Zero-based boundary index.
+        index: usize,
+        /// Entry committed by the layout, or absence for an extra boundary.
+        expected: Option<ProfileBoundary>,
+        /// Entry emitted by profile replay, or absence for a missing boundary.
+        observed: Option<ProfileBoundary>,
+    },
     /// The output refused to make progress.
     WriteZero {
         /// Layout being emitted.
@@ -119,6 +144,7 @@ impl Error for ReconstructionError {
         match self {
             Self::ChunkHash { source, .. } => Some(source),
             Self::BlobHash(source) => Some(source),
+            Self::ProfileChunking { source, .. } => Some(source),
             Self::LayoutDecode(source) => Some(source),
             Self::LayoutEncoding(source) => Some(source),
             Self::Write { source, .. } => Some(source),
@@ -127,6 +153,8 @@ impl Error for ReconstructionError {
             | Self::ChunkMissing { .. }
             | Self::ChunkIdentityMismatch { .. }
             | Self::BlobIdentityMismatch { .. }
+            | Self::ProfileVerifierUnavailable { .. }
+            | Self::ProfileBoundaryMismatch { .. }
             | Self::WriteZero { .. }
             | Self::InvalidWriteCount { .. }
             | Self::WrittenLengthOverflow { .. }

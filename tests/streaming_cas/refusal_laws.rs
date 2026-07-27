@@ -8,6 +8,7 @@ use keep::{
     ReferenceStore, ReferenceStoreCapacity,
 };
 
+use crate::layout_mutation_support::mutation_cases;
 use crate::support::{FailingWriter, LyingWriter, ZeroWriter};
 
 #[test]
@@ -32,6 +33,43 @@ fn malformed_layout_refuses_before_chunk_lookup_or_output() -> Result<(), Box<dy
     assert!(matches!(
         error,
         ReconstructionError::LayoutDecode(LayoutDecodeError::ChecksumMismatch { .. })
+    ));
+    assert!(output.is_empty());
+    Ok(())
+}
+
+#[test]
+fn content_correct_false_profile_boundaries_are_refused_before_output() -> Result<(), Box<dyn Error>>
+{
+    let mutation = mutation_cases()?
+        .into_iter()
+        .find(|candidate| candidate.case() == "profile-boundary-mismatch")
+        .ok_or("profile-boundary mismatch fixture is absent")?;
+    let encoded = mutation.mutated_record()?;
+    let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+    for bytes in [vec![0_u8; 262_143], vec![0_u8; 2]] {
+        let mut source = Cursor::new(bytes);
+        store
+            .stage(&mut source, LayoutEntryLimit::MAXIMUM)?
+            .commit(&mut store)?;
+    }
+    let policy = LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM);
+    let mut output = Vec::new();
+
+    let error = store
+        .reconstruct_record(&encoded, policy, &mut output)
+        .err()
+        .ok_or("false profile boundaries unexpectedly reconstructed")?;
+
+    assert!(matches!(
+        error,
+        ReconstructionError::ProfileBoundaryMismatch {
+            index: 0,
+            expected: Some(expected),
+            observed: Some(observed),
+            ..
+        } if expected.length().get() == 262_143
+            && observed.length().get() == 262_144
     ));
     assert!(output.is_empty());
     Ok(())

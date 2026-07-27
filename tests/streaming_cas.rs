@@ -1,5 +1,7 @@
 //! Public bounded streaming CAS laws.
 
+#[path = "layout_mutations/support.rs"]
+pub mod layout_mutation_support;
 pub mod support;
 
 #[path = "streaming_cas/ingestion_laws.rs"]
