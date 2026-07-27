@@ -1,4 +1,9 @@
 //! This module owns capability-relative, no-follow source-file admission.
+//!
+//! The repository source verifier is intentionally supported only on Unix hosts.
+//! It binds an opened source root to Unix device and inode identity so that path
+//! replacement cannot silently redirect a scan. Supporting another host requires
+//! an equivalent stable directory-identity contract before enabling this task.
 
 use std::fs::File;
 use std::io;
