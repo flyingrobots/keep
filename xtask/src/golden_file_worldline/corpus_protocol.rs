@@ -8,9 +8,11 @@ use std::io::{Read, Take};
 use std::path::{Path, PathBuf};
 
 #[cfg(feature = "repository-tasks")]
+use cap_fs_ext::OpenOptionsSyncExt;
+#[cfg(feature = "repository-tasks")]
 use cap_std::ambient_authority;
 #[cfg(feature = "repository-tasks")]
-use cap_std::fs::Dir;
+use cap_std::fs::{Dir, OpenOptions};
 
 use super::GoldenError;
 use xtask::protocol_admission::{FramedLinesError, framed_lines, posix_relative_path, tab_fields};
@@ -41,28 +43,34 @@ impl Corpus {
         schema: &str,
         columns: &[&'static str],
     ) -> Result<Vec<TableRow>, GoldenError> {
-        let path = self.root.join(table);
-        let lines = protocol_lines(&path)?;
+        let raw = self
+            .open_file(Path::new(table), table)?
+            .bounded_bytes(MAX_TABLE_BYTES, table)?;
+        let lines = protocol_lines_from_bytes(Path::new(table), &raw)?;
         table_rows(table, schema, columns, lines)
     }
 
-    pub(super) fn source_file(&self, parameter: &str) -> Result<CorpusSource, GoldenError> {
+    pub(super) fn source_file(&self, parameter: &str) -> Result<CorpusFile, GoldenError> {
         let relative = protocol_source_path(parameter)?;
-        let path = self.root.join(&relative);
+        self.open_file(&relative, parameter)
+    }
+
+    fn open_file(&self, relative: &Path, label: &str) -> Result<CorpusFile, GoldenError> {
+        let path = self.root.join(relative);
         let file = self
             .directory
-            .open(&relative)
+            .open_with(relative, &nonblocking_read_options())
             .map(cap_std::fs::File::into_std)
-            .map_err(|source| GoldenError::io("open source", &path, source))?;
+            .map_err(|source| GoldenError::io("open corpus entry", &path, source))?;
         let metadata = file
             .metadata()
-            .map_err(|source| GoldenError::io("inspect source", &path, source))?;
+            .map_err(|source| GoldenError::io("inspect corpus entry", &path, source))?;
         if !metadata.is_file() {
             return Err(GoldenError::violation(format!(
-                "source is not a regular file: {parameter}"
+                "corpus entry is not a regular file: {label}"
             )));
         }
-        Ok(CorpusSource {
+        Ok(CorpusFile {
             expected: metadata.len(),
             file,
             path,
@@ -71,14 +79,14 @@ impl Corpus {
 }
 
 #[cfg(feature = "repository-tasks")]
-pub(super) struct CorpusSource {
+pub(super) struct CorpusFile {
     expected: u64,
     file: File,
     path: PathBuf,
 }
 
 #[cfg(feature = "repository-tasks")]
-impl CorpusSource {
+impl CorpusFile {
     pub(super) const fn len(&self) -> u64 {
         self.expected
     }
@@ -86,6 +94,13 @@ impl CorpusSource {
     pub(super) fn bounded_bytes(self, maximum: usize, label: &str) -> Result<Vec<u8>, GoldenError> {
         bounded_reader_bytes(self.file, self.expected, &self.path, maximum, label)
     }
+}
+
+#[cfg(feature = "repository-tasks")]
+fn nonblocking_read_options() -> OpenOptions {
+    let mut options = OpenOptions::new();
+    options.read(true).nonblock(true);
+    options
 }
 
 fn protocol_source_path(parameter: &str) -> Result<PathBuf, GoldenError> {
@@ -161,20 +176,6 @@ impl TableRow {
 }
 
 #[cfg(feature = "repository-tasks")]
-pub(super) fn bounded_file_bytes(
-    path: &Path,
-    maximum: usize,
-    label: &str,
-) -> Result<Vec<u8>, GoldenError> {
-    let file = File::open(path).map_err(|source| GoldenError::io("open", path, source))?;
-    let expected = file
-        .metadata()
-        .map_err(|source| GoldenError::io("inspect", path, source))?
-        .len();
-    bounded_reader_bytes(file, expected, path, maximum, label)
-}
-
-#[cfg(feature = "repository-tasks")]
 fn bounded_reader_bytes(
     file: impl Read,
     expected: u64,
@@ -211,12 +212,6 @@ fn bounded_reader_bytes(
         )));
     }
     Ok(content)
-}
-
-#[cfg(feature = "repository-tasks")]
-fn protocol_lines(path: &Path) -> Result<Vec<String>, GoldenError> {
-    let raw = bounded_file_bytes(path, MAX_TABLE_BYTES, &display_name(path))?;
-    protocol_lines_from_bytes(path, &raw)
 }
 
 pub(super) fn protocol_lines_from_bytes(

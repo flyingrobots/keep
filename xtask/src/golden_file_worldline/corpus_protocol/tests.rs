@@ -70,6 +70,38 @@ fn source_paths_admit_canonical_posix_segments() {
     assert_eq!(result.ok(), Some(PathBuf::from("inputs/small-text.txt")));
 }
 
+#[test]
+fn corpus_read_options_refuse_blocking_io() {
+    let options = format!("{:?}", super::nonblocking_read_options());
+    assert!(options.contains("read: true"));
+    assert!(options.contains("nonblock: true"));
+}
+
+#[test]
+fn corpus_tables_refuse_non_regular_handles() -> Result<(), GoldenError> {
+    use std::env;
+    use std::fs;
+    use std::process;
+
+    let root = env::temp_dir().join(format!("keep-corpus-table-type-{}", process::id()));
+    fs::create_dir(&root)
+        .map_err(|source| GoldenError::io("create table test corpus", &root, source))?;
+    let table_path = root.join("cases.tsv");
+    fs::create_dir(&table_path)
+        .map_err(|source| GoldenError::io("create non-regular table", &table_path, source))?;
+
+    let result = Corpus::open(root.clone())?.rows("cases.tsv", "# keep.cases/v1", &["case"]);
+    let refused = matches!(
+        result,
+        Err(GoldenError::Violation(ref message))
+            if message == "corpus entry is not a regular file: cases.tsv"
+    );
+    fs::remove_dir_all(&root)
+        .map_err(|source| GoldenError::io("remove table test corpus", &root, source))?;
+    assert!(refused);
+    Ok(())
+}
+
 #[cfg(unix)]
 #[test]
 fn opened_corpus_sources_survive_path_replacement() -> Result<(), GoldenError> {
