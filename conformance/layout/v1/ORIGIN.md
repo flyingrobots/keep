@@ -48,15 +48,16 @@ The checked-in tables expose every source recipe, identity, entry coordinate,
 record length, checksum, and layout identity needed for an independent
 implementation to reproduce the fixtures.
 
-Issue #10 MUST add an independent checker that:
+The issue #10 implementation satisfies the corpus review controls through an
+independent field checker and companion conformance tests that:
 
-- decodes the hex fixtures without using the production layout decoder;
-- reconstructs every field at its documented offset;
-- recomputes both checksum and `LayoutId` through an independently admitted
+- decode the hex fixtures without using the production layout decoder;
+- reconstruct every field at its documented offset;
+- recompute both checksum and `LayoutId` through an independently admitted
   BLAKE3 capability;
-- executes every text and binary `LayoutId` refusal vector;
-- applies every mutation in `mutations.tsv`; and
-- cross-checks production encoding only after the independent values pass.
+- execute every text and binary `LayoutId` refusal vector;
+- apply every mutation in `mutations.tsv`; and
+- cross-check production encoding only after the independent values pass.
 
 Regenerating a fixture because production output differs is forbidden. Resolve
 the disagreement against the specification and independent digest oracle.

@@ -57,6 +57,9 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- An independent field-by-field flat-layout fixture oracle that verifies every
+  fixed offset, checksum, and `LayoutId` before cross-checking the production
+  encoder.
 - Validated flat-layout admission with explicit entry caps and an exact
   canonical version-1 encoder backed by every frozen record and `LayoutId`
   witness.

@@ -1,6 +1,6 @@
 # Flat Chunk Layout Version 1
 
-- Status: Frozen specification; no production encoder or decoder exists
+- Status: Frozen version-1 specification; production codec implemented
 - Format coordinate: `keep.flat-chunks/v1`
 - Format version: `1`
 - Layout codec: `1`
@@ -15,10 +15,10 @@ This page specifies the canonical durable plan that maps one logical
 `BlobId` to an ordered, bounded sequence of exact `ChunkId` values. It is a
 language-independent binary protocol.
 
-Keep does not yet expose a layout API, encoder, decoder, ingestion path, or
-stored reconstruction path. The checked-in fixtures prove exact design bytes;
-they do not prove production behavior. Issue #10 owns that implementation and
-its parser, corruption, property, and fuzz evidence.
+Keep exposes validated layout admission, canonical `LayoutId` and record
+encoding, and bounded record decoding. The checked-in fixtures and independent
+oracle prove exact production codec behavior. Keep does not yet expose an
+ingestion path, storage backend, or verified reconstruction path.
 
 ## Core law
 
