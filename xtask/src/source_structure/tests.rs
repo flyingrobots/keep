@@ -3,6 +3,7 @@
 use super::{
     PRESENT_PATH_ARGUMENTS, SourceLineCount, exceeds_hard_limit, is_source_module, line_count,
 };
+use crate::test_directory::TestDirectory;
 use std::io::{self, BufReader, Cursor, Read};
 
 #[test]
@@ -140,16 +141,15 @@ fn source_read_options_refuse_blocking_io() {
 #[cfg(unix)]
 #[test]
 fn source_scan_keeps_the_admitted_repository_root() -> Result<(), Box<dyn std::error::Error>> {
-    use std::env;
     use std::fs;
-    use std::process;
 
     use super::repository_path::RepositoryPath;
     use super::source_file::SourceRoot;
     use super::source_line_count;
 
-    let root = env::temp_dir().join(format!("keep-source-root-{}", process::id()));
-    let retained_root = root.with_extension("retained");
+    let directory = TestDirectory::create("source-root")?;
+    let root = directory.path().join("repository");
+    let retained_root = directory.path().join("retained");
     fs::create_dir(&root)?;
     fs::write(root.join("source.rs"), "safe\n")?;
     let source_root = SourceRoot::open(&root)?;
@@ -160,53 +160,54 @@ fn source_scan_keeps_the_admitted_repository_root() -> Result<(), Box<dyn std::e
     fs::write(root.join("source.rs"), "replacement\n".repeat(501))?;
 
     let line_count = source_line_count(&source_root, &relative)?;
-    fs::remove_dir_all(&root)?;
-    fs::remove_dir_all(&retained_root)?;
-
     assert_eq!(line_count, SourceLineCount::Within(1));
+    drop(source_root);
+    directory.close()?;
     Ok(())
 }
 
 #[cfg(unix)]
 #[test]
 fn source_scan_detects_a_replaced_repository_root() -> Result<(), Box<dyn std::error::Error>> {
-    use std::env;
     use std::fs;
-    use std::process;
 
     use super::source_file::SourceRoot;
 
-    let root = env::temp_dir().join(format!("keep-source-identity-{}", process::id()));
-    let retained_root = root.with_extension("retained");
+    let directory = TestDirectory::create("source-identity")?;
+    let root = directory.path().join("repository");
+    let retained_root = directory.path().join("retained");
     fs::create_dir(&root)?;
     let source_root = SourceRoot::open(&root)?;
 
     fs::rename(&root, &retained_root)?;
     fs::create_dir(&root)?;
     let result = super::verify_source_root(&source_root, &root);
-    fs::remove_dir_all(&root)?;
-    fs::remove_dir_all(&retained_root)?;
-
     assert!(matches!(
         result,
         Err(super::SourceStructureError::RepositoryRootChanged(ref path)) if path == &root
     ));
+    drop(source_root);
+    directory.close()?;
     Ok(())
 }
 
 #[cfg(unix)]
 #[test]
 fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructureError> {
-    use std::env;
     use std::fs;
     use std::os::unix::fs::symlink;
-    use std::process;
 
     use super::repository_path::RepositoryPath;
     use super::source_file::SourceRoot;
     use super::source_line_count_with;
 
-    let root = env::temp_dir().join(format!("keep-source-replacement-{}", process::id()));
+    let directory = TestDirectory::create("source-replacement").map_err(|source| {
+        super::SourceStructureError::Inspect {
+            path: "scoped test directory".into(),
+            source,
+        }
+    })?;
+    let root = directory.path().join("repository");
     fs::create_dir(&root).map_err(|source| super::SourceStructureError::Inspect {
         path: root.clone(),
         source,
@@ -244,12 +245,11 @@ fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructur
             source: _,
         }) if path == &source_path
     );
-    fs::remove_dir_all(&root).map_err(|source| super::SourceStructureError::Inspect {
-        path: root.clone(),
-        source,
-    })?;
-
     assert!(refused);
+    drop(source_root);
+    directory
+        .close()
+        .map_err(|source| super::SourceStructureError::Inspect { path: root, source })?;
     Ok(())
 }
 

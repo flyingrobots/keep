@@ -29,6 +29,12 @@ mod source_structure;
     reason = "the parent command dispatcher is the only consumer"
 )]
 mod task_error;
+#[cfg(test)]
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "scoped test directories are shared by sibling test modules"
+)]
+mod test_directory;
 
 use std::env;
 use std::ffi::OsString;

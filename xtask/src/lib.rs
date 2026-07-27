@@ -18,6 +18,13 @@ mod golden_protocol_fuzz;
 
 pub mod protocol_admission;
 
+#[cfg(test)]
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "scoped test directories are shared by parser test modules"
+)]
+mod test_directory;
+
 /// Whether one bounded Golden File Worldline production parser admitted input.
 #[cfg(feature = "golden-protocol-fuzz")]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -3,6 +3,7 @@
 use std::path::PathBuf;
 
 use super::{Corpus, GoldenError, protocol_source_path, table_rows};
+use crate::test_directory::TestDirectory;
 
 #[path = "tests/malformed_corpus.rs"]
 mod malformed_corpus;
@@ -89,13 +90,11 @@ fn golden_diagnostics_escape_terminal_controls() {
 
 #[test]
 fn corpus_tables_refuse_non_regular_handles() -> Result<(), GoldenError> {
-    use std::env;
     use std::fs;
-    use std::process;
 
-    let root = env::temp_dir().join(format!("keep-corpus-table-type-{}", process::id()));
-    fs::create_dir(&root)
-        .map_err(|source| GoldenError::io("create table test corpus", &root, source))?;
+    let directory = TestDirectory::create("corpus-table-type")
+        .map_err(|source| GoldenError::io("create table test corpus", "temporary", source))?;
+    let root = directory.path().to_owned();
     let table_path = root.join("cases.tsv");
     fs::create_dir(&table_path)
         .map_err(|source| GoldenError::io("create non-regular table", &table_path, source))?;
@@ -106,22 +105,23 @@ fn corpus_tables_refuse_non_regular_handles() -> Result<(), GoldenError> {
         Err(GoldenError::Violation(ref message))
             if message == "corpus entry is not a regular file: cases.tsv"
     );
-    fs::remove_dir_all(&root)
-        .map_err(|source| GoldenError::io("remove table test corpus", &root, source))?;
     assert!(refused);
+    directory
+        .close()
+        .map_err(|source| GoldenError::io("remove table test corpus", &root, source))?;
     Ok(())
 }
 
 #[cfg(unix)]
 #[test]
 fn corpus_tables_refuse_symlink_substitution() -> Result<(), GoldenError> {
-    use std::env;
     use std::fs;
     use std::os::unix::fs::symlink;
-    use std::process;
 
-    let root = env::temp_dir().join(format!("keep-corpus-table-link-{}", process::id()));
-    let outside = root.with_extension("outside");
+    let directory = TestDirectory::create("corpus-table-link")
+        .map_err(|source| GoldenError::io("create table test root", "temporary", source))?;
+    let root = directory.path().join("corpus");
+    let outside = directory.path().join("outside.tsv");
     fs::create_dir(&root)
         .map_err(|source| GoldenError::io("create table test corpus", &root, source))?;
     fs::write(&outside, "# keep.cases/v1\ncase\nsubstituted\n")
@@ -139,29 +139,27 @@ fn corpus_tables_refuse_symlink_substitution() -> Result<(), GoldenError> {
             source: _,
         }) if path == &table_path
     );
-    fs::remove_dir_all(&root)
-        .map_err(|source| GoldenError::io("remove table test corpus", &root, source))?;
-    fs::remove_file(&outside)
-        .map_err(|source| GoldenError::io("remove substituted table", &outside, source))?;
-
     assert!(refused);
+    directory
+        .close()
+        .map_err(|source| GoldenError::io("remove table test root", &root, source))?;
     Ok(())
 }
 
 #[cfg(unix)]
 #[test]
 fn opened_corpus_sources_survive_path_replacement() -> Result<(), GoldenError> {
-    use std::env;
     use std::fs;
     use std::os::unix::fs::symlink;
-    use std::process;
 
-    let root = env::temp_dir().join(format!("keep-corpus-source-race-{}", process::id()));
+    let directory = TestDirectory::create("corpus-source-race")
+        .map_err(|source| GoldenError::io("create source test root", "temporary", source))?;
+    let root = directory.path().join("corpus");
     fs::create_dir(&root)
         .map_err(|source| GoldenError::io("create source test corpus", &root, source))?;
     let source_path = root.join("source.txt");
     let retained_path = root.join("retained.txt");
-    let outside_path = root.with_extension("outside");
+    let outside_path = directory.path().join("outside.txt");
     fs::write(&source_path, b"admitted")
         .map_err(|source| GoldenError::io("write admitted source", &source_path, source))?;
     fs::write(&outside_path, b"substituted")
@@ -175,11 +173,11 @@ fn opened_corpus_sources_survive_path_replacement() -> Result<(), GoldenError> {
         .map_err(|source| GoldenError::io("replace admitted source", &source_path, source))?;
     let observed = source.bounded_bytes(super::MAX_SOURCE_BYTES, "source-race")?;
 
-    fs::remove_dir_all(&root)
-        .map_err(|source| GoldenError::io("remove source test corpus", &root, source))?;
-    fs::remove_file(&outside_path)
-        .map_err(|source| GoldenError::io("remove substituted source", &outside_path, source))?;
     assert_eq!(observed, b"admitted");
+    drop(corpus);
+    directory
+        .close()
+        .map_err(|source| GoldenError::io("remove source test root", &root, source))?;
     Ok(())
 }
 

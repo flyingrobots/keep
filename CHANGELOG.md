@@ -30,6 +30,8 @@ after its public API and format compatibility policies are established.
   semantic parser.
 - Golden File Worldline source paths now have a named version-1 lexical
   profile with an explicit portability rationale.
+- Filesystem-backed `xtask` tests now use collision-resistant scoped
+  directories with explicit cleanup instead of PID-only paths.
 - Scheduled and manually dispatched fuzz campaigns now exercise every
   registered target under centralized bounded policy, retain failures, and
   preserve minimized evolving corpora as non-authoritative test state.

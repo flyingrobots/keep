@@ -1,13 +1,12 @@
 //! This module owns mutation-width and case-admission regression evidence.
 
 use std::collections::BTreeMap;
-use std::env;
 use std::fs;
-use std::process;
 
 use super::{Corpus, GoldenError, IdentityFixture, apply_fixed_width, check, expected_text};
 use crate::golden_file_worldline::digest_port::IdentityDigestOracle;
 use crate::golden_file_worldline::identity_oracle::digest;
+use crate::test_directory::TestDirectory;
 
 struct InProcessOracle;
 
@@ -40,9 +39,9 @@ fn fixed_width_mutations_admit_the_declared_value_width() {
 
 #[test]
 fn duplicate_mutation_precedes_malformed_mutation_semantics() -> Result<(), GoldenError> {
-    let root = env::temp_dir().join(format!("keep-duplicate-mutation-{}", process::id()));
-    fs::create_dir(&root)
-        .map_err(|source| GoldenError::io("create mutation test corpus", &root, source))?;
+    let directory = TestDirectory::create("duplicate-mutation")
+        .map_err(|source| GoldenError::io("create mutation test corpus", "temporary", source))?;
+    let root = directory.path().to_owned();
     let first = include_str!("../../../../conformance/golden-file-worldline/v1/mutations.tsv")
         .lines()
         .nth(2)
@@ -72,9 +71,9 @@ fn duplicate_mutation_precedes_malformed_mutation_semantics() -> Result<(), Gold
         Err(GoldenError::Violation(ref message))
             if message == "mutations.tsv: duplicate identifier \"content-first-bit\""
     );
-    fs::remove_dir_all(&root)
-        .map_err(|source| GoldenError::io("remove mutation test corpus", &root, source))?;
-
     assert!(refused);
+    directory
+        .close()
+        .map_err(|source| GoldenError::io("remove mutation test corpus", &root, source))?;
     Ok(())
 }

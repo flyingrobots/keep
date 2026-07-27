@@ -3,6 +3,7 @@
 use std::path::Path;
 
 use super::{FuzzSeedError, Seed, filesystem::RepositoryFiles, golden_protocol_seeds, prepare};
+use crate::test_directory::TestDirectory;
 
 const TABLES: [&str; 5] = [
     "identities.tsv",
@@ -64,15 +65,15 @@ fn fuzz_seed_diagnostics_escape_terminal_controls() {
 }
 
 #[test]
-fn seed_preparation_materializes_the_complete_deterministic_set() -> Result<(), FuzzSeedError> {
-    use std::env;
+fn seed_preparation_materializes_the_complete_deterministic_set()
+-> Result<(), Box<dyn std::error::Error>> {
     use std::fs;
-    use std::process;
 
     let source_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .ok_or(FuzzSeedError::RepositoryRoot)?;
-    let root = env::temp_dir().join(format!("keep-fuzz-seeds-{}", process::id()));
+    let directory = TestDirectory::create("fuzz-seeds")?;
+    let root = directory.path();
     let conformance = root.join("conformance/golden-file-worldline/v1");
     fs::create_dir_all(&conformance).map_err(|source| {
         FuzzSeedError::io("create test conformance root", &conformance, source)
@@ -86,7 +87,7 @@ fn seed_preparation_materializes_the_complete_deterministic_set() -> Result<(), 
             .map_err(|source| FuzzSeedError::io("copy test table", &destination, source))?;
     }
 
-    prepare(&root)?;
+    prepare(root)?;
     let corpus = root.join("fuzz/corpus");
     let first = seed_contents(&corpus)?;
     assert_eq!(first.len(), 22);
@@ -97,21 +98,19 @@ fn seed_preparation_materializes_the_complete_deterministic_set() -> Result<(), 
             .count(),
         9
     );
-    prepare(&root)?;
+    prepare(root)?;
     assert_eq!(seed_contents(&corpus)?, first);
 
-    fs::remove_dir_all(&root)
-        .map_err(|source| FuzzSeedError::io("remove test seed root", &root, source))?;
+    directory.close()?;
     Ok(())
 }
 
 #[test]
-fn seed_publication_does_not_mutate_a_hard_link_target() -> Result<(), FuzzSeedError> {
-    use std::env;
+fn seed_publication_does_not_mutate_a_hard_link_target() -> Result<(), Box<dyn std::error::Error>> {
     use std::fs;
-    use std::process;
 
-    let root = env::temp_dir().join(format!("keep-fuzz-seed-hard-link-{}", process::id()));
+    let directory = TestDirectory::create("fuzz-seed-hard-link")?;
+    let root = directory.path();
     let target = root.join("fuzz/corpus/blob_hasher");
     fs::create_dir_all(&target)
         .map_err(|source| FuzzSeedError::io("create test corpus", &target, source))?;
@@ -122,7 +121,7 @@ fn seed_publication_does_not_mutate_a_hard_link_target() -> Result<(), FuzzSeedE
     fs::hard_link(&protected, &destination)
         .map_err(|source| FuzzSeedError::io("link test seed destination", &destination, source))?;
 
-    RepositoryFiles::open(&root)?.write_seeds(&[Seed {
+    RepositoryFiles::open(root)?.write_seeds(&[Seed {
         target: "blob_hasher",
         name: "empty",
         content: b"derived".to_vec(),
@@ -131,11 +130,9 @@ fn seed_publication_does_not_mutate_a_hard_link_target() -> Result<(), FuzzSeedE
         .map_err(|source| FuzzSeedError::io("read protected test file", &protected, source))?;
     let seed_content = fs::read(&destination)
         .map_err(|source| FuzzSeedError::io("read test seed", &destination, source))?;
-    fs::remove_dir_all(&root)
-        .map_err(|source| FuzzSeedError::io("remove hard-link test root", &root, source))?;
-
     assert_eq!(protected_content, b"authoritative");
     assert_eq!(seed_content, b"derived");
+    directory.close()?;
     Ok(())
 }
 

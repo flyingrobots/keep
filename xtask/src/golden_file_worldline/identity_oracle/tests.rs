@@ -1,11 +1,10 @@
 //! This module owns identity-case admission-order regression evidence.
 
-use std::env;
 use std::fs;
-use std::process;
 
 use super::{Corpus, GoldenError, check_identities, digest, verify_independent_digest};
 use crate::golden_file_worldline::digest_port::IdentityDigestOracle;
+use crate::test_directory::TestDirectory;
 
 struct InProcessOracle;
 
@@ -28,9 +27,9 @@ fn independent_digest_mismatch_is_refused() {
 
 #[test]
 fn duplicate_identity_precedes_malformed_identity_semantics() -> Result<(), GoldenError> {
-    let root = env::temp_dir().join(format!("keep-duplicate-identity-{}", process::id()));
-    fs::create_dir(&root)
-        .map_err(|source| GoldenError::io("create identity test corpus", &root, source))?;
+    let directory = TestDirectory::create("duplicate-identity")
+        .map_err(|source| GoldenError::io("create identity test corpus", "temporary", source))?;
+    let root = directory.path().to_owned();
     let first = include_str!("../../../../conformance/golden-file-worldline/v1/identities.tsv")
         .lines()
         .nth(2)
@@ -51,9 +50,9 @@ fn duplicate_identity_precedes_malformed_identity_semantics() -> Result<(), Gold
         Err(GoldenError::Violation(ref message))
             if message == "identities.tsv: duplicate identifier \"empty\""
     );
-    fs::remove_dir_all(&root)
-        .map_err(|source| GoldenError::io("remove identity test corpus", &root, source))?;
-
     assert!(refused);
+    directory
+        .close()
+        .map_err(|source| GoldenError::io("remove identity test corpus", &root, source))?;
     Ok(())
 }
