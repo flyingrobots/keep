@@ -50,6 +50,7 @@ pub(crate) enum SourceStructureError {
     },
     InvalidPath(String),
     NonRegular(PathBuf),
+    RepositoryRootChanged(PathBuf),
     RunGit {
         operation: &'static str,
         action: &'static str,
@@ -121,6 +122,11 @@ impl fmt::Display for SourceStructureError {
                 "tracked source module is not a regular file: `{}`",
                 path.display()
             ),
+            Self::RepositoryRootChanged(path) => write!(
+                formatter,
+                "repository root changed during source inspection: `{}`",
+                path.display()
+            ),
             Self::RunGit {
                 operation, action, ..
             } => write!(formatter, "cannot {action} `{operation}`"),
@@ -153,6 +159,7 @@ impl Error for SourceStructureError {
             | Self::GitWorker { .. }
             | Self::InvalidPath(_)
             | Self::NonRegular(_)
+            | Self::RepositoryRootChanged(_)
             | Self::Violations { .. } => None,
         }
     }

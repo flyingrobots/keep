@@ -159,6 +159,33 @@ fn source_scan_keeps_the_admitted_repository_root() -> Result<(), Box<dyn std::e
 
 #[cfg(unix)]
 #[test]
+fn source_scan_detects_a_replaced_repository_root() -> Result<(), Box<dyn std::error::Error>> {
+    use std::env;
+    use std::fs;
+    use std::process;
+
+    use super::source_file::SourceRoot;
+
+    let root = env::temp_dir().join(format!("keep-source-identity-{}", process::id()));
+    let retained_root = root.with_extension("retained");
+    fs::create_dir(&root)?;
+    let source_root = SourceRoot::open(&root)?;
+
+    fs::rename(&root, &retained_root)?;
+    fs::create_dir(&root)?;
+    let result = super::verify_source_root(&source_root, &root);
+    fs::remove_dir_all(&root)?;
+    fs::remove_dir_all(&retained_root)?;
+
+    assert!(matches!(
+        result,
+        Err(super::SourceStructureError::RepositoryRootChanged(ref path)) if path == &root
+    ));
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
 fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructureError> {
     use std::env;
     use std::fs;

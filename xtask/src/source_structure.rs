@@ -31,6 +31,7 @@ pub(super) fn check(repository_root: &Path) -> Result<(), SourceStructureError> 
             source,
         })?;
     let paths = source_paths(repository_root)?;
+    verify_source_root(&source_root, repository_root)?;
     let violations = source_violations(&source_root, paths)?;
     if violations.is_empty() {
         Ok(())
@@ -39,6 +40,22 @@ pub(super) fn check(repository_root: &Path) -> Result<(), SourceStructureError> 
             maximum: SOURCE_MODULE_HARD_LIMIT_LINES,
             paths: violations,
         })
+    }
+}
+
+fn verify_source_root(
+    source_root: &SourceRoot,
+    repository_root: &Path,
+) -> Result<(), SourceStructureError> {
+    match source_root.is_current_path() {
+        Ok(true) => Ok(()),
+        Ok(false) => Err(SourceStructureError::RepositoryRootChanged(
+            repository_root.to_owned(),
+        )),
+        Err(source) => Err(SourceStructureError::Inspect {
+            path: repository_root.to_owned(),
+            source,
+        }),
     }
 }
 
