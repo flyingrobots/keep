@@ -132,10 +132,11 @@ fn git_diagnostics_cannot_inject_terminal_control_lines() {
 }
 
 #[test]
-fn source_read_options_refuse_blocking_io() {
-    let options = format!("{:?}", super::source_file::nonblocking_read_options());
-    assert!(options.contains("read: true"));
-    assert!(options.contains("nonblock: true"));
+fn source_read_policy_enables_reads_and_refuses_blocking_io() {
+    use super::source_file::{BlockingIoPolicy, ReadAccessPolicy, SOURCE_READ_POLICY};
+
+    assert_eq!(SOURCE_READ_POLICY.read_access(), ReadAccessPolicy::Enabled);
+    assert_eq!(SOURCE_READ_POLICY.blocking_io(), BlockingIoPolicy::Refuse);
 }
 
 #[cfg(unix)]

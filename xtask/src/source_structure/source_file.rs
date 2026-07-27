@@ -13,6 +13,27 @@ use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt, OpenOptionsS
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions};
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum ReadAccessPolicy {
+    Enabled,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum BlockingIoPolicy {
+    Refuse,
+}
+
+#[derive(Clone, Copy)]
+pub(super) struct SourceReadPolicy {
+    read_access: ReadAccessPolicy,
+    blocking_io: BlockingIoPolicy,
+}
+
+pub(super) const SOURCE_READ_POLICY: SourceReadPolicy = SourceReadPolicy {
+    read_access: ReadAccessPolicy::Enabled,
+    blocking_io: BlockingIoPolicy::Refuse,
+};
+
 pub(super) struct SourceRoot {
     directory: Dir,
     identity: DirectoryIdentity,
@@ -54,7 +75,7 @@ impl SourceRoot {
     pub(super) fn open_file(&self, relative: &Path) -> Result<File, OpenSourceError> {
         let file = self
             .directory
-            .open_with(relative, &nonblocking_read_options())
+            .open_with(relative, &SOURCE_READ_POLICY.options())
             .map_err(OpenSourceError::Io)?
             .into_std();
         let metadata = file.metadata().map_err(OpenSourceError::Io)?;
@@ -66,6 +87,34 @@ impl SourceRoot {
     }
 }
 
+impl SourceReadPolicy {
+    #[cfg(test)]
+    pub(super) const fn read_access(self) -> ReadAccessPolicy {
+        self.read_access
+    }
+
+    #[cfg(test)]
+    pub(super) const fn blocking_io(self) -> BlockingIoPolicy {
+        self.blocking_io
+    }
+
+    fn options(self) -> OpenOptions {
+        let mut options = OpenOptions::new();
+        match self.read_access {
+            ReadAccessPolicy::Enabled => {
+                options.read(true);
+            }
+        }
+        options.follow(FollowSymlinks::No);
+        match self.blocking_io {
+            BlockingIoPolicy::Refuse => {
+                options.nonblock(true);
+            }
+        }
+        options
+    }
+}
+
 impl From<&cap_std::fs::Metadata> for DirectoryIdentity {
     fn from(metadata: &cap_std::fs::Metadata) -> Self {
         Self {
@@ -73,10 +122,4 @@ impl From<&cap_std::fs::Metadata> for DirectoryIdentity {
             inode: metadata.ino(),
         }
     }
-}
-
-pub(super) fn nonblocking_read_options() -> OpenOptions {
-    let mut options = OpenOptions::new();
-    options.read(true).follow(FollowSymlinks::No).nonblock(true);
-    options
 }
