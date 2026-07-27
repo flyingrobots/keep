@@ -38,6 +38,22 @@ fn source_structure_diagnostics_are_stable() {
 }
 
 #[test]
+fn git_diagnostics_cannot_inject_terminal_control_lines() {
+    let error = super::SourceStructureError::GitFailed {
+        operation: "git inventory",
+        code: Some(9),
+        stderr: String::from("first\nError: forged\rrewrite\u{1b}[31m"),
+    };
+    let diagnostic = error.to_string();
+    assert_eq!(
+        diagnostic,
+        "`git inventory` failed with code Some(9): \
+         first\\nError: forged\\rrewrite\\u{1b}[31m"
+    );
+    assert_eq!(diagnostic.lines().count(), 1);
+}
+
+#[test]
 fn source_read_options_refuse_blocking_io() {
     let options = format!("{:?}", super::source_file::nonblocking_read_options());
     assert!(options.contains("read: true"));

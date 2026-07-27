@@ -1,7 +1,7 @@
 //! This module owns typed source-structure failures and stable diagnostics.
 
 use std::error::Error;
-use std::fmt;
+use std::fmt::{self, Write as _};
 use std::io;
 use std::path::PathBuf;
 use std::string::FromUtf8Error;
@@ -138,11 +138,21 @@ fn git_failed(
     code: Option<i32>,
     stderr: &str,
 ) -> fmt::Result {
-    write!(
-        formatter,
-        "`{operation}` failed with code {code:?}: {}",
-        stderr.trim()
-    )
+    write!(formatter, "`{operation}` failed with code {code:?}: ")?;
+    escaped_controls(formatter, stderr.trim())
+}
+
+fn escaped_controls(formatter: &mut fmt::Formatter<'_>, diagnostic: &str) -> fmt::Result {
+    for character in diagnostic.chars() {
+        if character.is_control() {
+            for escaped in character.escape_default() {
+                formatter.write_char(escaped)?;
+            }
+        } else {
+            formatter.write_char(character)?;
+        }
+    }
+    Ok(())
 }
 
 fn violations_display(
