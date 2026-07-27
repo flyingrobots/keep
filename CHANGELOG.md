@@ -67,7 +67,8 @@ after its public API and format compatibility policies are established.
 - Bounded canonical layout-record reconstruction with typed pre-output refusal
   for malformed records, zero-progress and over-reporting writers, output I/O
   failures, conflicting stored chunks, corrupted chunk content, and ordinary
-  publication attempts that would silently repair missing committed chunks.
+  publication attempts that would silently repair missing committed chunks or
+  inconsistent committed layout indexes.
 - Exact synchronous reference-store reconstruction that authenticates every
   chunk, the registered storage-profile boundaries, and the complete named
   blob before output, reverifies chunks during emission, completes short

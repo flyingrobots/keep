@@ -13,8 +13,8 @@ use super::{PublishError, PublishedBlob, ReferenceStoreCapacity, StagedBlob};
 pub struct ReferenceStore {
     pub(super) capacity: ReferenceStoreCapacity,
     pub(super) chunks: BTreeMap<ChunkId, Box<[u8]>>,
-    layouts: BTreeMap<LayoutId, AdmittedLayout>,
-    blob_layouts: BTreeMap<BlobId, BTreeSet<LayoutId>>,
+    pub(super) layouts: BTreeMap<LayoutId, AdmittedLayout>,
+    pub(super) blob_layouts: BTreeMap<BlobId, BTreeSet<LayoutId>>,
     pub(super) materialized_bytes: usize,
 }
 

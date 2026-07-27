@@ -83,22 +83,40 @@ impl StagedBlob {
     }
 
     pub(super) fn validate_for(&self, store: &ReferenceStore) -> Result<(), PublishError> {
-        if let Some(existing) = store.layout(self.layout_id)
-            && existing != &self.layout
+        let existing = store.layout(self.layout_id);
+        if let Some(layout) = existing
+            && layout != &self.layout
         {
             return Err(PublishError::ConflictingLayout {
                 identity: self.layout_id,
             });
         }
-        if let Some(existing) = store.layout(self.layout_id) {
-            for entry in existing.entries() {
-                if store.chunk(entry.chunk_id()).is_none() {
-                    return Err(PublishError::CommittedChunkMissing {
-                        layout: self.layout_id,
-                        chunk: entry.chunk_id(),
-                    });
+        let indexed = store
+            .blob_layouts
+            .get(&self.target())
+            .is_some_and(|layouts| layouts.contains(&self.layout_id));
+        match (existing, indexed) {
+            (Some(_layout), false) => {
+                return Err(PublishError::CommittedLayoutIndexMissing {
+                    layout: self.layout_id,
+                });
+            }
+            (None, true) => {
+                return Err(PublishError::CommittedLayoutMissing {
+                    layout: self.layout_id,
+                });
+            }
+            (Some(layout), true) => {
+                for entry in layout.entries() {
+                    if store.chunk(entry.chunk_id()).is_none() {
+                        return Err(PublishError::CommittedChunkMissing {
+                            layout: self.layout_id,
+                            chunk: entry.chunk_id(),
+                        });
+                    }
                 }
             }
+            (None, false) => {}
         }
         let mut attempted = store.materialized_bytes;
         for (identity, bytes) in &self.chunks {
@@ -169,6 +187,66 @@ mod tests {
             } if layout == published.layout_id() && chunk == missing
         ));
         assert!(!store.chunks.contains_key(&missing));
+        Ok(())
+    }
+
+    #[test]
+    fn committed_layout_without_its_blob_index_is_never_silently_repaired()
+    -> Result<(), Box<dyn Error>> {
+        let source = b"layout index loss requires an explicit recovery operation";
+        let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+        let mut first_source = Cursor::new(source);
+        let published = store
+            .stage(&mut first_source, LayoutEntryLimit::MAXIMUM)?
+            .commit(&mut store)?;
+        let removed = store
+            .blob_layouts
+            .get_mut(&published.target())
+            .is_some_and(|layouts| layouts.remove(&published.layout_id()));
+        assert!(removed);
+        let mut second_source = Cursor::new(source);
+        let staged = store.stage(&mut second_source, LayoutEntryLimit::MAXIMUM)?;
+
+        let error = staged
+            .commit(&mut store)
+            .err()
+            .ok_or("ordinary publication silently repaired the blob index")?;
+
+        assert!(matches!(
+            error,
+            PublishError::CommittedLayoutIndexMissing { layout }
+                if layout == published.layout_id()
+        ));
+        assert!(!store.contains_blob(published.target()));
+        Ok(())
+    }
+
+    #[test]
+    fn committed_blob_index_without_its_layout_is_never_silently_repaired()
+    -> Result<(), Box<dyn Error>> {
+        let source = b"layout loss requires an explicit recovery operation";
+        let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+        let mut first_source = Cursor::new(source);
+        let published = store
+            .stage(&mut first_source, LayoutEntryLimit::MAXIMUM)?
+            .commit(&mut store)?;
+        let removed = store.layouts.remove(&published.layout_id());
+        assert!(removed.is_some());
+        let mut second_source = Cursor::new(source);
+        let staged = store.stage(&mut second_source, LayoutEntryLimit::MAXIMUM)?;
+
+        let error = staged
+            .commit(&mut store)
+            .err()
+            .ok_or("ordinary publication silently repaired the missing layout")?;
+
+        assert!(matches!(
+            error,
+            PublishError::CommittedLayoutMissing { layout }
+                if layout == published.layout_id()
+        ));
+        assert!(store.contains_blob(published.target()));
+        assert!(store.layout(published.layout_id()).is_none());
         Ok(())
     }
 }

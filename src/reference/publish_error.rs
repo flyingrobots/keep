@@ -32,6 +32,16 @@ pub enum PublishError {
         /// Exact chunk absent from committed state.
         chunk: ChunkId,
     },
+    /// A committed layout is absent from its target blob's visible index.
+    CommittedLayoutIndexMissing {
+        /// Existing layout missing from its target's index.
+        layout: LayoutId,
+    },
+    /// A visible blob index references an absent committed layout.
+    CommittedLayoutMissing {
+        /// Indexed layout absent from committed layout state.
+        layout: LayoutId,
+    },
 }
 
 impl fmt::Display for PublishError {
@@ -54,6 +64,18 @@ impl fmt::Display for PublishError {
                 write!(
                     formatter,
                     "committed layout {layout} is missing chunk {chunk:?}"
+                )
+            }
+            Self::CommittedLayoutIndexMissing { layout } => {
+                write!(
+                    formatter,
+                    "committed layout {layout} is absent from its blob index"
+                )
+            }
+            Self::CommittedLayoutMissing { layout } => {
+                write!(
+                    formatter,
+                    "blob index references absent committed layout {layout}"
                 )
             }
         }
