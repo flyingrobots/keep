@@ -5,6 +5,7 @@
 //! policy remain outside this module.
 
 mod admitted;
+mod decoded_admission;
 mod entry;
 mod entry_limit;
 mod id;

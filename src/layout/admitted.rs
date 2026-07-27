@@ -40,25 +40,19 @@ impl AdmittedLayout {
             entries.push(LayoutEntry::from(span));
         }
         validate_entries(target, profile, &entries, entry_limit)?;
-        Ok(Self {
-            target,
-            profile,
-            entries: entries.into_boxed_slice(),
-        })
+        Ok(Self::from_validated_entries(target, profile, entries))
     }
 
-    pub(crate) fn from_decoded_entries(
+    pub(super) fn from_validated_entries(
         target: BlobId,
         profile: RegisteredStorageProfile,
         entries: Vec<LayoutEntry>,
-        entry_limit: LayoutEntryLimit,
-    ) -> Result<Self, LayoutValidationError> {
-        validate_entries(target, profile, &entries, entry_limit)?;
-        Ok(Self {
+    ) -> Self {
+        Self {
             target,
             profile,
             entries: entries.into_boxed_slice(),
-        })
+        }
     }
 
     /// Returns the exact target logical blob identity.

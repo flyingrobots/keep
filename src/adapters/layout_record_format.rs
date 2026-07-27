@@ -8,6 +8,7 @@ pub(super) const LAYOUT_CODEC: u16 = 1;
 pub(super) const FLAGS: u32 = 0;
 pub(super) const HEADER_LENGTH: u16 = 144;
 pub(super) const ENTRY_LENGTH: u16 = 44;
+pub(super) const ENTRY_WIDTH: usize = 44;
 pub(super) const CHECKSUM_LENGTH: u64 = 32;
 pub(super) const CHECKSUM_ALGORITHM: u8 = 1;
 pub(super) const CHUNK_HASH_ALGORITHM: u8 = 1;

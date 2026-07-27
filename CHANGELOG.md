@@ -10,6 +10,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Flat-layout decoding now validates cardinality before entry materialization
+  and admits decoded coordinates through the domain's ordered one-pass
+  validator, so a later zero length cannot hide an earlier entry failure.
 - Golden File Worldline verification now runs through a dependency-isolated
   Rust `xtask`, cross-checks every identity-bearing digest against external
   `b3sum`, and CI refuses Rust, Python, or shell source modules that exceed the

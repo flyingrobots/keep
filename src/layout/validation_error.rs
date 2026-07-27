@@ -33,6 +33,18 @@ pub enum LayoutValidationError {
     },
     /// A nonempty target declared no entries.
     NonemptyBlobHasNoEntries,
+    /// A decoded entry carried the forbidden zero chunk length.
+    ZeroChunkLength {
+        /// Zero-based entry index.
+        index: u32,
+    },
+    /// Decoded entry iteration disagreed with its validated framing count.
+    EntryCountMismatch {
+        /// Entry count proven by framing.
+        expected: usize,
+        /// Entry count yielded by the decoded coordinate stream.
+        observed: usize,
+    },
     /// The first entry did not begin at logical offset zero.
     FirstOffsetNotZero {
         /// Observed first logical offset.
@@ -110,6 +122,13 @@ impl fmt::Display for LayoutValidationError {
             Self::NonemptyBlobHasNoEntries => {
                 formatter.write_str("nonempty blob layout has no entries")
             }
+            Self::ZeroChunkLength { index } => {
+                write!(formatter, "layout entry {index} has zero chunk length")
+            }
+            Self::EntryCountMismatch { expected, observed } => write!(
+                formatter,
+                "layout decoded {observed} entries, expected {expected}"
+            ),
             Self::FirstOffsetNotZero { observed } => {
                 write!(formatter, "first layout offset is {observed}, not zero")
             }

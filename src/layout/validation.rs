@@ -10,49 +10,54 @@ pub(super) fn validate_entries(
     entry_limit: LayoutEntryLimit,
 ) -> Result<(), LayoutValidationError> {
     check_entry_limit(entries.len(), entry_limit)?;
-    validate_cardinality(target, entries)?;
+    validate_cardinality(target, entries.len())?;
     let mut expected_offset = 0_u64;
     for (position, entry) in entries.iter().enumerate() {
-        let index = u32::try_from(position).map_err(|_source| {
-            LayoutValidationError::EntryIndexOutOfRange { observed: position }
-        })?;
+        let index = entry_index(position)?;
         let observed_offset = entry.offset().get();
         validate_offset(index, expected_offset, observed_offset)?;
         let length = entry.chunk_id().length().get();
         validate_profile_length(position, entries.len(), index, length, profile)?;
-        expected_offset = observed_offset.checked_add(u64::from(length)).ok_or(
-            LayoutValidationError::OffsetOverflow {
-                index,
-                offset: observed_offset,
-                length,
-            },
-        )?;
+        expected_offset = checked_end(index, observed_offset, length)?;
     }
-    if expected_offset != target.logical_length().get() {
-        return Err(LayoutValidationError::AggregateLengthMismatch {
-            expected: target.logical_length(),
-            observed: expected_offset,
-        });
-    }
-    Ok(())
+    validate_aggregate(target, expected_offset)
 }
 
-const fn validate_cardinality(
+pub(super) const fn validate_cardinality(
     target: BlobId,
-    entries: &[LayoutEntry],
+    entry_count: usize,
 ) -> Result<(), LayoutValidationError> {
-    if target.is_empty() && !entries.is_empty() {
+    if target.is_empty() && entry_count != 0 {
         return Err(LayoutValidationError::EmptyBlobHasEntries {
-            observed: entries.len(),
+            observed: entry_count,
         });
     }
-    if !target.is_empty() && entries.is_empty() {
+    if !target.is_empty() && entry_count == 0 {
         return Err(LayoutValidationError::NonemptyBlobHasNoEntries);
     }
     Ok(())
 }
 
-fn validate_offset(index: u32, expected: u64, observed: u64) -> Result<(), LayoutValidationError> {
+pub(super) fn entry_index(position: usize) -> Result<u32, LayoutValidationError> {
+    u32::try_from(position)
+        .map_err(|_source| LayoutValidationError::EntryIndexOutOfRange { observed: position })
+}
+
+pub(super) const fn validate_positive_length(
+    index: u32,
+    observed: u32,
+) -> Result<(), LayoutValidationError> {
+    if observed == 0 {
+        return Err(LayoutValidationError::ZeroChunkLength { index });
+    }
+    Ok(())
+}
+
+pub(super) fn validate_offset(
+    index: u32,
+    expected: u64,
+    observed: u64,
+) -> Result<(), LayoutValidationError> {
     if index == 0 && observed != 0 {
         return Err(LayoutValidationError::FirstOffsetNotZero { observed });
     }
@@ -71,7 +76,7 @@ fn validate_offset(index: u32, expected: u64, observed: u64) -> Result<(), Layou
     }
 }
 
-fn validate_profile_length(
+pub(super) fn validate_profile_length(
     position: usize,
     entry_count: usize,
     index: u32,
@@ -94,4 +99,31 @@ fn validate_profile_length(
         maximum,
         observed,
     })
+}
+
+pub(super) fn checked_end(
+    index: u32,
+    offset: u64,
+    length: u32,
+) -> Result<u64, LayoutValidationError> {
+    offset
+        .checked_add(u64::from(length))
+        .ok_or(LayoutValidationError::OffsetOverflow {
+            index,
+            offset,
+            length,
+        })
+}
+
+pub(super) const fn validate_aggregate(
+    target: BlobId,
+    observed: u64,
+) -> Result<(), LayoutValidationError> {
+    if observed != target.logical_length().get() {
+        return Err(LayoutValidationError::AggregateLengthMismatch {
+            expected: target.logical_length(),
+            observed,
+        });
+    }
+    Ok(())
 }

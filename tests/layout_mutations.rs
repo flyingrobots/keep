@@ -10,7 +10,7 @@ use keep::{
     AdmittedLayout, BlobIdBinaryParseError, LayoutDecodeError, LayoutDecodePolicy,
     LayoutEntryLimit, LayoutId, LayoutIdMismatch, LayoutValidationError,
 };
-use layout_mutation_support::mutation_cases;
+use layout_mutation_support::{mutation_cases, recompute_record_checksum};
 use support::{decode_hex, invalid_corpus};
 
 #[test]
@@ -96,6 +96,51 @@ fn expected_layout_identity_is_checked_after_structural_admission() -> Result<()
         digest_error,
         LayoutDecodeError::LayoutIdentity {
             source: LayoutIdMismatch::Digest { .. }
+        }
+    ));
+    Ok(())
+}
+
+#[test]
+fn earlier_layout_laws_precede_zero_lengths_in_later_entry_decoding() -> Result<(), Box<dyn Error>>
+{
+    let empty = fixture("empty")?;
+    let mut cardinality = fixture("one-zero")?;
+    overwrite(&mut cardinality, 44, 103, bytes_between(&empty, 44, 103)?)?;
+    overwrite(&mut cardinality, 152, 156, &[0_u8; 4])?;
+    recompute_record_checksum(&mut cardinality)?;
+    let cardinality_error = require_error(
+        AdmittedLayout::decode_record(
+            &cardinality,
+            LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM),
+        ),
+        "empty cardinality with a zero-length entry was admitted",
+    )?;
+    assert!(matches!(
+        cardinality_error,
+        LayoutDecodeError::Validation {
+            source: LayoutValidationError::EmptyBlobHasEntries { .. }
+        }
+    ));
+
+    let mut ordering = mutation_cases()?
+        .into_iter()
+        .find(|mutation| mutation.case() == "entry-order-swap")
+        .ok_or_else(|| invalid_corpus("entry-order mutation is missing"))?
+        .mutated_record()?;
+    overwrite(&mut ordering, 284, 288, &[0_u8; 4])?;
+    recompute_record_checksum(&mut ordering)?;
+    let ordering_error = require_error(
+        AdmittedLayout::decode_record(
+            &ordering,
+            LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM),
+        ),
+        "an earlier gap was hidden by a later zero-length entry",
+    )?;
+    assert!(matches!(
+        ordering_error,
+        LayoutDecodeError::Validation {
+            source: LayoutValidationError::Gap { index: 1, .. }
         }
     ));
     Ok(())
@@ -218,4 +263,26 @@ fn require_error<T, E>(result: Result<T, E>, message: &'static str) -> Result<E,
         Ok(_) => Err(invalid_corpus(message)),
         Err(error) => Ok(error),
     }
+}
+
+fn bytes_between(bytes: &[u8], start: usize, end: usize) -> Result<&[u8], std::io::Error> {
+    bytes
+        .get(start..end)
+        .ok_or_else(|| invalid_corpus("test fixture span is out of bounds"))
+}
+
+fn overwrite(
+    bytes: &mut [u8],
+    start: usize,
+    end: usize,
+    replacement: &[u8],
+) -> Result<(), std::io::Error> {
+    let target = bytes
+        .get_mut(start..end)
+        .ok_or_else(|| invalid_corpus("test mutation span is out of bounds"))?;
+    if target.len() != replacement.len() {
+        return Err(invalid_corpus("test mutation replacement width mismatch"));
+    }
+    target.copy_from_slice(replacement);
+    Ok(())
 }

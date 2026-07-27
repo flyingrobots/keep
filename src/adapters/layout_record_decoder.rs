@@ -2,14 +2,13 @@
 
 use super::layout_header_decoder::{DecodedHeader, decode_header};
 use super::layout_record_format::{
-    CHECKSUM_LENGTH, ENTRY_LENGTH, HEADER_LENGTH, PROFILE_HASH_ALGORITHM, PROFILE_IDENTITY_VERSION,
+    CHECKSUM_LENGTH, ENTRY_WIDTH, HEADER_LENGTH, PROFILE_HASH_ALGORITHM, PROFILE_IDENTITY_VERSION,
     calculate_layout_id, record_checksum,
 };
 use super::layout_record_framing::{ValidatedFraming, validate_framing};
 use super::{LayoutDecodeError, LayoutDecodePolicy};
 use crate::BlobId;
-use crate::chunk::{ChunkId, ChunkLength, ChunkOffset};
-use crate::layout::{AdmittedLayout, LayoutEntry};
+use crate::layout::{AdmittedLayout, LayoutValidationError};
 use crate::profile::{RegisteredStorageProfile, StorageProfileId};
 
 pub(super) fn decode_layout(
@@ -26,10 +25,15 @@ pub(super) fn decode_layout(
     verify_checksum(encoded, &framing)?;
     let target = decode_target(&header)?;
     let profile = admit_profile(&header)?;
-    let entries = decode_entries(encoded, &framing)?;
-    let layout =
-        AdmittedLayout::from_decoded_entries(target, profile, entries, policy.entry_limit())
-            .map_err(|source| LayoutDecodeError::Validation { source })?;
+    let coordinates = decoded_entry_coordinates(encoded, &framing)?;
+    let layout = AdmittedLayout::from_decoded_coordinates(
+        target,
+        profile,
+        framing.entry_capacity,
+        coordinates,
+        policy.entry_limit(),
+    )
+    .map_err(|source| map_admission_error(source, framing.entry_capacity))?;
     verify_expected_identity(encoded, framing.record_length, policy)?;
     Ok(layout)
 }
@@ -93,10 +97,10 @@ fn admit_profile(header: &DecodedHeader) -> Result<RegisteredStorageProfile, Lay
         .map_err(|source| LayoutDecodeError::StorageProfile { source })
 }
 
-fn decode_entries(
-    encoded: &[u8],
+fn decoded_entry_coordinates<'a>(
+    encoded: &'a [u8],
     framing: &ValidatedFraming,
-) -> Result<Vec<LayoutEntry>, LayoutDecodeError> {
+) -> Result<DecodedEntryCoordinates<'a>, LayoutDecodeError> {
     let header_width = usize::from(HEADER_LENGTH);
     let Some(covered) = encoded.get(..framing.checksum_start) else {
         return Err(truncated(encoded, framing));
@@ -104,59 +108,45 @@ fn decode_entries(
     let Some(entries_bytes) = covered.get(header_width..) else {
         return Err(truncated(encoded, framing));
     };
-    let mut entries = Vec::new();
-    entries
-        .try_reserve_exact(framing.entry_capacity)
-        .map_err(|source| LayoutDecodeError::Allocation {
-            requested: framing.entry_capacity,
-            source,
-        })?;
-    let mut chunks = entries_bytes.chunks_exact(usize::from(ENTRY_LENGTH));
-    let mut index = 0_u32;
-    for entry_bytes in chunks.by_ref() {
-        entries.push(decode_entry(entry_bytes, index, encoded, framing)?);
-        index = index
-            .checked_add(1)
-            .ok_or(LayoutDecodeError::RecordLengthArithmetic {
-                entry_count: framing.entry_count,
-            })?;
-    }
-    if !chunks.remainder().is_empty() || index != framing.entry_count {
-        return Err(LayoutDecodeError::RecordLengthArithmetic {
-            entry_count: framing.entry_count,
-        });
-    }
-    Ok(entries)
+    Ok(DecodedEntryCoordinates {
+        remaining: entries_bytes,
+    })
 }
 
-const fn decode_entry(
-    encoded: &[u8],
-    index: u32,
-    complete: &[u8],
-    framing: &ValidatedFraming,
-) -> Result<LayoutEntry, LayoutDecodeError> {
-    let Some((offset_bytes, remainder)) = encoded.split_first_chunk::<8>() else {
-        return Err(truncated(complete, framing));
-    };
-    let Some((length_bytes, remainder)) = remainder.split_first_chunk::<4>() else {
-        return Err(truncated(complete, framing));
-    };
-    let Some((digest, trailing)) = remainder.split_first_chunk::<32>() else {
-        return Err(truncated(complete, framing));
-    };
-    if !trailing.is_empty() {
-        return Err(LayoutDecodeError::RecordLengthArithmetic {
-            entry_count: framing.entry_count,
-        });
+const fn map_admission_error(source: LayoutValidationError, requested: usize) -> LayoutDecodeError {
+    match source {
+        LayoutValidationError::Allocation { source } => {
+            LayoutDecodeError::Allocation { requested, source }
+        }
+        LayoutValidationError::ZeroChunkLength { index } => {
+            LayoutDecodeError::ZeroChunkLength { index }
+        }
+        source => LayoutDecodeError::Validation { source },
     }
-    let raw_length = u32::from_be_bytes(*length_bytes);
-    if raw_length == 0 {
-        return Err(LayoutDecodeError::ZeroChunkLength { index });
+}
+
+struct DecodedEntryCoordinates<'a> {
+    remaining: &'a [u8],
+}
+
+impl Iterator for DecodedEntryCoordinates<'_> {
+    type Item = (u64, u32, [u8; 32]);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (entry, remaining) = self.remaining.split_first_chunk::<ENTRY_WIDTH>()?;
+        let (offset_bytes, remainder) = entry.split_first_chunk::<8>()?;
+        let (length_bytes, remainder) = remainder.split_first_chunk::<4>()?;
+        let (digest, trailing) = remainder.split_first_chunk::<32>()?;
+        if !trailing.is_empty() {
+            return None;
+        }
+        self.remaining = remaining;
+        Some((
+            u64::from_be_bytes(*offset_bytes),
+            u32::from_be_bytes(*length_bytes),
+            *digest,
+        ))
     }
-    let offset = ChunkOffset::from_validated(u64::from_be_bytes(*offset_bytes));
-    let length = ChunkLength::from_validated(raw_length);
-    let id = ChunkId::from_validated_parts(length, *digest);
-    Ok(LayoutEntry::from_validated_parts(offset, id))
 }
 
 fn verify_expected_identity(

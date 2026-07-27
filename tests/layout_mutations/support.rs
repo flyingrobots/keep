@@ -56,7 +56,7 @@ impl MutationCase<'_> {
             _ => return Err(invalid_corpus("unknown layout mutation operation")),
         }
         match self.checksum_posture {
-            "recompute-v1" => recompute_checksum(&mut bytes)?,
+            "recompute-v1" => recompute_record_checksum(&mut bytes)?,
             "preserve-v1" => {}
             _ => return Err(invalid_corpus("unknown checksum posture")),
         }
@@ -159,7 +159,13 @@ fn swap(bytes: &mut [u8], mutation: &MutationCase<'_>) -> Result<(), io::Error> 
     Ok(())
 }
 
-fn recompute_checksum(bytes: &mut [u8]) -> Result<(), io::Error> {
+/// Recalculates the version-1 checksum after a same-length test mutation.
+///
+/// # Errors
+///
+/// Returns an I/O-shaped corpus error when the record cannot contain an exact
+/// 32-byte checksum or its covered length cannot be represented by `u64`.
+pub fn recompute_record_checksum(bytes: &mut [u8]) -> Result<(), io::Error> {
     let checksum_start = bytes
         .len()
         .checked_sub(32)
