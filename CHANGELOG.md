@@ -18,9 +18,10 @@ after its public API and format compatibility policies are established.
   opens and verifies repository-root identity after Git inventory, so a
   persistent root replacement or source path replaced with a symlink is
   refused before source bytes are read.
-- The Rust `xtask` command contract is now explicitly silent on success and
-  emits one typed `Error:` diagnostic with exit status 1 on refusal; untrusted
-  control characters are escaped so the diagnostic remains one physical line.
+- The repository `cargo xtask` alias and Rust command contract are now
+  explicitly silent on success and emit one typed `Error:` diagnostic with
+  exit status 1 on refusal; untrusted control characters are escaped so the
+  diagnostic remains one physical line.
 - Golden protocol framing, field, hexadecimal, and path decoders now share a
   bounded fuzz surface backed by table-driven malformed-corpus refusals.
 - Deterministic fuzz seed materialization now uses a capability-bound Rust

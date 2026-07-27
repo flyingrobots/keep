@@ -3,6 +3,7 @@
 #![cfg(feature = "repository-tasks")]
 
 use std::io;
+use std::path::Path;
 use std::process::{Command, Output};
 
 #[cfg(unix)]
@@ -14,12 +15,21 @@ const CARGO_CONFIGURATION: &str = include_str!("../../.cargo/config.toml");
 
 #[test]
 fn repository_tasks_require_the_committed_dependency_graph() {
-    assert!(CARGO_CONFIGURATION.contains("xtask = \"run --locked --package xtask --\""));
+    assert!(CARGO_CONFIGURATION.contains("xtask = \"run --quiet --locked --package xtask --\""));
 }
 
 #[test]
 fn successful_verification_is_silent() -> Result<(), io::Error> {
     let output = invoke(&["verify"])?;
+    assert!(output.status.success());
+    assert!(output.stdout.is_empty());
+    assert!(output.stderr.is_empty());
+    Ok(())
+}
+
+#[test]
+fn repository_alias_preserves_silent_success() -> Result<(), io::Error> {
+    let output = invoke_alias(&["golden-file-worldline-check"])?;
     assert!(output.status.success());
     assert!(output.stdout.is_empty());
     assert!(output.stderr.is_empty());
@@ -95,6 +105,17 @@ fn non_utf8_arguments_are_typed_refusals() -> Result<(), io::Error> {
 fn invoke(arguments: &[&str]) -> Result<Output, io::Error> {
     Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(arguments)
+        .output()
+}
+
+fn invoke_alias(arguments: &[&str]) -> Result<Output, io::Error> {
+    let repository_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .ok_or_else(|| io::Error::other("xtask manifest has no repository parent"))?;
+    Command::new(env!("CARGO"))
+        .arg("xtask")
+        .args(arguments)
+        .current_dir(repository_root)
         .output()
 }
 
