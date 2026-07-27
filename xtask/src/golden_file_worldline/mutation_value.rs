@@ -129,10 +129,25 @@ pub(super) fn apply_fixed_width(
     match operation {
         FixedWidthOperation::XorByte => xor_byte(destination, &value, name)?,
         FixedWidthOperation::SetU8 | FixedWidthOperation::SetU16Be => {
-            destination.copy_from_slice(&value);
+            copy_fixed_width(destination, &value, name)?;
         }
     }
     Ok(())
+}
+
+pub(super) fn copy_fixed_width(
+    destination: &mut [u8],
+    value: &[u8],
+    name: &str,
+) -> Result<(), GoldenError> {
+    if destination.len() == value.len() {
+        destination.copy_from_slice(value);
+        Ok(())
+    } else {
+        Err(GoldenError::violation(format!(
+            "{name}: mutation value width does not match its destination"
+        )))
+    }
 }
 
 impl FixedWidthOperation {

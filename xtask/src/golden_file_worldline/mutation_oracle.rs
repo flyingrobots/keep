@@ -12,7 +12,7 @@ use super::mutation_value::{mutate, mutation_offset};
 use super::{Corpus, GoldenError};
 
 #[cfg(test)]
-use super::mutation_value::apply_fixed_width;
+use super::mutation_value::{apply_fixed_width, copy_fixed_width};
 
 const MUTATION_COLUMNS: [&str; 7] = [
     "case",

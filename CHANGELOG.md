@@ -22,9 +22,9 @@ after its public API and format compatibility policies are established.
   explicitly silent on success and emit one typed `Error:` diagnostic with
   exit status 1 on refusal; untrusted control characters are escaped so the
   diagnostic remains one physical line.
-- Golden protocol framing, field, hexadecimal, path, and mutation-operation
-  decoders now share a bounded fuzz surface backed by table-driven
-  malformed-corpus refusals.
+- Golden protocol framing, field, hexadecimal, path, mutation-operation, and
+  fixed-width value decoders now share a bounded fuzz surface backed by
+  table-driven malformed-corpus refusals.
 - Deterministic fuzz seed materialization now uses a capability-bound Rust
   `xtask`, syncs and atomically publishes derived seed files without mutating
   hard-link targets, recovers interrupted fixed-name staging files, cleans

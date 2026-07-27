@@ -3,7 +3,9 @@
 use std::collections::BTreeMap;
 use std::fs;
 
-use super::{Corpus, GoldenError, IdentityFixture, apply_fixed_width, check, expected_text};
+use super::{
+    Corpus, GoldenError, IdentityFixture, apply_fixed_width, check, copy_fixed_width, expected_text,
+};
 use crate::golden_file_worldline::digest_port::IdentityDigestOracle;
 use crate::golden_file_worldline::identity_oracle::digest;
 use crate::test_directory::TestDirectory;
@@ -50,6 +52,17 @@ fn fixed_width_mutations_refuse_unknown_operations() {
                 )
         ));
     }
+}
+
+#[test]
+fn fixed_width_copy_refuses_a_width_mismatch() {
+    let mut destination = [0_u8; 2];
+    let result = copy_fixed_width(&mut destination, &[1_u8], "set-value");
+    assert!(matches!(
+        result,
+        Err(GoldenError::Violation(ref message))
+            if message == "set-value: mutation value width does not match its destination"
+    ));
 }
 
 #[test]
