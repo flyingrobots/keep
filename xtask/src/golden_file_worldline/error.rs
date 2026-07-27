@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use std::string::FromUtf8Error;
 
 use crate::diagnostic::{escaped_controls, escaped_path};
+use xtask::protocol_admission::RelativePathError;
 
 pub(crate) enum GoldenError {
     Integer {
@@ -37,6 +38,10 @@ pub(crate) enum GoldenError {
         program: &'static str,
         stream: &'static str,
         maximum: usize,
+    },
+    Path {
+        parameter: String,
+        source: RelativePathError,
     },
     Violation(String),
 }
@@ -100,6 +105,11 @@ impl fmt::Display for GoldenError {
                 formatter,
                 "{program} {stream} exceeded the {maximum}-byte bound"
             ),
+            Self::Path { parameter, source } => {
+                formatter.write_str("unsafe source path: ")?;
+                escaped_controls(formatter, parameter)?;
+                write!(formatter, ": {source}")
+            }
             Self::Violation(message) => escaped_controls(formatter, message),
         }
     }
@@ -113,6 +123,7 @@ impl Error for GoldenError {
             Self::Utf8 { source, .. } | Self::ProcessDiagnosticEncoding { source, .. } => {
                 Some(source)
             }
+            Self::Path { source, .. } => Some(source),
             Self::ProcessFailed { .. } | Self::ProcessOutputBound { .. } | Self::Violation(_) => {
                 None
             }

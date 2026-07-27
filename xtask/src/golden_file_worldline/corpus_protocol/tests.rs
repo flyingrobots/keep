@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 use super::{Corpus, GoldenError, protocol_source_path, table_rows};
 use crate::test_directory::TestDirectory;
+use xtask::protocol_admission::RelativePathError;
 
 #[path = "tests/malformed_corpus.rs"]
 mod malformed_corpus;
@@ -45,22 +46,24 @@ fn tables_admit_a_schema_columns_and_one_row() {
 
 #[test]
 fn source_paths_refuse_host_dependent_or_noncanonical_spellings() {
-    for parameter in [
-        "",
-        ".",
-        "..",
-        "/absolute",
-        "C:/drive-prefix",
-        r"inputs\host-separator",
-        "inputs//empty-segment",
-        "inputs/./dot-segment",
-        "inputs/../parent-segment",
+    for (parameter, expected) in [
+        ("", RelativePathError::Empty),
+        (".", RelativePathError::DotSegment),
+        ("..", RelativePathError::ParentSegment),
+        ("/absolute", RelativePathError::Absolute),
+        ("C:/drive-prefix", RelativePathError::Colon),
+        (r"inputs\host-separator", RelativePathError::Backslash),
+        ("inputs//empty-segment", RelativePathError::EmptySegment),
+        ("inputs/./dot-segment", RelativePathError::DotSegment),
+        ("inputs/../parent-segment", RelativePathError::ParentSegment),
     ] {
         let result = protocol_source_path(parameter);
         assert!(matches!(
             result,
-            Err(GoldenError::Violation(ref message))
-                if message == &format!("unsafe source path: {parameter}")
+            Err(GoldenError::Path {
+                parameter: ref observed,
+                source,
+            }) if observed == parameter && source == expected
         ));
     }
 }
@@ -69,6 +72,18 @@ fn source_paths_refuse_host_dependent_or_noncanonical_spellings() {
 fn source_paths_admit_canonical_posix_segments() {
     let result = protocol_source_path("inputs/small-text.txt");
     assert_eq!(result.ok(), Some(PathBuf::from("inputs/small-text.txt")));
+}
+
+#[test]
+fn source_path_refusal_preserves_the_lexical_reason() {
+    let result = protocol_source_path("inputs//empty-segment");
+    assert_eq!(
+        result.err().map(|error| error.to_string()),
+        Some(String::from(
+            "golden corpus check failed: unsafe source path: \
+             inputs//empty-segment: path contains an empty segment"
+        ))
+    );
 }
 
 #[test]

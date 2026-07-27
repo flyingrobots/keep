@@ -135,8 +135,10 @@ fn nofollow_read_options() -> OpenOptions {
 }
 
 fn protocol_source_path(parameter: &str) -> Result<PathBuf, GoldenError> {
-    posix_relative_path(parameter)
-        .map_err(|_| GoldenError::violation(format!("unsafe source path: {parameter}")))
+    posix_relative_path(parameter).map_err(|source| GoldenError::Path {
+        parameter: parameter.to_owned(),
+        source,
+    })
 }
 
 pub(super) fn table_rows(

@@ -31,8 +31,9 @@ after its public API and format compatibility policies are established.
   failed stages, and gives `golden_protocol` seeds that reach every table and
   semantic parser.
 - Golden File Worldline source paths now have a named version-1 lexical
-  profile with an explicit portability rationale, and both tables and named
-  sources refuse final-component symlinks.
+  profile with typed lexical refusal reasons and an explicit portability
+  rationale, and both tables and named sources refuse final-component
+  symlinks.
 - Filesystem-backed `xtask` tests now use collision-resistant scoped
   directories with explicit cleanup instead of PID-only paths.
 - Scheduled and manually dispatched fuzz campaigns now exercise every

@@ -22,18 +22,18 @@ fn path_profile_is_named_specified_and_rationalized() {
 
 #[test]
 fn path_profile_refuses_every_documented_ambiguous_spelling() {
-    for path in [
-        "",
-        "/absolute",
-        "inputs/",
-        "inputs//source",
-        "inputs/./source",
-        "inputs/../source",
-        r"inputs\source",
-        "inputs/source:stream",
-        "inputs/source\0tail",
+    for (path, expected) in [
+        ("", RelativePathError::Empty),
+        ("/absolute", RelativePathError::Absolute),
+        ("inputs/", RelativePathError::EmptySegment),
+        ("inputs//source", RelativePathError::EmptySegment),
+        ("inputs/./source", RelativePathError::DotSegment),
+        ("inputs/../source", RelativePathError::ParentSegment),
+        (r"inputs\source", RelativePathError::Backslash),
+        ("inputs/source:stream", RelativePathError::Colon),
+        ("inputs/source\0tail", RelativePathError::Nul),
     ] {
-        assert_eq!(posix_relative_path(path), Err(RelativePathError));
+        assert_eq!(posix_relative_path(path), Err(expected));
     }
     assert_eq!(
         posix_relative_path("inputs/source.txt").ok(),

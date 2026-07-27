@@ -51,7 +51,24 @@ pub struct FieldCountError;
 
 /// A refusal produced by the platform-neutral relative path grammar.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct RelativePathError;
+pub enum RelativePathError {
+    /// The path is empty.
+    Empty,
+    /// The path begins with a POSIX root separator.
+    Absolute,
+    /// The path contains a backslash.
+    Backslash,
+    /// The path contains a colon.
+    Colon,
+    /// The path contains a NUL.
+    Nul,
+    /// The path contains an empty segment.
+    EmptySegment,
+    /// The path contains a current-directory segment.
+    DotSegment,
+    /// The path contains a parent-directory segment.
+    ParentSegment,
+}
 
 /// Named canonical profile for Golden File Worldline source paths.
 pub const POSIX_RELATIVE_PATH_PROFILE: &str = "keep.golden-file-worldline.path/v1";
@@ -126,19 +143,29 @@ pub fn decode_lower_hex(
 /// Returns [`RelativePathError`] for empty, absolute, colon-containing,
 /// backslash-separated, NUL-containing, dot-segment, or empty-segment paths.
 pub fn posix_relative_path(parameter: &str) -> Result<PathBuf, RelativePathError> {
-    if parameter.is_empty()
-        || parameter.contains('\\')
-        || parameter.contains(':')
-        || parameter.contains('\0')
-    {
-        return Err(RelativePathError);
+    if parameter.is_empty() {
+        return Err(RelativePathError::Empty);
+    }
+    if parameter.starts_with('/') {
+        return Err(RelativePathError::Absolute);
+    }
+    if parameter.contains('\\') {
+        return Err(RelativePathError::Backslash);
+    }
+    if parameter.contains(':') {
+        return Err(RelativePathError::Colon);
+    }
+    if parameter.contains('\0') {
+        return Err(RelativePathError::Nul);
     }
     let mut relative = PathBuf::new();
     for segment in parameter.split('/') {
-        if segment.is_empty() || matches!(segment, "." | "..") {
-            return Err(RelativePathError);
+        match segment {
+            "" => return Err(RelativePathError::EmptySegment),
+            "." => return Err(RelativePathError::DotSegment),
+            ".." => return Err(RelativePathError::ParentSegment),
+            _ => relative.push(segment),
         }
-        relative.push(segment);
     }
     Ok(relative)
 }
@@ -204,7 +231,16 @@ impl Error for FieldCountError {}
 
 impl fmt::Display for RelativePathError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("path is not canonical POSIX-relative")
+        formatter.write_str(match self {
+            Self::Empty => "path is empty",
+            Self::Absolute => "path is absolute",
+            Self::Backslash => "path contains a backslash",
+            Self::Colon => "path contains a colon",
+            Self::Nul => "path contains a NUL",
+            Self::EmptySegment => "path contains an empty segment",
+            Self::DotSegment => "path contains a current-directory segment",
+            Self::ParentSegment => "path contains a parent-directory segment",
+        })
     }
 }
 
