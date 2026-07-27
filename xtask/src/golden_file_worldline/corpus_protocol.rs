@@ -24,6 +24,15 @@ pub(super) const U16_MAX: u64 = 65_535;
 const MAX_TABLE_BYTES: usize = 1_048_576;
 
 #[cfg(feature = "repository-tasks")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum BlockingIoPolicy {
+    Refuse,
+}
+
+#[cfg(feature = "repository-tasks")]
+const CORPUS_BLOCKING_IO: BlockingIoPolicy = BlockingIoPolicy::Refuse;
+
+#[cfg(feature = "repository-tasks")]
 pub(super) struct Corpus {
     directory: Dir,
     root: PathBuf,
@@ -121,15 +130,20 @@ impl CorpusFile {
 }
 
 #[cfg(feature = "repository-tasks")]
-fn nonblocking_read_options() -> OpenOptions {
+fn corpus_read_options() -> OpenOptions {
     let mut options = OpenOptions::new();
-    options.read(true).nonblock(true);
+    options.read(true);
+    match CORPUS_BLOCKING_IO {
+        BlockingIoPolicy::Refuse => {
+            options.nonblock(true);
+        }
+    }
     options
 }
 
 #[cfg(feature = "repository-tasks")]
 fn nofollow_read_options() -> OpenOptions {
-    let mut options = nonblocking_read_options();
+    let mut options = corpus_read_options();
     options.follow(FollowSymlinks::No);
     options
 }

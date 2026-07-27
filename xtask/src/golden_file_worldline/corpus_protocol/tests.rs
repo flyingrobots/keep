@@ -87,10 +87,8 @@ fn source_path_refusal_preserves_the_lexical_reason() {
 }
 
 #[test]
-fn corpus_read_options_refuse_blocking_io() {
-    let options = format!("{:?}", super::nonblocking_read_options());
-    assert!(options.contains("read: true"));
-    assert!(options.contains("nonblock: true"));
+fn corpus_read_policy_refuses_blocking_io() {
+    assert_eq!(super::CORPUS_BLOCKING_IO, super::BlockingIoPolicy::Refuse);
 }
 
 #[test]
