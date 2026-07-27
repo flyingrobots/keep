@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use super::{FuzzSeedError, golden_protocol_seeds, prepare};
+use super::{FuzzSeedError, Seed, filesystem::RepositoryFiles, golden_protocol_seeds, prepare};
 
 const TABLES: [&str; 5] = [
     "identities.tsv",
@@ -91,6 +91,40 @@ fn seed_preparation_materializes_the_complete_deterministic_set() -> Result<(), 
 
     fs::remove_dir_all(&root)
         .map_err(|source| FuzzSeedError::io("remove test seed root", &root, source))?;
+    Ok(())
+}
+
+#[test]
+fn seed_publication_does_not_mutate_a_hard_link_target() -> Result<(), FuzzSeedError> {
+    use std::env;
+    use std::fs;
+    use std::process;
+
+    let root = env::temp_dir().join(format!("keep-fuzz-seed-hard-link-{}", process::id()));
+    let target = root.join("fuzz/corpus/blob_hasher");
+    fs::create_dir_all(&target)
+        .map_err(|source| FuzzSeedError::io("create test corpus", &target, source))?;
+    let protected = root.join("protected");
+    fs::write(&protected, b"authoritative")
+        .map_err(|source| FuzzSeedError::io("write protected test file", &protected, source))?;
+    let destination = target.join("empty");
+    fs::hard_link(&protected, &destination)
+        .map_err(|source| FuzzSeedError::io("link test seed destination", &destination, source))?;
+
+    RepositoryFiles::open(&root)?.write_seeds(&[Seed {
+        target: "blob_hasher",
+        name: "empty",
+        content: b"derived".to_vec(),
+    }])?;
+    let protected_content = fs::read(&protected)
+        .map_err(|source| FuzzSeedError::io("read protected test file", &protected, source))?;
+    let seed_content = fs::read(&destination)
+        .map_err(|source| FuzzSeedError::io("read test seed", &destination, source))?;
+    fs::remove_dir_all(&root)
+        .map_err(|source| FuzzSeedError::io("remove hard-link test root", &root, source))?;
+
+    assert_eq!(protected_content, b"authoritative");
+    assert_eq!(seed_content, b"derived");
     Ok(())
 }
 

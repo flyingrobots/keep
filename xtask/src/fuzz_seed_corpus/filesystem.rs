@@ -110,30 +110,35 @@ fn child_directory(parent: &Dir, name: &str, root: &Path) -> Result<Dir, FuzzSee
 
 fn write_seed(directory: &Dir, seed: &Seed, root: &Path) -> Result<(), FuzzSeedError> {
     let path = root.join(seed.target).join(seed.name);
+    let temporary = format!(".{}.keep-tmp", seed.name);
+    let temporary_path = root.join(seed.target).join(&temporary);
     let mut options = OpenOptions::new();
     options
         .write(true)
-        .create(true)
-        .truncate(true)
+        .create_new(true)
         .follow(FollowSymlinks::No)
         .nonblock(true);
     let mut file = directory
-        .open_with(seed.name, &options)
+        .open_with(&temporary, &options)
         .map(cap_std::fs::File::into_std)
-        .map_err(|source| FuzzSeedError::io("open seed destination", &path, source))?;
+        .map_err(|source| FuzzSeedError::io("create temporary seed", &temporary_path, source))?;
     let metadata = file
         .metadata()
-        .map_err(|source| FuzzSeedError::io("inspect seed destination", &path, source))?;
+        .map_err(|source| FuzzSeedError::io("inspect temporary seed", &temporary_path, source))?;
     if !metadata.is_file() {
         return Err(FuzzSeedError::violation(format!(
-            "seed destination is not a regular file: {}",
-            path.display()
+            "temporary seed is not a regular file: {}",
+            temporary_path.display()
         )));
     }
     file.write_all(&seed.content)
-        .map_err(|source| FuzzSeedError::io("write seed", &path, source))?;
+        .map_err(|source| FuzzSeedError::io("write temporary seed", &temporary_path, source))?;
     file.flush()
-        .map_err(|source| FuzzSeedError::io("flush seed", path, source))
+        .map_err(|source| FuzzSeedError::io("flush temporary seed", &temporary_path, source))?;
+    drop(file);
+    directory
+        .rename(&temporary, directory, seed.name)
+        .map_err(|source| FuzzSeedError::io("publish seed", path, source))
 }
 
 fn bounded_bytes(
