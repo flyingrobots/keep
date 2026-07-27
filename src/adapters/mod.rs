@@ -9,9 +9,16 @@ mod blob_id_binary;
 mod blob_id_binary_error;
 mod blob_id_text;
 mod blob_id_text_error;
+mod layout_id_binary;
+mod layout_id_binary_error;
+mod layout_id_text;
+mod layout_id_text_error;
+mod lower_hex;
 mod storage_profile_id_text;
 mod storage_profile_id_text_error;
 
 pub use blob_id_binary_error::BlobIdBinaryParseError;
 pub use blob_id_text_error::BlobIdTextParseError;
+pub use layout_id_binary_error::LayoutIdBinaryParseError;
+pub use layout_id_text_error::LayoutIdTextParseError;
 pub use storage_profile_id_text_error::StorageProfileIdParseError;

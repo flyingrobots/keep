@@ -3,6 +3,7 @@
 use std::fmt;
 use std::str::FromStr;
 
+use super::lower_hex::{LowerHexError, decode_digest_32};
 use super::storage_profile_id_text_error::StorageProfileIdParseError;
 use crate::profile::StorageProfileId;
 
@@ -96,57 +97,11 @@ fn validate_version(field: &str) -> Result<(), StorageProfileIdParseError> {
 }
 
 fn parse_digest(field: &str) -> Result<[u8; 32], StorageProfileIdParseError> {
-    if field.len() != DIGEST_HEX_BYTES {
-        return Err(StorageProfileIdParseError::InvalidDigestLength {
-            expected: DIGEST_HEX_BYTES,
-            observed: field.len(),
-        });
-    }
-    let mut digest = [0_u8; 32];
-    for (slot, pair) in digest.iter_mut().zip(field.as_bytes().chunks_exact(2)) {
-        let high = pair
-            .first()
-            .copied()
-            .ok_or_else(|| invalid_length(field.len()))?;
-        let low = pair
-            .get(1)
-            .copied()
-            .ok_or_else(|| invalid_length(field.len()))?;
-        let high_nibble = decode_nibble(high)?;
-        let shifted = high_nibble
-            .checked_shl(4)
-            .ok_or(StorageProfileIdParseError::InvalidDigestAlphabet)?;
-        *slot = shifted | decode_nibble(low)?;
-    }
-    Ok(digest)
-}
-
-const fn invalid_length(observed: usize) -> StorageProfileIdParseError {
-    StorageProfileIdParseError::InvalidDigestLength {
-        expected: DIGEST_HEX_BYTES,
-        observed,
-    }
-}
-
-const fn decode_nibble(value: u8) -> Result<u8, StorageProfileIdParseError> {
-    match value {
-        b'0' => Ok(0),
-        b'1' => Ok(1),
-        b'2' => Ok(2),
-        b'3' => Ok(3),
-        b'4' => Ok(4),
-        b'5' => Ok(5),
-        b'6' => Ok(6),
-        b'7' => Ok(7),
-        b'8' => Ok(8),
-        b'9' => Ok(9),
-        b'a' => Ok(10),
-        b'b' => Ok(11),
-        b'c' => Ok(12),
-        b'd' => Ok(13),
-        b'e' => Ok(14),
-        b'f' => Ok(15),
-        b'A'..=b'F' => Err(StorageProfileIdParseError::NonCanonicalDigestCase),
-        _ => Err(StorageProfileIdParseError::InvalidDigestAlphabet),
-    }
+    decode_digest_32(field).map_err(|error| match error {
+        LowerHexError::WrongLength { expected, observed } => {
+            StorageProfileIdParseError::InvalidDigestLength { expected, observed }
+        }
+        LowerHexError::Uppercase => StorageProfileIdParseError::NonCanonicalDigestCase,
+        LowerHexError::InvalidAlphabet => StorageProfileIdParseError::InvalidDigestAlphabet,
+    })
 }

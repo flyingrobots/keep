@@ -56,6 +56,8 @@ after its public API and format compatibility policies are established.
 
 - Canonical `StorageProfileId` text coordinates and explicit admission of the
   frozen `fastcdc-64k-v1` profile through `RegisteredStorageProfile`.
+- Canonical binary and text `LayoutId` coordinates with typed plan-length and
+  digest mismatch reporting backed by every coordinate refusal vector.
 - The canonical `keep.flat-chunks/v1` durable layout specification, typed
   `LayoutId` grammar, checked flat-plan bounds, domain-separated checksum,
   exact golden records, field-complete `LayoutId` refusal tables and

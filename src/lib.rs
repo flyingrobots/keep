@@ -12,11 +12,16 @@
 mod adapters;
 mod blob;
 mod chunk;
+mod layout;
 mod profile;
 
-pub use adapters::{BlobIdBinaryParseError, BlobIdTextParseError, StorageProfileIdParseError};
+pub use adapters::{
+    BlobIdBinaryParseError, BlobIdTextParseError, LayoutIdBinaryParseError, LayoutIdTextParseError,
+    StorageProfileIdParseError,
+};
 pub use blob::{BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError};
 pub use chunk::{
     ChunkHashError, ChunkId, ChunkLength, ChunkOffset, ChunkSpan, ChunkingError, FastCdc,
 };
+pub use layout::{LayoutId, LayoutIdMismatch, LayoutRecordLength};
 pub use profile::{RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId};
