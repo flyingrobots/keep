@@ -2,7 +2,7 @@
 
 use std::io;
 
-use crate::support::{decode_hex, invalid_corpus};
+use crate::support::{decode_hex, field, invalid_corpus, layout_record_fixture};
 
 const MUTATIONS: &str = include_str!("../../conformance/layout/v1/mutations.tsv");
 const CHECKSUM_DOMAIN: &[u8; 16] = b"KEEP:LAYOUT:SUM\0";
@@ -46,7 +46,7 @@ impl MutationCase<'_> {
     /// Returns an I/O-shaped corpus error for malformed fields, out-of-bounds
     /// spans, unsupported operations, or inconsistent mutation widths.
     pub fn mutated_record(&self) -> Result<Vec<u8>, io::Error> {
-        let mut bytes = decode_hex(record_fixture(self.base_case)?)?;
+        let mut bytes = decode_hex(layout_record_fixture(self.base_case)?)?;
         match self.operation {
             "replace-v1" => replace(&mut bytes, self, &decode_parameter(self.parameter)?)?,
             "xor-v1" => xor(&mut bytes, self, &decode_parameter(self.parameter)?)?,
@@ -224,27 +224,4 @@ fn decode_parameter(parameter: &str) -> Result<Vec<u8>, io::Error> {
         return Ok(Vec::new());
     }
     decode_hex(parameter)
-}
-
-fn record_fixture(case: &str) -> Result<&'static str, io::Error> {
-    match case {
-        "empty" => Ok(include_str!("../../conformance/layout/v1/empty.layout.hex").trim_end()),
-        "one-zero" => {
-            Ok(include_str!("../../conformance/layout/v1/one-zero.layout.hex").trim_end())
-        }
-        "max-plus-one-zeros" => Ok(include_str!(
-            "../../conformance/layout/v1/max-plus-one-zeros.layout.hex"
-        )
-        .trim_end()),
-        "zeros-long" => {
-            Ok(include_str!("../../conformance/layout/v1/zeros-long.layout.hex").trim_end())
-        }
-        _ => Err(invalid_corpus("unknown layout base fixture")),
-    }
-}
-
-fn field(row: &str, index: usize) -> Result<&str, io::Error> {
-    row.split('\t')
-        .nth(index)
-        .ok_or_else(|| invalid_corpus("layout mutation row is missing a field"))
 }

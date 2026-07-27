@@ -7,7 +7,7 @@ use std::io;
 use std::str;
 
 use keep::{LayoutId, LayoutIdBinaryParseError, LayoutIdMismatch, LayoutIdTextParseError};
-use support::{decode_hex, invalid_corpus};
+use support::{decode_hex, field, field_unchecked, invalid_corpus};
 
 const LAYOUTS: &str = include_str!("../conformance/layout/v1/layouts.tsv");
 const INVALID_BINARY: &str = include_str!("../conformance/layout/v1/invalid-layout-id-binary.tsv");
@@ -172,14 +172,6 @@ fn insert(
     let replacement = decode_hex(parameter)?;
     bytes.splice(offset..offset, replacement);
     Ok(())
-}
-
-fn field(row: &str, index: usize) -> Result<&str, io::Error> {
-    field_unchecked(row, index).ok_or_else(|| invalid_corpus("TSV row is missing a field"))
-}
-
-fn field_unchecked(row: &str, index: usize) -> Option<&str> {
-    row.split('\t').nth(index)
 }
 
 const fn text_error_code(error: LayoutIdTextParseError) -> &'static str {

@@ -11,7 +11,7 @@ use keep::{
     LayoutEntryLimit, LayoutId, LayoutIdMismatch, LayoutValidationError,
 };
 use layout_mutation_support::{mutation_cases, recompute_record_checksum};
-use support::{decode_hex, invalid_corpus};
+use support::{decode_hex, invalid_corpus, layout_case_field, layout_record_bytes, require_error};
 
 #[test]
 fn every_frozen_mutation_reaches_its_exact_first_failure_phase() -> Result<(), Box<dyn Error>> {
@@ -44,7 +44,7 @@ fn every_frozen_mutation_reaches_its_exact_first_failure_phase() -> Result<(), B
 
 #[test]
 fn configured_entry_cap_refuses_before_materialization() -> Result<(), Box<dyn Error>> {
-    let bytes = fixture("max-plus-one-zeros")?;
+    let bytes = layout_record_bytes("max-plus-one-zeros")?;
     let policy = LayoutDecodePolicy::new(LayoutEntryLimit::new(1)?);
     let error = require_error(
         AdmittedLayout::decode_record(&bytes, policy),
@@ -63,8 +63,8 @@ fn configured_entry_cap_refuses_before_materialization() -> Result<(), Box<dyn E
 
 #[test]
 fn expected_layout_identity_is_checked_after_structural_admission() -> Result<(), Box<dyn Error>> {
-    let empty_id = layout_id("empty")?;
-    let one_zero_bytes = fixture("one-zero")?;
+    let empty_id = layout_case_field("empty", 10)?.parse::<LayoutId>()?;
+    let one_zero_bytes = layout_record_bytes("one-zero")?;
     let length_error = require_error(
         AdmittedLayout::decode_record(
             &one_zero_bytes,
@@ -79,7 +79,7 @@ fn expected_layout_identity_is_checked_after_structural_admission() -> Result<()
         }
     ));
 
-    let mut altered_coordinate = layout_id_binary("one-zero")?;
+    let mut altered_coordinate = decode_hex(layout_case_field("one-zero", 11)?)?;
     let last = altered_coordinate
         .last_mut()
         .ok_or_else(|| invalid_corpus("layout identity binary is empty"))?;
@@ -104,8 +104,8 @@ fn expected_layout_identity_is_checked_after_structural_admission() -> Result<()
 #[test]
 fn earlier_layout_laws_precede_zero_lengths_in_later_entry_decoding() -> Result<(), Box<dyn Error>>
 {
-    let empty = fixture("empty")?;
-    let mut cardinality = fixture("one-zero")?;
+    let empty = layout_record_bytes("empty")?;
+    let mut cardinality = layout_record_bytes("one-zero")?;
     overwrite(&mut cardinality, 44, 103, bytes_between(&empty, 44, 103)?)?;
     overwrite(&mut cardinality, 152, 156, &[0_u8; 4])?;
     recompute_record_checksum(&mut cardinality)?;
@@ -236,44 +236,6 @@ const fn classify_validation(error: &LayoutValidationError) -> Option<&'static s
         | LayoutValidationError::EntryCountMismatch { .. }
         | LayoutValidationError::OffsetOverflow { .. }
         | LayoutValidationError::EntryIndexOutOfRange { .. } => None,
-    }
-}
-
-fn fixture(case: &str) -> Result<Vec<u8>, Box<dyn Error>> {
-    let encoded = match case {
-        "empty" => include_str!("../conformance/layout/v1/empty.layout.hex"),
-        "one-zero" => include_str!("../conformance/layout/v1/one-zero.layout.hex"),
-        "max-plus-one-zeros" => {
-            include_str!("../conformance/layout/v1/max-plus-one-zeros.layout.hex")
-        }
-        _ => return Err(Box::new(invalid_corpus("unknown layout fixture"))),
-    };
-    Ok(decode_hex(encoded.trim_end())?)
-}
-
-fn layout_id(case: &str) -> Result<LayoutId, Box<dyn Error>> {
-    Ok(layout_field(case, 10)?.parse()?)
-}
-
-fn layout_id_binary(case: &str) -> Result<Vec<u8>, Box<dyn Error>> {
-    Ok(decode_hex(layout_field(case, 11)?)?)
-}
-
-fn layout_field(case: &str, index: usize) -> Result<&'static str, Box<dyn Error>> {
-    let row = include_str!("../conformance/layout/v1/layouts.tsv")
-        .lines()
-        .skip(2)
-        .find(|row| row.split('\t').next() == Some(case))
-        .ok_or_else(|| invalid_corpus("layout case is missing"))?;
-    row.split('\t')
-        .nth(index)
-        .ok_or_else(|| Box::<dyn Error>::from(invalid_corpus("layout field is missing")))
-}
-
-fn require_error<T, E>(result: Result<T, E>, message: &'static str) -> Result<E, std::io::Error> {
-    match result {
-        Ok(_) => Err(invalid_corpus(message)),
-        Err(error) => Ok(error),
     }
 }
 

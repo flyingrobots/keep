@@ -1,11 +1,13 @@
 //! Generated canonicality properties for admitted flat layouts.
 
+pub mod support;
+
 use std::error::Error;
 
 use keep::{
-    AdmittedLayout, BlobId, ChunkSpan, FastCdc, LayoutDecodePolicy, LayoutEntryLimit,
-    RegisteredStorageProfile,
+    AdmittedLayout, BlobId, LayoutDecodePolicy, LayoutEntryLimit, RegisteredStorageProfile,
 };
+use support::detect_spans;
 
 const LENGTHS: [usize; 12] = [
     0, 1, 2, 31, 16_383, 16_384, 65_535, 65_536, 65_537, 262_143, 262_144, 262_145,
@@ -46,16 +48,6 @@ fn assert_canonical_round_trip(source: &[u8]) -> Result<(), Box<dyn Error>> {
     assert_eq!(reencoded.bytes(), canonical.bytes());
     assert_eq!(reencoded.id(), canonical.id());
     Ok(())
-}
-
-fn detect_spans(bytes: &[u8]) -> Result<Vec<ChunkSpan>, keep::ChunkingError> {
-    let mut detector = FastCdc::new();
-    let mut spans = Vec::new();
-    detector.feed(bytes, |span| spans.push(span))?;
-    if let Some(span) = detector.finish()? {
-        spans.push(span);
-    }
-    Ok(spans)
 }
 
 fn generated_bytes(length: usize, case: usize) -> Result<Vec<u8>, Box<dyn Error>> {

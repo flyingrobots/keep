@@ -4,7 +4,7 @@ use std::error::Error;
 
 use keep::{BlobId, LayoutId};
 
-use crate::support::{decode_hex, invalid_corpus};
+use crate::support::{decode_hex, field, invalid_corpus};
 
 const ENTRIES: &str = include_str!("../../conformance/layout/v1/entries.tsv");
 const RECORD_MAGIC: [u8; 16] = *b"KEEP:LAYOUT:PLAN";
@@ -180,10 +180,4 @@ fn u32_at(bytes: &[u8], offset: usize) -> Result<u32, Box<dyn Error>> {
 
 fn u64_at(bytes: &[u8], offset: usize) -> Result<u64, Box<dyn Error>> {
     Ok(u64::from_be_bytes(array_at(bytes, offset)?))
-}
-
-fn field(row: &str, index: usize) -> Result<&str, Box<dyn Error>> {
-    row.split('\t')
-        .nth(index)
-        .ok_or_else(|| Box::<dyn Error>::from(invalid_corpus("TSV row is missing a field")))
 }

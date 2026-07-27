@@ -6,6 +6,16 @@ const CONFORMANCE_GUIDE: &str = include_str!("../../conformance/layout/v1/README
 const LAYOUT_DECODE_ERROR_DISPLAY: &str =
     include_str!("../../src/adapters/layout_decode_error_display.rs");
 const LAYOUT_MUTATION_TESTS: &str = include_str!("../../tests/layout_mutations.rs");
+const LAYOUT_TEST_HELPER_CALLERS: &str = concat!(
+    include_str!("../../tests/layout_decode.rs"),
+    include_str!("../../tests/layout_id.rs"),
+    include_str!("../../tests/layout_mutations.rs"),
+    include_str!("../../tests/layout_mutations/support.rs"),
+    include_str!("../../tests/layout_oracle.rs"),
+    include_str!("../../tests/layout_oracle/support.rs"),
+    include_str!("../../tests/layout_properties.rs"),
+    include_str!("../../tests/layout_record.rs"),
+);
 const INVALID_LAYOUT_ID_BINARY: &str =
     include_str!("../../conformance/layout/v1/invalid-layout-id-binary.tsv");
 const INVALID_LAYOUT_ID_TEXT: &str =
@@ -33,6 +43,27 @@ fn layout_mutation_classifiers_name_every_unclassified_variant() {
         !LAYOUT_MUTATION_TESTS.contains("_ => None"),
         "layout mutation classifiers must not hide future error variants"
     );
+}
+
+#[test]
+fn layout_corpus_plumbing_has_one_shared_owner() {
+    for duplicate in [
+        "\nfn detect_spans(",
+        "\nfn source_bytes(",
+        "\nfn record_fixture(",
+        "\nfn field(",
+        "\nfn field_unchecked(",
+        "\nfn fixture(",
+        "\nfn layout_field(",
+        "\nfn layout_id(",
+        "\nfn layout_id_binary(",
+        "\nfn require_error",
+    ] {
+        assert!(
+            !LAYOUT_TEST_HELPER_CALLERS.contains(duplicate),
+            "layout corpus helper remains duplicated: {duplicate}"
+        );
+    }
 }
 
 #[test]
