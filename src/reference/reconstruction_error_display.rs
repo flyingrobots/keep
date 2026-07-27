@@ -12,7 +12,9 @@ impl fmt::Display for ReconstructionError {
 
 enum DisplayGroup<'a> {
     Presence(&'a ReconstructionError),
-    Verification(&'a ReconstructionError),
+    ChunkVerification(&'a ReconstructionError),
+    BlobVerification(&'a ReconstructionError),
+    ProfileVerification(&'a ReconstructionError),
     Output(&'a ReconstructionError),
 }
 
@@ -20,7 +22,9 @@ impl DisplayGroup<'_> {
     fn fmt(self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Presence(error) => format_presence(formatter, error),
-            Self::Verification(error) => format_verification(formatter, error),
+            Self::ChunkVerification(error) => format_chunk_verification(formatter, error),
+            Self::BlobVerification(error) => format_blob_verification(formatter, error),
+            Self::ProfileVerification(error) => format_profile_verification(formatter, error),
             Self::Output(error) => format_output(formatter, error),
         }
     }
@@ -35,12 +39,15 @@ impl<'a> From<&'a ReconstructionError> for DisplayGroup<'a> {
             | ReconstructionError::LayoutEncoding(_) => Self::Presence(error),
             ReconstructionError::ChunkMissing { .. }
             | ReconstructionError::ChunkHash { .. }
-            | ReconstructionError::ChunkIdentityMismatch { .. }
-            | ReconstructionError::BlobHash(_)
-            | ReconstructionError::BlobIdentityMismatch { .. }
-            | ReconstructionError::ProfileVerifierUnavailable { .. }
+            | ReconstructionError::ChunkIdentityMismatch { .. } => Self::ChunkVerification(error),
+            ReconstructionError::BlobHash(_) | ReconstructionError::BlobIdentityMismatch { .. } => {
+                Self::BlobVerification(error)
+            }
+            ReconstructionError::ProfileVerifierUnavailable { .. }
             | ReconstructionError::ProfileChunking { .. }
-            | ReconstructionError::ProfileBoundaryMismatch { .. } => Self::Verification(error),
+            | ReconstructionError::ProfileBoundaryMismatch { .. } => {
+                Self::ProfileVerification(error)
+            }
             ReconstructionError::WriteZero { .. }
             | ReconstructionError::InvalidWriteCount { .. }
             | ReconstructionError::Write { .. }
@@ -76,7 +83,7 @@ fn format_presence(formatter: &mut fmt::Formatter<'_>, error: &ReconstructionErr
     }
 }
 
-fn format_verification(
+fn format_chunk_verification(
     formatter: &mut fmt::Formatter<'_>,
     error: &ReconstructionError,
 ) -> fmt::Result {
@@ -107,6 +114,28 @@ fn format_verification(
             formatter,
             "layout {layout} entry {index} expected chunk {expected:?}, observed {observed:?}"
         ),
+        ReconstructionError::BlobMissing { .. }
+        | ReconstructionError::LayoutMissing { .. }
+        | ReconstructionError::LayoutDecode(_)
+        | ReconstructionError::LayoutEncoding(_)
+        | ReconstructionError::BlobHash(_)
+        | ReconstructionError::BlobIdentityMismatch { .. }
+        | ReconstructionError::ProfileVerifierUnavailable { .. }
+        | ReconstructionError::ProfileChunking { .. }
+        | ReconstructionError::ProfileBoundaryMismatch { .. }
+        | ReconstructionError::WriteZero { .. }
+        | ReconstructionError::InvalidWriteCount { .. }
+        | ReconstructionError::Write { .. }
+        | ReconstructionError::WrittenLengthOverflow { .. }
+        | ReconstructionError::WrittenLengthMismatch { .. } => Err(fmt::Error),
+    }
+}
+
+fn format_blob_verification(
+    formatter: &mut fmt::Formatter<'_>,
+    error: &ReconstructionError,
+) -> fmt::Result {
+    match error {
         ReconstructionError::BlobHash(source) => source.fmt(formatter),
         ReconstructionError::BlobIdentityMismatch {
             layout,
@@ -116,6 +145,29 @@ fn format_verification(
             formatter,
             "layout {layout} reconstructs {observed}, not named blob {expected}"
         ),
+        ReconstructionError::BlobMissing { .. }
+        | ReconstructionError::LayoutMissing { .. }
+        | ReconstructionError::LayoutDecode(_)
+        | ReconstructionError::LayoutEncoding(_)
+        | ReconstructionError::ChunkMissing { .. }
+        | ReconstructionError::ChunkHash { .. }
+        | ReconstructionError::ChunkIdentityMismatch { .. }
+        | ReconstructionError::ProfileVerifierUnavailable { .. }
+        | ReconstructionError::ProfileChunking { .. }
+        | ReconstructionError::ProfileBoundaryMismatch { .. }
+        | ReconstructionError::WriteZero { .. }
+        | ReconstructionError::InvalidWriteCount { .. }
+        | ReconstructionError::Write { .. }
+        | ReconstructionError::WrittenLengthOverflow { .. }
+        | ReconstructionError::WrittenLengthMismatch { .. } => Err(fmt::Error),
+    }
+}
+
+fn format_profile_verification(
+    formatter: &mut fmt::Formatter<'_>,
+    error: &ReconstructionError,
+) -> fmt::Result {
+    match error {
         ReconstructionError::ProfileVerifierUnavailable { layout, profile } => write!(
             formatter,
             "layout {layout} has no reconstruction verifier for registered profile {profile}"
@@ -137,6 +189,11 @@ fn format_verification(
         | ReconstructionError::LayoutMissing { .. }
         | ReconstructionError::LayoutDecode(_)
         | ReconstructionError::LayoutEncoding(_)
+        | ReconstructionError::ChunkMissing { .. }
+        | ReconstructionError::ChunkHash { .. }
+        | ReconstructionError::ChunkIdentityMismatch { .. }
+        | ReconstructionError::BlobHash(_)
+        | ReconstructionError::BlobIdentityMismatch { .. }
         | ReconstructionError::WriteZero { .. }
         | ReconstructionError::InvalidWriteCount { .. }
         | ReconstructionError::Write { .. }

@@ -8,6 +8,22 @@ const CAPABILITIES: &str = include_str!("../conformance/golden-file-worldline/v1
 const ARCHITECTURE: &str = include_str!("../docs/architecture/reference-store/README.md");
 const ARCHITECTURE_RATIONALE: &str =
     include_str!("../docs/architecture/reference-store/rationale.md");
+const RECONSTRUCTION_ERROR_DISPLAY: &str =
+    include_str!("../src/reference/reconstruction_error_display.rs");
+
+#[test]
+fn reconstruction_error_formatters_stay_below_the_hard_function_limit() {
+    for function in RECONSTRUCTION_ERROR_DISPLAY.split("\nfn ").skip(1) {
+        let body = function
+            .split_once("\n}\n\n")
+            .map_or(function, |(body, _)| body);
+        let name = function.split_once('(').map_or(function, |(name, _)| name);
+        assert!(
+            body.lines().count() <= 59,
+            "{name} exceeds the 60-line hard limit"
+        );
+    }
+}
 
 #[test]
 fn public_reference_cas_is_reported_as_implemented_without_a_durability_claim() {
