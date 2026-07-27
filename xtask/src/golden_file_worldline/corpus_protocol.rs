@@ -57,7 +57,7 @@ fn protocol_source_path(parameter: &str) -> Result<PathBuf, GoldenError> {
         .map_err(|_| GoldenError::violation(format!("unsafe source path: {parameter}")))
 }
 
-fn table_rows(
+pub(super) fn table_rows(
     table: &str,
     schema: &str,
     columns: &[&'static str],
@@ -170,7 +170,10 @@ fn protocol_lines(path: &Path) -> Result<Vec<String>, GoldenError> {
     protocol_lines_from_bytes(path, &raw)
 }
 
-fn protocol_lines_from_bytes(path: &Path, raw: &[u8]) -> Result<Vec<String>, GoldenError> {
+pub(super) fn protocol_lines_from_bytes(
+    path: &Path,
+    raw: &[u8],
+) -> Result<Vec<String>, GoldenError> {
     let table = display_name(path);
     match framed_lines(raw, MAX_TABLE_BYTES) {
         Ok(lines) => Ok(lines),
@@ -197,4 +200,5 @@ fn display_name(path: &Path) -> String {
 }
 
 #[cfg(test)]
+#[path = "corpus_protocol/tests.rs"]
 mod tests;

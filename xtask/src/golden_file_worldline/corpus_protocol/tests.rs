@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 use super::{Corpus, GoldenError, protocol_source_path, table_rows};
 
+#[path = "tests/malformed_corpus.rs"]
 mod malformed_corpus;
 
 #[test]

@@ -61,7 +61,7 @@ pub(super) fn check(corpus: &Corpus) -> Result<(), GoldenError> {
     }
 }
 
-fn text_outcome(encoded: &[u8]) -> Result<&'static str, GoldenError> {
+pub(super) fn text_outcome(encoded: &[u8]) -> Result<&'static str, GoldenError> {
     std::str::from_utf8(encoded).map_err(|source| {
         GoldenError::violation(format!("invalid-text.tsv: input is not UTF-8: {source}"))
     })?;

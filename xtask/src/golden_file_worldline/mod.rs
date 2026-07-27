@@ -7,6 +7,7 @@ mod error;
 mod identity_oracle;
 mod invalid_text_oracle;
 mod mutation_oracle;
+mod mutation_value;
 mod scenario_oracle;
 
 use std::path::Path;
