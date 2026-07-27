@@ -69,7 +69,7 @@ impl Corpus {
             relative,
             label,
             "open corpus source",
-            &nonblocking_read_options(),
+            &nofollow_read_options(),
         )
     }
 

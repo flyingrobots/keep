@@ -28,7 +28,8 @@ crate, while the external `b3sum` path independently checks the algorithm
 boundary.
 
 The TSV files are protocol inputs. Do not reorder rows, normalize source files,
-or regenerate expected values with production `BlobId` code.
+or regenerate expected values with production `BlobId` code. Tables and named
+source files must be regular files reached without following a final symlink.
 
 The [version-1 rationale](rationale.md) records the durable source-path
 spelling and its portability boundary.

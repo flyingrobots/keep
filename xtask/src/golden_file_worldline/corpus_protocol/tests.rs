@@ -148,6 +148,58 @@ fn corpus_tables_refuse_symlink_substitution() -> Result<(), GoldenError> {
 
 #[cfg(unix)]
 #[test]
+fn corpus_sources_refuse_symlink_substitution() -> Result<(), GoldenError> {
+    use std::fs;
+    use std::os::unix::fs::symlink;
+
+    let directory = TestDirectory::create("corpus-source-link")
+        .map_err(|source| GoldenError::io("create source test root", "temporary", source))?;
+    let root = directory.path().join("corpus");
+    let outside = directory.path().join("outside.txt");
+    fs::create_dir(&root)
+        .map_err(|source| GoldenError::io("create source test corpus", &root, source))?;
+    fs::write(&outside, b"substituted")
+        .map_err(|source| GoldenError::io("write substituted source", &outside, source))?;
+    let source_path = root.join("source.txt");
+    symlink(&outside, &source_path)
+        .map_err(|source| GoldenError::io("link substituted source", &source_path, source))?;
+    let loop_code = filesystem_loop_error_code(directory.path())?;
+
+    let result = Corpus::open(root.clone())?.source_file("source.txt");
+    assert!(matches!(
+        result,
+        Err(GoldenError::Io {
+            action: "open corpus source",
+            ref path,
+            ref source,
+        }) if path == &source_path && source.raw_os_error() == Some(loop_code)
+    ));
+    directory
+        .close()
+        .map_err(|source| GoldenError::io("remove source test root", &root, source))?;
+    Ok(())
+}
+
+#[cfg(unix)]
+fn filesystem_loop_error_code(root: &std::path::Path) -> Result<i32, GoldenError> {
+    use std::fs;
+    use std::os::unix::fs::symlink;
+
+    let path = root.join("self-loop");
+    symlink("self-loop", &path)
+        .map_err(|source| GoldenError::io("create filesystem loop", &path, source))?;
+    match fs::metadata(&path) {
+        Err(source) => source
+            .raw_os_error()
+            .ok_or_else(|| GoldenError::violation("filesystem loop has no OS error code")),
+        Ok(_) => Err(GoldenError::violation(
+            "self-referential symlink unexpectedly resolved",
+        )),
+    }
+}
+
+#[cfg(unix)]
+#[test]
 fn opened_corpus_sources_survive_path_replacement() -> Result<(), GoldenError> {
     use std::fs;
     use std::os::unix::fs::symlink;
