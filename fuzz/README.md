@@ -29,13 +29,18 @@ installation and execution commands.
 Run:
 
 ```bash
-python3 fuzz/prepare_corpus.py
+cargo xtask prepare-fuzz-corpus
 ```
 
-The script materializes bounded, ignored seed files under `fuzz/corpus/`.
-Parser seeds come from the canonical Golden File Worldline identity table. CDC
-seeds reproduce registered minimum, natural-boundary, probe-carry,
+The Rust task materializes bounded, ignored seed files under `fuzz/corpus/`.
+Identity parser seeds come from the canonical Golden File Worldline identity
+table. CDC seeds reproduce registered minimum, natural-boundary, probe-carry,
 forced-maximum, and multi-chunk witnesses.
+
+The `golden_protocol` seeds deterministically reach all five corpus table
+schemas plus canonical case, canonical decimal, invalid-identity
+classification, and mutation parsing under the campaign's one-mebibyte input
+bound.
 
 The generated corpus is derived test state, not protocol authority. The
 canonical identities, source recipes, and expected boundaries remain under

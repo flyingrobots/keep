@@ -457,9 +457,11 @@ Hard CI limits:
 - **Review required:** 300 lines
 - **Absolute maximum:** 500 lines
 - **Generated code:** exempt only in clearly marked generated directories
-- **Tests:** 750-line hard maximum per file, but prefer scenario subdivision
+- **Tests:** same 500-line absolute maximum; prefer scenario subdivision
 
-Count nonblank, non-comment lines for enforcement, but reviewers should also examine physical file length.
+Count physical lines for deterministic enforcement. Blank and comment lines
+remain part of the maintainability surface; reviewers should also examine
+logical structure.
 
 A file above 300 lines MUST begin with a decomposition issue or contain an approved exception explaining why splitting it would damage locality.
 

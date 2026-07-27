@@ -1,5 +1,7 @@
 #![no_main]
 
+//! This target owns canonical text `BlobId` decoder fuzzing.
+
 use keep::BlobId;
 use libfuzzer_sys::fuzz_target;
 

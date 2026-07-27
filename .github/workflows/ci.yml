@@ -31,13 +31,16 @@ jobs:
           tool: b3sum@1.8.5
 
       - name: Check Golden File Worldline corpus
-        run: python3 conformance/golden-file-worldline/v1/check_vectors.py
+        run: cargo xtask golden-file-worldline-check
 
       - name: Check CDC profile corpus
         run: python3 conformance/cdc-profile/v1/check_vectors.py
 
       - name: Check chunk identity corpus
         run: python3 conformance/chunk-id/v1/check_vectors.py
+
+      - name: Check source structure
+        run: cargo xtask source-structure-check
 
       - name: Check formatting
         run: cargo fmt --all --check
@@ -132,7 +135,7 @@ jobs:
         run: cargo install cargo-fuzz --version "$CARGO_FUZZ_VERSION" --locked
 
       - name: Prepare deterministic fuzz seeds
-        run: python3 fuzz/prepare_corpus.py
+        run: cargo xtask prepare-fuzz-corpus
 
       - name: Exercise every fuzz target
         run: python3 fuzz/run_campaign.py run --profile smoke

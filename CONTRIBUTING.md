@@ -81,7 +81,7 @@ cargo install cargo-fuzz --version "$CARGO_FUZZ_VERSION" --locked
 Run the same bounded smoke campaign as CI:
 
 ```bash
-python3 fuzz/prepare_corpus.py
+cargo xtask prepare-fuzz-corpus
 python3 fuzz/run_campaign.py describe --profile smoke
 python3 fuzz/run_campaign.py run --profile smoke
 ```

@@ -1,6 +1,6 @@
 # Dependency Admission: BLAKE3 1.8.5
 
-- Status: Accepted for `BlobId` and `ChunkId` version 1
+- Status: Accepted for version-1 identities and their independent corpus oracle
 - Date: 2026-07-19
 - Owner: Keep identity layer
 - Governing decision:
@@ -15,6 +15,18 @@ Keep admits the `blake3` crate at locked version 1.8.5 to calculate the
 the incremental `Hasher` API only. No dependency-owned type appears in Keep's
 public API.
 
+The private `xtask` crate also uses the same pinned implementation to recompute
+Golden File Worldline digest witnesses directly from corpus source bytes and to
+name deterministic fuzz seeds. The oracle does not import Keep production
+types or hashing wrappers. This separation independently checks preimage
+framing, length encoding, canonical text and binary encodings, mutation
+semantics, and committed witness bytes. For every identity and content mutation,
+the repository checker also streams the canonical preimage through external
+`b3sum`; a mismatch with the in-process result is a refusal. The checked-in
+vectors and runtime cross-check therefore cover the algorithm boundary without
+claiming that the Rust path independently implements the BLAKE3 compression
+function.
+
 The manifest disables default features and enables exactly:
 
 - `std`, because Keep version 1 is a standard-library crate and admits the
@@ -22,11 +34,13 @@ The manifest disables default features and enables exactly:
 - `pure`, which forces upstream's pure-Rust build path instead of its
   handwritten assembly or C implementations.
 
-The current Keep call paths use only `Hasher::new`, `Hasher::update`, and
-`Hasher::finalize`. The `std` feature is not part of content identity and may
-be removed in a dedicated dependency-policy change if Keep adopts a `no_std`
-lower layer. The `pure` feature is also not part of identity. Any future
-change to either feature must reproduce every identity vector exactly.
+The production Keep call paths use only `Hasher::new`, `Hasher::update`, and
+`Hasher::finalize`; repository tasks additionally use the one-shot `hash`
+function for deterministic seed naming. The `std` feature is not part of
+content identity and may be removed in a dedicated dependency-policy change if
+Keep adopts a `no_std` lower layer. The `pure` feature is also not part of
+identity. Any future change to either feature must reproduce every identity
+vector exactly.
 
 `pure` does not mean “free of unsafe code.” It selects Rust implementations,
 including platform intrinsics and dispatch that contain upstream-audited unsafe
@@ -62,7 +76,8 @@ Instead, this admission records the boundary explicitly:
 - upstream Rust SIMD intrinsics and runtime dispatch may execute unsafe code;
 - the build script and its `cc` dependency remain in the resolved build graph
   even when `pure` prevents C or assembly objects from being selected;
-- independent `b3sum` vectors detect an output change at the protocol boundary.
+- independent `b3sum` vectors and runtime digest cross-checks detect an output
+  change at the protocol boundary.
 
 This posture accepts upstream's unsafe implementation boundary. Re-enabling C,
 assembly, AVX-512, NEON, or WASM SIMD requires a dedicated change with target
@@ -168,6 +183,7 @@ Reopen this admission when any of these changes:
 - Keep's MSRV or supported target set;
 - the upstream unsafe, C, assembly, or runtime-dispatch boundary;
 - a dependency-owned type crosses Keep's public API;
+- the independent oracle begins importing production identity code;
 - an advisory, maintenance, or license fact changes;
 - measured performance motivates enabling another implementation path.
 

@@ -10,6 +10,32 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Golden File Worldline verification now runs through a dependency-isolated
+  Rust `xtask`, cross-checks every identity-bearing digest against external
+  `b3sum`, and CI refuses Rust, Python, or shell source modules that exceed the
+  documented 500-physical-line hard maximum, including test modules.
+- Repository source verification now uses capability-relative, no-follow file
+  opens and verifies repository-root identity after Git inventory, so a
+  persistent root replacement or source path replaced with a symlink is
+  refused before source bytes are read.
+- The repository `cargo xtask` alias and Rust command contract are now
+  explicitly silent on success and emit one typed `Error:` diagnostic with
+  exit status 1 on refusal; untrusted control characters are escaped so the
+  diagnostic remains one physical line.
+- Golden protocol framing, field, hexadecimal, path, mutation-operation, and
+  fixed-width value decoders now share a bounded fuzz surface backed by
+  precise table-driven malformed-corpus refusals.
+- Deterministic fuzz seed materialization now uses a capability-bound Rust
+  `xtask`, syncs and atomically publishes derived seed files without mutating
+  hard-link targets, recovers interrupted fixed-name staging files, cleans
+  failed stages, and gives `golden_protocol` seeds that reach every table and
+  semantic parser.
+- Golden File Worldline source paths now have a named version-1 lexical
+  profile with typed lexical refusal reasons and an explicit portability
+  rationale, and both tables and named sources refuse final-component
+  symlinks.
+- Filesystem-backed `xtask` tests now use collision-resistant scoped
+  directories with explicit cleanup instead of PID-only paths.
 - Scheduled and manually dispatched fuzz campaigns now exercise every
   registered target under centralized bounded policy, retain failures, and
   preserve minimized evolving corpora as non-authoritative test state.

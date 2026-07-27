@@ -1,5 +1,7 @@
 #![no_main]
 
+//! This target owns streaming `FastCdc` boundary and identity fuzzing.
+
 use keep::{ChunkSpan, ChunkingError, FastCdc};
 use keep_fuzz::validate_spans;
 use libfuzzer_sys::fuzz_target;
