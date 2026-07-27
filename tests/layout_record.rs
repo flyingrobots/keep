@@ -5,12 +5,21 @@ pub mod support;
 use std::error::Error;
 
 use keep::{
-    AdmittedLayout, BlobId, FastCdc, LayoutEntryLimit, LayoutValidationError,
+    AdmittedLayout, BlobId, FastCdc, LayoutEntryLimit, LayoutRecordLength, LayoutValidationError,
     RegisteredStorageProfile,
 };
 use support::{decode_hex, invalid_corpus};
 
 const LAYOUTS: &str = include_str!("../conformance/layout/v1/layouts.tsv");
+
+#[test]
+fn record_length_bounds_remain_domain_typed() {
+    let minimum: LayoutRecordLength = LayoutRecordLength::MINIMUM;
+    let maximum: LayoutRecordLength = LayoutRecordLength::MAXIMUM;
+
+    assert_eq!(minimum.get(), 176);
+    assert_eq!(maximum.get(), 46_137_520);
+}
 
 #[test]
 fn every_semantic_golden_layout_encodes_to_the_frozen_record() -> Result<(), Box<dyn Error>> {

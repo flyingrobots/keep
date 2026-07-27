@@ -15,12 +15,12 @@ pub struct LayoutRecordLength(u64);
 
 impl LayoutRecordLength {
     /// Smallest canonical record length: an empty layout.
-    pub const MINIMUM: u64 = HEADER_AND_CHECKSUM_LENGTH;
+    pub const MINIMUM: Self = Self(HEADER_AND_CHECKSUM_LENGTH);
     /// Largest canonical record length under the version-1 entry limit.
-    pub const MAXIMUM: u64 = MAXIMUM_RECORD_LENGTH;
+    pub const MAXIMUM: Self = Self(MAXIMUM_RECORD_LENGTH);
 
     pub(crate) const fn from_wire(value: u64) -> Option<Self> {
-        if value < Self::MINIMUM || value > Self::MAXIMUM {
+        if value < Self::MINIMUM.get() || value > Self::MAXIMUM.get() {
             return None;
         }
         let Some(entry_bytes) = value.checked_sub(HEADER_AND_CHECKSUM_LENGTH) else {

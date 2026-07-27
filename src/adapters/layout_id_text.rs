@@ -113,10 +113,11 @@ fn parse_plan_length(field: &str) -> Result<LayoutRecordLength, LayoutIdTextPars
     let observed = field
         .parse::<u64>()
         .map_err(|_source| LayoutIdTextParseError::PlanLengthOverflow)?;
-    if !(LayoutRecordLength::MINIMUM..=LayoutRecordLength::MAXIMUM).contains(&observed) {
+    if !(LayoutRecordLength::MINIMUM.get()..=LayoutRecordLength::MAXIMUM.get()).contains(&observed)
+    {
         return Err(LayoutIdTextParseError::PlanLengthOutOfBounds {
-            minimum: LayoutRecordLength::MINIMUM,
-            maximum: LayoutRecordLength::MAXIMUM,
+            minimum: LayoutRecordLength::MINIMUM.get(),
+            maximum: LayoutRecordLength::MAXIMUM.get(),
             observed,
         });
     }

@@ -109,10 +109,11 @@ const fn validate_codec(observed: u16) -> Result<(), LayoutIdBinaryParseError> {
 }
 
 fn validate_plan_length(observed: u64) -> Result<LayoutRecordLength, LayoutIdBinaryParseError> {
-    if !(LayoutRecordLength::MINIMUM..=LayoutRecordLength::MAXIMUM).contains(&observed) {
+    if !(LayoutRecordLength::MINIMUM.get()..=LayoutRecordLength::MAXIMUM.get()).contains(&observed)
+    {
         return Err(LayoutIdBinaryParseError::PlanLengthOutOfBounds {
-            minimum: LayoutRecordLength::MINIMUM,
-            maximum: LayoutRecordLength::MAXIMUM,
+            minimum: LayoutRecordLength::MINIMUM.get(),
+            maximum: LayoutRecordLength::MAXIMUM.get(),
             observed,
         });
     }

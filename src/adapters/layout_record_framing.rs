@@ -77,9 +77,9 @@ const fn validate_entry_bounds(
 }
 
 const fn validate_record_bound(observed: u64) -> Result<(), LayoutDecodeError> {
-    if observed > LayoutRecordLength::MAXIMUM {
+    if observed > LayoutRecordLength::MAXIMUM.get() {
         return Err(LayoutDecodeError::RecordLengthLimitExceeded {
-            maximum: LayoutRecordLength::MAXIMUM,
+            maximum: LayoutRecordLength::MAXIMUM.get(),
             observed,
         });
     }
