@@ -17,7 +17,7 @@ impl ChunkLength {
         if value == 0 { None } else { Some(Self(value)) }
     }
 
-    pub(super) const fn from_validated(value: u32) -> Self {
+    pub(crate) const fn from_validated(value: u32) -> Self {
         Self(value)
     }
 

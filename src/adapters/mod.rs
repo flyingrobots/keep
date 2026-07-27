@@ -9,6 +9,9 @@ mod blob_id_binary;
 mod blob_id_binary_error;
 mod blob_id_text;
 mod blob_id_text_error;
+mod storage_profile_id_text;
+mod storage_profile_id_text_error;
 
 pub use blob_id_binary_error::BlobIdBinaryParseError;
 pub use blob_id_text_error::BlobIdTextParseError;
+pub use storage_profile_id_text_error::StorageProfileIdParseError;
