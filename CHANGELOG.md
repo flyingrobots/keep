@@ -15,6 +15,8 @@ after its public API and format compatibility policies are established.
   the documented 500-line hard maximum.
 - Repository source verification now uses capability-relative, no-follow file
   opens so a path replaced with a symlink is refused before any bytes are read.
+- The Rust `xtask` command contract is now explicitly silent on success and
+  emits one typed `Error:` diagnostic with exit status 1 on refusal.
 - Scheduled and manually dispatched fuzz campaigns now exercise every
   registered target under centralized bounded policy, retain failures, and
   preserve minimized evolving corpora as non-authoritative test state.
