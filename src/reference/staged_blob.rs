@@ -91,6 +91,12 @@ impl StagedBlob {
                 identity: self.layout_id,
             });
         }
+        if let Some(observed) = store.first_other_index(self.layout_id, self.target()) {
+            return Err(PublishError::CommittedLayoutMisindexed {
+                layout: self.layout_id,
+                observed,
+            });
+        }
         let indexed = store
             .blob_layouts
             .get(&self.target())
@@ -246,6 +252,46 @@ mod tests {
                 if layout == published.layout_id()
         ));
         assert!(store.contains_blob(published.target()));
+        assert!(store.layout(published.layout_id()).is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn layout_indexed_under_the_wrong_blob_is_never_silently_extended() -> Result<(), Box<dyn Error>>
+    {
+        let source = b"a layout identity cannot migrate between target indexes";
+        let wrong_target = crate::BlobId::hash_bytes(b"different target")?;
+        let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+        let mut first_source = Cursor::new(source);
+        let published = store
+            .stage(&mut first_source, LayoutEntryLimit::MAXIMUM)?
+            .commit(&mut store)?;
+        store.layouts.remove(&published.layout_id());
+        let removed = store
+            .blob_layouts
+            .get_mut(&published.target())
+            .is_some_and(|layouts| layouts.remove(&published.layout_id()));
+        assert!(removed);
+        store
+            .blob_layouts
+            .entry(wrong_target)
+            .or_default()
+            .insert(published.layout_id());
+        let mut second_source = Cursor::new(source);
+        let staged = store.stage(&mut second_source, LayoutEntryLimit::MAXIMUM)?;
+
+        let error = staged
+            .commit(&mut store)
+            .err()
+            .ok_or("ordinary publication extended a wrong-target layout index")?;
+
+        assert!(matches!(
+            error,
+            PublishError::CommittedLayoutMisindexed { layout, observed }
+                if layout == published.layout_id() && observed == wrong_target
+        ));
+        assert!(!store.contains_blob(published.target()));
+        assert!(store.contains_blob(wrong_target));
         assert!(store.layout(published.layout_id()).is_none());
         Ok(())
     }

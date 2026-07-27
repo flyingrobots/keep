@@ -78,6 +78,12 @@ impl ReferenceStore {
             .copied()
     }
 
+    pub(super) fn first_other_index(&self, layout: LayoutId, expected: BlobId) -> Option<BlobId> {
+        self.blob_layouts.iter().find_map(|(target, layouts)| {
+            (*target != expected && layouts.contains(&layout)).then_some(*target)
+        })
+    }
+
     pub(super) fn chunk(&self, identity: ChunkId) -> Option<&[u8]> {
         self.chunks.get(&identity).map(Box::as_ref)
     }

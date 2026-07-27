@@ -3,7 +3,7 @@
 use std::error::Error;
 use std::fmt;
 
-use crate::{ChunkId, LayoutId};
+use crate::{BlobId, ChunkId, LayoutId};
 
 /// Failure while explicitly publishing staged reference-store work.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -42,6 +42,13 @@ pub enum PublishError {
         /// Indexed layout absent from committed layout state.
         layout: LayoutId,
     },
+    /// A committed layout identity appears under another target blob.
+    CommittedLayoutMisindexed {
+        /// Layout indexed under the wrong target.
+        layout: LayoutId,
+        /// Incorrect target blob index.
+        observed: BlobId,
+    },
 }
 
 impl fmt::Display for PublishError {
@@ -78,6 +85,10 @@ impl fmt::Display for PublishError {
                     "blob index references absent committed layout {layout}"
                 )
             }
+            Self::CommittedLayoutMisindexed { layout, observed } => write!(
+                formatter,
+                "committed layout {layout} is indexed under wrong blob {observed}"
+            ),
         }
     }
 }
