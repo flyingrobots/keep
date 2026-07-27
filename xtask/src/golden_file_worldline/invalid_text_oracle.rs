@@ -3,12 +3,11 @@
 #[cfg(feature = "repository-tasks")]
 use std::collections::BTreeSet;
 
-#[cfg(not(feature = "repository-tasks"))]
+#[cfg(feature = "repository-tasks")]
+use super::Corpus;
 use super::GoldenError;
 #[cfg(feature = "repository-tasks")]
 use super::canonical_value::{EmptyHex, case_name, decoded_hex, unique};
-#[cfg(feature = "repository-tasks")]
-use super::{Corpus, GoldenError};
 
 #[cfg(feature = "repository-tasks")]
 const MAX_INVALID_TEXT_BYTES: usize = 4_096;
