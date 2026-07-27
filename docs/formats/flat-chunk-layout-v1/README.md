@@ -342,22 +342,22 @@ replace an earlier gap or overlap with another error.
 
 | ID | Requirement | Design evidence | Implementation status |
 | --- | --- | --- | --- |
-| `KEEP-LAYOUT-001` | Exact magic, version, codec, and big-endian fixed-width grammar | Header table and golden records | Planned in #10 |
-| `KEEP-LAYOUT-002` | `LayoutId` uses the ADR-0002 domain and exact plan length | Identity grammar, fixture coordinates, and text and binary refusal tables | Planned in #10 |
-| `KEEP-LAYOUT-003` | Target `BlobId` and logical length are inseparable | Embedded canonical 59-byte coordinate | Planned in #10 |
-| `KEEP-LAYOUT-004` | One registered `StorageProfileId` governs all entries | Header profile coordinate | Planned in #10 |
-| `KEEP-LAYOUT-005` | Entry `ChunkId` kind, version, algorithm, length, and digest are typed | Header and entry grammar | Planned in #10 |
-| `KEEP-LAYOUT-006` | Offsets are strictly ordered, contiguous, and gap/overlap free | Structural laws and mutation ledger | Planned in #10 |
-| `KEEP-LAYOUT-007` | Entry and aggregate arithmetic is checked | Bounds and structural laws | Planned in #10 |
-| `KEEP-LAYOUT-008` | Empty and nonempty layouts have exact cardinality | Empty and one-chunk golden records | Planned in #10 |
-| `KEEP-LAYOUT-009` | Depth, counts, and record allocation are bounded before allocation | Depth 1, `2^20` entries, and 46,137,520-byte limit | Planned in #10 |
-| `KEEP-LAYOUT-010` | Nonzero flags, reserved bytes, and unknown mandatory coordinates are refused | Mutation ledger | Planned in #10 |
-| `KEEP-LAYOUT-011` | Trailing, truncated, duplicated, and noncanonical framing is refused | Mutation ledger | Planned in #10 |
-| `KEEP-LAYOUT-012` | Record checksum is typed, domain-separated, and checked | Checksum grammar and golden records | Planned in #10 |
+| `KEEP-LAYOUT-001` | Exact magic, version, codec, and big-endian fixed-width grammar | Header table and golden records | Implemented in #10 |
+| `KEEP-LAYOUT-002` | `LayoutId` uses the ADR-0002 domain and exact plan length | Identity grammar, fixture coordinates, and text and binary refusal tables | Implemented in #10 |
+| `KEEP-LAYOUT-003` | Target `BlobId` and logical length are inseparable | Embedded canonical 59-byte coordinate | Implemented in #10 |
+| `KEEP-LAYOUT-004` | One registered `StorageProfileId` governs all entries | Header profile coordinate | Implemented in #10 |
+| `KEEP-LAYOUT-005` | Entry `ChunkId` kind, version, algorithm, length, and digest are typed | Header and entry grammar | Implemented in #10 |
+| `KEEP-LAYOUT-006` | Offsets are strictly ordered, contiguous, and gap/overlap free | Structural laws and mutation ledger | Implemented in #10 |
+| `KEEP-LAYOUT-007` | Entry and aggregate arithmetic is checked | Bounds and structural laws | Implemented in #10 |
+| `KEEP-LAYOUT-008` | Empty and nonempty layouts have exact cardinality | Empty and one-chunk golden records | Implemented in #10 |
+| `KEEP-LAYOUT-009` | Depth, counts, and record allocation are bounded before allocation | Depth 1, `2^20` entries, and 46,137,520-byte limit | Implemented in #10 |
+| `KEEP-LAYOUT-010` | Nonzero flags, reserved bytes, and unknown mandatory coordinates are refused | Mutation ledger | Implemented in #10 |
+| `KEEP-LAYOUT-011` | Trailing, truncated, duplicated, and noncanonical framing is refused | Mutation ledger | Implemented in #10 |
+| `KEEP-LAYOUT-012` | Record checksum is typed, domain-separated, and checked | Checksum grammar and golden records | Implemented in #10 |
 | `KEEP-LAYOUT-013` | Physical locations never participate | Header and entry grammar | Specified |
-| `KEEP-LAYOUT-014` | Decoded, validated, admitted, and verified states remain distinct | State model | Planned in #10 |
+| `KEEP-LAYOUT-014` | Decoded, validated, admitted, and verified states remain distinct | State model | Implemented through admission in #10 |
 | `KEEP-LAYOUT-015` | Flat v1 never silently becomes hierarchical | Compatibility section and rationale | Specified |
-| `KEEP-LAYOUT-016` | Verified reconstruction reproduces the declared spans under the bound storage profile | Verification state and profile-boundary mutation | Planned in #10 |
+| `KEEP-LAYOUT-016` | Verified reconstruction reproduces the declared spans under the bound storage profile | Verification state and profile-boundary mutation | Deferred to reconstruction API |
 
 <!-- markdownlint-enable MD013 -->
 

@@ -60,6 +60,9 @@ after its public API and format compatibility policies are established.
 - Bounded flat-layout decoding through explicit parse, validate, and admit
   stages with deterministic first-failure errors for every frozen structural
   mutation and optional final expected-`LayoutId` verification.
+- Generated flat-layout canonicality properties and a continuous
+  `layout_record` decoder fuzz target seeded through the Rust `xtask` with all
+  four frozen binary records.
 - Canonical `StorageProfileId` text coordinates and explicit admission of the
   frozen `fastcdc-64k-v1` profile through `RegisteredStorageProfile`.
 - Canonical binary and text `LayoutId` coordinates with typed plan-length and

@@ -1,15 +1,15 @@
 # Flat Chunk Layout Corpus v1
 
-This directory is the implementation-independent design corpus for
+This directory is the implementation-independent corpus for
 `keep.flat-chunks/v1`. It freezes canonical record bytes, `LayoutId`
-coordinates, and mutation expectations without supplying a production encoder
-or decoder.
+coordinates, and mutation expectations independently of the production
+encoder and decoder.
 
 Issue [#10](https://github.com/flyingrobots/keep/issues/10) owns the
-implementation, independent checker, corruption tests, property tests, and
-continuous fuzz target. Until that issue lands, these fixtures are protocol
-evidence, not evidence that Keep can ingest, decode, admit, or reconstruct a
-layout.
+production codec, corruption tests, property tests, and continuous fuzz
+target. The three verification-phase mutations intentionally remain admitted
+until a future reconstruction boundary compares actual chunk bytes and replays
+the registered storage profile.
 
 The normative format is the
 [Flat Chunk Layout v1 specification](../../../docs/formats/flat-chunk-layout-v1/README.md).
