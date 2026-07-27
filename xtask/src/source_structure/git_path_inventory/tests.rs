@@ -55,8 +55,23 @@ fn git_path_stream_requires_nul_framing() {
     let result = read_paths(Cursor::new(b"abc"), "test paths", TEST_LIMITS);
     assert!(matches!(
         result,
-        Err(SourceStructureError::GitOutputFraming { .. })
+        Err(SourceStructureError::GitOutputFraming {
+            operation: "test paths"
+        })
     ));
+}
+
+#[test]
+fn git_path_stream_refuses_empty_records() {
+    for stream in [&b"\0"[..], &b"a\0\0"[..]] {
+        let result = read_paths(Cursor::new(stream), "test paths", TEST_LIMITS);
+        assert!(matches!(
+            result,
+            Err(SourceStructureError::GitOutputFraming {
+                operation: "test paths"
+            })
+        ));
+    }
 }
 
 #[test]

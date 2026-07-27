@@ -177,27 +177,28 @@ fn read_paths(
             })?;
         for byte in bytes {
             if *byte == 0 {
-                if !current.is_empty() {
-                    observed_paths = observed_paths.checked_add(1).ok_or(
-                        SourceStructureError::GitOutputBound {
-                            operation,
-                            stream: "path count",
-                            maximum: limits.paths,
-                        },
-                    )?;
-                    if observed_paths > limits.paths {
-                        return Err(SourceStructureError::GitOutputBound {
-                            operation,
-                            stream: "path count",
-                            maximum: limits.paths,
-                        });
-                    }
-                    let path =
-                        String::from_utf8(std::mem::take(&mut current)).map_err(|source| {
-                            SourceStructureError::GitPathEncoding { operation, source }
-                        })?;
-                    paths.insert(path);
+                if current.is_empty() {
+                    return Err(SourceStructureError::GitOutputFraming { operation });
                 }
+                observed_paths =
+                    observed_paths
+                        .checked_add(1)
+                        .ok_or(SourceStructureError::GitOutputBound {
+                            operation,
+                            stream: "path count",
+                            maximum: limits.paths,
+                        })?;
+                if observed_paths > limits.paths {
+                    return Err(SourceStructureError::GitOutputBound {
+                        operation,
+                        stream: "path count",
+                        maximum: limits.paths,
+                    });
+                }
+                let path = String::from_utf8(std::mem::take(&mut current)).map_err(|source| {
+                    SourceStructureError::GitPathEncoding { operation, source }
+                })?;
+                paths.insert(path);
             } else {
                 if current.len() >= limits.path_bytes {
                     return Err(SourceStructureError::GitOutputBound {
