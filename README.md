@@ -29,6 +29,13 @@ for that profile and a domain-separated `ChunkId`. The detector consumes
 arbitrary borrowed feed partitions, emits identified spans without retaining
 candidate bytes, and flushes a final runt only when the caller declares EOF.
 
+The next M2 design slice freezes the canonical `keep.flat-chunks/v1` layout
+record and `LayoutId`: one bounded, ordered sequence of exact chunk identities
+and logical offsets bound to one `BlobId` and one `StorageProfileId`. Its
+language-neutral golden and mutation corpus exists, but the encoder, decoder,
+ingestion path, and reconstruction path remain assigned to the next
+implementation slice.
+
 Keep does **not** expose ingestion, layouts, or physical storage yet.
 Durability, retention, recovery, verification of stored structures, and
 garbage collection remain planned work. Calculating a `BlobId` or `ChunkId`
@@ -110,7 +117,10 @@ implemented proof boundary and explicit nonclaims. The separate
 [CDC profile corpus](conformance/cdc-profile/v1/README.md) freezes M2 boundary
 semantics, and the
 [chunk identity invariant](docs/invariants/chunk-identity/README.md) defines
-the implemented `ChunkId` and `FastCdc` proof boundary.
+the implemented `ChunkId` and `FastCdc` proof boundary. The
+[Flat Chunk Layout v1 specification](docs/formats/flat-chunk-layout-v1/README.md)
+and [layout corpus](conformance/layout/v1/README.md) freeze the next format
+boundary without claiming that its implementation exists.
 
 ## Contributing
 
