@@ -25,6 +25,13 @@ pub enum PublishError {
         /// Conflicting layout identity.
         identity: LayoutId,
     },
+    /// A previously committed layout references an absent chunk.
+    CommittedChunkMissing {
+        /// Existing committed layout.
+        layout: LayoutId,
+        /// Exact chunk absent from committed state.
+        chunk: ChunkId,
+    },
 }
 
 impl fmt::Display for PublishError {
@@ -42,6 +49,12 @@ impl fmt::Display for PublishError {
             }
             Self::ConflictingLayout { identity } => {
                 write!(formatter, "conflicting semantic layout for {identity}")
+            }
+            Self::CommittedChunkMissing { layout, chunk } => {
+                write!(
+                    formatter,
+                    "committed layout {layout} is missing chunk {chunk:?}"
+                )
             }
         }
     }

@@ -90,6 +90,16 @@ impl StagedBlob {
                 identity: self.layout_id,
             });
         }
+        if let Some(existing) = store.layout(self.layout_id) {
+            for entry in existing.entries() {
+                if store.chunk(entry.chunk_id()).is_none() {
+                    return Err(PublishError::CommittedChunkMissing {
+                        layout: self.layout_id,
+                        chunk: entry.chunk_id(),
+                    });
+                }
+            }
+        }
         let mut attempted = store.materialized_bytes;
         for (identity, bytes) in &self.chunks {
             if let Some(existing) = store.chunks.get(identity) {
@@ -118,5 +128,47 @@ impl StagedBlob {
 
     pub(super) fn into_parts(self) -> (AdmittedLayout, BTreeMap<ChunkId, Box<[u8]>>) {
         (self.layout, self.chunks)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::error::Error;
+    use std::io::Cursor;
+
+    use crate::{LayoutEntryLimit, PublishError, ReferenceStore, ReferenceStoreCapacity};
+
+    #[test]
+    fn committed_layout_with_a_missing_chunk_is_never_silently_repaired()
+    -> Result<(), Box<dyn Error>> {
+        let source = b"committed state cannot be repaired by ordinary publication";
+        let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+        let mut first_source = Cursor::new(source);
+        let published = store
+            .stage(&mut first_source, LayoutEntryLimit::MAXIMUM)?
+            .commit(&mut store)?;
+        let missing = store
+            .layout(published.layout_id())
+            .and_then(|layout| layout.entries().first())
+            .ok_or("published layout has no chunk")?
+            .chunk_id();
+        store.chunks.remove(&missing);
+        let mut second_source = Cursor::new(source);
+        let staged = store.stage(&mut second_source, LayoutEntryLimit::MAXIMUM)?;
+
+        let error = staged
+            .commit(&mut store)
+            .err()
+            .ok_or("ordinary publication silently repaired committed state")?;
+
+        assert!(matches!(
+            error,
+            PublishError::CommittedChunkMissing {
+                layout,
+                chunk
+            } if layout == published.layout_id() && chunk == missing
+        ));
+        assert!(!store.chunks.contains_key(&missing));
+        Ok(())
     }
 }
