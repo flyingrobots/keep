@@ -117,39 +117,57 @@ const fn exceeds_hard_limit(lines: u64) -> bool {
 }
 
 fn line_count(mut reader: impl BufRead) -> Result<u64, io::Error> {
-    let mut completed_lines = 0_u64;
-    let mut in_line = false;
+    let mut counter = LineCounter::default();
     loop {
         let buffer = reader.fill_buf()?;
         if buffer.is_empty() {
             break;
         }
         for byte in buffer {
-            if !in_line {
-                let current_line = completed_lines
-                    .checked_add(1)
-                    .ok_or_else(|| io::Error::other("source line count overflow"))?;
-                if exceeds_hard_limit(current_line) {
-                    return Ok(current_line);
-                }
-                in_line = true;
-            }
-            if *byte == b'\n' {
-                completed_lines = completed_lines
-                    .checked_add(1)
-                    .ok_or_else(|| io::Error::other("source line count overflow"))?;
-                in_line = false;
+            if let Some(lines) = counter.observe(*byte)? {
+                return Ok(lines);
             }
         }
         let consumed = buffer.len();
         reader.consume(consumed);
     }
-    if in_line {
-        completed_lines
+    counter.finish()
+}
+
+#[derive(Default)]
+struct LineCounter {
+    completed: u64,
+    in_line: bool,
+}
+
+impl LineCounter {
+    fn observe(&mut self, byte: u8) -> Result<Option<u64>, io::Error> {
+        if !self.in_line {
+            let current = self.next_line()?;
+            if exceeds_hard_limit(current) {
+                return Ok(Some(current));
+            }
+            self.in_line = true;
+        }
+        if byte == b'\n' {
+            self.completed = self.next_line()?;
+            self.in_line = false;
+        }
+        Ok(None)
+    }
+
+    fn finish(&self) -> Result<u64, io::Error> {
+        if self.in_line {
+            self.next_line()
+        } else {
+            Ok(self.completed)
+        }
+    }
+
+    fn next_line(&self) -> Result<u64, io::Error> {
+        self.completed
             .checked_add(1)
             .ok_or_else(|| io::Error::other("source line count overflow"))
-    } else {
-        Ok(completed_lines)
     }
 }
 
