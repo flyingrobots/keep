@@ -1,0 +1,11 @@
+keep.flat-chunk-layout-id.invalid-binary/v1
+case	base_case	operation	offset	span_length	parameter	expected_outcome
+wrong-identity-magic	empty	xor-v1	0	1	01	layout-id.wrong-magic
+unsupported-identity-version	empty	replace-v1	16	2	0002	layout-id.unsupported-version
+unsupported-layout-codec	empty	replace-v1	18	2	0002	layout-id.unsupported-codec
+plan-length-out-of-bounds	empty	replace-v1	20	8	0000000002c000b1	layout-id.plan-length-out-of-bounds
+plan-length-not-congruent	empty	replace-v1	20	8	00000000000000b1	layout-id.plan-length-not-congruent
+plan-length-mismatch	empty	replace-v1	20	8	00000000000000dc	layout-id.plan-length-mismatch
+digest-mismatch	empty	xor-v1	28	1	01	layout-id.mismatch
+truncated-coordinate	empty	delete-v1	59	1	-	layout-id.wrong-length
+trailing-byte	empty	insert-v1	60	0	00	layout-id.wrong-length

@@ -54,6 +54,12 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- The canonical `keep.flat-chunks/v1` durable layout specification, typed
+  `LayoutId` grammar, checked flat-plan bounds, domain-separated checksum,
+  exact golden records, field-complete `LayoutId` refusal tables and
+  cardinality-before-aggregate first-failure plan mutation ledger, and
+  verified storage-profile boundary replay law. Production encoding, decoding,
+  admission, ingestion, and reconstruction remain assigned to issue #10.
 - Canonical version-1 `ChunkId` calculation in a domain distinct from
   `BlobId`, with independent golden vectors.
 - A constant-memory `FastCdc` detector for `fastcdc-64k-v1` that preserves
