@@ -7,6 +7,9 @@
 extern crate self as xtask;
 
 #[cfg(feature = "golden-protocol-fuzz")]
+mod diagnostic;
+
+#[cfg(feature = "golden-protocol-fuzz")]
 #[allow(
     clippy::redundant_pub_crate,
     reason = "the library facade deliberately hides the parser implementation"

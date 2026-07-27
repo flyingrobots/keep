@@ -7,6 +7,8 @@ use std::num::ParseIntError;
 use std::path::PathBuf;
 use std::string::FromUtf8Error;
 
+use crate::diagnostic::{escaped_controls, escaped_path};
+
 pub(crate) enum GoldenError {
     Integer {
         field: String,
@@ -49,15 +51,19 @@ impl fmt::Display for GoldenError {
         formatter.write_str("golden corpus check failed: ")?;
         match self {
             Self::Integer { field, .. } => {
-                write!(formatter, "cannot parse canonical {field}")
+                formatter.write_str("cannot parse canonical ")?;
+                escaped_controls(formatter, field)
             }
             Self::Io { action, path, .. } => {
-                write!(formatter, "cannot {action} `{}`", path.display())
+                write!(formatter, "cannot {action} `")?;
+                escaped_path(formatter, path)?;
+                formatter.write_str("`")
             }
             Self::Utf8 { path, .. } => {
-                write!(formatter, "{}: protocol is not UTF-8", path.display())
+                escaped_path(formatter, path)?;
+                formatter.write_str(": protocol is not UTF-8")
             }
-            Self::Violation(message) => formatter.write_str(message),
+            Self::Violation(message) => escaped_controls(formatter, message),
         }
     }
 }

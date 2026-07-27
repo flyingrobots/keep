@@ -118,6 +118,16 @@ fn git_diagnostics_cannot_inject_terminal_control_lines() {
          first\\nError: forged\\rrewrite\\u{1b}[31m"
     );
     assert_eq!(diagnostic.lines().count(), 1);
+
+    let path = super::SourceStructureError::InvalidPath(String::from(
+        "first\nError: forged\rrewrite\u{1b}",
+    ))
+    .to_string();
+    assert_eq!(
+        path,
+        "git returned unsafe path `first\\nError: forged\\rrewrite\\u{1b}`"
+    );
+    assert_eq!(path.lines().count(), 1);
 }
 
 #[test]

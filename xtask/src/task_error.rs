@@ -3,6 +3,7 @@
 use std::error::Error;
 use std::fmt;
 
+use crate::diagnostic::escaped_controls;
 use crate::fuzz_seed_corpus::FuzzSeedError;
 use crate::golden_file_worldline::GoldenError;
 use crate::source_structure::SourceStructureError;
@@ -39,10 +40,14 @@ impl fmt::Display for TaskError {
             Self::RepositoryRoot => formatter.write_str("xtask manifest has no repository parent"),
             Self::SourceStructure(error) => write!(formatter, "{error}"),
             Self::UnexpectedArgument(argument) => {
-                write!(formatter, "unexpected xtask argument `{argument}`")
+                formatter.write_str("unexpected xtask argument `")?;
+                escaped_controls(formatter, argument)?;
+                formatter.write_str("`")
             }
             Self::UnknownCommand(command) => {
-                write!(formatter, "unknown xtask command `{command}`")
+                formatter.write_str("unknown xtask command `")?;
+                escaped_controls(formatter, command)?;
+                formatter.write_str("`")
             }
             Self::Usage => formatter.write_str(
                 "usage: cargo xtask \

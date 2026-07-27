@@ -3,6 +3,7 @@
 #![deny(warnings)]
 #![forbid(unsafe_code)]
 
+mod diagnostic;
 #[allow(
     clippy::redundant_pub_crate,
     reason = "the parent command dispatcher is the only consumer"

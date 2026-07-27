@@ -53,6 +53,17 @@ fn fuzz_workflows_delegate_seed_preparation_to_the_rust_task() -> Result<(), Fuz
 }
 
 #[test]
+fn fuzz_seed_diagnostics_escape_terminal_controls() {
+    let diagnostic =
+        FuzzSeedError::violation("first\nError: forged\rrewrite\u{1b}[31m").to_string();
+    assert_eq!(
+        diagnostic,
+        "fuzz seed preparation failed: first\\nError: forged\\rrewrite\\u{1b}[31m"
+    );
+    assert_eq!(diagnostic.lines().count(), 1);
+}
+
+#[test]
 fn seed_preparation_materializes_the_complete_deterministic_set() -> Result<(), FuzzSeedError> {
     use std::env;
     use std::fs;

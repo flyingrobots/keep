@@ -43,6 +43,18 @@ fn unknown_command_is_a_silent_stdout_refusal() -> Result<(), io::Error> {
 }
 
 #[test]
+fn command_diagnostics_escape_terminal_controls() -> Result<(), io::Error> {
+    let output = invoke(&["first\nError: forged\rrewrite\u{1b}[31m"])?;
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        output.stderr,
+        b"Error: unknown xtask command `first\\nError: forged\\rrewrite\\u{1b}[31m`\n"
+    );
+    Ok(())
+}
+
+#[test]
 fn extra_argument_is_a_silent_stdout_refusal() -> Result<(), io::Error> {
     let output = invoke(&["verify", "extra"])?;
     assert_eq!(output.status.code(), Some(1));

@@ -9,6 +9,7 @@ use std::fmt;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::diagnostic::{escaped_controls, escaped_path};
 use filesystem::RepositoryFiles;
 
 const MAX_SEED_BYTES: usize = 1_048_576;
@@ -133,11 +134,13 @@ impl fmt::Display for FuzzSeedError {
         formatter.write_str("fuzz seed preparation failed: ")?;
         match self {
             Self::Io { action, path, .. } => {
-                write!(formatter, "cannot {action} `{}`", path.display())
+                write!(formatter, "cannot {action} `")?;
+                escaped_path(formatter, path)?;
+                formatter.write_str("`")
             }
             #[cfg(test)]
             Self::RepositoryRoot => formatter.write_str("xtask manifest has no repository parent"),
-            Self::Violation(message) => formatter.write_str(message),
+            Self::Violation(message) => escaped_controls(formatter, message),
         }
     }
 }

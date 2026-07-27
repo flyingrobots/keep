@@ -1,10 +1,12 @@
 //! This module owns typed source-structure failures and stable diagnostics.
 
 use std::error::Error;
-use std::fmt::{self, Write as _};
+use std::fmt;
 use std::io;
 use std::path::PathBuf;
 use std::string::FromUtf8Error;
+
+use crate::diagnostic::{escaped_controls, escaped_path};
 
 #[derive(Clone, Copy)]
 pub(crate) enum GitOutputUnit {
@@ -72,7 +74,9 @@ impl fmt::Display for SourceStructureError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::DuplicatePath(path) => {
-                write!(formatter, "git returned duplicate path `{path}`")
+                formatter.write_str("git returned duplicate path `")?;
+                escaped_controls(formatter, path)?;
+                formatter.write_str("`")
             }
             Self::GitFailed {
                 operation,
@@ -114,19 +118,25 @@ impl fmt::Display for SourceStructureError {
                 )
             }
             Self::Inspect { path, .. } => {
-                write!(formatter, "cannot inspect `{}`", path.display())
+                formatter.write_str("cannot inspect `")?;
+                escaped_path(formatter, path)?;
+                formatter.write_str("`")
             }
-            Self::InvalidPath(path) => write!(formatter, "git returned unsafe path `{path}`"),
-            Self::NonRegular(path) => write!(
-                formatter,
-                "tracked source module is not a regular file: `{}`",
-                path.display()
-            ),
-            Self::RepositoryRootChanged(path) => write!(
-                formatter,
-                "repository root changed during source inspection: `{}`",
-                path.display()
-            ),
+            Self::InvalidPath(path) => {
+                formatter.write_str("git returned unsafe path `")?;
+                escaped_controls(formatter, path)?;
+                formatter.write_str("`")
+            }
+            Self::NonRegular(path) => {
+                formatter.write_str("tracked source module is not a regular file: `")?;
+                escaped_path(formatter, path)?;
+                formatter.write_str("`")
+            }
+            Self::RepositoryRootChanged(path) => {
+                formatter.write_str("repository root changed during source inspection: `")?;
+                escaped_path(formatter, path)?;
+                formatter.write_str("`")
+            }
             Self::RunGit {
                 operation, action, ..
             } => write!(formatter, "cannot {action} `{operation}`"),
@@ -175,19 +185,6 @@ fn git_failed(
     escaped_controls(formatter, stderr.trim())
 }
 
-fn escaped_controls(formatter: &mut fmt::Formatter<'_>, diagnostic: &str) -> fmt::Result {
-    for character in diagnostic.chars() {
-        if character.is_control() {
-            for escaped in character.escape_default() {
-                formatter.write_char(escaped)?;
-            }
-        } else {
-            formatter.write_char(character)?;
-        }
-    }
-    Ok(())
-}
-
 fn violations_display(
     formatter: &mut fmt::Formatter<'_>,
     maximum: u64,
@@ -198,7 +195,9 @@ fn violations_display(
         "tracked source modules exceed the {maximum}-line hard maximum"
     )?;
     for path in paths {
-        write!(formatter, "; {path}: >{maximum}")?;
+        formatter.write_str("; ")?;
+        escaped_controls(formatter, path)?;
+        write!(formatter, ": >{maximum}")?;
     }
     Ok(())
 }

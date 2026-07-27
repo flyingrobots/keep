@@ -78,6 +78,16 @@ fn corpus_read_options_refuse_blocking_io() {
 }
 
 #[test]
+fn golden_diagnostics_escape_terminal_controls() {
+    let diagnostic = GoldenError::violation("first\nError: forged\rrewrite\u{1b}[31m").to_string();
+    assert_eq!(
+        diagnostic,
+        "golden corpus check failed: first\\nError: forged\\rrewrite\\u{1b}[31m"
+    );
+    assert_eq!(diagnostic.lines().count(), 1);
+}
+
+#[test]
 fn corpus_tables_refuse_non_regular_handles() -> Result<(), GoldenError> {
     use std::env;
     use std::fs;
