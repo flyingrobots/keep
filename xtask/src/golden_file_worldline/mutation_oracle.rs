@@ -4,8 +4,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::canonical_value::{case_name, unique};
 use super::corpus_protocol::TableRow;
+use super::digest_port::IdentityDigestOracle;
 use super::identity_oracle::{
-    ALGORITHM, BINARY_LENGTH, ID_MAGIC, IdentityFixture, VERSION, digest, expected_text,
+    ALGORITHM, BINARY_LENGTH, ID_MAGIC, IdentityFixture, VERSION, expected_text, verified_digest,
 };
 use super::mutation_value::{mutate, mutation_offset};
 use super::{Corpus, GoldenError};
@@ -36,6 +37,7 @@ const REQUIRED_OPERATIONS: [(&str, &str); 8] = [
 pub(super) fn check(
     corpus: &Corpus,
     fixtures: &BTreeMap<String, IdentityFixture>,
+    oracle: &impl IdentityDigestOracle,
 ) -> Result<(), GoldenError> {
     let rows = corpus.rows(
         "mutations.tsv",
@@ -47,7 +49,7 @@ pub(super) fn check(
     for row in rows {
         let name = case_name(row.field("case")?, "mutations.tsv")?.to_owned();
         unique(&name, &mut seen, "mutations.tsv")?;
-        let (target_kind, operation) = check_mutation(fixtures, &row, &name)?;
+        let (target_kind, operation) = check_mutation(fixtures, &row, &name, oracle)?;
         covered.insert((target_kind, operation));
     }
     if REQUIRED_OPERATIONS
@@ -66,6 +68,7 @@ fn check_mutation(
     fixtures: &BTreeMap<String, IdentityFixture>,
     row: &TableRow,
     name: &str,
+    oracle: &impl IdentityDigestOracle,
 ) -> Result<(String, String), GoldenError> {
     let target_kind = row.field("target_kind")?;
     if !matches!(target_kind, "content" | "identity-binary") {
@@ -80,13 +83,7 @@ fn check_mutation(
     let offset = mutation_offset(row.field("offset")?, target.len(), name)?;
     let operation = row.field("operation")?;
     let changed = mutate(target, operation, offset, row.field("value_hex")?, name)?;
-    check_outcome(
-        fixture,
-        target_kind,
-        &changed,
-        row.field("expected_outcome")?,
-        name,
-    )?;
+    check_outcome(fixture, target_kind, &changed, row, oracle)?;
     Ok((target_kind.to_owned(), operation.to_owned()))
 }
 
@@ -102,16 +99,18 @@ fn check_outcome(
     fixture: &IdentityFixture,
     target_kind: &str,
     changed: &[u8],
-    expected_outcome: &str,
-    name: &str,
+    row: &TableRow,
+    oracle: &impl IdentityDigestOracle,
 ) -> Result<(), GoldenError> {
+    let expected_outcome = row.field("expected_outcome")?;
+    let name = row.field("case")?;
     if target_kind == "content" {
         let length = u64::try_from(changed.len()).map_err(|source| {
             GoldenError::violation(format!(
                 "{name}: mutation length cannot be represented: {source}"
             ))
         })?;
-        let observed = expected_text(length, &digest(changed)?);
+        let observed = expected_text(length, &verified_digest(changed, oracle)?);
         if expected_outcome == "keep.content.mismatch" && observed != fixture.canonical_text {
             return Ok(());
         }

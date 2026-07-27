@@ -23,6 +23,21 @@ pub(crate) enum GoldenError {
         path: PathBuf,
         source: FromUtf8Error,
     },
+    ProcessDiagnosticEncoding {
+        program: &'static str,
+        code: Option<i32>,
+        source: FromUtf8Error,
+    },
+    ProcessFailed {
+        program: &'static str,
+        code: Option<i32>,
+        stderr: String,
+    },
+    ProcessOutputBound {
+        program: &'static str,
+        stream: &'static str,
+        maximum: usize,
+    },
     Violation(String),
 }
 
@@ -63,6 +78,28 @@ impl fmt::Display for GoldenError {
                 escaped_path(formatter, path)?;
                 formatter.write_str(": protocol is not UTF-8")
             }
+            Self::ProcessDiagnosticEncoding { program, code, .. } => {
+                write!(
+                    formatter,
+                    "{program} failed with status {code:?} and non-UTF-8 diagnostics"
+                )
+            }
+            Self::ProcessFailed {
+                program,
+                code,
+                stderr,
+            } => {
+                write!(formatter, "{program} failed with status {code:?}: ")?;
+                escaped_controls(formatter, stderr)
+            }
+            Self::ProcessOutputBound {
+                program,
+                stream,
+                maximum,
+            } => write!(
+                formatter,
+                "{program} {stream} exceeded the {maximum}-byte bound"
+            ),
             Self::Violation(message) => escaped_controls(formatter, message),
         }
     }
@@ -73,8 +110,12 @@ impl Error for GoldenError {
         match self {
             Self::Integer { source, .. } => Some(source),
             Self::Io { source, .. } => Some(source),
-            Self::Utf8 { source, .. } => Some(source),
-            Self::Violation(_) => None,
+            Self::Utf8 { source, .. } | Self::ProcessDiagnosticEncoding { source, .. } => {
+                Some(source)
+            }
+            Self::ProcessFailed { .. } | Self::ProcessOutputBound { .. } | Self::Violation(_) => {
+                None
+            }
         }
     }
 }

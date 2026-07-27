@@ -20,9 +20,12 @@ Golden File Worldline digest witnesses directly from corpus source bytes and to
 name deterministic fuzz seeds. The oracle does not import Keep production
 types or hashing wrappers. This separation independently checks preimage
 framing, length encoding, canonical text and binary encodings, mutation
-semantics, and committed witness bytes. It is not an independent
-implementation of the BLAKE3 compression function; external `b3sum` vectors
-cover that algorithm boundary.
+semantics, and committed witness bytes. For every identity and content mutation,
+the repository checker also streams the canonical preimage through external
+`b3sum`; a mismatch with the in-process result is a refusal. The checked-in
+vectors and runtime cross-check therefore cover the algorithm boundary without
+claiming that the Rust path independently implements the BLAKE3 compression
+function.
 
 The manifest disables default features and enables exactly:
 
@@ -73,7 +76,8 @@ Instead, this admission records the boundary explicitly:
 - upstream Rust SIMD intrinsics and runtime dispatch may execute unsafe code;
 - the build script and its `cc` dependency remain in the resolved build graph
   even when `pure` prevents C or assembly objects from being selected;
-- independent `b3sum` vectors detect an output change at the protocol boundary.
+- independent `b3sum` vectors and runtime digest cross-checks detect an output
+  change at the protocol boundary.
 
 This posture accepts upstream's unsafe implementation boundary. Re-enabling C,
 assembly, AVX-512, NEON, or WASM SIMD requires a dedicated change with target

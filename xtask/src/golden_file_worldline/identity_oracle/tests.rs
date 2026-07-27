@@ -4,7 +4,27 @@ use std::env;
 use std::fs;
 use std::process;
 
-use super::{Corpus, GoldenError, check_identities};
+use super::{Corpus, GoldenError, check_identities, digest, verify_independent_digest};
+use crate::golden_file_worldline::digest_port::IdentityDigestOracle;
+
+struct InProcessOracle;
+
+impl IdentityDigestOracle for InProcessOracle {
+    fn identity_digest(&self, payload: &[u8]) -> Result<[u8; 32], GoldenError> {
+        Ok(*digest(payload)?.as_bytes())
+    }
+}
+
+#[test]
+fn independent_digest_mismatch_is_refused() {
+    let in_process = blake3::hash(b"in-process");
+    let result = verify_independent_digest(&in_process, [0_u8; 32]);
+    assert!(matches!(
+        result,
+        Err(GoldenError::Violation(ref message))
+            if message == "independent BLAKE3 digest mismatch"
+    ));
+}
 
 #[test]
 fn duplicate_identity_precedes_malformed_identity_semantics() -> Result<(), GoldenError> {
@@ -25,7 +45,7 @@ fn duplicate_identity_precedes_malformed_identity_semantics() -> Result<(), Gold
     fs::write(&path, table)
         .map_err(|source| GoldenError::io("write identity test corpus", &path, source))?;
 
-    let result = check_identities(&Corpus::open(root.clone())?);
+    let result = check_identities(&Corpus::open(root.clone())?, &InProcessOracle);
     let refused = matches!(
         result,
         Err(GoldenError::Violation(ref message))

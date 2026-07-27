@@ -1,10 +1,12 @@
 //! This module owns bounded Git path streaming and diagnostic collection.
 
 use std::collections::BTreeSet;
-use std::io::{self, Read};
+use std::io;
 use std::path::Path;
 use std::process::{Child, ChildStdout, Command, Stdio};
 use std::thread::{self, JoinHandle};
+
+use crate::process_output::{BoundedBytes, bounded_bytes};
 
 use super::git_path_stream::{GitPathRecord, read_paths};
 use super::{GitOutputUnit, SourceStructureError};
@@ -171,31 +173,6 @@ fn git_failure(
             source,
         },
     }
-}
-
-struct BoundedBytes {
-    bytes: Vec<u8>,
-    exceeded: bool,
-}
-
-fn bounded_bytes(mut reader: impl Read, maximum: usize) -> Result<BoundedBytes, io::Error> {
-    let mut buffer = [0_u8; 4_096];
-    let mut bytes = Vec::new();
-    let mut exceeded = false;
-    loop {
-        let read = reader.read(&mut buffer)?;
-        if read == 0 {
-            break;
-        }
-        let remaining = maximum.saturating_sub(bytes.len());
-        let admitted = read.min(remaining);
-        let chunk = buffer
-            .get(..admitted)
-            .ok_or_else(|| io::Error::other("diagnostic buffer admission overflow"))?;
-        bytes.extend_from_slice(chunk);
-        exceeded |= admitted < read;
-    }
-    Ok(BoundedBytes { bytes, exceeded })
 }
 
 #[cfg(test)]

@@ -5,9 +5,17 @@ use std::env;
 use std::fs;
 use std::process;
 
-use super::{
-    Corpus, GoldenError, IdentityFixture, apply_fixed_width, check, digest, expected_text,
-};
+use super::{Corpus, GoldenError, IdentityFixture, apply_fixed_width, check, expected_text};
+use crate::golden_file_worldline::digest_port::IdentityDigestOracle;
+use crate::golden_file_worldline::identity_oracle::digest;
+
+struct InProcessOracle;
+
+impl IdentityDigestOracle for InProcessOracle {
+    fn identity_digest(&self, payload: &[u8]) -> Result<[u8; 32], GoldenError> {
+        Ok(*digest(payload)?.as_bytes())
+    }
+}
 
 #[test]
 fn fixed_width_mutations_require_the_declared_value_width() {
@@ -58,7 +66,7 @@ fn duplicate_mutation_precedes_malformed_mutation_semantics() -> Result<(), Gold
     };
     let fixtures = BTreeMap::from([(String::from("state-a"), fixture)]);
 
-    let result = check(&Corpus::open(root.clone())?, &fixtures);
+    let result = check(&Corpus::open(root.clone())?, &fixtures, &InProcessOracle);
     let refused = matches!(
         result,
         Err(GoldenError::Violation(ref message))

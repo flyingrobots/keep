@@ -2,7 +2,8 @@
 
 use std::io::Cursor;
 
-use super::{SourceStructureError, bounded_bytes, git_failure};
+use super::{SourceStructureError, git_failure};
+use crate::process_output::bounded_bytes;
 
 #[test]
 fn git_diagnostic_encoding_failure_retains_exit_status() {

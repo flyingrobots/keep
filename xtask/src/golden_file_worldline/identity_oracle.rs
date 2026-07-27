@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::canonical_value::{EmptyHex, case_name, decimal, decoded_hex, unique};
 use super::corpus_protocol::{MAX_SOURCE_BYTES, TableRow};
+use super::digest_port::IdentityDigestOracle;
 use super::{Corpus, GoldenError};
 
 pub(super) const ALGORITHM: u8 = 1;
@@ -31,6 +32,7 @@ pub(super) struct IdentityFixture {
 
 pub(super) fn check_identities(
     corpus: &Corpus,
+    oracle: &impl IdentityDigestOracle,
 ) -> Result<BTreeMap<String, IdentityFixture>, GoldenError> {
     let rows = corpus.rows(
         "identities.tsv",
@@ -43,7 +45,7 @@ pub(super) fn check_identities(
     for row in rows {
         let name = case_name(row.field("case")?, "identities.tsv")?.to_owned();
         unique(&name, &mut seen, "identities.tsv")?;
-        let (fixture, length) = identity_fixture(corpus, &row, &name)?;
+        let (fixture, length) = identity_fixture(corpus, &row, &name, oracle)?;
         total = total
             .checked_add(length)
             .ok_or_else(|| GoldenError::violation("total materialized corpus overflow"))?;
@@ -67,11 +69,12 @@ fn identity_fixture(
     corpus: &Corpus,
     row: &TableRow,
     name: &str,
+    oracle: &impl IdentityDigestOracle,
 ) -> Result<(IdentityFixture, u64), GoldenError> {
     let repetitions = source_number(row, "repetitions", name)?;
     let length = source_number(row, "logical_length", name)?;
     let content = source_bytes(corpus, row, repetitions, length)?;
-    let identity_digest = digest(&content)?;
+    let identity_digest = verified_digest(&content, oracle)?;
     let canonical_text = expected_text(length, &identity_digest);
     if row.field("canonical_text")? != canonical_text {
         return Err(GoldenError::violation(format!(
@@ -119,6 +122,26 @@ pub(super) fn digest(payload: &[u8]) -> Result<blake3::Hash, GoldenError> {
     hasher.update(payload);
     hasher.update(&length.to_be_bytes());
     Ok(hasher.finalize())
+}
+
+fn verify_independent_digest(
+    in_process: &blake3::Hash,
+    independent: [u8; 32],
+) -> Result<(), GoldenError> {
+    if in_process.as_bytes() == &independent {
+        Ok(())
+    } else {
+        Err(GoldenError::violation("independent BLAKE3 digest mismatch"))
+    }
+}
+
+pub(super) fn verified_digest(
+    payload: &[u8],
+    oracle: &impl IdentityDigestOracle,
+) -> Result<blake3::Hash, GoldenError> {
+    let in_process = digest(payload)?;
+    verify_independent_digest(&in_process, oracle.identity_digest(payload)?)?;
+    Ok(in_process)
 }
 
 pub(super) fn expected_text(length: u64, identity_digest: &blake3::Hash) -> String {

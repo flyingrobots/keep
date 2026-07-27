@@ -11,8 +11,9 @@ after its public API and format compatibility policies are established.
 ### Changed
 
 - Golden File Worldline verification now runs through a dependency-isolated
-  Rust `xtask`, and CI refuses Rust, Python, or shell source modules that exceed
-  the documented 500-line hard maximum.
+  Rust `xtask`, cross-checks every identity-bearing digest against external
+  `b3sum`, and CI refuses Rust, Python, or shell source modules that exceed the
+  documented 500-line hard maximum.
 - Repository source verification now uses capability-relative, no-follow file
   opens and verifies repository-root identity after Git inventory, so a
   persistent root replacement or source path replaced with a symlink is

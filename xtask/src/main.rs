@@ -16,6 +16,11 @@ mod fuzz_seed_corpus;
 mod golden_file_worldline;
 #[allow(
     clippy::redundant_pub_crate,
+    reason = "bounded process output is shared by sibling adapters"
+)]
+mod process_output;
+#[allow(
+    clippy::redundant_pub_crate,
     reason = "the parent command dispatcher is the only consumer"
 )]
 mod source_structure;
