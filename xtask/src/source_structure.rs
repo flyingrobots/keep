@@ -27,7 +27,12 @@ pub(super) enum SourceStructureError {
         code: Option<i32>,
         stderr: String,
     },
-    GitOutput {
+    GitDiagnosticEncoding {
+        operation: &'static str,
+        code: Option<i32>,
+        source: FromUtf8Error,
+    },
+    GitPathEncoding {
         operation: &'static str,
         source: FromUtf8Error,
     },
@@ -78,7 +83,13 @@ impl fmt::Display for SourceStructureError {
                 "`{operation}` failed with code {code:?}: {}",
                 stderr.trim()
             ),
-            Self::GitOutput { operation, .. } => {
+            Self::GitDiagnosticEncoding {
+                operation, code, ..
+            } => write!(
+                formatter,
+                "`{operation}` failed with code {code:?} and returned non-UTF-8 diagnostics"
+            ),
+            Self::GitPathEncoding { operation, .. } => {
                 write!(formatter, "`{operation}` returned a non-UTF-8 path")
             }
             Self::GitOutputBound {
@@ -134,7 +145,9 @@ impl fmt::Display for SourceStructureError {
 impl Error for SourceStructureError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::GitOutput { source, .. } => Some(source),
+            Self::GitDiagnosticEncoding { source, .. } | Self::GitPathEncoding { source, .. } => {
+                Some(source)
+            }
             Self::Inspect { source, .. } | Self::RunGit { source, .. } => Some(source),
             Self::GitFailed { .. }
             | Self::GitOutputBound { .. }

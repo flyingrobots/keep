@@ -1,6 +1,6 @@
 use std::io::Cursor;
 
-use super::{GitOutputLimits, SourceStructureError, bounded_bytes, read_paths};
+use super::{GitOutputLimits, SourceStructureError, bounded_bytes, git_failure, read_paths};
 
 const TEST_LIMITS: GitOutputLimits = GitOutputLimits {
     diagnostic_bytes: 3,
@@ -54,6 +54,31 @@ fn git_path_stream_requires_nul_framing() {
     assert!(matches!(
         result,
         Err(SourceStructureError::GitOutputFraming { .. })
+    ));
+}
+
+#[test]
+fn git_path_encoding_failure_names_the_path_stream() {
+    let result = read_paths(Cursor::new([u8::MAX, 0]), "test paths", TEST_LIMITS);
+    assert!(matches!(
+        result,
+        Err(SourceStructureError::GitPathEncoding {
+            operation: "test paths",
+            ..
+        })
+    ));
+}
+
+#[test]
+fn git_diagnostic_encoding_failure_retains_exit_status() {
+    let error = git_failure("test diagnostics", Some(9), vec![u8::MAX]);
+    assert!(matches!(
+        error,
+        SourceStructureError::GitDiagnosticEncoding {
+            operation: "test diagnostics",
+            code: Some(9),
+            ..
+        }
     ));
 }
 

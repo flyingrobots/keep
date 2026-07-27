@@ -97,13 +97,7 @@ pub(super) fn git_paths(
         });
     }
     if !status.success() {
-        let stderr = String::from_utf8(diagnostic.bytes)
-            .map_err(|source| SourceStructureError::GitOutput { operation, source })?;
-        return Err(SourceStructureError::GitFailed {
-            operation,
-            code: status.code(),
-            stderr,
-        });
+        return Err(git_failure(operation, status.code(), diagnostic.bytes));
     }
     Ok(paths)
 }
@@ -196,8 +190,10 @@ fn read_paths(
                             maximum: limits.paths,
                         });
                     }
-                    let path = String::from_utf8(std::mem::take(&mut current))
-                        .map_err(|source| SourceStructureError::GitOutput { operation, source })?;
+                    let path =
+                        String::from_utf8(std::mem::take(&mut current)).map_err(|source| {
+                            SourceStructureError::GitPathEncoding { operation, source }
+                        })?;
                     paths.insert(path);
                 }
             } else {
@@ -216,6 +212,25 @@ fn read_paths(
         Ok(paths)
     } else {
         Err(SourceStructureError::GitOutputFraming { operation })
+    }
+}
+
+fn git_failure(
+    operation: &'static str,
+    code: Option<i32>,
+    diagnostic: Vec<u8>,
+) -> SourceStructureError {
+    match String::from_utf8(diagnostic) {
+        Ok(stderr) => SourceStructureError::GitFailed {
+            operation,
+            code,
+            stderr,
+        },
+        Err(source) => SourceStructureError::GitDiagnosticEncoding {
+            operation,
+            code,
+            source,
+        },
     }
 }
 
