@@ -100,6 +100,25 @@ class WorkflowContractLaws(unittest.TestCase):
 class ToolInstallerLaws(unittest.TestCase):
     """The Markdown tool graph is fully locked before network installation."""
 
+    def test_patched_parser_is_directly_admitted_without_override(self) -> None:
+        tool_directory = (
+            REPOSITORY_ROOT / "scripts" / "documentation-tools"
+        )
+        manifest = json.loads(
+            (tool_directory / "package.json").read_text(encoding="utf-8")
+        )
+        lock = json.loads(
+            (tool_directory / "package-lock.json").read_text(encoding="utf-8")
+        )
+
+        self.assertNotIn("overrides", manifest)
+        self.assertEqual(
+            lock["packages"]["node_modules/markdownlint-cli2"][
+                "dependencies"
+            ]["js-yaml"],
+            "5.2.2",
+        )
+
     def test_known_parser_denial_of_service_versions_are_refused(self) -> None:
         lock_path = (
             REPOSITORY_ROOT

@@ -3,10 +3,5 @@
   "private": true,
   "dependencies": {
     "markdownlint-cli2": "0.23.2"
-  },
-  "overrides": {
-    "markdownlint-cli2": {
-      "js-yaml": "5.2.2"
-    }
   }
 }
