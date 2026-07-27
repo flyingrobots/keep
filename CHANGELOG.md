@@ -10,6 +10,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Public streaming CAS behavior is now checked after every operation in all
+  216 exhaustive three-step sequences over admission, reads, dropped staging,
+  empty blobs, idempotence, and claimed-content mismatch.
 - Flat-layout decoding now validates cardinality before entry materialization
   and admits decoded coordinates through the domain's ordered one-pass
   validator, so a later zero length cannot hide an earlier entry failure.
