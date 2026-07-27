@@ -38,6 +38,21 @@ fn fixed_width_mutations_admit_the_declared_value_width() {
 }
 
 #[test]
+fn fixed_width_mutations_refuse_unknown_operations() {
+    for operation in ["set-u32-be", "set-u64-le", "set-u8-typo"] {
+        let mut changed = [0_u8; 4];
+        let result = apply_fixed_width(&mut changed, operation, 0, "01", "set-value");
+        assert!(matches!(
+            result,
+            Err(GoldenError::Violation(ref message))
+                if message == &format!(
+                    "set-value: unknown fixed-width mutation operation {operation:?}"
+                )
+        ));
+    }
+}
+
+#[test]
 fn duplicate_mutation_precedes_malformed_mutation_semantics() -> Result<(), GoldenError> {
     let directory = TestDirectory::create("duplicate-mutation")
         .map_err(|source| GoldenError::io("create mutation test corpus", "temporary", source))?;

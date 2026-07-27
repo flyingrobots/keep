@@ -4,6 +4,13 @@ use super::GoldenError;
 use super::canonical_value::{EmptyHex, decimal, decoded_hex};
 use super::corpus_protocol::{MAX_MUTATION_VALUE_BYTES, MAX_SOURCE_BYTES};
 
+#[derive(Clone, Copy)]
+enum FixedWidthOperation {
+    SetU8,
+    SetU16Be,
+    XorByte,
+}
+
 pub(super) fn mutation_offset(
     value: &str,
     target_length: usize,
@@ -97,7 +104,8 @@ pub(super) fn apply_fixed_width(
     value_field: &str,
     name: &str,
 ) -> Result<(), GoldenError> {
-    let width: usize = if operation == "set-u16-be" { 2 } else { 1 };
+    let operation = FixedWidthOperation::admit(operation, name)?;
+    let width = operation.width();
     let expected_digits = width
         .checked_mul(2)
         .ok_or_else(|| GoldenError::violation(format!("{name}: mutation width overflow")))?;
@@ -118,12 +126,33 @@ pub(super) fn apply_fixed_width(
     let destination = changed.get_mut(offset..end).ok_or_else(|| {
         GoldenError::violation(format!("{name}: mutation width or offset is invalid"))
     })?;
-    if operation == "xor-byte" {
-        xor_byte(destination, &value, name)?;
-    } else {
-        destination.copy_from_slice(&value);
+    match operation {
+        FixedWidthOperation::XorByte => xor_byte(destination, &value, name)?,
+        FixedWidthOperation::SetU8 | FixedWidthOperation::SetU16Be => {
+            destination.copy_from_slice(&value);
+        }
     }
     Ok(())
+}
+
+impl FixedWidthOperation {
+    fn admit(value: &str, name: &str) -> Result<Self, GoldenError> {
+        match value {
+            "set-u8" => Ok(Self::SetU8),
+            "set-u16-be" => Ok(Self::SetU16Be),
+            "xor-byte" => Ok(Self::XorByte),
+            _ => Err(GoldenError::violation(format!(
+                "{name}: unknown fixed-width mutation operation {value:?}"
+            ))),
+        }
+    }
+
+    const fn width(self) -> usize {
+        match self {
+            Self::SetU8 | Self::XorByte => 1,
+            Self::SetU16Be => 2,
+        }
+    }
 }
 
 fn xor_byte(destination: &mut [u8], value: &[u8], name: &str) -> Result<(), GoldenError> {
