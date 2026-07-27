@@ -129,7 +129,7 @@ class ToolInstallerLaws(unittest.TestCase):
         self.assertEqual(lock["lockfileVersion"], 3)
         self.assertEqual(
             lock["packages"][""]["dependencies"]["markdownlint-cli2"],
-            "0.23.1",
+            "0.23.2",
         )
         for path, package in lock["packages"].items():
             if path:

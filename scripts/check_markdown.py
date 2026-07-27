@@ -9,7 +9,7 @@ import stat
 import subprocess
 import sys
 
-EXPECTED_LINTER_VERSION = "markdownlint-cli2 v0.23.1 (markdownlint v0.41.1)"
+EXPECTED_LINTER_VERSION = "markdownlint-cli2 v0.23.2 (markdownlint v0.41.1)"
 EXPECTED_LINK_CHECKER_VERSION = "lychee 0.21.0"
 
 
@@ -18,7 +18,7 @@ def find_linter() -> str:
     executable = shutil.which("markdownlint-cli2")
     if executable is None:
         raise RuntimeError(
-            "markdownlint-cli2 is unavailable; install version 0.23.1"
+            "markdownlint-cli2 is unavailable; install version 0.23.2"
         )
     return executable
 
