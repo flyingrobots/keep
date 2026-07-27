@@ -57,6 +57,10 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Expected-`BlobId` staging with typed complete-stream mismatch refusal; the
+  Golden File Worldline scenario and every claimed-content mutation now run
+  through public stage, commit, and reconstruct APIs instead of only the
+  private test model.
 - Bounded canonical layout-record reconstruction with typed pre-output refusal
   for malformed records, zero-progress and over-reporting writers, output I/O
   failures, conflicting stored chunks, and corrupted chunk content.

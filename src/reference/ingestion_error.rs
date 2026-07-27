@@ -6,7 +6,8 @@ use std::fmt;
 use std::io;
 
 use crate::{
-    BlobHashError, ChunkHashError, ChunkId, ChunkingError, LayoutEncodeError, LayoutValidationError,
+    BlobHashError, BlobId, ChunkHashError, ChunkId, ChunkingError, LayoutEncodeError,
+    LayoutValidationError,
 };
 
 /// Allocation whose explicit bounded reservation failed.
@@ -37,6 +38,13 @@ pub enum IngestionError {
     },
     /// Logical blob identity accounting failed.
     BlobHash(BlobHashError),
+    /// Staged exact bytes do not match a caller-supplied logical identity.
+    BlobIdentityMismatch {
+        /// Logical identity required by the caller.
+        expected: BlobId,
+        /// Logical identity calculated from the complete staged stream.
+        observed: BlobId,
+    },
     /// Registered CDC processing failed.
     Chunking(ChunkingError),
     /// Independent staged-chunk verification failed.
@@ -105,6 +113,10 @@ impl fmt::Display for IngestionError {
                 "reader reported {observed} bytes for a {maximum}-byte buffer"
             ),
             Self::BlobHash(source) => source.fmt(formatter),
+            Self::BlobIdentityMismatch { expected, observed } => write!(
+                formatter,
+                "staged bytes identify as {observed}, not required blob {expected}"
+            ),
             Self::Chunking(source) => source.fmt(formatter),
             Self::ChunkHash(source) => source.fmt(formatter),
             Self::ChunkIdentityMismatch { expected, observed } => write!(
@@ -160,6 +172,7 @@ impl Error for IngestionError {
             Self::Layout(source) => Some(source),
             Self::LayoutEncoding(source) => Some(source),
             Self::InvalidReadCount { .. }
+            | Self::BlobIdentityMismatch { .. }
             | Self::ChunkIdentityMismatch { .. }
             | Self::BoundaryOutOfRange { .. }
             | Self::MultipleBoundaries { .. }

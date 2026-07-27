@@ -2,7 +2,7 @@
 
 use std::io::{ErrorKind, Read};
 
-use crate::{AdmittedLayout, BlobHasher, ChunkId, ChunkSpan, FastCdc, LayoutEntryLimit};
+use crate::{AdmittedLayout, BlobHasher, BlobId, ChunkId, ChunkSpan, FastCdc, LayoutEntryLimit};
 
 use super::chunk_staging::ReferenceChunkStaging;
 use super::ingestion_error::IngestionAllocation;
@@ -51,6 +51,34 @@ impl ReferenceStore {
             .id();
         let (chunks, pending_bytes) = staging.into_parts();
         Ok(StagedBlob::new(layout, layout_id, chunks, pending_bytes))
+    }
+
+    /// Stages a stream only when its complete exact identity is `expected`.
+    ///
+    /// This performs the same bounded one-pass ingestion as
+    /// [`ReferenceStore::stage`]. A mismatch returns both identities and drops
+    /// all invisible staged bytes without mutating the store.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`IngestionError::BlobIdentityMismatch`] when the complete
+    /// staged stream names a different blob, or any failure documented by
+    /// [`ReferenceStore::stage`].
+    pub fn stage_expected<R>(
+        &self,
+        source: &mut R,
+        expected: BlobId,
+        entry_limit: LayoutEntryLimit,
+    ) -> Result<StagedBlob, IngestionError>
+    where
+        R: Read + ?Sized,
+    {
+        let staged = self.stage(source, entry_limit)?;
+        let observed = staged.target();
+        if observed != expected {
+            return Err(IngestionError::BlobIdentityMismatch { expected, observed });
+        }
+        Ok(staged)
     }
 }
 
