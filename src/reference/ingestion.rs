@@ -2,6 +2,7 @@
 
 use std::io::{ErrorKind, Read};
 
+use crate::layout::check_entry_limit;
 use crate::{AdmittedLayout, BlobHasher, BlobId, ChunkId, ChunkSpan, FastCdc, LayoutEntryLimit};
 
 use super::chunk_staging::ReferenceChunkStaging;
@@ -37,7 +38,7 @@ impl ReferenceStore {
         R: Read + ?Sized,
     {
         let mut staging = ReferenceChunkStaging::new(self);
-        let (target, spans) = ingest_stream(source, &mut staging)?;
+        let (target, spans) = ingest_stream(source, &mut staging, entry_limit)?;
         let layout = AdmittedLayout::from_spans(
             target,
             crate::RegisteredStorageProfile::FAST_CDC_64K_V1,
@@ -85,6 +86,7 @@ impl ReferenceStore {
 fn ingest_stream<R>(
     source: &mut R,
     staging: &mut ReferenceChunkStaging<'_>,
+    entry_limit: LayoutEntryLimit,
 ) -> Result<(crate::BlobId, Vec<ChunkSpan>), IngestionError>
 where
     R: Read + ?Sized,
@@ -103,7 +105,7 @@ where
             requested: maximum,
             source,
         })?;
-    let mut state = StreamState::new(chunk_buffer);
+    let mut state = StreamState::new(chunk_buffer, entry_limit);
     let mut read_buffer = [0_u8; READ_BUFFER_BYTES];
     loop {
         match source.read(&mut read_buffer) {
@@ -130,16 +132,18 @@ struct StreamState {
     chunk_buffer: Vec<u8>,
     spans: Vec<ChunkSpan>,
     accepted: u64,
+    entry_limit: LayoutEntryLimit,
 }
 
 impl StreamState {
-    fn new(chunk_buffer: Vec<u8>) -> Self {
+    fn new(chunk_buffer: Vec<u8>, entry_limit: LayoutEntryLimit) -> Self {
         Self {
             detector: FastCdc::new(),
             blob_hasher: BlobHasher::new(),
             chunk_buffer,
             spans: Vec::new(),
             accepted: 0,
+            entry_limit,
         }
     }
 
@@ -190,9 +194,9 @@ impl StreamState {
                 boundary: span.end().get(),
                 feed_length: bytes.len(),
             })?;
+        prepare_span(&mut self.spans, self.entry_limit)?;
         self.chunk_buffer.extend_from_slice(prefix);
         stage_exact_chunk(staging, span, &self.chunk_buffer)?;
-        reserve_span(&mut self.spans)?;
         self.spans.push(span);
         self.chunk_buffer.clear();
         self.chunk_buffer.extend_from_slice(remainder);
@@ -204,8 +208,8 @@ impl StreamState {
         staging: &mut ReferenceChunkStaging<'_>,
     ) -> Result<(crate::BlobId, Vec<ChunkSpan>), IngestionError> {
         if let Some(span) = self.detector.finish().map_err(IngestionError::Chunking)? {
+            prepare_span(&mut self.spans, self.entry_limit)?;
             stage_exact_chunk(staging, span, &self.chunk_buffer)?;
-            reserve_span(&mut self.spans)?;
             self.spans.push(span);
         }
         Ok((self.blob_hasher.finish(), self.spans))
@@ -276,4 +280,17 @@ fn reserve_span(spans: &mut Vec<ChunkSpan>) -> Result<(), IngestionError> {
             requested: 1,
             source,
         })
+}
+
+fn prepare_span(
+    spans: &mut Vec<ChunkSpan>,
+    entry_limit: LayoutEntryLimit,
+) -> Result<(), IngestionError> {
+    let observed = spans.len().checked_add(1).ok_or({
+        IngestionError::Layout(crate::LayoutValidationError::EntryIndexOutOfRange {
+            observed: usize::MAX,
+        })
+    })?;
+    check_entry_limit(observed, entry_limit).map_err(IngestionError::Layout)?;
+    reserve_span(spans)
 }

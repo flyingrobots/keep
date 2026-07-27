@@ -1,9 +1,12 @@
 //! Streaming ingestion, staging, and publication laws.
 
 use std::error::Error;
-use std::io::{Cursor, ErrorKind};
+use std::io::{self, Cursor, ErrorKind, Read};
 
-use keep::{BlobId, IngestionError, LayoutEntryLimit, ReferenceStore, ReferenceStoreCapacity};
+use keep::{
+    BlobId, IngestionError, LayoutEntryLimit, LayoutValidationError, ReferenceStore,
+    ReferenceStoreCapacity,
+};
 
 use crate::support::{FailingReader, LyingReader, PartitionReader};
 
@@ -108,4 +111,46 @@ fn source_failures_preserve_io_boundaries_and_broken_read_counts() {
             observed: 8_193
         })
     ));
+}
+
+#[test]
+fn entry_limit_refuses_during_streaming_before_a_later_source_failure() -> Result<(), Box<dyn Error>>
+{
+    let source = vec![0_u8; 524_288];
+    let mut reader = BytesThenFailure {
+        bytes: Cursor::new(source),
+    };
+    let store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+    let limit = LayoutEntryLimit::new(1)?;
+
+    let error = store
+        .stage(&mut reader, limit)
+        .err()
+        .ok_or("two chunks unexpectedly staged under a one-entry limit")?;
+
+    assert!(matches!(
+        error,
+        IngestionError::Layout(LayoutValidationError::EntryLimitExceeded {
+            maximum: 1,
+            observed: 2
+        })
+    ));
+    Ok(())
+}
+
+struct BytesThenFailure {
+    bytes: Cursor<Vec<u8>>,
+}
+
+impl Read for BytesThenFailure {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+        let observed = self.bytes.read(buffer)?;
+        if observed == 0 {
+            return Err(io::Error::new(
+                ErrorKind::PermissionDenied,
+                "failure after complete test bytes",
+            ));
+        }
+        Ok(observed)
+    }
 }

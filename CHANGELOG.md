@@ -74,8 +74,9 @@ after its public API and format compatibility policies are established.
   with typed expected and observed identities.
 - Capacity-bounded streaming ingestion into a non-durable in-memory reference
   adapter, with exact blob, chunk, and layout identity calculation, typed
-  source and capacity refusals, identity-based chunk deduplication, and an
-  explicit staged-to-visible commit transition.
+  source and capacity refusals, streaming enforcement of the caller's layout
+  entry cap, identity-based chunk deduplication, and an explicit
+  staged-to-visible commit transition.
 - An independent field-by-field flat-layout fixture oracle that verifies every
   fixed offset, checksum, and `LayoutId` before cross-checking the production
   encoder.
