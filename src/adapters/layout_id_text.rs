@@ -97,7 +97,7 @@ fn validate_version(field: &str) -> Result<(), LayoutIdTextParseError> {
     let Some(decimal) = field.strip_prefix('v') else {
         return Err(LayoutIdTextParseError::MalformedVersion);
     };
-    if decimal.is_empty() || !decimal.as_bytes().iter().all(u8::is_ascii_digit) {
+    if !is_canonical_decimal(decimal) {
         return Err(LayoutIdTextParseError::MalformedVersion);
     }
     let observed = decimal

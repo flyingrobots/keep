@@ -90,6 +90,7 @@ fn layout_id_coordinates_have_field_complete_refusal_vectors() {
         "wrong-scheme",
         "wrong-kind",
         "malformed-version",
+        "leading-zero-version",
         "unsupported-version",
         "unsupported-codec",
         "unsupported-algorithm",
