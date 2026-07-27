@@ -1,0 +1,55 @@
+//! Deterministic short-write sink.
+
+use std::io::{self, ErrorKind, Write};
+
+/// Writer that cycles through exact short-write widths and injects one retry.
+pub struct PartitionWriter<'a> {
+    bytes: Vec<u8>,
+    widths: std::iter::Cycle<std::slice::Iter<'a, usize>>,
+    interrupt_next: bool,
+}
+
+impl<'a> PartitionWriter<'a> {
+    /// Constructs an empty sink with a repeated nonempty width plan.
+    #[must_use]
+    pub fn new(widths: &'a [usize]) -> Self {
+        Self {
+            bytes: Vec::new(),
+            widths: widths.iter().cycle(),
+            interrupt_next: true,
+        }
+    }
+
+    /// Returns every byte accepted by the sink.
+    #[must_use]
+    pub fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+}
+
+impl Write for PartitionWriter<'_> {
+    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+        if self.interrupt_next {
+            self.interrupt_next = false;
+            return Err(io::Error::new(
+                ErrorKind::Interrupted,
+                "fixture interruption",
+            ));
+        }
+        let width = self
+            .widths
+            .next()
+            .copied()
+            .ok_or_else(|| io::Error::new(ErrorKind::InvalidInput, "empty partition plan"))?;
+        let count = width.min(buffer.len());
+        let accepted = buffer
+            .get(..count)
+            .ok_or_else(|| io::Error::new(ErrorKind::InvalidInput, "invalid write buffer"))?;
+        self.bytes.extend_from_slice(accepted);
+        Ok(count)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}

@@ -70,4 +70,15 @@ impl ReferenceStore {
     pub(super) fn layout(&self, identity: LayoutId) -> Option<&AdmittedLayout> {
         self.layouts.get(&identity)
     }
+
+    pub(super) fn first_layout_id(&self, target: BlobId) -> Option<LayoutId> {
+        self.blob_layouts
+            .get(&target)
+            .and_then(BTreeSet::first)
+            .copied()
+    }
+
+    pub(super) fn chunk(&self, identity: ChunkId) -> Option<&[u8]> {
+        self.chunks.get(&identity).map(Box::as_ref)
+    }
 }

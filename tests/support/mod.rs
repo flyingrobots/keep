@@ -1,12 +1,14 @@
 //! Shared deterministic integration-corpus support.
 
 mod byte_readers;
+mod byte_writers;
 
 use std::io;
 
 use keep::{ChunkSpan, FastCdc};
 
 pub use byte_readers::{FailingReader, LyingReader, PartitionReader};
+pub use byte_writers::PartitionWriter;
 
 const LAYOUTS: &str = include_str!("../../conformance/layout/v1/layouts.tsv");
 
