@@ -67,7 +67,7 @@ impl ReferenceStore {
     }
 
     pub(super) fn publish(&mut self, staged: StagedBlob) -> Result<PublishedBlob, PublishError> {
-        staged.validate_for(self)?;
+        let materialized_bytes = staged.validate_for(self)?;
         let target = staged.target();
         let layout_id = staged.layout_id();
         let (layout, chunks) = staged.into_parts();
@@ -75,15 +75,9 @@ impl ReferenceStore {
             if self.chunks.contains_key(&identity) {
                 continue;
             }
-            self.materialized_bytes = self
-                .materialized_bytes
-                .checked_add(bytes.len())
-                .ok_or_else(|| PublishError::CapacityExceeded {
-                    capacity: self.capacity.get(),
-                    attempted: usize::MAX,
-                })?;
             self.chunks.insert(identity, bytes);
         }
+        self.materialized_bytes = materialized_bytes;
         self.layouts.entry(layout_id).or_insert(layout);
         self.blob_layouts
             .entry(target)

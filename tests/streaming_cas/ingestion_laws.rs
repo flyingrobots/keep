@@ -4,8 +4,8 @@ use std::error::Error;
 use std::io::{self, Cursor, ErrorKind, Read};
 
 use keep::{
-    BlobId, IngestionError, LayoutEntryLimit, LayoutValidationError, ReferenceStore,
-    ReferenceStoreCapacity,
+    BlobId, IngestionError, LayoutEntryLimit, LayoutValidationError, PublishError,
+    ReconstructionError, ReferenceStore, ReferenceStoreCapacity,
 };
 
 use crate::support::{FailingReader, LyingReader, PartitionReader};
@@ -134,6 +134,44 @@ fn entry_limit_refuses_during_streaming_before_a_later_source_failure() -> Resul
             maximum: 1,
             observed: 2
         })
+    ));
+    Ok(())
+}
+
+#[test]
+fn intervening_capacity_refusal_publishes_no_partial_state() -> Result<(), Box<dyn Error>> {
+    let first_bytes = b"first staged value";
+    let second_bytes = b"other staged value";
+    assert_eq!(first_bytes.len(), second_bytes.len());
+    let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(first_bytes.len()));
+    let mut first_source = Cursor::new(first_bytes);
+    let first = store.stage(&mut first_source, LayoutEntryLimit::MAXIMUM)?;
+    let mut second_source = Cursor::new(second_bytes);
+    let second = store.stage(&mut second_source, LayoutEntryLimit::MAXIMUM)?;
+    let second_target = second.target();
+    let first_published = first.commit(&mut store)?;
+
+    let error = second
+        .commit(&mut store)
+        .err()
+        .ok_or("intervening capacity use unexpectedly admitted both blobs")?;
+
+    assert!(matches!(
+        error,
+        PublishError::CapacityExceeded {
+            capacity,
+            attempted
+        } if capacity == first_bytes.len()
+            && attempted == first_bytes.len().checked_add(second_bytes.len())
+                .ok_or("fixture length overflow")?
+    ));
+    let mut first_output = Vec::new();
+    store.reconstruct(first_published.target(), &mut first_output)?;
+    assert_eq!(first_output, first_bytes);
+    assert!(matches!(
+        store.reconstruct(second_target, &mut Vec::new()),
+        Err(ReconstructionError::BlobMissing { requested })
+            if requested == second_target
     ));
     Ok(())
 }
