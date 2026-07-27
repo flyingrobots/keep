@@ -22,6 +22,22 @@ fn source_scan_stops_at_the_first_violating_line() {
 }
 
 #[test]
+fn source_structure_diagnostics_are_stable() {
+    let framing = super::SourceStructureError::GitOutputFraming {
+        operation: "git inventory",
+    };
+    let non_regular = super::SourceStructureError::NonRegular("src/link.rs".into());
+    assert_eq!(
+        framing.to_string(),
+        "`git inventory` returned a non-NUL-terminated path"
+    );
+    assert_eq!(
+        non_regular.to_string(),
+        "tracked source module is not a regular file: `src/link.rs`"
+    );
+}
+
+#[test]
 fn source_read_options_refuse_blocking_io() {
     let options = format!("{:?}", super::source_file::nonblocking_read_options());
     assert!(options.contains("read: true"));
