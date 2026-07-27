@@ -5,7 +5,7 @@
 Keep uses three development-only tools to enforce deterministic documentation
 and GitHub Actions facts:
 
-- `markdownlint-cli2` 0.23.1 validates Markdown structure;
+- `markdownlint-cli2` 0.23.2 validates Markdown structure;
 - `lychee` 0.21.0 validates local links and fragments with network access
   disabled;
 - `actionlint` 1.7.12 validates GitHub Actions syntax and expressions.
