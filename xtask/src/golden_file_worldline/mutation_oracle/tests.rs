@@ -89,6 +89,16 @@ fn mutation_bound_refusal_reports_observed_and_maximum_bytes() {
 }
 
 #[test]
+fn malformed_mutation_fixture_rewrite_refuses_source_drift() {
+    let result = malformed_target_kind("case\tidentity-binary\ttarget");
+    assert!(matches!(
+        result,
+        Err(GoldenError::Violation(ref message))
+            if message == "mutation fixture row no longer carries a content target kind"
+    ));
+}
+
+#[test]
 fn duplicate_mutation_precedes_malformed_mutation_semantics() -> Result<(), GoldenError> {
     let directory = TestDirectory::create("duplicate-mutation")
         .map_err(|source| GoldenError::io("create mutation test corpus", "temporary", source))?;
@@ -97,7 +107,7 @@ fn duplicate_mutation_precedes_malformed_mutation_semantics() -> Result<(), Gold
         .lines()
         .nth(2)
         .ok_or_else(|| GoldenError::violation("mutation fixture row is absent"))?;
-    let malformed = first.replacen("\tcontent\t", "\tinvalid\t", 1);
+    let malformed = malformed_target_kind(first)?;
     let table = format!(
         "# keep.golden-file-worldline.mutations/v1\n\
          case\ttarget_kind\ttarget_case\toperation\toffset\tvalue_hex\texpected_outcome\n\
@@ -127,4 +137,15 @@ fn duplicate_mutation_precedes_malformed_mutation_semantics() -> Result<(), Gold
         .close()
         .map_err(|source| GoldenError::io("remove mutation test corpus", &root, source))?;
     Ok(())
+}
+
+fn malformed_target_kind(row: &str) -> Result<String, GoldenError> {
+    let malformed = row.replacen("\tcontent\t", "\tinvalid\t", 1);
+    if malformed == row {
+        Err(GoldenError::violation(
+            "mutation fixture row no longer carries a content target kind",
+        ))
+    } else {
+        Ok(malformed)
+    }
 }
