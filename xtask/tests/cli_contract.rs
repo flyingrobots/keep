@@ -5,6 +5,11 @@
 use std::io;
 use std::process::{Command, Output};
 
+#[cfg(unix)]
+use std::ffi::OsString;
+#[cfg(unix)]
+use std::os::unix::ffi::OsStringExt;
+
 #[test]
 fn successful_verification_is_silent() -> Result<(), io::Error> {
     let output = invoke(&["verify"])?;
@@ -45,7 +50,36 @@ fn extra_argument_is_a_silent_stdout_refusal() -> Result<(), io::Error> {
     Ok(())
 }
 
+#[cfg(unix)]
+#[test]
+fn non_utf8_arguments_are_typed_refusals() -> Result<(), io::Error> {
+    let invalid = OsString::from_vec(vec![0xff]);
+    let command_output = invoke_os(std::slice::from_ref(&invalid))?;
+    assert_eq!(command_output.status.code(), Some(1));
+    assert!(command_output.stdout.is_empty());
+    assert_eq!(
+        command_output.stderr,
+        b"Error: xtask command is not valid UTF-8\n"
+    );
+
+    let extra_output = invoke_os(&[OsString::from("verify"), invalid])?;
+    assert_eq!(extra_output.status.code(), Some(1));
+    assert!(extra_output.stdout.is_empty());
+    assert_eq!(
+        extra_output.stderr,
+        b"Error: unexpected xtask argument is not valid UTF-8\n"
+    );
+    Ok(())
+}
+
 fn invoke(arguments: &[&str]) -> Result<Output, io::Error> {
+    Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .args(arguments)
+        .output()
+}
+
+#[cfg(unix)]
+fn invoke_os(arguments: &[OsString]) -> Result<Output, io::Error> {
     Command::new(env!("CARGO_BIN_EXE_xtask"))
         .args(arguments)
         .output()

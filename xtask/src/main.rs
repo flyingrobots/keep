@@ -20,17 +20,25 @@ mod source_structure;
 mod task_error;
 
 use std::env;
+use std::ffi::OsString;
 use std::path::Path;
 
 use task_error::TaskError;
 
 fn main() -> Result<(), TaskError> {
-    run(env::args().skip(1))
+    run(env::args_os().skip(1))
 }
 
-fn run(mut arguments: impl Iterator<Item = String>) -> Result<(), TaskError> {
-    let command = arguments.next().ok_or(TaskError::Usage)?;
+fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
+    let command = arguments
+        .next()
+        .ok_or(TaskError::Usage)?
+        .into_string()
+        .map_err(|_| TaskError::InvalidCommandEncoding)?;
     if let Some(extra) = arguments.next() {
+        let extra = extra
+            .into_string()
+            .map_err(|_| TaskError::InvalidExtraArgumentEncoding)?;
         return Err(TaskError::UnexpectedArgument(extra));
     }
     let repository_root = repository_root()?;

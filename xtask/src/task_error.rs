@@ -8,6 +8,8 @@ use crate::source_structure::SourceStructureError;
 
 pub(super) enum TaskError {
     Golden(GoldenError),
+    InvalidCommandEncoding,
+    InvalidExtraArgumentEncoding,
     RepositoryRoot,
     SourceStructure(SourceStructureError),
     UnexpectedArgument(String),
@@ -25,6 +27,10 @@ impl fmt::Display for TaskError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Golden(error) => write!(formatter, "{error}"),
+            Self::InvalidCommandEncoding => formatter.write_str("xtask command is not valid UTF-8"),
+            Self::InvalidExtraArgumentEncoding => {
+                formatter.write_str("unexpected xtask argument is not valid UTF-8")
+            }
             Self::RepositoryRoot => formatter.write_str("xtask manifest has no repository parent"),
             Self::SourceStructure(error) => write!(formatter, "{error}"),
             Self::UnexpectedArgument(argument) => {
@@ -46,7 +52,9 @@ impl Error for TaskError {
         match self {
             Self::Golden(error) => Some(error),
             Self::SourceStructure(error) => Some(error),
-            Self::RepositoryRoot
+            Self::InvalidCommandEncoding
+            | Self::InvalidExtraArgumentEncoding
+            | Self::RepositoryRoot
             | Self::UnexpectedArgument(_)
             | Self::UnknownCommand(_)
             | Self::Usage => None,
