@@ -8,11 +8,13 @@ use super::{PublishError, PublishedBlob, ReferenceStore};
 
 /// Validated reference-store work that is not yet visible.
 ///
-/// This value explicitly owns every new unique chunk byte required by its
-/// target. Its memory may therefore grow with logical blob length, bounded by
-/// the store capacity checked during staging. This materialization belongs to
-/// the deliberately in-memory reference adapter, not to the streaming core's
-/// scratch state.
+/// This value explicitly owns every target chunk that was absent from the
+/// store used during staging. Its memory may therefore grow with logical blob
+/// length, bounded by the store capacity checked during staging. Committing to
+/// another store succeeds only when that destination already owns every
+/// deduplicated chunk not carried by this value. This materialization belongs
+/// to the deliberately in-memory reference adapter, not to the streaming
+/// core's scratch state.
 #[must_use = "staged work remains invisible until commit is called"]
 pub struct StagedBlob {
     layout: AdmittedLayout,
@@ -62,7 +64,7 @@ impl StagedBlob {
 
     /// Returns the exact new chunk bytes materialized by staging.
     ///
-    /// This excludes chunks already present in the destination store.
+    /// This excludes chunks already present in the store used during staging.
     #[must_use]
     pub const fn pending_materialized_bytes(&self) -> usize {
         self.pending_bytes
@@ -76,8 +78,9 @@ impl StagedBlob {
     ///
     /// # Errors
     ///
-    /// Returns [`PublishError`] if intervening work exhausted capacity or
-    /// introduced conflicting bytes or layout state.
+    /// Returns [`PublishError`] if the destination lacks required chunks,
+    /// intervening work exhausted capacity, or conflicting bytes or layout
+    /// state appeared.
     pub fn commit(self, store: &mut ReferenceStore) -> Result<PublishedBlob, PublishError> {
         store.publish(self)
     }

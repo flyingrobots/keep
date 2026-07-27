@@ -21,7 +21,9 @@ or recovery.
 
 Materialization is explicit rather than hidden. `ReferenceStoreCapacity` bounds
 owned chunk bytes, `LayoutEntryLimit` bounds layout metadata, and `StagedBlob`
-reports the number and bytes of newly materialized chunks.
+reports the number and bytes of chunks absent from the store used during
+staging. Commit rechecks that another destination already owns any required
+chunks omitted by that deduplication.
 
 ## Why stage before commit
 

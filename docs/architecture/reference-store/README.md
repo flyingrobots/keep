@@ -40,17 +40,19 @@ maximum chunk length, hash and detector state, and the caller's layout entry
 cap. Layout admission and `LayoutId` calculation transiently materialize
 metadata proportional to the bounded entry count.
 
-The returned `StagedBlob` deliberately owns every new unique chunk value. Those
-bytes may grow with blob length up to `ReferenceStoreCapacity`. The API and
-type documentation expose that materialization; input beyond the configured
-capacity refuses.
+The returned `StagedBlob` deliberately owns every chunk value absent from the
+store used during staging. Those bytes may grow with blob length up to
+`ReferenceStoreCapacity`. The API and type documentation expose that
+materialization; input beyond the configured capacity refuses.
 
 ## Publication
 
 Staged work is invisible and `#[must_use]`. `StagedBlob::commit` is the only
 ordinary transition into visible reference-store state. It revalidates
-capacity, chunk conflicts, layout conflicts, committed chunks, and layout
-indexes before changing the store.
+capacity, required chunk availability, chunk conflicts, layout conflicts,
+committed chunks, and layout indexes before changing the store. A staged value
+may be committed to another store only when its owned chunks plus that
+destination's existing chunks completely satisfy the layout.
 
 Commit is atomic only with respect to synchronous exclusive `&mut
 ReferenceStore` access. It may allocate in-memory map nodes. It performs no
