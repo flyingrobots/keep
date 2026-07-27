@@ -23,6 +23,7 @@ mod invalid_text_oracle;
 #[path = "golden_file_worldline/mutation_value.rs"]
 mod mutation_value;
 
+#[cfg(feature = "repository-tasks")]
 use corpus_protocol::Corpus;
 pub(super) use error::GoldenError;
 

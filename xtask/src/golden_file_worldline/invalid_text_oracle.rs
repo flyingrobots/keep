@@ -1,13 +1,21 @@
 //! This module owns version-1 malformed identity-text outcome classification.
 
+#[cfg(feature = "repository-tasks")]
 use std::collections::BTreeSet;
 
+#[cfg(not(feature = "repository-tasks"))]
+use super::GoldenError;
+#[cfg(feature = "repository-tasks")]
 use super::canonical_value::{EmptyHex, case_name, decoded_hex, unique};
+#[cfg(feature = "repository-tasks")]
 use super::{Corpus, GoldenError};
 
+#[cfg(feature = "repository-tasks")]
 const MAX_INVALID_TEXT_BYTES: usize = 4_096;
 const MAX_TEXT_BYTES: usize = 109;
+#[cfg(feature = "repository-tasks")]
 const INVALID_TEXT_COLUMNS: [&str; 3] = ["case", "input_hex", "expected_outcome"];
+#[cfg(feature = "repository-tasks")]
 const REQUIRED_TEXT_OUTCOMES: [&str; 13] = [
     "keep.identity.input_too_long",
     "keep.identity.malformed_structure",
@@ -24,6 +32,7 @@ const REQUIRED_TEXT_OUTCOMES: [&str; 13] = [
     "keep.identity.invalid_digest_alphabet",
 ];
 
+#[cfg(feature = "repository-tasks")]
 pub(super) fn check(corpus: &Corpus) -> Result<(), GoldenError> {
     let rows = corpus.rows(
         "invalid-text.tsv",

@@ -17,7 +17,7 @@ use corpus_protocol::Corpus;
 pub(crate) use error::GoldenError;
 
 pub(super) fn check(repository_root: &Path) -> Result<(), GoldenError> {
-    let corpus = Corpus::new(repository_root.join("conformance/golden-file-worldline/v1"));
+    let corpus = Corpus::open(repository_root.join("conformance/golden-file-worldline/v1"))?;
     let fixtures = identity_oracle::check_identities(&corpus)?;
     invalid_text_oracle::check(&corpus)?;
     mutation_oracle::check(&corpus, &fixtures)?;

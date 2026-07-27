@@ -1,10 +1,9 @@
 //! This module owns independent identity materialization, hashing, and vectors.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::fs;
 
 use super::canonical_value::{EmptyHex, case_name, decimal, decoded_hex, unique};
-use super::corpus_protocol::{MAX_SOURCE_BYTES, TableRow, bounded_file_bytes};
+use super::corpus_protocol::{MAX_SOURCE_BYTES, TableRow};
 use super::{Corpus, GoldenError};
 
 pub(super) const ALGORITHM: u8 = 1;
@@ -146,16 +145,13 @@ fn source_bytes(
     let content = match (kind, parameter, repetitions) {
         ("empty-v1", "-", 1) => Vec::new(),
         ("file-v1", _, 1) => {
-            let path = corpus.source_path(parameter)?;
-            let observed = fs::metadata(&path)
-                .map_err(|source| GoldenError::io("inspect source", &path, source))?
-                .len();
-            if observed != declared_length {
+            let source = corpus.source_file(parameter)?;
+            if source.len() != declared_length {
                 return Err(GoldenError::violation(format!(
                     "{name}: source size differs from its declaration"
                 )));
             }
-            bounded_file_bytes(&path, MAX_SOURCE_BYTES, name)?
+            source.bounded_bytes(MAX_SOURCE_BYTES, name)?
         }
         ("byte-ramp-v1", "-", count) if count > 0 => byte_ramp(name, count, declared_usize)?,
         _ => {

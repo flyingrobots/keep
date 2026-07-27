@@ -58,7 +58,7 @@ fn duplicate_mutation_precedes_malformed_mutation_semantics() -> Result<(), Gold
     };
     let fixtures = BTreeMap::from([(String::from("state-a"), fixture)]);
 
-    let result = check(&Corpus::new(root.clone()), &fixtures);
+    let result = check(&Corpus::open(root.clone())?, &fixtures);
     let refused = matches!(
         result,
         Err(GoldenError::Violation(ref message))

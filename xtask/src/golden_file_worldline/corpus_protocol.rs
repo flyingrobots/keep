@@ -1,9 +1,16 @@
 //! This module owns bounded TSV framing, row admission, and corpus file paths.
 
 use std::collections::BTreeMap;
-use std::fs::{self, File};
+#[cfg(feature = "repository-tasks")]
+use std::fs::File;
+#[cfg(feature = "repository-tasks")]
 use std::io::{Read, Take};
 use std::path::{Path, PathBuf};
+
+#[cfg(feature = "repository-tasks")]
+use cap_std::ambient_authority;
+#[cfg(feature = "repository-tasks")]
+use cap_std::fs::Dir;
 
 use super::GoldenError;
 use xtask::protocol_admission::{FramedLinesError, framed_lines, posix_relative_path, tab_fields};
@@ -14,13 +21,18 @@ pub(super) const U16_MAX: u64 = 65_535;
 
 const MAX_TABLE_BYTES: usize = 1_048_576;
 
+#[cfg(feature = "repository-tasks")]
 pub(super) struct Corpus {
+    directory: Dir,
     root: PathBuf,
 }
 
+#[cfg(feature = "repository-tasks")]
 impl Corpus {
-    pub(super) const fn new(root: PathBuf) -> Self {
-        Self { root }
+    pub(super) fn open(root: PathBuf) -> Result<Self, GoldenError> {
+        let directory = Dir::open_ambient_dir(&root, ambient_authority())
+            .map_err(|source| GoldenError::io("open corpus root", &root, source))?;
+        Ok(Self { directory, root })
     }
 
     pub(super) fn rows(
@@ -34,21 +46,45 @@ impl Corpus {
         table_rows(table, schema, columns, lines)
     }
 
-    pub(super) fn source_path(&self, parameter: &str) -> Result<PathBuf, GoldenError> {
+    pub(super) fn source_file(&self, parameter: &str) -> Result<CorpusSource, GoldenError> {
         let relative = protocol_source_path(parameter)?;
-        let root = fs::canonicalize(&self.root)
-            .map_err(|source| GoldenError::io("canonicalize corpus root", &self.root, source))?;
-        let unresolved = self.root.join(&relative);
-        let path = fs::canonicalize(&unresolved)
-            .map_err(|source| GoldenError::io("canonicalize corpus source", &unresolved, source))?;
-        let metadata = fs::metadata(&path)
+        let path = self.root.join(&relative);
+        let file = self
+            .directory
+            .open(&relative)
+            .map(cap_std::fs::File::into_std)
+            .map_err(|source| GoldenError::io("open source", &path, source))?;
+        let metadata = file
+            .metadata()
             .map_err(|source| GoldenError::io("inspect source", &path, source))?;
-        if path == root || !path.starts_with(&root) || !metadata.is_file() {
+        if !metadata.is_file() {
             return Err(GoldenError::violation(format!(
-                "source is outside the corpus or is not a file: {parameter}"
+                "source is not a regular file: {parameter}"
             )));
         }
-        Ok(path)
+        Ok(CorpusSource {
+            expected: metadata.len(),
+            file,
+            path,
+        })
+    }
+}
+
+#[cfg(feature = "repository-tasks")]
+pub(super) struct CorpusSource {
+    expected: u64,
+    file: File,
+    path: PathBuf,
+}
+
+#[cfg(feature = "repository-tasks")]
+impl CorpusSource {
+    pub(super) const fn len(&self) -> u64 {
+        self.expected
+    }
+
+    pub(super) fn bounded_bytes(self, maximum: usize, label: &str) -> Result<Vec<u8>, GoldenError> {
+        bounded_reader_bytes(self.file, self.expected, &self.path, maximum, label)
     }
 }
 
@@ -124,6 +160,7 @@ impl TableRow {
     }
 }
 
+#[cfg(feature = "repository-tasks")]
 pub(super) fn bounded_file_bytes(
     path: &Path,
     maximum: usize,
@@ -134,6 +171,17 @@ pub(super) fn bounded_file_bytes(
         .metadata()
         .map_err(|source| GoldenError::io("inspect", path, source))?
         .len();
+    bounded_reader_bytes(file, expected, path, maximum, label)
+}
+
+#[cfg(feature = "repository-tasks")]
+fn bounded_reader_bytes(
+    file: impl Read,
+    expected: u64,
+    path: &Path,
+    maximum: usize,
+    label: &str,
+) -> Result<Vec<u8>, GoldenError> {
     let maximum_u64 = u64::try_from(maximum).map_err(|source| {
         GoldenError::violation(format!(
             "{label}: platform bound cannot be represented: {source}"
@@ -148,7 +196,7 @@ pub(super) fn bounded_file_bytes(
         .checked_add(1)
         .ok_or_else(|| GoldenError::violation(format!("{label}: read bound overflow")))?;
     let mut content = Vec::new();
-    let mut bounded: Take<File> = file.take(read_limit);
+    let mut bounded: Take<_> = file.take(read_limit);
     bounded
         .read_to_end(&mut content)
         .map_err(|source| GoldenError::io("read", path, source))?;
@@ -165,6 +213,7 @@ pub(super) fn bounded_file_bytes(
     Ok(content)
 }
 
+#[cfg(feature = "repository-tasks")]
 fn protocol_lines(path: &Path) -> Result<Vec<String>, GoldenError> {
     let raw = bounded_file_bytes(path, MAX_TABLE_BYTES, &display_name(path))?;
     protocol_lines_from_bytes(path, &raw)
@@ -199,6 +248,6 @@ fn display_name(path: &Path) -> String {
         .map_or_else(|| path.display().to_string(), str::to_owned)
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "repository-tasks"))]
 #[path = "corpus_protocol/tests.rs"]
 mod tests;

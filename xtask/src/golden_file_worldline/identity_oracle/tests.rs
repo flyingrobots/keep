@@ -25,7 +25,7 @@ fn duplicate_identity_precedes_malformed_identity_semantics() -> Result<(), Gold
     fs::write(&path, table)
         .map_err(|source| GoldenError::io("write identity test corpus", &path, source))?;
 
-    let result = check_identities(&Corpus::new(root.clone()));
+    let result = check_identities(&Corpus::open(root.clone())?);
     let refused = matches!(
         result,
         Err(GoldenError::Violation(ref message))
