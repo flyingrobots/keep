@@ -25,6 +25,13 @@ pub enum PublishError {
         /// Conflicting layout identity.
         identity: LayoutId,
     },
+    /// Staged work and the destination both lack a required chunk.
+    StagedChunkMissing {
+        /// Layout that cannot be published completely.
+        layout: LayoutId,
+        /// Exact chunk absent from both staged and destination state.
+        chunk: ChunkId,
+    },
     /// A previously committed layout references an absent chunk.
     CommittedChunkMissing {
         /// Existing committed layout.
@@ -67,6 +74,10 @@ impl fmt::Display for PublishError {
             Self::ConflictingLayout { identity } => {
                 write!(formatter, "conflicting semantic layout for {identity}")
             }
+            Self::StagedChunkMissing { layout, chunk } => write!(
+                formatter,
+                "staged layout {layout} and its destination are missing chunk {chunk:?}"
+            ),
             Self::CommittedChunkMissing { layout, chunk } => {
                 write!(
                     formatter,

@@ -84,6 +84,7 @@ impl StagedBlob {
 
     pub(super) fn validate_for(&self, store: &ReferenceStore) -> Result<usize, PublishError> {
         validate_committed_state(self, store)?;
+        validate_required_chunks(self, store)?;
         validate_pending_chunks(self, store)
     }
 
@@ -121,6 +122,22 @@ fn validate_pending_chunks(
         });
     }
     Ok(attempted)
+}
+
+fn validate_required_chunks(
+    staged: &StagedBlob,
+    store: &ReferenceStore,
+) -> Result<(), PublishError> {
+    for entry in staged.layout.entries() {
+        let identity = entry.chunk_id();
+        if !store.chunks.contains_key(&identity) && !staged.chunks.contains_key(&identity) {
+            return Err(PublishError::StagedChunkMissing {
+                layout: staged.layout_id,
+                chunk: identity,
+            });
+        }
+    }
+    Ok(())
 }
 
 fn validate_committed_state(

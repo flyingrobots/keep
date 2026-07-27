@@ -176,6 +176,48 @@ fn intervening_capacity_refusal_publishes_no_partial_state() -> Result<(), Box<d
     Ok(())
 }
 
+#[test]
+fn cross_store_publication_refuses_chunks_not_owned_by_staged_work() -> Result<(), Box<dyn Error>> {
+    let source = b"deduplicated bytes belong to the store that supplied them";
+    let capacity = ReferenceStoreCapacity::new(1_048_576);
+    let mut origin = ReferenceStore::new(capacity);
+    let mut initial_source = Cursor::new(source);
+    origin
+        .stage(&mut initial_source, LayoutEntryLimit::MAXIMUM)?
+        .commit(&mut origin)?;
+    let mut repeated_source = Cursor::new(source);
+    let staged = origin.stage(&mut repeated_source, LayoutEntryLimit::MAXIMUM)?;
+    assert_eq!(staged.pending_chunk_count(), 0);
+    let target = staged.target();
+    let layout = staged.layout_id();
+    let missing = staged
+        .layout()
+        .entries()
+        .first()
+        .ok_or("fixture layout has no chunk")?
+        .chunk_id();
+    let mut destination = ReferenceStore::new(capacity);
+
+    let error = staged
+        .commit(&mut destination)
+        .err()
+        .ok_or("cross-store commit published a layout without its chunks")?;
+
+    assert!(matches!(
+        error,
+        PublishError::StagedChunkMissing {
+            layout: observed_layout,
+            chunk
+        } if observed_layout == layout && chunk == missing
+    ));
+    assert!(!destination.contains_blob(target));
+    assert!(matches!(
+        destination.reconstruct(target, &mut Vec::new()),
+        Err(ReconstructionError::BlobMissing { requested }) if requested == target
+    ));
+    Ok(())
+}
+
 struct BytesThenFailure {
     bytes: Cursor<Vec<u8>>,
 }
