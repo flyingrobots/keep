@@ -128,7 +128,7 @@ impl fmt::Display for SourceStructureError {
                 formatter.write_str("`")
             }
             Self::NonRegular(path) => {
-                formatter.write_str("tracked source module is not a regular file: `")?;
+                formatter.write_str("repository source module is not a regular file: `")?;
                 escaped_path(formatter, path)?;
                 formatter.write_str("`")
             }
@@ -192,7 +192,7 @@ fn violations_display(
 ) -> fmt::Result {
     write!(
         formatter,
-        "tracked source modules exceed the {maximum}-line hard maximum"
+        "repository source modules exceed the {maximum}-line hard maximum"
     )?;
     for path in paths {
         formatter.write_str("; ")?;

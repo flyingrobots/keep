@@ -54,7 +54,7 @@ fn early_source_refusal_does_not_claim_an_exact_line_count() {
     assert_eq!(
         diagnostic.ok().as_deref(),
         Some(
-            "tracked source modules exceed the 500-line hard maximum; \
+            "repository source modules exceed the 500-line hard maximum; \
              src/large.rs: >500"
         )
     );
@@ -72,7 +72,7 @@ fn source_structure_diagnostics_are_stable() {
     );
     assert_eq!(
         non_regular.to_string(),
-        "tracked source module is not a regular file: `src/link.rs`"
+        "repository source module is not a regular file: `src/link.rs`"
     );
     let violations = super::SourceStructureError::Violations {
         maximum: 7,
@@ -80,7 +80,7 @@ fn source_structure_diagnostics_are_stable() {
     };
     assert_eq!(
         violations.to_string(),
-        "tracked source modules exceed the 7-line hard maximum; src/large.rs: >7"
+        "repository source modules exceed the 7-line hard maximum; src/large.rs: >7"
     );
     let byte_bound = super::SourceStructureError::GitOutputBound {
         operation: "git inventory",
