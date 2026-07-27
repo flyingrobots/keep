@@ -7,6 +7,9 @@ publish = false
 
 [dependencies]
 blake3 = { version = "=1.8.5", default-features = false, features = ["pure", "std"] }
+# Capability-relative, no-follow opens close source-scan replacement races.
+cap-fs-ext = { version = "=4.0.2", default-features = false, features = ["std"] }
+cap-std = { version = "=4.0.2", default-features = false }
 
 [lints]
 workspace = true

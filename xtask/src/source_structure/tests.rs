@@ -19,6 +19,57 @@ fn source_scan_stops_at_the_first_violating_line() {
     assert_eq!(line_count(BufReader::new(reader)).ok(), Some(501));
 }
 
+#[cfg(unix)]
+#[test]
+fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructureError> {
+    use std::env;
+    use std::fs;
+    use std::os::unix::fs::symlink;
+    use std::process;
+
+    use super::{open_source_file, source_line_count_with};
+
+    let root = env::temp_dir().join(format!("keep-source-replacement-{}", process::id()));
+    fs::create_dir(&root).map_err(|source| super::SourceStructureError::Inspect {
+        path: root.clone(),
+        source,
+    })?;
+    let source_path = root.join("source.rs");
+    let retained_path = root.join("retained.rs");
+    let target_path = root.join("target.rs");
+    fs::write(&source_path, "safe\n").map_err(|source| super::SourceStructureError::Inspect {
+        path: source_path.clone(),
+        source,
+    })?;
+    fs::write(&target_path, "outside\n".repeat(501)).map_err(|source| {
+        super::SourceStructureError::Inspect {
+            path: target_path.clone(),
+            source,
+        }
+    })?;
+
+    let result = source_line_count_with(&root, "source.rs", |repository_root, relative| {
+        let admitted = repository_root.join(relative);
+        fs::rename(&admitted, &retained_path).map_err(super::OpenSourceError::Io)?;
+        symlink(&target_path, &admitted).map_err(super::OpenSourceError::Io)?;
+        open_source_file(repository_root, relative)
+    });
+    let refused = matches!(
+        result,
+        Err(super::SourceStructureError::Inspect {
+            ref path,
+            source: _,
+        }) if path == &source_path
+    );
+    fs::remove_dir_all(&root).map_err(|source| super::SourceStructureError::Inspect {
+        path: root.clone(),
+        source,
+    })?;
+
+    assert!(refused);
+    Ok(())
+}
+
 #[test]
 fn source_module_limit_accepts_five_hundred_and_refuses_five_hundred_one() {
     assert!(!exceeds_hard_limit(500));

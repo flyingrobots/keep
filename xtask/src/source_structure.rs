@@ -1,14 +1,15 @@
 mod git_path_inventory;
+mod source_file;
 
 use std::error::Error;
 use std::ffi::OsStr;
 use std::fmt;
-use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader};
 use std::path::{Component, Path, PathBuf};
 use std::string::FromUtf8Error;
 
 use git_path_inventory::git_paths;
+use source_file::{OpenSourceError, open_source_file};
 
 const SOURCE_MODULE_HARD_LIMIT_LINES: u64 = 500;
 const SOURCE_SUFFIXES: [&str; 3] = ["py", "rs", "sh"];
@@ -190,18 +191,22 @@ fn source_violations(
 }
 
 fn source_line_count(repository_root: &Path, relative: &str) -> Result<u64, SourceStructureError> {
+    source_line_count_with(repository_root, relative, open_source_file)
+}
+
+fn source_line_count_with(
+    repository_root: &Path,
+    relative: &str,
+    open_source: impl FnOnce(&Path, &Path) -> Result<std::fs::File, OpenSourceError>,
+) -> Result<u64, SourceStructureError> {
     let relative_path = admitted_relative_path(relative)?;
     let path = repository_root.join(relative_path);
-    let metadata = fs::symlink_metadata(&path).map_err(|source| SourceStructureError::Inspect {
-        path: path.clone(),
-        source,
-    })?;
-    if !metadata.file_type().is_file() {
-        return Err(SourceStructureError::NonRegular(path));
-    }
-    let file = File::open(&path).map_err(|source| SourceStructureError::Inspect {
-        path: path.clone(),
-        source,
+    let file = open_source(repository_root, relative_path).map_err(|error| match error {
+        OpenSourceError::Io(source) => SourceStructureError::Inspect {
+            path: path.clone(),
+            source,
+        },
+        OpenSourceError::NonRegular => SourceStructureError::NonRegular(path.clone()),
     })?;
     line_count(BufReader::new(file))
         .map_err(|source| SourceStructureError::Inspect { path, source })
