@@ -22,3 +22,6 @@ production `BlobId` code.
 
 The TSV files are protocol inputs. Do not reorder rows, normalize source files,
 or regenerate expected values with production `BlobId` code.
+
+The [version-1 rationale](rationale.md) records the durable source-path
+spelling and its portability boundary.

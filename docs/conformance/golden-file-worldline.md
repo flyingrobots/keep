@@ -52,8 +52,24 @@ unknown source kinds, unknown operations, extra columns, and missing columns
 are invalid.
 
 Lengths and offsets are canonical unsigned decimal. Hex is lowercase and has
-even length. Repository-relative paths may not be absolute and may not contain
-`.` or `..` components.
+even length.
+
+Repository source paths use the named
+`keep.golden-file-worldline.path/v1` profile:
+
+- the field is a nonempty UTF-8 relative path;
+- `/` is the only separator;
+- leading, trailing, or repeated `/` bytes are invalid because they create
+  empty path segments;
+- `.` and `..` segments are invalid;
+- a backslash, colon, or NUL is invalid anywhere in the field; and
+- the checker rejects rather than normalizes any noncanonical spelling.
+
+This lexical profile is independent of filesystem admission. A canonical path
+can still be refused when its target is absent, inaccessible, outside the
+corpus capability, or not a regular file. The scoped
+[path-profile rationale](../../conformance/golden-file-worldline/v1/rationale.md)
+records why version 1 deliberately uses the stricter portable spelling.
 
 The corpus is declarative evidence, not part of a `BlobId` preimage.
 

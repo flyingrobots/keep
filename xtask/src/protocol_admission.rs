@@ -53,6 +53,9 @@ pub struct FieldCountError;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RelativePathError;
 
+/// Named canonical profile for Golden File Worldline source paths.
+pub const POSIX_RELATIVE_PATH_PROFILE: &str = "keep.golden-file-worldline.path/v1";
+
 /// Admit bounded UTF-8 lines under final-LF-only framing.
 ///
 /// # Errors
@@ -116,11 +119,11 @@ pub fn decode_lower_hex(
     value.as_bytes().chunks_exact(2).map(decode_pair).collect()
 }
 
-/// Admit a relative path written with canonical POSIX separators.
+/// Admit a relative path under [`POSIX_RELATIVE_PATH_PROFILE`].
 ///
 /// # Errors
 ///
-/// Returns [`RelativePathError`] for empty, absolute, drive-prefixed,
+/// Returns [`RelativePathError`] for empty, absolute, colon-containing,
 /// backslash-separated, NUL-containing, dot-segment, or empty-segment paths.
 pub fn posix_relative_path(parameter: &str) -> Result<PathBuf, RelativePathError> {
     if parameter.is_empty()

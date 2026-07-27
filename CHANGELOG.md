@@ -21,6 +21,8 @@ after its public API and format compatibility policies are established.
   bounded fuzz surface backed by table-driven malformed-corpus refusals.
 - Deterministic fuzz seed materialization now uses a capability-bound Rust
   `xtask`; `golden_protocol` seeds reach every table and semantic parser.
+- Golden File Worldline source paths now have a named version-1 lexical
+  profile with an explicit portability rationale.
 - Scheduled and manually dispatched fuzz campaigns now exercise every
   registered target under centralized bounded policy, retain failures, and
   preserve minimized evolving corpora as non-authoritative test state.
