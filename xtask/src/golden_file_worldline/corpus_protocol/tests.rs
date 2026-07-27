@@ -104,6 +104,42 @@ fn corpus_tables_refuse_non_regular_handles() -> Result<(), GoldenError> {
 
 #[cfg(unix)]
 #[test]
+fn corpus_tables_refuse_symlink_substitution() -> Result<(), GoldenError> {
+    use std::env;
+    use std::fs;
+    use std::os::unix::fs::symlink;
+    use std::process;
+
+    let root = env::temp_dir().join(format!("keep-corpus-table-link-{}", process::id()));
+    let outside = root.with_extension("outside");
+    fs::create_dir(&root)
+        .map_err(|source| GoldenError::io("create table test corpus", &root, source))?;
+    fs::write(&outside, "# keep.cases/v1\ncase\nsubstituted\n")
+        .map_err(|source| GoldenError::io("write substituted table", &outside, source))?;
+    let table_path = root.join("cases.tsv");
+    symlink(&outside, &table_path)
+        .map_err(|source| GoldenError::io("link substituted table", &table_path, source))?;
+
+    let result = Corpus::open(root.clone())?.rows("cases.tsv", "# keep.cases/v1", &["case"]);
+    let refused = matches!(
+        result,
+        Err(GoldenError::Io {
+            action: "open corpus table",
+            ref path,
+            source: _,
+        }) if path == &table_path
+    );
+    fs::remove_dir_all(&root)
+        .map_err(|source| GoldenError::io("remove table test corpus", &root, source))?;
+    fs::remove_file(&outside)
+        .map_err(|source| GoldenError::io("remove substituted table", &outside, source))?;
+
+    assert!(refused);
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
 fn opened_corpus_sources_survive_path_replacement() -> Result<(), GoldenError> {
     use std::env;
     use std::fs;

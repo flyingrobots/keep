@@ -8,7 +8,7 @@ use std::io::{Read, Take};
 use std::path::{Path, PathBuf};
 
 #[cfg(feature = "repository-tasks")]
-use cap_fs_ext::OpenOptionsSyncExt;
+use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
 #[cfg(feature = "repository-tasks")]
 use cap_std::ambient_authority;
 #[cfg(feature = "repository-tasks")]
@@ -44,7 +44,7 @@ impl Corpus {
         columns: &[&'static str],
     ) -> Result<Vec<TableRow>, GoldenError> {
         let raw = self
-            .open_file(Path::new(table), table)?
+            .open_table(Path::new(table), table)?
             .bounded_bytes(MAX_TABLE_BYTES, table)?;
         let lines = protocol_lines_from_bytes(Path::new(table), &raw)?;
         table_rows(table, schema, columns, lines)
@@ -52,16 +52,40 @@ impl Corpus {
 
     pub(super) fn source_file(&self, parameter: &str) -> Result<CorpusFile, GoldenError> {
         let relative = protocol_source_path(parameter)?;
-        self.open_file(&relative, parameter)
+        self.open_source(&relative, parameter)
     }
 
-    fn open_file(&self, relative: &Path, label: &str) -> Result<CorpusFile, GoldenError> {
+    fn open_table(&self, relative: &Path, label: &str) -> Result<CorpusFile, GoldenError> {
+        self.open_file(
+            relative,
+            label,
+            "open corpus table",
+            &nofollow_read_options(),
+        )
+    }
+
+    fn open_source(&self, relative: &Path, label: &str) -> Result<CorpusFile, GoldenError> {
+        self.open_file(
+            relative,
+            label,
+            "open corpus source",
+            &nonblocking_read_options(),
+        )
+    }
+
+    fn open_file(
+        &self,
+        relative: &Path,
+        label: &str,
+        action: &'static str,
+        options: &OpenOptions,
+    ) -> Result<CorpusFile, GoldenError> {
         let path = self.root.join(relative);
         let file = self
             .directory
-            .open_with(relative, &nonblocking_read_options())
+            .open_with(relative, options)
             .map(cap_std::fs::File::into_std)
-            .map_err(|source| GoldenError::io("open corpus entry", &path, source))?;
+            .map_err(|source| GoldenError::io(action, &path, source))?;
         let metadata = file
             .metadata()
             .map_err(|source| GoldenError::io("inspect corpus entry", &path, source))?;
@@ -100,6 +124,13 @@ impl CorpusFile {
 fn nonblocking_read_options() -> OpenOptions {
     let mut options = OpenOptions::new();
     options.read(true).nonblock(true);
+    options
+}
+
+#[cfg(feature = "repository-tasks")]
+fn nofollow_read_options() -> OpenOptions {
+    let mut options = nonblocking_read_options();
+    options.follow(FollowSymlinks::No);
     options
 }
 
