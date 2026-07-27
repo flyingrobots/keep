@@ -86,8 +86,13 @@ unsigned decimal with no sign, whitespace, separators, or leading zeroes
 except the value `0` itself. Codec 1 accepts only lengths in the inclusive
 range 176 through 46,137,520 for which
 `(plan_length - 176) % 44 == 0`. The digest is exactly 64 lowercase
-hexadecimal characters. Unknown versions, codecs, algorithms, impossible or
-overlong lengths, uppercase hex, and trailing data are refused.
+hexadecimal characters. A canonical coordinate is at most 114 ASCII bytes.
+The parser accepts at most 128 input bytes so it can distinguish malformed
+fields, including an overflowing decimal length, and refuses a longer input
+before token parsing. Unknown versions, codecs, algorithms, impossible or
+overlong lengths, uppercase hex, and trailing data are refused. The checked-in
+[invalid-text corpus](../../../conformance/layout/v1/invalid-layout-id-text.tsv)
+fixes exact refusal classes for every text field and canonicality edge.
 
 ### Binary coordinate
 
@@ -104,7 +109,9 @@ The canonical binary `LayoutId` coordinate is exactly 60 bytes:
 Parsing either coordinate proves only canonical supported shape. It does not
 prove possession, checksum validity, structural validity, or reconstruction
 of the named plan. Binary parsing applies the same codec-1 plan-length range
-and congruence law as text parsing.
+and congruence law as text parsing. The checked-in
+[invalid-binary corpus](../../../conformance/layout/v1/invalid-layout-id-binary.tsv)
+provides exact byte mutations and refusal classes.
 
 ## Canonical plan record
 
@@ -216,6 +223,9 @@ Version 1 defines:
 | `LAYOUT_HEADER_LENGTH` | 144 bytes |
 | `LAYOUT_ENTRY_LENGTH` | 44 bytes |
 | `LAYOUT_CHECKSUM_LENGTH` | 32 bytes |
+| `MAX_CANONICAL_LAYOUT_ID_TEXT_LENGTH` | 114 bytes |
+| `MAX_LAYOUT_ID_TEXT_INPUT_LENGTH` | 128 bytes |
+| `LAYOUT_ID_BINARY_LENGTH` | 60 bytes |
 | `MAX_LAYOUT_DEPTH` | 1 record |
 | `MAX_LAYOUT_ENTRY_COUNT` | 1,048,576 (`2^20`) |
 | `MAX_LAYOUT_RECORD_LENGTH` | 46,137,520 bytes |
@@ -333,7 +343,7 @@ replace an earlier gap or overlap with another error.
 | ID | Requirement | Design evidence | Implementation status |
 | --- | --- | --- | --- |
 | `KEEP-LAYOUT-001` | Exact magic, version, codec, and big-endian fixed-width grammar | Header table and golden records | Planned in #10 |
-| `KEEP-LAYOUT-002` | `LayoutId` uses the ADR-0002 domain and exact plan length | Identity grammar and fixture coordinates | Planned in #10 |
+| `KEEP-LAYOUT-002` | `LayoutId` uses the ADR-0002 domain and exact plan length | Identity grammar, fixture coordinates, and text and binary refusal tables | Planned in #10 |
 | `KEEP-LAYOUT-003` | Target `BlobId` and logical length are inseparable | Embedded canonical 59-byte coordinate | Planned in #10 |
 | `KEEP-LAYOUT-004` | One registered `StorageProfileId` governs all entries | Header profile coordinate | Planned in #10 |
 | `KEEP-LAYOUT-005` | Entry `ChunkId` kind, version, algorithm, length, and digest are typed | Header and entry grammar | Planned in #10 |
@@ -406,10 +416,11 @@ The implementation-independent
   distinct offsets;
 - exact canonical record hex, checksums, `BlobId`, and `LayoutId` coordinates;
   and
-- a mutation ledger covering every fixed header field, entry field, checksum,
-  truncation, trailing bytes, duplicate-field insertion, ordering, gap,
-  overlap, aggregate mismatch, allocation limit, and later content
-  or storage-profile verification failure.
+- text and binary `LayoutId` refusal tables plus a plan mutation ledger
+  covering every fixed header field, entry field, checksum, truncation,
+  trailing bytes, duplicate-field insertion, ordering, gap, overlap,
+  aggregate mismatch, allocation limit, and later content or storage-profile
+  verification failure.
 
 The reasons for the flat grammar, explicit offsets, checksum, bounds, and
 hierarchy posture are recorded in the

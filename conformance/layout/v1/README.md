@@ -23,6 +23,10 @@ The normative format is the
 - `*.layout.hex` contains one lowercase hexadecimal encoding of the complete
   canonical binary record followed by exactly one LF. Hex is fixture transport;
   decoded bytes are the durable record.
+- `invalid-layout-id-text.tsv` supplies hexadecimal input bytes and exact
+  refusal classes for malformed or unsupported text coordinates.
+- `invalid-layout-id-binary.tsv` supplies exact byte mutations and refusal
+  classes for malformed or mismatched binary coordinates.
 - `mutations.tsv` defines structural and verification mutations for issue #10.
 - `ORIGIN.md` records independent construction and review provenance.
 
@@ -83,19 +87,13 @@ the plan because replaying `fastcdc-64k-v1` emits the original boundary.
 
 ## `LayoutId` coordinate mutations
 
-Issue #10 also derives these mutations from every `layout_id_binary_hex` value
-in `layouts.tsv`:
+Issue #10 applies every row in `invalid-layout-id-binary.tsv` to the named
+case's `layout_id_binary_hex` value. Operations have the same exact semantics
+as the plan mutation protocol. Wider replacements deliberately distinguish an
+out-of-bounds plan length, an in-bounds but incongruent length, and a different
+valid record length that mismatches the named record.
 
-| Mutation | Offset | Expected refusal |
-| --- | ---: | --- |
-| Wrong identity magic | 0 | `layout-id.wrong-magic` |
-| Unsupported identity version | 16 | `layout-id.unsupported-version` |
-| Unsupported layout codec | 18 | `layout-id.unsupported-codec` |
-| Plan-length mismatch | 20 | `layout-id.plan-length-mismatch` when compared with a record |
-| Digest mismatch | 28 | `layout-id.mismatch` when compared with a record |
-| Truncation | 59 | `layout-id.wrong-length` |
-| Trailing byte | 60 | `layout-id.wrong-length` |
-
-Every mutation is one bit unless a wider replacement is necessary to target a
-bound. The production decoder MUST assert exact typed outcomes rather than
-only generic failure.
+`invalid-layout-id-text.tsv` stores raw input as hexadecimal so empty input,
+whitespace, and other noncanonical bytes remain unambiguous in a
+line-oriented table. The production codecs MUST assert the exact typed
+outcomes in both files rather than only generic failure.

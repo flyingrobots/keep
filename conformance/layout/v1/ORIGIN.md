@@ -54,6 +54,7 @@ Issue #10 MUST add an independent checker that:
 - reconstructs every field at its documented offset;
 - recomputes both checksum and `LayoutId` through an independently admitted
   BLAKE3 capability;
+- executes every text and binary `LayoutId` refusal vector;
 - applies every mutation in `mutations.tsv`; and
 - cross-checks production encoding only after the independent values pass.
 
