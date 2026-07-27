@@ -16,12 +16,16 @@ impl ReferenceStore {
     ///
     /// The streaming engine retains one fixed 8 KiB read buffer, one buffer
     /// bounded by [`FastCdc::MAXIMUM_CHUNK_LENGTH`], detector/hash state, and
-    /// layout metadata bounded by `entry_limit`. The returned
-    /// [`StagedBlob`] explicitly materializes new unique chunk bytes because
-    /// this reference adapter is in memory.
+    /// layout metadata bounded by `entry_limit`. Layout admission and canonical
+    /// identity calculation transiently materialize metadata proportional to
+    /// that bounded entry count. The returned [`StagedBlob`] explicitly
+    /// materializes new unique chunk bytes because this reference adapter is in
+    /// memory, bounded by
+    /// [`ReferenceStoreCapacity`](super::ReferenceStoreCapacity).
     ///
-    /// Interrupted reads are retried. Empty and short reads are lawful; EOF is
-    /// the only `Ok(0)` read.
+    /// This blocking operation performs caller-provided input I/O. Interrupted
+    /// reads are retried. Empty and short reads are lawful; EOF is the only
+    /// `Ok(0)` read.
     ///
     /// # Errors
     ///

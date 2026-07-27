@@ -4,9 +4,9 @@ keep.identity.canonical/v1	required	M1	2,6	exact bytes have one canonical versio
 keep.identity.partition-invariant/v1	required	M1	6	input read partitioning does not move BlobId
 keep.model.exact-immutable-map/v1	required	M1	5	the bounded reference model returns exact admitted bytes or refuses
 keep.cdc.profile.canonical/v1	required	M2	7	one typed profile produces canonical partition-invariant chunk boundaries
-keep.content.exact-public-read/v1	declared-future	M2	13	a production public read returns exact reconstructed bytes or refuses
+keep.content.exact-public-read/v1	required	M2	13	a production public read returns exact reconstructed bytes or refuses
 keep.cdc.nearby-state-reuse/v1	declared-future	M2	7,8,13	nearby states reuse chunks under one canonical profile
-keep.ingest.bounded-stream/v1	declared-future	M2	13	production ingest memory remains bounded independently of blob size
+keep.ingest.bounded-stream/v1	required	M2	13	production ingest memory remains bounded independently of blob size
 keep.range.minimal-overlap/v1	declared-future	M2	11	only chunks overlapping an exact requested range are loaded
 keep.segment.verified-read/v1	declared-future	M3	14,15	sealed segment reads authenticate framing and content
 keep.restart.lawful-recovery/v1	declared-future	M3	17	restart recovery reaches one documented lawful state

@@ -10,6 +10,31 @@ use super::{PublishError, PublishedBlob, ReferenceStoreCapacity, StagedBlob};
 ///
 /// Exact chunks are deduplicated by [`ChunkId`]. Deduplication is only a
 /// storage fact: this adapter exposes no retention or durability claim.
+/// All operations are synchronous. Staging reads caller-provided I/O and
+/// materializes new unique chunks up to the configured capacity;
+/// reconstruction verifies content and writes to caller-provided I/O. Process
+/// death loses all committed state.
+///
+/// # Examples
+///
+/// ```
+/// use std::io::Cursor;
+///
+/// use keep::{LayoutEntryLimit, ReferenceStore, ReferenceStoreCapacity};
+///
+/// let bytes = b"exact reference bytes";
+/// let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+/// let mut source = Cursor::new(bytes);
+/// let published = store
+///     .stage(&mut source, LayoutEntryLimit::MAXIMUM)?
+///     .commit(&mut store)?;
+///
+/// let mut reconstructed = Vec::new();
+/// let receipt = store.reconstruct(published.target(), &mut reconstructed)?;
+/// assert_eq!(reconstructed, bytes);
+/// assert_eq!(receipt.layout_id(), published.layout_id());
+/// # Ok::<(), Box<dyn std::error::Error>>(())
+/// ```
 pub struct ReferenceStore {
     pub(super) capacity: ReferenceStoreCapacity,
     pub(super) chunks: BTreeMap<ChunkId, Box<[u8]>>,
@@ -19,7 +44,7 @@ pub struct ReferenceStore {
 }
 
 impl ReferenceStore {
-    /// Constructs an empty non-durable reference backend.
+    /// Constructs an empty non-durable reference backend without allocating.
     #[must_use]
     pub const fn new(capacity: ReferenceStoreCapacity) -> Self {
         Self {

@@ -7,9 +7,11 @@ encoder and decoder.
 
 Issue [#10](https://github.com/flyingrobots/keep/issues/10) owns the
 production codec, corruption tests, property tests, and continuous fuzz
-target. The three verification-phase mutations intentionally remain admitted
-until a future reconstruction boundary compares actual chunk bytes and replays
-the registered storage profile.
+target. Issue [#13](https://github.com/flyingrobots/keep/issues/13) owns the
+public verification boundary that compares actual chunk bytes, the complete
+blob identity, and the replayed registered storage profile. The decoder still
+admits all three verification-phase mutations because structural admission
+does not possess chunk bytes.
 
 The normative format is the
 [Flat Chunk Layout v1 specification](../../../docs/formats/flat-chunk-layout-v1/README.md).
@@ -77,7 +79,7 @@ Mutations of opaque identity digests are not all structural errors. A
 rechecksummed `BlobId` digest or `ChunkId` digest can form another structurally
 valid layout. Those cases remain admitted until verified content proves
 `layout.reconstruction-mismatch` or `layout.chunk-mismatch`. The ledger names
-that later phase explicitly.
+that later phase explicitly, and the reference CAS now enforces it.
 
 The `profile-boundary-mismatch` mutation replaces the natural 262,144-byte
 hard-maximum boundary for 262,145 zero bytes with structurally valid

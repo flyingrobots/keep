@@ -15,13 +15,15 @@ impl ReferenceStore {
     ///
     /// The lowest canonical committed [`LayoutId`] is chosen deterministically
     /// when more than one layout names the blob. Reconstruction first verifies
-    /// every chunk and the complete logical [`BlobId`] without writing. It then
-    /// reverifies each immutable reference-store chunk immediately before
-    /// emitting it, so no unauthenticated byte reaches `output`.
+    /// every chunk, the registered storage-profile boundaries, and the complete
+    /// logical [`BlobId`] without writing. It then reverifies each immutable
+    /// reference-store chunk immediately before emitting it, so no
+    /// unauthenticated byte reaches `output`.
     ///
     /// Short writes are completed and interrupted writes are retried. This
-    /// synchronous operation does not flush `output` and makes no durability
-    /// claim.
+    /// synchronous blocking operation allocates no adapter-owned heap memory,
+    /// does not flush `output`, and makes no durability claim. Any allocation
+    /// performed by `output` belongs to the caller-provided writer.
     ///
     /// # Errors
     ///
@@ -72,7 +74,8 @@ impl ReferenceStore {
     ///
     /// The layout need not be published in this store, but every chunk it
     /// names must be present and exact. The canonical layout identity is
-    /// calculated before content verification.
+    /// calculated before content verification by materializing one canonical
+    /// record bounded by the admitted layout's protocol entry limit.
     ///
     /// # Errors
     ///
@@ -96,8 +99,10 @@ impl ReferenceStore {
 
     /// Decodes and reconstructs one exact canonical layout record.
     ///
-    /// Bounded decoding and semantic admission complete before chunk lookup or
-    /// output. Authentication and emission then follow
+    /// Bounded decoding and semantic admission allocate entry metadata within
+    /// `policy` before chunk lookup or output. Canonical identity calculation
+    /// transiently materializes one bounded record. Authentication and emission
+    /// then follow
     /// [`ReferenceStore::reconstruct_admitted_layout`].
     ///
     /// # Errors

@@ -13,34 +13,25 @@ in the storage path.
 
 ## Status
 
-Keep has completed the implementation portion of its first identity milestone.
-The crate exposes a strict, versioned `BlobId` that can be calculated in one
-pass from exact bytes or a blocking stream, and parsed from canonical text or
-binary form. The language-neutral Golden File Worldline corpus independently
-checks those identity rules.
+Keep exposes strict, versioned `BlobId`, `ChunkId`, `StorageProfileId`, and
+`LayoutId` coordinates. It implements the frozen `fastcdc-64k-v1` detector and
+the canonical `keep.flat-chunks/v1` layout codec with language-neutral golden
+and mutation corpora.
 
-The first M2 design slice freezes a deterministic, implementation-independent
-content-defined chunking profile and its golden boundary corpus. That profile
-defines physical layout only: rechunking exact bytes may move a future layout
-identity, but cannot move their `BlobId`.
+The public
+[non-durable reference CAS](docs/architecture/reference-store/README.md)
+provides capacity-bounded blocking ingestion, identity-based chunk
+deduplication, an explicit staged-to-visible transition, and authenticated
+whole-blob reconstruction. Reconstruction verifies every chunk, replays the
+registered storage profile, and verifies the complete named `BlobId` before
+writing any bytes.
 
-The first M2 implementation slice exposes a constant-memory `FastCdc` detector
-for that profile and a domain-separated `ChunkId`. The detector consumes
-arbitrary borrowed feed partitions, emits identified spans without retaining
-candidate bytes, and flushes a final runt only when the caller declares EOF.
-
-The next M2 design slice freezes the canonical `keep.flat-chunks/v1` layout
-record and `LayoutId`: one bounded, ordered sequence of exact chunk identities
-and logical offsets bound to one `BlobId` and one `StorageProfileId`. Its
-language-neutral golden and mutation corpus exists, but the encoder, decoder,
-ingestion path, and reconstruction path remain assigned to the next
-implementation slice.
-
-Keep does **not** expose ingestion, layouts, or physical storage yet.
-Durability, retention, recovery, verification of stored structures, and
-garbage collection remain planned work. Calculating a `BlobId` or `ChunkId`
-does not claim that Keep possesses, has retained, or has durably verified the
-named bytes.
+The reference CAS is executable evidence for M2 storage laws, not a durable
+backend. Its committed state is process memory; process death loses it all.
+Durable segment storage, exact range reads, retention, restart recovery,
+verification of durable structures, compaction, and garbage collection remain
+planned work. Presence in the reference CAS does not claim retention,
+crash-recovery, or durability.
 
 ```rust
 use keep::BlobId;

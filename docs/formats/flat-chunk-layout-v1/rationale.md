@@ -10,8 +10,9 @@ limits the entry count to `2^20`.
 
 This decision governs the canonical record, `LayoutId`, validation stages,
 resource bounds, migration posture, and first durable layout compatibility
-surface. The production codec implements those laws. Ingestion, storage, and
-verified reconstruction remain separate future boundaries.
+surface. The production codec implements those laws. The non-durable reference
+adapter implements ingestion and verified reconstruction in issue #13. Durable
+storage remains a separate future boundary.
 
 ## Why a flat first codec
 
