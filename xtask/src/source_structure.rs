@@ -1,12 +1,14 @@
-use std::collections::BTreeSet;
+mod git_path_inventory;
+
 use std::error::Error;
 use std::ffi::OsStr;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader};
 use std::path::{Component, Path, PathBuf};
-use std::process::Command;
 use std::string::FromUtf8Error;
+
+use git_path_inventory::git_paths;
 
 const SOURCE_MODULE_HARD_LIMIT_LINES: u64 = 500;
 const SOURCE_SUFFIXES: [&str; 3] = ["py", "rs", "sh"];
@@ -28,6 +30,21 @@ pub(super) enum SourceStructureError {
         operation: &'static str,
         source: FromUtf8Error,
     },
+    GitOutputBound {
+        operation: &'static str,
+        stream: &'static str,
+        maximum: usize,
+    },
+    GitOutputFraming {
+        operation: &'static str,
+    },
+    GitPipe {
+        operation: &'static str,
+        stream: &'static str,
+    },
+    GitWorker {
+        operation: &'static str,
+    },
     Inspect {
         path: PathBuf,
         source: io::Error,
@@ -36,6 +53,7 @@ pub(super) enum SourceStructureError {
     NonRegular(PathBuf),
     RunGit {
         operation: &'static str,
+        action: &'static str,
         source: io::Error,
     },
     Violations(Vec<(String, u64)>),
@@ -62,6 +80,29 @@ impl fmt::Display for SourceStructureError {
             Self::GitOutput { operation, .. } => {
                 write!(formatter, "`{operation}` returned a non-UTF-8 path")
             }
+            Self::GitOutputBound {
+                operation,
+                stream,
+                maximum,
+            } => write!(
+                formatter,
+                "`{operation}` exceeded the {maximum}-byte or item {stream} bound"
+            ),
+            Self::GitOutputFraming { operation } => {
+                write!(
+                    formatter,
+                    "`{operation}` returned a non-NUL-terminated path"
+                )
+            }
+            Self::GitPipe { operation, stream } => {
+                write!(formatter, "`{operation}` did not provide its {stream} pipe")
+            }
+            Self::GitWorker { operation } => {
+                write!(
+                    formatter,
+                    "`{operation}` diagnostic reader stopped unexpectedly"
+                )
+            }
             Self::Inspect { path, .. } => {
                 write!(formatter, "cannot inspect `{}`", path.display())
             }
@@ -73,8 +114,10 @@ impl fmt::Display for SourceStructureError {
                 "tracked source module is not a regular file: `{}`",
                 path.display()
             ),
-            Self::RunGit { operation, .. } => {
-                write!(formatter, "cannot run `{operation}`")
+            Self::RunGit {
+                operation, action, ..
+            } => {
+                write!(formatter, "cannot {action} `{operation}`")
             }
             Self::Violations(violations) => {
                 formatter.write_str("tracked source modules exceed the 500-line hard maximum")?;
@@ -93,6 +136,10 @@ impl Error for SourceStructureError {
             Self::GitOutput { source, .. } => Some(source),
             Self::Inspect { source, .. } | Self::RunGit { source, .. } => Some(source),
             Self::GitFailed { .. }
+            | Self::GitOutputBound { .. }
+            | Self::GitOutputFraming { .. }
+            | Self::GitPipe { .. }
+            | Self::GitWorker { .. }
             | Self::InvalidPath(_)
             | Self::NonRegular(_)
             | Self::Violations(_) => None,
@@ -160,36 +207,6 @@ fn source_line_count(repository_root: &Path, relative: &str) -> Result<u64, Sour
         .map_err(|source| SourceStructureError::Inspect { path, source })
 }
 
-fn git_paths(
-    repository_root: &Path,
-    arguments: &[&str],
-    operation: &'static str,
-) -> Result<BTreeSet<String>, SourceStructureError> {
-    let output = Command::new("git")
-        .args(arguments)
-        .current_dir(repository_root)
-        .output()
-        .map_err(|source| SourceStructureError::RunGit { operation, source })?;
-    if !output.status.success() {
-        let stderr = String::from_utf8(output.stderr)
-            .map_err(|source| SourceStructureError::GitOutput { operation, source })?;
-        return Err(SourceStructureError::GitFailed {
-            operation,
-            code: output.status.code(),
-            stderr,
-        });
-    }
-    String::from_utf8(output.stdout)
-        .map_err(|source| SourceStructureError::GitOutput { operation, source })
-        .map(|paths| {
-            paths
-                .split('\0')
-                .filter(|path| !path.is_empty())
-                .map(str::to_owned)
-                .collect()
-        })
-}
-
 fn admitted_relative_path(path: &str) -> Result<&Path, SourceStructureError> {
     let relative = Path::new(path);
     if relative
@@ -213,77 +230,41 @@ const fn exceeds_hard_limit(lines: u64) -> bool {
 }
 
 fn line_count(mut reader: impl BufRead) -> Result<u64, io::Error> {
-    let mut lines = 0_u64;
-    let mut saw_bytes = false;
-    let mut ended_with_newline = false;
+    let mut completed_lines = 0_u64;
+    let mut in_line = false;
     loop {
         let buffer = reader.fill_buf()?;
         if buffer.is_empty() {
             break;
         }
-        saw_bytes = true;
-        ended_with_newline = buffer.last() == Some(&b'\n');
         for byte in buffer {
-            if *byte == b'\n' {
-                lines = lines
+            if !in_line {
+                let current_line = completed_lines
                     .checked_add(1)
                     .ok_or_else(|| io::Error::other("source line count overflow"))?;
+                if exceeds_hard_limit(current_line) {
+                    return Ok(current_line);
+                }
+                in_line = true;
+            }
+            if *byte == b'\n' {
+                completed_lines = completed_lines
+                    .checked_add(1)
+                    .ok_or_else(|| io::Error::other("source line count overflow"))?;
+                in_line = false;
             }
         }
         let consumed = buffer.len();
         reader.consume(consumed);
     }
-    if saw_bytes && !ended_with_newline {
-        lines
+    if in_line {
+        completed_lines
             .checked_add(1)
             .ok_or_else(|| io::Error::other("source line count overflow"))
     } else {
-        Ok(lines)
+        Ok(completed_lines)
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use std::io::Cursor;
-    use std::path::Path;
-
-    use super::{PRESENT_PATH_ARGUMENTS, exceeds_hard_limit, is_source_module, line_count};
-
-    #[test]
-    fn line_count_observes_empty_and_final_newline_edges() {
-        assert_eq!(line_count(Cursor::new(b"")).ok(), Some(0));
-        assert_eq!(line_count(Cursor::new(b"a")).ok(), Some(1));
-        assert_eq!(line_count(Cursor::new(b"a\n")).ok(), Some(1));
-        assert_eq!(line_count(Cursor::new(b"a\nb")).ok(), Some(2));
-        assert_eq!(line_count(Cursor::new(b"a\nb\n")).ok(), Some(2));
-    }
-
-    #[test]
-    fn source_module_limit_accepts_five_hundred_and_refuses_five_hundred_one() {
-        assert!(!exceeds_hard_limit(500));
-        assert!(exceeds_hard_limit(501));
-    }
-
-    #[test]
-    fn source_module_classification_is_explicit() {
-        assert!(is_source_module(Path::new("src/lib.rs")));
-        assert!(is_source_module(Path::new("scripts/check.py")));
-        assert!(is_source_module(Path::new("scripts/check.sh")));
-        assert!(!is_source_module(Path::new("README.md")));
-        assert!(!is_source_module(Path::new("src/lib.RS")));
-    }
-
-    #[test]
-    fn source_selection_ignores_only_repository_owned_patterns() {
-        assert_eq!(
-            PRESENT_PATH_ARGUMENTS,
-            [
-                "ls-files",
-                "-z",
-                "--cached",
-                "--others",
-                "--exclude-per-directory=.gitignore",
-            ]
-        );
-    }
-}
+mod tests;
