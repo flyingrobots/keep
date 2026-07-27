@@ -73,6 +73,18 @@ fn every_invalid_binary_coordinate_has_its_exact_typed_refusal() -> Result<(), B
     Ok(())
 }
 
+#[test]
+fn binary_insert_mutation_refuses_a_nonzero_span() -> Result<(), io::Error> {
+    let malformed = "stray-span\tempty\tinsert-v1\t0\t1\t00\tunused";
+    let error = apply_mutation(&[0_u8], malformed)
+        .err()
+        .ok_or_else(|| invalid_corpus("insert mutation admitted a nonzero span"))?;
+
+    assert_eq!(error.kind(), io::ErrorKind::Other);
+    assert_eq!(error.to_string(), "insert mutation has a nonzero span");
+    Ok(())
+}
+
 fn golden_binary(case_name: &str) -> Result<Vec<u8>, io::Error> {
     let line = LAYOUTS
         .lines()
@@ -100,7 +112,7 @@ fn apply_mutation(base: &[u8], row: &str) -> Result<Vec<u8>, io::Error> {
         "replace-v1" => replace(&mut result, offset, end, parameter)?,
         "xor-v1" => xor(&mut result, offset, end, parameter)?,
         "delete-v1" => delete(&mut result, offset, end, parameter)?,
-        "insert-v1" => insert(&mut result, offset, parameter)?,
+        "insert-v1" => insert(&mut result, offset, span_length, parameter)?,
         _ => return Err(invalid_corpus("unknown identity mutation operation")),
     }
     Ok(result)
@@ -145,7 +157,15 @@ fn delete(
     Ok(())
 }
 
-fn insert(bytes: &mut Vec<u8>, offset: usize, parameter: &str) -> Result<(), io::Error> {
+fn insert(
+    bytes: &mut Vec<u8>,
+    offset: usize,
+    span_length: usize,
+    parameter: &str,
+) -> Result<(), io::Error> {
+    if span_length != 0 {
+        return Err(invalid_corpus("insert mutation has a nonzero span"));
+    }
     if offset > bytes.len() {
         return Err(invalid_corpus("insert offset is out of bounds"));
     }
