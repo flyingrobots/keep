@@ -203,6 +203,43 @@ fn failed_seed_publication_removes_its_stage() -> Result<(), Box<dyn std::error:
     Ok(())
 }
 
+#[cfg(unix)]
+#[test]
+fn symlinked_seed_destination_is_refused() -> Result<(), Box<dyn std::error::Error>> {
+    use std::fs;
+    use std::os::unix::fs::symlink;
+
+    let directory = TestDirectory::create("fuzz-seed-destination-link")?;
+    let root = directory.path();
+    let fuzz = root.join("fuzz");
+    let outside = root.join("outside-corpus");
+    fs::create_dir(&fuzz)
+        .map_err(|source| FuzzSeedError::io("create fuzz test root", &fuzz, source))?;
+    fs::create_dir(&outside)
+        .map_err(|source| FuzzSeedError::io("create outside corpus", &outside, source))?;
+    let corpus = fuzz.join("corpus");
+    symlink(&outside, &corpus)
+        .map_err(|source| FuzzSeedError::io("link corpus destination", &corpus, source))?;
+
+    let result = RepositoryFiles::open(root)?.write_seeds(&[Seed {
+        target: "blob_hasher",
+        name: "empty",
+        content: Vec::new(),
+    }]);
+
+    assert!(matches!(
+        result,
+        Err(FuzzSeedError::Violation(ref message))
+            if message
+                == &format!(
+                    "seed destination is not a real directory: {}",
+                    corpus.display()
+                )
+    ));
+    directory.close()?;
+    Ok(())
+}
+
 fn seed_contents(
     root: &Path,
 ) -> Result<std::collections::BTreeMap<String, Vec<u8>>, FuzzSeedError> {
