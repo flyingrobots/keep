@@ -3,11 +3,68 @@
 const SPECIFICATION: &str = include_str!("../../docs/formats/flat-chunk-layout-v1/README.md");
 const RATIONALE: &str = include_str!("../../docs/formats/flat-chunk-layout-v1/rationale.md");
 const CONFORMANCE_GUIDE: &str = include_str!("../../conformance/layout/v1/README.md");
+const LAYOUT_DECODE_ERROR_DISPLAY: &str =
+    include_str!("../../src/adapters/layout_decode_error_display.rs");
+const LAYOUT_MUTATION_TESTS: &str = include_str!("../../tests/layout_mutations.rs");
+const LAYOUT_TEST_HELPER_CALLERS: &str = concat!(
+    include_str!("../../tests/layout_decode.rs"),
+    include_str!("../../tests/layout_id.rs"),
+    include_str!("../../tests/layout_mutations.rs"),
+    include_str!("../../tests/layout_mutations/support.rs"),
+    include_str!("../../tests/layout_oracle.rs"),
+    include_str!("../../tests/layout_oracle/support.rs"),
+    include_str!("../../tests/layout_properties.rs"),
+    include_str!("../../tests/layout_record.rs"),
+);
 const INVALID_LAYOUT_ID_BINARY: &str =
     include_str!("../../conformance/layout/v1/invalid-layout-id-binary.tsv");
 const INVALID_LAYOUT_ID_TEXT: &str =
     include_str!("../../conformance/layout/v1/invalid-layout-id-text.tsv");
 const MUTATIONS: &str = include_str!("../../conformance/layout/v1/mutations.tsv");
+
+#[test]
+fn layout_decode_error_formatter_stays_below_the_hard_function_limit() -> Result<(), &'static str> {
+    let (_, after_signature) = LAYOUT_DECODE_ERROR_DISPLAY
+        .split_once("    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {")
+        .ok_or("display implementation must retain its formatter")?;
+    let (body, _) = after_signature
+        .split_once("\n    }\n}\n\nfn ")
+        .ok_or("display formatter must remain a directly inspectable function")?;
+    assert!(
+        body.lines().count() <= 59,
+        "LayoutDecodeError::fmt exceeds the 60-line hard limit"
+    );
+    Ok(())
+}
+
+#[test]
+fn layout_mutation_classifiers_name_every_unclassified_variant() {
+    assert!(
+        !LAYOUT_MUTATION_TESTS.contains("_ => None"),
+        "layout mutation classifiers must not hide future error variants"
+    );
+}
+
+#[test]
+fn layout_corpus_plumbing_has_one_shared_owner() {
+    for duplicate in [
+        "\nfn detect_spans(",
+        "\nfn source_bytes(",
+        "\nfn record_fixture(",
+        "\nfn field(",
+        "\nfn field_unchecked(",
+        "\nfn fixture(",
+        "\nfn layout_field(",
+        "\nfn layout_id(",
+        "\nfn layout_id_binary(",
+        "\nfn require_error",
+    ] {
+        assert!(
+            !LAYOUT_TEST_HELPER_CALLERS.contains(duplicate),
+            "layout corpus helper remains duplicated: {duplicate}"
+        );
+    }
+}
 
 #[test]
 fn verified_reconstruction_proves_the_bound_storage_profile() {
@@ -73,6 +130,7 @@ fn layout_id_coordinates_have_field_complete_refusal_vectors() {
         "wrong-scheme",
         "wrong-kind",
         "malformed-version",
+        "leading-zero-version",
         "unsupported-version",
         "unsupported-codec",
         "unsupported-algorithm",

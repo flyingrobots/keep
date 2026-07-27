@@ -10,8 +10,8 @@ limits the entry count to `2^20`.
 
 This decision governs the canonical record, `LayoutId`, validation stages,
 resource bounds, migration posture, and first durable layout compatibility
-surface. It does not implement an encoder, decoder, ingestion path, storage
-backend, or verified reader.
+surface. The production codec implements those laws. Ingestion, storage, and
+verified reconstruction remain separate future boundaries.
 
 ## Why a flat first codec
 

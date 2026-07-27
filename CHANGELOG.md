@@ -10,6 +10,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Flat-layout decoding now validates cardinality before entry materialization
+  and admits decoded coordinates through the domain's ordered one-pass
+  validator, so a later zero length cannot hide an earlier entry failure.
 - Golden File Worldline verification now runs through a dependency-isolated
   Rust `xtask`, cross-checks every identity-bearing digest against external
   `b3sum`, and CI refuses Rust, Python, or shell source modules that exceed the
@@ -54,12 +57,28 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- An independent field-by-field flat-layout fixture oracle that verifies every
+  fixed offset, checksum, and `LayoutId` before cross-checking the production
+  encoder.
+- Validated flat-layout admission with explicit entry caps and an exact
+  canonical version-1 encoder backed by every frozen record and `LayoutId`
+  witness.
+- Bounded flat-layout decoding through explicit parse, validate, and admit
+  stages with deterministic first-failure errors for every frozen structural
+  mutation and optional final expected-`LayoutId` verification.
+- Generated flat-layout canonicality properties and a continuous
+  `layout_record` decoder fuzz target seeded through the Rust `xtask` with all
+  four frozen binary records.
+- Canonical `StorageProfileId` text coordinates and explicit admission of the
+  frozen `fastcdc-64k-v1` profile through `RegisteredStorageProfile`.
+- Canonical binary and text `LayoutId` coordinates with typed plan-length and
+  digest mismatch reporting backed by every coordinate refusal vector.
 - The canonical `keep.flat-chunks/v1` durable layout specification, typed
   `LayoutId` grammar, checked flat-plan bounds, domain-separated checksum,
   exact golden records, field-complete `LayoutId` refusal tables and
   cardinality-before-aggregate first-failure plan mutation ledger, and
-  verified storage-profile boundary replay law. Production encoding, decoding,
-  admission, ingestion, and reconstruction remain assigned to issue #10.
+  verified storage-profile boundary replay law. Ingestion and verified
+  reconstruction remain outside the current implementation.
 - Canonical version-1 `ChunkId` calculation in a domain distinct from
   `BlobId`, with independent golden vectors.
 - A constant-memory `FastCdc` detector for `fastcdc-64k-v1` that preserves

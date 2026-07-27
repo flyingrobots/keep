@@ -2,16 +2,11 @@
 
 use std::path::Path;
 
-use super::{FuzzSeedError, Seed, filesystem::RepositoryFiles, golden_protocol_seeds, prepare};
+use super::{FuzzSeedError, Seed, filesystem::RepositoryFiles, golden_protocol_seeds};
 use crate::test_directory::TestDirectory;
 
-const TABLES: [&str; 5] = [
-    "identities.tsv",
-    "invalid-text.tsv",
-    "mutations.tsv",
-    "steps.tsv",
-    "capabilities.tsv",
-];
+mod materialization;
+
 const FILESYSTEM_SOURCE: &str = include_str!("filesystem.rs");
 
 #[test]
@@ -85,47 +80,6 @@ fn repository_file_boundary_documents_its_io_contracts() {
     }
     assert!(FILESYSTEM_SOURCE.contains("batch-atomic"));
     assert!(FILESYSTEM_SOURCE.contains("The containing directory is not synced"));
-}
-
-#[test]
-fn seed_preparation_materializes_the_complete_deterministic_set()
--> Result<(), Box<dyn std::error::Error>> {
-    use std::fs;
-
-    let source_root = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .ok_or(FuzzSeedError::RepositoryRoot)?;
-    let directory = TestDirectory::create("fuzz-seeds")?;
-    let root = directory.path();
-    let conformance = root.join("conformance/golden-file-worldline/v1");
-    fs::create_dir_all(&conformance).map_err(|source| {
-        FuzzSeedError::io("create test conformance root", &conformance, source)
-    })?;
-    for table in TABLES {
-        let source_path = source_root
-            .join("conformance/golden-file-worldline/v1")
-            .join(table);
-        let destination = conformance.join(table);
-        fs::copy(&source_path, &destination)
-            .map_err(|source| FuzzSeedError::io("copy test table", &destination, source))?;
-    }
-
-    prepare(root)?;
-    let corpus = root.join("fuzz/corpus");
-    let first = seed_contents(&corpus)?;
-    assert_eq!(first.len(), 22);
-    assert_eq!(
-        first
-            .keys()
-            .filter(|name| name.starts_with("golden_protocol/"))
-            .count(),
-        9
-    );
-    prepare(root)?;
-    assert_eq!(seed_contents(&corpus)?, first);
-
-    directory.close()?;
-    Ok(())
 }
 
 #[test]
@@ -251,44 +205,5 @@ fn symlinked_seed_destination_is_refused() -> Result<(), Box<dyn std::error::Err
                 )
     ));
     directory.close()?;
-    Ok(())
-}
-
-fn seed_contents(
-    root: &Path,
-) -> Result<std::collections::BTreeMap<String, Vec<u8>>, FuzzSeedError> {
-    let mut contents = std::collections::BTreeMap::new();
-    collect_seed_contents(root, root, &mut contents)?;
-    Ok(contents)
-}
-
-fn collect_seed_contents(
-    root: &Path,
-    directory: &Path,
-    contents: &mut std::collections::BTreeMap<String, Vec<u8>>,
-) -> Result<(), FuzzSeedError> {
-    use std::fs;
-
-    for entry in fs::read_dir(directory)
-        .map_err(|source| FuzzSeedError::io("read test seed directory", directory, source))?
-    {
-        let entry =
-            entry.map_err(|source| FuzzSeedError::io("read test seed entry", directory, source))?;
-        let path = entry.path();
-        if path.is_dir() {
-            collect_seed_contents(root, &path, contents)?;
-        } else {
-            let name = path
-                .strip_prefix(root)
-                .map_err(|source| {
-                    FuzzSeedError::violation(format!("test seed prefix is invalid: {source}"))
-                })?
-                .display()
-                .to_string();
-            let content = fs::read(&path)
-                .map_err(|source| FuzzSeedError::io("read test seed", &path, source))?;
-            contents.insert(name, content);
-        }
-    }
     Ok(())
 }

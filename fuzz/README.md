@@ -42,6 +42,21 @@ schemas plus canonical case, canonical decimal, invalid-identity
 classification, and mutation parsing under the campaign's one-mebibyte input
 bound.
 
+The `layout_record` seeds are the four exact canonical binary records derived
+from the reviewed hexadecimal fixtures. The target feeds arbitrary bytes
+through the bounded decoder and, for every admitted record, requires exact
+decode-encode byte equality plus successful expected-`LayoutId` admission.
+Run that target alone under the reviewed smoke bounds with:
+
+```bash
+source fuzz/campaign.env
+cargo +"$FUZZ_TOOLCHAIN" fuzz run layout_record -- \
+  -max_total_time="$FUZZ_SMOKE_SECONDS_PER_TARGET" \
+  -timeout="$FUZZ_INPUT_TIMEOUT_SECONDS" \
+  -max_len="$FUZZ_MAX_INPUT_BYTES" \
+  -rss_limit_mb="$FUZZ_RSS_LIMIT_MB"
+```
+
 The generated corpus is derived test state, not protocol authority. The
 canonical identities, source recipes, and expected boundaries remain under
 `conformance/`. Fuzzing may add or minimize files beneath `fuzz/corpus/`
