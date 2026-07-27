@@ -10,6 +10,13 @@ use std::ffi::OsString;
 #[cfg(unix)]
 use std::os::unix::ffi::OsStringExt;
 
+const CARGO_CONFIGURATION: &str = include_str!("../../.cargo/config.toml");
+
+#[test]
+fn repository_tasks_require_the_committed_dependency_graph() {
+    assert!(CARGO_CONFIGURATION.contains("xtask = \"run --locked --package xtask --\""));
+}
+
 #[test]
 fn successful_verification_is_silent() -> Result<(), io::Error> {
     let output = invoke(&["verify"])?;
