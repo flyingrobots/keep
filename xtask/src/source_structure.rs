@@ -63,12 +63,12 @@ fn source_paths(repository_root: &Path) -> Result<Vec<RepositoryPath>, SourceStr
 fn source_violations(
     source_root: &SourceRoot,
     paths: Vec<RepositoryPath>,
-) -> Result<Vec<(String, u64)>, SourceStructureError> {
+) -> Result<Vec<String>, SourceStructureError> {
     let mut violations = Vec::new();
     for relative in paths {
         let lines = source_line_count(source_root, &relative)?;
-        if exceeds_hard_limit(lines) {
-            violations.push((relative.as_str().to_owned(), lines));
+        if lines == SourceLineCount::Exceeded {
+            violations.push(relative.as_str().to_owned());
         }
     }
     Ok(violations)
@@ -77,7 +77,7 @@ fn source_violations(
 fn source_line_count(
     source_root: &SourceRoot,
     relative: &RepositoryPath,
-) -> Result<u64, SourceStructureError> {
+) -> Result<SourceLineCount, SourceStructureError> {
     source_line_count_with(source_root, relative, SourceRoot::open_file)
 }
 
@@ -85,7 +85,7 @@ fn source_line_count_with(
     source_root: &SourceRoot,
     relative: &RepositoryPath,
     open_source: impl FnOnce(&SourceRoot, &Path) -> Result<std::fs::File, OpenSourceError>,
-) -> Result<u64, SourceStructureError> {
+) -> Result<SourceLineCount, SourceStructureError> {
     let path = source_root.display_path(relative.as_path());
     let file = open_source(source_root, relative.as_path()).map_err(|error| match error {
         OpenSourceError::Io(source) => SourceStructureError::Inspect {
@@ -112,7 +112,7 @@ const fn exceeds_hard_limit(lines: u64) -> bool {
     lines > SOURCE_MODULE_HARD_LIMIT_LINES
 }
 
-fn line_count(mut reader: impl BufRead) -> Result<u64, io::Error> {
+fn line_count(mut reader: impl BufRead) -> Result<SourceLineCount, io::Error> {
     let mut counter = LineCounter::default();
     loop {
         let buffer = reader.fill_buf()?;
@@ -136,12 +136,18 @@ struct LineCounter {
     in_line: bool,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum SourceLineCount {
+    Exceeded,
+    Within(u64),
+}
+
 impl LineCounter {
-    fn observe(&mut self, byte: u8) -> Result<Option<u64>, io::Error> {
+    fn observe(&mut self, byte: u8) -> Result<Option<SourceLineCount>, io::Error> {
         if !self.in_line {
             let current = self.next_line()?;
             if exceeds_hard_limit(current) {
-                return Ok(Some(current));
+                return Ok(Some(SourceLineCount::Exceeded));
             }
             self.in_line = true;
         }
@@ -152,11 +158,11 @@ impl LineCounter {
         Ok(None)
     }
 
-    fn finish(&self) -> Result<u64, io::Error> {
+    fn finish(&self) -> Result<SourceLineCount, io::Error> {
         if self.in_line {
-            self.next_line()
+            self.next_line().map(SourceLineCount::Within)
         } else {
-            Ok(self.completed)
+            Ok(SourceLineCount::Within(self.completed))
         }
     }
 

@@ -1,22 +1,63 @@
 //! This module owns source-line, selection, and replacement-race tests.
 
-use super::{PRESENT_PATH_ARGUMENTS, exceeds_hard_limit, is_source_module, line_count};
+use super::{
+    PRESENT_PATH_ARGUMENTS, SourceLineCount, exceeds_hard_limit, is_source_module, line_count,
+};
 use std::io::{self, BufReader, Cursor, Read};
 
 #[test]
 fn line_count_observes_empty_and_final_newline_edges() {
-    assert_eq!(line_count(Cursor::new(b"")).ok(), Some(0));
-    assert_eq!(line_count(Cursor::new(b"a")).ok(), Some(1));
-    assert_eq!(line_count(Cursor::new(b"a\n")).ok(), Some(1));
-    assert_eq!(line_count(Cursor::new(b"a\nb")).ok(), Some(2));
-    assert_eq!(line_count(Cursor::new(b"a\nb\n")).ok(), Some(2));
+    assert_eq!(
+        line_count(Cursor::new(b"")).ok(),
+        Some(SourceLineCount::Within(0))
+    );
+    assert_eq!(
+        line_count(Cursor::new(b"a")).ok(),
+        Some(SourceLineCount::Within(1))
+    );
+    assert_eq!(
+        line_count(Cursor::new(b"a\n")).ok(),
+        Some(SourceLineCount::Within(1))
+    );
+    assert_eq!(
+        line_count(Cursor::new(b"a\nb")).ok(),
+        Some(SourceLineCount::Within(2))
+    );
+    assert_eq!(
+        line_count(Cursor::new(b"a\nb\n")).ok(),
+        Some(SourceLineCount::Within(2))
+    );
 }
 
 #[test]
 fn source_scan_stops_at_the_first_violating_line() {
     let lines = "x\n".repeat(501);
     let reader = Cursor::new(lines.into_bytes()).chain(RefuseTail);
-    assert_eq!(line_count(BufReader::new(reader)).ok(), Some(501));
+    assert_eq!(
+        line_count(BufReader::new(reader)).ok(),
+        Some(SourceLineCount::Exceeded)
+    );
+}
+
+#[test]
+fn early_source_refusal_does_not_claim_an_exact_line_count() {
+    let lines = "x\n".repeat(501);
+    let reader = Cursor::new(lines.into_bytes()).chain(RefuseTail);
+    let diagnostic = line_count(BufReader::new(reader)).map(|observed| match observed {
+        SourceLineCount::Exceeded => super::SourceStructureError::Violations {
+            maximum: 500,
+            paths: vec![String::from("src/large.rs")],
+        }
+        .to_string(),
+        SourceLineCount::Within(lines) => format!("unexpected exact count: {lines}"),
+    });
+    assert_eq!(
+        diagnostic.ok().as_deref(),
+        Some(
+            "tracked source modules exceed the 500-line hard maximum; \
+             src/large.rs: >500"
+        )
+    );
 }
 
 #[test]
@@ -35,11 +76,11 @@ fn source_structure_diagnostics_are_stable() {
     );
     let violations = super::SourceStructureError::Violations {
         maximum: 7,
-        paths: vec![(String::from("src/large.rs"), 8)],
+        paths: vec![String::from("src/large.rs")],
     };
     assert_eq!(
         violations.to_string(),
-        "tracked source modules exceed the 7-line hard maximum; src/large.rs: 8"
+        "tracked source modules exceed the 7-line hard maximum; src/large.rs: >7"
     );
     let byte_bound = super::SourceStructureError::GitOutputBound {
         operation: "git inventory",
@@ -112,7 +153,7 @@ fn source_scan_keeps_the_admitted_repository_root() -> Result<(), Box<dyn std::e
     fs::remove_dir_all(&root)?;
     fs::remove_dir_all(&retained_root)?;
 
-    assert_eq!(line_count, 1);
+    assert_eq!(line_count, SourceLineCount::Within(1));
     Ok(())
 }
 

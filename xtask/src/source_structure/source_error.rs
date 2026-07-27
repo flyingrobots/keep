@@ -57,7 +57,7 @@ pub(crate) enum SourceStructureError {
     },
     Violations {
         maximum: u64,
-        paths: Vec<(String, u64)>,
+        paths: Vec<String>,
     },
 }
 
@@ -184,14 +184,14 @@ fn escaped_controls(formatter: &mut fmt::Formatter<'_>, diagnostic: &str) -> fmt
 fn violations_display(
     formatter: &mut fmt::Formatter<'_>,
     maximum: u64,
-    violations: &[(String, u64)],
+    paths: &[String],
 ) -> fmt::Result {
     write!(
         formatter,
         "tracked source modules exceed the {maximum}-line hard maximum"
     )?;
-    for (path, lines) in violations {
-        write!(formatter, "; {path}: {lines}")?;
+    for path in paths {
+        write!(formatter, "; {path}: >{maximum}")?;
     }
     Ok(())
 }
