@@ -3,7 +3,6 @@
 use std::collections::BTreeSet;
 use std::io::Read;
 
-use super::repository_path::RepositoryPath;
 use super::{GitOutputUnit, SourceStructureError};
 
 const GIT_PATH_LIMITS: GitPathLimits = GitPathLimits {
@@ -22,7 +21,7 @@ struct GitPathLimits {
 pub(super) fn read_paths(
     reader: impl Read,
     operation: &'static str,
-) -> Result<BTreeSet<RepositoryPath>, SourceStructureError> {
+) -> Result<BTreeSet<GitPathRecord>, SourceStructureError> {
     read_paths_with(reader, operation, GIT_PATH_LIMITS)
 }
 
@@ -30,7 +29,7 @@ fn read_paths_with(
     mut reader: impl Read,
     operation: &'static str,
     limits: GitPathLimits,
-) -> Result<BTreeSet<RepositoryPath>, SourceStructureError> {
+) -> Result<BTreeSet<GitPathRecord>, SourceStructureError> {
     let mut decoder = GitPathDecoder::new(operation, limits);
     let mut buffer = [0_u8; 4_096];
     loop {
@@ -63,7 +62,20 @@ struct GitPathDecoder {
     observed_bytes: usize,
     observed_paths: usize,
     operation: &'static str,
-    paths: BTreeSet<RepositoryPath>,
+    paths: BTreeSet<GitPathRecord>,
+}
+
+#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
+pub(super) struct GitPathRecord(String);
+
+impl GitPathRecord {
+    pub(super) const fn new(text: String) -> Self {
+        Self(text)
+    }
+
+    pub(super) fn as_str(&self) -> &str {
+        &self.0
+    }
 }
 
 impl GitPathDecoder {
@@ -146,7 +158,7 @@ impl GitPathDecoder {
                 source,
             }
         })?;
-        let path = RepositoryPath::admit(text)?;
+        let path = GitPathRecord::new(text);
         if self.paths.insert(path.clone()) {
             Ok(())
         } else {
@@ -156,7 +168,7 @@ impl GitPathDecoder {
         }
     }
 
-    fn finish(self) -> Result<BTreeSet<RepositoryPath>, SourceStructureError> {
+    fn finish(self) -> Result<BTreeSet<GitPathRecord>, SourceStructureError> {
         if self.current.is_empty() {
             Ok(self.paths)
         } else {

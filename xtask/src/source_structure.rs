@@ -6,10 +6,12 @@ mod repository_path;
 mod source_error;
 mod source_file;
 
+use std::collections::BTreeSet;
 use std::io::{self, BufRead, BufReader};
 use std::path::Path;
 
 use git_path_inventory::git_paths;
+use git_path_stream::GitPathRecord;
 use repository_path::RepositoryPath;
 pub(super) use source_error::{GitOutputUnit, SourceStructureError};
 use source_file::{OpenSourceError, SourceRoot};
@@ -70,11 +72,18 @@ fn source_paths(repository_root: &Path) -> Result<Vec<RepositoryPath>, SourceStr
         &["ls-files", "-z", "--deleted"],
         "git ls-files deleted",
     )?;
-    Ok(present
-        .difference(&deleted)
+    select_source_paths(&present, &deleted)
+}
+
+fn select_source_paths(
+    present: &BTreeSet<GitPathRecord>,
+    deleted: &BTreeSet<GitPathRecord>,
+) -> Result<Vec<RepositoryPath>, SourceStructureError> {
+    present
+        .difference(deleted)
         .filter(|path| is_source_module(path.as_str()))
-        .cloned()
-        .collect())
+        .map(|path| RepositoryPath::admit(path.as_str().to_owned()))
+        .collect()
 }
 
 fn source_violations(

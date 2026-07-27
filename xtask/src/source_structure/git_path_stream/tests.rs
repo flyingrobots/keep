@@ -83,12 +83,27 @@ fn git_path_stream_refuses_duplicate_records() {
 }
 
 #[test]
-fn git_path_stream_refuses_unsafe_records_before_inventory() {
+fn git_path_stream_preserves_records_before_source_selection() {
     let result = read_paths_with(Cursor::new(b"..\0"), "test paths", TEST_LIMITS);
-    assert!(matches!(
-        result,
-        Err(SourceStructureError::InvalidPath(ref path)) if path == ".."
-    ));
+    let paths = result.map(|paths| {
+        paths
+            .iter()
+            .map(|path| path.as_str().to_owned())
+            .collect::<Vec<_>>()
+    });
+    assert_eq!(paths.ok(), Some(vec![String::from("..")]));
+}
+
+#[test]
+fn git_path_stream_admits_non_source_repository_spellings() {
+    let result = read_paths_with(Cursor::new(b"x:y\0"), "test paths", TEST_LIMITS);
+    let paths = result.map(|paths| {
+        paths
+            .iter()
+            .map(|path| path.as_str().to_owned())
+            .collect::<Vec<_>>()
+    });
+    assert_eq!(paths.ok(), Some(vec![String::from("x:y")]));
 }
 
 #[test]

@@ -271,6 +271,23 @@ fn source_paths_refuse_host_dependent_spellings() {
 }
 
 #[test]
+fn source_selection_refuses_an_unsafe_source_record() {
+    use std::collections::BTreeSet;
+
+    use super::git_path_stream::GitPathRecord;
+
+    let present = BTreeSet::from([
+        GitPathRecord::new(String::from("../escape.rs")),
+        GitPathRecord::new(String::from("notes/x:y")),
+    ]);
+    let result = super::select_source_paths(&present, &BTreeSet::new());
+    assert!(matches!(
+        result,
+        Err(super::SourceStructureError::InvalidPath(ref path)) if path == "../escape.rs"
+    ));
+}
+
+#[test]
 fn source_selection_ignores_only_repository_owned_patterns() {
     assert_eq!(
         PRESENT_PATH_ARGUMENTS,
