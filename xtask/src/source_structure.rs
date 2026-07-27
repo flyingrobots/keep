@@ -11,7 +11,7 @@ use std::path::{Component, Path, PathBuf};
 use std::string::FromUtf8Error;
 
 use git_path_inventory::git_paths;
-use source_file::{OpenSourceError, open_source_file};
+use source_file::{OpenSourceError, SourceRoot};
 
 const SOURCE_MODULE_HARD_LIMIT_LINES: u64 = 500;
 const SOURCE_SUFFIXES: [&str; 3] = ["py", "rs", "sh"];
@@ -164,8 +164,13 @@ impl Error for SourceStructureError {
 }
 
 pub(super) fn check(repository_root: &Path) -> Result<(), SourceStructureError> {
+    let source_root =
+        SourceRoot::open(repository_root).map_err(|source| SourceStructureError::Inspect {
+            path: repository_root.to_owned(),
+            source,
+        })?;
     let paths = source_paths(repository_root)?;
-    let violations = source_violations(repository_root, paths)?;
+    let violations = source_violations(&source_root, paths)?;
     if violations.is_empty() {
         Ok(())
     } else {
@@ -192,12 +197,12 @@ fn source_paths(repository_root: &Path) -> Result<Vec<String>, SourceStructureEr
 }
 
 fn source_violations(
-    repository_root: &Path,
+    source_root: &SourceRoot,
     paths: Vec<String>,
 ) -> Result<Vec<(String, u64)>, SourceStructureError> {
     let mut violations = Vec::new();
     for relative in paths {
-        let lines = source_line_count(repository_root, &relative)?;
+        let lines = source_line_count(source_root, &relative)?;
         if exceeds_hard_limit(lines) {
             violations.push((relative, lines));
         }
@@ -205,18 +210,21 @@ fn source_violations(
     Ok(violations)
 }
 
-fn source_line_count(repository_root: &Path, relative: &str) -> Result<u64, SourceStructureError> {
-    source_line_count_with(repository_root, relative, open_source_file)
+fn source_line_count(
+    source_root: &SourceRoot,
+    relative: &str,
+) -> Result<u64, SourceStructureError> {
+    source_line_count_with(source_root, relative, SourceRoot::open_file)
 }
 
 fn source_line_count_with(
-    repository_root: &Path,
+    source_root: &SourceRoot,
     relative: &str,
-    open_source: impl FnOnce(&Path, &Path) -> Result<std::fs::File, OpenSourceError>,
+    open_source: impl FnOnce(&SourceRoot, &Path) -> Result<std::fs::File, OpenSourceError>,
 ) -> Result<u64, SourceStructureError> {
     let relative_path = admitted_relative_path(relative)?;
-    let path = repository_root.join(relative_path);
-    let file = open_source(repository_root, relative_path).map_err(|error| match error {
+    let path = source_root.display_path(relative_path);
+    let file = open_source(source_root, relative_path).map_err(|error| match error {
         OpenSourceError::Io(source) => SourceStructureError::Inspect {
             path: path.clone(),
             source,

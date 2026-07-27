@@ -30,13 +30,42 @@ fn source_read_options_refuse_blocking_io() {
 
 #[cfg(unix)]
 #[test]
+fn source_scan_keeps_the_admitted_repository_root() -> Result<(), Box<dyn std::error::Error>> {
+    use std::env;
+    use std::fs;
+    use std::process;
+
+    use super::source_file::SourceRoot;
+    use super::source_line_count;
+
+    let root = env::temp_dir().join(format!("keep-source-root-{}", process::id()));
+    let retained_root = root.with_extension("retained");
+    fs::create_dir(&root)?;
+    fs::write(root.join("source.rs"), "safe\n")?;
+    let source_root = SourceRoot::open(&root)?;
+
+    fs::rename(&root, &retained_root)?;
+    fs::create_dir(&root)?;
+    fs::write(root.join("source.rs"), "replacement\n".repeat(501))?;
+
+    let line_count = source_line_count(&source_root, "source.rs")?;
+    fs::remove_dir_all(&root)?;
+    fs::remove_dir_all(&retained_root)?;
+
+    assert_eq!(line_count, 1);
+    Ok(())
+}
+
+#[cfg(unix)]
+#[test]
 fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructureError> {
     use std::env;
     use std::fs;
     use std::os::unix::fs::symlink;
     use std::process;
 
-    use super::{open_source_file, source_line_count_with};
+    use super::source_file::SourceRoot;
+    use super::source_line_count_with;
 
     let root = env::temp_dir().join(format!("keep-source-replacement-{}", process::id()));
     fs::create_dir(&root).map_err(|source| super::SourceStructureError::Inspect {
@@ -56,12 +85,17 @@ fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructur
             source,
         }
     })?;
+    let source_root =
+        SourceRoot::open(&root).map_err(|source| super::SourceStructureError::Inspect {
+            path: root.clone(),
+            source,
+        })?;
 
-    let result = source_line_count_with(&root, "source.rs", |repository_root, relative| {
-        let admitted = repository_root.join(relative);
+    let result = source_line_count_with(&source_root, "source.rs", |source_root, relative| {
+        let admitted = source_root.display_path(relative);
         fs::rename(&admitted, &retained_path).map_err(super::OpenSourceError::Io)?;
         symlink(&target_path, &admitted).map_err(super::OpenSourceError::Io)?;
-        open_source_file(repository_root, relative)
+        source_root.open_file(relative)
     });
     let refused = matches!(
         result,
