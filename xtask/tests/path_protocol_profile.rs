@@ -1,6 +1,8 @@
 //! Regression laws for the durable corpus path profile.
 
-use xtask::protocol_admission::{POSIX_RELATIVE_PATH_PROFILE, posix_relative_path};
+use xtask::protocol_admission::{
+    POSIX_RELATIVE_PATH_PROFILE, RelativePathError, posix_relative_path,
+};
 
 const SPECIFICATION: &str = include_str!("../../docs/conformance/golden-file-worldline.md");
 const RATIONALE: &str = include_str!("../../conformance/golden-file-worldline/v1/rationale.md");
@@ -31,7 +33,7 @@ fn path_profile_refuses_every_documented_ambiguous_spelling() {
         "inputs/source:stream",
         "inputs/source\0tail",
     ] {
-        assert!(posix_relative_path(path).is_err());
+        assert_eq!(posix_relative_path(path), Err(RelativePathError));
     }
     assert_eq!(
         posix_relative_path("inputs/source.txt").ok(),
