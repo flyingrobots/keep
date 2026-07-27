@@ -52,13 +52,18 @@ pub(super) fn mutate(
     let maximum = MAX_SOURCE_BYTES
         .checked_add(MAX_MUTATION_VALUE_BYTES)
         .ok_or_else(|| GoldenError::violation("mutation bound overflow"))?;
-    if changed == target || changed.len() > maximum {
-        Err(GoldenError::violation(format!(
-            "{name}: mutation is a no-op or exceeds its bound"
-        )))
-    } else {
-        Ok(changed)
+    if changed == target {
+        return Err(GoldenError::violation(format!(
+            "{name}: mutation is a no-op"
+        )));
     }
+    if changed.len() > maximum {
+        return Err(GoldenError::violation(format!(
+            "{name}: mutation produced {} bytes, exceeding {maximum}",
+            changed.len()
+        )));
+    }
+    Ok(changed)
 }
 
 fn truncate(

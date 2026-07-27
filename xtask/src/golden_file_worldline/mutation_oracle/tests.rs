@@ -4,7 +4,8 @@ use std::collections::BTreeMap;
 use std::fs;
 
 use super::{
-    Corpus, GoldenError, IdentityFixture, apply_fixed_width, check, copy_fixed_width, expected_text,
+    Corpus, GoldenError, IdentityFixture, apply_fixed_width, check, copy_fixed_width,
+    expected_text, mutate,
 };
 use crate::golden_file_worldline::digest_port::IdentityDigestOracle;
 use crate::golden_file_worldline::identity_oracle::digest;
@@ -62,6 +63,28 @@ fn fixed_width_copy_refuses_a_width_mismatch() {
         result,
         Err(GoldenError::Violation(ref message))
             if message == "set-value: mutation value width does not match its destination"
+    ));
+}
+
+#[test]
+fn no_op_mutation_has_an_exact_refusal() {
+    let result = mutate(&[1_u8], "xor-byte", 0, "00", "zero-xor");
+    assert!(matches!(
+        result,
+        Err(GoldenError::Violation(ref message))
+            if message == "zero-xor: mutation is a no-op"
+    ));
+}
+
+#[test]
+fn mutation_bound_refusal_reports_observed_and_maximum_bytes() {
+    let target = vec![0_u8; 1_048_640];
+    let result = mutate(&target, "append", target.len(), "01", "oversized-append");
+    assert!(matches!(
+        result,
+        Err(GoldenError::Violation(ref message))
+            if message
+                == "oversized-append: mutation produced 1048641 bytes, exceeding 1048640"
     ));
 }
 

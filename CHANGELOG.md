@@ -24,7 +24,7 @@ after its public API and format compatibility policies are established.
   diagnostic remains one physical line.
 - Golden protocol framing, field, hexadecimal, path, mutation-operation, and
   fixed-width value decoders now share a bounded fuzz surface backed by
-  table-driven malformed-corpus refusals.
+  precise table-driven malformed-corpus refusals.
 - Deterministic fuzz seed materialization now uses a capability-bound Rust
   `xtask`, syncs and atomically publishes derived seed files without mutating
   hard-link targets, recovers interrupted fixed-name staging files, cleans
