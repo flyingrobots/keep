@@ -48,7 +48,10 @@ pub(crate) enum SourceStructureError {
         action: &'static str,
         source: io::Error,
     },
-    Violations(Vec<(String, u64)>),
+    Violations {
+        maximum: u64,
+        paths: Vec<(String, u64)>,
+    },
 }
 
 impl fmt::Debug for SourceStructureError {
@@ -112,7 +115,7 @@ impl fmt::Display for SourceStructureError {
             Self::RunGit {
                 operation, action, ..
             } => write!(formatter, "cannot {action} `{operation}`"),
-            Self::Violations(violations) => violations_display(formatter, violations),
+            Self::Violations { maximum, paths } => violations_display(formatter, *maximum, paths),
         }
     }
 }
@@ -132,7 +135,7 @@ impl Error for SourceStructureError {
             | Self::GitWorker { .. }
             | Self::InvalidPath(_)
             | Self::NonRegular(_)
-            | Self::Violations(_) => None,
+            | Self::Violations { .. } => None,
         }
     }
 }
@@ -162,9 +165,13 @@ fn escaped_controls(formatter: &mut fmt::Formatter<'_>, diagnostic: &str) -> fmt
 
 fn violations_display(
     formatter: &mut fmt::Formatter<'_>,
+    maximum: u64,
     violations: &[(String, u64)],
 ) -> fmt::Result {
-    formatter.write_str("tracked source modules exceed the 500-line hard maximum")?;
+    write!(
+        formatter,
+        "tracked source modules exceed the {maximum}-line hard maximum"
+    )?;
     for (path, lines) in violations {
         write!(formatter, "; {path}: {lines}")?;
     }

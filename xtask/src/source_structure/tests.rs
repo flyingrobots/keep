@@ -33,6 +33,14 @@ fn source_structure_diagnostics_are_stable() {
         non_regular.to_string(),
         "tracked source module is not a regular file: `src/link.rs`"
     );
+    let violations = super::SourceStructureError::Violations {
+        maximum: 7,
+        paths: vec![(String::from("src/large.rs"), 8)],
+    };
+    assert_eq!(
+        violations.to_string(),
+        "tracked source modules exceed the 7-line hard maximum; src/large.rs: 8"
+    );
 }
 
 #[test]

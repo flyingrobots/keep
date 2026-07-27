@@ -34,7 +34,10 @@ pub(super) fn check(repository_root: &Path) -> Result<(), SourceStructureError> 
     if violations.is_empty() {
         Ok(())
     } else {
-        Err(SourceStructureError::Violations(violations))
+        Err(SourceStructureError::Violations {
+            maximum: SOURCE_MODULE_HARD_LIMIT_LINES,
+            paths: violations,
+        })
     }
 }
 
