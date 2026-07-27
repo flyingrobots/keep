@@ -316,13 +316,15 @@ A version-1 decoder validates in this order:
 5. record checksum;
 6. canonical nested identity coordinates and registered profile admission;
 7. empty/nonempty cardinality;
-8. entry ordering, offset continuity, positive lengths, profile bounds, and
-   checked aggregate length; and
+8. positive entry lengths, profile bounds, encoded-order offset continuity,
+   and checked aggregate length; and
 9. expected `LayoutId`, when supplied.
 
 The first failed law determines the typed boundary error. Implementations MUST
 not allocate from an unbounded count, continue after ambiguous framing, or
-silently canonicalize malformed bytes.
+silently canonicalize malformed bytes. Entry validation processes entries in
+encoded order and stops at the first failed entry law; a later offset cannot
+replace an earlier gap or overlap with another error.
 
 ## Requirement ledger
 

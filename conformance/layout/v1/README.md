@@ -63,6 +63,12 @@ the accepted ADR-0003 witness.
 the targeted semantic law, rather than checksum corruption, decides the
 result. `preserve-v1` leaves every existing checksum byte unchanged.
 
+Expected outcomes follow the specification's first-failure order. Inserting a
+duplicate flags-width field at offset 24 shifts the canonical header and makes
+`header_length` the first invalid field. Swapping the middle entries of
+`zeros-long` creates a gap at the first swapped position before the later
+offset decrease is observed.
+
 Mutations of opaque identity digests are not all structural errors. A
 rechecksummed `BlobId` digest or `ChunkId` digest can form another structurally
 valid layout. Those cases remain admitted until verified content proves
