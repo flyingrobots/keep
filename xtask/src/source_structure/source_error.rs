@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::string::FromUtf8Error;
 
 pub(crate) enum SourceStructureError {
+    DuplicatePath(String),
     GitFailed {
         operation: &'static str,
         code: Option<i32>,
@@ -59,6 +60,9 @@ impl fmt::Debug for SourceStructureError {
 impl fmt::Display for SourceStructureError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::DuplicatePath(path) => {
+                write!(formatter, "git returned duplicate path `{path}`")
+            }
             Self::GitFailed {
                 operation,
                 code,
@@ -120,7 +124,8 @@ impl Error for SourceStructureError {
                 Some(source)
             }
             Self::Inspect { source, .. } | Self::RunGit { source, .. } => Some(source),
-            Self::GitFailed { .. }
+            Self::DuplicatePath(_)
+            | Self::GitFailed { .. }
             | Self::GitOutputBound { .. }
             | Self::GitOutputFraming { .. }
             | Self::GitPipe { .. }

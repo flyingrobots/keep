@@ -139,8 +139,11 @@ impl GitPathDecoder {
                 source,
             }
         })?;
-        self.paths.insert(path);
-        Ok(())
+        if self.paths.insert(path.clone()) {
+            Ok(())
+        } else {
+            Err(SourceStructureError::DuplicatePath(path))
+        }
     }
 
     fn finish(self) -> Result<BTreeSet<String>, SourceStructureError> {

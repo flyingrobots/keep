@@ -5,13 +5,13 @@ mod git_path_stream;
 mod source_error;
 mod source_file;
 
-use std::ffi::OsStr;
 use std::io::{self, BufRead, BufReader};
-use std::path::{Component, Path};
+use std::path::{Path, PathBuf};
 
 use git_path_inventory::git_paths;
 pub(super) use source_error::SourceStructureError;
 use source_file::{OpenSourceError, SourceRoot};
+use xtask::protocol_admission::posix_relative_path;
 
 const SOURCE_MODULE_HARD_LIMIT_LINES: u64 = 500;
 const SOURCE_SUFFIXES: [&str; 3] = ["py", "rs", "sh"];
@@ -51,7 +51,7 @@ fn source_paths(repository_root: &Path) -> Result<Vec<String>, SourceStructureEr
     )?;
     Ok(present
         .difference(&deleted)
-        .filter(|path| is_source_module(Path::new(path)))
+        .filter(|path| is_source_module(path))
         .cloned()
         .collect())
 }
@@ -83,8 +83,8 @@ fn source_line_count_with(
     open_source: impl FnOnce(&SourceRoot, &Path) -> Result<std::fs::File, OpenSourceError>,
 ) -> Result<u64, SourceStructureError> {
     let relative_path = admitted_relative_path(relative)?;
-    let path = source_root.display_path(relative_path);
-    let file = open_source(source_root, relative_path).map_err(|error| match error {
+    let path = source_root.display_path(&relative_path);
+    let file = open_source(source_root, &relative_path).map_err(|error| match error {
         OpenSourceError::Io(source) => SourceStructureError::Inspect {
             path: path.clone(),
             source,
@@ -95,22 +95,18 @@ fn source_line_count_with(
         .map_err(|source| SourceStructureError::Inspect { path, source })
 }
 
-fn admitted_relative_path(path: &str) -> Result<&Path, SourceStructureError> {
-    let relative = Path::new(path);
-    if relative
-        .components()
-        .all(|component| matches!(component, Component::Normal(_)))
-    {
-        Ok(relative)
-    } else {
-        Err(SourceStructureError::InvalidPath(path.to_owned()))
-    }
+fn admitted_relative_path(path: &str) -> Result<PathBuf, SourceStructureError> {
+    posix_relative_path(path).map_err(|_| SourceStructureError::InvalidPath(path.to_owned()))
 }
 
-fn is_source_module(path: &Path) -> bool {
-    path.extension()
-        .and_then(OsStr::to_str)
-        .is_some_and(|suffix| SOURCE_SUFFIXES.contains(&suffix))
+fn is_source_module(path: &str) -> bool {
+    let Some(file_name) = path.rsplit('/').next() else {
+        return false;
+    };
+    let Some((stem, suffix)) = file_name.rsplit_once('.') else {
+        return false;
+    };
+    !stem.is_empty() && SOURCE_SUFFIXES.contains(&suffix)
 }
 
 const fn exceeds_hard_limit(lines: u64) -> bool {

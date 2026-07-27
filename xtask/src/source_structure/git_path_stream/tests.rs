@@ -74,6 +74,15 @@ fn git_path_stream_refuses_empty_records() {
 }
 
 #[test]
+fn git_path_stream_refuses_duplicate_records() {
+    let result = read_paths_with(Cursor::new(b"a\0a\0"), "test paths", TEST_LIMITS);
+    assert!(matches!(
+        result,
+        Err(SourceStructureError::DuplicatePath(ref path)) if path == "a"
+    ));
+}
+
+#[test]
 fn git_path_encoding_failure_names_the_path_stream() {
     let result = read_paths_with(Cursor::new([u8::MAX, 0]), "test paths", TEST_LIMITS);
     assert!(matches!(

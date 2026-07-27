@@ -1,9 +1,7 @@
 //! This module owns source-line, selection, and replacement-race tests.
 
-use std::io::{self, BufReader, Cursor, Read};
-use std::path::Path;
-
 use super::{PRESENT_PATH_ARGUMENTS, exceeds_hard_limit, is_source_module, line_count};
+use std::io::{self, BufReader, Cursor, Read};
 
 #[test]
 fn line_count_observes_empty_and_final_newline_edges() {
@@ -153,11 +151,23 @@ fn source_module_limit_accepts_five_hundred_and_refuses_five_hundred_one() {
 
 #[test]
 fn source_module_classification_is_explicit() {
-    assert!(is_source_module(Path::new("src/lib.rs")));
-    assert!(is_source_module(Path::new("scripts/check.py")));
-    assert!(is_source_module(Path::new("scripts/check.sh")));
-    assert!(!is_source_module(Path::new("README.md")));
-    assert!(!is_source_module(Path::new("src/lib.RS")));
+    assert!(is_source_module("src/lib.rs"));
+    assert!(is_source_module("scripts/check.py"));
+    assert!(is_source_module("scripts/check.sh"));
+    assert!(!is_source_module("README.md"));
+    assert!(!is_source_module("src/lib.RS"));
+    assert!(!is_source_module(".rs"));
+}
+
+#[test]
+fn source_paths_refuse_host_dependent_spellings() {
+    for path in [r"src\host.rs", "C:/drive.rs", "src//empty.rs"] {
+        let result = super::admitted_relative_path(path);
+        assert!(matches!(
+            result,
+            Err(super::SourceStructureError::InvalidPath(ref observed)) if observed == path
+        ));
+    }
 }
 
 #[test]
