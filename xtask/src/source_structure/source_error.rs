@@ -6,6 +6,12 @@ use std::io;
 use std::path::PathBuf;
 use std::string::FromUtf8Error;
 
+#[derive(Clone, Copy)]
+pub(crate) enum GitOutputUnit {
+    Bytes,
+    Items,
+}
+
 pub(crate) enum SourceStructureError {
     DuplicatePath(String),
     GitFailed {
@@ -26,6 +32,7 @@ pub(crate) enum SourceStructureError {
         operation: &'static str,
         stream: &'static str,
         maximum: usize,
+        unit: GitOutputUnit,
     },
     GitOutputFraming {
         operation: &'static str,
@@ -84,9 +91,11 @@ impl fmt::Display for SourceStructureError {
                 operation,
                 stream,
                 maximum,
+                unit,
             } => write!(
                 formatter,
-                "`{operation}` exceeded the {maximum}-byte or item {stream} bound"
+                "`{operation}` exceeded the {stream} bound of {maximum} {}",
+                unit.label()
             ),
             Self::GitOutputFraming { operation } => {
                 write!(
@@ -116,6 +125,15 @@ impl fmt::Display for SourceStructureError {
                 operation, action, ..
             } => write!(formatter, "cannot {action} `{operation}`"),
             Self::Violations { maximum, paths } => violations_display(formatter, *maximum, paths),
+        }
+    }
+}
+
+impl GitOutputUnit {
+    const fn label(self) -> &'static str {
+        match self {
+            Self::Bytes => "bytes",
+            Self::Items => "items",
         }
     }
 }

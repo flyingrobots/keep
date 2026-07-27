@@ -11,7 +11,7 @@ use std::path::Path;
 
 use git_path_inventory::git_paths;
 use repository_path::RepositoryPath;
-pub(super) use source_error::SourceStructureError;
+pub(super) use source_error::{GitOutputUnit, SourceStructureError};
 use source_file::{OpenSourceError, SourceRoot};
 
 const SOURCE_MODULE_HARD_LIMIT_LINES: u64 = 500;

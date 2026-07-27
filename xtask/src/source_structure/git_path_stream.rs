@@ -3,8 +3,8 @@
 use std::collections::BTreeSet;
 use std::io::Read;
 
-use super::SourceStructureError;
 use super::repository_path::RepositoryPath;
+use super::{GitOutputUnit, SourceStructureError};
 
 const GIT_PATH_LIMITS: GitPathLimits = GitPathLimits {
     path_bytes: 4_096,
@@ -50,6 +50,7 @@ fn read_paths_with(
                 operation,
                 stream: "path read",
                 maximum: buffer.len(),
+                unit: GitOutputUnit::Bytes,
             })?;
         decoder.admit(bytes)?;
     }
@@ -83,6 +84,7 @@ impl GitPathDecoder {
                 operation: self.operation,
                 stream: "path stream bytes",
                 maximum: self.limits.stream_bytes,
+                unit: GitOutputUnit::Bytes,
             },
         )?;
         if self.observed_bytes > self.limits.stream_bytes {
@@ -90,6 +92,7 @@ impl GitPathDecoder {
                 operation: self.operation,
                 stream: "path stream bytes",
                 maximum: self.limits.stream_bytes,
+                unit: GitOutputUnit::Bytes,
             });
         }
         for byte in bytes {
@@ -107,6 +110,7 @@ impl GitPathDecoder {
                 operation: self.operation,
                 stream: "path bytes",
                 maximum: self.limits.path_bytes,
+                unit: GitOutputUnit::Bytes,
             });
         }
         self.current.push(byte);
@@ -126,12 +130,14 @@ impl GitPathDecoder {
                     operation: self.operation,
                     stream: "path count",
                     maximum: self.limits.paths,
+                    unit: GitOutputUnit::Items,
                 })?;
         if self.observed_paths > self.limits.paths {
             return Err(SourceStructureError::GitOutputBound {
                 operation: self.operation,
                 stream: "path count",
                 maximum: self.limits.paths,
+                unit: GitOutputUnit::Items,
             });
         }
         let text = String::from_utf8(std::mem::take(&mut self.current)).map_err(|source| {

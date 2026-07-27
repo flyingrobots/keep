@@ -6,9 +6,9 @@ use std::path::Path;
 use std::process::{Child, ChildStdout, Command, Stdio};
 use std::thread::{self, JoinHandle};
 
-use super::SourceStructureError;
 use super::git_path_stream::read_paths;
 use super::repository_path::RepositoryPath;
+use super::{GitOutputUnit, SourceStructureError};
 
 const GIT_DIAGNOSTIC_LIMIT_BYTES: usize = 65_536;
 
@@ -118,6 +118,7 @@ fn collect_git_result(
             operation,
             stream: "diagnostic bytes",
             maximum: GIT_DIAGNOSTIC_LIMIT_BYTES,
+            unit: GitOutputUnit::Bytes,
         });
     }
     if !status.success() {

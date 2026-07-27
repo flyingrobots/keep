@@ -41,6 +41,26 @@ fn source_structure_diagnostics_are_stable() {
         violations.to_string(),
         "tracked source modules exceed the 7-line hard maximum; src/large.rs: 8"
     );
+    let byte_bound = super::SourceStructureError::GitOutputBound {
+        operation: "git inventory",
+        stream: "path bytes",
+        maximum: 4_096,
+        unit: super::GitOutputUnit::Bytes,
+    };
+    let item_bound = super::SourceStructureError::GitOutputBound {
+        operation: "git inventory",
+        stream: "path count",
+        maximum: 100_000,
+        unit: super::GitOutputUnit::Items,
+    };
+    assert_eq!(
+        byte_bound.to_string(),
+        "`git inventory` exceeded the path bytes bound of 4096 bytes"
+    );
+    assert_eq!(
+        item_bound.to_string(),
+        "`git inventory` exceeded the path count bound of 100000 items"
+    );
 }
 
 #[test]
