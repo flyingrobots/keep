@@ -16,12 +16,15 @@ mod layout;
 mod profile;
 
 pub use adapters::{
-    BlobIdBinaryParseError, BlobIdTextParseError, LayoutIdBinaryParseError, LayoutIdTextParseError,
-    StorageProfileIdParseError,
+    BlobIdBinaryParseError, BlobIdTextParseError, CanonicalLayoutRecord, LayoutEncodeError,
+    LayoutIdBinaryParseError, LayoutIdTextParseError, StorageProfileIdParseError,
 };
 pub use blob::{BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError};
 pub use chunk::{
     ChunkHashError, ChunkId, ChunkLength, ChunkOffset, ChunkSpan, ChunkingError, FastCdc,
 };
-pub use layout::{LayoutId, LayoutIdMismatch, LayoutRecordLength};
+pub use layout::{
+    AdmittedLayout, LayoutEntry, LayoutEntryLimit, LayoutEntryLimitError, LayoutId,
+    LayoutIdMismatch, LayoutRecordLength, LayoutValidationError,
+};
 pub use profile::{RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId};

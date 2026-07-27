@@ -54,6 +54,9 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Validated flat-layout admission with explicit entry caps and an exact
+  canonical version-1 encoder backed by every frozen record and `LayoutId`
+  witness.
 - Canonical `StorageProfileId` text coordinates and explicit admission of the
   frozen `fastcdc-64k-v1` profile through `RegisteredStorageProfile`.
 - Canonical binary and text `LayoutId` coordinates with typed plan-length and

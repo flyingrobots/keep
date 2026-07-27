@@ -57,6 +57,10 @@ impl ChunkId {
     pub const fn length(self) -> ChunkLength {
         self.length
     }
+
+    pub(crate) const fn digest(&self) -> &[u8; 32] {
+        &self.digest
+    }
 }
 
 impl fmt::Debug for ChunkId {
