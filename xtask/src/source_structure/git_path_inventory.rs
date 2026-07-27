@@ -7,21 +7,9 @@ use std::process::{Child, ChildStdout, Command, Stdio};
 use std::thread::{self, JoinHandle};
 
 use super::SourceStructureError;
+use super::git_path_stream::read_paths;
 
-const GIT_OUTPUT_LIMITS: GitOutputLimits = GitOutputLimits {
-    diagnostic_bytes: 65_536,
-    path_bytes: 4_096,
-    path_stream_bytes: 16_777_216,
-    paths: 100_000,
-};
-
-#[derive(Clone, Copy)]
-struct GitOutputLimits {
-    diagnostic_bytes: usize,
-    path_bytes: usize,
-    path_stream_bytes: usize,
-    paths: usize,
-}
+const GIT_DIAGNOSTIC_LIMIT_BYTES: usize = 65_536;
 
 struct GitProcess {
     child: Child,
@@ -41,7 +29,7 @@ pub(super) fn git_paths(
     operation: &'static str,
 ) -> Result<BTreeSet<String>, SourceStructureError> {
     let process = start_git(repository_root, arguments, operation)?;
-    let paths = read_paths(process.stdout, operation, GIT_OUTPUT_LIMITS);
+    let paths = read_paths(process.stdout, operation);
     collect_git_result(process.child, process.diagnostic_worker, paths, operation)
 }
 
@@ -77,7 +65,7 @@ fn start_git(
     };
     let diagnostic_worker = thread::Builder::new()
         .name(String::from("xtask-git-diagnostic"))
-        .spawn(move || bounded_bytes(stderr, GIT_OUTPUT_LIMITS.diagnostic_bytes));
+        .spawn(move || bounded_bytes(stderr, GIT_DIAGNOSTIC_LIMIT_BYTES));
     let diagnostic_worker = match diagnostic_worker {
         Ok(worker) => worker,
         Err(source) => {
@@ -128,7 +116,7 @@ fn collect_git_result(
         return Err(SourceStructureError::GitOutputBound {
             operation,
             stream: "diagnostic bytes",
-            maximum: GIT_OUTPUT_LIMITS.diagnostic_bytes,
+            maximum: GIT_DIAGNOSTIC_LIMIT_BYTES,
         });
     }
     if !status.success() {
@@ -163,92 +151,6 @@ fn cleanup_child(child: &mut Child, operation: &'static str) -> Result<(), Sourc
     });
     stop?;
     wait.map(|_| ())
-}
-
-fn read_paths(
-    mut reader: impl Read,
-    operation: &'static str,
-    limits: GitOutputLimits,
-) -> Result<BTreeSet<String>, SourceStructureError> {
-    let mut buffer = [0_u8; 4_096];
-    let mut current = Vec::new();
-    let mut observed_bytes = 0_usize;
-    let mut observed_paths = 0_usize;
-    let mut paths = BTreeSet::new();
-    loop {
-        let read = reader
-            .read(&mut buffer)
-            .map_err(|source| SourceStructureError::RunGit {
-                operation,
-                action: "read paths from",
-                source,
-            })?;
-        if read == 0 {
-            break;
-        }
-        observed_bytes =
-            observed_bytes
-                .checked_add(read)
-                .ok_or(SourceStructureError::GitOutputBound {
-                    operation,
-                    stream: "path stream bytes",
-                    maximum: limits.path_stream_bytes,
-                })?;
-        if observed_bytes > limits.path_stream_bytes {
-            return Err(SourceStructureError::GitOutputBound {
-                operation,
-                stream: "path stream bytes",
-                maximum: limits.path_stream_bytes,
-            });
-        }
-        let bytes = buffer
-            .get(..read)
-            .ok_or(SourceStructureError::GitOutputBound {
-                operation,
-                stream: "path read",
-                maximum: buffer.len(),
-            })?;
-        for byte in bytes {
-            if *byte == 0 {
-                if current.is_empty() {
-                    return Err(SourceStructureError::GitOutputFraming { operation });
-                }
-                observed_paths =
-                    observed_paths
-                        .checked_add(1)
-                        .ok_or(SourceStructureError::GitOutputBound {
-                            operation,
-                            stream: "path count",
-                            maximum: limits.paths,
-                        })?;
-                if observed_paths > limits.paths {
-                    return Err(SourceStructureError::GitOutputBound {
-                        operation,
-                        stream: "path count",
-                        maximum: limits.paths,
-                    });
-                }
-                let path = String::from_utf8(std::mem::take(&mut current)).map_err(|source| {
-                    SourceStructureError::GitPathEncoding { operation, source }
-                })?;
-                paths.insert(path);
-            } else {
-                if current.len() >= limits.path_bytes {
-                    return Err(SourceStructureError::GitOutputBound {
-                        operation,
-                        stream: "path bytes",
-                        maximum: limits.path_bytes,
-                    });
-                }
-                current.push(*byte);
-            }
-        }
-    }
-    if current.is_empty() {
-        Ok(paths)
-    } else {
-        Err(SourceStructureError::GitOutputFraming { operation })
-    }
 }
 
 fn git_failure(
