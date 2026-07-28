@@ -2,6 +2,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+#[cfg(test)]
+use std::cell::RefCell;
+
 use crate::{AdmittedLayout, BlobId, ChunkId, LayoutId};
 
 use super::{PublishError, PublishedBlob, ReferenceStoreCapacity, StagedBlob};
@@ -41,6 +44,8 @@ pub struct ReferenceStore {
     pub(super) layouts: BTreeMap<LayoutId, AdmittedLayout>,
     pub(super) blob_layouts: BTreeMap<BlobId, BTreeSet<LayoutId>>,
     pub(super) materialized_bytes: usize,
+    #[cfg(test)]
+    pub(super) observed_chunk_reads: RefCell<Vec<ChunkId>>,
 }
 
 impl ReferenceStore {
@@ -53,6 +58,8 @@ impl ReferenceStore {
             layouts: BTreeMap::new(),
             blob_layouts: BTreeMap::new(),
             materialized_bytes: 0,
+            #[cfg(test)]
+            observed_chunk_reads: RefCell::new(Vec::new()),
         }
     }
 
@@ -104,6 +111,8 @@ impl ReferenceStore {
     }
 
     pub(super) fn chunk(&self, identity: ChunkId) -> Option<&[u8]> {
+        #[cfg(test)]
+        self.observed_chunk_reads.borrow_mut().push(identity);
         self.chunks.get(&identity).map(Box::as_ref)
     }
 }

@@ -136,3 +136,7 @@ const fn slice_unavailable(
         chunk,
     }
 }
+
+#[cfg(test)]
+#[path = "range_read_tests.rs"]
+mod tests;
