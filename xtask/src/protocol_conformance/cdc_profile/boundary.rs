@@ -1,6 +1,7 @@
 //! This module owns CDC boundary-table admission and per-case verification.
 
 mod named_laws;
+mod schedule;
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -204,49 +205,8 @@ fn run_sizes(
     schedule: usize,
 ) -> Result<(), ConformanceError> {
     let mut chunker = StreamingChunker::new(case.gear);
-    feed_sizes(&mut chunker, case.source, sizes)?;
+    self::schedule::feed_sizes(&mut chunker, case.source, sizes)?;
     admit_stream(case, schedule, &mut chunker)
-}
-
-fn feed_sizes(
-    chunker: &mut StreamingChunker<'_>,
-    source: &[u8],
-    sizes: &[usize],
-) -> Result<(), ConformanceError> {
-    if sizes.is_empty() || sizes.contains(&0) {
-        return Err(ConformanceError::violation(
-            "partition schedule must contain positive sizes",
-        ));
-    }
-    let mut offset = 0_usize;
-    let mut index = 0_usize;
-    while offset < source.len() {
-        let size = *sizes
-            .get(index)
-            .ok_or_else(|| ConformanceError::violation("partition size is absent"))?;
-        let end = partition_end(offset, size, source.len(), "partition schedule")?;
-        chunker.feed(source.get(offset..end).ok_or_else(|| {
-            ConformanceError::violation("partition schedule moved outside its source")
-        })?)?;
-        offset = end;
-        let next = index
-            .checked_add(1)
-            .ok_or_else(|| ConformanceError::violation("partition schedule overflow"))?;
-        index = if next == sizes.len() { 0 } else { next };
-    }
-    Ok(())
-}
-
-pub(super) fn partition_end(
-    offset: usize,
-    size: usize,
-    source_length: usize,
-    schedule: &str,
-) -> Result<usize, ConformanceError> {
-    offset
-        .checked_add(size)
-        .map(|end| end.min(source_length))
-        .ok_or_else(|| ConformanceError::violation(format!("{schedule} offset overflow")))
 }
 
 fn run_adjacent(case: StreamCase<'_>, schedule: usize) -> Result<(), ConformanceError> {

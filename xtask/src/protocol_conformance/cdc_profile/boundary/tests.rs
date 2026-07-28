@@ -3,7 +3,8 @@
 use std::collections::BTreeMap;
 use std::fs;
 
-use super::{ConformanceError, Corpus, partition_end, read_values};
+use super::schedule::{feed_sizes_with, partition_end};
+use super::{ConformanceError, Corpus, StreamingChunker, read_values};
 use crate::test_directory::TestDirectory;
 
 #[test]
@@ -18,6 +19,21 @@ fn partition_offset_overflow_is_refused() {
         Err(ConformanceError::Violation(ref message))
             if message == "partition schedule offset overflow"
     ));
+}
+
+#[test]
+fn schedule_observer_precedes_every_partition() -> Result<(), ConformanceError> {
+    let gear = [0_u64; 256];
+    let mut chunker = StreamingChunker::new(&gear);
+    let mut observations = 0_usize;
+    feed_sizes_with(&mut chunker, b"abc", &[1, 2], "test schedule", |_| {
+        observations = observations
+            .checked_add(1)
+            .ok_or_else(|| ConformanceError::violation("observer count overflow"))?;
+        Ok(())
+    })?;
+    assert_eq!(observations, 2);
+    Ok(())
 }
 
 #[test]

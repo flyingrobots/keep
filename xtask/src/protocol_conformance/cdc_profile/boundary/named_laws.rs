@@ -1,6 +1,6 @@
 //! This module owns named witnesses for subtle `FastCDC` boundary semantics.
 
-use super::{Boundaries, partition_end};
+use super::{Boundaries, schedule::feed_sizes_with};
 use crate::protocol_conformance::ConformanceError;
 use crate::protocol_conformance::cdc_profile::scalar_fastcdc::{
     StreamingChunker, probe_fingerprint, reference_boundaries,
@@ -137,29 +137,22 @@ fn require_empty_feed_invariance(
     let source = sources.get("probe-byte-carry")?;
     let sizes = [1_usize, 4_093, 65_521];
     let mut chunker = StreamingChunker::new(gear);
-    let mut offset = 0_usize;
-    let mut index = 0_usize;
-    while offset < source.len() {
-        let before = chunker.snapshot();
-        chunker.feed(&[])?;
-        if before != chunker.snapshot() {
-            return Err(ConformanceError::violation(
-                "empty-interleaved: empty feed changed chunker state",
-            ));
-        }
-        let size = *sizes
-            .get(index)
-            .ok_or_else(|| ConformanceError::violation("empty-feed schedule is absent"))?;
-        let end = partition_end(offset, size, source.len(), "empty-feed schedule")?;
-        chunker.feed(source.get(offset..end).ok_or_else(|| {
-            ConformanceError::violation("empty-feed schedule moved outside its source")
-        })?)?;
-        offset = end;
-        let next = index
-            .checked_add(1)
-            .ok_or_else(|| ConformanceError::violation("empty-feed schedule overflow"))?;
-        index = if next == sizes.len() { 0 } else { next };
-    }
+    feed_sizes_with(
+        &mut chunker,
+        source,
+        &sizes,
+        "empty-feed schedule",
+        |chunker| {
+            let before = chunker.snapshot();
+            chunker.feed(&[])?;
+            if before != chunker.snapshot() {
+                return Err(ConformanceError::violation(
+                    "empty-interleaved: empty feed changed chunker state",
+                ));
+            }
+            Ok(())
+        },
+    )?;
     chunker.finish()?;
     let first = chunker.boundaries()?;
     chunker.feed(&[])?;
