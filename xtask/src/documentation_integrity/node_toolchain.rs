@@ -12,6 +12,8 @@ use super::repository_text;
 const INSTALLER_PATH: &str = "scripts/install_documentation_tools.sh";
 const LOCK_PATH: &str = "scripts/documentation-tools/package-lock.json";
 const MANIFEST_PATH: &str = "scripts/documentation-tools/package.json";
+const NPM_CI_COMMAND: &str =
+    "npm ci \\\n  --prefix \"$npm_dir\" \\\n  --ignore-scripts \\\n  --no-audit \\\n  --no-fund";
 
 pub(super) fn check(repository_root: &RepositoryRoot) -> Result<(), DocumentationError> {
     let manifest = repository_text::read(repository_root, MANIFEST_PATH)?;
@@ -91,8 +93,11 @@ fn admit_lock(lock: &Value) -> Result<(), DocumentationError> {
 }
 
 fn admit_installer(installer: &str) -> Result<(), DocumentationError> {
-    if !installer.contains("npm ci") {
-        return Err(contract(INSTALLER_PATH, "installation uses npm ci"));
+    if !installer.contains(NPM_CI_COMMAND) {
+        return Err(contract(
+            INSTALLER_PATH,
+            "installation uses the reviewed npm ci command",
+        ));
     }
     if !installer.contains("package-lock.json") {
         return Err(contract(
@@ -100,7 +105,7 @@ fn admit_installer(installer: &str) -> Result<(), DocumentationError> {
             "installation requires package-lock.json",
         ));
     }
-    if installer.contains("npm install \\") {
+    if installer.contains("npm install") {
         return Err(contract(
             INSTALLER_PATH,
             "installation does not bypass the lock with npm install",

@@ -24,7 +24,14 @@ const LOCK: &str = r#"{
     }
   }
 }"#;
-const INSTALLER: &str = "test -f package-lock.json\nnpm ci\n";
+const INSTALLER: &str = concat!(
+    "test -f package-lock.json\n",
+    "npm ci \\\n",
+    "  --prefix \"$npm_dir\" \\\n",
+    "  --ignore-scripts \\\n",
+    "  --no-audit \\\n",
+    "  --no-fund\n",
+);
 
 #[test]
 fn admitted_node_toolchain_is_exact_and_lockfile_installed() {
@@ -138,7 +145,19 @@ fn unlocked_installer_is_refused() {
         super::admit(MANIFEST, LOCK, "npm install markdownlint-cli2\n"),
         Err(super::DocumentationError::RepositoryContract {
             path: super::INSTALLER_PATH,
-            requirement: "installation uses npm ci",
+            requirement: "installation uses the reviewed npm ci command",
+        })
+    ));
+}
+
+#[test]
+fn comments_cannot_mask_an_unlocked_installer() {
+    let installer = "# npm ci\n# package-lock.json\nnpm install markdownlint-cli2\n";
+    assert!(matches!(
+        super::admit(MANIFEST, LOCK, installer),
+        Err(super::DocumentationError::RepositoryContract {
+            path: super::INSTALLER_PATH,
+            requirement: "installation uses the reviewed npm ci command",
         })
     ));
 }
