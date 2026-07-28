@@ -2,19 +2,26 @@
 
 use std::io::{self, ErrorKind, Read};
 
-pub(super) struct PartitionReader<'a> {
+/// Reader that cycles through exact short-read widths and injects one retry.
+pub(crate) struct PartitionReader<'a> {
     remaining: &'a [u8],
     widths: std::iter::Cycle<std::slice::Iter<'a, usize>>,
     interrupt_next: bool,
 }
 
 impl<'a> PartitionReader<'a> {
-    pub(super) fn new(bytes: &'a [u8], widths: &'a [usize]) -> Self {
-        Self {
+    /// Constructs a source over `bytes` with a repeated nonempty width plan.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ErrorKind::InvalidInput`] for an empty plan or a zero width.
+    pub(crate) fn new(bytes: &'a [u8], widths: &'a [usize]) -> io::Result<Self> {
+        super::validate_partition_widths(widths)?;
+        Ok(Self {
             remaining: bytes,
             widths: widths.iter().cycle(),
             interrupt_next: true,
-        }
+        })
     }
 }
 
@@ -30,32 +37,27 @@ impl Read for PartitionReader<'_> {
         if self.remaining.is_empty() {
             return Ok(0);
         }
-        let Some(width) = self.widths.next().copied() else {
-            return Err(io::Error::new(
-                ErrorKind::InvalidInput,
-                "empty partition plan",
-            ));
-        };
+        let width = self
+            .widths
+            .next()
+            .copied()
+            .ok_or_else(|| io::Error::new(ErrorKind::InvalidInput, "empty partition plan"))?;
         let count = width.min(buffer.len()).min(self.remaining.len());
-        let Some((source, remainder)) = self.remaining.split_at_checked(count) else {
-            return Err(io::Error::new(
-                ErrorKind::InvalidData,
-                "invalid fixture partition",
-            ));
-        };
-        let Some(destination) = buffer.get_mut(..count) else {
-            return Err(io::Error::new(
-                ErrorKind::InvalidInput,
-                "invalid read buffer",
-            ));
-        };
+        let (source, remainder) = self
+            .remaining
+            .split_at_checked(count)
+            .ok_or_else(|| io::Error::new(ErrorKind::InvalidData, "invalid fixture partition"))?;
+        let destination = buffer
+            .get_mut(..count)
+            .ok_or_else(|| io::Error::new(ErrorKind::InvalidInput, "invalid read buffer"))?;
         destination.copy_from_slice(source);
         self.remaining = remainder;
         Ok(count)
     }
 }
 
-pub(super) struct FailingReader;
+/// Reader that deterministically returns a non-interruption source failure.
+pub(crate) struct FailingReader;
 
 impl Read for FailingReader {
     fn read(&mut self, _buffer: &mut [u8]) -> io::Result<usize> {
@@ -66,7 +68,8 @@ impl Read for FailingReader {
     }
 }
 
-pub(super) struct LyingReader;
+/// Broken reader that reports one byte beyond the supplied buffer.
+pub(crate) struct LyingReader;
 
 impl Read for LyingReader {
     fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {

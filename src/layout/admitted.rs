@@ -74,7 +74,11 @@ impl AdmittedLayout {
     }
 }
 
-pub(super) fn check_entry_limit(
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "the reference adapter enforces this domain admission law while streaming"
+)]
+pub(crate) fn check_entry_limit(
     observed: usize,
     limit: LayoutEntryLimit,
 ) -> Result<(), LayoutValidationError> {

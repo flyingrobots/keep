@@ -15,6 +15,11 @@ mod validation;
 mod validation_error;
 
 pub use admitted::AdmittedLayout;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "the reference adapter consumes this domain admission law"
+)]
+pub(crate) use admitted::check_entry_limit;
 pub use entry::LayoutEntry;
 pub use entry_limit::{LayoutEntryLimit, LayoutEntryLimitError};
 pub use id::LayoutId;

@@ -5,16 +5,17 @@
 //! Correctness-first content-addressed storage.
 //!
 //! Keep currently exposes exact logical byte and physical chunk identity,
-//! deterministic streaming chunk detection, and canonical flat-layout
-//! identity, admission, encoding, and bounded decoding. Physical storage,
-//! retention, durability, and recovery APIs remain intentionally absent until
-//! their contracts have executable specifications.
+//! deterministic streaming chunk detection, canonical flat-layout identity
+//! and codecs, and a capacity-bounded non-durable reference CAS. Durable
+//! physical storage, retention, and recovery APIs remain intentionally absent
+//! until their contracts have executable specifications.
 
 mod adapters;
 mod blob;
 mod chunk;
 mod layout;
 mod profile;
+mod reference;
 
 pub use adapters::{
     BlobIdBinaryParseError, BlobIdTextParseError, CanonicalLayoutRecord, LayoutDecodeError,
@@ -30,3 +31,7 @@ pub use layout::{
     LayoutIdMismatch, LayoutRecordLength, LayoutValidationError,
 };
 pub use profile::{RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId};
+pub use reference::{
+    IngestionAllocation, IngestionError, ProfileBoundary, PublishError, PublishedBlob,
+    ReconstructionError, ReconstructionReceipt, ReferenceStore, ReferenceStoreCapacity, StagedBlob,
+};

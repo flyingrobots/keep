@@ -8,16 +8,17 @@ mod identity_assertions;
 mod identity_corpus;
 #[path = "mutation_assertions.rs"]
 mod mutation_assertions;
-#[path = "partition_reader.rs"]
-mod partition_reader;
 #[path = "reference_model.rs"]
 mod reference_model;
 #[path = "scenario_corpus.rs"]
 mod scenario_corpus;
+#[path = "storage_assertions.rs"]
+mod storage_assertions;
 
 use std::error::Error;
 use std::io::ErrorKind;
 
+use crate::support::{FailingReader, LyingReader, PartitionReader};
 use harness_failure::HarnessFailure;
 use identity_assertions::{
     assert_named_bytes, generated_bytes, hash_partitioned, text_error_class,
@@ -25,9 +26,7 @@ use identity_assertions::{
 use identity_corpus::{find_case, identity_cases};
 use keep::{BlobId, BlobIdTextParseError, BlobReadError};
 use mutation_assertions::{apply_mutation, assert_binary_mutation};
-use partition_reader::{FailingReader, LyingReader, PartitionReader};
-use reference_model::{MODEL_CAPACITY_BYTES, ReferenceModel, ReferenceModelError};
-use scenario_corpus::{invalid_text_cases, mutation_cases, scenario_steps};
+use scenario_corpus::{invalid_text_cases, mutation_cases};
 
 type TestResult = Result<(), HarnessFailure>;
 
@@ -62,7 +61,8 @@ fn input_partitioning_does_not_move_blob_identity() -> TestResult {
         if bytes.len() <= 256 {
             assert_eq!(hash_partitioned(&bytes, &[1])?, expected);
         }
-        let mut reader = PartitionReader::new(&bytes, &irregular);
+        let mut reader = PartitionReader::new(&bytes, &irregular)
+            .map_err(|_source| HarnessFailure::corpus("invalid partition plan"))?;
         assert_eq!(BlobId::hash_reader(&mut reader)?, expected);
     }
     Ok(())
@@ -81,7 +81,8 @@ fn generated_bytes_and_partitions_preserve_identity() -> TestResult {
             let expected = BlobId::hash_bytes(&bytes)?;
             for plan in plans {
                 assert_eq!(hash_partitioned(&bytes, plan)?, expected);
-                let mut reader = PartitionReader::new(&bytes, plan);
+                let mut reader = PartitionReader::new(&bytes, plan)
+                    .map_err(|_source| HarnessFailure::corpus("invalid partition plan"))?;
                 assert_eq!(BlobId::hash_reader(&mut reader)?, expected);
             }
         }
@@ -179,57 +180,6 @@ fn every_single_bit_content_change_moves_the_fixture_identity() -> TestResult {
 }
 
 #[test]
-fn reference_model_executes_the_golden_worldline() -> TestResult {
-    let mut model = ReferenceModel::new();
-    for step in scenario_steps()? {
-        let identity = find_case(step.identity_case)?.expected_id()?;
-        match step.operation {
-            "identify" => {
-                assert_eq!(step.expected_outcome, "keep.identity.identified");
-                assert_eq!(
-                    BlobId::hash_bytes(&find_case(step.input_case)?.bytes()?)?,
-                    identity
-                );
-            }
-            "admit-exact" => {
-                assert_eq!(step.expected_outcome, "keep.content.admitted");
-                assert_eq!(
-                    model.admit_exact_materialized(&find_case(step.input_case)?.bytes()?)?,
-                    identity
-                );
-            }
-            "read-exact" => {
-                assert_eq!(step.expected_outcome, "keep.content.exact");
-                let expected = find_case(step.input_case)?.bytes()?;
-                let observed = model.read_exact_materialized(identity)?;
-                assert_named_bytes(identity, observed)?;
-                assert_eq!(observed, expected.as_slice());
-            }
-            "verify-claimed-content" => {
-                assert_eq!(step.expected_outcome, "keep.content.mismatch");
-                let result = model
-                    .admit_claimed_materialized(identity, &find_case(step.input_case)?.bytes()?);
-                assert!(matches!(
-                    result,
-                    Err(ReferenceModelError::ContentMismatch { .. })
-                ));
-            }
-            "read-absent" => {
-                assert_eq!(step.expected_outcome, "keep.content.absent");
-                assert_eq!(
-                    model.read_exact_materialized(identity),
-                    Err(ReferenceModelError::Absent {
-                        requested: identity
-                    })
-                );
-            }
-            _ => return Err(HarnessFailure::corpus("unknown worldline operation")),
-        }
-    }
-    Ok(())
-}
-
-#[test]
 fn harness_detects_a_deliberately_substituted_read() -> TestResult {
     let expected = find_case("state-a")?.expected_id()?;
     let substituted = find_case("state-b")?.bytes()?;
@@ -240,56 +190,6 @@ fn harness_detects_a_deliberately_substituted_read() -> TestResult {
             ..
         }) if observed_expected == expected
     ));
-    Ok(())
-}
-
-#[test]
-fn reference_model_capacity_is_bounded_and_refusal_is_atomic() -> TestResult {
-    let mut model = ReferenceModel::new();
-    let capacity_filler = vec![0_u8; MODEL_CAPACITY_BYTES];
-    let retained = model.admit_exact_materialized(&capacity_filler)?;
-    assert_eq!(model.admit_exact_materialized(&capacity_filler)?, retained);
-
-    let refused_bytes = [1_u8];
-    let refused = BlobId::hash_bytes(&refused_bytes)?;
-    let attempted = MODEL_CAPACITY_BYTES
-        .checked_add(refused_bytes.len())
-        .ok_or_else(|| HarnessFailure::corpus("model capacity test overflowed"))?;
-    assert_eq!(
-        model.admit_exact_materialized(&refused_bytes),
-        Err(ReferenceModelError::CapacityExceeded {
-            capacity: MODEL_CAPACITY_BYTES,
-            attempted,
-        })
-    );
-    assert_eq!(
-        model.read_exact_materialized(retained)?,
-        capacity_filler.as_slice()
-    );
-    assert_eq!(
-        model.read_exact_materialized(refused),
-        Err(ReferenceModelError::Absent { requested: refused })
-    );
-    Ok(())
-}
-
-#[test]
-fn claimed_identity_refuses_every_content_mutation() -> TestResult {
-    let mut model = ReferenceModel::new();
-    for mutation in mutation_cases()?
-        .into_iter()
-        .filter(|case| case.target_kind == "content")
-    {
-        let fixture = find_case(mutation.target_case)?;
-        let identity = fixture.expected_id()?;
-        let mut bytes = fixture.bytes()?;
-        apply_mutation(&mut bytes, &mutation)?;
-        assert_eq!(mutation.expected_outcome, "keep.content.mismatch");
-        assert!(matches!(
-            model.admit_claimed_materialized(identity, &bytes),
-            Err(ReferenceModelError::ContentMismatch { .. })
-        ));
-    }
     Ok(())
 }
 

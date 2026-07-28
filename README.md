@@ -13,34 +13,25 @@ in the storage path.
 
 ## Status
 
-Keep has completed the implementation portion of its first identity milestone.
-The crate exposes a strict, versioned `BlobId` that can be calculated in one
-pass from exact bytes or a blocking stream, and parsed from canonical text or
-binary form. The language-neutral Golden File Worldline corpus independently
-checks those identity rules.
+Keep exposes strict, versioned `BlobId`, `ChunkId`, `StorageProfileId`, and
+`LayoutId` coordinates. It implements the frozen `fastcdc-64k-v1` detector and
+the canonical `keep.flat-chunks/v1` layout codec with language-neutral golden
+and mutation corpora.
 
-The first M2 design slice freezes a deterministic, implementation-independent
-content-defined chunking profile and its golden boundary corpus. That profile
-defines physical layout only: rechunking exact bytes may move a future layout
-identity, but cannot move their `BlobId`.
+The public
+[non-durable reference CAS](docs/architecture/reference-store/README.md)
+provides capacity-bounded blocking ingestion, identity-based chunk
+deduplication, an explicit staged-to-visible transition, and authenticated
+whole-blob reconstruction. Reconstruction verifies every chunk, replays the
+registered storage profile, and verifies the complete named `BlobId` before
+writing any bytes.
 
-The first M2 implementation slice exposes a constant-memory `FastCdc` detector
-for that profile and a domain-separated `ChunkId`. The detector consumes
-arbitrary borrowed feed partitions, emits identified spans without retaining
-candidate bytes, and flushes a final runt only when the caller declares EOF.
-
-The next M2 design slice freezes the canonical `keep.flat-chunks/v1` layout
-record and `LayoutId`: one bounded, ordered sequence of exact chunk identities
-and logical offsets bound to one `BlobId` and one `StorageProfileId`. Its
-language-neutral golden and mutation corpus exists, but the encoder, decoder,
-ingestion path, and reconstruction path remain assigned to the next
-implementation slice.
-
-Keep does **not** expose ingestion, layouts, or physical storage yet.
-Durability, retention, recovery, verification of stored structures, and
-garbage collection remain planned work. Calculating a `BlobId` or `ChunkId`
-does not claim that Keep possesses, has retained, or has durably verified the
-named bytes.
+The reference CAS is executable evidence for M2 storage laws, not a durable
+backend. Its committed state is process memory; process death loses it all.
+Durable segment storage, exact range reads, retention, restart recovery,
+verification of durable structures, compaction, and garbage collection remain
+planned work. Presence in the reference CAS does not claim retention,
+crash-recovery, or durability.
 
 ```rust
 use keep::BlobId;
@@ -109,18 +100,20 @@ The complete Golden File Worldline is planned to demonstrate that Keep can:
 5. refuse corrupted or ambiguous storage;
 6. recover to a documented lawful state after interruption.
 
-Items 1 through 6 describe the multi-milestone destination, not current
-storage behavior. Deterministic chunk detection now exists, but ingestion and
-storage do not. See the
-[M1 conformance contract](docs/conformance/golden-file-worldline.md) for the
-implemented proof boundary and explicit nonclaims. The separate
-[CDC profile corpus](conformance/cdc-profile/v1/README.md) freezes M2 boundary
-semantics, and the
-[chunk identity invariant](docs/invariants/chunk-identity/README.md) defines
-the implemented `ChunkId` and `FastCdc` proof boundary. The
-[Flat Chunk Layout v1 specification](docs/formats/flat-chunk-layout-v1/README.md)
-and [layout corpus](conformance/layout/v1/README.md) freeze the next format
-boundary without claiming that its implementation exists.
+Items 1 through 6 describe the multi-milestone destination. M1 establishes the
+canonical identity boundary. M2 now provides deterministic chunk detection,
+canonical layouts, capacity-bounded ingestion, and authenticated whole-blob
+reconstruction through the non-durable reference CAS. Durable retention and
+recovery, nearby-version workflows, minimal exact range reads, sealed-storage
+verification, and restart recovery remain future milestones.
+
+See the [M1 conformance contract](docs/conformance/golden-file-worldline.md),
+the [CDC profile corpus](conformance/cdc-profile/v1/README.md), the
+[chunk identity invariant](docs/invariants/chunk-identity/README.md), the
+[Flat Chunk Layout v1 specification](docs/formats/flat-chunk-layout-v1/README.md),
+the [layout corpus](conformance/layout/v1/README.md), and the
+[reference CAS contract](docs/architecture/reference-store/README.md) for the
+implemented proof boundaries and explicit nonclaims.
 
 ## Contributing
 

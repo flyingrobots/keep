@@ -3,7 +3,10 @@
 use std::error::Error;
 use std::fmt;
 
-use keep::{BlobHashError, BlobId, BlobIdBinaryParseError, BlobIdTextParseError, BlobReadError};
+use keep::{
+    BlobHashError, BlobId, BlobIdBinaryParseError, BlobIdTextParseError, BlobReadError,
+    IngestionError, PublishError, ReconstructionError,
+};
 
 use super::reference_model::ReferenceModelError;
 
@@ -15,6 +18,9 @@ pub(super) enum HarnessFailure {
     Binary(BlobIdBinaryParseError),
     Text(BlobIdTextParseError),
     Read(BlobReadError),
+    Ingestion(IngestionError),
+    Publish(PublishError),
+    Reconstruction(Box<ReconstructionError>),
     Model(ReferenceModelError),
 }
 
@@ -36,6 +42,9 @@ impl fmt::Display for HarnessFailure {
             Self::Binary(source) => source.fmt(formatter),
             Self::Text(source) => source.fmt(formatter),
             Self::Read(source) => source.fmt(formatter),
+            Self::Ingestion(source) => source.fmt(formatter),
+            Self::Publish(source) => source.fmt(formatter),
+            Self::Reconstruction(source) => source.fmt(formatter),
             Self::Model(source) => source.fmt(formatter),
         }
     }
@@ -48,6 +57,9 @@ impl Error for HarnessFailure {
             Self::Binary(source) => Some(source),
             Self::Text(source) => Some(source),
             Self::Read(source) => Some(source),
+            Self::Ingestion(source) => Some(source),
+            Self::Publish(source) => Some(source),
+            Self::Reconstruction(source) => Some(source),
             Self::Model(source) => Some(source),
             Self::Corpus { .. } | Self::NamedBytesMismatch { .. } => None,
         }
@@ -75,6 +87,24 @@ impl From<BlobIdTextParseError> for HarnessFailure {
 impl From<BlobReadError> for HarnessFailure {
     fn from(source: BlobReadError) -> Self {
         Self::Read(source)
+    }
+}
+
+impl From<IngestionError> for HarnessFailure {
+    fn from(source: IngestionError) -> Self {
+        Self::Ingestion(source)
+    }
+}
+
+impl From<PublishError> for HarnessFailure {
+    fn from(source: PublishError) -> Self {
+        Self::Publish(source)
+    }
+}
+
+impl From<ReconstructionError> for HarnessFailure {
+    fn from(source: ReconstructionError) -> Self {
+        Self::Reconstruction(Box::new(source))
     }
 }
 

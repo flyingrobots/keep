@@ -10,6 +10,11 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Reconstruction output-accounting errors now expose typed `BlobLength`
+  coordinates consistently.
+- Public streaming CAS behavior is now checked after every operation in all
+  216 exhaustive three-step sequences over admission, reads, dropped staging,
+  empty blobs, idempotence, and claimed-content mismatch.
 - Flat-layout decoding now validates cardinality before entry materialization
   and admits decoded coordinates through the domain's ordered one-pass
   validator, so a later zero length cannot hide an earlier entry failure.
@@ -57,6 +62,30 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Expected-`BlobId` staging with typed complete-stream mismatch refusal; the
+  Golden File Worldline scenario and every claimed-content mutation now run
+  through public stage, commit, and reconstruct APIs instead of only the
+  private test model.
+- Publication now calculates and validates the final materialized-byte count
+  before changing visible reference-store state, so intervening capacity
+  exhaustion cannot expose a partial commit.
+- Publication refuses staged work whose destination lacks a required chunk,
+  preventing cross-store commits from exposing incomplete layouts.
+- Bounded canonical layout-record reconstruction with typed pre-output refusal
+  for malformed records, zero-progress and over-reporting writers, output I/O
+  failures, conflicting stored chunks, corrupted chunk content, and ordinary
+  publication attempts that would silently repair missing committed chunks or
+  missing, incomplete, or wrong-target committed layout indexes.
+- Exact synchronous reference-store reconstruction that authenticates every
+  chunk, the registered storage-profile boundaries, and the complete named
+  blob before output, reverifies chunks during emission, completes short
+  writes, retries interruptions, and reports missing or mismatched content
+  with typed expected and observed identities.
+- Capacity-bounded streaming ingestion into a non-durable in-memory reference
+  adapter, with exact blob, chunk, and layout identity calculation, typed
+  source and capacity refusals, streaming enforcement of the caller's layout
+  entry cap, identity-based chunk deduplication, and an explicit
+  staged-to-visible commit transition.
 - An independent field-by-field flat-layout fixture oracle that verifies every
   fixed offset, checksum, and `LayoutId` before cross-checking the production
   encoder.
@@ -77,8 +106,7 @@ after its public API and format compatibility policies are established.
   `LayoutId` grammar, checked flat-plan bounds, domain-separated checksum,
   exact golden records, field-complete `LayoutId` refusal tables and
   cardinality-before-aggregate first-failure plan mutation ledger, and
-  verified storage-profile boundary replay law. Ingestion and verified
-  reconstruction remain outside the current implementation.
+  verified storage-profile boundary replay law.
 - Canonical version-1 `ChunkId` calculation in a domain distinct from
   `BlobId`, with independent golden vectors.
 - A constant-memory `FastCdc` detector for `fastcdc-64k-v1` that preserves

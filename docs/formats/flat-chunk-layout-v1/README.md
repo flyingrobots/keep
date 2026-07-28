@@ -6,6 +6,7 @@
 - Layout codec: `1`
 - Related issue: [#9](https://github.com/flyingrobots/keep/issues/9)
 - Implementation issue: [#10](https://github.com/flyingrobots/keep/issues/10)
+- Reconstruction issue: [#13](https://github.com/flyingrobots/keep/issues/13)
 - Depends on:
   [ADR-0001](../../adr/0001-exact-logical-byte-identity.md),
   [ADR-0002](../../adr/0002-separate-identity-from-physical-storage.md),
@@ -17,8 +18,9 @@ language-independent binary protocol.
 
 Keep exposes validated layout admission, canonical `LayoutId` and record
 encoding, and bounded record decoding. The checked-in fixtures and independent
-oracle prove exact production codec behavior. Keep does not yet expose an
-ingestion path, storage backend, or verified reconstruction path.
+oracle prove exact production codec behavior. The non-durable reference CAS
+implements bounded ingestion and verified reconstruction; durable storage
+remains a separate future boundary.
 
 ## Core law
 
@@ -355,9 +357,9 @@ replace an earlier gap or overlap with another error.
 | `KEEP-LAYOUT-011` | Trailing, truncated, duplicated, and noncanonical framing is refused | Mutation ledger | Implemented in #10 |
 | `KEEP-LAYOUT-012` | Record checksum is typed, domain-separated, and checked | Checksum grammar and golden records | Implemented in #10 |
 | `KEEP-LAYOUT-013` | Physical locations never participate | Header and entry grammar | Specified |
-| `KEEP-LAYOUT-014` | Decoded, validated, admitted, and verified states remain distinct | State model | Implemented through admission in #10 |
+| `KEEP-LAYOUT-014` | Decoded, validated, admitted, and verified states remain distinct | State model | Implemented through admission in #10 and verification in #13 |
 | `KEEP-LAYOUT-015` | Flat v1 never silently becomes hierarchical | Compatibility section and rationale | Specified |
-| `KEEP-LAYOUT-016` | Verified reconstruction reproduces the declared spans under the bound storage profile | Verification state and profile-boundary mutation | Deferred to reconstruction API |
+| `KEEP-LAYOUT-016` | Verified reconstruction reproduces the declared spans under the bound storage profile | Verification state and profile-boundary mutation | Implemented in #13 |
 
 <!-- markdownlint-enable MD013 -->
 
