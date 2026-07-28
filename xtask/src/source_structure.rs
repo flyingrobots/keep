@@ -34,6 +34,7 @@ pub(super) fn check(repository_root: &Path) -> Result<(), SourceStructureError> 
     let paths = source_paths(repository_root)?;
     verify_source_root(&source_root, repository_root)?;
     let violations = source_violations(&source_root, paths)?;
+    verify_source_root(&source_root, repository_root)?;
     if violations.is_empty() {
         Ok(())
     } else {

@@ -20,3 +20,13 @@ fn repository_file_admission_declares_its_unix_scope() {
     assert!(REPOSITORY_FILE.contains("intentionally supported only on Unix hosts"));
     assert!(REPOSITORY_FILE.contains("Unix device and inode identity"));
 }
+
+#[test]
+fn source_scan_revalidates_repository_identity_after_reading() {
+    assert_eq!(
+        SOURCE_STRUCTURE
+            .matches("verify_source_root(&source_root, repository_root)?;")
+            .count(),
+        2
+    );
+}
