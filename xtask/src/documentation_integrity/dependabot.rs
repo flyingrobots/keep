@@ -4,6 +4,8 @@ mod manifest;
 
 use std::collections::BTreeSet;
 
+use yaml_rust2::{Yaml, YamlLoader};
+
 use crate::repository_file::{RepositoryProcessDirectory, RepositoryRoot};
 
 use super::error::DocumentationError;
@@ -11,7 +13,6 @@ use super::repository_text;
 use manifest::tracked_scopes;
 
 const DEPENDABOT_PATH: &str = ".github/dependabot.yml";
-const UPDATE_MARKER: &str = "  - package-ecosystem: ";
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 struct DependencyScope {
@@ -29,17 +30,27 @@ pub(super) fn check(
 }
 
 fn admit(raw: &str, required: &BTreeSet<DependencyScope>) -> Result<(), DocumentationError> {
-    if !raw.starts_with("version: 2\nupdates:\n") {
-        return Err(contract("version and updates header is exact"));
+    let documents =
+        YamlLoader::load_from_str(raw).map_err(|source| DocumentationError::RepositoryYaml {
+            path: DEPENDABOT_PATH,
+            source,
+        })?;
+    let [document] = documents.as_slice() else {
+        return Err(contract("policy contains exactly one YAML document"));
+    };
+    if document["version"].as_i64() != Some(2) {
+        return Err(contract("policy version is exactly 2"));
     }
-    let blocks = update_blocks(raw);
-    if blocks.is_empty() {
+    let Some(updates) = document["updates"].as_vec() else {
+        return Err(contract("updates is a sequence"));
+    };
+    if updates.is_empty() {
         return Err(contract("at least one update block exists"));
     }
     let mut configured = BTreeSet::new();
-    for block in blocks {
-        let scopes = block_scopes(&block)?;
-        admit_maintenance_policy(&block, &scopes)?;
+    for update in updates {
+        let scopes = block_scopes(update)?;
+        admit_maintenance_policy(update, &scopes)?;
         for scope in scopes {
             if !configured.insert(scope.clone()) {
                 return Err(contract_at(
@@ -58,47 +69,26 @@ fn admit(raw: &str, required: &BTreeSet<DependencyScope>) -> Result<(), Document
     Ok(())
 }
 
-fn update_blocks(raw: &str) -> Vec<Vec<&str>> {
-    let mut blocks = Vec::new();
-    let mut block = Vec::new();
-    let mut active = false;
-    for line in raw.lines() {
-        if line.starts_with(UPDATE_MARKER) {
-            if active {
-                blocks.push(std::mem::take(&mut block));
-            }
-            active = true;
-        }
-        if active {
-            block.push(line);
-        }
-    }
-    if active {
-        blocks.push(block);
-    }
-    blocks
-}
-
-fn block_scopes(block: &[&str]) -> Result<Vec<DependencyScope>, DocumentationError> {
-    let ecosystem = block
-        .first()
-        .and_then(|line| line.strip_prefix(UPDATE_MARKER))
-        .map(unquote)
+fn block_scopes(update: &Yaml) -> Result<Vec<DependencyScope>, DocumentationError> {
+    let ecosystem = update["package-ecosystem"]
+        .as_str()
         .ok_or_else(|| contract("every update block names an ecosystem"))?;
     let mut scopes = Vec::new();
-    let mut remaining = block;
-    while let Some((line, rest)) = remaining.split_first() {
-        remaining = rest;
-        if let Some(directory) = line.strip_prefix("    directory: ") {
-            scopes.push(DependencyScope::new(ecosystem, unquote(directory)));
-        } else if *line == "    directories:" {
-            while let Some((entry, rest)) = remaining.split_first() {
-                let Some(directory) = entry.strip_prefix("      - ") else {
-                    break;
-                };
-                scopes.push(DependencyScope::new(ecosystem, unquote(directory)));
-                remaining = rest;
-            }
+    if !update["directory"].is_badvalue() {
+        let directory = update["directory"]
+            .as_str()
+            .ok_or_else(|| contract("update directory is a string"))?;
+        scopes.push(DependencyScope::new(ecosystem, directory));
+    }
+    if !update["directories"].is_badvalue() {
+        let directories = update["directories"]
+            .as_vec()
+            .ok_or_else(|| contract("update directories is a sequence"))?;
+        for directory in directories {
+            let directory = directory
+                .as_str()
+                .ok_or_else(|| contract("every update directory is a string"))?;
+            scopes.push(DependencyScope::new(ecosystem, directory));
         }
     }
     if scopes.is_empty() {
@@ -112,13 +102,15 @@ fn block_scopes(block: &[&str]) -> Result<Vec<DependencyScope>, DocumentationErr
 }
 
 fn admit_maintenance_policy(
-    block: &[&str],
+    update: &Yaml,
     scopes: &[DependencyScope],
 ) -> Result<(), DocumentationError> {
-    let raw = block.join("\n");
-    let uniform = raw.contains("    schedule:\n      interval: weekly")
-        && raw.contains("    open-pull-requests-limit: 5")
-        && raw.contains("    labels:\n      - dependencies");
+    let labels_are_exact = update["labels"].as_vec().is_some_and(
+        |labels| matches!(labels.as_slice(), [label] if label.as_str() == Some("dependencies")),
+    );
+    let uniform = update["schedule"]["interval"].as_str() == Some("weekly")
+        && update["open-pull-requests-limit"].as_i64() == Some(5)
+        && labels_are_exact;
     if uniform {
         Ok(())
     } else {
@@ -129,18 +121,6 @@ fn admit_maintenance_policy(
             subject,
             "update block uses the maintenance policy",
         ))
-    }
-}
-
-fn unquote(raw: &str) -> &str {
-    let bytes = raw.as_bytes();
-    match (bytes.first(), bytes.last()) {
-        (Some(first), Some(last))
-            if bytes.len() >= 2 && first == last && matches!(first, b'\'' | b'"') =>
-        {
-            raw.get(1..raw.len().saturating_sub(1)).unwrap_or(raw)
-        }
-        _ => raw,
     }
 }
 

@@ -43,21 +43,13 @@ fn complete_uniform_dependabot_policy_is_admitted() {
 
 #[test]
 fn list_termination_preserves_the_following_scope_declaration() {
-    let block = [
-        "  - package-ecosystem: cargo",
-        "    directories:",
-        "      - /",
-        "    directory: /xtask",
-    ];
+    let policy = POLICY.replacen("      - /xtask\n", "", 1).replacen(
+        "    schedule:\n",
+        "    directory: /xtask\n    schedule:\n",
+        1,
+    );
 
-    let scopes = super::block_scopes(&block);
-    assert!(matches!(
-        scopes,
-        Ok(scopes) if scopes == vec![
-            DependencyScope::new("cargo", "/"),
-            DependencyScope::new("cargo", "/xtask"),
-        ]
-    ));
+    assert!(super::admit(&policy, &required()).is_ok());
 }
 
 #[test]
@@ -97,6 +89,28 @@ fn nonuniform_maintenance_policy_is_refused() {
             requirement: "update block uses the maintenance policy",
         }) if subject == "cargo /"
     ));
+}
+
+#[test]
+fn prefix_confusable_maintenance_values_are_refused() {
+    for policy in [
+        POLICY.replacen("      interval: weekly", "      interval: weeklylies", 1),
+        POLICY.replacen(
+            "    open-pull-requests-limit: 5",
+            "    open-pull-requests-limit: 50",
+            1,
+        ),
+        POLICY.replacen("      - dependencies", "      - dependencies-extra", 1),
+    ] {
+        assert!(matches!(
+            super::admit(&policy, &required()),
+            Err(super::DocumentationError::RepositoryContractAt {
+                path: super::DEPENDABOT_PATH,
+                ref subject,
+                requirement: "update block uses the maintenance policy",
+            }) if subject == "cargo /"
+        ));
+    }
 }
 
 #[test]
