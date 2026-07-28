@@ -69,7 +69,10 @@ resolved by "last write wins."
 The catalog includes record offsets, lengths, payload lengths, and record
 checksums. Those values let a reader reject an entry that does not name one
 complete record before it materializes a payload. The enclosing segment
-digest separately binds the immutable file.
+digest separately binds the immutable file. Admission first scans the complete
+segment grammar and records its top-level spans, so record-shaped bytes inside
+a payload cannot become a second physical record merely because a catalog
+points at them.
 
 Catalog generations form a checked predecessor chain. Generation 1 uses an
 all-zero predecessor digest; every later generation increments by exactly one

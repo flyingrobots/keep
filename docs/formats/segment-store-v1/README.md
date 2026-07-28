@@ -273,6 +273,13 @@ The named segment must exist at the digest-derived immutable-pool name and
 verify completely. The record at the declared span must reproduce the entry's
 kind, identity, lengths, and checksum exactly.
 
+Catalog admission scans the complete segment grammar from byte 64 through the
+declared record count and records every top-level record span before admitting
+locations. Each `(record_offset, record_length)` pair must equal one discovered
+top-level record span. A location into a record header, payload, checksum, or
+segment seal is refused even when those embedded bytes independently resemble
+a valid record.
+
 Let `C` be the complete header and sorted entries. The two 32-byte trailer
 fields are:
 
@@ -631,6 +638,7 @@ state this assumption; they do not upgrade it into proof.
 | `KEEP-STORE-014` | Memory, record, segment, and catalog sizes are bounded | Bounds table | Specified in #14 |
 | `KEEP-STORE-015` | Unsupported filesystem semantics fail closed | Platform contract | Specified in #14 |
 | `KEEP-STORE-016` | No Echo, Graft, Git, or application policy enters the protocol | ADR-0005 and physical namespace | Specified in #14 |
+| `KEEP-STORE-017` | Catalog locations equal verified top-level segment-record spans | Catalog-entry admission | Specified in #14 |
 
 <!-- markdownlint-enable MD013 -->
 

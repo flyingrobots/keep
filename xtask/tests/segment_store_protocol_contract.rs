@@ -148,3 +148,20 @@ fn recovery_inventory_is_bounded_before_names_are_retained() {
         );
     }
 }
+
+#[test]
+fn catalog_locations_name_only_top_level_segment_records() {
+    for required in [
+        "scans the complete segment grammar from byte 64",
+        "must equal one discovered",
+        "top-level record span",
+        "record header, payload, checksum",
+        "segment seal is refused",
+        "`KEEP-STORE-017`",
+    ] {
+        assert!(
+            SPECIFICATION.contains(required),
+            "missing top-level catalog-span law: {required}"
+        );
+    }
+}
