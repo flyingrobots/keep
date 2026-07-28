@@ -8,16 +8,32 @@ const CDC_GUIDE: &str = include_str!("../../../conformance/cdc-profile/v1/README
 const CHUNK_GUIDE: &str = include_str!("../../../conformance/chunk-id/v1/README.md");
 const CI_WORKFLOW: &str = include_str!("../../../.github/workflows/ci.yml");
 const COMMAND: &str = "cargo xtask conformance-check";
+const CI_RUN_STEP: &str = "run: cargo xtask conformance-check";
 
 #[test]
 fn ci_and_living_guides_route_both_corpora_through_rust() {
     assert!(CI_WORKFLOW.contains("name: Check protocol conformance corpora"));
-    assert_eq!(CI_WORKFLOW.matches(COMMAND).count(), 1);
+    assert!(ci_executes_conformance(CI_WORKFLOW));
     assert_eq!(CDC_GUIDE.matches(COMMAND).count(), 1);
     assert_eq!(CHUNK_GUIDE.matches(COMMAND).count(), 1);
     assert!(!CI_WORKFLOW.contains("python3 conformance/"));
     assert!(!CDC_GUIDE.contains("python3"));
     assert!(!CHUNK_GUIDE.contains("python3"));
+}
+
+fn ci_executes_conformance(workflow: &str) -> bool {
+    workflow
+        .lines()
+        .filter(|line| line.trim() == CI_RUN_STEP)
+        .count()
+        == 1
+}
+
+#[test]
+fn a_commented_command_is_not_ci_execution() {
+    assert!(!ci_executes_conformance(
+        "# cargo xtask conformance-check\n"
+    ));
 }
 
 #[test]
