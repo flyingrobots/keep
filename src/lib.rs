@@ -20,7 +20,9 @@ mod reference;
 pub use adapters::{
     BlobIdBinaryParseError, BlobIdTextParseError, CanonicalLayoutRecord, LayoutDecodeError,
     LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
-    SegmentHeader, SegmentHeaderError, StorageProfileIdParseError,
+    SegmentHeader, SegmentHeaderError, SegmentRecordHeader, SegmentRecordHeaderError,
+    SegmentRecordIdentity, SegmentRecordLength, SegmentRecordPayloadLength,
+    StorageProfileIdParseError,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

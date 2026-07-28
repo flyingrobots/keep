@@ -1,4 +1,4 @@
-//! Canonical identity codecs.
+//! Canonical boundary codecs.
 //!
 //! This module owns codecs at Keep's ingress and egress boundaries: decoding
 //! raw input into validated domain types, encoding validated domain types
@@ -30,6 +30,17 @@ mod segment_header_decoder;
 mod segment_header_encoding;
 mod segment_header_error;
 mod segment_header_error_display;
+mod segment_record_header;
+mod segment_record_header_admission;
+mod segment_record_header_decoder;
+mod segment_record_header_encoding;
+mod segment_record_header_error;
+mod segment_record_header_error_display;
+mod segment_record_identity;
+mod segment_record_identity_admission;
+mod segment_record_kind;
+mod segment_record_length;
+mod segment_record_payload_length;
 mod storage_profile_id_text;
 mod storage_profile_id_text_error;
 
@@ -43,4 +54,9 @@ pub use layout_id_text_error::LayoutIdTextParseError;
 pub use layout_record::CanonicalLayoutRecord;
 pub use segment_header::SegmentHeader;
 pub use segment_header_error::SegmentHeaderError;
+pub use segment_record_header::SegmentRecordHeader;
+pub use segment_record_header_error::SegmentRecordHeaderError;
+pub use segment_record_identity::SegmentRecordIdentity;
+pub use segment_record_length::SegmentRecordLength;
+pub use segment_record_payload_length::SegmentRecordPayloadLength;
 pub use storage_profile_id_text_error::StorageProfileIdParseError;

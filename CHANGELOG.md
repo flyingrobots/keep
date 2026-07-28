@@ -65,6 +65,9 @@ after its public API and format compatibility policies are established.
 - Public, allocation-free `SegmentHeader` admission and emission for the exact
   `keep.segment-store/v1` 64-byte header, with field-complete typed refusals
   and golden-corpus evidence.
+- Public, allocation-free `SegmentRecordHeader` admission and emission for the
+  exact 112-byte chunk and flat-layout record grammar, with typed logical
+  identities, checked length derivation, and field-complete corruption laws.
 - ADR-0005 and the implementation-independent `keep.segment-store/v1`
   protocol: exact immutable segment, catalog-generation, and publication-head
   grammars; canonical ordering, bounds, and domain-separated checksums;
