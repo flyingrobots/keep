@@ -51,8 +51,9 @@ fn fuzz_workflows_delegate_seed_preparation_to_the_rust_task() -> Result<(), Fuz
 }
 
 #[test]
-fn segment_format_documentation_runs_the_documented_target() {
-    assert!(FUZZ_README.contains("fuzz run segment_format"));
+fn fuzz_documentation_runs_every_target_through_the_rust_task() {
+    assert!(FUZZ_README.contains("cargo xtask fuzz run --profile smoke"));
+    assert!(FUZZ_README.contains("across every registered target"));
 }
 
 #[test]
