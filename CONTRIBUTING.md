@@ -82,8 +82,8 @@ Run the same bounded smoke campaign as CI:
 
 ```bash
 cargo xtask prepare-fuzz-corpus
-python3 fuzz/run_campaign.py describe --profile smoke
-python3 fuzz/run_campaign.py run --profile smoke
+cargo xtask fuzz describe --profile smoke
+cargo xtask fuzz run --profile smoke
 ```
 
 The deterministic seeds make every parser success path and the registered CDC
@@ -94,10 +94,10 @@ coverage.
 For the longer scheduled profile, run:
 
 ```bash
-python3 fuzz/run_campaign.py describe --profile scheduled
-python3 fuzz/run_campaign.py build --profile scheduled
-python3 fuzz/run_campaign.py run --profile scheduled
-python3 fuzz/run_campaign.py minimize --profile scheduled
+cargo xtask fuzz describe --profile scheduled
+cargo xtask fuzz build --profile scheduled
+cargo xtask fuzz run --profile scheduled
+cargo xtask fuzz minimize --profile scheduled
 ```
 
 The scheduled profile uses the same per-input bounds with a larger,

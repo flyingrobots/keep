@@ -10,6 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Fuzz policy admission, target reconciliation, bounded campaign execution,
+  minimization deadlines, retained-corpus admission, and workflow contract
+  tests now run through the repository's Rust `xtask`; the superseded Python
+  fuzz scripts have been removed.
 - Reconstruction output-accounting errors now expose typed `BlobLength`
   coordinates consistently.
 - Public streaming CAS behavior is now checked after every operation in all

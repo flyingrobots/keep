@@ -37,6 +37,29 @@ fn repository_alias_preserves_silent_success() -> Result<(), io::Error> {
 }
 
 #[test]
+fn fuzz_description_emits_the_admitted_smoke_policy() -> Result<(), io::Error> {
+    let output = invoke(&["fuzz", "describe", "--profile", "smoke"])?;
+    assert!(output.status.success());
+    assert_eq!(
+        output.stdout,
+        b"CARGO_FUZZ_VERSION: 0.13.2\n\
+          FUZZ_CMIN_SECONDS_PER_TARGET: 120\n\
+          FUZZ_CORPUS_MAX_BYTES: 536870912\n\
+          FUZZ_CORPUS_MAX_FILES: 20000\n\
+          FUZZ_CORPUS_RETENTION_DAYS: 14\n\
+          FUZZ_INPUT_TIMEOUT_SECONDS: 5\n\
+          FUZZ_MAX_INPUT_BYTES: 1048576\n\
+          FUZZ_RSS_LIMIT_MB: 1024\n\
+          FUZZ_SCHEDULED_FAILURE_RETENTION_DAYS: 30\n\
+          FUZZ_SECONDS_PER_TARGET: 15\n\
+          FUZZ_SMOKE_FAILURE_RETENTION_DAYS: 14\n\
+          FUZZ_TOOLCHAIN: nightly-2026-07-24\n"
+    );
+    assert!(output.stderr.is_empty());
+    Ok(())
+}
+
+#[test]
 fn missing_command_returns_the_versioned_usage_contract() -> Result<(), io::Error> {
     let output = invoke(&[])?;
     assert_eq!(output.status.code(), Some(1));
@@ -45,7 +68,7 @@ fn missing_command_returns_the_versioned_usage_contract() -> Result<(), io::Erro
         output.stderr,
         b"Error: usage: cargo xtask \
           <benchmark-baseline|golden-file-worldline-check|prepare-fuzz-corpus|\
-          source-structure-check|verify>\n"
+          fuzz|source-structure-check|verify>\n"
     );
     Ok(())
 }

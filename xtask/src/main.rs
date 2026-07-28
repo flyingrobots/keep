@@ -11,6 +11,11 @@ mod benchmark_baseline;
 mod diagnostic;
 #[allow(
     clippy::redundant_pub_crate,
+    reason = "the command and task-error boundaries are sibling consumers"
+)]
+mod fuzz_campaign;
+#[allow(
+    clippy::redundant_pub_crate,
     reason = "the parent command dispatcher is the only consumer"
 )]
 mod fuzz_seed_corpus;
@@ -43,6 +48,7 @@ mod test_directory;
 
 use std::env;
 use std::ffi::OsString;
+use std::io;
 use std::path::Path;
 
 use task_error::TaskError;
@@ -57,13 +63,14 @@ fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
         .ok_or(TaskError::Usage)?
         .into_string()
         .map_err(|_| TaskError::InvalidCommandEncoding)?;
-    if let Some(extra) = arguments.next() {
-        let extra = extra
-            .into_string()
-            .map_err(|_| TaskError::InvalidExtraArgumentEncoding)?;
-        return Err(TaskError::UnexpectedArgument(extra));
-    }
     let repository_root = repository_root()?;
+    if command == "fuzz" {
+        let stdout = io::stdout();
+        let mut output = stdout.lock();
+        fuzz_campaign::run(repository_root, arguments, &mut output)?;
+        return Ok(());
+    }
+    refuse_extra(&mut arguments)?;
     match command.as_str() {
         "benchmark-baseline" => {
             benchmark_baseline::run(repository_root)?;
@@ -82,6 +89,16 @@ fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
             source_structure::check(repository_root)?;
         }
         _ => return Err(TaskError::UnknownCommand(command)),
+    }
+    Ok(())
+}
+
+fn refuse_extra(arguments: &mut impl Iterator<Item = OsString>) -> Result<(), TaskError> {
+    if let Some(extra) = arguments.next() {
+        let extra = extra
+            .into_string()
+            .map_err(|_| TaskError::InvalidExtraArgumentEncoding)?;
+        return Err(TaskError::UnexpectedArgument(extra));
     }
     Ok(())
 }
