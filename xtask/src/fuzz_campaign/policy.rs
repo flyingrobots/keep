@@ -92,6 +92,22 @@ impl CampaignPolicy {
         &self.toolchain
     }
 
+    pub(super) const fn cmin_seconds(&self) -> u64 {
+        self.cmin_seconds_per_target
+    }
+
+    pub(super) const fn input_timeout_seconds(&self) -> u64 {
+        self.input_timeout_seconds
+    }
+
+    pub(super) const fn max_input_bytes(&self) -> u64 {
+        self.max_input_bytes
+    }
+
+    pub(super) const fn rss_limit_mb(&self) -> u64 {
+        self.rss_limit_mb
+    }
+
     fn from_values(
         values: &BTreeMap<&str, &str>,
         cargo_fuzz_version: String,
@@ -139,7 +155,7 @@ impl CampaignPolicy {
         Ok(())
     }
 
-    const fn seconds_per_target(&self, profile: CampaignProfile) -> u64 {
+    pub(super) const fn seconds_per_target(&self, profile: CampaignProfile) -> u64 {
         match profile {
             CampaignProfile::Scheduled => self.scheduled_seconds_per_target,
             CampaignProfile::Smoke => self.smoke_seconds_per_target,

@@ -3,14 +3,15 @@
 mod error;
 
 use std::io;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, ExitStatus, Stdio};
 use std::thread::{self, JoinHandle};
+use std::time::{Duration, Instant};
 
 pub(super) use error::ProcessError;
 
 use crate::process_output::{BoundedBytes, bounded_bytes};
 
-const OUTPUT_LIMIT: usize = 65_536;
+const OUTPUT_LIMIT: usize = 1_048_576;
 
 pub(super) struct ProcessOutput {
     pub(super) succeeded: bool,
@@ -18,7 +19,10 @@ pub(super) struct ProcessOutput {
     pub(super) stderr: Vec<u8>,
 }
 
-pub(super) fn capture(command: &mut Command) -> Result<ProcessOutput, ProcessError> {
+pub(super) fn capture(
+    command: &mut Command,
+    deadline: Option<Duration>,
+) -> Result<ProcessOutput, ProcessError> {
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
     let mut child = command.spawn().map_err(|source| ProcessError::Io {
         action: "spawn",
@@ -41,12 +45,10 @@ pub(super) fn capture(command: &mut Command) -> Result<ProcessOutput, ProcessErr
         Ok(reader) => reader,
         Err(error) => return cleanup(&mut child, error),
     };
-    let status = child.wait().map_err(|source| ProcessError::Io {
-        action: "wait",
-        source,
-    })?;
+    let status = wait_for_child(&mut child, deadline);
     let stdout = join_reader("stdout", stdout_reader)?;
     let stderr = join_reader("stderr", stderr_reader)?;
+    let status = status?;
     refuse_exceeded("stdout", &stdout)?;
     refuse_exceeded("stderr", &stderr)?;
     Ok(ProcessOutput {
@@ -54,6 +56,33 @@ pub(super) fn capture(command: &mut Command) -> Result<ProcessOutput, ProcessErr
         stdout: stdout.bytes,
         stderr: stderr.bytes,
     })
+}
+
+fn wait_for_child(
+    child: &mut Child,
+    deadline: Option<Duration>,
+) -> Result<ExitStatus, ProcessError> {
+    let Some(duration) = deadline else {
+        return child.wait().map_err(|source| ProcessError::Io {
+            action: "wait",
+            source,
+        });
+    };
+    let expires = Instant::now()
+        .checked_add(duration)
+        .ok_or(ProcessError::Timeout(duration))?;
+    loop {
+        match child.try_wait().map_err(|source| ProcessError::Io {
+            action: "poll",
+            source,
+        })? {
+            Some(status) => return Ok(status),
+            None if Instant::now() >= expires => {
+                return cleanup(child, ProcessError::Timeout(duration));
+            }
+            None => thread::sleep(Duration::from_millis(10)),
+        }
+    }
 }
 
 fn start_reader(

@@ -23,7 +23,7 @@ impl FuzzTarget {
         &self.0
     }
 
-    fn admit(value: String) -> Result<Self, TargetError> {
+    pub(super) fn admit(value: String) -> Result<Self, TargetError> {
         let mut bytes = value.bytes();
         let Some(first) = bytes.next() else {
             return Err(TargetError::Malformed(value));
@@ -48,7 +48,7 @@ pub(super) fn registered(
         .arg(format!("+{}", policy.toolchain()))
         .args(["fuzz", "list"])
         .current_dir(repository_root);
-    let output = process::capture(&mut command)?;
+    let output = process::capture(&mut command, None)?;
     if !output.succeeded {
         return Err(TargetError::ListFailed {
             stdout: output.stdout,

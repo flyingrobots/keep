@@ -3,6 +3,7 @@
 use std::error::Error;
 use std::fmt;
 use std::io;
+use std::time::Duration;
 
 pub(crate) enum ProcessError {
     Cleanup {
@@ -20,6 +21,7 @@ pub(crate) enum ProcessError {
         maximum: usize,
     },
     ReaderPanic(&'static str),
+    Timeout(Duration),
 }
 
 impl fmt::Debug for ProcessError {
@@ -48,6 +50,11 @@ impl fmt::Display for ProcessError {
                 )
             }
             Self::ReaderPanic(stream) => write!(formatter, "cargo-fuzz {stream} reader panicked"),
+            Self::Timeout(duration) => write!(
+                formatter,
+                "cargo-fuzz process exceeded its {}-second deadline",
+                duration.as_secs()
+            ),
         }
     }
 }
@@ -56,7 +63,10 @@ impl Error for ProcessError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::Cleanup { source, .. } | Self::Io { source, .. } => Some(source),
-            Self::MissingStream(_) | Self::OutputLimit { .. } | Self::ReaderPanic(_) => None,
+            Self::MissingStream(_)
+            | Self::OutputLimit { .. }
+            | Self::ReaderPanic(_)
+            | Self::Timeout(_) => None,
         }
     }
 }
