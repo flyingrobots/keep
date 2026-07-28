@@ -31,6 +31,11 @@ mod golden_file_worldline;
 mod process_output;
 #[allow(
     clippy::redundant_pub_crate,
+    reason = "the command and task-error boundaries are sibling consumers"
+)]
+mod protocol_conformance;
+#[allow(
+    clippy::redundant_pub_crate,
     reason = "the parent command dispatcher is the only consumer"
 )]
 mod source_structure;
@@ -75,6 +80,15 @@ fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
         "benchmark-baseline" => {
             benchmark_baseline::run(repository_root)?;
         }
+        "cdc-profile-conformance-check" => {
+            protocol_conformance::check_cdc_profile(repository_root)?;
+        }
+        "chunk-id-conformance-check" => {
+            protocol_conformance::check_chunk_identity(repository_root)?;
+        }
+        "conformance-check" => {
+            protocol_conformance::check(repository_root)?;
+        }
         "prepare-fuzz-corpus" => {
             fuzz_seed_corpus::prepare(repository_root)?;
         }
@@ -86,6 +100,7 @@ fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
         }
         "verify" => {
             golden_file_worldline::check(repository_root)?;
+            protocol_conformance::check(repository_root)?;
             source_structure::check(repository_root)?;
         }
         _ => return Err(TaskError::UnknownCommand(command)),

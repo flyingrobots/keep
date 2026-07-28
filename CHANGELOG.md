@@ -10,6 +10,11 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- ChunkId v1 and CDC profile v1 conformance now run through one bounded Rust
+  `cargo xtask conformance-check` command, including the external `b3sum`
+  witness, reproducible Gear-table recipe, scalar and streaming FastCDC laws,
+  source mutations, and exact boundary corpus; the three superseded Python
+  programs have been removed.
 - Fuzz policy admission, target reconciliation, bounded campaign execution,
   minimization deadlines, retained-corpus admission, and workflow contract
   tests now run through the repository's Rust `xtask`; the superseded Python

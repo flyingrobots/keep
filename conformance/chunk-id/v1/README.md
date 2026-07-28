@@ -7,11 +7,12 @@ layout, storage location, retention claim, or chunk-boundary profile.
 Run the independent checker with:
 
 ```bash
-python3 conformance/chunk-id/v1/check_vectors.py
+cargo xtask conformance-check
 ```
 
-The checker requires Python 3.10 or newer and `b3sum` 1.8.5 or a compatible
-implementation on `PATH`.
+The checker uses Keep's pinned Rust toolchain and requires `b3sum` 1.8.5 or a
+compatible implementation on `PATH`. The command checks both the ChunkId v1
+and CDC profile v1 corpora.
 
 ## Identity
 
