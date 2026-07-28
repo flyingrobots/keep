@@ -382,6 +382,10 @@ capability-relative and refuse symlinks, nonregular files, alternate
 spellings, unknown entries in protocol-owned directories, and replacement of
 the opened store root.
 
+The filesystem must expose case-sensitive, byte-preserving directory names.
+The capability probe refuses case-folding or normalization aliases before a
+store root is initialized or admitted.
+
 The names are physical adapter coordinates, not stable public handles.
 `writer.lock` persists; its existence and contents prove nothing.
 
@@ -598,6 +602,7 @@ from an untrusted count before bounds and exact total length agree.
 The initial adapter is supported only when it can prove:
 
 - capability-relative no-follow access to regular files and directories;
+- case-sensitive, byte-preserving directory names without path aliases;
 - atomic same-filesystem no-clobber hard-link creation;
 - atomic same-filesystem replacement of one regular file by another;
 - file synchronization that covers required data and metadata;

@@ -92,11 +92,12 @@ The required classifications are:
 - unrecoverable ambiguity.
 
 The initial durable adapter is supported only where its capability probe can
-establish regular no-follow files, same-filesystem atomic replacement,
-atomic no-clobber hard-link creation, durable file and directory
-synchronization, and process-scoped kernel advisory locking. Unknown,
-networked, or otherwise weaker filesystems are refused. This ADR makes no
-unsupported power-loss or hardware-cache claim.
+establish regular no-follow files; case-sensitive, byte-preserving directory
+names; same-filesystem atomic replacement; atomic no-clobber hard-link
+creation; durable file and directory synchronization; and process-scoped
+kernel advisory locking. Unknown, networked, path-aliasing, or otherwise
+weaker filesystems are refused. This ADR makes no unsupported power-loss or
+hardware-cache claim.
 
 The exact grammars, bounds, checksum preimages, physical naming rules,
 visibility states, crash points, recovery table, and platform contract are

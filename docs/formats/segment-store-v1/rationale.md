@@ -91,6 +91,11 @@ The immutable pool names include verified digests. Naming is an adapter
 detail, but its canonical lowercase grammar makes recovery deterministic and
 prevents multiple spellings of one physical artifact.
 
+That grammar requires case-sensitive, byte-preserving directory names.
+Case-folding or normalization aliases would let a noncanonical spelling reach
+canonical bytes before recovery could refuse the path, so version 1 rejects
+such filesystems instead of weakening path identity.
+
 ## Flush, sync, link, unlink, rename, and directory sync
 
 `flush` moves language or library buffers toward the operating system. File

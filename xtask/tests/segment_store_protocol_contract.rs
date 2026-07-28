@@ -178,3 +178,16 @@ fn conformance_provenance_has_one_issue_prefix_per_owner() {
         "conformance provenance repeats an issue prefix"
     );
 }
+
+#[test]
+fn physical_namespace_refuses_aliasing_filesystems() {
+    for required in [
+        "case-sensitive, byte-preserving directory names",
+        "case-folding or normalization aliases",
+    ] {
+        assert!(
+            SPECIFICATION.contains(required),
+            "missing physical-namespace capability: {required}"
+        );
+    }
+}
