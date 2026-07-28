@@ -111,7 +111,7 @@ impl CapturedProcess {
     }
 }
 
-fn wait_for_child(
+pub(super) fn wait_for_child(
     program: &'static str,
     child: &mut Child,
     deadline: &ProcessDeadline,

@@ -41,7 +41,9 @@ impl CommandRunner for SystemRunner {
                 replay(&output)?;
                 Ok(output)
             }
-            OutputMode::Inherit => bounded_process::status(CARGO_FUZZ_PROCESS, &mut command),
+            OutputMode::Inherit => {
+                bounded_process::status(CARGO_FUZZ_PROCESS, &mut command, plan.deadline())
+            }
         }
     }
 }
