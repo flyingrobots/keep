@@ -53,6 +53,9 @@ pub(crate) enum ConformanceError {
         program: &'static str,
         stream: &'static str,
     },
+    WriterPanic {
+        program: &'static str,
+    },
     Utf8 {
         path: PathBuf,
         source: FromUtf8Error,
@@ -135,6 +138,7 @@ impl fmt::Display for ConformanceError {
             Self::ReaderPanic { program, stream } => {
                 write!(formatter, "{program} {stream} reader panicked")
             }
+            Self::WriterPanic { program } => write!(formatter, "{program} stdin writer panicked"),
             Self::Utf8 { path, .. } => {
                 escaped_path(formatter, path)?;
                 formatter.write_str(": protocol is not UTF-8")
@@ -157,6 +161,7 @@ impl Error for ConformanceError {
             | Self::ProcessOutputBound { .. }
             | Self::ProcessTimeout { .. }
             | Self::ReaderPanic { .. }
+            | Self::WriterPanic { .. }
             | Self::Violation(_) => None,
         }
     }

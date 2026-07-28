@@ -24,7 +24,7 @@ struct B3sumProcess {
 
 pub(super) fn digest(parts: &[&[u8]]) -> Result<[u8; DIGEST_BYTES], ConformanceError> {
     let process = start()?;
-    collect(process, parts)
+    collect_with_timeout(process, parts, TIMEOUT)
 }
 
 fn start() -> Result<B3sumProcess, ConformanceError> {
@@ -96,25 +96,60 @@ fn start_reader(
         .map_err(|source| ConformanceError::io("start b3sum reader", Path::new(B3SUM), source))
 }
 
-fn collect(process: B3sumProcess, parts: &[&[u8]]) -> Result<[u8; DIGEST_BYTES], ConformanceError> {
+fn collect_with_timeout(
+    process: B3sumProcess,
+    parts: &[&[u8]],
+    duration: Duration,
+) -> Result<[u8; DIGEST_BYTES], ConformanceError> {
     let B3sumProcess {
         mut child,
-        mut stdin,
+        stdin,
         stdout_worker,
         stderr_worker,
     } = process;
-    if let Err(error) = write_parts(&mut stdin, parts) {
-        let primary = cleanup(&mut child, error);
-        drop(join_reader(stdout_worker, "output"));
-        drop(join_reader(stderr_worker, "diagnostic"));
-        return Err(primary);
-    }
-    drop(stdin);
-    let status = wait(&mut child);
+    let status = write_and_wait(&mut child, stdin, parts, duration);
     let output = join_reader(stdout_worker, "output");
     let diagnostic = join_reader(stderr_worker, "diagnostic");
     let status = status?;
     validate(status, output?, diagnostic?)
+}
+
+fn write_and_wait(
+    child: &mut Child,
+    stdin: ChildStdin,
+    parts: &[&[u8]],
+    duration: Duration,
+) -> Result<ExitStatus, ConformanceError> {
+    let expires = Instant::now()
+        .checked_add(duration)
+        .ok_or_else(|| cleanup(child, timeout(duration)))?;
+    thread::scope(|scope| {
+        let writer = thread::Builder::new()
+            .name(String::from("conformance-b3sum-input"))
+            .spawn_scoped(scope, move || {
+                let mut stdin = stdin;
+                write_parts(&mut stdin, parts)
+            })
+            .map_err(|source| ConformanceError::io("start b3sum writer", Path::new(B3SUM), source));
+        let writer = match writer {
+            Ok(worker) => worker,
+            Err(error) => return Err(cleanup(child, error)),
+        };
+        let status = wait_until(child, expires, duration);
+        let written = writer
+            .join()
+            .map_err(|_| ConformanceError::WriterPanic { program: B3SUM });
+        match status {
+            Ok(status) => {
+                written??;
+                Ok(status)
+            }
+            Err(primary) => {
+                drop(written);
+                Err(primary)
+            }
+        }
+    })
 }
 
 fn write_parts(stdin: &mut ChildStdin, parts: &[&[u8]]) -> Result<(), ConformanceError> {
@@ -126,14 +161,17 @@ fn write_parts(stdin: &mut ChildStdin, parts: &[&[u8]]) -> Result<(), Conformanc
     Ok(())
 }
 
-fn wait(child: &mut Child) -> Result<ExitStatus, ConformanceError> {
-    let expires = Instant::now()
-        .checked_add(TIMEOUT)
-        .ok_or_else(|| cleanup(child, timeout()))?;
+fn wait_until(
+    child: &mut Child,
+    expires: Instant,
+    duration: Duration,
+) -> Result<ExitStatus, ConformanceError> {
     loop {
         match child.try_wait() {
             Ok(Some(status)) => return Ok(status),
-            Ok(None) if Instant::now() >= expires => return Err(cleanup(child, timeout())),
+            Ok(None) if Instant::now() >= expires => {
+                return Err(cleanup(child, timeout(duration)));
+            }
             Ok(None) => thread::sleep(Duration::from_millis(10)),
             Err(source) => {
                 return Err(cleanup(
@@ -145,10 +183,10 @@ fn wait(child: &mut Child) -> Result<ExitStatus, ConformanceError> {
     }
 }
 
-const fn timeout() -> ConformanceError {
+const fn timeout(duration: Duration) -> ConformanceError {
     ConformanceError::ProcessTimeout {
         program: B3SUM,
-        duration: TIMEOUT,
+        duration,
     }
 }
 
@@ -230,3 +268,6 @@ fn cleanup(child: &mut Child, primary: ConformanceError) -> ConformanceError {
     }
     primary
 }
+
+#[cfg(test)]
+mod tests;
