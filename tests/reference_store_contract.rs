@@ -13,6 +13,14 @@ const RECONSTRUCTION_ERROR_DISPLAY: &str =
 
 #[test]
 fn reconstruction_error_formatters_stay_below_the_hard_function_limit() {
+    assert!(
+        !RECONSTRUCTION_ERROR_DISPLAY.contains("enum DisplayGroup"),
+        "reconstruction diagnostics must not route variants indirectly"
+    );
+    assert!(
+        !RECONSTRUCTION_ERROR_DISPLAY.contains("Err(fmt::Error)"),
+        "reconstruction diagnostics must not reject routed variants"
+    );
     for function in RECONSTRUCTION_ERROR_DISPLAY.split("\nfn ").skip(1) {
         let body = function
             .split_once("\n}\n\n")

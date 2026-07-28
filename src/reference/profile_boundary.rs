@@ -1,5 +1,7 @@
 //! Compact semantic coordinate for profile-replay diagnostics.
 
+use std::fmt;
+
 use crate::{ChunkLength, ChunkOffset, ChunkSpan, LayoutEntry};
 
 /// One storage-profile boundary coordinate without retained content identity.
@@ -38,5 +40,16 @@ impl From<ChunkSpan> for ProfileBoundary {
             offset: span.offset(),
             length: span.length(),
         }
+    }
+}
+
+impl fmt::Display for ProfileBoundary {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            formatter,
+            "offset {} length {}",
+            self.offset(),
+            self.length()
+        )
     }
 }

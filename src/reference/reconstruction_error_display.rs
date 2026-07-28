@@ -1,262 +1,208 @@
-//! Bounded diagnostic rendering for reconstruction failures.
+//! Total diagnostic rendering for reconstruction failures.
 
 use std::fmt::{self, Display};
+use std::io;
+
+use crate::{
+    BlobId, BlobLength, ChunkHashError, ChunkId, ChunkingError, LayoutId, ProfileBoundary,
+    StorageProfileId,
+};
 
 use super::ReconstructionError;
 
-impl fmt::Display for ReconstructionError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        DisplayGroup::from(self).fmt(formatter)
-    }
-}
-
-enum DisplayGroup<'a> {
-    Presence(&'a ReconstructionError),
-    ChunkVerification(&'a ReconstructionError),
-    BlobVerification(&'a ReconstructionError),
-    ProfileVerification(&'a ReconstructionError),
-    Output(&'a ReconstructionError),
-}
-
-impl DisplayGroup<'_> {
-    fn fmt(self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for ReconstructionError {
+    // Keep the exhaustive arms directly auditable within the 60-line limit.
+    #[rustfmt::skip]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Presence(error) => format_presence(formatter, error),
-            Self::ChunkVerification(error) => format_chunk_verification(formatter, error),
-            Self::BlobVerification(error) => format_blob_verification(formatter, error),
-            Self::ProfileVerification(error) => format_profile_verification(formatter, error),
-            Self::Output(error) => format_output(formatter, error),
+            Self::BlobMissing { requested } => write!(f, "blob {requested} is absent"),
+            Self::LayoutMissing { requested } => write!(f, "layout {requested} is absent"),
+            Self::LayoutDecode(source) => source.fmt(f),
+            Self::LayoutEncoding(source) => source.fmt(f),
+            Self::ChunkMissing { layout, index, requested } =>
+                format_chunk_missing(f, *layout, *index, *requested),
+            Self::ChunkHash { layout, index, expected, source } =>
+                format_chunk_hash(f, *layout, *index, *expected, source),
+            Self::ChunkIdentityMismatch { layout, index, expected, observed } =>
+                format_chunk_mismatch(f, *layout, *index, *expected, *observed),
+            Self::BlobHash(source) => source.fmt(f),
+            Self::BlobIdentityMismatch { layout, expected, observed } =>
+                format_blob_mismatch(f, *layout, *expected, *observed),
+            Self::ProfileVerifierUnavailable { layout, profile } =>
+                format_profile_unavailable(f, *layout, *profile),
+            Self::ProfileChunking { layout, source } => format_profile_chunking(f, *layout, source),
+            Self::ProfileBoundaryMismatch { layout, index, expected, observed } =>
+                format_profile_mismatch(f, *layout, *index, *expected, *observed),
+            Self::WriteZero { layout, bytes_written } =>
+                format_write_zero(f, *layout, *bytes_written),
+            Self::InvalidWriteCount { layout, maximum, observed, bytes_written } =>
+                format_invalid_write(f, *layout, *maximum, *observed, *bytes_written),
+            Self::Write { layout, bytes_written, source } =>
+                format_write_error(f, *layout, *bytes_written, source),
+            Self::WrittenLengthOverflow { layout, bytes_written, incoming } =>
+                format_length_overflow(f, *layout, *bytes_written, *incoming),
+            Self::WrittenLengthMismatch { layout, expected, observed } =>
+                format_length_mismatch(f, *layout, *expected, *observed),
         }
     }
 }
 
-impl<'a> From<&'a ReconstructionError> for DisplayGroup<'a> {
-    fn from(error: &'a ReconstructionError) -> Self {
-        match error {
-            ReconstructionError::BlobMissing { .. }
-            | ReconstructionError::LayoutMissing { .. }
-            | ReconstructionError::LayoutDecode(_)
-            | ReconstructionError::LayoutEncoding(_) => Self::Presence(error),
-            ReconstructionError::ChunkMissing { .. }
-            | ReconstructionError::ChunkHash { .. }
-            | ReconstructionError::ChunkIdentityMismatch { .. } => Self::ChunkVerification(error),
-            ReconstructionError::BlobHash(_) | ReconstructionError::BlobIdentityMismatch { .. } => {
-                Self::BlobVerification(error)
-            }
-            ReconstructionError::ProfileVerifierUnavailable { .. }
-            | ReconstructionError::ProfileChunking { .. }
-            | ReconstructionError::ProfileBoundaryMismatch { .. } => {
-                Self::ProfileVerification(error)
-            }
-            ReconstructionError::WriteZero { .. }
-            | ReconstructionError::InvalidWriteCount { .. }
-            | ReconstructionError::Write { .. }
-            | ReconstructionError::WrittenLengthOverflow { .. }
-            | ReconstructionError::WrittenLengthMismatch { .. } => Self::Output(error),
-        }
-    }
-}
-
-fn format_presence(formatter: &mut fmt::Formatter<'_>, error: &ReconstructionError) -> fmt::Result {
-    match error {
-        ReconstructionError::BlobMissing { requested } => {
-            write!(formatter, "blob {requested} is absent")
-        }
-        ReconstructionError::LayoutMissing { requested } => {
-            write!(formatter, "layout {requested} is absent")
-        }
-        ReconstructionError::LayoutDecode(source) => source.fmt(formatter),
-        ReconstructionError::LayoutEncoding(source) => source.fmt(formatter),
-        ReconstructionError::ChunkMissing { .. }
-        | ReconstructionError::ChunkHash { .. }
-        | ReconstructionError::ChunkIdentityMismatch { .. }
-        | ReconstructionError::BlobHash(_)
-        | ReconstructionError::BlobIdentityMismatch { .. }
-        | ReconstructionError::ProfileVerifierUnavailable { .. }
-        | ReconstructionError::ProfileChunking { .. }
-        | ReconstructionError::ProfileBoundaryMismatch { .. }
-        | ReconstructionError::WriteZero { .. }
-        | ReconstructionError::InvalidWriteCount { .. }
-        | ReconstructionError::Write { .. }
-        | ReconstructionError::WrittenLengthOverflow { .. }
-        | ReconstructionError::WrittenLengthMismatch { .. } => Err(fmt::Error),
-    }
-}
-
-fn format_chunk_verification(
+fn format_chunk_missing(
     formatter: &mut fmt::Formatter<'_>,
-    error: &ReconstructionError,
+    layout: LayoutId,
+    index: usize,
+    requested: ChunkId,
 ) -> fmt::Result {
-    match error {
-        ReconstructionError::ChunkMissing {
-            layout,
-            index,
-            requested,
-        } => write!(
-            formatter,
-            "layout {layout} entry {index} is missing chunk {requested:?}"
-        ),
-        ReconstructionError::ChunkHash {
-            layout,
-            index,
-            expected,
-            source,
-        } => write!(
-            formatter,
-            "layout {layout} entry {index} chunk {expected:?} cannot be verified: {source}"
-        ),
-        ReconstructionError::ChunkIdentityMismatch {
-            layout,
-            index,
-            expected,
-            observed,
-        } => write!(
-            formatter,
-            "layout {layout} entry {index} expected chunk {expected:?}, observed {observed:?}"
-        ),
-        ReconstructionError::BlobMissing { .. }
-        | ReconstructionError::LayoutMissing { .. }
-        | ReconstructionError::LayoutDecode(_)
-        | ReconstructionError::LayoutEncoding(_)
-        | ReconstructionError::BlobHash(_)
-        | ReconstructionError::BlobIdentityMismatch { .. }
-        | ReconstructionError::ProfileVerifierUnavailable { .. }
-        | ReconstructionError::ProfileChunking { .. }
-        | ReconstructionError::ProfileBoundaryMismatch { .. }
-        | ReconstructionError::WriteZero { .. }
-        | ReconstructionError::InvalidWriteCount { .. }
-        | ReconstructionError::Write { .. }
-        | ReconstructionError::WrittenLengthOverflow { .. }
-        | ReconstructionError::WrittenLengthMismatch { .. } => Err(fmt::Error),
-    }
+    write!(
+        formatter,
+        "layout {layout} entry {index} is missing chunk {requested:?}"
+    )
 }
 
-fn format_blob_verification(
+fn format_chunk_hash(
     formatter: &mut fmt::Formatter<'_>,
-    error: &ReconstructionError,
+    layout: LayoutId,
+    index: usize,
+    expected: ChunkId,
+    source: &ChunkHashError,
 ) -> fmt::Result {
-    match error {
-        ReconstructionError::BlobHash(source) => source.fmt(formatter),
-        ReconstructionError::BlobIdentityMismatch {
-            layout,
-            expected,
-            observed,
-        } => write!(
-            formatter,
-            "layout {layout} reconstructs {observed}, not named blob {expected}"
-        ),
-        ReconstructionError::BlobMissing { .. }
-        | ReconstructionError::LayoutMissing { .. }
-        | ReconstructionError::LayoutDecode(_)
-        | ReconstructionError::LayoutEncoding(_)
-        | ReconstructionError::ChunkMissing { .. }
-        | ReconstructionError::ChunkHash { .. }
-        | ReconstructionError::ChunkIdentityMismatch { .. }
-        | ReconstructionError::ProfileVerifierUnavailable { .. }
-        | ReconstructionError::ProfileChunking { .. }
-        | ReconstructionError::ProfileBoundaryMismatch { .. }
-        | ReconstructionError::WriteZero { .. }
-        | ReconstructionError::InvalidWriteCount { .. }
-        | ReconstructionError::Write { .. }
-        | ReconstructionError::WrittenLengthOverflow { .. }
-        | ReconstructionError::WrittenLengthMismatch { .. } => Err(fmt::Error),
-    }
+    write!(
+        formatter,
+        "layout {layout} entry {index} chunk {expected:?} cannot be verified: {source}"
+    )
 }
 
-fn format_profile_verification(
+fn format_chunk_mismatch(
     formatter: &mut fmt::Formatter<'_>,
-    error: &ReconstructionError,
+    layout: LayoutId,
+    index: usize,
+    expected: ChunkId,
+    observed: ChunkId,
 ) -> fmt::Result {
-    match error {
-        ReconstructionError::ProfileVerifierUnavailable { layout, profile } => write!(
-            formatter,
-            "layout {layout} has no reconstruction verifier for registered profile {profile}"
-        ),
-        ReconstructionError::ProfileChunking { layout, source } => write!(
-            formatter,
-            "layout {layout} storage-profile replay failed: {source}"
-        ),
-        ReconstructionError::ProfileBoundaryMismatch {
-            layout,
-            index,
-            expected,
-            observed,
-        } => write!(
-            formatter,
-            "layout {layout} profile boundary {index} expected {expected:?}, observed {observed:?}"
-        ),
-        ReconstructionError::BlobMissing { .. }
-        | ReconstructionError::LayoutMissing { .. }
-        | ReconstructionError::LayoutDecode(_)
-        | ReconstructionError::LayoutEncoding(_)
-        | ReconstructionError::ChunkMissing { .. }
-        | ReconstructionError::ChunkHash { .. }
-        | ReconstructionError::ChunkIdentityMismatch { .. }
-        | ReconstructionError::BlobHash(_)
-        | ReconstructionError::BlobIdentityMismatch { .. }
-        | ReconstructionError::WriteZero { .. }
-        | ReconstructionError::InvalidWriteCount { .. }
-        | ReconstructionError::Write { .. }
-        | ReconstructionError::WrittenLengthOverflow { .. }
-        | ReconstructionError::WrittenLengthMismatch { .. } => Err(fmt::Error),
+    write!(
+        formatter,
+        "layout {layout} entry {index} expected chunk {expected:?}, observed {observed:?}"
+    )
+}
+
+fn format_blob_mismatch(
+    formatter: &mut fmt::Formatter<'_>,
+    layout: LayoutId,
+    expected: BlobId,
+    observed: BlobId,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "layout {layout} reconstructs {observed}, not named blob {expected}"
+    )
+}
+
+fn format_profile_unavailable(
+    formatter: &mut fmt::Formatter<'_>,
+    layout: LayoutId,
+    profile: StorageProfileId,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "layout {layout} has no reconstruction verifier for registered profile {profile}"
+    )
+}
+
+fn format_profile_chunking(
+    formatter: &mut fmt::Formatter<'_>,
+    layout: LayoutId,
+    source: &ChunkingError,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "layout {layout} storage-profile replay failed: {source}"
+    )
+}
+
+fn format_profile_mismatch(
+    formatter: &mut fmt::Formatter<'_>,
+    layout: LayoutId,
+    index: usize,
+    expected: Option<ProfileBoundary>,
+    observed: Option<ProfileBoundary>,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "layout {layout} profile boundary {index} expected {}, observed {}",
+        BoundaryDisplay(expected),
+        BoundaryDisplay(observed)
+    )
+}
+
+struct BoundaryDisplay(Option<ProfileBoundary>);
+
+impl Display for BoundaryDisplay {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.0 {
+            Some(boundary) => boundary.fmt(formatter),
+            None => formatter.write_str("no boundary"),
+        }
     }
 }
 
-fn format_output(formatter: &mut fmt::Formatter<'_>, error: &ReconstructionError) -> fmt::Result {
-    match error {
-        ReconstructionError::WriteZero {
-            layout,
-            bytes_written,
-        } => write!(
-            formatter,
-            "output stopped after {bytes_written} authenticated bytes for layout {layout}"
-        ),
-        ReconstructionError::InvalidWriteCount {
-            layout,
-            maximum,
-            observed,
-            bytes_written,
-        } => write!(
-            formatter,
-            "writer reported {observed} bytes for a {maximum}-byte buffer after \
-             {bytes_written} authenticated bytes of layout {layout}"
-        ),
-        ReconstructionError::Write {
-            layout,
-            bytes_written,
-            source,
-        } => write!(
-            formatter,
-            "failed after writing {bytes_written} authenticated bytes of layout {layout}: {source}"
-        ),
-        ReconstructionError::WrittenLengthOverflow {
-            layout,
-            bytes_written,
-            incoming,
-        } => write!(
-            formatter,
-            "written length overflow for layout {layout} after {bytes_written} bytes with \
-             {incoming} incoming bytes"
-        ),
-        ReconstructionError::WrittenLengthMismatch {
-            layout,
-            expected,
-            observed,
-        } => write!(
-            formatter,
-            "layout {layout} wrote {observed} authenticated bytes, expected {expected}"
-        ),
-        ReconstructionError::BlobMissing { .. }
-        | ReconstructionError::LayoutMissing { .. }
-        | ReconstructionError::LayoutDecode(_)
-        | ReconstructionError::LayoutEncoding(_)
-        | ReconstructionError::ChunkMissing { .. }
-        | ReconstructionError::ChunkHash { .. }
-        | ReconstructionError::ChunkIdentityMismatch { .. }
-        | ReconstructionError::BlobHash(_)
-        | ReconstructionError::BlobIdentityMismatch { .. }
-        | ReconstructionError::ProfileVerifierUnavailable { .. }
-        | ReconstructionError::ProfileChunking { .. }
-        | ReconstructionError::ProfileBoundaryMismatch { .. } => Err(fmt::Error),
-    }
+fn format_write_zero(
+    formatter: &mut fmt::Formatter<'_>,
+    layout: LayoutId,
+    bytes_written: BlobLength,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "output stopped after {bytes_written} authenticated bytes for layout {layout}"
+    )
+}
+
+fn format_invalid_write(
+    formatter: &mut fmt::Formatter<'_>,
+    layout: LayoutId,
+    maximum: usize,
+    observed: usize,
+    bytes_written: BlobLength,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "writer reported {observed} bytes for a {maximum}-byte buffer after \
+         {bytes_written} authenticated bytes of layout {layout}"
+    )
+}
+
+fn format_write_error(
+    formatter: &mut fmt::Formatter<'_>,
+    layout: LayoutId,
+    bytes_written: BlobLength,
+    source: &io::Error,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "failed after writing {bytes_written} authenticated bytes of layout {layout}: {source}"
+    )
+}
+
+fn format_length_overflow(
+    formatter: &mut fmt::Formatter<'_>,
+    layout: LayoutId,
+    bytes_written: u64,
+    incoming: usize,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "written length overflow for layout {layout} after {bytes_written} bytes with \
+         {incoming} incoming bytes"
+    )
+}
+
+fn format_length_mismatch(
+    formatter: &mut fmt::Formatter<'_>,
+    layout: LayoutId,
+    expected: BlobLength,
+    observed: BlobLength,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "layout {layout} wrote {observed} authenticated bytes, expected {expected}"
+    )
 }

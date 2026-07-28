@@ -61,16 +61,19 @@ fn content_correct_false_profile_boundaries_are_refused_before_output() -> Resul
         .err()
         .ok_or("false profile boundaries unexpectedly reconstructed")?;
 
-    assert!(matches!(
-        error,
-        ReconstructionError::ProfileBoundaryMismatch {
-            index: 0,
-            expected: Some(expected),
-            observed: Some(observed),
-            ..
-        } if expected.length().get() == 262_143
-            && observed.length().get() == 262_144
-    ));
+    let ReconstructionError::ProfileBoundaryMismatch {
+        index: 0,
+        expected: Some(expected),
+        observed: Some(observed),
+        ..
+    } = error
+    else {
+        return Err("profile mismatch lost its exact boundary coordinates".into());
+    };
+    assert_eq!(expected.length().get(), 262_143);
+    assert_eq!(observed.length().get(), 262_144);
+    assert_eq!(expected.to_string(), "offset 0 length 262143");
+    assert_eq!(observed.to_string(), "offset 0 length 262144");
     assert!(output.is_empty());
     Ok(())
 }
