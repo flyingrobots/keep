@@ -50,17 +50,26 @@ pub(super) fn capture(
         .ok_or(ProcessError::MissingStream("stderr"));
     let (stdout, stderr) = match (stdout, stderr) {
         (Ok(stdout), Ok(stderr)) => (stdout, stderr),
-        (Err(error), _) | (_, Err(error)) => return cleanup(&mut child, error),
+        (Err(error), _) | (_, Err(error)) => return Err(cleanup(&mut child, error)),
     };
-    let stdout_reader = start_reader("stdout", stdout)?;
+    let stdout_reader = match start_reader("stdout", stdout) {
+        Ok(reader) => reader,
+        Err(error) => return Err(cleanup(&mut child, error)),
+    };
     let stderr_reader = match start_reader("stderr", stderr) {
         Ok(reader) => reader,
-        Err(error) => return cleanup(&mut child, error),
+        Err(error) => {
+            let error = cleanup(&mut child, error);
+            drop(join_reader("stdout", stdout_reader));
+            return Err(error);
+        }
     };
     let status = wait_for_child(&mut child, deadline);
-    let stdout = join_reader("stdout", stdout_reader)?;
-    let stderr = join_reader("stderr", stderr_reader)?;
+    let stdout = join_reader("stdout", stdout_reader);
+    let stderr = join_reader("stderr", stderr_reader);
     let status = status?;
+    let stdout = stdout?;
+    let stderr = stderr?;
     refuse_exceeded("stdout", &stdout)?;
     refuse_exceeded("stderr", &stderr)?;
     Ok(ProcessOutput {
@@ -75,24 +84,36 @@ fn wait_for_child(
     deadline: Option<Duration>,
 ) -> Result<ExitStatus, ProcessError> {
     let Some(duration) = deadline else {
-        return child.wait().map_err(|source| ProcessError::Io {
-            action: "wait",
-            source,
-        });
+        return match child.wait() {
+            Ok(status) => Ok(status),
+            Err(source) => Err(cleanup(
+                child,
+                ProcessError::Io {
+                    action: "wait",
+                    source,
+                },
+            )),
+        };
     };
-    let expires = Instant::now()
-        .checked_add(duration)
-        .ok_or(ProcessError::Timeout(duration))?;
+    let Some(expires) = Instant::now().checked_add(duration) else {
+        return Err(cleanup(child, ProcessError::Timeout(duration)));
+    };
     loop {
-        match child.try_wait().map_err(|source| ProcessError::Io {
-            action: "poll",
-            source,
-        })? {
-            Some(status) => return Ok(status),
-            None if Instant::now() >= expires => {
-                return cleanup(child, ProcessError::Timeout(duration));
+        match child.try_wait() {
+            Err(source) => {
+                return Err(cleanup(
+                    child,
+                    ProcessError::Io {
+                        action: "poll",
+                        source,
+                    },
+                ));
             }
-            None => thread::sleep(Duration::from_millis(10)),
+            Ok(Some(status)) => return Ok(status),
+            Ok(None) if Instant::now() >= expires => {
+                return Err(cleanup(child, ProcessError::Timeout(duration)));
+            }
+            Ok(None) => thread::sleep(Duration::from_millis(10)),
         }
     }
 }
@@ -134,24 +155,24 @@ const fn refuse_exceeded(stream: &'static str, output: &BoundedBytes) -> Result<
     }
 }
 
-fn cleanup<T>(child: &mut std::process::Child, primary: ProcessError) -> Result<T, ProcessError> {
+fn cleanup(child: &mut std::process::Child, primary: ProcessError) -> ProcessError {
     let kill = child.kill();
     let wait = child.wait();
     if let Err(source) = kill
         && source.kind() != io::ErrorKind::InvalidInput
     {
-        return Err(ProcessError::Cleanup {
+        return ProcessError::Cleanup {
             primary: Box::new(primary),
             action: "kill",
             source,
-        });
+        };
     }
     if let Err(source) = wait {
-        return Err(ProcessError::Cleanup {
+        return ProcessError::Cleanup {
             primary: Box::new(primary),
             action: "wait",
             source,
-        });
+        };
     }
-    Err(primary)
+    primary
 }
