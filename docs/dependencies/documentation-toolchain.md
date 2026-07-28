@@ -32,9 +32,11 @@ before extraction:
 | `lychee-x86_64-unknown-linux-gnu.tar.gz` | `a06547250f10021dcafc6ed5bb20fca75835b65711745b63cfdda34c29ff6a73` |
 
 The Rust `cargo xtask documentation-integrity-check` boundary verifies the
-committed Node graph and the exact BLAKE3 digest of the reviewed installer,
-then verifies each executable's reported version before admitting its output
-as evidence. A missing tool, changed archive, unexpected version, empty input
+structure and exact BLAKE3 digest of the committed Node lock artifact and the
+exact BLAKE3 digest of the reviewed installer. The byte-exact lock admission
+refuses altered, omitted, or additional package records. The boundary then
+verifies each executable's reported version before admitting its output as
+evidence. A missing tool, changed archive, unexpected version, empty input
 corpus, or tool failure refuses the check.
 
 ## Determinism and network posture

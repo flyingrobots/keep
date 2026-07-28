@@ -2,6 +2,9 @@ use std::path::Path;
 
 use crate::repository_file::RepositoryRoot;
 
+#[path = "tests/lock_graph.rs"]
+mod lock_graph;
+
 const MANIFEST: &str = r#"{"dependencies":{"markdownlint-cli2":"0.23.2"}}"#;
 const LOCK: &str = r#"{
   "lockfileVersion": 3,

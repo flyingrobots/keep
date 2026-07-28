@@ -14,6 +14,10 @@ const INSTALLER_DIGEST: [u8; 32] = [
     0x12, 0xfb, 0x82, 0xcd, 0xdb, 0x65, 0x52, 0xe5, 0xae, 0xdb, 0x14, 0x54, 0x83, 0xf4, 0x8a, 0x8a,
     0x8b, 0x35, 0x54, 0xea, 0x2a, 0x90, 0xeb, 0xd4, 0x82, 0xd7, 0x4a, 0x61, 0x1f, 0xf6, 0xd3, 0xfd,
 ];
+const LOCK_DIGEST: [u8; 32] = [
+    0x74, 0x21, 0xce, 0x90, 0xdd, 0x52, 0x33, 0xfe, 0x99, 0x1a, 0x0b, 0x7e, 0xdd, 0xaa, 0xb7, 0x53,
+    0x63, 0xf3, 0xad, 0x3b, 0x0f, 0x9e, 0x7d, 0xa2, 0xa4, 0x77, 0x65, 0xf0, 0x9c, 0x1d, 0xcb, 0x3b,
+];
 const LOCK_PATH: &str = "scripts/documentation-tools/package-lock.json";
 const MANIFEST_PATH: &str = "scripts/documentation-tools/package.json";
 
@@ -21,7 +25,8 @@ pub(super) fn check(repository_root: &RepositoryRoot) -> Result<(), Documentatio
     let manifest = repository_text::read(repository_root, MANIFEST_PATH)?;
     let lock = repository_text::read(repository_root, LOCK_PATH)?;
     let installer = repository_text::read(repository_root, INSTALLER_PATH)?;
-    admit(&manifest, &lock, &installer)
+    admit(&manifest, &lock, &installer)?;
+    admit_lock_bytes(&lock)
 }
 
 fn admit(manifest: &str, lock: &str, installer: &str) -> Result<(), DocumentationError> {
@@ -102,6 +107,14 @@ fn admit_installer(installer: &str) -> Result<(), DocumentationError> {
             INSTALLER_PATH,
             "installer bytes match the reviewed digest",
         ))
+    }
+}
+
+fn admit_lock_bytes(lock: &str) -> Result<(), DocumentationError> {
+    if blake3::hash(lock.as_bytes()).as_bytes() == &LOCK_DIGEST {
+        Ok(())
+    } else {
+        Err(contract(LOCK_PATH, "lock bytes match the reviewed digest"))
     }
 }
 
