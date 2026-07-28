@@ -32,6 +32,11 @@ fn public_reference_cas_is_reported_as_implemented_without_a_durability_claim() 
             .contains("[non-durable reference CAS](docs/architecture/reference-store/README.md)")
     );
     assert!(!ROOT_README.contains("does **not** expose ingestion, layouts, or physical storage"));
+    assert!(!ROOT_README.contains("but ingestion and\nstorage do not"));
+    assert!(
+        !ROOT_README
+            .contains("next format\nboundary without claiming that its implementation exists")
+    );
     assert!(
         ARCHITECTURE.contains("Process death may erase every pre-commit and post-commit state")
     );

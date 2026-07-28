@@ -100,18 +100,20 @@ The complete Golden File Worldline is planned to demonstrate that Keep can:
 5. refuse corrupted or ambiguous storage;
 6. recover to a documented lawful state after interruption.
 
-Items 1 through 6 describe the multi-milestone destination, not current
-storage behavior. Deterministic chunk detection now exists, but ingestion and
-storage do not. See the
-[M1 conformance contract](docs/conformance/golden-file-worldline.md) for the
-implemented proof boundary and explicit nonclaims. The separate
-[CDC profile corpus](conformance/cdc-profile/v1/README.md) freezes M2 boundary
-semantics, and the
-[chunk identity invariant](docs/invariants/chunk-identity/README.md) defines
-the implemented `ChunkId` and `FastCdc` proof boundary. The
-[Flat Chunk Layout v1 specification](docs/formats/flat-chunk-layout-v1/README.md)
-and [layout corpus](conformance/layout/v1/README.md) freeze the next format
-boundary without claiming that its implementation exists.
+Items 1 through 6 describe the multi-milestone destination. M1 establishes the
+canonical identity boundary. M2 now provides deterministic chunk detection,
+canonical layouts, capacity-bounded ingestion, and authenticated whole-blob
+reconstruction through the non-durable reference CAS. Durable retention and
+recovery, nearby-version workflows, minimal exact range reads, sealed-storage
+verification, and restart recovery remain future milestones.
+
+See the [M1 conformance contract](docs/conformance/golden-file-worldline.md),
+the [CDC profile corpus](conformance/cdc-profile/v1/README.md), the
+[chunk identity invariant](docs/invariants/chunk-identity/README.md), the
+[Flat Chunk Layout v1 specification](docs/formats/flat-chunk-layout-v1/README.md),
+the [layout corpus](conformance/layout/v1/README.md), and the
+[reference CAS contract](docs/architecture/reference-store/README.md) for the
+implemented proof boundaries and explicit nonclaims.
 
 ## Contributing
 
