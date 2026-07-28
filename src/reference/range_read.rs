@@ -95,19 +95,22 @@ impl ReferenceStore {
         read_admitted(self, layout_id, layout, requested, output)
     }
 
-    /// Reads one exact range through a caller-supplied admitted layout.
+    /// Resolves a caller-supplied admitted layout to one committed range.
     ///
-    /// The layout need not be published in this store, but every selected
-    /// chunk must be present and exact. Calculating the canonical layout
-    /// identity transiently materializes one record bounded by the admitted
-    /// layout's protocol entry limit. The logical blob itself is never
-    /// materialized.
+    /// The supplied layout is used only to calculate its canonical identity,
+    /// which must name a committed layout in this store. Range planning,
+    /// receipt coordinates, and chunk lookup use that committed layout, so a
+    /// caller cannot associate stored bytes with an uncommitted target.
+    /// Calculating the identity transiently materializes one record bounded by
+    /// the admitted layout's protocol entry limit. The logical blob itself is
+    /// never materialized.
     ///
     /// # Errors
     ///
-    /// Returns [`RangeReadError`] for canonical encoding failure, an invalid
-    /// range, missing or mismatched selected content, checked slicing or
-    /// accounting failure, broken writer behavior, or output I/O failure.
+    /// Returns [`RangeReadError`] for canonical encoding failure, an absent
+    /// committed layout, an invalid range, missing or mismatched selected
+    /// content, checked slicing or accounting failure, broken writer behavior,
+    /// or output I/O failure.
     pub fn read_admitted_layout_range<W>(
         &self,
         layout: &AdmittedLayout,
@@ -121,22 +124,23 @@ impl ReferenceStore {
             .encode_record()
             .map_err(RangeReadError::LayoutEncoding)?
             .id();
-        read_admitted(self, layout_id, layout, requested, output)
+        self.read_layout_range(layout_id, requested, output)
     }
 
     /// Decodes one canonical layout record and reads an exact logical range.
     ///
-    /// Bounded decoding and admission allocate entry metadata within `policy`
-    /// before chunk lookup or output. The complete logical blob is never
-    /// materialized. Selected-chunk verification and output then follow
-    /// [`ReferenceStore::read_admitted_layout_range`].
+    /// Bounded decoding and admission allocate entry metadata within `policy`.
+    /// The decoded record is used only to resolve a canonical identity that
+    /// must name a committed layout in this store. The complete logical blob
+    /// is never materialized. Selected-chunk verification and output then
+    /// follow [`ReferenceStore::read_admitted_layout_range`].
     ///
     /// # Errors
     ///
     /// Returns [`RangeReadError`] for malformed, noncanonical, or
-    /// policy-exceeding layout bytes; an invalid range; absent or mismatched
-    /// selected content; checked slicing or accounting failure; broken writer
-    /// behavior; or output I/O failure.
+    /// policy-exceeding layout bytes; an absent committed layout; an invalid
+    /// range; absent or mismatched selected content; checked slicing or
+    /// accounting failure; broken writer behavior; or output I/O failure.
     pub fn read_record_range<W>(
         &self,
         encoded: &[u8],

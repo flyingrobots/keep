@@ -96,8 +96,10 @@ Planning traverses admitted layout metadata without allocation and selects the
 minimal ordered entry interval that overlaps the request. Committed-layout
 reads load no prefix or suffix chunk outside that interval and allocate no
 adapter-owned heap memory. Caller-supplied admitted layouts and encoded layout
-records may allocate bounded layout-record or decoded-entry metadata before
-planning; none of the range APIs materializes the complete blob.
+records may allocate bounded layout-record or decoded-entry metadata to
+calculate a canonical identity. That identity must name a committed layout;
+planning, receipt coordinates, and chunk lookup use only the committed layout.
+None of the range APIs materializes the complete blob.
 
 Before any output, a range read authenticates every selected complete chunk
 against its `ChunkId`. During the output pass it reauthenticates each chunk,

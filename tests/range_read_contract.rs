@@ -12,12 +12,14 @@ const RANGE_READ_API: &str = include_str!("../src/reference/range_read.rs");
 const RANGE_READ_RECEIPT: &str = include_str!("../src/reference/range_read_receipt.rs");
 const RANGE_PLAN_TEST_ENTRYPOINT: &str = include_str!("range_plan.rs");
 const RANGE_READ_TEST_ENTRYPOINT: &str = include_str!("range_read.rs");
+const RANGE_READ_ENTRYPOINTS_TEST: &str = include_str!("range_read_entrypoints.rs");
 const RANGE_READ_FAILURE_TEST_ENTRYPOINT: &str = include_str!("range_read_failures.rs");
 
 #[test]
 fn range_fixture_modules_are_visible_only_within_their_test_crates() {
     assert!(RANGE_PLAN_TEST_ENTRYPOINT.contains("\npub(crate) mod support;"));
     assert!(RANGE_READ_TEST_ENTRYPOINT.contains("\npub(crate) mod support;"));
+    assert!(RANGE_READ_ENTRYPOINTS_TEST.contains("\npub(crate) mod support;"));
     assert!(RANGE_READ_FAILURE_TEST_ENTRYPOINT.contains("\npub(crate) mod support;"));
 }
 
@@ -48,6 +50,9 @@ fn exact_range_reads_are_current_in_contract_rationale_and_roadmap() {
     assert!(ARCHITECTURE.contains("complete `BlobId`, any unrequested chunk"));
     assert!(
         ARCHITECTURE_RATIONALE.contains("## Why range reads authenticate selected chunks only")
+    );
+    assert!(
+        ARCHITECTURE_RATIONALE.contains("## Why caller-supplied ranges require a committed layout")
     );
     assert!(FORMAT_SPEC.contains(
         "| `KEEP-LAYOUT-017` | Exact range planning selects only the minimal ordered overlap | Range-plan and instrumented chunk-lookup laws | Implemented in #11 |"

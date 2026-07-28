@@ -67,6 +67,19 @@ Preverification ensures a later selected chunk cannot fail after an earlier
 range byte has been emitted. Reverification protects the separate output pass
 without buffering selected chunks or the requested result.
 
+## Why caller-supplied ranges require a committed layout
+
+Structural admission does not prove that a layout's target `BlobId` names the
+chunks it lists. A same-length target can be paired with unrelated chunk
+identities while preserving every structural law. A partial read cannot
+authenticate that complete target without loading the complete blob.
+
+Caller-supplied admitted layouts and canonical records are therefore used only
+to calculate a `LayoutId`. That identity must already name a committed layout
+in the store, and the range operation uses the committed layout for planning,
+receipt coordinates, and chunk lookup. An uncommitted target-layout
+association refuses before output.
+
 ## Alternatives considered
 
 - **Publish chunks as they arrive.** Rejected because later source, allocation,
