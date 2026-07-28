@@ -6,11 +6,13 @@ use std::io;
 
 use crate::diagnostic::escaped_controls;
 
+use super::corpus::CorpusError;
 use super::execution::ExecutionError;
 use super::policy::PolicyError;
 use super::target::TargetError;
 
 pub(crate) enum FuzzCampaignError {
+    Corpus(CorpusError),
     Execution(ExecutionError),
     InvalidArgumentEncoding,
     Output(io::Error),
@@ -30,6 +32,7 @@ impl fmt::Debug for FuzzCampaignError {
 impl fmt::Display for FuzzCampaignError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Corpus(error) => write!(formatter, "fuzz corpus refused: {error}"),
             Self::Execution(error) => write!(formatter, "{error}"),
             Self::InvalidArgumentEncoding => {
                 formatter.write_str("fuzz campaign argument is not valid Unicode")
@@ -48,7 +51,8 @@ impl fmt::Display for FuzzCampaignError {
                 formatter.write_str("`")
             }
             Self::Usage => formatter.write_str(
-                "usage: cargo xtask fuzz <build|describe|github-env|list|minimize|run> \
+                "usage: cargo xtask fuzz \
+                 <build|check-corpus|describe|github-env|list|minimize|run> \
                  [--profile <smoke|scheduled>]",
             ),
         }
@@ -58,6 +62,7 @@ impl fmt::Display for FuzzCampaignError {
 impl Error for FuzzCampaignError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::Corpus(source) => Some(source),
             Self::Execution(source) => Some(source),
             Self::Output(source) => Some(source),
             Self::Policy(source) => Some(source),
@@ -67,6 +72,12 @@ impl Error for FuzzCampaignError {
             | Self::UnknownOperation(_)
             | Self::Usage => None,
         }
+    }
+}
+
+impl From<CorpusError> for FuzzCampaignError {
+    fn from(error: CorpusError) -> Self {
+        Self::Corpus(error)
     }
 }
 

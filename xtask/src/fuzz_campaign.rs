@@ -1,6 +1,7 @@
 //! This module owns the repository fuzz campaign command boundary.
 
 mod command;
+mod corpus;
 mod error;
 mod execution;
 mod policy;
@@ -19,6 +20,7 @@ use profile::CampaignProfile;
 
 enum Operation {
     Build,
+    CheckCorpus,
     Describe,
     GitHubEnvironment,
     List,
@@ -41,6 +43,21 @@ pub(super) fn run(
             "build",
             &mut arguments,
         ),
+        Operation::CheckCorpus => {
+            refuse_extra(&mut arguments)?;
+            let stats = corpus::audit(
+                &repository_root.join("fuzz/corpus"),
+                repository_root,
+                &policy,
+            )?;
+            writeln!(
+                output,
+                "Admitted fuzz corpus: {} files, {} bytes",
+                stats.files(),
+                stats.bytes()
+            )
+            .map_err(FuzzCampaignError::Output)
+        }
         Operation::Describe => {
             write_environment(&policy, parse_profile(&mut arguments)?, ": ", output)
         }
@@ -113,6 +130,7 @@ fn write_environment(
 fn parse_operation(argument: String) -> Result<Operation, FuzzCampaignError> {
     match argument.as_str() {
         "build" => Ok(Operation::Build),
+        "check-corpus" => Ok(Operation::CheckCorpus),
         "describe" => Ok(Operation::Describe),
         "github-env" => Ok(Operation::GitHubEnvironment),
         "list" => Ok(Operation::List),

@@ -96,6 +96,14 @@ impl CampaignPolicy {
         self.cmin_seconds_per_target
     }
 
+    pub(super) const fn corpus_max_bytes(&self) -> u64 {
+        self.corpus_max_bytes
+    }
+
+    pub(super) const fn corpus_max_files(&self) -> u64 {
+        self.corpus_max_files
+    }
+
     pub(super) const fn input_timeout_seconds(&self) -> u64 {
         self.input_timeout_seconds
     }

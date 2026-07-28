@@ -66,7 +66,7 @@ pub(super) fn registered(
     }
 }
 
-fn harnesses(repository_root: &Path) -> Result<Vec<FuzzTarget>, TargetError> {
+pub(super) fn harnesses(repository_root: &Path) -> Result<Vec<FuzzTarget>, TargetError> {
     let directory = repository_root.join("fuzz/fuzz_targets");
     let entries = fs::read_dir(&directory).map_err(|source| TargetError::ReadDirectory {
         path: directory,
