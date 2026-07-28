@@ -3,27 +3,24 @@
 mod python_source;
 mod repository_path;
 mod source_error;
+mod source_inventory;
 mod source_kind;
 
-use std::collections::BTreeSet;
 use std::io::{self, BufRead, BufReader};
 use std::path::Path;
 
-use crate::git_inventory::{GitPath, paths as git_paths};
 use crate::repository_file::{OpenRepositoryFileError, RepositoryRoot};
 use python_source::{FileExecution, refuse_executable_python};
 use repository_path::RepositoryPath;
 pub(super) use source_error::SourceStructureError;
-use source_kind::{is_extensionless_file, is_python_module, is_source_candidate};
+#[cfg(test)]
+use source_inventory::{
+    PRESENT_PATH_ARGUMENTS, select as select_source_inventory, select_source_paths,
+};
+use source_inventory::{SourceInventory, collect as source_paths};
+use source_kind::is_extensionless_file;
 
 const SOURCE_MODULE_HARD_LIMIT_LINES: u64 = 500;
-const PRESENT_PATH_ARGUMENTS: [&str; 5] = [
-    "ls-files",
-    "-z",
-    "--cached",
-    "--others",
-    "--exclude-per-directory=.gitignore",
-];
 
 pub(super) fn check(repository_root: &Path) -> Result<(), SourceStructureError> {
     let source_root =
@@ -33,7 +30,7 @@ pub(super) fn check(repository_root: &Path) -> Result<(), SourceStructureError> 
         })?;
     let paths = source_paths(repository_root)?;
     verify_source_root(&source_root, repository_root)?;
-    let violations = source_violations(&source_root, paths)?;
+    let violations = inventory_violations(&source_root, paths)?;
     verify_source_root(&source_root, repository_root)?;
     if violations.is_empty() {
         Ok(())
@@ -61,47 +58,14 @@ fn verify_source_root(
     }
 }
 
-fn source_paths(repository_root: &Path) -> Result<Vec<RepositoryPath>, SourceStructureError> {
-    let present = git_paths(
-        repository_root,
-        &PRESENT_PATH_ARGUMENTS,
-        "git ls-files present",
-    )?;
-    let deleted = git_paths(
-        repository_root,
-        &["ls-files", "-z", "--deleted"],
-        "git ls-files deleted",
-    )?;
-    select_source_paths(&present, &deleted)
-}
-
-fn select_source_paths(
-    present: &BTreeSet<GitPath>,
-    deleted: &BTreeSet<GitPath>,
-) -> Result<Vec<RepositoryPath>, SourceStructureError> {
-    present
-        .difference(deleted)
-        .filter(|path| is_source_candidate(path.as_bytes()))
-        .map(admit_source_path)
-        .collect()
-}
-
-fn admit_source_path(path: &GitPath) -> Result<RepositoryPath, SourceStructureError> {
-    let python = is_python_module(path.as_bytes());
-    let text = String::from_utf8(path.as_bytes().to_vec()).map_err(|source| {
-        SourceStructureError::GitPathEncoding {
-            operation: "source path admission",
-            source,
-        }
-    })?;
-    let relative = RepositoryPath::admit(text)?;
-    if python {
-        Err(SourceStructureError::PythonSource(
-            relative.as_str().to_owned(),
-        ))
-    } else {
-        Ok(relative)
+fn inventory_violations(
+    source_root: &RepositoryRoot,
+    inventory: SourceInventory,
+) -> Result<Vec<String>, SourceStructureError> {
+    for relative in inventory.executable_candidates {
+        let _execution = refuse_executable_python(source_root, &relative)?;
     }
+    source_violations(source_root, inventory.modules)
 }
 
 fn source_violations(
@@ -110,7 +74,12 @@ fn source_violations(
 ) -> Result<Vec<String>, SourceStructureError> {
     let mut violations = Vec::new();
     for relative in paths {
-        let execution = refuse_executable_python(source_root, &relative)?;
+        let execution = refuse_executable_python(source_root, relative.as_path())?;
+        if execution == FileExecution::NonRegular {
+            return Err(SourceStructureError::NonRegular(
+                source_root.display_path(relative.as_path()),
+            ));
+        }
         if is_extensionless_file(relative.as_str().as_bytes())
             && execution == FileExecution::NonExecutable
         {
@@ -213,6 +182,9 @@ impl LineCounter {
     }
 }
 
+#[cfg(test)]
+#[path = "source_structure/executable_candidate_tests.rs"]
+mod executable_candidate_tests;
 #[cfg(test)]
 #[path = "source_structure/pure_rust_tests.rs"]
 mod pure_rust_tests;

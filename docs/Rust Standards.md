@@ -2057,8 +2057,8 @@ Also forbidden:
 - hidden filesystem access;
 - hidden network access;
 - hidden allocation proportional to input;
-- Python source files, including `.py`, `.pyw`, and extensionless executable
-  Python shebangs;
+- Python source files, including `.py`, `.pyw`, and executable Python shebangs
+  in regular files regardless of filename suffix;
 - random IDs where content identity is required;
 - wall-clock time in deterministic algorithms;
 - hashing arbitrary serializer output;

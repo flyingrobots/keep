@@ -9,7 +9,7 @@ use std::os::unix::fs::PermissionsExt;
 use crate::repository_file::{OpenRepositoryFileError, RepositoryRoot};
 
 use super::SourceStructureError;
-use super::repository_path::RepositoryPath;
+use std::path::Path;
 
 const SHEBANG_SCAN_BYTES: u64 = 1_024;
 
@@ -17,22 +17,21 @@ const SHEBANG_SCAN_BYTES: u64 = 1_024;
 pub(super) enum FileExecution {
     Executable,
     NonExecutable,
+    NonRegular,
 }
 
 pub(super) fn refuse_executable_python(
     source_root: &RepositoryRoot,
-    relative: &RepositoryPath,
+    relative: &Path,
 ) -> Result<FileExecution, SourceStructureError> {
-    let path = source_root.display_path(relative.as_path());
-    let file = source_root
-        .open_file(relative.as_path())
-        .map_err(|error| match error {
-            OpenRepositoryFileError::Io(source) => SourceStructureError::Inspect {
-                path: path.clone(),
-                source,
-            },
-            OpenRepositoryFileError::NonRegular => SourceStructureError::NonRegular(path.clone()),
-        })?;
+    let path = source_root.display_path(relative);
+    let file = match source_root.open_file(relative) {
+        Ok(file) => file,
+        Err(OpenRepositoryFileError::NonRegular) => return Ok(FileExecution::NonRegular),
+        Err(OpenRepositoryFileError::Io(source)) => {
+            return Err(SourceStructureError::Inspect { path, source });
+        }
+    };
     let execution = file_execution(&file).map_err(|source| SourceStructureError::Inspect {
         path: path.clone(),
         source,
@@ -43,9 +42,7 @@ pub(super) fn refuse_executable_python(
             source,
         })?;
     if python {
-        Err(SourceStructureError::PythonSource(
-            relative.as_str().to_owned(),
-        ))
+        Err(SourceStructureError::PythonSource(relative.to_owned()))
     } else {
         Ok(execution)
     }
