@@ -19,6 +19,18 @@ pub(super) struct ProcessOutput {
     pub(super) stderr: Vec<u8>,
 }
 
+pub(super) fn status(command: &mut Command) -> Result<ProcessOutput, ProcessError> {
+    let status = command.status().map_err(|source| ProcessError::Io {
+        action: "wait for",
+        source,
+    })?;
+    Ok(ProcessOutput {
+        succeeded: status.success(),
+        stdout: Vec::new(),
+        stderr: Vec::new(),
+    })
+}
+
 pub(super) fn capture(
     command: &mut Command,
     deadline: Option<Duration>,

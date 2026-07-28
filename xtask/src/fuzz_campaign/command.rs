@@ -19,10 +19,17 @@ pub(super) enum CampaignOperation {
     Run(CampaignProfile),
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum OutputMode {
+    Capture,
+    Inherit,
+}
+
 pub(super) struct CommandPlan {
     target: FuzzTarget,
     arguments: Vec<OsString>,
     deadline: Option<Duration>,
+    output_mode: OutputMode,
     refused_output_marker: Option<&'static str>,
 }
 
@@ -36,29 +43,31 @@ impl CommandPlan {
             OsString::from(format!("+{}", policy.toolchain())),
             OsString::from("fuzz"),
         ];
-        let (deadline, refused_output_marker) = match operation {
+        let (deadline, output_mode, refused_output_marker) = match operation {
             CampaignOperation::Build => {
                 arguments.extend([OsString::from("build"), OsString::from(target.as_str())]);
-                (None, None)
+                (None, OutputMode::Inherit, None)
             }
             CampaignOperation::Minimize => {
                 arguments.extend([OsString::from("cmin"), OsString::from(target.as_str())]);
                 push_fuzzer_arguments(&mut arguments, policy.cmin_seconds(), policy);
                 (
                     Some(Duration::from_secs(policy.cmin_seconds())),
+                    OutputMode::Capture,
                     Some(CMIN_FAILURE_MARKER),
                 )
             }
             CampaignOperation::Run(profile) => {
                 arguments.extend([OsString::from("run"), OsString::from(target.as_str())]);
                 push_fuzzer_arguments(&mut arguments, policy.seconds_per_target(profile), policy);
-                (None, None)
+                (None, OutputMode::Inherit, None)
             }
         };
         Self {
             target,
             arguments,
             deadline,
+            output_mode,
             refused_output_marker,
         }
     }
@@ -73,6 +82,10 @@ impl CommandPlan {
 
     pub(super) const fn deadline(&self) -> Option<Duration> {
         self.deadline
+    }
+
+    pub(super) const fn output_mode(&self) -> OutputMode {
+        self.output_mode
     }
 
     pub(super) const fn refused_output_marker(&self) -> Option<&'static str> {

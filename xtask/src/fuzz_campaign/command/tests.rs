@@ -2,7 +2,7 @@ use std::error::Error;
 use std::path::Path;
 use std::time::Duration;
 
-use super::{CampaignOperation, CommandPlan};
+use super::{CampaignOperation, CommandPlan, OutputMode};
 use crate::fuzz_campaign::policy::CampaignPolicy;
 use crate::fuzz_campaign::profile::CampaignProfile;
 use crate::fuzz_campaign::target::FuzzTarget;
@@ -32,6 +32,7 @@ fn run_plan_preserves_every_reviewed_resource_bound() -> Result<(), Box<dyn Erro
         ]
     );
     assert_eq!(plan.deadline(), None);
+    assert_eq!(plan.output_mode(), OutputMode::Inherit);
     Ok(())
 }
 
@@ -45,6 +46,7 @@ fn minimization_plan_has_an_external_deadline_and_failure_marker() -> Result<(),
         plan.refused_output_marker(),
         Some("Failed to minimize corpus:")
     );
+    assert_eq!(plan.output_mode(), OutputMode::Capture);
     Ok(())
 }
 

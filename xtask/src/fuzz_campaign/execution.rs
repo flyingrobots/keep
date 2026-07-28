@@ -4,13 +4,14 @@ mod error;
 #[cfg(test)]
 mod tests;
 
+use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
 
 pub(crate) use error::ExecutionError;
 use error::{TargetFailure, TargetFailureReason};
 
-use super::command::CommandPlan;
+use super::command::{CommandPlan, OutputMode};
 use super::process::{self, ProcessError, ProcessOutput};
 
 trait CommandRunner {
@@ -31,7 +32,14 @@ impl CommandRunner for SystemRunner {
     ) -> Result<ProcessOutput, ProcessError> {
         let mut command = Command::new("cargo");
         command.args(plan.arguments()).current_dir(repository_root);
-        process::capture(&mut command, plan.deadline())
+        match plan.output_mode() {
+            OutputMode::Capture => {
+                let output = process::capture(&mut command, plan.deadline())?;
+                replay(&output)?;
+                Ok(output)
+            }
+            OutputMode::Inherit => process::status(&mut command),
+        }
     }
 }
 
@@ -41,6 +49,30 @@ pub(super) fn run(
     plans: &[CommandPlan],
 ) -> Result<(), ExecutionError> {
     execute_all(repository_root, operation, plans, &mut SystemRunner)
+}
+
+fn replay(output: &ProcessOutput) -> Result<(), ProcessError> {
+    write_output(
+        &mut io::stdout().lock(),
+        "write captured child stdout",
+        &output.stdout,
+    )?;
+    write_output(
+        &mut io::stderr().lock(),
+        "write captured child stderr",
+        &output.stderr,
+    )
+}
+
+fn write_output(
+    writer: &mut impl Write,
+    action: &'static str,
+    bytes: &[u8],
+) -> Result<(), ProcessError> {
+    writer
+        .write_all(bytes)
+        .and_then(|()| writer.flush())
+        .map_err(|source| ProcessError::Io { action, source })
 }
 
 fn execute_all(
