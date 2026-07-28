@@ -21,6 +21,11 @@ mod fuzz_campaign;
 mod fuzz_seed_corpus;
 #[allow(
     clippy::redundant_pub_crate,
+    reason = "bounded Git inventory is shared by sibling repository tasks"
+)]
+mod git_inventory;
+#[allow(
+    clippy::redundant_pub_crate,
     reason = "the parent command dispatcher is the only consumer"
 )]
 mod golden_file_worldline;

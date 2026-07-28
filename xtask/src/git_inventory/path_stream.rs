@@ -3,7 +3,7 @@
 use std::collections::BTreeSet;
 use std::io::Read;
 
-use super::{GitOutputUnit, SourceStructureError};
+use super::{GitInventoryError, GitOutputUnit};
 
 const GIT_PATH_LIMITS: GitPathLimits = GitPathLimits {
     path_bytes: 4_096,
@@ -21,7 +21,7 @@ struct GitPathLimits {
 pub(super) fn read_paths(
     reader: impl Read,
     operation: &'static str,
-) -> Result<BTreeSet<GitPathRecord>, SourceStructureError> {
+) -> Result<BTreeSet<GitPath>, GitInventoryError> {
     read_paths_with(reader, operation, GIT_PATH_LIMITS)
 }
 
@@ -29,13 +29,13 @@ fn read_paths_with(
     mut reader: impl Read,
     operation: &'static str,
     limits: GitPathLimits,
-) -> Result<BTreeSet<GitPathRecord>, SourceStructureError> {
+) -> Result<BTreeSet<GitPath>, GitInventoryError> {
     let mut decoder = GitPathDecoder::new(operation, limits);
     let mut buffer = [0_u8; 4_096];
     loop {
         let read = reader
             .read(&mut buffer)
-            .map_err(|source| SourceStructureError::RunGit {
+            .map_err(|source| GitInventoryError::Run {
                 operation,
                 action: "read paths from",
                 source,
@@ -43,14 +43,12 @@ fn read_paths_with(
         if read == 0 {
             break;
         }
-        let bytes = buffer
-            .get(..read)
-            .ok_or(SourceStructureError::GitOutputBound {
-                operation,
-                stream: "path read",
-                maximum: buffer.len(),
-                unit: GitOutputUnit::Bytes,
-            })?;
+        let bytes = buffer.get(..read).ok_or(GitInventoryError::OutputBound {
+            operation,
+            stream: "path read",
+            maximum: buffer.len(),
+            unit: GitOutputUnit::Bytes,
+        })?;
         decoder.admit(bytes)?;
     }
     decoder.finish()
@@ -62,18 +60,18 @@ struct GitPathDecoder {
     observed_bytes: usize,
     observed_paths: usize,
     operation: &'static str,
-    paths: BTreeSet<GitPathRecord>,
+    paths: BTreeSet<GitPath>,
 }
 
 #[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
-pub(super) struct GitPathRecord(Vec<u8>);
+pub(crate) struct GitPath(Vec<u8>);
 
-impl GitPathRecord {
-    pub(super) const fn new(bytes: Vec<u8>) -> Self {
+impl GitPath {
+    pub(crate) const fn new(bytes: Vec<u8>) -> Self {
         Self(bytes)
     }
 
-    pub(super) fn as_bytes(&self) -> &[u8] {
+    pub(crate) fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 }
@@ -90,17 +88,18 @@ impl GitPathDecoder {
         }
     }
 
-    fn admit(&mut self, bytes: &[u8]) -> Result<(), SourceStructureError> {
-        self.observed_bytes = self.observed_bytes.checked_add(bytes.len()).ok_or(
-            SourceStructureError::GitOutputBound {
-                operation: self.operation,
-                stream: "path stream bytes",
-                maximum: self.limits.stream_bytes,
-                unit: GitOutputUnit::Bytes,
-            },
-        )?;
+    fn admit(&mut self, bytes: &[u8]) -> Result<(), GitInventoryError> {
+        self.observed_bytes =
+            self.observed_bytes
+                .checked_add(bytes.len())
+                .ok_or(GitInventoryError::OutputBound {
+                    operation: self.operation,
+                    stream: "path stream bytes",
+                    maximum: self.limits.stream_bytes,
+                    unit: GitOutputUnit::Bytes,
+                })?;
         if self.observed_bytes > self.limits.stream_bytes {
-            return Err(SourceStructureError::GitOutputBound {
+            return Err(GitInventoryError::OutputBound {
                 operation: self.operation,
                 stream: "path stream bytes",
                 maximum: self.limits.stream_bytes,
@@ -113,12 +112,12 @@ impl GitPathDecoder {
         Ok(())
     }
 
-    fn admit_byte(&mut self, byte: u8) -> Result<(), SourceStructureError> {
+    fn admit_byte(&mut self, byte: u8) -> Result<(), GitInventoryError> {
         if byte == 0 {
             return self.admit_path();
         }
         if self.current.len() >= self.limits.path_bytes {
-            return Err(SourceStructureError::GitOutputBound {
+            return Err(GitInventoryError::OutputBound {
                 operation: self.operation,
                 stream: "path bytes",
                 maximum: self.limits.path_bytes,
@@ -129,44 +128,42 @@ impl GitPathDecoder {
         Ok(())
     }
 
-    fn admit_path(&mut self) -> Result<(), SourceStructureError> {
+    fn admit_path(&mut self) -> Result<(), GitInventoryError> {
         if self.current.is_empty() {
-            return Err(SourceStructureError::GitOutputFraming {
+            return Err(GitInventoryError::OutputFraming {
                 operation: self.operation,
             });
         }
         self.observed_paths =
             self.observed_paths
                 .checked_add(1)
-                .ok_or(SourceStructureError::GitOutputBound {
+                .ok_or(GitInventoryError::OutputBound {
                     operation: self.operation,
                     stream: "path count",
                     maximum: self.limits.paths,
                     unit: GitOutputUnit::Items,
                 })?;
         if self.observed_paths > self.limits.paths {
-            return Err(SourceStructureError::GitOutputBound {
+            return Err(GitInventoryError::OutputBound {
                 operation: self.operation,
                 stream: "path count",
                 maximum: self.limits.paths,
                 unit: GitOutputUnit::Items,
             });
         }
-        let path = GitPathRecord::new(std::mem::take(&mut self.current));
+        let path = GitPath::new(std::mem::take(&mut self.current));
         if self.paths.insert(path.clone()) {
             Ok(())
         } else {
-            Err(SourceStructureError::DuplicatePath(
-                path.as_bytes().to_vec(),
-            ))
+            Err(GitInventoryError::DuplicatePath(path.as_bytes().to_vec()))
         }
     }
 
-    fn finish(self) -> Result<BTreeSet<GitPathRecord>, SourceStructureError> {
+    fn finish(self) -> Result<BTreeSet<GitPath>, GitInventoryError> {
         if self.current.is_empty() {
             Ok(self.paths)
         } else {
-            Err(SourceStructureError::GitOutputFraming {
+            Err(GitInventoryError::OutputFraming {
                 operation: self.operation,
             })
         }
@@ -174,5 +171,5 @@ impl GitPathDecoder {
 }
 
 #[cfg(test)]
-#[path = "git_path_stream/tests.rs"]
+#[path = "path_stream/tests.rs"]
 mod tests;

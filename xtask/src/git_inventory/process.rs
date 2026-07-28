@@ -1,4 +1,4 @@
-//! This module owns bounded Git path streaming and diagnostic collection.
+//! This module owns bounded Git path process execution and collection.
 
 use std::collections::BTreeSet;
 use std::io;
@@ -8,8 +8,8 @@ use std::thread::{self, JoinHandle};
 
 use crate::process_output::{BoundedBytes, bounded_bytes};
 
-use super::git_path_stream::{GitPathRecord, read_paths};
-use super::{GitOutputUnit, SourceStructureError};
+use super::path_stream::{GitPath, read_paths};
+use super::{GitInventoryError, GitOutputUnit};
 
 const GIT_DIAGNOSTIC_LIMIT_BYTES: usize = 65_536;
 
@@ -25,11 +25,11 @@ struct GitProcess {
 /// Collection reads standard output before requesting termination, waits for
 /// the child before joining the diagnostic reader, and then preserves the
 /// established error precedence.
-pub(super) fn git_paths(
+pub(crate) fn paths(
     repository_root: &Path,
     arguments: &[&str],
     operation: &'static str,
-) -> Result<BTreeSet<GitPathRecord>, SourceStructureError> {
+) -> Result<BTreeSet<GitPath>, GitInventoryError> {
     let process = start_git(repository_root, arguments, operation)?;
     let paths = read_paths(process.stdout, operation);
     collect_git_result(process.child, process.diagnostic_worker, paths, operation)
@@ -39,28 +39,28 @@ fn start_git(
     repository_root: &Path,
     arguments: &[&str],
     operation: &'static str,
-) -> Result<GitProcess, SourceStructureError> {
+) -> Result<GitProcess, GitInventoryError> {
     let mut child = Command::new("git")
         .args(arguments)
         .current_dir(repository_root)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|source| SourceStructureError::RunGit {
+        .map_err(|source| GitInventoryError::Run {
             operation,
             action: "start",
             source,
         })?;
     let Some(stdout) = child.stdout.take() else {
         cleanup_child(&mut child, operation)?;
-        return Err(SourceStructureError::GitPipe {
+        return Err(GitInventoryError::Pipe {
             operation,
             stream: "stdout",
         });
     };
     let Some(stderr) = child.stderr.take() else {
         cleanup_child(&mut child, operation)?;
-        return Err(SourceStructureError::GitPipe {
+        return Err(GitInventoryError::Pipe {
             operation,
             stream: "stderr",
         });
@@ -72,7 +72,7 @@ fn start_git(
         Ok(worker) => worker,
         Err(source) => {
             cleanup_child(&mut child, operation)?;
-            return Err(SourceStructureError::RunGit {
+            return Err(GitInventoryError::Run {
                 operation,
                 action: "start the diagnostic reader for",
                 source,
@@ -89,33 +89,33 @@ fn start_git(
 fn collect_git_result(
     mut child: Child,
     diagnostic_worker: JoinHandle<Result<BoundedBytes, io::Error>>,
-    paths: Result<BTreeSet<GitPathRecord>, SourceStructureError>,
+    paths: Result<BTreeSet<GitPath>, GitInventoryError>,
     operation: &'static str,
-) -> Result<BTreeSet<GitPathRecord>, SourceStructureError> {
+) -> Result<BTreeSet<GitPath>, GitInventoryError> {
     let stop = if paths.is_err() {
         request_stop(&mut child, operation)
     } else {
         Ok(())
     };
-    let status = child.wait().map_err(|source| SourceStructureError::RunGit {
+    let status = child.wait().map_err(|source| GitInventoryError::Run {
         operation,
         action: "wait for",
         source,
     });
     let diagnostic = diagnostic_worker
         .join()
-        .map_err(|_| SourceStructureError::GitWorker { operation })?;
+        .map_err(|_| GitInventoryError::Worker { operation })?;
 
     stop?;
     let paths = paths?;
     let status = status?;
-    let diagnostic = diagnostic.map_err(|source| SourceStructureError::RunGit {
+    let diagnostic = diagnostic.map_err(|source| GitInventoryError::Run {
         operation,
         action: "read diagnostics from",
         source,
     })?;
     if diagnostic.exceeded {
-        return Err(SourceStructureError::GitOutputBound {
+        return Err(GitInventoryError::OutputBound {
             operation,
             stream: "diagnostic bytes",
             maximum: GIT_DIAGNOSTIC_LIMIT_BYTES,
@@ -128,7 +128,7 @@ fn collect_git_result(
     Ok(paths)
 }
 
-fn request_stop(child: &mut Child, operation: &'static str) -> Result<(), SourceStructureError> {
+fn request_stop(child: &mut Child, operation: &'static str) -> Result<(), GitInventoryError> {
     child
         .kill()
         .or_else(|source| {
@@ -138,16 +138,16 @@ fn request_stop(child: &mut Child, operation: &'static str) -> Result<(), Source
                 Err(source)
             }
         })
-        .map_err(|source| SourceStructureError::RunGit {
+        .map_err(|source| GitInventoryError::Run {
             operation,
             action: "stop",
             source,
         })
 }
 
-fn cleanup_child(child: &mut Child, operation: &'static str) -> Result<(), SourceStructureError> {
+fn cleanup_child(child: &mut Child, operation: &'static str) -> Result<(), GitInventoryError> {
     let stop = request_stop(child, operation);
-    let wait = child.wait().map_err(|source| SourceStructureError::RunGit {
+    let wait = child.wait().map_err(|source| GitInventoryError::Run {
         operation,
         action: "wait for",
         source,
@@ -160,14 +160,14 @@ fn git_failure(
     operation: &'static str,
     code: Option<i32>,
     diagnostic: Vec<u8>,
-) -> SourceStructureError {
+) -> GitInventoryError {
     match String::from_utf8(diagnostic) {
-        Ok(stderr) => SourceStructureError::GitFailed {
+        Ok(stderr) => GitInventoryError::Failed {
             operation,
             code,
             stderr,
         },
-        Err(source) => SourceStructureError::GitDiagnosticEncoding {
+        Err(source) => GitInventoryError::DiagnosticEncoding {
             operation,
             code,
             source,

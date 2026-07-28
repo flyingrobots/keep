@@ -63,9 +63,11 @@ fn early_source_refusal_does_not_claim_an_exact_line_count() {
 
 #[test]
 fn source_structure_diagnostics_are_stable() {
-    let framing = super::SourceStructureError::GitOutputFraming {
+    use crate::git_inventory::{GitInventoryError, GitOutputUnit};
+
+    let framing = super::SourceStructureError::GitInventory(GitInventoryError::OutputFraming {
         operation: "git inventory",
-    };
+    });
     let non_regular = super::SourceStructureError::NonRegular("src/link.rs".into());
     assert_eq!(
         framing.to_string(),
@@ -83,18 +85,18 @@ fn source_structure_diagnostics_are_stable() {
         violations.to_string(),
         "repository source modules exceed the 7-line hard maximum; src/large.rs: >7"
     );
-    let byte_bound = super::SourceStructureError::GitOutputBound {
+    let byte_bound = super::SourceStructureError::GitInventory(GitInventoryError::OutputBound {
         operation: "git inventory",
         stream: "path bytes",
         maximum: 4_096,
-        unit: super::GitOutputUnit::Bytes,
-    };
-    let item_bound = super::SourceStructureError::GitOutputBound {
+        unit: GitOutputUnit::Bytes,
+    });
+    let item_bound = super::SourceStructureError::GitInventory(GitInventoryError::OutputBound {
         operation: "git inventory",
         stream: "path count",
         maximum: 100_000,
-        unit: super::GitOutputUnit::Items,
-    };
+        unit: GitOutputUnit::Items,
+    });
     assert_eq!(
         byte_bound.to_string(),
         "`git inventory` exceeded the path bytes bound of 4096 bytes"
@@ -107,11 +109,13 @@ fn source_structure_diagnostics_are_stable() {
 
 #[test]
 fn git_diagnostics_cannot_inject_terminal_control_lines() {
-    let error = super::SourceStructureError::GitFailed {
+    use crate::git_inventory::GitInventoryError;
+
+    let error = super::SourceStructureError::GitInventory(GitInventoryError::Failed {
         operation: "git inventory",
         code: Some(9),
         stderr: String::from("first\nError: forged\rrewrite\u{1b}[31m"),
-    };
+    });
     let diagnostic = error.to_string();
     assert_eq!(
         diagnostic,
@@ -285,11 +289,11 @@ fn source_paths_refuse_host_dependent_spellings() {
 fn source_selection_refuses_an_unsafe_source_record() {
     use std::collections::BTreeSet;
 
-    use super::git_path_stream::GitPathRecord;
+    use crate::git_inventory::GitPath;
 
     let present = BTreeSet::from([
-        GitPathRecord::new(b"../escape.rs".to_vec()),
-        GitPathRecord::new(b"notes/x:y".to_vec()),
+        GitPath::new(b"../escape.rs".to_vec()),
+        GitPath::new(b"notes/x:y".to_vec()),
     ]);
     let result = super::select_source_paths(&present, &BTreeSet::new());
     assert!(matches!(
@@ -302,9 +306,9 @@ fn source_selection_refuses_an_unsafe_source_record() {
 fn source_selection_refuses_a_non_utf8_source_record() {
     use std::collections::BTreeSet;
 
-    use super::git_path_stream::GitPathRecord;
+    use crate::git_inventory::GitPath;
 
-    let present = BTreeSet::from([GitPathRecord::new(b"bad\xff.rs".to_vec())]);
+    let present = BTreeSet::from([GitPath::new(b"bad\xff.rs".to_vec())]);
     let result = super::select_source_paths(&present, &BTreeSet::new());
     assert!(matches!(
         result,

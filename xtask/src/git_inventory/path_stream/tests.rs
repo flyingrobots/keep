@@ -2,7 +2,7 @@
 
 use std::io::Cursor;
 
-use super::{GitPathLimits, SourceStructureError, read_paths_with};
+use super::{GitInventoryError, GitPathLimits, read_paths_with};
 
 const TEST_LIMITS: GitPathLimits = GitPathLimits {
     path_bytes: 3,
@@ -15,7 +15,7 @@ fn git_path_stream_refuses_an_oversized_path_without_buffering_the_tail() {
     let result = read_paths_with(Cursor::new(b"abcd\0"), "test paths", TEST_LIMITS);
     assert!(matches!(
         result,
-        Err(SourceStructureError::GitOutputBound {
+        Err(GitInventoryError::OutputBound {
             stream: "path bytes",
             maximum: 3,
             ..
@@ -28,7 +28,7 @@ fn git_path_stream_refuses_an_oversized_inventory() {
     let result = read_paths_with(Cursor::new(b"a\0b\0c\0"), "test paths", TEST_LIMITS);
     assert!(matches!(
         result,
-        Err(SourceStructureError::GitOutputBound {
+        Err(GitInventoryError::OutputBound {
             stream: "path count",
             maximum: 2,
             ..
@@ -41,7 +41,7 @@ fn git_path_stream_refuses_excess_framing_bytes() {
     let result = read_paths_with(Cursor::new(b"\0\0\0\0\0\0\0"), "test paths", TEST_LIMITS);
     assert!(matches!(
         result,
-        Err(SourceStructureError::GitOutputBound {
+        Err(GitInventoryError::OutputBound {
             stream: "path stream bytes",
             maximum: 6,
             ..
@@ -54,7 +54,7 @@ fn git_path_stream_requires_nul_framing() {
     let result = read_paths_with(Cursor::new(b"abc"), "test paths", TEST_LIMITS);
     assert!(matches!(
         result,
-        Err(SourceStructureError::GitOutputFraming {
+        Err(GitInventoryError::OutputFraming {
             operation: "test paths"
         })
     ));
@@ -66,7 +66,7 @@ fn git_path_stream_refuses_empty_records() {
         let result = read_paths_with(Cursor::new(stream), "test paths", TEST_LIMITS);
         assert!(matches!(
             result,
-            Err(SourceStructureError::GitOutputFraming {
+            Err(GitInventoryError::OutputFraming {
                 operation: "test paths"
             })
         ));
@@ -78,7 +78,7 @@ fn git_path_stream_refuses_duplicate_records() {
     let result = read_paths_with(Cursor::new(b"a\0a\0"), "test paths", TEST_LIMITS);
     assert!(matches!(
         result,
-        Err(SourceStructureError::DuplicatePath(ref path)) if path == b"a"
+        Err(GitInventoryError::DuplicatePath(ref path)) if path == b"a"
     ));
 }
 

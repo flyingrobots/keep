@@ -1,7 +1,5 @@
 //! This module owns source inventory orchestration and the 500-line law.
 
-mod git_path_inventory;
-mod git_path_stream;
 mod repository_path;
 mod source_error;
 mod source_file;
@@ -10,10 +8,9 @@ use std::collections::BTreeSet;
 use std::io::{self, BufRead, BufReader};
 use std::path::Path;
 
-use git_path_inventory::git_paths;
-use git_path_stream::GitPathRecord;
+use crate::git_inventory::{GitPath, paths as git_paths};
 use repository_path::RepositoryPath;
-pub(super) use source_error::{GitOutputUnit, SourceStructureError};
+pub(super) use source_error::SourceStructureError;
 use source_file::{OpenSourceError, SourceRoot};
 
 const SOURCE_MODULE_HARD_LIMIT_LINES: u64 = 500;
@@ -76,8 +73,8 @@ fn source_paths(repository_root: &Path) -> Result<Vec<RepositoryPath>, SourceStr
 }
 
 fn select_source_paths(
-    present: &BTreeSet<GitPathRecord>,
-    deleted: &BTreeSet<GitPathRecord>,
+    present: &BTreeSet<GitPath>,
+    deleted: &BTreeSet<GitPath>,
 ) -> Result<Vec<RepositoryPath>, SourceStructureError> {
     present
         .difference(deleted)
@@ -86,7 +83,7 @@ fn select_source_paths(
         .collect()
 }
 
-fn admit_source_path(path: &GitPathRecord) -> Result<RepositoryPath, SourceStructureError> {
+fn admit_source_path(path: &GitPath) -> Result<RepositoryPath, SourceStructureError> {
     let text = String::from_utf8(path.as_bytes().to_vec()).map_err(|source| {
         SourceStructureError::GitPathEncoding {
             operation: "source path admission",

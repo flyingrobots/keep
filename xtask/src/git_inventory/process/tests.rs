@@ -2,7 +2,7 @@
 
 use std::io::Cursor;
 
-use super::{SourceStructureError, git_failure};
+use super::{GitInventoryError, git_failure};
 use crate::process_output::bounded_bytes;
 
 #[test]
@@ -10,7 +10,7 @@ fn git_diagnostic_encoding_failure_retains_exit_status() {
     let error = git_failure("test diagnostics", Some(9), vec![u8::MAX]);
     assert!(matches!(
         error,
-        SourceStructureError::GitDiagnosticEncoding {
+        GitInventoryError::DiagnosticEncoding {
             operation: "test diagnostics",
             code: Some(9),
             ..
