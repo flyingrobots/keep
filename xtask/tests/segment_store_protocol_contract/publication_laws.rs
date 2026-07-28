@@ -31,6 +31,25 @@ fn immutable_pool_links_are_verified_after_namespace_resolution() {
 }
 
 #[test]
+fn initialization_is_writer_locked_idempotent_and_root_synchronized() {
+    for required in [
+        "## Crash-safe initialization",
+        "acquires the exclusive advisory lock before\n\
+         creating any directory",
+        "partial canonical initialization set",
+        "synchronizes the store\n\
+         root (`KEEP-CRASH-035`)",
+        "Only the completed root synchronization admits an\n\
+         uninitialized store",
+    ] {
+        assert!(
+            SPECIFICATION.contains(required),
+            "missing crash-safe initialization law: {required}"
+        );
+    }
+}
+
+#[test]
 fn leftover_next_head_has_explicit_finalization_or_discard() {
     for required in [
         "Recovery finalizes it only when it",

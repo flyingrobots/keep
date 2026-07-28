@@ -25,7 +25,7 @@ fn durable_transition_ledger_is_complete_and_stable() -> Result<(), String> {
             .checked_add(1)
             .ok_or("transition count overflow")?;
     }
-    assert_eq!(row_count, 30);
+    assert_eq!(row_count, 35);
     for exact_transition in [
         "KEEP-CRASH-009\tsegment\tlink-sealed-stage\t\
          durable-sealed-stage\t\
@@ -65,6 +65,23 @@ fn durable_transition_ledger_is_complete_and_stable() -> Result<(), String> {
          unlinked-next-head\t\
          named-unpublishable-next-head-or-discarded-next-head\t\
          discarded-next-head\treport-explicit-next-head-discard",
+        "KEEP-CRASH-031\tinitialization\testablish-writer-lock\t\
+         capability-probed-initialization-root\trecoverable-initialization\t\
+         locked-initialization-root\treopen-or-create-and-lock",
+        "KEEP-CRASH-032\tinitialization\tcreate-staging-directory\t\
+         locked-initialization-root\trecoverable-initialization\t\
+         staging-directory-present\tverify-canonical-initialization-set",
+        "KEEP-CRASH-033\tinitialization\tcreate-segment-directory\t\
+         staging-directory-present\trecoverable-initialization\t\
+         segment-directory-present\tverify-canonical-initialization-set",
+        "KEEP-CRASH-034\tinitialization\tcreate-catalog-directory\t\
+         segment-directory-present\trecoverable-initialization\t\
+         complete-unsynchronized-initialization-set\t\
+         verify-canonical-initialization-set",
+        "KEEP-CRASH-035\tinitialization\tsync-root-after-initialization\t\
+         complete-unsynchronized-initialization-set\t\
+         recoverable-initialization-or-uninitialized-store\t\
+         uninitialized-store-admitted\treport-initialization",
     ] {
         assert!(
             TRANSITIONS

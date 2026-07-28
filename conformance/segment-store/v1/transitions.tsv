@@ -30,3 +30,8 @@ KEEP-CRASH-027	recovery	unlink-truncated-stage	named-truncated-stage	named-trunc
 KEEP-CRASH-028	recovery	sync-staging-after-discard	unlinked-truncated-stage	named-truncated-stage-or-discarded-stage	discarded-truncated-stage	report-explicit-discard
 KEEP-CRASH-029	recovery	unlink-next-head	named-unpublishable-next-head	named-unpublishable-next-head-or-unlinked-next-head	unlinked-next-head	verify-requested-next-head-fingerprint
 KEEP-CRASH-030	recovery	sync-root-after-next-head-discard	unlinked-next-head	named-unpublishable-next-head-or-discarded-next-head	discarded-next-head	report-explicit-next-head-discard
+KEEP-CRASH-031	initialization	establish-writer-lock	capability-probed-initialization-root	recoverable-initialization	locked-initialization-root	reopen-or-create-and-lock
+KEEP-CRASH-032	initialization	create-staging-directory	locked-initialization-root	recoverable-initialization	staging-directory-present	verify-canonical-initialization-set
+KEEP-CRASH-033	initialization	create-segment-directory	staging-directory-present	recoverable-initialization	segment-directory-present	verify-canonical-initialization-set
+KEEP-CRASH-034	initialization	create-catalog-directory	segment-directory-present	recoverable-initialization	complete-unsynchronized-initialization-set	verify-canonical-initialization-set
+KEEP-CRASH-035	initialization	sync-root-after-initialization	complete-unsynchronized-initialization-set	recoverable-initialization-or-uninitialized-store	uninitialized-store-admitted	report-initialization

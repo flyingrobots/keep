@@ -51,6 +51,36 @@ publication use generation 1 with an all-zero predecessor digest. A missing
 head in a root containing protocol artifacts requires recovery; it is never
 silently interpreted as an empty store.
 
+## Crash-safe initialization
+
+Before mutation, the initializer admits the opened root only when the
+capability probe passes and its protocol namespace is either empty or a
+partial canonical initialization set containing only `writer.lock`,
+`staging`, `segments`, and `catalogs`. Every existing name must have the
+required regular-file or directory kind and must pass no-follow admission.
+Any artifact, unknown name, wrong kind, or alias is unrecoverable ambiguity.
+
+The initializer creates `writer.lock` exclusively when absent, or reopens the
+existing regular file without following links (`KEEP-CRASH-031`). Its contents
+prove nothing. The initializer acquires the exclusive advisory lock before
+creating any directory. Under that lock, it creates each absent directory
+exclusively in this order:
+
+1. `staging` (`KEEP-CRASH-032`);
+2. `segments` (`KEEP-CRASH-033`); and
+3. `catalogs` (`KEEP-CRASH-034`).
+
+An exact existing directory is idempotent success for its creation step. Each
+retry reopens and verifies every existing canonical name. A crash before the
+final synchronization leaves a recoverable partial initialization set; the
+next initializer reacquires the lock, verifies the observed subset, and
+continues without deleting or renaming it.
+
+After all four canonical names exist, the initializer synchronizes the store
+root (`KEEP-CRASH-035`). Only the completed root synchronization admits an
+uninitialized store and returns an initialization receipt. No reader treats a
+partial set or an unsynchronized complete set as an admitted store.
+
 ## State and visibility
 
 <!-- markdownlint-disable MD013 -->
