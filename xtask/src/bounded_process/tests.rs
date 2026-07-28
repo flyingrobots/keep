@@ -1,29 +1,46 @@
 //! This module owns bounded child-process regression evidence.
 
 use std::env;
-use std::io::{self, Write};
+use std::fs;
+use std::io;
 use std::process::{Command, Stdio};
+use std::str;
 use std::time::Duration;
 
 use super::{ProcessError, capture, status};
+use crate::test_directory::TestDirectory;
 
-const OUTPUT_CHILD: &str = "KEEP_XTASK_BOUNDED_OUTPUT_CHILD";
 const PARKED_CHILD: &str = "KEEP_XTASK_PARKED_CHILD";
 
 #[test]
 fn external_output_is_drained_but_refused_above_the_bound() -> Result<(), Box<dyn std::error::Error>>
 {
-    let executable = env::current_exe()?;
-    let mut command = Command::new(executable);
+    let repository = TestDirectory::create("bounded-process-output")?;
+    let blob = repository.path().join("oversized.bin");
+    fs::write(&blob, vec![b'x'; 1_048_577])?;
+    let initialized = Command::new("git")
+        .args(["init", "--quiet"])
+        .current_dir(repository.path())
+        .status()?;
+    if !initialized.success() {
+        return Err(io::Error::other("cannot initialize fixture repository").into());
+    }
+    let hashed = Command::new("git")
+        .args(["hash-object", "-w", "oversized.bin"])
+        .current_dir(repository.path())
+        .output()?;
+    if !hashed.status.success() {
+        return Err(io::Error::other("cannot hash fixture blob").into());
+    }
+    let object_id = str::from_utf8(&hashed.stdout)?.trim();
+    let mut command = Command::new("git");
     command
-        .args([
-            "--exact",
-            "bounded_process::tests::process_child_writes_excess_output",
-        ])
-        .env(OUTPUT_CHILD, "1")
+        .args(["cat-file", "blob", object_id])
+        .current_dir(repository.path())
         .stdin(Stdio::null());
 
     let result = capture("test process", &mut command, Some(Duration::from_secs(5)));
+    repository.close()?;
 
     assert!(matches!(
         result,
@@ -34,17 +51,6 @@ fn external_output_is_drained_but_refused_above_the_bound() -> Result<(), Box<dy
         })
     ));
     Ok(())
-}
-
-#[test]
-fn process_child_writes_excess_output() -> Result<(), io::Error> {
-    if env::var_os(OUTPUT_CHILD).is_none() {
-        return Ok(());
-    }
-    let bytes = vec![b'x'; 1_048_577];
-    let mut output = io::stdout().lock();
-    output.write_all(&bytes)?;
-    output.flush()
 }
 
 #[test]

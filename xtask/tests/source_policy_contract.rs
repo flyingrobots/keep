@@ -1,6 +1,7 @@
 //! Written-policy regression evidence for the executable source-size law.
 
 const RUST_STANDARDS: &str = include_str!("../../docs/Rust Standards.md");
+const BOUNDED_PROCESS_TESTS: &str = include_str!("../src/bounded_process/tests.rs");
 const REPOSITORY_FILE: &str = include_str!("../src/repository_file.rs");
 const SOURCE_STRUCTURE: &str = include_str!("../src/source_structure.rs");
 
@@ -29,4 +30,9 @@ fn source_scan_revalidates_repository_identity_after_reading() {
             .count(),
         2
     );
+}
+
+#[test]
+fn process_fixtures_do_not_write_to_rust_stdout() {
+    assert!(!BOUNDED_PROCESS_TESTS.contains("io::stdout()"));
 }
