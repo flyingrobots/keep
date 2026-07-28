@@ -22,7 +22,10 @@ fn living_documentation_names_the_implemented_segment_boundary() {
         ),
         (REQUIREMENTS, "`KEEP-SEGMENT-010`"),
     ] {
-        assert!(document.contains(claim), "missing documentation claim: {claim}");
+        assert!(
+            document.contains(claim),
+            "missing documentation claim: {claim}"
+        );
     }
     assert!(!ROOT_README.contains("Durable segment storage, retention"));
 }
