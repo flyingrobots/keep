@@ -1,6 +1,7 @@
 //! Living-documentation contract for the public non-durable reference CAS.
 
 const ROOT_README: &str = include_str!("../README.md");
+const BLOB_MODULE: &str = include_str!("../src/blob/mod.rs");
 const CHANGELOG: &str = include_str!("../CHANGELOG.md");
 const FORMAT_SPEC: &str = include_str!("../docs/formats/flat-chunk-layout-v1/README.md");
 const FORMAT_RATIONALE: &str = include_str!("../docs/formats/flat-chunk-layout-v1/rationale.md");
@@ -60,6 +61,13 @@ fn consequential_reference_store_receipts_are_must_use() {
     assert!(PUBLISHED_BLOB.contains("#[must_use ="));
     assert!(RECONSTRUCTION_RECEIPT.contains("#[must_use ="));
     assert!(RANGE_READ_RECEIPT.contains("#[must_use ="));
+}
+
+#[test]
+fn logical_range_coordinates_have_a_named_domain_owner() {
+    assert!(
+        BLOB_MODULE.contains("This module owns logical blob identity and byte-range coordinates.")
+    );
 }
 
 #[test]

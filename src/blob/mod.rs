@@ -1,7 +1,8 @@
-//! Exact logical byte identity.
+//! Exact logical blob identity and byte-range coordinates.
 //!
-//! This module owns `BlobId` calculation. It does not own canonical identity
-//! codecs, storage, layout, representation, location, or retention.
+//! This module owns logical blob identity and byte-range coordinates. It does
+//! not own canonical identity codecs, storage, layout, representation,
+//! location, or retention.
 
 mod byte_length;
 mod byte_offset;
