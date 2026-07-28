@@ -230,3 +230,11 @@ fn protocol_index_routes_each_semantic_owner() {
         );
     }
 }
+
+#[test]
+fn truncated_stage_discard_fingerprint_has_one_preimage() {
+    assert!(
+        SPECIFICATION.contains("framed_blake3_v1(ASCII(\"KEEP:RECOVERY:STAGE\\0\"), stage_bytes)"),
+        "truncated-stage discard fingerprint lacks its exact preimage"
+    );
+}

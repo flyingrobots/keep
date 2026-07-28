@@ -57,6 +57,14 @@ the complete observed truncated bytes. Under the writer lock, the executor
 reopens the stage without following links and refuses replacement or
 fingerprint drift. It then:
 
+```text
+stage_fingerprint =
+    framed_blake3_v1(ASCII("KEEP:RECOVERY:STAGE\0"), stage_bytes)
+```
+
+`stage_bytes` is the complete exact byte sequence observed through the
+bounded streaming reader. The request admits only algorithm value `1`.
+
 1. unlinks only that verified stage (`KEEP-CRASH-027`); and
 2. synchronizes `staging` (`KEEP-CRASH-028`).
 
