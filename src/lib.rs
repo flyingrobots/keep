@@ -20,14 +20,14 @@ mod reference;
 
 pub use adapters::{
     AdmittedSegment, AdmittedSegmentRecord, BlobIdBinaryParseError, BlobIdTextParseError,
-    CanonicalLayoutRecord, ChecksummedSegmentRecord, LayoutDecodeError, LayoutDecodePolicy,
-    LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError, SealedSegment,
-    SegmentDigest, SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError, SegmentReadError,
-    SegmentReadPolicy, SegmentRecordAdmissionError, SegmentRecordChecksum,
+    CanonicalLayoutRecord, ChecksummedSegmentRecord, FilesystemSegmentStage, LayoutDecodeError,
+    LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
+    SealedSegment, SegmentDigest, SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError,
+    SegmentReadError, SegmentReadPolicy, SegmentRecordAdmissionError, SegmentRecordChecksum,
     SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity,
     SegmentRecordLength, SegmentRecordLimit, SegmentRecordLimitError, SegmentRecordPayloadLength,
-    SegmentRecords, SegmentSeal, SegmentSealError, SegmentStage, SegmentWriteError,
-    SegmentWritePhase, StagedSegment, StorageProfileIdParseError,
+    SegmentRecords, SegmentSeal, SegmentSealError, SegmentStage, SegmentStageCreateError,
+    SegmentWriteError, SegmentWritePhase, StagedSegment, StorageProfileIdParseError,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

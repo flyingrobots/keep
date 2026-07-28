@@ -80,6 +80,9 @@ after its public API and format compatibility policies are established.
 - Consuming `StagedSegment` transitions and immutable `SealedSegment` receipts
   for exact append-only record writing, streaming seal construction, explicit
   prefix/sealed flush-and-sync order, and phase-typed I/O refusals.
+- Exclusive `FilesystemSegmentStage` creation for the fixed `current.seg`
+  staging name, with atomic no-replacement admission, preserved existing
+  evidence, zero-origin writing, and no implicit cleanup from `Drop`.
 - ADR-0005 and the implementation-independent `keep.segment-store/v1`
   protocol: exact immutable segment, catalog-generation, and publication-head
   grammars; canonical ordering, bounds, and domain-separated checksums;
