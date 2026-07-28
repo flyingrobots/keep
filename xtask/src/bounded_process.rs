@@ -1,15 +1,19 @@
 //! This module owns bounded external child-process collection.
 
+mod deadline;
 mod error;
+mod reader;
 
 use std::io;
 use std::process::{Child, Command, ExitStatus, Stdio};
-use std::thread::{self, JoinHandle};
+use std::thread;
 use std::time::{Duration, Instant};
 
+use deadline::ProcessDeadline;
 pub(crate) use error::ProcessError;
+use reader::ReaderWorker;
 
-use crate::process_output::{BoundedBytes, bounded_bytes};
+use crate::process_output::BoundedBytes;
 
 const OUTPUT_LIMIT: usize = 1_048_576;
 
@@ -42,6 +46,7 @@ pub(crate) fn capture(
     command: &mut Command,
     deadline: Option<Duration>,
 ) -> Result<ProcessOutput, ProcessError> {
+    let deadline = ProcessDeadline::new(program, deadline)?;
     command.stdout(Stdio::piped()).stderr(Stdio::piped());
     let mut child = command.spawn().map_err(|source| ProcessError::Io {
         program,
@@ -60,24 +65,21 @@ pub(crate) fn capture(
         (Ok(stdout), Ok(stderr)) => (stdout, stderr),
         (Err(error), _) | (_, Err(error)) => return Err(cleanup(&mut child, error)),
     };
-    let stdout_reader = match start_reader(program, "stdout", stdout) {
+    let stdout_reader = match ReaderWorker::start(program, "stdout", stdout, OUTPUT_LIMIT) {
         Ok(reader) => reader,
         Err(error) => return Err(cleanup(&mut child, error)),
     };
-    let stderr_reader = match start_reader(program, "stderr", stderr) {
+    let stderr_reader = match ReaderWorker::start(program, "stderr", stderr, OUTPUT_LIMIT) {
         Ok(reader) => reader,
         Err(error) => {
             let error = cleanup(&mut child, error);
-            drop(join_reader(program, "stdout", stdout_reader));
+            drop(stdout_reader);
             return Err(error);
         }
     };
-    let status = wait_for_child(program, &mut child, deadline);
-    let stdout = join_reader(program, "stdout", stdout_reader);
-    let stderr = join_reader(program, "stderr", stderr_reader);
-    let status = status?;
-    let stdout = stdout?;
-    let stderr = stderr?;
+    let status = wait_for_child(program, &mut child, &deadline)?;
+    let stdout = stdout_reader.collect(&deadline)?;
+    let stderr = stderr_reader.collect(&deadline)?;
     refuse_exceeded(program, "stdout", &stdout)?;
     refuse_exceeded(program, "stderr", &stderr)?;
     Ok(ProcessOutput {
@@ -91,9 +93,9 @@ pub(crate) fn capture(
 fn wait_for_child(
     program: &'static str,
     child: &mut Child,
-    deadline: Option<Duration>,
+    deadline: &ProcessDeadline,
 ) -> Result<ExitStatus, ProcessError> {
-    let Some(duration) = deadline else {
+    let ProcessDeadline::Bounded { duration, expires } = deadline else {
         return match child.wait() {
             Ok(status) => Ok(status),
             Err(source) => Err(cleanup(
@@ -105,9 +107,6 @@ fn wait_for_child(
                 },
             )),
         };
-    };
-    let Some(expires) = Instant::now().checked_add(duration) else {
-        return Err(cleanup(child, ProcessError::Timeout { program, duration }));
     };
     loop {
         match child.try_wait() {
@@ -122,42 +121,20 @@ fn wait_for_child(
                 ));
             }
             Ok(Some(status)) => return Ok(status),
-            Ok(None) if Instant::now() >= expires => {
-                return Err(cleanup(child, ProcessError::Timeout { program, duration }));
+            Ok(None) if Instant::now() >= *expires => {
+                return Err(cleanup(
+                    child,
+                    ProcessError::Timeout {
+                        program,
+                        duration: *duration,
+                    },
+                ));
             }
-            Ok(None) => thread::sleep(Duration::from_millis(10)),
+            Ok(None) => thread::sleep(
+                Duration::from_millis(10).min(expires.saturating_duration_since(Instant::now())),
+            ),
         }
     }
-}
-
-fn start_reader(
-    program: &'static str,
-    stream: &'static str,
-    reader: impl io::Read + Send + 'static,
-) -> Result<JoinHandle<Result<BoundedBytes, io::Error>>, ProcessError> {
-    thread::Builder::new()
-        .name(format!("xtask-{stream}-reader"))
-        .spawn(move || bounded_bytes(reader, OUTPUT_LIMIT))
-        .map_err(|source| ProcessError::Io {
-            program,
-            action: "start output reader",
-            source,
-        })
-}
-
-fn join_reader(
-    program: &'static str,
-    stream: &'static str,
-    worker: JoinHandle<Result<BoundedBytes, io::Error>>,
-) -> Result<BoundedBytes, ProcessError> {
-    worker
-        .join()
-        .map_err(|_panic| ProcessError::ReaderPanic { program, stream })?
-        .map_err(|source| ProcessError::Io {
-            program,
-            action: "read child output",
-            source,
-        })
 }
 
 const fn refuse_exceeded(
