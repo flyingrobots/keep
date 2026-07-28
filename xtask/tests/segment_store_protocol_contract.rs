@@ -275,3 +275,19 @@ fn leftover_next_head_has_explicit_finalization_or_discard() {
         );
     }
 }
+
+#[test]
+fn discard_fingerprints_refuse_oversized_evidence_before_hashing() {
+    for required in [
+        "`current.seg` uses `MAX_SEGMENT_LENGTH`",
+        "`current.cat` uses `MAX_CATALOG_LENGTH`",
+        "`head.next` uses `PUBLICATION_HEAD_LENGTH`",
+        "reads at most the selected limit plus one byte",
+        "before any discard fingerprint is admitted",
+    ] {
+        assert!(
+            SPECIFICATION.contains(required),
+            "missing discard input bound: {required}"
+        );
+    }
+}

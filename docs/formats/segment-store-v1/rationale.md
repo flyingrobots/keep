@@ -141,6 +141,11 @@ generation, and ambiguity remain distinct because they authorize different
 future actions. In particular, a valid orphan is preserved but invisible; it
 is not silently promoted or deleted.
 
+Explicit discard fingerprints are computed only after the canonical stage
+name selects its format maximum and a limit-plus-one stream proves the complete
+observed bytes fit. Oversized evidence is preserved and refused before hashing
+rather than turned into unbounded recovery work.
+
 ## Deferred capabilities
 
 Version 1 does not define retention roots, deletion, garbage collection,

@@ -55,7 +55,19 @@ Discard is one explicit two-step protocol. The recovery request binds the
 canonical stage name, observed byte length, and a domain-separated digest of
 the complete observed truncated bytes. Under the writer lock, the executor
 reopens the stage without following links and refuses replacement or
-fingerprint drift. It then:
+fingerprint drift.
+
+The canonical name selects one protocol maximum:
+
+- `current.seg` uses `MAX_SEGMENT_LENGTH`;
+- `current.cat` uses `MAX_CATALOG_LENGTH`; and
+- `head.next` uses `PUBLICATION_HEAD_LENGTH`.
+
+Before hashing, recovery refuses metadata length above that maximum. The
+bounded reader then reads at most the selected limit plus one byte across the
+complete stream. The extra byte proves oversized or concurrently grown
+evidence. Either observation produces a typed oversized-evidence refusal
+before any discard fingerprint is admitted; recovery preserves the evidence.
 
 ```text
 stage_fingerprint =
@@ -63,7 +75,10 @@ stage_fingerprint =
 ```
 
 `stage_bytes` is the complete exact byte sequence observed through the
-bounded streaming reader. The request admits only algorithm value `1`.
+bounded streaming reader after this size admission. The request admits only
+algorithm value `1`.
+
+For admitted evidence, the executor:
 
 1. unlinks only that verified stage (`KEEP-CRASH-027`); and
 2. synchronizes `staging` (`KEEP-CRASH-028`).
