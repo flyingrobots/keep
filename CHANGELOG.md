@@ -62,6 +62,14 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- ADR-0005 and the implementation-independent `keep.segment-store/v1`
+  protocol: exact immutable segment, catalog-generation, and publication-head
+  grammars; canonical ordering, bounds, and domain-separated checksums;
+  one-writer/many-reader publication with explicit flush, synchronization,
+  atomic replacement, and directory-synchronization order; stable
+  `KEEP-CRASH-001`–`026` transitions; typed recovery classifications; and
+  golden physical artifacts. Production storage remains assigned to issues
+  #15–#17.
 - A deterministic, bounded, license-safe streaming CAS benchmark corpus and
   release-only `cargo xtask benchmark-baseline` workflow covering all required
   ingestion, edit, deduplication, range-read, verification, and input

@@ -1,0 +1,9 @@
+keep.segment-store.artifacts/v1
+case	kind	byte_length	record_count	entry_count	generation	bound_digest_hex	final_checksum_hex	fixture
+empty-segment	segment	192	0	-	-	fef0cccd7bb6f75a3322d5457219ce4875e5f5ae75193e3c66d4856bca380170	77ee705411ab973d2119c8e155c6ddbba7567af2cc3a666ade1fdf5bedb1d033	empty-segment.hex
+one-zero-segment	segment	337	1	-	-	b7542dced2ab770894a14d1d04b066e3a899942602c5986d35ba6df6c1a35cfc	461adc4061f9e65c70f9e4b8fddb83f3b080ac7587a960bc0af3d80f3c894797	one-zero-segment.hex
+one-zero-catalog	catalog	352	-	1	1	04b82519b0399baefd0b9c0f32a871052e4c47e3a00226ab03b21661470f7320	82fde08fdd592a2183adfacb6727f35820e72b663fb0b68658bd018ca2a759a4	one-zero-catalog.hex
+one-zero-head	head	128	-	-	1	04b82519b0399baefd0b9c0f32a871052e4c47e3a00226ab03b21661470f7320	5a5ee66516266f56193cd93afac0a9db67cfd88120a3db4ab02b3dab414384ee	one-zero-head.hex
+one-zero-bundle-segment	segment	701	2	-	-	221f6745cd8a5221c9a87c3707593608479282b54a4a74d0e753fd76f70e8db2	08cd2bfc7461fa136a105e5f09a76d1ab2cefa271050720a3ef3bc602ef973b9	one-zero-bundle-segment.hex
+one-zero-bundle-catalog	catalog	512	-	2	1	0b7cad1b6de663d34beacbc214db7497f2e36ab6b08dfbd5febbc8d06a418811	da92a3068a2f21aa7e96979daa04033ebadba51d4a2b262ee49fad98601fe674	one-zero-bundle-catalog.hex
+one-zero-bundle-head	head	128	-	-	1	0b7cad1b6de663d34beacbc214db7497f2e36ab6b08dfbd5febbc8d06a418811	4f0b50220ad8b91599a9c028fdba793eaa97c7e79a42016103e5813a30736a2f	one-zero-bundle-head.hex
