@@ -2,6 +2,7 @@
 
 const SPECIFICATION: &str = include_str!("../../docs/formats/flat-chunk-layout-v1/README.md");
 const RATIONALE: &str = include_str!("../../docs/formats/flat-chunk-layout-v1/rationale.md");
+const FORMAT_REGISTRY: &str = include_str!("../../docs/formats/README.md");
 const CONFORMANCE_GUIDE: &str = include_str!("../../conformance/layout/v1/README.md");
 const LAYOUT_DECODE_ERROR_DISPLAY: &str =
     include_str!("../../src/adapters/layout_decode_error_display.rs");
@@ -74,6 +75,15 @@ fn verified_reconstruction_proves_the_bound_storage_profile() {
         MUTATIONS
             .lines()
             .any(|line| line.starts_with("profile-boundary-mismatch\t"))
+    );
+}
+
+#[test]
+fn format_registry_reports_flat_layout_as_implemented() {
+    assert!(
+        FORMAT_REGISTRY
+            .contains("Implemented through verified reconstruction in issues #10 and #13"),
+        "format registry understates the implemented flat-layout proof boundary"
     );
 }
 
