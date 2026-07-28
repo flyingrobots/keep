@@ -1,4 +1,4 @@
-# Dependency Admission: serde_json 1.0.151
+# Dependency Admission: serde 1.0.229 and serde_json 1.0.151
 
 - Status: Accepted for repository-task JSON admission only
 - Date: 2026-07-28

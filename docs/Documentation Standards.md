@@ -52,6 +52,7 @@ Keep keeps its durable truth in a small set of known places.
 | `docs/recovery/` | The crash-point catalog, the publication protocol, and the documented lawful state recovery must reach. |
 | `docs/adr/` | Slugged ADRs for decisions that cut across subsystems or predate a colocated home. See §3.10. |
 | `docs/<category>/<concept>/rationale.md` | Colocated decision record for a decision scoped to one concept: the decision, alternatives rejected, and why. See §3.10. |
+| `docs/dependencies/` | Dependency and development-tool admission records: scope, selected features, resolved graph, risks, and review triggers. |
 | `CONTRIBUTING.md` | Contributor-facing operational contract: what to read, required local checks, and PR expectations. |
 | `CHANGELOG.md` | Release-visible historical ledger. |
 | `SECURITY.md` | Vulnerability reporting and support posture. |

@@ -31,18 +31,21 @@ before extraction:
 | `actionlint_1.7.12_linux_amd64.tar.gz` | `8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8` |
 | `lychee-x86_64-unknown-linux-gnu.tar.gz` | `a06547250f10021dcafc6ed5bb20fca75835b65711745b63cfdda34c29ff6a73` |
 
-The repository checkers then verify each executable's reported version before
-admitting its output as evidence. A missing tool, changed archive, unexpected
-version, empty input corpus, or tool failure refuses the check.
+The Rust `cargo xtask documentation-integrity-check` boundary verifies the
+committed Node graph and installer command, then verifies each executable's
+reported version before admitting its output as evidence. A missing tool,
+changed archive, unexpected version, empty input corpus, or tool failure
+refuses the check.
 
 ## Determinism and network posture
 
-The Markdown and workflow checkers derive their inputs from Git's tracked and
+The Rust task derives the Markdown and workflow inputs from Git's tracked and
 repository-nonignored source paths. Generated Rustdoc, build outputs, ignored
 fuzz artifacts, ignored vendor trees, and user-global ignore policy cannot
-enter either input set. Missing tracked paths are treated as pending deletions;
-Git-trackable nonregular paths such as symlinks are refused. Non-trackable
-special files such as FIFOs cannot enter the Git-selected corpus.
+enter either input set. Missing tracked paths are treated as pending
+deletions; Git-trackable nonregular paths such as symlinks and tracked paths
+replaced by FIFOs are refused. Non-trackable special files cannot enter the
+Git-selected corpus.
 
 The workflow checker disables `actionlint`'s optional `shellcheck` and
 `pyflakes` integrations. Neither auxiliary executable is admitted or pinned by
