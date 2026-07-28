@@ -116,6 +116,48 @@ fn guarded_required_commands_do_not_satisfy_the_contract() {
 }
 
 #[test]
+fn guarded_documentation_jobs_do_not_satisfy_the_contract() {
+    let workflow = WORKFLOW.replace("  documentation:\n", "  documentation:\n    if: false\n");
+    assert!(matches!(
+        super::admit(&workflow),
+        Err(super::DocumentationError::RepositoryContract {
+            path: super::CI_PATH,
+            requirement: "documentation job is unguarded",
+        })
+    ));
+}
+
+#[test]
+fn failure_tolerant_documentation_jobs_do_not_satisfy_the_contract() {
+    let workflow = WORKFLOW.replace(
+        "  documentation:\n",
+        "  documentation:\n    continue-on-error: true\n",
+    );
+    assert!(matches!(
+        super::admit(&workflow),
+        Err(super::DocumentationError::RepositoryContract {
+            path: super::CI_PATH,
+            requirement: "documentation job is failure-intolerant",
+        })
+    ));
+}
+
+#[test]
+fn failure_tolerant_required_commands_do_not_satisfy_the_contract() {
+    let workflow = WORKFLOW.replace(
+        "      - name: Verify\n        run:",
+        "      - name: Verify\n        continue-on-error: true\n        run:",
+    );
+    assert!(matches!(
+        super::admit(&workflow),
+        Err(super::DocumentationError::RepositoryContract {
+            path: super::CI_PATH,
+            requirement: "documentation job run steps are failure-intolerant",
+        })
+    ));
+}
+
+#[test]
 fn unreviewed_python_executables_are_refused() {
     let workflow = WORKFLOW.replace(
         "  next-job:",

@@ -20,7 +20,8 @@ after its public API and format compatibility policies are established.
   commands as YAML, rejects guarded or non-string `run` values, preserves
   declarations after Dependabot directory lists, compares Dependabot
   maintenance fields as typed YAML values, requires every reviewed
-  documentation CI command exactly once, and applies one deadline across
+  documentation CI command exactly once, rejects guarded or failure-tolerant
+  documentation jobs and required run steps, and applies one deadline across
   captured and inherited child execution and output collection.
   Git-backed process fixtures ignore system and global Git configuration and
   preserve non-UTF-8 template paths without lossy conversion. Documentation

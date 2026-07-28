@@ -49,7 +49,14 @@ fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError>
     let [document] = documents.as_slice() else {
         return Err(contract("workflow contains exactly one YAML document"));
     };
-    let Some(steps) = document["jobs"]["documentation"]["steps"].as_vec() else {
+    let job = &document["jobs"]["documentation"];
+    if !job["if"].is_badvalue() {
+        return Err(contract("documentation job is unguarded"));
+    }
+    if !job["continue-on-error"].is_badvalue() {
+        return Err(contract("documentation job is failure-intolerant"));
+    }
+    let Some(steps) = job["steps"].as_vec() else {
         return Err(contract("workflow defines documentation job steps"));
     };
     let mut runs = Vec::new();
@@ -60,6 +67,11 @@ fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError>
         }
         if !step["if"].is_badvalue() {
             return Err(contract("documentation job run steps are unguarded"));
+        }
+        if !step["continue-on-error"].is_badvalue() {
+            return Err(contract(
+                "documentation job run steps are failure-intolerant",
+            ));
         }
         let Some(run) = run.as_str() else {
             return Err(contract("documentation job run values are strings"));
