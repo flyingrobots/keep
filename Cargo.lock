@@ -246,6 +246,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "keep-benchmark"
+version = "0.0.0"
+dependencies = [
+ "allocation-counter",
+ "keep",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.186"
 source = "registry+https://github.com/rust-lang/crates.io-index"
