@@ -11,10 +11,16 @@ use super::repository_path::RepositoryPath;
 
 const SHEBANG_SCAN_BYTES: u64 = 1_024;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum FileExecution {
+    Executable,
+    NonExecutable,
+}
+
 pub(super) fn refuse_executable_python(
     source_root: &RepositoryRoot,
     relative: &RepositoryPath,
-) -> Result<(), SourceStructureError> {
+) -> Result<FileExecution, SourceStructureError> {
     let path = source_root.display_path(relative.as_path());
     let file = source_root
         .open_file(relative.as_path())
@@ -25,23 +31,33 @@ pub(super) fn refuse_executable_python(
             },
             OpenRepositoryFileError::NonRegular => SourceStructureError::NonRegular(path.clone()),
         })?;
-    let python = executable_uses_python(&file).map_err(|source| SourceStructureError::Inspect {
+    let execution = file_execution(&file).map_err(|source| SourceStructureError::Inspect {
         path: path.clone(),
         source,
     })?;
+    let python = execution == FileExecution::Executable
+        && executable_uses_python(file).map_err(|source| SourceStructureError::Inspect {
+            path: path.clone(),
+            source,
+        })?;
     if python {
         Err(SourceStructureError::PythonSource(
             relative.as_str().to_owned(),
         ))
     } else {
-        Ok(())
+        Ok(execution)
     }
 }
 
-fn executable_uses_python(file: &File) -> Result<bool, io::Error> {
+fn file_execution(file: &File) -> Result<FileExecution, io::Error> {
     if file.metadata()?.permissions().mode() & 0o111 == 0 {
-        return Ok(false);
+        Ok(FileExecution::NonExecutable)
+    } else {
+        Ok(FileExecution::Executable)
     }
+}
+
+fn executable_uses_python(file: File) -> Result<bool, io::Error> {
     let mut prefix = Vec::new();
     file.take(SHEBANG_SCAN_BYTES).read_to_end(&mut prefix)?;
     Ok(is_python_shebang(&prefix))

@@ -11,7 +11,7 @@ use std::path::Path;
 
 use crate::git_inventory::{GitPath, paths as git_paths};
 use crate::repository_file::{OpenRepositoryFileError, RepositoryRoot};
-use python_source::refuse_executable_python;
+use python_source::{FileExecution, refuse_executable_python};
 use repository_path::RepositoryPath;
 pub(super) use source_error::SourceStructureError;
 use source_kind::{is_extensionless_file, is_python_module, is_source_candidate};
@@ -110,8 +110,10 @@ fn source_violations(
 ) -> Result<Vec<String>, SourceStructureError> {
     let mut violations = Vec::new();
     for relative in paths {
-        refuse_executable_python(source_root, &relative)?;
-        if is_extensionless_file(relative.as_str().as_bytes()) {
+        let execution = refuse_executable_python(source_root, &relative)?;
+        if is_extensionless_file(relative.as_str().as_bytes())
+            && execution == FileExecution::NonExecutable
+        {
             continue;
         }
         let lines = source_line_count(source_root, &relative)?;
