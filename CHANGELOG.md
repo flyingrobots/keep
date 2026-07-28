@@ -62,6 +62,14 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- A deterministic, bounded, license-safe streaming CAS benchmark corpus and
+  release-only `cargo xtask benchmark-baseline` workflow covering all required
+  ingestion, edit, deduplication, range-read, verification, and input
+  partitioning scenarios. The versioned TSV report records exact semantic I/O,
+  amplification and reuse ratios, p50/p95/p99 wall latency, process CPU time,
+  throughput, allocations, incremental peak live heap, five chunking-profile
+  comparisons, compiler/target/Git identity, and an explicit refusal to invent
+  regression thresholds before controlled baseline history exists.
 - Validated half-open `ByteRange` coordinates and allocation-free range
   planning, plus exact synchronous reference-store range reads that load only
   overlapping chunks, authenticate each selected complete chunk before

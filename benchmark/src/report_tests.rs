@@ -8,6 +8,8 @@ use crate::{
     SourceTreeState,
 };
 
+const REFERENCE_BASELINE: &str = include_str!("../baselines/159863e-aarch64-apple-darwin.tsv");
+
 #[test]
 fn report_environment_rejects_ambiguous_tsv_fields() {
     let result = BaselineEnvironment::new(
@@ -82,4 +84,49 @@ fn tsv_report_names_every_metric_profile_and_unset_threshold() -> Result<(), Box
          requires-controlled-baseline-history\n"
     ));
     Ok(())
+}
+
+#[test]
+fn committed_reference_baseline_is_field_complete_and_source_bound() {
+    let scenario_width = REFERENCE_BASELINE
+        .lines()
+        .find(|line| line.starts_with("scenario-header\t"))
+        .map(|line| line.split('\t').count());
+    let profile_width = REFERENCE_BASELINE
+        .lines()
+        .find(|line| line.starts_with("profile-header\t"))
+        .map(|line| line.split('\t').count());
+
+    assert_eq!(
+        REFERENCE_BASELINE
+            .lines()
+            .filter(|line| line.starts_with("scenario\t"))
+            .count(),
+        13
+    );
+    assert_eq!(
+        REFERENCE_BASELINE
+            .lines()
+            .filter(|line| line.starts_with("profile\t"))
+            .count(),
+        5
+    );
+    assert!(
+        REFERENCE_BASELINE.lines().any(|line| {
+            line == "metadata\tgit-commit\t159863e21f7de8b5ba76902f44568e545701ade9"
+        })
+    );
+    assert!(REFERENCE_BASELINE.lines().any(|line| {
+        line == "threshold\tall-performance-metrics\tunconfigured\t\
+                 requires-controlled-baseline-history"
+    }));
+    assert!(REFERENCE_BASELINE.lines().all(|line| {
+        if line.starts_with("scenario\t") {
+            Some(line.split('\t').count()) == scenario_width
+        } else if line.starts_with("profile\t") {
+            Some(line.split('\t').count()) == profile_width
+        } else {
+            true
+        }
+    }));
 }
