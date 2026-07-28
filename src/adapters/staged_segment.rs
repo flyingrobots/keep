@@ -1,5 +1,7 @@
 //! Append-only segment stage before explicit sealing.
 
+use std::collections::HashSet;
+
 use super::segment_digest_builder::SegmentDigestBuilder;
 use super::{
     AdmittedSegmentRecord, SealedSegment, SegmentDurabilityPhase, SegmentHeader,
@@ -12,6 +14,8 @@ use super::{
 /// Each mutating operation consumes this state. Any write or durability
 /// failure therefore prevents accidental continuation from an ambiguous
 /// partial tail. Dropping this value never seals or publishes the stage.
+/// The duplicate-identity set is used only for membership; its iteration order
+/// cannot affect encoded bytes, errors, or identity.
 #[must_use]
 pub struct StagedSegment<S>
 where
@@ -19,7 +23,7 @@ where
 {
     stage: S,
     digest: SegmentDigestBuilder,
-    identities: Vec<SegmentRecordIdentity>,
+    identities: HashSet<SegmentRecordIdentity>,
     record_limit: SegmentRecordLimit,
     record_count: u32,
     bytes_written: u64,
@@ -52,7 +56,7 @@ where
         Ok(Self {
             stage,
             digest,
-            identities: Vec::new(),
+            identities: HashSet::new(),
             record_limit,
             record_count: 0,
             bytes_written,
@@ -77,7 +81,7 @@ where
             record.checksum().as_bytes(),
             SegmentWritePhase::RecordChecksum,
         )?;
-        self.identities.push(record.identity());
+        let _inserted = self.identities.insert(record.identity());
         self.record_count = next_count;
         Ok(self)
     }
