@@ -7,6 +7,24 @@ mod documentation_tools;
 
 use std::io;
 
+const DOCUMENTATION_ERROR_DISPLAY: &str =
+    include_str!("../src/documentation_integrity/error/display.rs");
+
+#[test]
+fn documentation_error_formatter_stays_below_the_hard_function_limit() -> Result<(), &'static str> {
+    let (_, after_signature) = DOCUMENTATION_ERROR_DISPLAY
+        .split_once("    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {")
+        .ok_or("display implementation must retain its formatter")?;
+    let (body, _) = after_signature
+        .split_once("\n    }\n}\n\nfn ")
+        .ok_or("display formatter must remain a directly inspectable function")?;
+    assert!(
+        body.lines().count() <= 59,
+        "DocumentationError::fmt exceeds the 60-line hard limit"
+    );
+    Ok(())
+}
+
 #[test]
 fn successful_verification_runs_every_documentation_tool_silently() -> Result<(), io::Error> {
     let tools = documentation_tools::DocumentationTools::create()?;

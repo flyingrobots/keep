@@ -40,76 +40,101 @@ impl fmt::Display for DocumentationError {
                 write!(formatter, "{corpus} corpus contains a non-UTF-8 path")
             }
             Self::Process(error) => write!(formatter, "{error}"),
-            Self::RepositoryFileEncoding { path, .. } => {
-                write!(formatter, "repository file `{path}` is not UTF-8")
-            }
-            Self::RepositoryFileInspect { path, .. } => {
-                write!(formatter, "cannot inspect repository file `{path}`")
-            }
-            Self::RepositoryFileNonRegular(path) => {
-                write!(formatter, "repository file is not regular: `{path}`")
-            }
-            Self::RepositoryFileTooLarge { path, maximum } => write!(
-                formatter,
-                "repository file `{path}` exceeds the {maximum}-byte bound"
-            ),
-            Self::RepositoryContract { path, requirement } => {
-                write!(
-                    formatter,
-                    "repository file `{path}` violates: {requirement}"
-                )
-            }
-            Self::RepositoryContractAt {
-                path,
-                subject,
-                requirement,
-            } => repository_contract_at(formatter, path, subject, requirement),
-            Self::RepositoryJson { path, .. } => {
-                write!(formatter, "repository file `{path}` is not valid JSON")
-            }
-            Self::RepositoryYaml { path, .. } => {
-                write!(formatter, "repository file `{path}` is not valid YAML")
-            }
+            error @ (Self::RepositoryFileEncoding { .. }
+            | Self::RepositoryFileInspect { .. }
+            | Self::RepositoryFileNonRegular(_)
+            | Self::RepositoryFileTooLarge { .. }
+            | Self::RepositoryContract { .. }
+            | Self::RepositoryContractAt { .. }
+            | Self::RepositoryJson { .. }
+            | Self::RepositoryYaml { .. }
+            | Self::RepositoryValue { .. }) => repository_file(formatter, error),
             Self::RepositoryRootChanged(path) => {
                 repository_root(formatter, RepositoryRootDiagnostic::Changed, path)
             }
             Self::RepositoryRootInspect { path, .. } => {
                 repository_root(formatter, RepositoryRootDiagnostic::Inspect, path)
             }
-            Self::RepositoryValue {
-                path,
-                field,
-                expected,
-                observed,
-            } => repository_value(formatter, path, field, expected, observed.as_deref()),
-            Self::VersionMismatch {
-                program,
-                expected,
-                observed,
-            } => write!(
-                formatter,
-                "{program} version mismatch: expected {expected:?}, observed {observed:?}"
-            ),
-            Self::ToolFailed {
-                program,
-                code,
-                stdout,
-                stderr,
-            } => tool_failed(formatter, program, *code, stdout, stderr),
-            Self::ToolOutputEncoding {
-                program, stream, ..
-            } => {
-                write!(formatter, "{program} {stream} is not UTF-8")
-            }
-            Self::ToolUnavailable {
-                program,
-                install_version,
-                ..
-            } => write!(
-                formatter,
-                "{program} is unavailable; install version {install_version}"
-            ),
+            error @ (Self::VersionMismatch { .. }
+            | Self::ToolFailed { .. }
+            | Self::ToolOutputEncoding { .. }
+            | Self::ToolUnavailable { .. }) => tool(formatter, error),
         }
+    }
+}
+
+fn repository_file(formatter: &mut fmt::Formatter<'_>, error: &DocumentationError) -> fmt::Result {
+    match error {
+        DocumentationError::RepositoryFileEncoding { path, .. } => {
+            write!(formatter, "repository file `{path}` is not UTF-8")
+        }
+        DocumentationError::RepositoryFileInspect { path, .. } => {
+            write!(formatter, "cannot inspect repository file `{path}`")
+        }
+        DocumentationError::RepositoryFileNonRegular(path) => {
+            write!(formatter, "repository file is not regular: `{path}`")
+        }
+        DocumentationError::RepositoryFileTooLarge { path, maximum } => write!(
+            formatter,
+            "repository file `{path}` exceeds the {maximum}-byte bound"
+        ),
+        DocumentationError::RepositoryContract { path, requirement } => {
+            write!(
+                formatter,
+                "repository file `{path}` violates: {requirement}"
+            )
+        }
+        DocumentationError::RepositoryContractAt {
+            path,
+            subject,
+            requirement,
+        } => repository_contract_at(formatter, path, subject, requirement),
+        DocumentationError::RepositoryJson { path, .. } => {
+            write!(formatter, "repository file `{path}` is not valid JSON")
+        }
+        DocumentationError::RepositoryYaml { path, .. } => {
+            write!(formatter, "repository file `{path}` is not valid YAML")
+        }
+        DocumentationError::RepositoryValue {
+            path,
+            field,
+            expected,
+            observed,
+        } => repository_value(formatter, path, field, expected, observed.as_deref()),
+        _ => Err(fmt::Error),
+    }
+}
+
+fn tool(formatter: &mut fmt::Formatter<'_>, error: &DocumentationError) -> fmt::Result {
+    match error {
+        DocumentationError::VersionMismatch {
+            program,
+            expected,
+            observed,
+        } => write!(
+            formatter,
+            "{program} version mismatch: expected {expected:?}, observed {observed:?}"
+        ),
+        DocumentationError::ToolFailed {
+            program,
+            code,
+            stdout,
+            stderr,
+        } => tool_failed(formatter, program, *code, stdout, stderr),
+        DocumentationError::ToolOutputEncoding {
+            program, stream, ..
+        } => {
+            write!(formatter, "{program} {stream} is not UTF-8")
+        }
+        DocumentationError::ToolUnavailable {
+            program,
+            install_version,
+            ..
+        } => write!(
+            formatter,
+            "{program} is unavailable; install version {install_version}"
+        ),
+        _ => Err(fmt::Error),
     }
 }
 
