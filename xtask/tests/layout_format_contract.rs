@@ -88,16 +88,16 @@ fn format_registry_reports_flat_layout_as_implemented() {
 }
 
 #[test]
-fn format_registry_preserves_the_segment_store_proof_boundary() {
+fn format_registry_reports_the_segment_store_implementation_boundary() {
     const EXPECTED_ROW: &str = "\
 | [Durable Segment Store v1](segment-store-v1/README.md) | \
-`keep.segment-store/v1` | Specified in issue #14; production implementation \
-is planned in issues #15–#17 | \
+`keep.segment-store/v1` | Specified in issue #14; segment I/O implemented in \
+issue #15; publication and recovery remain in issues #16–#17 | \
 [Golden corpus](../../conformance/segment-store/v1/README.md) |";
 
     assert!(
         FORMAT_REGISTRY.lines().any(|line| line == EXPECTED_ROW),
-        "format registry lost the exact durable segment-store proof boundary"
+        "format registry lost the exact durable segment-store implementation boundary"
     );
 }
 
