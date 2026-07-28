@@ -15,12 +15,18 @@ use std::error::Error;
 use std::io::{self, Write};
 use std::rc::Rc;
 
-use keep::{AdmittedSegmentRecord, SegmentRecordLimit, SegmentStage, StagedSegment};
+use keep::{
+    AdmittedLayout, AdmittedSegmentRecord, LayoutDecodePolicy, LayoutEntryLimit,
+    SegmentRecordLimit, SegmentStage, StagedSegment,
+};
 use support::decode_hex;
 
 const EMPTY_SEGMENT_HEX: &str = include_str!("../conformance/segment-store/v1/empty-segment.hex");
 const ONE_ZERO_SEGMENT_HEX: &str =
     include_str!("../conformance/segment-store/v1/one-zero-segment.hex");
+const ONE_ZERO_BUNDLE_SEGMENT_HEX: &str =
+    include_str!("../conformance/segment-store/v1/one-zero-bundle-segment.hex");
+const ONE_ZERO_LAYOUT_HEX: &str = include_str!("../conformance/layout/v1/one-zero.layout.hex");
 
 #[test]
 fn explicit_empty_seal_matches_the_frozen_segment() -> Result<(), Box<dyn Error>> {
@@ -72,6 +78,33 @@ fn explicit_sealing_matches_the_frozen_segment_and_durability_order() -> Result<
     );
     assert_eq!(sealed.record_count(), 1);
     assert_eq!(sealed.segment_length(), 337);
+    Ok(())
+}
+
+#[test]
+fn mixed_kind_writing_matches_the_frozen_bundle_segment() -> Result<(), Box<dyn Error>> {
+    let layout_bytes = decode_hex(
+        ONE_ZERO_LAYOUT_HEX
+            .strip_suffix('\n')
+            .ok_or("layout fixture must end in one LF")?,
+    )?;
+    let policy = LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM);
+    let layout = AdmittedLayout::decode_record(&layout_bytes, policy)?.encode_record()?;
+    let observation = Rc::new(RefCell::new(StageObservation::default()));
+    let stage = RecordingStage::new(Rc::clone(&observation));
+    let staged = StagedSegment::begin(stage, SegmentRecordLimit::MAXIMUM)?;
+    let staged = staged.append(AdmittedSegmentRecord::for_chunk(&[0])?)?;
+    let staged = staged.append(AdmittedSegmentRecord::for_layout(&layout)?)?;
+    let sealed = staged.seal()?;
+    let canonical = decode_hex(
+        ONE_ZERO_BUNDLE_SEGMENT_HEX
+            .strip_suffix('\n')
+            .ok_or("bundle segment fixture must end in one LF")?,
+    )?;
+
+    assert_eq!(observation.borrow().bytes, canonical);
+    assert_eq!(sealed.record_count(), 2);
+    assert_eq!(usize::try_from(sealed.segment_length())?, canonical.len());
     Ok(())
 }
 
