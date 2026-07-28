@@ -207,7 +207,7 @@ fn feed_sizes(
         let size = *sizes
             .get(index)
             .ok_or_else(|| ConformanceError::violation("partition size is absent"))?;
-        let end = offset.saturating_add(size).min(source.len());
+        let end = partition_end(offset, size, source.len(), "partition schedule")?;
         chunker.feed(source.get(offset..end).ok_or_else(|| {
             ConformanceError::violation("partition schedule moved outside its source")
         })?)?;
@@ -218,6 +218,18 @@ fn feed_sizes(
         index = if next == sizes.len() { 0 } else { next };
     }
     Ok(())
+}
+
+pub(super) fn partition_end(
+    offset: usize,
+    size: usize,
+    source_length: usize,
+    schedule: &str,
+) -> Result<usize, ConformanceError> {
+    offset
+        .checked_add(size)
+        .map(|end| end.min(source_length))
+        .ok_or_else(|| ConformanceError::violation(format!("{schedule} offset overflow")))
 }
 
 fn run_adjacent(case: StreamCase<'_>, schedule: usize) -> Result<(), ConformanceError> {
@@ -257,4 +269,23 @@ fn admit_stream(
         )));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ConformanceError, partition_end};
+
+    #[test]
+    fn partition_offset_overflow_is_refused() {
+        assert!(matches!(
+            partition_end(
+                usize::MAX,
+                1,
+                usize::MAX,
+                "partition schedule",
+            ),
+            Err(ConformanceError::Violation(ref message))
+                if message == "partition schedule offset overflow"
+        ));
+    }
 }

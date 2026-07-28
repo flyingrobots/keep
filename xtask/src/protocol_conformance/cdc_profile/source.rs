@@ -158,7 +158,8 @@ fn xorshift64(parameter: &str, count: usize, name: &str) -> Result<Vec<u8>, Conf
         state ^= state.wrapping_shl(13);
         state ^= state >> 7;
         state ^= state.wrapping_shl(17);
-        output.push(state.to_le_bytes()[0]);
+        let [low, ..] = state.to_le_bytes();
+        output.push(low);
     }
     Ok(output)
 }

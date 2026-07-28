@@ -1,6 +1,6 @@
 //! This module owns named witnesses for subtle `FastCDC` boundary semantics.
 
-use super::Boundaries;
+use super::{Boundaries, partition_end};
 use crate::protocol_conformance::ConformanceError;
 use crate::protocol_conformance::cdc_profile::scalar_fastcdc::{
     StreamingChunker, probe_fingerprint, reference_boundaries,
@@ -150,7 +150,7 @@ fn require_empty_feed_invariance(
         let size = *sizes
             .get(index)
             .ok_or_else(|| ConformanceError::violation("empty-feed schedule is absent"))?;
-        let end = offset.saturating_add(size).min(source.len());
+        let end = partition_end(offset, size, source.len(), "empty-feed schedule")?;
         chunker.feed(source.get(offset..end).ok_or_else(|| {
             ConformanceError::violation("empty-feed schedule moved outside its source")
         })?)?;
