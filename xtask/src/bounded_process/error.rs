@@ -6,6 +6,10 @@ use std::io;
 use std::time::Duration;
 
 pub(crate) enum ProcessError {
+    Additional {
+        primary: Box<Self>,
+        additional: Box<Self>,
+    },
     Cleanup {
         primary: Box<Self>,
         action: &'static str,
@@ -38,7 +42,9 @@ pub(crate) enum ProcessError {
 impl ProcessError {
     pub(crate) fn is_not_found(&self) -> bool {
         match self {
-            Self::Cleanup { primary, .. } => primary.is_not_found(),
+            Self::Additional { primary, .. } | Self::Cleanup { primary, .. } => {
+                primary.is_not_found()
+            }
             Self::Io { source, .. } => source.kind() == io::ErrorKind::NotFound,
             Self::MissingStream { .. }
             | Self::OutputLimit { .. }
@@ -57,12 +63,13 @@ impl fmt::Debug for ProcessError {
 impl fmt::Display for ProcessError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Additional {
+                primary,
+                additional,
+            } => write!(formatter, "{primary}; additionally {additional}"),
             Self::Cleanup {
                 primary, action, ..
-            } => write!(
-                formatter,
-                "{primary}; additionally failed to {action} child process"
-            ),
+            } => write!(formatter, "{primary}; additionally failed to {action}"),
             Self::Io {
                 program, action, ..
             } => write!(formatter, "cannot {action} {program} process"),
@@ -92,6 +99,7 @@ impl fmt::Display for ProcessError {
 impl Error for ProcessError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::Additional { primary, .. } => Some(primary),
             Self::Cleanup { source, .. } | Self::Io { source, .. } => Some(source),
             Self::MissingStream { .. }
             | Self::OutputLimit { .. }
