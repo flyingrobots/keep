@@ -10,10 +10,12 @@ use super::error::DocumentationError;
 use super::repository_text;
 
 const INSTALLER_PATH: &str = "scripts/install_documentation_tools.sh";
+const INSTALLER_DIGEST: [u8; 32] = [
+    0x12, 0xfb, 0x82, 0xcd, 0xdb, 0x65, 0x52, 0xe5, 0xae, 0xdb, 0x14, 0x54, 0x83, 0xf4, 0x8a, 0x8a,
+    0x8b, 0x35, 0x54, 0xea, 0x2a, 0x90, 0xeb, 0xd4, 0x82, 0xd7, 0x4a, 0x61, 0x1f, 0xf6, 0xd3, 0xfd,
+];
 const LOCK_PATH: &str = "scripts/documentation-tools/package-lock.json";
 const MANIFEST_PATH: &str = "scripts/documentation-tools/package.json";
-const NPM_CI_COMMAND: &str =
-    "npm ci \\\n  --prefix \"$npm_dir\" \\\n  --ignore-scripts \\\n  --no-audit \\\n  --no-fund";
 
 pub(super) fn check(repository_root: &RepositoryRoot) -> Result<(), DocumentationError> {
     let manifest = repository_text::read(repository_root, MANIFEST_PATH)?;
@@ -93,25 +95,14 @@ fn admit_lock(lock: &Value) -> Result<(), DocumentationError> {
 }
 
 fn admit_installer(installer: &str) -> Result<(), DocumentationError> {
-    if !installer.contains(NPM_CI_COMMAND) {
-        return Err(contract(
+    if blake3::hash(installer.as_bytes()).as_bytes() == &INSTALLER_DIGEST {
+        Ok(())
+    } else {
+        Err(contract(
             INSTALLER_PATH,
-            "installation uses the reviewed npm ci command",
-        ));
+            "installer bytes match the reviewed digest",
+        ))
     }
-    if !installer.contains("package-lock.json") {
-        return Err(contract(
-            INSTALLER_PATH,
-            "installation requires package-lock.json",
-        ));
-    }
-    if installer.contains("npm install") {
-        return Err(contract(
-            INSTALLER_PATH,
-            "installation does not bypass the lock with npm install",
-        ));
-    }
-    Ok(())
 }
 
 fn parse(path: &'static str, raw: &str) -> Result<Value, DocumentationError> {

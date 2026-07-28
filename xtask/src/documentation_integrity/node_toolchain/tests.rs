@@ -24,8 +24,8 @@ const LOCK: &str = r#"{
     }
   }
 }"#;
-const INSTALLER: &str = concat!(
-    "test -f package-lock.json\n",
+const INSTALLER: &str = include_str!("../../../../scripts/install_documentation_tools.sh");
+const REVIEWED_NPM_CI: &str = concat!(
     "npm ci \\\n",
     "  --prefix \"$npm_dir\" \\\n",
     "  --ignore-scripts \\\n",
@@ -145,7 +145,7 @@ fn unlocked_installer_is_refused() {
         super::admit(MANIFEST, LOCK, "npm install markdownlint-cli2\n"),
         Err(super::DocumentationError::RepositoryContract {
             path: super::INSTALLER_PATH,
-            requirement: "installation uses the reviewed npm ci command",
+            requirement: "installer bytes match the reviewed digest",
         })
     ));
 }
@@ -157,7 +157,27 @@ fn comments_cannot_mask_an_unlocked_installer() {
         super::admit(MANIFEST, LOCK, installer),
         Err(super::DocumentationError::RepositoryContract {
             path: super::INSTALLER_PATH,
-            requirement: "installation uses the reviewed npm ci command",
+            requirement: "installer bytes match the reviewed digest",
+        })
+    ));
+}
+
+#[test]
+fn dead_shell_structure_cannot_mask_an_unreviewed_command() {
+    let installer = format!(
+        "# package-lock.json\n\
+         unused() {{\n\
+         \x20 cat <<'REVIEWED'\n\
+         {REVIEWED_NPM_CI}\n\
+         REVIEWED\n\
+         }}\n\
+         npm ci --prefix /tmp/unreviewed --foreground-scripts\n",
+    );
+    assert!(matches!(
+        super::admit(MANIFEST, LOCK, &installer),
+        Err(super::DocumentationError::RepositoryContract {
+            path: super::INSTALLER_PATH,
+            requirement: "installer bytes match the reviewed digest",
         })
     ));
 }
