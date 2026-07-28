@@ -12,7 +12,9 @@ pub(crate) use error::ExecutionError;
 use error::{TargetFailure, TargetFailureReason};
 
 use super::command::{CommandPlan, OutputMode};
-use super::process::{self, ProcessError, ProcessOutput};
+use crate::bounded_process::{self, ProcessError, ProcessOutput};
+
+const CARGO_FUZZ_PROCESS: &str = "cargo-fuzz";
 
 trait CommandRunner {
     fn execute(
@@ -34,11 +36,12 @@ impl CommandRunner for SystemRunner {
         command.args(plan.arguments()).current_dir(repository_root);
         match plan.output_mode() {
             OutputMode::Capture => {
-                let output = process::capture(&mut command, plan.deadline())?;
+                let output =
+                    bounded_process::capture(CARGO_FUZZ_PROCESS, &mut command, plan.deadline())?;
                 replay(&output)?;
                 Ok(output)
             }
-            OutputMode::Inherit => process::status(&mut command),
+            OutputMode::Inherit => bounded_process::status(CARGO_FUZZ_PROCESS, &mut command),
         }
     }
 }
@@ -72,7 +75,11 @@ fn write_output(
     writer
         .write_all(bytes)
         .and_then(|()| writer.flush())
-        .map_err(|source| ProcessError::Io { action, source })
+        .map_err(|source| ProcessError::Io {
+            program: CARGO_FUZZ_PROCESS,
+            action,
+            source,
+        })
 }
 
 fn execute_all(

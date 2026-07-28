@@ -4,9 +4,9 @@ use std::io;
 use std::path::Path;
 
 use super::{CommandRunner, execute_all};
+use crate::bounded_process::{ProcessError, ProcessOutput};
 use crate::fuzz_campaign::command::{CampaignOperation, CommandPlan};
 use crate::fuzz_campaign::policy::CampaignPolicy;
-use crate::fuzz_campaign::process::{ProcessError, ProcessOutput};
 use crate::fuzz_campaign::profile::CampaignProfile;
 use crate::fuzz_campaign::target::FuzzTarget;
 
@@ -103,6 +103,7 @@ impl CommandRunner for RefusingRunner {
         _plan: &CommandPlan,
     ) -> Result<ProcessOutput, ProcessError> {
         Err(ProcessError::Io {
+            program: "cargo-fuzz",
             action: "spawn",
             source: io::Error::other("scripted refusal"),
         })
@@ -126,7 +127,10 @@ impl CommandRunner for ScriptedRunner {
     ) -> Result<ProcessOutput, ProcessError> {
         self.observed.push(plan.target().as_str().to_owned());
         let Some(output) = self.outcomes.pop_front() else {
-            return Err(ProcessError::MissingStream("scripted outcome"));
+            return Err(ProcessError::MissingStream {
+                program: "cargo-fuzz",
+                stream: "scripted outcome",
+            });
         };
         Ok(output)
     }

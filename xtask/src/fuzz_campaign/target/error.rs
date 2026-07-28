@@ -5,8 +5,8 @@ use std::fmt;
 use std::io;
 use std::path::PathBuf;
 
+use crate::bounded_process::ProcessError;
 use crate::diagnostic::{escaped_controls, escaped_path};
-use crate::fuzz_campaign::process::ProcessError;
 
 pub(crate) enum TargetError {
     Disagreement {

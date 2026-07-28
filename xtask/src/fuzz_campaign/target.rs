@@ -13,7 +13,9 @@ use std::process::Command;
 pub(super) use error::TargetError;
 
 use super::policy::CampaignPolicy;
-use super::process;
+use crate::bounded_process;
+
+const CARGO_FUZZ_PROCESS: &str = "cargo-fuzz";
 
 #[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub(super) struct FuzzTarget(String);
@@ -48,7 +50,7 @@ pub(super) fn registered(
         .arg(format!("+{}", policy.toolchain()))
         .args(["fuzz", "list"])
         .current_dir(repository_root);
-    let output = process::capture(&mut command, None)?;
+    let output = bounded_process::capture(CARGO_FUZZ_PROCESS, &mut command, None)?;
     if !output.succeeded {
         return Err(TargetError::ListFailed {
             stdout: output.stdout,

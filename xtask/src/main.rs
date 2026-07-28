@@ -8,6 +8,11 @@
     reason = "the command dispatcher owns this private repository task"
 )]
 mod benchmark_baseline;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "bounded process execution is shared by sibling repository tasks"
+)]
+mod bounded_process;
 mod diagnostic;
 #[cfg(test)]
 mod documentation_integrity;
