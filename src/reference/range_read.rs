@@ -22,6 +22,32 @@ impl ReferenceStore {
     /// synchronous operation allocates no adapter-owned heap memory and does
     /// not flush `output`.
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::io::Cursor;
+    ///
+    /// use keep::{
+    ///     ByteLength, ByteOffset, ByteRange, LayoutEntryLimit, ReferenceStore,
+    ///     ReferenceStoreCapacity,
+    /// };
+    ///
+    /// let bytes = b"one exact requested range";
+    /// let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+    /// let mut source = Cursor::new(bytes);
+    /// let published = store
+    ///     .stage(&mut source, LayoutEntryLimit::MAXIMUM)?
+    ///     .commit(&mut store)?;
+    /// let requested = ByteRange::new(ByteOffset::new(4), ByteLength::new(5))?;
+    /// let mut output = Vec::new();
+    ///
+    /// let receipt = store.read_range(published.target(), requested, &mut output)?;
+    ///
+    /// assert_eq!(output, b"exact");
+    /// assert_eq!(receipt.requested(), requested);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    ///
     /// # Errors
     ///
     /// Returns [`RangeReadError`] for absent state, an out-of-bounds range,
