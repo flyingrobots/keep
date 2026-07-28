@@ -6,7 +6,7 @@ use crate::{BlobId, ByteLength, ByteRange, LayoutId};
 ///
 /// This receipt proves that the requested bytes came from chunks whose complete
 /// identities were verified under the admitted layout. It does not prove that
-/// unrequested chunks, the complete blob identity, or unselected profile
+/// unrequested chunks, the complete blob identity, or storage-profile
 /// boundaries were verified.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[must_use = "the range-read receipt records the exact authenticated range"]

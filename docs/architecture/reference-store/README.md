@@ -108,9 +108,9 @@ typed refusals.
 
 The resulting `RangeReadReceipt` proves that the requested bytes came from
 authenticated complete chunks under the admitted layout. It does not prove the
-complete `BlobId`, any unrequested chunk, or unselected storage-profile
-boundaries. Applications that require those stronger claims must use
-whole-blob reconstruction.
+complete `BlobId`, any unrequested chunk, or any storage-profile boundary.
+Applications that require those stronger claims must use whole-blob
+reconstruction.
 
 Range reads are synchronous and do not flush the writer. The in-memory chunks
 remain non-durable before, during, and after the operation.

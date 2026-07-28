@@ -60,8 +60,8 @@ Range reads therefore plan from admitted metadata, authenticate every complete
 overlapping chunk before output, then reauthenticate each chunk immediately
 before slicing and emission. Their receipt names the requested range and
 explicitly does not claim complete-blob identity, unrequested chunks, or
-unselected profile boundaries. Callers choose whole-blob reconstruction when
-they need those stronger claims.
+storage-profile boundaries. Callers choose whole-blob reconstruction when they
+need those stronger claims.
 
 Preverification ensures a later selected chunk cannot fail after an earlier
 range byte has been emitted. Reverification protects the separate output pass

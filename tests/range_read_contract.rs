@@ -8,6 +8,7 @@ const ARCHITECTURE_RATIONALE: &str =
     include_str!("../docs/architecture/reference-store/rationale.md");
 const FORMAT_SPEC: &str = include_str!("../docs/formats/flat-chunk-layout-v1/README.md");
 const FORMAT_RATIONALE: &str = include_str!("../docs/formats/flat-chunk-layout-v1/rationale.md");
+const RANGE_READ_API: &str = include_str!("../src/reference/range_read.rs");
 const RANGE_READ_RECEIPT: &str = include_str!("../src/reference/range_read_receipt.rs");
 const RANGE_PLAN_TEST_ENTRYPOINT: &str = include_str!("range_plan.rs");
 const RANGE_READ_TEST_ENTRYPOINT: &str = include_str!("range_read.rs");
@@ -24,6 +25,9 @@ fn range_fixture_modules_are_visible_only_within_their_test_crates() {
 fn the_range_receipt_is_consequential_without_overstating_verification() {
     assert!(RANGE_READ_RECEIPT.contains("#[must_use ="));
     assert!(!RANGE_READ_RECEIPT.contains("Returns the verified canonical layout identity used."));
+    assert!(!RANGE_READ_RECEIPT.contains("unselected profile"));
+    assert!(RANGE_READ_RECEIPT.contains("storage-profile"));
+    assert!(RANGE_READ_RECEIPT.contains("boundaries were verified"));
     assert!(
         RANGE_READ_RECEIPT.contains("Returns the canonical identity of the admitted layout used.")
     );
@@ -51,4 +55,14 @@ fn exact_range_reads_are_current_in_contract_rationale_and_roadmap() {
     assert!(FORMAT_RATIONALE.contains("Exact range planning and reads are"));
     assert!(FORMAT_RATIONALE.contains("implemented in issue #11."));
     assert!(CAPABILITIES.contains("keep.range.minimal-overlap/v1\trequired\tM2\t11\t"));
+    for contract in [
+        ARCHITECTURE,
+        ARCHITECTURE_RATIONALE,
+        FORMAT_SPEC,
+        RANGE_READ_API,
+        RANGE_READ_RECEIPT,
+    ] {
+        assert!(!contract.contains("unselected profile"));
+        assert!(!contract.contains("unselected storage-profile"));
+    }
 }

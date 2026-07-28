@@ -320,7 +320,7 @@ Exact range planning is an operation over an admitted layout, not another
 admission state. A half-open range selects only the minimal ordered entry
 interval whose logical spans overlap it. An authenticated range read verifies
 each selected complete chunk before slicing, but does not thereby verify the
-complete target `BlobId`, unrequested chunks, or unselected profile boundaries.
+complete target `BlobId`, unrequested chunks, or storage-profile boundaries.
 
 ## Deterministic refusal order
 

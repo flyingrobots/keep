@@ -18,7 +18,7 @@ impl ReferenceStore {
     ///
     /// The receipt proves the requested bytes came from authenticated chunks
     /// under an admitted layout. It does not prove the complete blob identity,
-    /// unrequested chunks, or unselected storage-profile boundaries. This
+    /// unrequested chunks, or any storage-profile boundary. This
     /// synchronous operation allocates no adapter-owned heap memory and does
     /// not flush `output`.
     ///
