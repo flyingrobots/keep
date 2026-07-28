@@ -59,14 +59,11 @@ fn read_values(
                 "boundaries.tsv: duplicate case {name:?}"
             )));
         }
-        if !source_lengths.contains_key(name) {
+        let Some(source_length) = source_lengths.get(name).copied() else {
             return Err(ConformanceError::violation(format!(
                 "boundaries.tsv: case is outside the required exact source set: {name:?}"
             )));
-        }
-        let source_length = source_lengths.get(name).copied().ok_or_else(|| {
-            ConformanceError::violation(format!("boundary source length is absent: {name}"))
-        })?;
+        };
         let count = decimal(
             row.field("chunk_count")?,
             &format!("{name} chunk count"),
