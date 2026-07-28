@@ -1,6 +1,6 @@
 //! Public output-boundary refusal laws for exact byte-range reads.
 
-pub mod support;
+pub(crate) mod support;
 
 use std::error::Error;
 use std::io::{Cursor, ErrorKind};

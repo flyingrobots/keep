@@ -19,6 +19,9 @@ const RECONSTRUCTION_RECEIPT: &str = include_str!("../src/reference/reconstructi
 const RANGE_READ_RECEIPT: &str = include_str!("../src/reference/range_read_receipt.rs");
 const STAGED_BLOB_TESTS: &str = include_str!("../src/reference/staged_blob_tests.rs");
 const GOLDEN_TEST_ENTRYPOINT: &str = include_str!("golden_file_worldline.rs");
+const RANGE_PLAN_TEST_ENTRYPOINT: &str = include_str!("range_plan.rs");
+const RANGE_READ_TEST_ENTRYPOINT: &str = include_str!("range_read.rs");
+const RANGE_READ_FAILURE_TEST_ENTRYPOINT: &str = include_str!("range_read_failures.rs");
 const STREAMING_TEST_ENTRYPOINT: &str = include_str!("streaming_cas.rs");
 const TEST_SUPPORT: &str = include_str!("support/mod.rs");
 const TEST_READERS: &str = include_str!("support/byte_readers.rs");
@@ -34,6 +37,9 @@ fn publication_changelog_names_required_chunks_without_assuming_deduplication() 
 #[test]
 fn integration_fixtures_are_visible_only_within_their_test_crate() {
     assert!(GOLDEN_TEST_ENTRYPOINT.contains("\npub(crate) mod support;"));
+    assert!(RANGE_PLAN_TEST_ENTRYPOINT.contains("\npub(crate) mod support;"));
+    assert!(RANGE_READ_TEST_ENTRYPOINT.contains("\npub(crate) mod support;"));
+    assert!(RANGE_READ_FAILURE_TEST_ENTRYPOINT.contains("\npub(crate) mod support;"));
     assert!(STREAMING_TEST_ENTRYPOINT.contains("\npub(crate) mod layout_mutation_support;"));
     assert!(STREAMING_TEST_ENTRYPOINT.contains("\npub(crate) mod support;"));
     assert!(!TEST_SUPPORT.contains("\npub use byte_"));

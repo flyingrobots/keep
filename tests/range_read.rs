@@ -1,6 +1,6 @@
 //! Public exact byte-range read and refusal laws.
 
-pub mod support;
+pub(crate) mod support;
 
 use std::error::Error;
 use std::io::{self, Cursor};
