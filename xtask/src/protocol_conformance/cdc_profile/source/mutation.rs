@@ -49,6 +49,11 @@ pub(super) fn load(
                 "mutations.tsv: duplicate case {name:?}"
             )));
         }
+        if !CASES.contains(&name) {
+            return Err(ConformanceError::violation(format!(
+                "mutations.tsv: case is outside the required exact set: {name:?}"
+            )));
+        }
         let content = reconstruct(values, &row)?;
         admit_aggregate(aggregate, content.len())?;
         values.insert(name.to_owned(), content);
@@ -153,7 +158,11 @@ fn apply(plan: MutationPlan<'_>) -> Result<Vec<u8>, ConformanceError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{ConformanceError, MutationPlan, apply};
+    use std::collections::BTreeMap;
+    use std::fs;
+
+    use super::{ConformanceError, Corpus, MutationPlan, apply, load};
+    use crate::test_directory::TestDirectory;
 
     #[test]
     fn edit_operations_preserve_exact_byte_coordinates() {
@@ -206,5 +215,35 @@ mod tests {
             Err(ConformanceError::Violation(ref message))
                 if message == "empty: malformed mutation \"insert-v1\""
         ));
+    }
+
+    #[test]
+    fn mutation_case_set_precedes_mutation_semantics() -> Result<(), ConformanceError> {
+        let directory = TestDirectory::create("cdc-mutation-case-set").map_err(|source| {
+            ConformanceError::io("create mutation test corpus", "temporary", source)
+        })?;
+        let root = directory.path().to_owned();
+        let path = root.join("mutations.tsv");
+        fs::write(
+            &path,
+            "keep.cdc-mutations/v1\n\
+             case\tbase_case\toperation\toffset\tspan_length\tvalue_hex\tlogical_length\n\
+             rogue\tedit-base\tunsupported-v1\t0\t0\t-\t4\n",
+        )
+        .map_err(|source| ConformanceError::io("write mutation test corpus", &path, source))?;
+        let corpus = Corpus::open(root.clone())?;
+        let mut values = BTreeMap::from([(String::from("edit-base"), b"base".to_vec())]);
+        let mut aggregate = 0;
+
+        let result = load(&corpus, &mut values, &mut aggregate);
+        assert!(matches!(
+            result,
+            Err(ConformanceError::Violation(ref message))
+                if message == "mutations.tsv: case is outside the required exact set: \"rogue\""
+        ));
+        directory
+            .close()
+            .map_err(|source| ConformanceError::io("remove mutation test corpus", &root, source))?;
+        Ok(())
     }
 }

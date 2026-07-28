@@ -69,6 +69,11 @@ pub(super) fn load(corpus: &Corpus) -> Result<Sources, ConformanceError> {
                 "sources.tsv: duplicate case {name:?}"
             )));
         }
+        if !SOURCE_CASES.contains(&name) {
+            return Err(ConformanceError::violation(format!(
+                "sources.tsv: case is outside the required exact set: {name:?}"
+            )));
+        }
         let content = primitive_source(corpus, &row)?;
         admit_aggregate(&mut aggregate, content.len())?;
         values.insert(name.to_owned(), content);
@@ -204,5 +209,40 @@ fn require_names(
         Err(ConformanceError::violation(format!(
             "{table}: case set differs from the required exact set"
         )))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use super::{ConformanceError, Corpus, load};
+    use crate::test_directory::TestDirectory;
+
+    #[test]
+    fn source_case_set_precedes_source_recipe_semantics() -> Result<(), ConformanceError> {
+        let directory = TestDirectory::create("cdc-source-case-set").map_err(|source| {
+            ConformanceError::io("create source test corpus", "temporary", source)
+        })?;
+        let root = directory.path().to_owned();
+        let path = root.join("sources.tsv");
+        fs::write(
+            &path,
+            "keep.cdc-sources/v1\n\
+             case\trecipe\tparameter\tcount\tlogical_length\n\
+             rogue\tunsupported-v1\t-\t0\t0\n",
+        )
+        .map_err(|source| ConformanceError::io("write source test corpus", &path, source))?;
+
+        let result = load(&Corpus::open(root.clone())?);
+        assert!(matches!(
+            result,
+            Err(ConformanceError::Violation(ref message))
+                if message == "sources.tsv: case is outside the required exact set: \"rogue\""
+        ));
+        directory
+            .close()
+            .map_err(|source| ConformanceError::io("remove source test corpus", &root, source))?;
+        Ok(())
     }
 }
