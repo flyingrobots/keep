@@ -176,6 +176,12 @@ fn build_head(digest: [u8; 32], length: u64) -> Result<(Vec<u8>, [u8; 32]), &'st
     Ok((bytes, checksum))
 }
 
+fn build_head_for_catalog(catalog: &Catalog) -> Result<(Vec<u8>, [u8; 32]), &'static str> {
+    let length =
+        u64::try_from(catalog.bytes.len()).map_err(|_| "constructed catalog length overflow")?;
+    build_head(catalog.digest, length)
+}
+
 fn framed_digest(domain: &[u8], bytes: &[u8]) -> Result<[u8; 32], &'static str> {
     let length = u64::try_from(bytes.len()).map_err(|_| "digest input length overflow")?;
     let mut hasher = blake3::Hasher::new();

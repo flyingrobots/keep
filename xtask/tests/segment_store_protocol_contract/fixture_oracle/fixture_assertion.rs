@@ -81,3 +81,22 @@ fn fixture_transport_refuses_uppercase_hexadecimal() {
         Err("hex fixture contains a nonhexadecimal byte")
     );
 }
+
+#[test]
+fn publication_head_uses_the_constructed_catalog_length() -> Result<(), &'static str> {
+    let segment = build_one_zero_segment()?;
+    let record_checksum = segment
+        .record_checksum
+        .ok_or("one-zero segment must have a record checksum")?;
+    let catalog = build_catalog(segment.digest, record_checksum)?;
+    let head = build_head_for_catalog(&catalog)?;
+    let encoded_length = head
+        .0
+        .get(32..40)
+        .ok_or("publication head lacks its catalog length")?;
+    let expected_length = u64::try_from(catalog.bytes.len())
+        .map_err(|_| "constructed catalog length overflow")?
+        .to_be_bytes();
+    assert_eq!(encoded_length, expected_length);
+    Ok(())
+}

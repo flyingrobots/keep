@@ -57,7 +57,7 @@ fn one_zero_artifacts() -> Result<[Artifact; 3], &'static str> {
         .record_checksum
         .ok_or("one-zero segment must have a record checksum")?;
     let catalog = build_catalog(one_zero_segment.digest, record_checksum)?;
-    let head = build_head(catalog.digest, 352)?;
+    let head = build_head_for_catalog(&catalog)?;
 
     Ok([
         Artifact {
@@ -103,7 +103,7 @@ fn one_zero_bundle_artifacts() -> Result<[Artifact; 3], &'static str> {
         bundle.chunk_checksum,
         bundle.layout_checksum,
     )?;
-    let bundle_head = build_head(bundle_catalog.digest, 512)?;
+    let bundle_head = build_head_for_catalog(&bundle_catalog)?;
 
     Ok([
         Artifact {
