@@ -44,6 +44,20 @@ fn dependency_overrides_are_refused() {
 }
 
 #[test]
+fn manifest_dependency_version_drift_is_refused() {
+    let manifest = r#"{"dependencies":{"markdownlint-cli2":"999.0.0"}}"#;
+    assert!(matches!(
+        super::admit(manifest, LOCK, INSTALLER),
+        Err(super::DocumentationError::RepositoryValue {
+            path: super::MANIFEST_PATH,
+            field: "dependencies.markdownlint-cli2",
+            expected: "0.23.2",
+            observed: Some(ref observed),
+        }) if observed == "999.0.0"
+    ));
+}
+
+#[test]
 fn dependency_version_drift_is_refused() {
     let lock = LOCK.replacen("\"5.2.2\"", "\"5.2.1\"", 1);
     let error = super::admit(MANIFEST, &lock, INSTALLER);

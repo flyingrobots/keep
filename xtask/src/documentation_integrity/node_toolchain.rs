@@ -27,10 +27,22 @@ fn admit(manifest: &str, lock: &str, installer: &str) -> Result<(), Documentatio
 }
 
 fn admit_manifest(manifest: &Value) -> Result<(), DocumentationError> {
-    if manifest.get("overrides").is_none() {
+    if manifest.get("overrides").is_some() {
+        return Err(contract(MANIFEST_PATH, "dependency overrides are absent"));
+    }
+    let observed = manifest
+        .get("dependencies")
+        .and_then(|dependencies| dependencies.get("markdownlint-cli2"))
+        .and_then(Value::as_str);
+    if observed == Some("0.23.2") {
         Ok(())
     } else {
-        Err(contract(MANIFEST_PATH, "dependency overrides are absent"))
+        Err(DocumentationError::RepositoryValue {
+            path: MANIFEST_PATH,
+            field: "dependencies.markdownlint-cli2",
+            expected: "0.23.2",
+            observed: observed.map(str::to_owned),
+        })
     }
 }
 
