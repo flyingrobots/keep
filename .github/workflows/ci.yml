@@ -33,11 +33,8 @@ jobs:
       - name: Check Golden File Worldline corpus
         run: cargo xtask golden-file-worldline-check
 
-      - name: Check CDC profile corpus
-        run: python3 conformance/cdc-profile/v1/check_vectors.py
-
-      - name: Check chunk identity corpus
-        run: python3 conformance/chunk-id/v1/check_vectors.py
+      - name: Check protocol conformance corpora
+        run: cargo xtask conformance-check
 
       - name: Check source structure
         run: cargo xtask source-structure-check

@@ -61,7 +61,7 @@ impl fmt::Display for TaskError {
             Self::Usage => formatter.write_str(
                 "usage: cargo xtask \
                  <benchmark-baseline|cdc-profile-conformance-check|\
-                 chunk-id-conformance-check|\
+                 chunk-id-conformance-check|conformance-check|\
                  golden-file-worldline-check|prepare-fuzz-corpus|fuzz|\
                  source-structure-check|verify>",
             ),

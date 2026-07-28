@@ -6,10 +6,17 @@ mod chunk_identity;
 mod corpus;
 mod error;
 mod external_digest;
+#[cfg(test)]
+mod workflow_tests;
 
 use std::path::Path;
 
 pub(crate) use error::ConformanceError;
+
+pub(super) fn check(repository_root: &Path) -> Result<(), ConformanceError> {
+    check_chunk_identity(repository_root)?;
+    check_cdc_profile(repository_root)
+}
 
 pub(super) fn check_chunk_identity(repository_root: &Path) -> Result<(), ConformanceError> {
     chunk_identity::check(repository_root)

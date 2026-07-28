@@ -7,13 +7,14 @@ layout decision without defining chunk identity or changing logical `BlobId`.
 Run the independent checker with:
 
 ```bash
-python3 conformance/cdc-profile/v1/check_vectors.py
+cargo xtask conformance-check
 ```
 
-The checker requires Python 3.10 or newer and `b3sum` 1.8.5 or a compatible
-implementation on `PATH`. It uses Python's standard-library MD5 only to
-regenerate the public, fixed Gear table; MD5 is not a content identity or
-security primitive.
+The checker uses Keep's pinned Rust toolchain and requires `b3sum` 1.8.5 or a
+compatible implementation on `PATH`. Its exact-pinned, pure Rust `md-5`
+dependency only regenerates the public, fixed Gear table; MD5 is not a content
+identity or security primitive. The command checks both the CDC profile v1 and
+ChunkId v1 corpora.
 
 ## Profile
 
