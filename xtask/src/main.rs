@@ -9,6 +9,8 @@
 )]
 mod benchmark_baseline;
 mod diagnostic;
+#[cfg(test)]
+mod documentation_integrity;
 #[allow(
     clippy::redundant_pub_crate,
     reason = "the command and task-error boundaries are sibling consumers"
