@@ -76,6 +76,26 @@ fn link_check_runs_after_markdownlint_returns_nonzero() {
 }
 
 #[test]
+fn simultaneous_markdown_failures_are_both_reported() -> Result<(), &'static str> {
+    let mut runner = RecordingRunner::new([
+        version(DocumentationTool::Markdownlint),
+        version(DocumentationTool::Lychee),
+        failure(b"lint refusal", b""),
+        failure(b"link refusal", b""),
+    ]);
+
+    let result = super::run_with(&mut runner, &[String::from("README.md")], &[]);
+    let diagnostic = result
+        .err()
+        .ok_or("both Markdown checks unexpectedly succeeded")?
+        .to_string();
+
+    assert!(diagnostic.contains("lint refusal"));
+    assert!(diagnostic.contains("link refusal"));
+    Ok(())
+}
+
+#[test]
 fn unreviewed_version_stops_before_tool_execution() {
     let mut runner = RecordingRunner::new([ProcessOutput {
         code: Some(0),

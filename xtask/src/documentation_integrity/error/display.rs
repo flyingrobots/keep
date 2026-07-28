@@ -22,6 +22,9 @@ enum RepositoryRootDiagnostic {
 impl fmt::Display for DocumentationError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::CheckFailures { first, second } => {
+                write!(formatter, "{first}; additionally: {second}")
+            }
             Self::EmptyCorpus(label) => write!(formatter, "the {label} corpus is empty"),
             Self::GitInventory(error) => write!(formatter, "{error}"),
             Self::Inspect { corpus, path, .. } => {

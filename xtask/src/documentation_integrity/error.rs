@@ -12,6 +12,10 @@ use crate::bounded_process::ProcessError;
 use crate::git_inventory::GitInventoryError;
 
 pub(crate) enum DocumentationError {
+    CheckFailures {
+        first: Box<Self>,
+        second: Box<Self>,
+    },
     EmptyCorpus(&'static str),
     GitInventory(GitInventoryError),
     Inspect {
@@ -101,6 +105,7 @@ impl fmt::Debug for DocumentationError {
 impl Error for DocumentationError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::CheckFailures { first, .. } => Some(first),
             Self::GitInventory(error) => Some(error),
             Self::Process(error) => Some(error),
             Self::Inspect { source, .. } | Self::RepositoryFileInspect { source, .. } => {

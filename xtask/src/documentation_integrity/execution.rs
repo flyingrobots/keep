@@ -44,10 +44,23 @@ fn run_with(
     admit_version(runner, DocumentationTool::Lychee)?;
     let lint = run_check(runner, DocumentationTool::Markdownlint, markdown);
     let links = run_check(runner, DocumentationTool::Lychee, markdown);
-    lint?;
-    links?;
+    combine_checks(lint, links)?;
     admit_version(runner, DocumentationTool::Actionlint)?;
     run_check(runner, DocumentationTool::Actionlint, workflows)
+}
+
+fn combine_checks(
+    first: Result<(), DocumentationError>,
+    second: Result<(), DocumentationError>,
+) -> Result<(), DocumentationError> {
+    match (first, second) {
+        (Ok(()), Ok(())) => Ok(()),
+        (Err(error), Ok(())) | (Ok(()), Err(error)) => Err(error),
+        (Err(first), Err(second)) => Err(DocumentationError::CheckFailures {
+            first: Box::new(first),
+            second: Box::new(second),
+        }),
+    }
 }
 
 fn admit_version(
