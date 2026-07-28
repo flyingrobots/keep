@@ -10,6 +10,7 @@ Never silently repair, approximate, substitute, weaken verification, or continue
 
 ## Rust Standards
 
+* This is a pure Rust project. Do not write Python scripts.
 * Use stable, pinned Rust with edition 2024.
 * cargo fmt --check and Clippy with -D warnings must pass.
 * Deny unwrap, expect, panic!, todo!, unimplemented!, dbg!, stdout/stderr printing, unchecked indexing, lossy casts, and unsafe code.
