@@ -34,9 +34,13 @@ The names are physical adapter coordinates, not stable public handles.
 The writer never overwrites an immutable-pool name. It atomically hard-links
 one fully synchronized staged artifact into the same-filesystem pool. If the
 destination already exists, the link operation leaves it unchanged. The
-writer reopens it without following links and permits idempotent reuse only
-when its complete canonical bytes equal the staged bytes. Any disagreement is
-unrecoverable ambiguity.
+result is not trusted from the link outcome or destination name.
+
+After either a new link or an existing-name result, the writer
+reopens the pool entry without following links and verifies it completely.
+It compares the pool entry against the pre-link verified bytes and digest.
+Only that post-link verification advances the protocol. A mismatch is
+unrecoverable ambiguity and never an idempotent-success receipt.
 
 Before that link, the writer closes every writable staging handle and reopens
 the synchronized artifact read-only for complete verification. No writable
@@ -111,7 +115,8 @@ only and cannot publish.
 8. Synchronize the sealed staging file (`KEEP-CRASH-008`).
 9. Reopen and verify the complete staged segment, then atomically hard-link it
    without replacement to the exact digest-derived immutable-pool name
-   (`KEEP-CRASH-009`).
+   (`KEEP-CRASH-009`). Reopen the resolved pool entry and complete the required
+   post-link verification.
 10. Synchronize `segments` (`KEEP-CRASH-010`).
 11. Unlink `staging/current.seg` (`KEEP-CRASH-011`).
 12. Synchronize `staging` (`KEEP-CRASH-012`).
@@ -128,7 +133,8 @@ until a published catalog names it.
 4. Synchronize it (`KEEP-CRASH-016`).
 5. Reopen and verify it, then atomically hard-link it without replacement to
    the exact generation-and-digest immutable-pool name
-   (`KEEP-CRASH-017`).
+   (`KEEP-CRASH-017`). Reopen the resolved pool entry and complete the required
+   post-link verification.
 6. Synchronize `catalogs` (`KEEP-CRASH-018`).
 7. Unlink `staging/current.cat` (`KEEP-CRASH-019`).
 8. Synchronize `staging` (`KEEP-CRASH-020`).

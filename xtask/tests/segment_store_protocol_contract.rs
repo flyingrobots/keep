@@ -238,3 +238,18 @@ fn truncated_stage_discard_fingerprint_has_one_preimage() {
         "truncated-stage discard fingerprint lacks its exact preimage"
     );
 }
+
+#[test]
+fn immutable_pool_links_are_verified_after_namespace_resolution() {
+    for required in [
+        "After either a new link or an existing-name result",
+        "reopens the pool entry without following links",
+        "against the pre-link verified bytes and digest",
+        "Only that post-link verification advances the protocol",
+    ] {
+        assert!(
+            SPECIFICATION.contains(required),
+            "missing post-link verification law: {required}"
+        );
+    }
+}

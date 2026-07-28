@@ -107,11 +107,13 @@ another.
 Every immutable artifact is synchronized before it is hard-linked into its
 pool. Every writable staging handle is closed first, and complete verification
 uses a new read-only handle. Hard-link creation is atomic and no-clobber: it
-cannot overwrite an existing digest-derived name. The pool directory is
-synchronized before the staging link is removed, and the staging directory is
-synchronized after that removal. A crash between link and unlink leaves two
-names for the same verified immutable bytes, which recovery can classify
-without guessing.
+cannot overwrite an existing digest-derived name. Because path resolution can
+race the pre-link read, the resolved pool entry is reopened and completely
+verified after both new-link and existing-name outcomes. Only after that check
+is the pool directory synchronized; the staging link is then removed, and the
+staging directory is synchronized after that removal. A crash between link and
+unlink leaves two names for the same verified immutable bytes, which recovery
+can classify without guessing.
 
 The publication head is the only replaced protocol file. It is replaced only
 after every referenced immutable artifact is durable. Success is returned
