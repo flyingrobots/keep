@@ -7,11 +7,11 @@ performance-evidence protocol for Keep's non-durable streaming reference CAS.
 It is implemented by the non-published `keep-benchmark` workspace crate and
 the repository-owned `cargo xtask benchmark-baseline` command.
 
-The first reviewed evidence artifact measures source commit
-`fe06324fd2e62b2f223c208107e6454f607a4b12` on
+The reference evidence artifact measures source commit
+`c529c07f385b5bcd76a4e57c1987001d496f9135` on
 `aarch64-apple-darwin` with Rust 1.96.0:
 
-- [fe06324-aarch64-apple-darwin.tsv](../../../benchmark/baselines/fe06324-aarch64-apple-darwin.tsv)
+- [c529c07-aarch64-apple-darwin.tsv](../../../benchmark/baselines/c529c07-aarch64-apple-darwin.tsv)
 
 This single-host result is a methodology and baseline witness, not a marketing
 claim, portability claim, optimization mandate, or correctness proof.

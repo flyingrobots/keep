@@ -8,7 +8,7 @@ use crate::{
     ReportError, SourceTreeState,
 };
 
-const REFERENCE_BASELINE: &str = include_str!("../baselines/fe06324-aarch64-apple-darwin.tsv");
+const REFERENCE_BASELINE: &str = include_str!("../baselines/c529c07-aarch64-apple-darwin.tsv");
 
 #[test]
 fn report_environment_rejects_ambiguous_tsv_fields() -> Result<(), ReportError> {
@@ -124,8 +124,15 @@ fn committed_reference_baseline_is_field_complete_and_source_bound() {
     );
     assert!(
         REFERENCE_BASELINE.lines().any(|line| {
-            line == "metadata\tgit-commit\tfe06324fd2e62b2f223c208107e6454f607a4b12"
+            line == "metadata\tgit-commit\tc529c07f385b5bcd76a4e57c1987001d496f9135"
         })
+    );
+    assert_eq!(
+        REFERENCE_BASELINE
+            .lines()
+            .find(|line| line.starts_with("scenario\twarm-ingest\t"))
+            .and_then(|line| line.split('\t').nth(5)),
+        Some("1048576")
     );
     for metadata in [
         "metadata\tgit-tree\tclean",
