@@ -11,6 +11,12 @@ use crate::process_output::BoundedBytes;
 
 const OUTPUT_LIMIT: usize = 1_048_576;
 
+/// Runs a child synchronously and captures bounded standard output and error.
+///
+/// Each stream is drained concurrently and retains at most one mebibyte. The
+/// optional deadline covers child execution and reader collection. Failures
+/// terminate the child's dedicated process group, join both readers, and retain
+/// the primary and cleanup errors in [`ProcessError`].
 pub(crate) fn capture(
     program: &'static str,
     command: &mut Command,

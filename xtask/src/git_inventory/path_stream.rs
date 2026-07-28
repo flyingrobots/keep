@@ -18,6 +18,11 @@ struct GitPathLimits {
     paths: usize,
 }
 
+/// Decodes Git's NUL-framed path output into deterministic bytewise order.
+///
+/// The call blocks while reading and refuses empty, duplicate, unterminated,
+/// oversized, or excessive path records. Individual paths are limited to 4,096
+/// bytes; the stream is limited to 16 MiB and 100,000 records.
 pub(super) fn read_paths(
     reader: impl Read,
     operation: &'static str,
@@ -64,13 +69,19 @@ struct GitPathDecoder {
 }
 
 #[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
+/// An opaque repository path admitted from Git's byte-oriented output.
+///
+/// Ordering is bytewise and therefore independent of locale and filesystem
+/// enumeration order.
 pub(crate) struct GitPath(Vec<u8>);
 
 impl GitPath {
+    /// Wraps path bytes that the stream decoder has already admitted.
     pub(crate) const fn new(bytes: Vec<u8>) -> Self {
         Self(bytes)
     }
 
+    /// Returns the exact repository-relative bytes reported by Git.
     pub(crate) fn as_bytes(&self) -> &[u8] {
         &self.0
     }

@@ -5,34 +5,42 @@ use std::fmt;
 use std::io;
 use std::time::Duration;
 
+/// A typed failure from synchronous, bounded child-process execution.
 pub(crate) enum ProcessError {
+    /// Reader or cleanup collection found another failure after the primary one.
     Additional {
         primary: Box<Self>,
         additional: Box<Self>,
     },
+    /// Process-group termination or child reaping failed after a primary error.
     Cleanup {
         primary: Box<Self>,
         action: &'static str,
         source: io::Error,
     },
+    /// A named operating-system process action failed.
     Io {
         program: &'static str,
         action: &'static str,
         source: io::Error,
     },
+    /// A child configured for capture did not expose the requested pipe.
     MissingStream {
         program: &'static str,
         stream: &'static str,
     },
+    /// A captured stream exceeded its fixed retained-byte limit.
     OutputLimit {
         program: &'static str,
         stream: &'static str,
         maximum: usize,
     },
+    /// A dedicated output-reader thread stopped by panicking.
     ReaderPanic {
         program: &'static str,
         stream: &'static str,
     },
+    /// The complete child operation exceeded its admitted duration.
     Timeout {
         program: &'static str,
         duration: Duration,
@@ -40,6 +48,7 @@ pub(crate) enum ProcessError {
 }
 
 impl ProcessError {
+    /// Reports whether the primary process I/O failure is executable absence.
     pub(crate) fn is_not_found(&self) -> bool {
         match self {
             Self::Additional { primary, .. } | Self::Cleanup { primary, .. } => {

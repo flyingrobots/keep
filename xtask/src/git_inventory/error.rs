@@ -8,51 +8,59 @@ use std::string::FromUtf8Error;
 use crate::diagnostic::escaped_controls;
 
 #[derive(Clone, Copy)]
+/// The unit named by a bounded Git-output failure.
 pub(crate) enum GitOutputUnit {
+    /// A byte-count bound.
     Bytes,
+    /// A path-record count bound.
     Items,
 }
 
+/// A typed failure while listing or decoding repository paths from Git.
 pub(crate) enum GitInventoryError {
+    /// Cleanup failed after an earlier inventory failure was already detected.
     Cleanup {
         primary: Box<Self>,
         cleanup: Box<Self>,
     },
+    /// Git emitted the same path record more than once.
     DuplicatePath(Vec<u8>),
-    EmptyPath {
-        operation: &'static str,
-    },
+    /// Git emitted an empty NUL-framed path record.
+    EmptyPath { operation: &'static str },
+    /// Git exited unsuccessfully and returned valid UTF-8 diagnostics.
     Failed {
         operation: &'static str,
         code: Option<i32>,
         stderr: String,
     },
+    /// Git exited unsuccessfully with diagnostics that were not UTF-8.
     DiagnosticEncoding {
         operation: &'static str,
         code: Option<i32>,
         source: FromUtf8Error,
     },
+    /// A retained byte or item count exceeded its fixed bound.
     OutputBound {
         operation: &'static str,
         stream: &'static str,
         maximum: usize,
         unit: GitOutputUnit,
     },
-    OutputFraming {
-        operation: &'static str,
-    },
+    /// Git ended its output with bytes not terminated by a NUL delimiter.
+    OutputFraming { operation: &'static str },
+    /// A Git child configured for capture did not expose a requested pipe.
     Pipe {
         operation: &'static str,
         stream: &'static str,
     },
+    /// A named operating-system action for the Git child failed.
     Run {
         operation: &'static str,
         action: &'static str,
         source: io::Error,
     },
-    Worker {
-        operation: &'static str,
-    },
+    /// The concurrent diagnostic-reader thread stopped by panicking.
+    Worker { operation: &'static str },
 }
 
 impl fmt::Debug for GitInventoryError {
