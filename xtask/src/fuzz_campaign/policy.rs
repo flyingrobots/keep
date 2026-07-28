@@ -88,6 +88,10 @@ impl CampaignPolicy {
         .collect()
     }
 
+    pub(super) fn toolchain(&self) -> &str {
+        &self.toolchain
+    }
+
     fn from_values(
         values: &BTreeMap<&str, &str>,
         cargo_fuzz_version: String,

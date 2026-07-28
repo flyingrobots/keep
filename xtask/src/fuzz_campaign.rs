@@ -2,7 +2,9 @@
 
 mod error;
 mod policy;
+mod process;
 mod profile;
+mod target;
 
 use std::ffi::OsString;
 use std::io::Write;
@@ -15,6 +17,7 @@ use profile::CampaignProfile;
 enum Operation {
     Describe,
     GitHubEnvironment,
+    List,
 }
 
 pub(super) fn run(
@@ -23,12 +26,30 @@ pub(super) fn run(
     output: &mut impl Write,
 ) -> Result<(), FuzzCampaignError> {
     let operation = parse_operation(next_argument(&mut arguments)?)?;
-    let profile = parse_profile(&mut arguments)?;
     let policy = CampaignPolicy::load(repository_root)?;
-    let separator = match operation {
-        Operation::Describe => ": ",
-        Operation::GitHubEnvironment => "=",
-    };
+    match operation {
+        Operation::Describe => {
+            write_environment(&policy, parse_profile(&mut arguments)?, ": ", output)
+        }
+        Operation::GitHubEnvironment => {
+            write_environment(&policy, parse_profile(&mut arguments)?, "=", output)
+        }
+        Operation::List => {
+            refuse_extra(&mut arguments)?;
+            for target in target::registered(repository_root, &policy)? {
+                writeln!(output, "{}", target.as_str()).map_err(FuzzCampaignError::Output)?;
+            }
+            Ok(())
+        }
+    }
+}
+
+fn write_environment(
+    policy: &CampaignPolicy,
+    profile: CampaignProfile,
+    separator: &str,
+    output: &mut impl Write,
+) -> Result<(), FuzzCampaignError> {
     for (key, value) in policy.environment(profile) {
         writeln!(output, "{key}{separator}{value}").map_err(FuzzCampaignError::Output)?;
     }
@@ -39,6 +60,7 @@ fn parse_operation(argument: String) -> Result<Operation, FuzzCampaignError> {
     match argument.as_str() {
         "describe" => Ok(Operation::Describe),
         "github-env" => Ok(Operation::GitHubEnvironment),
+        "list" => Ok(Operation::List),
         _ => Err(FuzzCampaignError::UnknownOperation(argument)),
     }
 }

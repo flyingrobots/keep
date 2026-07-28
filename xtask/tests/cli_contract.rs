@@ -60,6 +60,24 @@ fn fuzz_description_emits_the_admitted_smoke_policy() -> Result<(), io::Error> {
 }
 
 #[test]
+fn fuzz_target_discovery_emits_the_exact_sorted_registry() -> Result<(), io::Error> {
+    let output = invoke(&["fuzz", "list"])?;
+    assert!(output.status.success());
+    assert_eq!(
+        output.stdout,
+        b"blob_hasher\n\
+          blob_id_binary\n\
+          blob_id_text\n\
+          fast_cdc\n\
+          golden_protocol\n\
+          layout_record\n\
+          segment_format\n"
+    );
+    assert!(output.stderr.is_empty());
+    Ok(())
+}
+
+#[test]
 fn missing_command_returns_the_versioned_usage_contract() -> Result<(), io::Error> {
     let output = invoke(&[])?;
     assert_eq!(output.status.code(), Some(1));

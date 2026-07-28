@@ -7,11 +7,13 @@ use std::io;
 use crate::diagnostic::escaped_controls;
 
 use super::policy::PolicyError;
+use super::target::TargetError;
 
 pub(crate) enum FuzzCampaignError {
     InvalidArgumentEncoding,
     Output(io::Error),
     Policy(PolicyError),
+    Target(TargetError),
     UnexpectedArgument(String),
     UnknownOperation(String),
     Usage,
@@ -31,6 +33,7 @@ impl fmt::Display for FuzzCampaignError {
             }
             Self::Output(_) => formatter.write_str("cannot write fuzz campaign output"),
             Self::Policy(error) => write!(formatter, "fuzz campaign refused: {error}"),
+            Self::Target(error) => write!(formatter, "fuzz campaign refused: {error}"),
             Self::UnexpectedArgument(argument) => {
                 formatter.write_str("unexpected fuzz campaign argument `")?;
                 escaped_controls(formatter, argument)?;
@@ -42,7 +45,7 @@ impl fmt::Display for FuzzCampaignError {
                 formatter.write_str("`")
             }
             Self::Usage => formatter.write_str(
-                "usage: cargo xtask fuzz <describe|github-env> \
+                "usage: cargo xtask fuzz <describe|github-env|list> \
                  [--profile <smoke|scheduled>]",
             ),
         }
@@ -54,6 +57,7 @@ impl Error for FuzzCampaignError {
         match self {
             Self::Output(source) => Some(source),
             Self::Policy(source) => Some(source),
+            Self::Target(source) => Some(source),
             Self::InvalidArgumentEncoding
             | Self::UnexpectedArgument(_)
             | Self::UnknownOperation(_)
@@ -65,5 +69,11 @@ impl Error for FuzzCampaignError {
 impl From<PolicyError> for FuzzCampaignError {
     fn from(error: PolicyError) -> Self {
         Self::Policy(error)
+    }
+}
+
+impl From<TargetError> for FuzzCampaignError {
+    fn from(error: TargetError) -> Self {
+        Self::Target(error)
     }
 }
