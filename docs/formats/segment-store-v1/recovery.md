@@ -19,8 +19,14 @@ limit may be lower but never higher.
 
 After the count is admitted, recovery sorts names by raw canonical bytes and
 verifies complete content before classification. Unknown names, symlinks,
-conflicting canonical coordinates, duplicate digests, multiple fixed-name
-stages, or a head that cannot be proven atomic are unrecoverable ambiguity.
+conflicting canonical coordinates, multiple fixed-name stages, or a head that
+cannot be proven atomic are unrecoverable ambiguity.
+
+The sole admissible duplicate digest is one fixed staging name and its exact
+digest-derived pool name after a link transition. Recovery admits that pair
+only after complete byte-for-byte verification proves the stage, pool entry,
+declared digest, physical pool name, and artifact kind agree. Any third name,
+wrong namespace, or disagreement is unrecoverable ambiguity.
 
 The required classes are:
 

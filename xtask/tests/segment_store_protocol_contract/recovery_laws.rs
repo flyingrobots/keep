@@ -19,6 +19,22 @@ fn recovery_inventory_is_bounded_before_names_are_retained() {
 }
 
 #[test]
+fn recovery_admits_only_the_protocol_created_stage_pool_duplicate() {
+    for required in [
+        "The sole admissible duplicate digest",
+        "one fixed staging name and its exact\n\
+         digest-derived pool name",
+        "complete byte-for-byte verification",
+        "Any third name",
+    ] {
+        assert!(
+            SPECIFICATION.contains(required),
+            "missing staging/pool duplicate law: {required}"
+        );
+    }
+}
+
+#[test]
 fn truncated_stage_discard_fingerprint_has_one_preimage() {
     assert!(
         SPECIFICATION.contains("framed_blake3_v1(ASCII(\"KEEP:RECOVERY:STAGE\\0\"), stage_bytes)"),
