@@ -30,6 +30,7 @@ struct Artifact {
 }
 
 include!("fixture_oracle/encoding.rs");
+include!("fixture_oracle/catalog_encoding.rs");
 include!("fixture_oracle/bundle_encoding.rs");
 include!("fixture_oracle/fixture_assertion.rs");
 

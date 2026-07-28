@@ -2,6 +2,27 @@
 
 use super::{CONFORMANCE_ORIGIN, CONTRACT_SOURCE, SPECIFICATION_INDEX};
 
+const FIXTURE_ENCODING: &str = include_str!("fixture_oracle/encoding.rs");
+const FIXTURE_CATALOG_ENCODING: &str = include_str!("fixture_oracle/catalog_encoding.rs");
+const FIXTURE_BUNDLE_ENCODING: &str = include_str!("fixture_oracle/bundle_encoding.rs");
+const FIXTURE_ASSERTION: &str = include_str!("fixture_oracle/fixture_assertion.rs");
+
+#[test]
+fn fixture_oracle_modules_stay_within_the_source_target() {
+    for (name, source) in [
+        ("encoding", FIXTURE_ENCODING),
+        ("catalog_encoding", FIXTURE_CATALOG_ENCODING),
+        ("bundle_encoding", FIXTURE_BUNDLE_ENCODING),
+        ("fixture_assertion", FIXTURE_ASSERTION),
+    ] {
+        let line_count = source.lines().count();
+        assert!(
+            line_count <= 200,
+            "{name} has {line_count} lines; target is 200"
+        );
+    }
+}
+
 #[test]
 fn conformance_provenance_has_one_issue_prefix_per_owner() {
     let normalized = CONFORMANCE_ORIGIN
