@@ -10,6 +10,7 @@ const ARCHITECTURE_RATIONALE: &str =
     include_str!("../docs/architecture/reference-store/rationale.md");
 const RECONSTRUCTION_ERROR_DISPLAY: &str =
     include_str!("../src/reference/reconstruction_error_display.rs");
+const RECONSTRUCTION_ERROR: &str = include_str!("../src/reference/reconstruction_error.rs");
 const REFERENCE_INGESTION: &str = include_str!("../src/reference/ingestion.rs");
 const PUBLISHED_BLOB: &str = include_str!("../src/reference/published_blob.rs");
 const RECONSTRUCTION_RECEIPT: &str = include_str!("../src/reference/reconstruction_receipt.rs");
@@ -18,6 +19,17 @@ const RECONSTRUCTION_RECEIPT: &str = include_str!("../src/reference/reconstructi
 fn consequential_reference_store_receipts_are_must_use() {
     assert!(PUBLISHED_BLOB.contains("#[must_use ="));
     assert!(RECONSTRUCTION_RECEIPT.contains("#[must_use ="));
+}
+
+#[test]
+fn reconstruction_output_accounting_uses_typed_lengths() {
+    let overflow_variant = RECONSTRUCTION_ERROR
+        .split_once("WrittenLengthOverflow {")
+        .and_then(|(_, remainder)| remainder.split_once("\n    },"))
+        .map_or(RECONSTRUCTION_ERROR, |(variant, _)| variant);
+
+    assert!(overflow_variant.contains("bytes_written: BlobLength"));
+    assert!(!overflow_variant.contains("bytes_written: u64"));
 }
 
 #[test]

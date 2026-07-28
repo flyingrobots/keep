@@ -185,7 +185,7 @@ fn format_write_error(
 fn format_length_overflow(
     formatter: &mut fmt::Formatter<'_>,
     layout: LayoutId,
-    bytes_written: u64,
+    bytes_written: BlobLength,
     incoming: usize,
 ) -> fmt::Result {
     write!(

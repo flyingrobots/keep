@@ -10,6 +10,8 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Reconstruction output-accounting errors now expose typed `BlobLength`
+  coordinates consistently.
 - Public streaming CAS behavior is now checked after every operation in all
   216 exhaustive three-step sequences over admission, reads, dropped staging,
   empty blobs, idempotence, and claimed-content mismatch.

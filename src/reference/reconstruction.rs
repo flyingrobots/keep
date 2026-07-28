@@ -277,14 +277,14 @@ fn checked_written(
     let incoming_u64 =
         u64::try_from(incoming).map_err(|_source| ReconstructionError::WrittenLengthOverflow {
             layout: layout_id,
-            bytes_written: written,
+            bytes_written: BlobLength::new(written),
             incoming,
         })?;
     written
         .checked_add(incoming_u64)
-        .ok_or(ReconstructionError::WrittenLengthOverflow {
+        .ok_or_else(|| ReconstructionError::WrittenLengthOverflow {
             layout: layout_id,
-            bytes_written: written,
+            bytes_written: BlobLength::new(written),
             incoming,
         })
 }

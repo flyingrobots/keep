@@ -124,7 +124,7 @@ pub enum ReconstructionError {
         /// Layout being emitted.
         layout: LayoutId,
         /// Authenticated bytes already written.
-        bytes_written: u64,
+        bytes_written: BlobLength,
         /// Newly accepted output count.
         incoming: usize,
     },
