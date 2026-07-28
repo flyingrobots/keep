@@ -33,6 +33,29 @@ nonclaims, and golden evidence for `keep.segment-store/v1`.
 
 <!-- markdownlint-enable MD013 -->
 
+## Segment implementation evidence
+
+The issue #15 boundary implements immutable segment creation and admission. It
+does not claim catalog publication, namespace durability, restart recovery,
+retention, or garbage collection.
+
+<!-- markdownlint-disable MD013 -->
+
+| ID | Implemented requirement | Executable evidence | Status |
+| --- | --- | --- | --- |
+| `KEEP-SEGMENT-001` | Segment, record-header, record, and seal codecs match the frozen version-1 bytes exactly | `tests/segment_header.rs`, `tests/segment_record_header.rs`, `tests/segment_record.rs`, `tests/segment_seal.rs` | Implemented in #15 |
+| `KEEP-SEGMENT-002` | Staged and sealed writer states are distinct, consuming types | `tests/segment_writer.rs` | Implemented in #15 |
+| `KEEP-SEGMENT-003` | Short, interrupted, zero-progress, invalid-count, storage, permission, flush, and synchronization failures retain exact phases and offsets | `tests/segment_writer/write_contract_laws.rs`, `tests/segment_writer/refusal_laws.rs`, `tests/segment_writer/durability_laws.rs` | Implemented in #15 |
+| `KEEP-SEGMENT-004` | Complete-segment admission verifies bounds, framing, checksums, logical identities, duplicate refusal, terminal state, and physical digest before exposure | `tests/segment.rs`, `tests/segment/identity_laws.rs`, `tests/segment/framing_laws.rs` | Implemented in #15 |
+| `KEEP-SEGMENT-005` | The public sealed receipt exposes no mutable stage handle | `src/adapters/sealed_segment.rs` | Implemented in #15 |
+| `KEEP-SEGMENT-006` | Malformed, unsupported, partial, conflicting, and corrupt input returns boundary-typed errors | `tests/segment_header/mutation_laws.rs`, `tests/segment_record_header/framing_laws.rs`, `tests/segment_seal/framing_laws.rs`, `tests/segment/identity_laws.rs` | Implemented in #15 |
+| `KEEP-SEGMENT-007` | Record, nested-layout, segment-length, and temporary identity-index allocation remain explicitly bounded | `tests/segment_memory.rs`, `tests/segment_record_memory.rs`, `tests/segment_seal_memory.rs` | Implemented in #15 |
+| `KEEP-SEGMENT-008` | Filesystem staging uses exclusive fixed-name creation and never enumerates storage as a content index | `tests/segment_filesystem_stage.rs`, `src/adapters/filesystem_segment_stage.rs` | Implemented in #15 |
+| `KEEP-SEGMENT-009` | Every implemented write and durability phase has deterministic fault injection, while dropped unsealed stages preserve recovery evidence | `tests/segment_writer/`, `tests/segment_filesystem_stage.rs` | Implemented in #15 |
+| `KEEP-SEGMENT-010` | Every public segment-format parser boundary is fuzzed from canonical deterministic seeds | `fuzz/fuzz_targets/segment_format.rs`, `xtask/src/fuzz_seed_corpus/segment_seeds.rs` | Implemented in #15 |
+
+<!-- markdownlint-enable MD013 -->
+
 ## Compatibility and migration
 
 The byte grammars, magic values, field widths and order, endianness, kinds,
@@ -80,9 +103,10 @@ contains:
 - the complete `KEEP-CRASH-001`–`KEEP-CRASH-035` transition ledger.
 
 The test-only Rust oracle reconstructs every artifact directly from these
-tables and formulas. Production implementations must match the frozen corpus
-and add parser fuzzing, corruption mutations, crash injection, recovery tests,
-and model-based generation tests in issues #15–#17.
+tables and formulas. The issue #15 segment implementation matches the frozen
+segment corpus and adds parser fuzzing and corruption evidence. Catalog,
+publication, crash-injection, recovery, and model-based generation evidence
+remain owned by issues #16 and #17.
 
 The format-local tradeoffs are recorded in the
 [colocated rationale](rationale.md).

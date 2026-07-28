@@ -17,6 +17,10 @@ impl ChunkLength {
         if value == 0 { None } else { Some(Self(value)) }
     }
 
+    pub(crate) const fn from_wire(value: u32) -> Option<Self> {
+        Self::new(value)
+    }
+
     pub(crate) const fn from_validated(value: u32) -> Self {
         Self(value)
     }

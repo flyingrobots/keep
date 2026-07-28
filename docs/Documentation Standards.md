@@ -282,7 +282,9 @@ For a meaningful behavior change:
    test pyramid — that fails for the missing behavior.
 4. Implement the behavior.
 5. Update the living `docs/architecture/`, `docs/invariants/`, or
-   `docs/formats/` page once the behavior exists on `main`.
+   `docs/formats/` page in the same change once the implementation exists.
+   Describe the resulting post-merge contract, not branch mechanics or an
+   unimplemented promise.
 6. Mark the requirement or crash-point identifiers implemented and record the
    actual evidence — the test file, fixture, or crash harness.
 7. Update `README.md`, `CONTRIBUTING.md`, and `CHANGELOG.md` when the public
@@ -290,6 +292,27 @@ For a meaningful behavior change:
 
 Small fixes may scale this down, but they still need a clear claim, evidence
 when behavior changes, and honest current truth.
+
+### **4.1 Pre-publication documentation upkeep**
+
+Before pushing a branch or opening a pull request for a meaningful change:
+
+1. Inspect the complete branch diff for changes to public APIs, formats,
+   invariants, durability, recovery, security, dependencies, workflows, and
+   operator-visible errors.
+2. Reconcile every affected living page, requirement ledger, rationale or ADR,
+   `README.md`, `CONTRIBUTING.md`, and `CHANGELOG.md`. Touch only pages whose
+   reader job or authoritative claim actually changed.
+3. Confirm that commands and examples name the exact implemented target, use
+   supported behavior, and state observable verification.
+4. Confirm that planned or deferred work is labeled and linked to active
+   ownership rather than presented as current behavior.
+5. Run the documentation, doctest, and whitespace gates required by §8.
+6. Push or open the pull request only after the documentation review and its
+   deterministic gates are clean.
+
+This upkeep is a delivery gate, not permission to mix unrelated documentation
+reorganization into an otherwise narrow change.
 
 ---
 
@@ -578,7 +601,8 @@ Before calling a documentation change done, check:
 
 - The page has one primary reader job.
 - Living references under `docs/architecture/`, `docs/invariants/`, and
-  `docs/formats/` describe current `main` behavior only.
+  `docs/formats/` describe the resulting current behavior of the change, not
+  unimplemented roadmap intent.
 - Planned work lives in a requirement ledger, a rationale note, an issue, or
   a PR — not silently implied by a reference page.
 - Examples use supported behavior and show observable results, ideally as

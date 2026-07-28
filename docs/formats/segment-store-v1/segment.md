@@ -127,6 +127,18 @@ claim. Record admission additionally recomputes the kind-specific logical
 identity from `P` and compares the complete observed identity with the
 header.
 
+Complete-segment admission walks exactly the seal's declared record count,
+admits every record under caller-selected record and nested-layout limits,
+refuses trailing record bytes, and refuses duplicate logical identities.
+Record iteration preserves physical order; the temporary duplicate-detection
+index does not define a canonical record order.
+
+The reader admits the seal's fixed coordinates and checksum before using its
+record count, then admits every nested record, and verifies the physical
+segment digest last. No payload is exposed until all phases succeed. This
+ordering preserves fail-closed outer framing while allowing record checksums
+to localize ordinary record corruption.
+
 ### Segment seal
 
 The segment seal is exactly 128 bytes:

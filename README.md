@@ -28,11 +28,21 @@ and verifies the complete named `BlobId` before writing any bytes. Range reads
 load only the minimal overlapping chunks and state their narrower verification
 claim explicitly.
 
+The public `keep.segment-store/v1` boundary provides exact segment, record, and
+seal codecs plus explicit immutable-segment transitions. `StagedSegment`
+writes only content-admitted chunk or layout records, while `AdmittedSegment`
+exposes payloads only after complete framing, checksum, logical-identity,
+duplicate, and physical-digest verification. `FilesystemSegmentStage`
+exclusively creates the fixed `current.seg` stage without truncating existing
+evidence.
+
 The reference CAS is executable evidence for M2 storage laws, not a durable
 backend. Its committed state is process memory; process death loses it all.
-Durable segment storage, retention, restart recovery, verification of durable
-structures, compaction, and garbage collection remain planned work. Presence
-in the reference CAS does not claim retention, crash-recovery, or durability.
+The segment boundary does not publish catalogs, synchronize its containing
+directory, open a durable namespace, or perform restart recovery. Catalog
+publication, retention, recovery, verification of complete durable namespaces,
+compaction, and garbage collection remain planned work. Presence in the
+reference CAS does not claim retention, crash recovery, or durability.
 
 ```rust
 use keep::BlobId;
@@ -105,8 +115,10 @@ Items 1 through 6 describe the multi-milestone destination. M1 establishes the
 canonical identity boundary. M2 now provides deterministic chunk detection,
 canonical layouts, capacity-bounded ingestion, and authenticated whole-blob
 reconstruction and minimal exact range reads through the non-durable reference
-CAS. Durable retention and recovery, nearby-version workflows, sealed-storage
-verification, and restart recovery remain future milestones.
+CAS. M3 now provides exact immutable-segment construction and verified
+admission. Catalog publication, durable retention and recovery, nearby-version
+workflows, complete namespace verification, and restart recovery remain future
+milestones.
 
 See the [M1 conformance contract](docs/conformance/golden-file-worldline.md),
 the [CDC profile corpus](conformance/cdc-profile/v1/README.md), the
@@ -115,6 +127,10 @@ the [CDC profile corpus](conformance/cdc-profile/v1/README.md), the
 the [layout corpus](conformance/layout/v1/README.md), and the
 [reference CAS contract](docs/architecture/reference-store/README.md) for the
 implemented proof boundaries and explicit nonclaims. The
+[Durable Segment Store v1 specification](docs/formats/segment-store-v1/README.md)
+and [segment-store corpus](conformance/segment-store/v1/README.md) define the
+implemented segment boundary and the still-planned publication and recovery
+work. The
 [streaming CAS baseline protocol](docs/benchmarks/streaming-cas-baseline-v1/README.md)
 defines reproducible performance evidence without treating measurements as
 correctness proof or weakening verification.

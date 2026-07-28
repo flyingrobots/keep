@@ -62,6 +62,32 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Public, allocation-free `SegmentHeader` admission and emission for the exact
+  `keep.segment-store/v1` 64-byte header, with field-complete typed refusals
+  and golden-corpus evidence.
+- Public, allocation-free `SegmentRecordHeader` admission and emission for the
+  exact 112-byte chunk and flat-layout record grammar, with typed logical
+  identities, checked length derivation, and field-complete corruption laws.
+- Borrowed `ChecksummedSegmentRecord` and `AdmittedSegmentRecord` states for
+  bounded complete-record framing, checksum verification, logical
+  content-identity admission, and allocation-free chunk preparation.
+- Public, allocation-free `SegmentSeal` admission and emission for the exact
+  128-byte immutable-segment terminator, with checked physical coordinates,
+  domain-separated digest verification, and seal-checksum corruption laws.
+- Borrowed `AdmittedSegment` reading with explicit record and layout resource
+  limits, exact nested framing and identity admission, physical-order record
+  iteration, trailing-byte refusal, and duplicate-identity index reservation
+  bounded by both the configured count and physical record-header capacity.
+- Consuming `StagedSegment` transitions and immutable `SealedSegment` receipts
+  for exact append-only record writing, streaming seal construction, explicit
+  prefix/sealed flush-and-sync order, phase-typed I/O refusals, and a fallibly
+  reserved membership index for sublinear duplicate admission.
+- Exclusive `FilesystemSegmentStage` creation for the fixed `current.seg`
+  staging name, with atomic no-replacement admission, preserved existing
+  evidence, zero-origin writing, and no implicit cleanup from `Drop`.
+- Rust cargo-fuzz coverage for the public segment header, record header,
+  complete record, seal, and complete-segment parser boundaries, seeded from
+  the canonical version-1 segment fixtures through `cargo xtask`.
 - ADR-0005 and the implementation-independent `keep.segment-store/v1`
   protocol: exact immutable segment, catalog-generation, and publication-head
   grammars; canonical ordering, bounds, and domain-separated checksums;

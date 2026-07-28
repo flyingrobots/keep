@@ -46,11 +46,17 @@ The `layout_record` seeds are the four exact canonical binary records derived
 from the reviewed hexadecimal fixtures. The target feeds arbitrary bytes
 through the bounded decoder and, for every admitted record, requires exact
 decode-encode byte equality plus successful expected-`LayoutId` admission.
+
+The `segment_format` seeds select the public segment-header, record-header,
+complete-record, seal, and complete-segment boundaries. Canonical empty,
+one-record, and bundled segments keep mutations inside the nested parsers;
+every admitted fixed-width value must re-encode byte-for-byte, and every
+admitted segment must retain its exact bytes and declared record count.
 Run that target alone under the reviewed smoke bounds with:
 
 ```bash
 source fuzz/campaign.env
-cargo +"$FUZZ_TOOLCHAIN" fuzz run layout_record -- \
+cargo +"$FUZZ_TOOLCHAIN" fuzz run segment_format -- \
   -max_total_time="$FUZZ_SMOKE_SECONDS_PER_TARGET" \
   -timeout="$FUZZ_INPUT_TIMEOUT_SECONDS" \
   -max_len="$FUZZ_MAX_INPUT_BYTES" \
