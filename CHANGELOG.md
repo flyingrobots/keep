@@ -24,7 +24,9 @@ after its public API and format compatibility policies are established.
   preserve non-UTF-8 template paths without lossy conversion. Documentation
   Git inventory and tools start from one retained repository directory handle,
   so transient replacement of the ambient repository path cannot redirect
-  validation.
+  validation. Terminal signals now become typed refusals while an external
+  repository task is active, so captured and inherited child groups are killed
+  and reaped before `xtask` returns.
 - Fuzz build and run plans now carry external process deadlines from the
   reviewed campaign policy. Run deadlines use checked addition of the
   exploration budget and process-grace interval before process-group execution.

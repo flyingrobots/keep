@@ -4,6 +4,7 @@ mod capture;
 mod cleanup;
 mod deadline;
 mod error;
+mod interrupt;
 mod process_group;
 mod reader;
 
@@ -15,6 +16,7 @@ use capture::wait_for_child;
 pub(crate) use capture::{capture, capture_with};
 use deadline::ProcessDeadline;
 pub(crate) use error::ProcessError;
+use interrupt::InterruptGuard;
 use reader::ReaderWorker;
 
 /// The completed child status and any output retained by the selected mode.
@@ -45,13 +47,14 @@ pub(crate) fn status(
     deadline: Option<Duration>,
 ) -> Result<ProcessOutput, ProcessError> {
     let deadline = ProcessDeadline::new(program, deadline)?;
+    let interrupts = InterruptGuard::begin(program)?;
     command.process_group(0);
     let mut child = command.spawn().map_err(|source| ProcessError::Io {
         program,
         action: "spawn",
         source,
     })?;
-    let status = wait_for_child(program, &mut child, &deadline)?;
+    let status = wait_for_child(program, &mut child, &deadline, &interrupts)?;
     Ok(ProcessOutput {
         code: status.code(),
         succeeded: status.success(),

@@ -33,6 +33,8 @@ const DESCENDANT_PARENT: &str = "KEEP_XTASK_DESCENDANT_PARENT";
 const DESCENDANT_READY: &str = "KEEP_XTASK_DESCENDANT_READY";
 #[cfg(test)]
 const DESCENDANT_SOCKET: &str = "KEEP_XTASK_DESCENDANT_SOCKET";
+#[cfg(test)]
+const INTERRUPT_SUPERVISOR: &str = "KEEP_XTASK_INTERRUPT_SUPERVISOR";
 
 #[cfg(test)]
 fn wait_for_ready(path: &std::path::Path) -> Result<(), io::Error> {

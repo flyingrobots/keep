@@ -6,7 +6,9 @@ use std::thread::{self, JoinHandle};
 
 use crate::process_output::{BoundedBytes, bounded_bytes};
 
-use super::{ProcessDeadline, ProcessError};
+use super::{InterruptGuard, ProcessDeadline, ProcessError};
+
+const INTERRUPT_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(10);
 
 pub(super) struct ReaderWorker {
     handle: JoinHandle<()>,
@@ -41,22 +43,33 @@ impl ReaderWorker {
         })
     }
 
-    pub(super) fn receive(&self, deadline: &ProcessDeadline) -> Result<BoundedBytes, ProcessError> {
-        let result = match deadline.remaining(self.program)? {
-            Some((remaining, duration)) => self
-                .receiver
-                .recv_timeout(remaining)
-                .map_err(|error| receive_error(self.program, self.stream, duration, error))?,
-            None => self
-                .receiver
-                .recv()
-                .map_err(|_| reader_panic(self.program, self.stream))?,
-        };
-        result.map_err(|source| ProcessError::Io {
-            program: self.program,
-            action: "read child output",
-            source,
-        })
+    pub(super) fn receive(
+        &self,
+        deadline: &ProcessDeadline,
+        interrupts: &InterruptGuard,
+    ) -> Result<BoundedBytes, ProcessError> {
+        loop {
+            if let Some(error) = interrupts.refusal(self.program) {
+                return Err(error);
+            }
+            let (wait, duration) = receive_wait(deadline, self.program)?;
+            match self.receiver.recv_timeout(wait) {
+                Ok(result) => {
+                    return result.map_err(|source| ProcessError::Io {
+                        program: self.program,
+                        action: "read child output",
+                        source,
+                    });
+                }
+                Err(RecvTimeoutError::Timeout) if duration.is_none() => {}
+                Err(RecvTimeoutError::Timeout) => {
+                    deadline.remaining(self.program)?;
+                }
+                Err(RecvTimeoutError::Disconnected) => {
+                    return Err(reader_panic(self.program, self.stream));
+                }
+            }
+        }
     }
 
     pub(super) fn join(self) -> Result<(), ProcessError> {
@@ -66,15 +79,13 @@ impl ReaderWorker {
     }
 }
 
-const fn receive_error(
+fn receive_wait(
+    deadline: &ProcessDeadline,
     program: &'static str,
-    stream: &'static str,
-    duration: std::time::Duration,
-    error: RecvTimeoutError,
-) -> ProcessError {
-    match error {
-        RecvTimeoutError::Timeout => ProcessError::Timeout { program, duration },
-        RecvTimeoutError::Disconnected => reader_panic(program, stream),
+) -> Result<(std::time::Duration, Option<std::time::Duration>), ProcessError> {
+    match deadline.remaining(program)? {
+        Some((remaining, duration)) => Ok((remaining.min(INTERRUPT_POLL_INTERVAL), Some(duration))),
+        None => Ok((INTERRUPT_POLL_INTERVAL, None)),
     }
 }
 

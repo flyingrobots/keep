@@ -29,6 +29,10 @@ The bounded subprocess adapter uses Rustix's safe process API to send
 `SIGKILL` to a dedicated child process group after a subprocess deadline or
 collection failure. This prevents descendants that inherited an output pipe
 from surviving the failed repository task.
+The
+[signal-hook dependency admission](signal-hook-0.4.4.md)
+records the terminal-signal guard that routes interruption through the same
+authoritative cleanup boundary.
 
 Documentation verification also duplicates the admitted repository directory
 handle and uses the isolated `repository-process-spawn` crate to start Git and

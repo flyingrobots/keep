@@ -24,6 +24,11 @@ pub(crate) enum ProcessError {
         action: &'static str,
         source: io::Error,
     },
+    /// A terminal signal interrupted the complete child operation.
+    Interrupted {
+        program: &'static str,
+        signal: &'static str,
+    },
     /// A child configured for capture did not expose the requested pipe.
     MissingStream {
         program: &'static str,
@@ -55,7 +60,8 @@ impl ProcessError {
                 primary.is_not_found()
             }
             Self::Io { source, .. } => source.kind() == io::ErrorKind::NotFound,
-            Self::MissingStream { .. }
+            Self::Interrupted { .. }
+            | Self::MissingStream { .. }
             | Self::OutputLimit { .. }
             | Self::ReaderPanic { .. }
             | Self::Timeout { .. } => false,
@@ -82,6 +88,9 @@ impl fmt::Display for ProcessError {
             Self::Io {
                 program, action, ..
             } => write!(formatter, "cannot {action} {program} process"),
+            Self::Interrupted { program, signal } => {
+                write!(formatter, "{program} process was interrupted by {signal}")
+            }
             Self::MissingStream { program, stream } => {
                 write!(formatter, "{program} {stream} pipe is unavailable")
             }
@@ -110,7 +119,8 @@ impl Error for ProcessError {
         match self {
             Self::Additional { primary, .. } => Some(primary),
             Self::Cleanup { source, .. } | Self::Io { source, .. } => Some(source),
-            Self::MissingStream { .. }
+            Self::Interrupted { .. }
+            | Self::MissingStream { .. }
             | Self::OutputLimit { .. }
             | Self::ReaderPanic { .. }
             | Self::Timeout { .. } => None,

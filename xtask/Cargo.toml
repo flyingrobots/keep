@@ -18,6 +18,7 @@ repository-tasks = [
     "dep:rustix",
     "dep:serde",
     "dep:serde_json",
+    "dep:signal-hook",
     "dep:yaml-rust2",
 ]
 
@@ -37,6 +38,8 @@ rustix = { version = "=1.1.4", default-features = false, features = ["process", 
 serde = { version = "=1.0.229", default-features = false, features = ["std"], optional = true }
 # Typed JSON admission checks the committed documentation-tool lock graph.
 serde_json = { version = "=1.0.151", default-features = false, features = ["std"], optional = true }
+# Safe self-pipe delivery forwards terminal signals to active child groups.
+signal-hook = { version = "=0.4.4", default-features = false, features = ["iterator"], optional = true }
 # Pure Rust YAML admission identifies executable GitHub Actions steps.
 yaml-rust2 = { version = "=0.11.0", default-features = false, optional = true }
 

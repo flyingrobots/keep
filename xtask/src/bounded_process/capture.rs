@@ -3,13 +3,14 @@
 use std::os::unix::process::CommandExt;
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use super::cleanup::{cleanup_process, join_after_cleanup, join_readers};
-use super::{ProcessDeadline, ProcessError, ProcessOutput, ReaderWorker};
+use super::{InterruptGuard, ProcessDeadline, ProcessError, ProcessOutput, ReaderWorker};
 use crate::process_output::BoundedBytes;
 
 const OUTPUT_LIMIT: usize = 1_048_576;
+const PROCESS_POLL_INTERVAL: Duration = Duration::from_millis(10);
 
 /// Runs a child synchronously and captures bounded standard output and error.
 ///
@@ -32,11 +33,13 @@ pub(crate) fn capture_with(
     spawn: impl FnOnce(&mut Command) -> Result<Child, std::io::Error>,
 ) -> Result<ProcessOutput, ProcessError> {
     let deadline = ProcessDeadline::new(program, deadline)?;
-    CapturedProcess::start(program, command, spawn)?.finish(program, &deadline)
+    let interrupts = InterruptGuard::begin(program)?;
+    CapturedProcess::start(program, command, spawn, interrupts)?.finish(program, &deadline)
 }
 
 struct CapturedProcess {
     child: Child,
+    interrupts: InterruptGuard,
     stderr: ReaderWorker,
     stdout: ReaderWorker,
 }
@@ -46,6 +49,7 @@ impl CapturedProcess {
         program: &'static str,
         command: &mut Command,
         spawn: impl FnOnce(&mut Command) -> Result<Child, std::io::Error>,
+        interrupts: InterruptGuard,
     ) -> Result<Self, ProcessError> {
         command
             .stdout(Stdio::piped())
@@ -83,6 +87,7 @@ impl CapturedProcess {
         };
         Ok(Self {
             child,
+            interrupts,
             stderr,
             stdout,
         })
@@ -93,15 +98,15 @@ impl CapturedProcess {
         program: &'static str,
         deadline: &ProcessDeadline,
     ) -> Result<ProcessOutput, ProcessError> {
-        let status = match wait_for_child(program, &mut self.child, deadline) {
+        let status = match wait_for_child(program, &mut self.child, deadline, &self.interrupts) {
             Ok(status) => status,
             Err(error) => return Err(join_readers(self.stdout, self.stderr, error)),
         };
-        let stdout = match self.stdout.receive(deadline) {
+        let stdout = match self.stdout.receive(deadline, &self.interrupts) {
             Ok(output) => output,
             Err(error) => return Err(self.cleanup_readers(error)),
         };
-        let stderr = match self.stderr.receive(deadline) {
+        let stderr = match self.stderr.receive(deadline, &self.interrupts) {
             Ok(output) => output,
             Err(error) => return Err(self.cleanup_readers(error)),
         };
@@ -115,6 +120,9 @@ impl CapturedProcess {
         refuse_exceeded(program, "stdout", &stdout)
             .and_then(|()| refuse_exceeded(program, "stderr", &stderr))
             .map_err(|error| cleanup_process(&mut self.child, error))?;
+        if let Some(error) = self.interrupts.refusal(program) {
+            return Err(cleanup_process(&mut self.child, error));
+        }
         Ok(ProcessOutput {
             code: status.code(),
             succeeded: status.success(),
@@ -134,20 +142,12 @@ pub(super) fn wait_for_child(
     program: &'static str,
     child: &mut Child,
     deadline: &ProcessDeadline,
+    interrupts: &InterruptGuard,
 ) -> Result<ExitStatus, ProcessError> {
-    let ProcessDeadline::Bounded { duration, expires } = deadline else {
-        return child.wait().map_err(|source| {
-            cleanup_process(
-                child,
-                ProcessError::Io {
-                    program,
-                    action: "wait",
-                    source,
-                },
-            )
-        });
-    };
     loop {
+        if let Some(error) = interrupts.refusal(program) {
+            return Err(cleanup_process(child, error));
+        }
         match child.try_wait() {
             Err(source) => {
                 return Err(cleanup_process(
@@ -160,18 +160,14 @@ pub(super) fn wait_for_child(
                 ));
             }
             Ok(Some(status)) => return Ok(status),
-            Ok(None) if Instant::now() >= *expires => {
-                return Err(cleanup_process(
-                    child,
-                    ProcessError::Timeout {
-                        program,
-                        duration: *duration,
-                    },
-                ));
+            Ok(None) => {
+                let interval = match deadline.remaining(program) {
+                    Ok(Some((remaining, _duration))) => PROCESS_POLL_INTERVAL.min(remaining),
+                    Ok(None) => PROCESS_POLL_INTERVAL,
+                    Err(error) => return Err(cleanup_process(child, error)),
+                };
+                thread::sleep(interval);
             }
-            Ok(None) => thread::sleep(
-                Duration::from_millis(10).min(expires.saturating_duration_since(Instant::now())),
-            ),
         }
     }
 }

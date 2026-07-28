@@ -9,13 +9,53 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use super::{DESCENDANT_PARENT, DESCENDANT_READY, DESCENDANT_SOCKET, wait_for_ready};
+use rustix::process::{Pid, Signal, kill_process};
+
+use super::{
+    DESCENDANT_PARENT, DESCENDANT_READY, DESCENDANT_SOCKET, INTERRUPT_SUPERVISOR, wait_for_ready,
+};
 use crate::bounded_process::cleanup::cleanup_process;
 use crate::bounded_process::{ProcessError, capture};
 use crate::test_directory::TestDirectory;
 
 const CHILD_PROCESS: &str =
     "bounded_process::process_group::child_tests::process_child_leaves_descendant_pipe_open";
+const SUPERVISOR_PROCESS: &str = "bounded_process::process_group::child_tests::process_supervisor_captures_descendant_until_interrupted";
+
+#[test]
+fn terminal_interrupt_terminates_the_isolated_descendant_group()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::create("process-group-interrupt")?;
+    let ready = directory.path().join("ready");
+    let socket = directory.path().join("descendant.sock");
+    let executable = env::current_exe()?;
+    let mut supervisor = Command::new(executable)
+        .args(["--exact", SUPERVISOR_PROCESS])
+        .env(INTERRUPT_SUPERVISOR, "1")
+        .env(DESCENDANT_READY, &ready)
+        .env(DESCENDANT_SOCKET, &socket)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()?;
+    wait_for_ready(&ready)?;
+    let supervisor_pid =
+        Pid::from_raw(i32::try_from(supervisor.id())?).ok_or("supervisor process ID is zero")?;
+    kill_process(supervisor_pid, Signal::INT)?;
+
+    let status = wait_for_exit(&mut supervisor)?;
+    let descendant_survived = descendant_survived_cleanup(&socket)?;
+    directory.close()?;
+    assert!(
+        status.success(),
+        "interrupted supervisor did not exit cleanly: {status:?}"
+    );
+    assert!(
+        !descendant_survived,
+        "terminal interrupt left the isolated descendant reachable"
+    );
+    Ok(())
+}
 
 #[test]
 fn inherited_descendant_pipe_obeys_the_process_deadline() -> Result<(), Box<dyn std::error::Error>>
@@ -118,5 +158,21 @@ fn descendant_survived_cleanup(socket: &Path) -> Result<bool, io::Error> {
             }
             Err(source) => return Err(source),
         }
+    }
+}
+
+fn wait_for_exit(child: &mut std::process::Child) -> Result<std::process::ExitStatus, io::Error> {
+    let expires = Instant::now()
+        .checked_add(Duration::from_secs(2))
+        .ok_or_else(|| io::Error::other("supervisor exit deadline overflow"))?;
+    loop {
+        if let Some(status) = child.try_wait()? {
+            return Ok(status);
+        }
+        if Instant::now() >= expires {
+            child.kill()?;
+            return child.wait();
+        }
+        thread::yield_now();
     }
 }
