@@ -1,6 +1,7 @@
 //! Living-documentation contract for the public non-durable reference CAS.
 
 const ROOT_README: &str = include_str!("../README.md");
+const CHANGELOG: &str = include_str!("../CHANGELOG.md");
 const FORMAT_SPEC: &str = include_str!("../docs/formats/flat-chunk-layout-v1/README.md");
 const FORMAT_RATIONALE: &str = include_str!("../docs/formats/flat-chunk-layout-v1/rationale.md");
 const CORPUS_README: &str = include_str!("../conformance/layout/v1/README.md");
@@ -20,6 +21,13 @@ const STREAMING_TEST_ENTRYPOINT: &str = include_str!("streaming_cas.rs");
 const TEST_SUPPORT: &str = include_str!("support/mod.rs");
 const TEST_READERS: &str = include_str!("support/byte_readers.rs");
 const TEST_WRITERS: &str = include_str!("support/byte_writers.rs");
+
+#[test]
+fn publication_changelog_names_required_chunks_without_assuming_deduplication() {
+    assert!(!CHANGELOG.contains("required\n  deduplicated chunk"));
+    assert!(!CHANGELOG.contains("required deduplicated chunk"));
+    assert!(CHANGELOG.contains("lacks a required chunk"));
+}
 
 #[test]
 fn integration_fixtures_are_visible_only_within_their_test_crate() {

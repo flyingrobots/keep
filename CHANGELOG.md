@@ -69,9 +69,8 @@ after its public API and format compatibility policies are established.
 - Publication now calculates and validates the final materialized-byte count
   before changing visible reference-store state, so intervening capacity
   exhaustion cannot expose a partial commit.
-- Publication refuses staged work whose destination lacks a required
-  deduplicated chunk, preventing cross-store commits from exposing incomplete
-  layouts.
+- Publication refuses staged work whose destination lacks a required chunk,
+  preventing cross-store commits from exposing incomplete layouts.
 - Bounded canonical layout-record reconstruction with typed pre-output refusal
   for malformed records, zero-progress and over-reporting writers, output I/O
   failures, conflicting stored chunks, corrupted chunk content, and ordinary
