@@ -5,15 +5,21 @@ use std::io::Cursor;
 
 use crate::{LayoutEntryLimit, PublishError, ReferenceStore, ReferenceStoreCapacity};
 
+fn publish_fixture(
+    store: &mut ReferenceStore,
+    source: &[u8],
+) -> Result<crate::PublishedBlob, Box<dyn Error>> {
+    let mut reader = Cursor::new(source);
+    let staged = store.stage(&mut reader, LayoutEntryLimit::MAXIMUM)?;
+    Ok(staged.commit(store)?)
+}
+
 #[test]
 fn committed_layout_with_a_missing_chunk_is_never_silently_repaired() -> Result<(), Box<dyn Error>>
 {
     let source = b"committed state cannot be repaired by ordinary publication";
     let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
-    let mut first_source = Cursor::new(source);
-    let published = store
-        .stage(&mut first_source, LayoutEntryLimit::MAXIMUM)?
-        .commit(&mut store)?;
+    let published = publish_fixture(&mut store, source)?;
     let missing = store
         .layout(published.layout_id())
         .and_then(|layout| layout.entries().first())
@@ -44,10 +50,7 @@ fn committed_layout_without_its_blob_index_is_never_silently_repaired() -> Resul
 {
     let source = b"layout index loss requires an explicit recovery operation";
     let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
-    let mut first_source = Cursor::new(source);
-    let published = store
-        .stage(&mut first_source, LayoutEntryLimit::MAXIMUM)?
-        .commit(&mut store)?;
+    let published = publish_fixture(&mut store, source)?;
     let removed = store
         .blob_layouts
         .get_mut(&published.target())
@@ -75,10 +78,7 @@ fn committed_blob_index_without_its_layout_is_never_silently_repaired() -> Resul
 {
     let source = b"layout loss requires an explicit recovery operation";
     let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
-    let mut first_source = Cursor::new(source);
-    let published = store
-        .stage(&mut first_source, LayoutEntryLimit::MAXIMUM)?
-        .commit(&mut store)?;
+    let published = publish_fixture(&mut store, source)?;
     let removed = store.layouts.remove(&published.layout_id());
     assert!(removed.is_some());
     let mut second_source = Cursor::new(source);
@@ -104,10 +104,7 @@ fn layout_indexed_under_the_wrong_blob_is_never_silently_extended() -> Result<()
     let source = b"a layout identity cannot migrate between target indexes";
     let wrong_target = crate::BlobId::hash_bytes(b"different target")?;
     let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
-    let mut first_source = Cursor::new(source);
-    let published = store
-        .stage(&mut first_source, LayoutEntryLimit::MAXIMUM)?
-        .commit(&mut store)?;
+    let published = publish_fixture(&mut store, source)?;
     store.layouts.remove(&published.layout_id());
     let removed = store
         .blob_layouts
