@@ -22,13 +22,16 @@ pub use adapters::{
     LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
     StorageProfileIdParseError,
 };
-pub use blob::{BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError};
+pub use blob::{
+    BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
+    ByteRange, ByteRangeError,
+};
 pub use chunk::{
     ChunkHashError, ChunkId, ChunkLength, ChunkOffset, ChunkSpan, ChunkingError, FastCdc,
 };
 pub use layout::{
     AdmittedLayout, LayoutEntry, LayoutEntryLimit, LayoutEntryLimitError, LayoutId,
-    LayoutIdMismatch, LayoutRecordLength, LayoutValidationError,
+    LayoutIdMismatch, LayoutRecordLength, LayoutValidationError, RangePlan, RangePlanError,
 };
 pub use profile::{RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId};
 pub use reference::{
