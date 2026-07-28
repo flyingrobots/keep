@@ -6,9 +6,10 @@
 //!
 //! Keep currently exposes exact logical byte and physical chunk identity,
 //! deterministic streaming chunk detection, canonical flat-layout identity
-//! and codecs, and a capacity-bounded non-durable reference CAS. Durable
-//! physical storage, retention, and recovery APIs remain intentionally absent
-//! until their contracts have executable specifications.
+//! and codecs, a capacity-bounded non-durable reference CAS, and explicit
+//! immutable-segment writing and verified reading. Durable namespace
+//! publication, retention, and recovery APIs remain intentionally absent until
+//! their contracts have executable specifications.
 
 mod adapters;
 mod blob;
@@ -20,12 +21,13 @@ mod reference;
 pub use adapters::{
     AdmittedSegment, AdmittedSegmentRecord, BlobIdBinaryParseError, BlobIdTextParseError,
     CanonicalLayoutRecord, ChecksummedSegmentRecord, LayoutDecodeError, LayoutDecodePolicy,
-    LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError, SegmentDigest,
-    SegmentHeader, SegmentHeaderError, SegmentReadError, SegmentReadPolicy,
-    SegmentRecordAdmissionError, SegmentRecordChecksum, SegmentRecordDecodeError,
-    SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity, SegmentRecordLength,
-    SegmentRecordLimit, SegmentRecordLimitError, SegmentRecordPayloadLength, SegmentRecords,
-    SegmentSeal, SegmentSealError, StorageProfileIdParseError,
+    LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError, SealedSegment,
+    SegmentDigest, SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError, SegmentReadError,
+    SegmentReadPolicy, SegmentRecordAdmissionError, SegmentRecordChecksum,
+    SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity,
+    SegmentRecordLength, SegmentRecordLimit, SegmentRecordLimitError, SegmentRecordPayloadLength,
+    SegmentRecords, SegmentSeal, SegmentSealError, SegmentStage, SegmentWriteError,
+    SegmentWritePhase, StagedSegment, StorageProfileIdParseError,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

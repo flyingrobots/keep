@@ -1,15 +1,13 @@
 //! Segment-seal semantic and cryptographic admission.
 
-use super::segment_header::{HEADER_LENGTH, MAXIMUM_RECORD_COUNT, MAXIMUM_SEGMENT_LENGTH};
-use super::segment_seal::{
-    ALGORITHM, FLAGS, MAGIC, SEAL_LENGTH, SegmentSeal, SegmentSealCoordinates, VERSION,
-};
+use super::segment_header::MAXIMUM_RECORD_COUNT;
+use super::segment_seal::{ALGORITHM, FLAGS, MAGIC, SEAL_LENGTH, SegmentSeal, VERSION};
 use super::segment_seal_decoder::DecodedSeal;
-use super::{SegmentDigest, SegmentSealError, segment_seal_hash};
+use super::{SegmentDigest, SegmentSealError, segment_seal_builder};
 
 pub(super) fn admit(prefix: &[u8], fields: &DecodedSeal) -> Result<SegmentSeal, SegmentSealError> {
     validate_fields(prefix, fields)?;
-    let canonical = from_prefix(prefix, fields.record_count)?;
+    let canonical = segment_seal_builder::from_prefix(prefix, fields.record_count)?;
     let observed_digest = SegmentDigest::from_validated(fields.digest);
     if observed_digest != canonical.digest() {
         return Err(SegmentSealError::SegmentDigestMismatch {
@@ -32,36 +30,6 @@ pub(super) fn validate_fields(prefix: &[u8], fields: &DecodedSeal) -> Result<(),
     validate_lengths(fields, prefix_length)?;
     validate_algorithms(fields)?;
     Ok(())
-}
-
-pub(super) fn from_prefix(
-    prefix: &[u8],
-    record_count: u32,
-) -> Result<SegmentSeal, SegmentSealError> {
-    if record_count > MAXIMUM_RECORD_COUNT {
-        return Err(SegmentSealError::RecordCountOutOfBounds {
-            maximum: MAXIMUM_RECORD_COUNT,
-            observed: record_count,
-        });
-    }
-    let bytes_before_seal = prefix_length(prefix.len())?;
-    let (segment_length, record_bytes) = derived_lengths(bytes_before_seal)?;
-    let coordinates = SegmentSealCoordinates::new(
-        record_count,
-        bytes_before_seal,
-        segment_length,
-        record_bytes,
-    );
-    let provisional = SegmentSeal::admitted(
-        coordinates,
-        SegmentDigest::from_validated([0_u8; 32]),
-        [0_u8; 32],
-    );
-    let provisional_bytes = provisional.encode();
-    let digest = segment_seal_hash::segment_digest(prefix, &provisional_bytes)?;
-    let with_digest = SegmentSeal::admitted(coordinates, digest, [0_u8; 32]);
-    let checksum = segment_seal_hash::seal_checksum(&with_digest.encode())?;
-    Ok(SegmentSeal::admitted(coordinates, digest, checksum))
 }
 
 fn validate_coordinates(fields: &DecodedSeal) -> Result<(), SegmentSealError> {
@@ -108,7 +76,7 @@ fn validate_lengths(fields: &DecodedSeal, prefix_length: u64) -> Result<(), Segm
             observed: fields.bytes_before_seal,
         });
     }
-    let (segment_length, record_bytes) = derived_lengths(prefix_length)?;
+    let (segment_length, record_bytes) = segment_seal_builder::derived_lengths(prefix_length)?;
     if fields.segment_length != segment_length {
         return Err(SegmentSealError::SegmentLength {
             expected: segment_length,
@@ -145,22 +113,6 @@ fn validate_algorithms(fields: &DecodedSeal) -> Result<(), SegmentSealError> {
 
 fn prefix_length(observed: usize) -> Result<u64, SegmentSealError> {
     u64::try_from(observed).map_err(|_source| SegmentSealError::PrefixLengthHostWidth { observed })
-}
-
-fn derived_lengths(bytes_before_seal: u64) -> Result<(u64, u64), SegmentSealError> {
-    let segment_length = bytes_before_seal
-        .checked_add(u64::from(SEAL_LENGTH))
-        .ok_or(SegmentSealError::LengthArithmetic { bytes_before_seal })?;
-    if segment_length > MAXIMUM_SEGMENT_LENGTH {
-        return Err(SegmentSealError::SegmentLengthOutOfBounds {
-            maximum: MAXIMUM_SEGMENT_LENGTH,
-            observed: segment_length,
-        });
-    }
-    let record_bytes = bytes_before_seal
-        .checked_sub(u64::from(HEADER_LENGTH))
-        .ok_or(SegmentSealError::LengthArithmetic { bytes_before_seal })?;
-    Ok((segment_length, record_bytes))
 }
 
 fn require_u8(

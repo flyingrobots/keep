@@ -77,6 +77,9 @@ after its public API and format compatibility policies are established.
 - Borrowed `AdmittedSegment` reading with explicit record and layout resource
   limits, exact nested framing and identity admission, physical-order record
   iteration, trailing-byte refusal, and bounded duplicate-identity detection.
+- Consuming `StagedSegment` transitions and immutable `SealedSegment` receipts
+  for exact append-only record writing, streaming seal construction, explicit
+  prefix/sealed flush-and-sync order, and phase-typed I/O refusals.
 - ADR-0005 and the implementation-independent `keep.segment-store/v1`
   protocol: exact immutable segment, catalog-generation, and publication-head
   grammars; canonical ordering, bounds, and domain-separated checksums;

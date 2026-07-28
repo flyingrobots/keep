@@ -2,7 +2,8 @@
 
 use super::segment_seal_decoder::DecodedSeal;
 use super::{
-    SegmentDigest, SegmentSeal, SegmentSealError, segment_seal_admission, segment_seal_hash,
+    SegmentDigest, SegmentSeal, SegmentSealError, segment_seal_admission, segment_seal_builder,
+    segment_seal_hash,
 };
 
 pub(super) fn admit(
@@ -22,7 +23,7 @@ pub(super) fn admit(
 }
 
 pub(super) fn verify(prefix: &[u8], fields: &DecodedSeal) -> Result<SegmentSeal, SegmentSealError> {
-    let canonical = segment_seal_admission::from_prefix(prefix, fields.record_count)?;
+    let canonical = segment_seal_builder::from_prefix(prefix, fields.record_count)?;
     let observed_digest = SegmentDigest::from_validated(fields.digest);
     if observed_digest != canonical.digest() {
         return Err(SegmentSealError::SegmentDigestMismatch {
