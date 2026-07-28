@@ -25,6 +25,10 @@ crash-injection and recovery matrix.
 - `one-zero-catalog.hex` is generation 1 and maps that chunk identity to its
   exact record in `one-zero-segment.hex`.
 - `one-zero-head.hex` publishes the one-zero catalog.
+- `one-zero-catalog-generation-two.hex` extends the generation-1 catalog
+  digest and repeats the same verified entry under generation 2.
+- `one-zero-head-generation-two.hex` publishes that exact generation-2
+  catalog.
 - `one-zero-bundle-segment.hex` stores both the one-zero chunk and its
   canonical flat-layout record.
 - `one-zero-bundle-catalog.hex` proves chunk-before-layout key ordering and
@@ -57,6 +61,10 @@ The one-zero chain proves the complete publication binding:
 4. catalog generation 1 maps the logical chunk identity to offset 64, record
    length 145, payload length 1, and that record checksum; and
 5. the head binds generation 1 to the exact catalog length and digest.
+
+The generation-2 extension freezes the noninitial branch: its generation field
+is 2, its predecessor field is the exact generation-1 catalog digest, and its
+head binds generation 2 to the extension's exact length and digest.
 
 The one-zero bundle adds the canonical 220-byte flat-layout payload and its
 60-byte `LayoutId` after the chunk record. Its two-entry catalog proves the

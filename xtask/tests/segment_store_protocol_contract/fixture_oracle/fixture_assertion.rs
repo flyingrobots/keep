@@ -22,6 +22,8 @@ fn golden_artifacts_match_the_independent_fixture_oracle() -> Result<(), String>
         ONE_ZERO_SEGMENT,
         ONE_ZERO_CATALOG,
         ONE_ZERO_HEAD,
+        ONE_ZERO_CATALOG_GENERATION_TWO,
+        ONE_ZERO_HEAD_GENERATION_TWO,
         ONE_ZERO_BUNDLE_SEGMENT,
         ONE_ZERO_BUNDLE_CATALOG,
         ONE_ZERO_BUNDLE_HEAD,
@@ -71,6 +73,38 @@ fn golden_artifacts_match_the_independent_fixture_oracle() -> Result<(), String>
         .map_err(|_| "artifact manifest formatting failed")?;
     }
     assert_eq!(ARTIFACTS, manifest);
+    Ok(())
+}
+
+#[test]
+fn golden_chain_freezes_generation_two_and_its_predecessor() -> Result<(), String> {
+    let expected = expected_artifacts().map_err(String::from)?;
+    let generation_one = expected
+        .iter()
+        .find(|artifact| artifact.case_name == "one-zero-catalog")
+        .ok_or("missing generation-one catalog")?;
+    let generation_two = expected
+        .iter()
+        .find(|artifact| artifact.case_name == "one-zero-catalog-generation-two")
+        .ok_or("missing generation-two catalog")?;
+    let generation_two_head = expected
+        .iter()
+        .find(|artifact| artifact.case_name == "one-zero-head-generation-two")
+        .ok_or("missing generation-two head")?;
+
+    assert_eq!(
+        generation_two.bytes.get(24..32),
+        Some(2u64.to_be_bytes().as_slice())
+    );
+    assert_eq!(
+        generation_two.bytes.get(32..64),
+        Some(generation_one.bound_digest.as_slice())
+    );
+    assert_eq!(
+        generation_two_head.bytes.get(24..32),
+        Some(2u64.to_be_bytes().as_slice())
+    );
+    assert_eq!(generation_two_head.bound_digest, generation_two.bound_digest);
     Ok(())
 }
 

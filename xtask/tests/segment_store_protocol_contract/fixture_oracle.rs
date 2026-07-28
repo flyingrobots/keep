@@ -7,6 +7,10 @@ const ONE_ZERO_SEGMENT: &str =
 const ONE_ZERO_CATALOG: &str =
     include_str!("../../../conformance/segment-store/v1/one-zero-catalog.hex");
 const ONE_ZERO_HEAD: &str = include_str!("../../../conformance/segment-store/v1/one-zero-head.hex");
+const ONE_ZERO_CATALOG_GENERATION_TWO: &str =
+    include_str!("../../../conformance/segment-store/v1/one-zero-catalog-generation-two.hex");
+const ONE_ZERO_HEAD_GENERATION_TWO: &str =
+    include_str!("../../../conformance/segment-store/v1/one-zero-head-generation-two.hex");
 const ONE_ZERO_BUNDLE_SEGMENT: &str =
     include_str!("../../../conformance/segment-store/v1/one-zero-bundle-segment.hex");
 const ONE_ZERO_BUNDLE_CATALOG: &str =
@@ -51,46 +55,80 @@ fn empty_segment_artifact() -> Result<Artifact, &'static str> {
     })
 }
 
-fn one_zero_artifacts() -> Result<[Artifact; 3], &'static str> {
+fn one_zero_artifacts() -> Result<Vec<Artifact>, &'static str> {
     let one_zero_segment = build_one_zero_segment()?;
     let record_checksum = one_zero_segment
         .record_checksum
         .ok_or("one-zero segment must have a record checksum")?;
-    let catalog = build_catalog(one_zero_segment.digest, record_checksum)?;
-    let head = build_head_for_catalog(&catalog)?;
+    let generation_one = build_catalog(one_zero_segment.digest, record_checksum)?;
+    let generation_two = build_catalog_generation(
+        one_zero_segment.digest,
+        record_checksum,
+        2,
+        generation_one.digest,
+    )?;
+    let mut artifacts = vec![Artifact {
+        case_name: "one-zero-segment",
+        kind: "segment",
+        record_count: "1",
+        entry_count: "-",
+        generation: "-",
+        bound_digest: one_zero_segment.digest,
+        final_checksum: one_zero_segment.seal_checksum,
+        fixture: "one-zero-segment.hex",
+        bytes: one_zero_segment.bytes,
+    }];
+    artifacts.extend(catalog_artifacts(
+        generation_one,
+        "one-zero-catalog",
+        "one-zero-catalog.hex",
+        "one-zero-head",
+        "one-zero-head.hex",
+    )?);
+    artifacts.extend(catalog_artifacts(
+        generation_two,
+        "one-zero-catalog-generation-two",
+        "one-zero-catalog-generation-two.hex",
+        "one-zero-head-generation-two",
+        "one-zero-head-generation-two.hex",
+    )?);
+    Ok(artifacts)
+}
 
+fn catalog_artifacts(
+    catalog: Catalog,
+    catalog_case: &'static str,
+    catalog_fixture: &'static str,
+    head_case: &'static str,
+    head_fixture: &'static str,
+) -> Result<[Artifact; 2], &'static str> {
+    let head = build_head_for_catalog(&catalog)?;
+    let generation = match catalog.generation {
+        1 => "1",
+        2 => "2",
+        _ => return Err("golden catalog has an unregistered generation"),
+    };
     Ok([
         Artifact {
-            case_name: "one-zero-segment",
-            kind: "segment",
-            record_count: "1",
-            entry_count: "-",
-            generation: "-",
-            bound_digest: one_zero_segment.digest,
-            final_checksum: one_zero_segment.seal_checksum,
-            fixture: "one-zero-segment.hex",
-            bytes: one_zero_segment.bytes,
-        },
-        Artifact {
-            case_name: "one-zero-catalog",
+            case_name: catalog_case,
             kind: "catalog",
             record_count: "-",
             entry_count: "1",
-            generation: "1",
+            generation,
             bound_digest: catalog.digest,
             final_checksum: catalog.checksum,
-            fixture: "one-zero-catalog.hex",
+            fixture: catalog_fixture,
             bytes: catalog.bytes,
         },
         Artifact {
-            case_name: "one-zero-head",
+            case_name: head_case,
             kind: "head",
             record_count: "-",
             entry_count: "-",
-            generation: "1",
+            generation,
             bound_digest: catalog.digest,
             final_checksum: head.1,
-            fixture: "one-zero-head.hex",
+            fixture: head_fixture,
             bytes: head.0,
         },
     ])

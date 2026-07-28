@@ -70,6 +70,8 @@ contains:
 - a one-byte chunk segment bound to an existing independent `ChunkId`;
 - catalog generation 1 naming its exact physical record;
 - a publication head naming that exact catalog;
+- catalog generation 2 naming the generation-1 digest as its exact
+  predecessor, plus its publication head;
 - a two-record segment carrying the chunk and its canonical flat layout;
 - a two-entry catalog proving chunk-before-layout order and checked offsets;
 - a publication head naming that cross-kind catalog;

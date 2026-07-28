@@ -138,6 +138,7 @@ fn finish_catalog(mut bytes: Vec<u8>) -> Result<Catalog, &'static str> {
         bytes,
         digest,
         checksum,
+        generation: 1,
     })
 }
 
