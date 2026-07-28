@@ -62,6 +62,25 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- ADR-0005 and the implementation-independent `keep.segment-store/v1`
+  protocol: exact immutable segment, catalog-generation, and publication-head
+  grammars; canonical ordering, bounds, and domain-separated checksums;
+  one-writer/many-reader publication with explicit flush, synchronization,
+  atomic replacement, and directory-synchronization order; stable
+  `KEEP-CRASH-001`–`035` transitions; typed recovery classifications; and
+  golden physical artifacts. Directory-synchronization crash classes admit
+  both the lawful pre-sync and durable namespace states, and recovery admits
+  only the exact verified stage/pool digest duplicate created by interrupted
+  hard-link publication. Fresh-store initialization is writer-locked,
+  idempotent across every partial canonical namespace set, and admitted only
+  after root synchronization. Explicit recovery can complete a durable
+  fixed-name stage into its immutable pool and durably clear the stage without
+  promoting a publication head. Explicit discard receipts now follow
+  synchronization of the stage's actual parent: `staging` for segment and
+  catalog stages, or the store root for `head.next`. Production storage
+  remains assigned to issues #15–#17. The golden corpus now includes a
+  generation-2 catalog/head pair whose predecessor field is the exact
+  generation-1 catalog digest.
 - A deterministic, bounded, license-safe streaming CAS benchmark corpus and
   release-only `cargo xtask benchmark-baseline` workflow covering all required
   ingestion, edit, deduplication, range-read, verification, and input
