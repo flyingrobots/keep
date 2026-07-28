@@ -45,7 +45,20 @@ impl fmt::Display for ExecutionError {
     }
 }
 
-impl Error for ExecutionError {}
+impl Error for ExecutionError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        self.failures
+            .iter()
+            .find_map(|failure| match &failure.reason {
+                TargetFailureReason::Process(source) => Some(process_source(source)),
+                TargetFailureReason::Exit | TargetFailureReason::RefusedOutput => None,
+            })
+    }
+}
+
+fn process_source(error: &ProcessError) -> &(dyn Error + 'static) {
+    error
+}
 
 struct FailureReason<'a>(&'a TargetFailureReason);
 

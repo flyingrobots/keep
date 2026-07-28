@@ -1,5 +1,6 @@
 use std::collections::VecDeque;
 use std::error::Error;
+use std::io;
 use std::path::Path;
 
 use super::{CommandRunner, execute_all};
@@ -50,6 +51,18 @@ fn swallowed_minimization_failure_is_refused() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+#[test]
+fn aggregated_process_failures_preserve_a_typed_source() -> Result<(), Box<dyn Error>> {
+    let plans = plans(CampaignOperation::Build)?;
+    let mut runner = RefusingRunner;
+    let Err(error) = execute_all(Path::new("."), "build", &plans, &mut runner) else {
+        return Err("the scripted process failure must be aggregated".into());
+    };
+    let source = Error::source(&error).ok_or("aggregate has no process source")?;
+    assert_eq!(source.to_string(), "cannot spawn cargo-fuzz process");
+    Ok(())
+}
+
 fn plans(operation: CampaignOperation) -> Result<Vec<CommandPlan>, Box<dyn Error>> {
     let policy = policy()?;
     ["first", "second", "third"]
@@ -79,6 +92,21 @@ fn output(succeeded: bool, stdout: &[u8], stderr: &[u8]) -> ProcessOutput {
 struct ScriptedRunner {
     outcomes: VecDeque<ProcessOutput>,
     observed: Vec<String>,
+}
+
+struct RefusingRunner;
+
+impl CommandRunner for RefusingRunner {
+    fn execute(
+        &mut self,
+        _repository_root: &Path,
+        _plan: &CommandPlan,
+    ) -> Result<ProcessOutput, ProcessError> {
+        Err(ProcessError::Io {
+            action: "spawn",
+            source: io::Error::other("scripted refusal"),
+        })
+    }
 }
 
 impl ScriptedRunner {
