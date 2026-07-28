@@ -9,6 +9,7 @@ use std::io;
 
 const DOCUMENTATION_ERROR_DISPLAY: &str =
     include_str!("../src/documentation_integrity/error/display.rs");
+const WORKFLOW_CONTRACT: &str = include_str!("../src/documentation_integrity/workflow_contract.rs");
 
 #[test]
 fn documentation_error_formatter_stays_below_the_hard_function_limit() -> Result<(), &'static str> {
@@ -21,6 +22,23 @@ fn documentation_error_formatter_stays_below_the_hard_function_limit() -> Result
     assert!(
         body.lines().count() <= 59,
         "DocumentationError::fmt exceeds the 60-line hard limit"
+    );
+    Ok(())
+}
+
+#[test]
+fn workflow_parser_stays_below_the_hard_function_limit() -> Result<(), &'static str> {
+    let (_, after_signature) = WORKFLOW_CONTRACT
+        .split_once(
+            "fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError> {",
+        )
+        .ok_or("workflow contract must retain its parser")?;
+    let (body, _) = after_signature
+        .split_once("\n}\n\nfn documentation_steps")
+        .ok_or("workflow parser must remain a directly inspectable function")?;
+    assert!(
+        body.lines().count() <= 59,
+        "documentation_runs exceeds the 60-line hard limit"
     );
     Ok(())
 }

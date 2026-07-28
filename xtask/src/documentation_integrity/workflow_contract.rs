@@ -1,6 +1,6 @@
 //! This module owns the CI documentation-job execution contract.
 
-use yaml_rust2::YamlLoader;
+use yaml_rust2::{Yaml, YamlLoader};
 
 use crate::repository_file::RepositoryRoot;
 
@@ -52,6 +52,10 @@ fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError>
     let [document] = documents.as_slice() else {
         return Err(contract("workflow contains exactly one YAML document"));
     };
+    reviewed_runs(documentation_steps(document)?)
+}
+
+fn documentation_steps(document: &Yaml) -> Result<&Vec<Yaml>, DocumentationError> {
     let job = &document["jobs"]["documentation"];
     if !job["if"].is_badvalue() {
         return Err(contract("documentation job is unguarded"));
@@ -62,48 +66,22 @@ fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError>
     let Some(steps) = job["steps"].as_vec() else {
         return Err(contract("workflow defines documentation job steps"));
     };
+    Ok(steps)
+}
+
+fn reviewed_runs(steps: &[Yaml]) -> Result<Vec<String>, DocumentationError> {
     let mut runs = Vec::new();
     let mut node_setup_seen = false;
     for step in steps {
-        let action = step["uses"].as_str();
-        if action.is_some_and(|value| value.starts_with(SETUP_NODE_ACTION_PREFIX)) {
-            if action != Some(SETUP_NODE_ACTION) {
-                return Err(contract("documentation Node.js setup action is pinned"));
-            }
+        if admit_node_setup(step)?.is_some() {
             if node_setup_seen {
                 return Err(contract(
                     "documentation job installs pinned Node.js exactly once",
                 ));
             }
             node_setup_seen = true;
-            if !step["if"].is_badvalue() {
-                return Err(contract("documentation Node.js setup is unguarded"));
-            }
-            if !step["continue-on-error"].is_badvalue() {
-                return Err(contract(
-                    "documentation Node.js setup is failure-intolerant",
-                ));
-            }
-            if step["with"]["node-version"].as_str() != Some(NODE_VERSION) {
-                return Err(contract("documentation Node.js version is 24.18.0"));
-            }
         }
-        let run = &step["run"];
-        if run.is_badvalue() {
-            continue;
-        }
-        if !step["if"].is_badvalue() {
-            return Err(contract("documentation job run steps are unguarded"));
-        }
-        if !step["continue-on-error"].is_badvalue() {
-            return Err(contract(
-                "documentation job run steps are failure-intolerant",
-            ));
-        }
-        let Some(run) = run.as_str() else {
-            return Err(contract("documentation job run values are strings"));
-        };
-        runs.push(run.trim_end_matches('\n').to_owned());
+        runs.extend(admit_run(step)?);
     }
     if !node_setup_seen {
         return Err(contract(
@@ -111,6 +89,47 @@ fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError>
         ));
     }
     Ok(runs)
+}
+
+fn admit_node_setup(step: &Yaml) -> Result<Option<()>, DocumentationError> {
+    let action = step["uses"].as_str();
+    if !action.is_some_and(|value| value.starts_with(SETUP_NODE_ACTION_PREFIX)) {
+        return Ok(None);
+    }
+    if action != Some(SETUP_NODE_ACTION) {
+        return Err(contract("documentation Node.js setup action is pinned"));
+    }
+    if !step["if"].is_badvalue() {
+        return Err(contract("documentation Node.js setup is unguarded"));
+    }
+    if !step["continue-on-error"].is_badvalue() {
+        return Err(contract(
+            "documentation Node.js setup is failure-intolerant",
+        ));
+    }
+    if step["with"]["node-version"].as_str() != Some(NODE_VERSION) {
+        return Err(contract("documentation Node.js version is 24.18.0"));
+    }
+    Ok(Some(()))
+}
+
+fn admit_run(step: &Yaml) -> Result<Option<String>, DocumentationError> {
+    let run = &step["run"];
+    if run.is_badvalue() {
+        return Ok(None);
+    }
+    if !step["if"].is_badvalue() {
+        return Err(contract("documentation job run steps are unguarded"));
+    }
+    if !step["continue-on-error"].is_badvalue() {
+        return Err(contract(
+            "documentation job run steps are failure-intolerant",
+        ));
+    }
+    let Some(run) = run.as_str() else {
+        return Err(contract("documentation job run values are strings"));
+    };
+    Ok(Some(run.trim_end_matches('\n').to_owned()))
 }
 
 fn runs_are_reviewed(runs: &[String]) -> bool {
