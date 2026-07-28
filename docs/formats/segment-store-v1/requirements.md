@@ -29,6 +29,7 @@ nonclaims, and golden evidence for `keep.segment-store/v1`.
 | `KEEP-STORE-018` | Truncated-stage discard has explicit unlink and directory-sync crash boundaries | `KEEP-CRASH-027`–`028` | Specified in #14 |
 | `KEEP-STORE-019` | Leftover next-head recovery either finalizes an exact successor or discards explicit evidence durably | `KEEP-CRASH-025`–`026`, `029`–`030` | Specified in #14 |
 | `KEEP-STORE-020` | Initialization is writer-locked, idempotent, recoverable from every partial canonical namespace set, and admitted only after root synchronization | `KEEP-CRASH-031`–`035` | Specified in #14 |
+| `KEEP-STORE-021` | Explicit recovery completes a durable fixed-name stage into its immutable pool without publishing a head | `KEEP-CRASH-008`–`012`, `016`–`020` | Specified in #14 |
 
 <!-- markdownlint-enable MD013 -->
 

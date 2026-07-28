@@ -27,6 +27,9 @@ fn durable_transition_ledger_is_complete_and_stable() -> Result<(), String> {
     }
     assert_eq!(row_count, 35);
     for exact_transition in [
+        "KEEP-CRASH-008\tsegment\tsync-sealed-stage\t\
+         flushed-sealed-stage\ttruncated-tail-or-valid-sealed-stage\t\
+         durable-sealed-stage\tcomplete-pool-publication-or-preserve",
         "KEEP-CRASH-009\tsegment\tlink-sealed-stage\t\
          durable-sealed-stage\t\
          valid-sealed-stage-or-valid-orphan-or-ambiguity\t\
@@ -34,6 +37,9 @@ fn durable_transition_ledger_is_complete_and_stable() -> Result<(), String> {
         "KEEP-CRASH-010\tsegment\tsync-segment-directory\t\
          linked-segment-orphan\tvalid-sealed-stage-or-valid-orphan\t\
          durable-linked-segment-orphan\tpreserve-invisible",
+        "KEEP-CRASH-016\tcatalog\tsync-generation\t\
+         flushed-catalog-stage\ttruncated-tail-or-valid-stage\t\
+         durable-catalog-stage\tcomplete-pool-publication-or-preserve",
         "KEEP-CRASH-017\tcatalog\tlink-generation\t\
          durable-catalog-stage\t\
          valid-catalog-stage-or-valid-orphan-or-ambiguity\t\

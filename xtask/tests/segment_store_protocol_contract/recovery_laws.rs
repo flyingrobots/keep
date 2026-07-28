@@ -35,6 +35,26 @@ fn recovery_admits_only_the_protocol_created_stage_pool_duplicate() {
 }
 
 #[test]
+fn durable_stage_recovery_can_complete_only_immutable_pool_publication() {
+    for required in [
+        "## Complete a durable stage",
+        "reverifies and resynchronizes the complete staged\n\
+         artifact",
+        "reuses `KEEP-CRASH-009`–`012`",
+        "catalog completion reuses\n\
+         `KEEP-CRASH-017`–`020`",
+        "returns a\n\
+         valid-orphan receipt",
+        "never creates or finalizes a publication head",
+    ] {
+        assert!(
+            SPECIFICATION.contains(required),
+            "missing durable-stage completion law: {required}"
+        );
+    }
+}
+
+#[test]
 fn truncated_stage_discard_fingerprint_has_one_preimage() {
     assert!(
         SPECIFICATION.contains("framed_blake3_v1(ASCII(\"KEEP:RECOVERY:STAGE\\0\"), stage_bytes)"),

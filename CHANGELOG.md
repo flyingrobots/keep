@@ -73,8 +73,10 @@ after its public API and format compatibility policies are established.
   only the exact verified stage/pool digest duplicate created by interrupted
   hard-link publication. Fresh-store initialization is writer-locked,
   idempotent across every partial canonical namespace set, and admitted only
-  after root synchronization. Production storage remains assigned to issues
-  #15–#17.
+  after root synchronization. Explicit recovery can complete a durable
+  fixed-name stage into its immutable pool and durably clear the stage without
+  promoting a publication head. Production storage remains assigned to
+  issues #15–#17.
 - A deterministic, bounded, license-safe streaming CAS benchmark corpus and
   release-only `cargo xtask benchmark-baseline` workflow covering all required
   ingestion, edit, deduplication, range-read, verification, and input

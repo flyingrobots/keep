@@ -49,13 +49,33 @@ The required classes are:
   history or cannot prove one lawful current state. Recovery refuses without
   choosing.
 
-An explicit recovery executor may resume a reusable stage, preserve an
-orphan, explicitly discard a named truncated stage, or finalize one fully
-verified next-generation head using the same generation comparison and
-publication steps. Recovery itself uses the same crash points and must be
-idempotent. It may not silently promote the newest artifact, truncate to the
-last plausible boundary, rewrite a checksum, delete a valid orphan, or select
-by timestamp.
+An explicit recovery executor may resume a reusable stage, complete a durable
+stage into its immutable pool, preserve an orphan, explicitly discard a named
+truncated stage, or finalize one fully verified next-generation head using the
+same generation comparison and publication steps. Recovery itself uses the
+same crash points and must be idempotent. It may not silently promote the
+newest artifact, truncate to the last plausible boundary, rewrite a checksum,
+delete a valid orphan, or select by timestamp.
+
+## Complete a durable stage
+
+The recovery plan may bind one fully verified `current.seg` or `current.cat`
+to its exact observed length, checksum, digest, artifact kind, and
+digest-derived pool coordinate. Under the writer lock, the executor reopens
+without following links, reverifies and resynchronizes the complete staged
+artifact, and refuses any drift.
+
+Segment completion reuses `KEEP-CRASH-009`–`012`; catalog completion reuses
+`KEEP-CRASH-017`–`020`. The executor performs the same no-clobber link,
+post-link pool verification, pool-directory synchronization, exact stage
+unlink, and staging-directory synchronization as forward publication. An
+existing exact pool entry is an idempotent input, not proof by name.
+
+After a crash, retry accepts only the exact verified stage/pool pair, the
+reappeared exact stage, or the already completed pool entry with an absent
+stage. It repeats any required directory synchronization and returns a
+valid-orphan receipt only after the fixed staging name is durably absent.
+This action never creates or finalizes a publication head.
 
 Discard is one explicit two-step protocol. The recovery request binds the
 canonical stage name, observed byte length, and a domain-separated digest of
