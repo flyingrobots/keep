@@ -5,6 +5,7 @@ updates:
       - /
       - /benchmark
       - /fuzz
+      - /repository-process-spawn
       - /xtask
     schedule:
       interval: weekly

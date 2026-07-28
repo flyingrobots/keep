@@ -23,14 +23,20 @@ pub(super) fn check(repository_path: &Path) -> Result<(), DocumentationError> {
             source,
         }
     })?;
+    let process_directory = repository_root.process_directory().map_err(|source| {
+        DocumentationError::RepositoryRootInspect {
+            path: repository_path.to_owned(),
+            source,
+        }
+    })?;
     verify_root(&repository_root, repository_path)?;
     contributor_contract::check(&repository_root)?;
     node_toolchain::check(&repository_root)?;
-    dependabot::check(repository_path, &repository_root)?;
+    dependabot::check(&repository_root, &process_directory)?;
     workflow_contract::check(&repository_root)?;
-    let markdown = corpus::SourceCorpus::markdown(repository_path)?;
-    let workflows = corpus::SourceCorpus::workflow(repository_path)?;
-    execution::run(repository_path, markdown.paths(), workflows.paths())?;
+    let markdown = corpus::SourceCorpus::markdown(&repository_root, &process_directory)?;
+    let workflows = corpus::SourceCorpus::workflow(&repository_root, &process_directory)?;
+    execution::run(&process_directory, markdown.paths(), workflows.paths())?;
     verify_root(&repository_root, repository_path)
 }
 

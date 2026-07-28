@@ -30,27 +30,36 @@ pub(crate) fn paths(
     arguments: &[&str],
     operation: &'static str,
 ) -> Result<BTreeSet<GitPath>, GitInventoryError> {
-    let process = start_git(repository_root, arguments, operation)?;
+    paths_with(arguments, operation, |command| {
+        command.current_dir(repository_root).spawn()
+    })
+}
+
+pub(crate) fn paths_with(
+    arguments: &[&str],
+    operation: &'static str,
+    spawn: impl FnOnce(&mut Command) -> Result<Child, io::Error>,
+) -> Result<BTreeSet<GitPath>, GitInventoryError> {
+    let process = start_git(arguments, operation, spawn)?;
     let paths = read_paths(process.stdout, operation);
     collect_git_result(process.child, process.diagnostic_worker, paths, operation)
 }
 
 fn start_git(
-    repository_root: &Path,
     arguments: &[&str],
     operation: &'static str,
+    spawn: impl FnOnce(&mut Command) -> Result<Child, io::Error>,
 ) -> Result<GitProcess, GitInventoryError> {
-    let mut child = Command::new("git")
+    let mut command = Command::new("git");
+    command
         .args(arguments)
-        .current_dir(repository_root)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .map_err(|source| GitInventoryError::Run {
-            operation,
-            action: "start",
-            source,
-        })?;
+        .stderr(Stdio::piped());
+    let mut child = spawn(&mut command).map_err(|source| GitInventoryError::Run {
+        operation,
+        action: "start",
+        source,
+    })?;
     let Some(stdout) = child.stdout.take() else {
         let primary = GitInventoryError::Pipe {
             operation,

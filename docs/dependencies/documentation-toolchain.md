@@ -51,6 +51,13 @@ deletions; Git-trackable nonregular paths such as symlinks and tracked paths
 replaced by FIFOs are refused. Non-trackable special files cannot enter the
 Git-selected corpus.
 
+Git inventory and each validation tool start through one retained repository
+directory handle. Child-only setup changes directory through that handle after
+fork and before exec; the parent working directory does not change. Replacing
+the configured repository path, running checks against a substitute, and
+restoring the original path cannot redirect either corpus selection or
+validation.
+
 The workflow checker disables `actionlint`'s optional `shellcheck` and
 `pyflakes` integrations. Neither auxiliary executable is admitted or pinned by
 this toolchain, so ambient PATH contents cannot expand the validation boundary.

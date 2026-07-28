@@ -30,6 +30,16 @@ The bounded subprocess adapter uses Rustix's safe process API to send
 collection failure. This prevents descendants that inherited an output pipe
 from surviving the failed repository task.
 
+Documentation verification also duplicates the admitted repository directory
+handle and uses the isolated `repository-process-spawn` crate to start Git and
+validation tools from that exact directory. Its child-only setup hook performs
+one POSIX async-signal-safe `fchdir` after fork and before exec. Parent process
+state never changes. A transient ambient-path replacement therefore cannot
+redirect corpus inventory or tool execution.
+The
+[descriptor-bound child working-directory decision](../adr/0006-descriptor-bound-child-working-directory.md)
+records the unsafe-boundary invariants and rejected alternatives.
+
 ## Why the standard library is insufficient
 
 Checking a path and then reopening it with `std::fs` leaves a
@@ -40,9 +50,9 @@ the admitted object.
 The standard library also has no portable API that combines
 capability-relative opens with no-follow and nonblocking semantics. Recreating
 that boundary locally would require operating-system-specific flags, handle
-conversion, and path-resolution code. That would exceed a small local helper,
-duplicate security-sensitive upstream work, and require unsafe code that Keep
-otherwise forbids.
+conversion, descriptor-relative directory changes, and path-resolution code.
+That would exceed a small local helper, duplicate security-sensitive upstream
+work, and require unsafe code that Keep otherwise forbids.
 
 ## Features and resolved graph
 
@@ -90,9 +100,10 @@ dependencies.
 
 ## Failure and recovery boundaries
 
-An open, metadata, or read failure is a typed refusal. The task never repairs,
-rewrites, or substitutes repository data. Retained handles exist only for one
-verification process and carry no durability or recovery semantics.
+An open, metadata, read, descriptor-duplication, child-directory setup, or
+child-spawn failure is a typed refusal. The task never repairs, rewrites, or
+substitutes repository data. Retained handles exist only for one verification
+process and carry no durability or recovery semantics.
 
 Keep can remove these dependencies without changing public or durable behavior
 by replacing them with an equally portable, safe implementation that preserves

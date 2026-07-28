@@ -2,6 +2,7 @@
 
 use std::fs;
 
+use crate::repository_file::RepositoryRoot;
 use crate::test_directory::TestDirectory;
 
 use super::{DocumentationError, DocumentationTool, ExternalToolRunner};
@@ -15,9 +16,11 @@ fn broken_internal_fragment_is_refused() -> Result<(), Box<dyn std::error::Error
         "# Source\n\n[Missing](target.md#missing-heading)\n",
     )?;
     fs::write(directory.path().join("target.md"), "# Present heading\n")?;
+    let repository_root = RepositoryRoot::open(directory.path())?;
+    let process_directory = repository_root.process_directory()?;
     let refusal = {
         let mut runner = ExternalToolRunner {
-            repository_root: directory.path(),
+            process_directory: &process_directory,
         };
         super::admit_version(&mut runner, DocumentationTool::Markdownlint)?;
         super::admit_version(&mut runner, DocumentationTool::Lychee)?;
@@ -54,9 +57,11 @@ fn invalid_workflow_is_refused() -> Result<(), Box<dyn std::error::Error>> {
         directory.path().join(".github/workflows/invalid.yml"),
         "name: Invalid\non: [push\n",
     )?;
+    let repository_root = RepositoryRoot::open(directory.path())?;
+    let process_directory = repository_root.process_directory()?;
     let refusal = {
         let mut runner = ExternalToolRunner {
-            repository_root: directory.path(),
+            process_directory: &process_directory,
         };
         super::admit_version(&mut runner, DocumentationTool::Actionlint)?;
         super::run_check(

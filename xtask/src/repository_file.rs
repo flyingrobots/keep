@@ -7,11 +7,14 @@
 
 use std::fs::File;
 use std::io;
+use std::os::fd::OwnedFd;
 use std::path::{Path, PathBuf};
+use std::process::{Child, Command};
 
 use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt, OpenOptionsSyncExt};
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions};
+use repository_process_spawn::set_working_directory;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ReadAccessPolicy {
@@ -38,6 +41,14 @@ pub(crate) struct RepositoryRoot {
     directory: Dir,
     identity: DirectoryIdentity,
     path: PathBuf,
+}
+
+/// An exact child-process working directory backed by an owned descriptor.
+///
+/// Child setup changes directory through this descriptor, never by reopening
+/// the ambient repository path.
+pub(crate) struct RepositoryProcessDirectory {
+    directory: OwnedFd,
 }
 
 #[derive(Eq, PartialEq)]
@@ -72,6 +83,12 @@ impl RepositoryRoot {
         Ok(self.identity == identity)
     }
 
+    /// Returns an exact child-process handle for this opened directory.
+    pub(crate) fn process_directory(&self) -> Result<RepositoryProcessDirectory, io::Error> {
+        let directory = rustix::io::fcntl_dupfd_cloexec(&self.directory, 0)?;
+        Ok(RepositoryProcessDirectory { directory })
+    }
+
     pub(crate) fn open_file(&self, relative: &Path) -> Result<File, OpenRepositoryFileError> {
         let file = self
             .directory
@@ -84,6 +101,18 @@ impl RepositoryRoot {
         } else {
             Err(OpenRepositoryFileError::NonRegular)
         }
+    }
+}
+
+impl RepositoryProcessDirectory {
+    /// Starts a child from the exact opened repository directory.
+    ///
+    /// The child changes directory through its retained descriptor after fork
+    /// and before exec. Parent process state is never changed.
+    pub(crate) fn spawn(&self, command: &mut Command) -> Result<Child, io::Error> {
+        let directory = rustix::io::fcntl_dupfd_cloexec(&self.directory, 0)?;
+        set_working_directory(command, directory);
+        command.spawn()
     }
 }
 

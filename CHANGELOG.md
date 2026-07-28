@@ -21,7 +21,10 @@ after its public API and format compatibility policies are established.
   declarations after Dependabot directory lists, and applies one deadline
   across captured and inherited child execution and output collection.
   Git-backed process fixtures ignore system and global Git configuration and
-  preserve non-UTF-8 template paths without lossy conversion.
+  preserve non-UTF-8 template paths without lossy conversion. Documentation
+  Git inventory and tools start from one retained repository directory handle,
+  so transient replacement of the ambient repository path cannot redirect
+  validation.
 - Fuzz build and run plans now carry external process deadlines from the
   reviewed campaign policy. Run deadlines use checked addition of the
   exploration budget and process-grace interval before process-group execution.

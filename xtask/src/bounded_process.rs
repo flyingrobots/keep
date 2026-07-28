@@ -11,8 +11,8 @@ use std::os::unix::process::CommandExt;
 use std::process::Command;
 use std::time::Duration;
 
-pub(crate) use capture::capture;
 use capture::wait_for_child;
+pub(crate) use capture::{capture, capture_with};
 use deadline::ProcessDeadline;
 pub(crate) use error::ProcessError;
 use reader::ReaderWorker;

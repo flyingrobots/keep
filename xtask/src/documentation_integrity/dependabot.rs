@@ -3,9 +3,8 @@
 mod manifest;
 
 use std::collections::BTreeSet;
-use std::path::Path;
 
-use crate::repository_file::RepositoryRoot;
+use crate::repository_file::{RepositoryProcessDirectory, RepositoryRoot};
 
 use super::error::DocumentationError;
 use super::repository_text;
@@ -21,11 +20,11 @@ struct DependencyScope {
 }
 
 pub(super) fn check(
-    repository_path: &Path,
     repository_root: &RepositoryRoot,
+    process_directory: &RepositoryProcessDirectory,
 ) -> Result<(), DocumentationError> {
     let raw = repository_text::read(repository_root, DEPENDABOT_PATH)?;
-    let required = tracked_scopes(repository_path)?;
+    let required = tracked_scopes(process_directory)?;
     admit(&raw, &required)
 }
 

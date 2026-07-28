@@ -1,11 +1,10 @@
 //! This module owns tracked dependency-manifest scope discovery.
 
 use std::collections::BTreeSet;
-use std::path::Path;
-
 use xtask::protocol_admission::posix_relative_path;
 
-use crate::git_inventory::{GitPath, paths};
+use crate::git_inventory::{GitPath, paths_with};
+use crate::repository_file::RepositoryProcessDirectory;
 
 use super::DependencyScope;
 use crate::documentation_integrity::error::DocumentationError;
@@ -19,12 +18,12 @@ const MANIFEST_ARGUMENTS: [&str; 5] = [
 ];
 
 pub(super) fn tracked_scopes(
-    repository_root: &Path,
+    process_directory: &RepositoryProcessDirectory,
 ) -> Result<BTreeSet<DependencyScope>, DocumentationError> {
-    paths(
-        repository_root,
+    paths_with(
         &MANIFEST_ARGUMENTS,
         "list tracked dependency manifests",
+        |command| process_directory.spawn(command),
     )?
     .iter()
     .map(manifest_scope)

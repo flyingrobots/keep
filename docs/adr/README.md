@@ -57,3 +57,4 @@ encryption, concurrency, or public-API surface it governs.
 - [ADR-0003: Deterministic content-defined chunking profiles](0003-deterministic-content-defined-chunking-profiles.md)
 - [ADR-0004: Hexagonal boundary architecture](0004-hexagonal-boundary-architecture.md)
 - [ADR-0005: Durable segment store protocol](0005-durable-segment-store-protocol.md)
+- [ADR-0006: Descriptor-bound child working directory](0006-descriptor-bound-child-working-directory.md)

@@ -1,10 +1,10 @@
 //! This module owns bounded execution of admitted documentation tools.
 
-use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use crate::bounded_process::{self, ProcessOutput};
+use crate::repository_file::RepositoryProcessDirectory;
 
 use super::error::DocumentationError;
 use super::tool::DocumentationTool;
@@ -20,16 +20,16 @@ trait ToolRunner {
 }
 
 struct ExternalToolRunner<'a> {
-    repository_root: &'a Path,
+    process_directory: &'a RepositoryProcessDirectory,
 }
 
 pub(super) fn run(
-    repository_root: &Path,
+    process_directory: &RepositoryProcessDirectory,
     markdown: &[String],
     workflows: &[String],
 ) -> Result<(), DocumentationError> {
     run_with(
-        &mut ExternalToolRunner { repository_root },
+        &mut ExternalToolRunner { process_directory },
         markdown,
         workflows,
     )
@@ -143,23 +143,24 @@ impl ToolRunner for ExternalToolRunner<'_> {
         arguments: &[String],
     ) -> Result<ProcessOutput, DocumentationError> {
         let mut command = Command::new(tool.program());
-        command
-            .args(arguments)
-            .current_dir(self.repository_root)
-            .stdin(Stdio::null());
-        bounded_process::capture(tool.program(), &mut command, Some(TOOL_DEADLINE)).map_err(
-            |source| {
-                if source.is_not_found() {
-                    DocumentationError::ToolUnavailable {
-                        program: tool.program(),
-                        install_version: tool.install_version(),
-                        source,
-                    }
-                } else {
-                    DocumentationError::Process(source)
-                }
-            },
+        command.args(arguments).stdin(Stdio::null());
+        bounded_process::capture_with(
+            tool.program(),
+            &mut command,
+            Some(TOOL_DEADLINE),
+            |command| self.process_directory.spawn(command),
         )
+        .map_err(|source| {
+            if source.is_not_found() {
+                DocumentationError::ToolUnavailable {
+                    program: tool.program(),
+                    install_version: tool.install_version(),
+                    source,
+                }
+            } else {
+                DocumentationError::Process(source)
+            }
+        })
     }
 }
 

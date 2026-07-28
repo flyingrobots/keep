@@ -22,8 +22,17 @@ pub(crate) fn capture(
     command: &mut Command,
     deadline: Option<Duration>,
 ) -> Result<ProcessOutput, ProcessError> {
+    capture_with(program, command, deadline, Command::spawn)
+}
+
+pub(crate) fn capture_with(
+    program: &'static str,
+    command: &mut Command,
+    deadline: Option<Duration>,
+    spawn: impl FnOnce(&mut Command) -> Result<Child, std::io::Error>,
+) -> Result<ProcessOutput, ProcessError> {
     let deadline = ProcessDeadline::new(program, deadline)?;
-    CapturedProcess::start(program, command)?.finish(program, &deadline)
+    CapturedProcess::start(program, command, spawn)?.finish(program, &deadline)
 }
 
 struct CapturedProcess {
@@ -33,12 +42,16 @@ struct CapturedProcess {
 }
 
 impl CapturedProcess {
-    fn start(program: &'static str, command: &mut Command) -> Result<Self, ProcessError> {
+    fn start(
+        program: &'static str,
+        command: &mut Command,
+        spawn: impl FnOnce(&mut Command) -> Result<Child, std::io::Error>,
+    ) -> Result<Self, ProcessError> {
         command
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .process_group(0);
-        let mut child = command.spawn().map_err(|source| ProcessError::Io {
+        let mut child = spawn(command).map_err(|source| ProcessError::Io {
             program,
             action: "spawn",
             source,

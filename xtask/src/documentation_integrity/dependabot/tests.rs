@@ -106,7 +106,8 @@ fn committed_dependabot_policy_covers_every_tracked_manifest()
         .parent()
         .ok_or("xtask manifest has no repository parent")?;
     let repository_root = RepositoryRoot::open(root)?;
-    super::check(root, &repository_root)?;
+    let process_directory = repository_root.process_directory()?;
+    super::check(&repository_root, &process_directory)?;
     assert!(repository_root.is_current_path()?);
     Ok(())
 }

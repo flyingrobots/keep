@@ -7,6 +7,7 @@ use std::process::Command;
 use super::{CorpusKind, SourceCorpus, admit_path};
 use crate::documentation_integrity::error::DocumentationError;
 use crate::git_inventory::GitPath;
+use crate::repository_file::RepositoryRoot;
 use crate::test_directory::TestDirectory;
 
 #[test]
@@ -23,7 +24,9 @@ fn markdown_corpus_is_the_sorted_present_repository_set() -> Result<(), Box<dyn 
     run_git(root, &["add", ".gitignore", "zulu.md", "deleted.md"])?;
     fs::remove_file(root.join("deleted.md"))?;
 
-    let corpus = SourceCorpus::markdown(root)?;
+    let repository_root = RepositoryRoot::open(root)?;
+    let process_directory = repository_root.process_directory()?;
+    let corpus = SourceCorpus::markdown(&repository_root, &process_directory)?;
 
     assert_eq!(corpus.paths(), ["alpha.md", "zulu.md"]);
     directory.close()?;
@@ -52,7 +55,9 @@ fn workflow_corpus_is_the_sorted_present_repository_set() -> Result<(), Box<dyn 
     )?;
     fs::remove_file(root.join(".github/workflows/deleted.yml"))?;
 
-    let corpus = SourceCorpus::workflow(root)?;
+    let repository_root = RepositoryRoot::open(root)?;
+    let process_directory = repository_root.process_directory()?;
+    let corpus = SourceCorpus::workflow(&repository_root, &process_directory)?;
 
     assert_eq!(
         corpus.paths(),
@@ -78,9 +83,41 @@ fn repository_configured_global_ignores_cannot_change_the_corpus()
         .ok_or("test path is not valid Unicode")?;
     run_git(root, &["config", "core.excludesFile", global_ignore])?;
 
-    let corpus = SourceCorpus::markdown(root)?;
+    let repository_root = RepositoryRoot::open(root)?;
+    let process_directory = repository_root.process_directory()?;
+    let corpus = SourceCorpus::markdown(&repository_root, &process_directory)?;
 
     assert_eq!(corpus.paths(), ["new.md", "tracked.md"]);
+    directory.close()?;
+    Ok(())
+}
+
+#[test]
+fn transient_repository_replacement_cannot_redirect_the_corpus()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::create("documentation-root-replacement")?;
+    let root = directory.path().join("repository");
+    let retained = directory.path().join("retained");
+    fs::create_dir(&root)?;
+    run_git(&root, &["init", "--quiet"])?;
+    write(&root, "original.md", "# Original\n")?;
+    let repository_root = RepositoryRoot::open(&root)?;
+    let process_directory = repository_root.process_directory()?;
+    let original_process_directory = std::env::current_dir()?;
+
+    fs::rename(&root, &retained)?;
+    fs::create_dir(&root)?;
+    run_git(&root, &["init", "--quiet"])?;
+    write(&root, "substitute.md", "# Substitute\n")?;
+
+    let corpus = SourceCorpus::markdown(&repository_root, &process_directory);
+    fs::remove_dir_all(&root)?;
+    fs::rename(&retained, &root)?;
+    let corpus = corpus?;
+
+    assert_eq!(corpus.paths(), ["original.md"]);
+    assert_eq!(std::env::current_dir()?, original_process_directory);
+    drop(repository_root);
     directory.close()?;
     Ok(())
 }
@@ -96,7 +133,9 @@ fn symlinked_markdown_is_refused() -> Result<(), Box<dyn std::error::Error>> {
     write(root, "target.txt", "target\n")?;
     symlink("target.txt", root.join("linked.md"))?;
 
-    let result = SourceCorpus::markdown(root);
+    let repository_root = RepositoryRoot::open(root)?;
+    let process_directory = repository_root.process_directory()?;
+    let result = SourceCorpus::markdown(&repository_root, &process_directory);
 
     assert!(matches!(
         result,
@@ -124,7 +163,9 @@ fn fifo_workflow_is_refused() -> Result<(), Box<dyn std::error::Error>> {
         return Err("mkfifo fixture command failed".into());
     }
 
-    let result = SourceCorpus::workflow(root);
+    let repository_root = RepositoryRoot::open(root)?;
+    let process_directory = repository_root.process_directory()?;
+    let result = SourceCorpus::workflow(&repository_root, &process_directory);
 
     assert!(matches!(
         result,
@@ -143,7 +184,8 @@ fn non_utf8_markdown_path_is_refused() -> Result<(), Box<dyn std::error::Error>>
     let root = directory.path();
     let path = GitPath::new(b"bad\xff.md".to_vec());
 
-    let result = admit_path(root, &path, CorpusKind::Markdown);
+    let repository_root = RepositoryRoot::open(root)?;
+    let result = admit_path(&repository_root, &path, CorpusKind::Markdown);
 
     assert!(matches!(
         result,

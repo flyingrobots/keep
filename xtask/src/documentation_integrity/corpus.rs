@@ -1,13 +1,12 @@
 //! This module owns deterministic documentation source selection.
 
-use std::fs;
 use std::io;
-use std::path::Path;
 
 use xtask::protocol_admission::posix_relative_path;
 
 use super::error::DocumentationError;
-use crate::git_inventory::{GitPath, paths};
+use crate::git_inventory::{GitPath, paths_with};
+use crate::repository_file::{OpenRepositoryFileError, RepositoryProcessDirectory, RepositoryRoot};
 
 const MARKDOWN_PRESENT: [&str; 7] = [
     "ls-files",
@@ -49,28 +48,38 @@ enum CorpusKind {
 }
 
 impl SourceCorpus {
-    pub(super) fn markdown(repository_root: &Path) -> Result<Self, DocumentationError> {
-        Self::read(repository_root, CorpusKind::Markdown)
+    pub(super) fn markdown(
+        repository_root: &RepositoryRoot,
+        process_directory: &RepositoryProcessDirectory,
+    ) -> Result<Self, DocumentationError> {
+        Self::read(repository_root, process_directory, CorpusKind::Markdown)
     }
 
-    pub(super) fn workflow(repository_root: &Path) -> Result<Self, DocumentationError> {
-        Self::read(repository_root, CorpusKind::Workflow)
+    pub(super) fn workflow(
+        repository_root: &RepositoryRoot,
+        process_directory: &RepositoryProcessDirectory,
+    ) -> Result<Self, DocumentationError> {
+        Self::read(repository_root, process_directory, CorpusKind::Workflow)
     }
 
     pub(super) fn paths(&self) -> &[String] {
         &self.paths
     }
 
-    fn read(repository_root: &Path, kind: CorpusKind) -> Result<Self, DocumentationError> {
-        let present = paths(
-            repository_root,
+    fn read(
+        repository_root: &RepositoryRoot,
+        process_directory: &RepositoryProcessDirectory,
+        kind: CorpusKind,
+    ) -> Result<Self, DocumentationError> {
+        let present = paths_with(
             kind.present_arguments(),
             kind.present_operation(),
+            |command| process_directory.spawn(command),
         )?;
-        let deleted = paths(
-            repository_root,
+        let deleted = paths_with(
             kind.deleted_arguments(),
             kind.deleted_operation(),
+            |command| process_directory.spawn(command),
         )?;
         let selected = present.difference(&deleted);
         let paths = admit_paths(repository_root, selected, kind)?;
@@ -120,7 +129,7 @@ impl CorpusKind {
 }
 
 fn admit_paths<'a>(
-    repository_root: &Path,
+    repository_root: &RepositoryRoot,
     paths: impl Iterator<Item = &'a GitPath>,
     kind: CorpusKind,
 ) -> Result<Vec<String>, DocumentationError> {
@@ -134,7 +143,7 @@ fn admit_paths<'a>(
 }
 
 fn admit_path(
-    repository_root: &Path,
+    repository_root: &RepositoryRoot,
     path: &GitPath,
     kind: CorpusKind,
 ) -> Result<Option<String>, DocumentationError> {
@@ -148,24 +157,28 @@ fn admit_path(
         corpus: kind.label(),
         path: text.clone(),
     })?;
-    let metadata = match fs::symlink_metadata(repository_root.join(relative)) {
-        Ok(metadata) => metadata,
-        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(source) => {
-            return Err(DocumentationError::Inspect {
+    match repository_root.open_file(&relative) {
+        Ok(_file) => Ok(Some(text)),
+        Err(OpenRepositoryFileError::Io(source)) if source.kind() == io::ErrorKind::NotFound => {
+            Ok(None)
+        }
+        Err(OpenRepositoryFileError::Io(source))
+            if source.raw_os_error() == Some(rustix::io::Errno::LOOP.raw_os_error()) =>
+        {
+            Err(DocumentationError::NonRegular {
                 corpus: kind.label(),
                 path: text,
-                source,
-            });
+            })
         }
-    };
-    if metadata.file_type().is_file() {
-        Ok(Some(text))
-    } else {
-        Err(DocumentationError::NonRegular {
+        Err(OpenRepositoryFileError::Io(source)) => Err(DocumentationError::Inspect {
             corpus: kind.label(),
             path: text,
-        })
+            source,
+        }),
+        Err(OpenRepositoryFileError::NonRegular) => Err(DocumentationError::NonRegular {
+            corpus: kind.label(),
+            path: text,
+        }),
     }
 }
 

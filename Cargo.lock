@@ -402,6 +402,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cab834c73d247e67f4fae452806d17d3c7501756d98c8808d7c9c7aa7d18f973"
 
 [[package]]
+name = "repository-process-spawn"
+version = "0.0.0"
+dependencies = [
+ "rustix",
+]
+
+[[package]]
 name = "rustix"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -708,6 +715,7 @@ dependencies = [
  "cap-fs-ext",
  "cap-std",
  "md-5",
+ "repository-process-spawn",
  "rustix",
  "serde",
  "serde_json",

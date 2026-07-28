@@ -142,7 +142,7 @@ All crates MUST inherit workspace lints.
 # Cargo.toml
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+unsafe_code = "deny"
 missing_docs = "deny"
 unused_must_use = "deny"
 unreachable_pub = "deny"
@@ -204,7 +204,13 @@ Each crate:
 #![warn(clippy::cargo)]
 ```
 
-Clippy’s `pedantic` group is explicitly aggressive and can produce false positives; that is acceptable here. Exceptions must be local and justified rather than weakening the workspace globally. (⁠[Rust Docs](https://doc.rust-lang.org/stable/clippy/lints.html?utm_source=chatgpt.com))
+Ordinary crates strengthen the workspace's `unsafe_code = "deny"` to
+`forbid`. A dedicated unsafe-boundary crate MAY carry a crate-level,
+reason-bearing allowance only after satisfying §4.2.
+
+Clippy’s `pedantic` group is explicitly aggressive and can produce false
+positives; that is acceptable here. Exceptions must be local and justified
+rather than weakening the workspace globally.
 
 ### **3.2 No broad lint suppression**
 
@@ -271,7 +277,8 @@ cargo clippy \
 
 ### **4.1 Default rule**
 
-`unsafe` is forbidden throughout Keep V1.
+`unsafe` is forbidden throughout Keep V1 except inside a dedicated crate
+admitted under §4.2.
 
 ```rust
 #![forbid(unsafe_code)]
@@ -288,9 +295,10 @@ Do not permit unsafe merely because storage engines often eventually use:
 
 Earn it later.
 
-### **4.2 Future unsafe admission**
+### **4.2 Unsafe admission**
 
-If unsafe becomes demonstrably necessary, it MUST live in a dedicated crate such as:
+If unsafe becomes demonstrably necessary, it MUST live in a dedicated crate
+such as:
 
 ```text
 keep-platform
@@ -306,11 +314,19 @@ That crate MUST contain:
 - property tests around the safe wrapper;
 - platform-specific integration tests;
 - a written alternative analysis;
-- benchmarks proving the unsafe implementation earns its existence.
+- measurements proving that safe alternatives cannot establish the required
+  behavior;
+- benchmarks when performance is part of the justification.
 
 Every unsafe block MUST have a nearby `SAFETY:` explanation proving all preconditions.
 
 “Required for performance” is not a proof.
+
+The only current admission is
+[`repository-process-spawn`](../repository-process-spawn/src/lib.rs), governed
+by the
+[descriptor-bound child working-directory decision](adr/0006-descriptor-bound-child-working-directory.md).
+Its one hook calls only POSIX async-signal-safe `fchdir` between fork and exec.
 
 ---
 
