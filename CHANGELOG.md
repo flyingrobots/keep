@@ -71,6 +71,9 @@ after its public API and format compatibility policies are established.
 - Borrowed `ChecksummedSegmentRecord` and `AdmittedSegmentRecord` states for
   bounded complete-record framing, checksum verification, logical
   content-identity admission, and allocation-free chunk preparation.
+- Public, allocation-free `SegmentSeal` admission and emission for the exact
+  128-byte immutable-segment terminator, with checked physical coordinates,
+  domain-separated digest verification, and seal-checksum corruption laws.
 - ADR-0005 and the implementation-independent `keep.segment-store/v1`
   protocol: exact immutable segment, catalog-generation, and publication-head
   grammars; canonical ordering, bounds, and domain-separated checksums;

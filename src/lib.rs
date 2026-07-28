@@ -20,10 +20,11 @@ mod reference;
 pub use adapters::{
     AdmittedSegmentRecord, BlobIdBinaryParseError, BlobIdTextParseError, CanonicalLayoutRecord,
     ChecksummedSegmentRecord, LayoutDecodeError, LayoutDecodePolicy, LayoutEncodeError,
-    LayoutIdBinaryParseError, LayoutIdTextParseError, SegmentHeader, SegmentHeaderError,
-    SegmentRecordAdmissionError, SegmentRecordChecksum, SegmentRecordDecodeError,
-    SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity, SegmentRecordLength,
-    SegmentRecordPayloadLength, StorageProfileIdParseError,
+    LayoutIdBinaryParseError, LayoutIdTextParseError, SegmentDigest, SegmentHeader,
+    SegmentHeaderError, SegmentRecordAdmissionError, SegmentRecordChecksum,
+    SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity,
+    SegmentRecordLength, SegmentRecordPayloadLength, SegmentSeal, SegmentSealError,
+    StorageProfileIdParseError,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
