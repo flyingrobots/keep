@@ -44,6 +44,21 @@ fn process_fixtures_do_not_write_to_rust_stdout() {
 }
 
 #[test]
+fn process_fixtures_isolate_git_from_host_configuration() {
+    assert_eq!(
+        BOUNDED_PROCESS_TESTS
+            .matches("Command::new(\"git\")")
+            .count(),
+        1
+    );
+    assert!(BOUNDED_PROCESS_TESTS.contains(".env_clear()"));
+    assert!(BOUNDED_PROCESS_TESTS.contains(".env(\"PATH\""));
+    assert!(BOUNDED_PROCESS_TESTS.contains(".env(\"GIT_CONFIG_NOSYSTEM\", \"1\")"));
+    assert!(BOUNDED_PROCESS_TESTS.contains(".env(\"GIT_CONFIG_GLOBAL\""));
+    assert!(BOUNDED_PROCESS_TESTS.contains("--template="));
+}
+
+#[test]
 fn repository_process_boundaries_document_every_exported_contract() -> Result<(), String> {
     require_docs(
         BOUNDED_PROCESS,

@@ -17,26 +17,28 @@ fn external_output_is_drained_but_refused_above_the_bound() -> Result<(), Box<dy
 {
     let repository = TestDirectory::create("bounded-process-output")?;
     let blob = repository.path().join("oversized.bin");
+    let global_config = repository.path().join("global.gitconfig");
+    let template = repository.path().join("empty-template");
     fs::write(&blob, vec![b'x'; 1_048_577])?;
-    let initialized = Command::new("git")
+    fs::write(&global_config, [])?;
+    fs::create_dir(&template)?;
+    let initialized = fixture_git_command(&repository)?
         .args(["init", "--quiet"])
-        .current_dir(repository.path())
+        .arg(format!("--template={}", template.display()))
         .status()?;
     if !initialized.success() {
         return Err(io::Error::other("cannot initialize fixture repository").into());
     }
-    let hashed = Command::new("git")
+    let hashed = fixture_git_command(&repository)?
         .args(["hash-object", "-w", "oversized.bin"])
-        .current_dir(repository.path())
         .output()?;
     if !hashed.status.success() {
         return Err(io::Error::other("cannot hash fixture blob").into());
     }
     let object_id = str::from_utf8(&hashed.stdout)?.trim();
-    let mut command = Command::new("git");
+    let mut command = fixture_git_command(&repository)?;
     command
         .args(["cat-file", "blob", object_id])
-        .current_dir(repository.path())
         .stdin(Stdio::null());
 
     let result = capture("test process", &mut command, Some(Duration::from_secs(5)));
@@ -51,6 +53,20 @@ fn external_output_is_drained_but_refused_above_the_bound() -> Result<(), Box<dy
         })
     ));
     Ok(())
+}
+
+fn fixture_git_command(repository: &TestDirectory) -> Result<Command, io::Error> {
+    let path = env::var_os("PATH").ok_or_else(|| io::Error::other("PATH is unavailable"))?;
+    let global_config = repository.path().join("global.gitconfig");
+    let mut command = Command::new("git");
+    command
+        .env_clear()
+        .env("PATH", path)
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", global_config)
+        .env("LC_ALL", "C")
+        .current_dir(repository.path());
+    Ok(command)
 }
 
 #[test]

@@ -19,7 +19,8 @@ after its public API and format compatibility policies are established.
   simultaneous Markdown and link failures, parses documentation workflow
   commands as YAML, rejects non-string `run` values, preserves declarations
   after Dependabot directory lists, and applies one deadline across captured
-  and inherited child execution and output collection.
+  and inherited child execution and output collection. Git-backed process
+  fixtures ignore system and global Git configuration.
 - ChunkId v1 and CDC profile v1 conformance now run through one bounded Rust
   `cargo xtask conformance-check` command, including the external `b3sum`
   witness, reproducible Gear-table recipe, scalar and streaming FastCDC laws,
