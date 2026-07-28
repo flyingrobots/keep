@@ -27,19 +27,17 @@ fn admit(manifest: &str, lock: &str, installer: &str) -> Result<(), Documentatio
 }
 
 fn admit_manifest(manifest: &Value) -> Result<(), DocumentationError> {
-    require(
-        manifest.get("overrides").is_none(),
-        MANIFEST_PATH,
-        "dependency overrides are absent",
-    )
+    if manifest.get("overrides").is_none() {
+        Ok(())
+    } else {
+        Err(contract(MANIFEST_PATH, "dependency overrides are absent"))
+    }
 }
 
 fn admit_lock(lock: &Value) -> Result<(), DocumentationError> {
-    require(
-        lock.get("lockfileVersion").and_then(Value::as_u64) == Some(3),
-        LOCK_PATH,
-        "lockfileVersion is exactly 3",
-    )?;
+    if lock.get("lockfileVersion").and_then(Value::as_u64) != Some(3) {
+        return Err(contract(LOCK_PATH, "lockfileVersion is exactly 3"));
+    }
     let packages = lock.get("packages").and_then(Value::as_object).ok_or(
         DocumentationError::RepositoryContract {
             path: LOCK_PATH,
@@ -79,21 +77,22 @@ fn admit_lock(lock: &Value) -> Result<(), DocumentationError> {
 }
 
 fn admit_installer(installer: &str) -> Result<(), DocumentationError> {
-    require(
-        installer.contains("npm ci"),
-        INSTALLER_PATH,
-        "installation uses npm ci",
-    )?;
-    require(
-        installer.contains("package-lock.json"),
-        INSTALLER_PATH,
-        "installation requires package-lock.json",
-    )?;
-    require(
-        !installer.contains("npm install \\"),
-        INSTALLER_PATH,
-        "installation does not bypass the lock with npm install",
-    )
+    if !installer.contains("npm ci") {
+        return Err(contract(INSTALLER_PATH, "installation uses npm ci"));
+    }
+    if !installer.contains("package-lock.json") {
+        return Err(contract(
+            INSTALLER_PATH,
+            "installation requires package-lock.json",
+        ));
+    }
+    if installer.contains("npm install \\") {
+        return Err(contract(
+            INSTALLER_PATH,
+            "installation does not bypass the lock with npm install",
+        ));
+    }
+    Ok(())
 }
 
 fn parse(path: &'static str, raw: &str) -> Result<Value, DocumentationError> {
@@ -142,16 +141,8 @@ fn require_provenance(packages: &Map<String, Value>) -> Result<(), Documentation
     Ok(())
 }
 
-fn require(
-    condition: bool,
-    path: &'static str,
-    requirement: &'static str,
-) -> Result<(), DocumentationError> {
-    if condition {
-        Ok(())
-    } else {
-        Err(DocumentationError::RepositoryContract { path, requirement })
-    }
+fn contract(path: &'static str, requirement: &'static str) -> DocumentationError {
+    DocumentationError::RepositoryContract { path, requirement }
 }
 
 #[cfg(test)]
