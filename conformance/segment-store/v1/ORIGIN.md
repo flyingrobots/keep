@@ -21,10 +21,9 @@ Construction used these independent inputs:
 
 The fixture oracle is executable evidence, not a production implementation.
 Issue #15 must test its encoder and decoder against the frozen bytes and must
-retain mutation and corruption cases discovered during implementation. Issue
+retain mutation and corruption cases discovered during implementation.
 Issue #16 must do the same for catalog and head publication. Issue #17 must
-implement
-the transition ledger as a crash-injection oracle.
+implement the transition ledger as a crash-injection oracle.
 
 The source byte is synthetic (`00`), license-safe, and contains no private
 workspace material, timestamps, host paths, random values, or application

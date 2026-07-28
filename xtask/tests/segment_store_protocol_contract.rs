@@ -12,6 +12,7 @@ const ADR: &str = include_str!("../../docs/adr/0005-durable-segment-store-protoc
 const SPECIFICATION: &str = include_str!("../../docs/formats/segment-store-v1/README.md");
 const RATIONALE: &str = include_str!("../../docs/formats/segment-store-v1/rationale.md");
 const CONFORMANCE_GUIDE: &str = include_str!("../../conformance/segment-store/v1/README.md");
+const CONFORMANCE_ORIGIN: &str = include_str!("../../conformance/segment-store/v1/ORIGIN.md");
 const TRANSITIONS: &str = include_str!("../../conformance/segment-store/v1/transitions.tsv");
 
 const REQUIRED_PROTOCOL_PAGES: &[&str] = &[
@@ -164,4 +165,16 @@ fn catalog_locations_name_only_top_level_segment_records() {
             "missing top-level catalog-span law: {required}"
         );
     }
+}
+
+#[test]
+fn conformance_provenance_has_one_issue_prefix_per_owner() {
+    let normalized = CONFORMANCE_ORIGIN
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+    assert!(
+        !normalized.contains("Issue Issue"),
+        "conformance provenance repeats an issue prefix"
+    );
 }
