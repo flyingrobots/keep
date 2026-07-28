@@ -56,13 +56,17 @@ impl Write for ZeroWriter {
 
 impl<'a> PartitionWriter<'a> {
     /// Constructs an empty sink with a repeated nonempty width plan.
-    #[must_use]
-    pub fn new(widths: &'a [usize]) -> Self {
-        Self {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ErrorKind::InvalidInput`] for an empty plan or a zero width.
+    pub fn new(widths: &'a [usize]) -> io::Result<Self> {
+        super::validate_partition_widths(widths)?;
+        Ok(Self {
             bytes: Vec::new(),
             widths: widths.iter().cycle(),
             interrupt_next: true,
-        }
+        })
     }
 
     /// Returns every byte accepted by the sink.

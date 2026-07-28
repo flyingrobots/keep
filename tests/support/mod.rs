@@ -12,6 +12,16 @@ pub use byte_writers::{FailingWriter, LyingWriter, PartitionWriter, ZeroWriter};
 
 const LAYOUTS: &str = include_str!("../../conformance/layout/v1/layouts.tsv");
 
+fn validate_partition_widths(widths: &[usize]) -> io::Result<()> {
+    if widths.is_empty() || widths.contains(&0) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "partition widths must be nonempty and positive",
+        ));
+    }
+    Ok(())
+}
+
 /// Returns one required tab-separated corpus field.
 ///
 /// # Errors

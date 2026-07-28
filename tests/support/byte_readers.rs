@@ -11,13 +11,17 @@ pub struct PartitionReader<'a> {
 
 impl<'a> PartitionReader<'a> {
     /// Constructs a source over `bytes` with a repeated nonempty width plan.
-    #[must_use]
-    pub fn new(bytes: &'a [u8], widths: &'a [usize]) -> Self {
-        Self {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ErrorKind::InvalidInput`] for an empty plan or a zero width.
+    pub fn new(bytes: &'a [u8], widths: &'a [usize]) -> io::Result<Self> {
+        super::validate_partition_widths(widths)?;
+        Ok(Self {
             remaining: bytes,
             widths: widths.iter().cycle(),
             interrupt_next: true,
-        }
+        })
     }
 }
 

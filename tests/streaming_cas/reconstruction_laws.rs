@@ -20,7 +20,7 @@ fn committed_blob_reconstructs_exactly_through_short_writes() -> Result<(), Box<
         .stage(&mut reader, LayoutEntryLimit::MAXIMUM)?
         .commit(&mut store)?;
     let widths = [1, 7, 4_093, 8_192];
-    let mut writer = PartitionWriter::new(&widths);
+    let mut writer = PartitionWriter::new(&widths)?;
 
     let receipt = store.reconstruct(published.target(), &mut writer)?;
 

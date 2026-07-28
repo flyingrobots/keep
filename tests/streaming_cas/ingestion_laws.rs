@@ -8,7 +8,21 @@ use keep::{
     ReconstructionError, ReferenceStore, ReferenceStoreCapacity,
 };
 
-use crate::support::{FailingReader, LyingReader, PartitionReader};
+use crate::support::{FailingReader, LyingReader, PartitionReader, PartitionWriter};
+
+#[test]
+fn partition_fixtures_refuse_empty_and_zero_width_plans() {
+    for widths in [&[][..], &[0][..], &[1, 0][..]] {
+        assert!(matches!(
+            PartitionReader::new(b"fixture", widths),
+            Err(ref source) if source.kind() == ErrorKind::InvalidInput
+        ));
+        assert!(matches!(
+            PartitionWriter::new(widths),
+            Err(ref source) if source.kind() == ErrorKind::InvalidInput
+        ));
+    }
+}
 
 #[test]
 fn staged_content_is_invisible_until_explicit_commit() -> Result<(), Box<dyn Error>> {
@@ -83,7 +97,7 @@ fn short_and_interrupted_reads_preserve_blob_and_layout_identity() -> Result<(),
     let mut contiguous = Cursor::new(&source);
     let expected = store.stage(&mut contiguous, LayoutEntryLimit::MAXIMUM)?;
     let widths = [1, 7, 4_093, 8_192];
-    let mut partitioned = PartitionReader::new(&source, &widths);
+    let mut partitioned = PartitionReader::new(&source, &widths)?;
 
     let observed = store.stage(&mut partitioned, LayoutEntryLimit::MAXIMUM)?;
 

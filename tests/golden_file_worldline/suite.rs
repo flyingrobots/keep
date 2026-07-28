@@ -61,7 +61,8 @@ fn input_partitioning_does_not_move_blob_identity() -> TestResult {
         if bytes.len() <= 256 {
             assert_eq!(hash_partitioned(&bytes, &[1])?, expected);
         }
-        let mut reader = PartitionReader::new(&bytes, &irregular);
+        let mut reader = PartitionReader::new(&bytes, &irregular)
+            .map_err(|_source| HarnessFailure::corpus("invalid partition plan"))?;
         assert_eq!(BlobId::hash_reader(&mut reader)?, expected);
     }
     Ok(())
@@ -80,7 +81,8 @@ fn generated_bytes_and_partitions_preserve_identity() -> TestResult {
             let expected = BlobId::hash_bytes(&bytes)?;
             for plan in plans {
                 assert_eq!(hash_partitioned(&bytes, plan)?, expected);
-                let mut reader = PartitionReader::new(&bytes, plan);
+                let mut reader = PartitionReader::new(&bytes, plan)
+                    .map_err(|_source| HarnessFailure::corpus("invalid partition plan"))?;
                 assert_eq!(BlobId::hash_reader(&mut reader)?, expected);
             }
         }
