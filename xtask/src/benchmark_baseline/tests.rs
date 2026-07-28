@@ -1,12 +1,18 @@
 //! Laws for admission of optimized benchmark subprocess output.
 
+use std::error::Error;
 use std::fmt::Write;
+use std::fs;
+use std::io;
 use std::num::NonZeroUsize;
+use std::path::Path;
+use std::process::Command;
 
 use super::artifact;
-use super::environment::CapturedEnvironment;
+use super::environment::{self, CapturedEnvironment};
 use super::host_environment::CapturedHost;
 use super::{BenchmarkBaselineError, admit_clean_source, admit_stable_environment};
+use crate::test_directory::TestDirectory;
 
 #[test]
 fn report_admission_binds_release_evidence_to_captured_git_state() {
@@ -87,6 +93,51 @@ fn optimized_baselines_refuse_dirty_or_drifting_source_coordinates() {
         })
     ));
     assert!(admit_stable_environment(&clean, &clean).is_ok());
+}
+
+#[test]
+fn captured_source_identity_detects_assume_unchanged_bytes() -> Result<(), Box<dyn Error>> {
+    let directory = TestDirectory::create("benchmark-hidden-source")?;
+    git(directory.path(), &["init", "--quiet"])?;
+    git(directory.path(), &["config", "user.name", "Keep Tests"])?;
+    git(
+        directory.path(),
+        &["config", "user.email", "keep-tests@example.invalid"],
+    )?;
+    let source = directory.path().join("tracked.txt");
+    fs::write(&source, b"law\n")?;
+    git(directory.path(), &["add", "tracked.txt"])?;
+    git(directory.path(), &["commit", "--quiet", "-m", "fixture"])?;
+    git(
+        directory.path(),
+        &["update-index", "--assume-unchanged", "tracked.txt"],
+    )?;
+    fs::write(&source, b"rot\n")?;
+
+    let status = git(
+        directory.path(),
+        &["status", "--porcelain=v1", "--untracked-files=all"],
+    )?;
+    assert!(status.is_empty());
+    assert_eq!(environment::capture(directory.path())?.tree, "dirty");
+    directory.close()?;
+    Ok(())
+}
+
+fn git(repository: &Path, arguments: &[&str]) -> Result<Vec<u8>, io::Error> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repository)
+        .args(arguments)
+        .output()?;
+    if output.status.success() {
+        Ok(output.stdout)
+    } else {
+        Err(io::Error::other(format!(
+            "fixture Git command failed with {:?}",
+            output.status.code()
+        )))
+    }
 }
 
 fn environment() -> CapturedEnvironment {

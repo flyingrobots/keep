@@ -6,6 +6,7 @@ use std::process::Command;
 use super::BenchmarkBaselineError;
 use super::host_environment::{self, CapturedHost};
 use super::process::{ProcessOutput, run};
+use super::tracked_source;
 
 const DIAGNOSTIC_LIMIT: usize = 65_536;
 const VALUE_LIMIT: usize = 4_096;
@@ -31,7 +32,8 @@ pub(super) fn capture(
         &["status", "--porcelain=v1", "--untracked-files=all", "-z"],
     )?;
     require_silent(&status)?;
-    let tree = if status.stdout.is_empty() {
+    let tracked_matches_head = tracked_source::matches_head(repository_root)?;
+    let tree = if status.stdout.is_empty() && tracked_matches_head {
         "clean"
     } else {
         "dirty"

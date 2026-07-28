@@ -43,6 +43,10 @@ The command:
 8. atomically publishes
    `target/benchmark/streaming-cas-baseline-v1.tsv`.
 
+Tracked-source admission reconstructs a temporary index directly from `HEAD`
+and compares it with the working tree. It does not trust mutable index hints
+such as `assume-unchanged` or `skip-worktree`.
+
 The `target` artifact is intentionally ignored. Promoting evidence into
 `benchmark/baselines` is a separate reviewed action so environment-sensitive
 numbers never change a regression gate merely because someone ran a command.
