@@ -1,9 +1,11 @@
 //! Laws for admission of optimized benchmark subprocess output.
 
 use std::fmt::Write;
+use std::num::NonZeroUsize;
 
 use super::artifact;
 use super::environment::CapturedEnvironment;
+use super::host_environment::CapturedHost;
 use super::{BenchmarkBaselineError, admit_clean_source, admit_stable_environment};
 
 #[test]
@@ -18,11 +20,23 @@ fn report_admission_binds_release_evidence_to_captured_git_state() {
         tree: "clean",
         rustc_version: String::from("rustc 1.96.0"),
         target_triple: String::from("aarch64-apple-darwin"),
+        host: host(),
     };
     assert!(matches!(
         artifact::validate(report.as_bytes(), &mismatch),
         Err(BenchmarkBaselineError::ReportViolation {
             reason: "report-git-commit"
+        })
+    ));
+
+    let wrong_cpu_count = report.replace(
+        "metadata\tlogical-cpu-count\t1",
+        "metadata\tlogical-cpu-count\t2",
+    );
+    assert!(matches!(
+        artifact::validate(wrong_cpu_count.as_bytes(), &environment),
+        Err(BenchmarkBaselineError::ReportViolation {
+            reason: "report-logical-cpu-count"
         })
     ));
 }
@@ -81,6 +95,15 @@ fn environment() -> CapturedEnvironment {
         tree: "clean",
         rustc_version: String::from("rustc 1.96.0"),
         target_triple: String::from("aarch64-apple-darwin"),
+        host: host(),
+    }
+}
+
+fn host() -> CapturedHost {
+    CapturedHost {
+        os_description: String::from("Darwin 25.3.0 arm64"),
+        cpu_model: String::from("Apple M1 Pro"),
+        logical_cpu_count: NonZeroUsize::MIN,
     }
 }
 
@@ -89,10 +112,21 @@ fn report(environment: &CapturedEnvironment, scenarios: usize, profiles: usize) 
         "schema\tkeep.streaming-cas-baseline/v1\n\
          metadata\tgit-commit\t{}\n\
          metadata\tgit-tree\t{}\n\
+         metadata\trustc-version\t{}\n\
+         metadata\ttarget-triple\t{}\n\
+         metadata\tos-description\t{}\n\
+         metadata\tcpu-model\t{}\n\
+         metadata\tlogical-cpu-count\t{}\n\
          metadata\tbuild-profile\toptimized-release\n\
          threshold\tall-performance-metrics\tunconfigured\t\
          requires-controlled-baseline-history\n",
-        environment.commit, environment.tree
+        environment.commit,
+        environment.tree,
+        environment.rustc_version,
+        environment.target_triple,
+        environment.host.os_description,
+        environment.host.cpu_model,
+        environment.host.logical_cpu_count
     );
     for index in 0..scenarios {
         let _written = writeln!(report, "scenario\t{index}");

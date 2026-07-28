@@ -4,6 +4,7 @@ use std::path::Path;
 use std::process::Command;
 
 use super::BenchmarkBaselineError;
+use super::host_environment::{self, CapturedHost};
 use super::process::{ProcessOutput, run};
 
 const DIAGNOSTIC_LIMIT: usize = 65_536;
@@ -15,6 +16,7 @@ pub(super) struct CapturedEnvironment {
     pub(super) tree: &'static str,
     pub(super) rustc_version: String,
     pub(super) target_triple: String,
+    pub(super) host: CapturedHost,
 }
 
 pub(super) fn capture(
@@ -36,11 +38,13 @@ pub(super) fn capture(
     };
     let rustc_version = text(rustc(&["--version"])?, "rustc-version")?;
     let target_triple = text(rustc(&["--print", "host-tuple"])?, "target-triple")?;
+    let host = host_environment::capture()?;
     Ok(CapturedEnvironment {
         commit,
         tree,
         rustc_version,
         target_triple,
+        host,
     })
 }
 
@@ -72,7 +76,17 @@ fn text(output: ProcessOutput, coordinate: &'static str) -> Result<String, Bench
     require_silent(&output)?;
     let text = String::from_utf8(output.stdout)
         .map_err(|source| BenchmarkBaselineError::ValueEncoding { coordinate, source })?;
-    let value = text.strip_suffix('\n').unwrap_or(&text);
+    let value = text
+        .strip_suffix("\r\n")
+        .or_else(|| text.strip_suffix('\n'))
+        .unwrap_or(&text);
+    admit_value(String::from(value), coordinate)
+}
+
+pub(super) fn admit_value(
+    value: String,
+    coordinate: &'static str,
+) -> Result<String, BenchmarkBaselineError> {
     if value.is_empty()
         || value.len() > VALUE_LIMIT
         || value.chars().any(char::is_control)
@@ -80,7 +94,7 @@ fn text(output: ProcessOutput, coordinate: &'static str) -> Result<String, Bench
     {
         return Err(BenchmarkBaselineError::InvalidValue { coordinate });
     }
-    Ok(String::from(value))
+    Ok(value)
 }
 
 const fn require_silent(output: &ProcessOutput) -> Result<(), BenchmarkBaselineError> {

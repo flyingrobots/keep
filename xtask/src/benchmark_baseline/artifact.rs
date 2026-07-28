@@ -36,6 +36,37 @@ pub(super) fn validate(
     )?;
     require_line(
         report,
+        &format!("metadata\trustc-version\t{}", environment.rustc_version),
+        "report-rustc-version",
+    )?;
+    require_line(
+        report,
+        &format!("metadata\ttarget-triple\t{}", environment.target_triple),
+        "report-target-triple",
+    )?;
+    require_line(
+        report,
+        &format!(
+            "metadata\tos-description\t{}",
+            environment.host.os_description
+        ),
+        "report-os-description",
+    )?;
+    require_line(
+        report,
+        &format!("metadata\tcpu-model\t{}", environment.host.cpu_model),
+        "report-cpu-model",
+    )?;
+    require_line(
+        report,
+        &format!(
+            "metadata\tlogical-cpu-count\t{}",
+            environment.host.logical_cpu_count
+        ),
+        "report-logical-cpu-count",
+    )?;
+    require_line(
+        report,
         "metadata\tbuild-profile\toptimized-release",
         "report-build-profile",
     )?;

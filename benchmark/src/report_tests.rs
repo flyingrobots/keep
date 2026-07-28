@@ -4,20 +4,20 @@ use std::error::Error;
 use std::num::NonZeroUsize;
 
 use crate::{
-    BaselineEnvironment, BaselineReport, BuildProfile, MeasurementSettings, ReportError,
-    SourceTreeState,
+    BaselineEnvironment, BaselineReport, BuildProfile, HostDescription, MeasurementSettings,
+    ReportError, SourceTreeState,
 };
 
 const REFERENCE_BASELINE: &str = include_str!("../baselines/159863e-aarch64-apple-darwin.tsv");
 
 #[test]
-fn report_environment_rejects_ambiguous_tsv_fields() {
+fn report_environment_rejects_ambiguous_tsv_fields() -> Result<(), ReportError> {
     let result = BaselineEnvironment::new(
         String::from("0123456789abcdef0123456789abcdef01234567"),
         SourceTreeState::Clean,
         String::from("rustc 1.96.0\nforged"),
         String::from("aarch64-apple-darwin"),
-        NonZeroUsize::MIN,
+        host()?,
     );
     assert!(matches!(
         result,
@@ -25,6 +25,7 @@ fn report_environment_rejects_ambiguous_tsv_fields() {
             field: "rustc-version"
         })
     ));
+    Ok(())
 }
 
 #[test]
@@ -49,7 +50,7 @@ fn tsv_report_names_every_metric_profile_and_unset_threshold() -> Result<(), Box
         SourceTreeState::Clean,
         String::from("rustc 1.96.0"),
         String::from("aarch64-apple-darwin"),
-        NonZeroUsize::MIN,
+        host()?,
     )?;
     let settings = MeasurementSettings::new(1, 0)?;
     let report = BaselineReport::collect(environment, settings)?;
@@ -60,6 +61,8 @@ fn tsv_report_names_every_metric_profile_and_unset_threshold() -> Result<(), Box
     assert!(output.starts_with("schema\tkeep.streaming-cas-baseline/v1\n"));
     assert!(output.contains("\nmetadata\tbuild-profile\t"));
     assert!(output.contains("\nmetadata\tgit-commit\t"));
+    assert!(output.contains("\nmetadata\tos-description\tDarwin 25.3.0 arm64\n"));
+    assert!(output.contains("\nmetadata\tcpu-model\tApple M1 Pro\n"));
     assert!(output.contains("\nmetadata\tpeak-memory\tincremental-live-heap\n"));
     assert!(output.contains("\nscenario-header\tname\tverification\t"));
     assert!(output.contains("\tread-amplification-numerator\t"));
@@ -84,6 +87,14 @@ fn tsv_report_names_every_metric_profile_and_unset_threshold() -> Result<(), Box
          requires-controlled-baseline-history\n"
     ));
     Ok(())
+}
+
+fn host() -> Result<HostDescription, ReportError> {
+    HostDescription::new(
+        String::from("Darwin 25.3.0 arm64"),
+        String::from("Apple M1 Pro"),
+        NonZeroUsize::MIN,
+    )
 }
 
 #[test]

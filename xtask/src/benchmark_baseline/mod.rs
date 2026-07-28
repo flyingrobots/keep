@@ -3,6 +3,7 @@
 mod artifact;
 mod environment;
 mod error;
+mod host_environment;
 mod process;
 
 use std::io::Write;
@@ -33,7 +34,16 @@ pub(crate) fn run(repository_root: &Path) -> Result<(), BenchmarkBaselineError> 
             .env("KEEP_BENCHMARK_GIT_COMMIT", &environment.commit)
             .env("KEEP_BENCHMARK_GIT_TREE", environment.tree)
             .env("KEEP_BENCHMARK_RUSTC_VERSION", &environment.rustc_version)
-            .env("KEEP_BENCHMARK_TARGET_TRIPLE", &environment.target_triple),
+            .env("KEEP_BENCHMARK_TARGET_TRIPLE", &environment.target_triple)
+            .env(
+                "KEEP_BENCHMARK_OS_DESCRIPTION",
+                &environment.host.os_description,
+            )
+            .env("KEEP_BENCHMARK_CPU_MODEL", &environment.host.cpu_model)
+            .env(
+                "KEEP_BENCHMARK_LOGICAL_CPU_COUNT",
+                environment.host.logical_cpu_count.to_string(),
+            ),
         "cargo",
         REPORT_LIMIT,
         DIAGNOSTIC_LIMIT,

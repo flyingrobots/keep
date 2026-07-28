@@ -31,13 +31,6 @@ pub enum ReportError {
     },
     /// An optimized baseline was requested from a debug build.
     DebugBuild,
-    /// A required host-environment coordinate could not be read.
-    Environment {
-        /// Environment operation that failed.
-        action: &'static str,
-        /// Original operating-system failure.
-        source: io::Error,
-    },
     /// Report bytes could not be written.
     Write(io::Error),
 }
@@ -70,9 +63,6 @@ impl fmt::Display for ReportError {
             Self::DebugBuild => formatter.write_str(
                 "optimized baseline requires a release build with debug assertions disabled",
             ),
-            Self::Environment { action, .. } => {
-                write!(formatter, "could not {action} benchmark environment")
-            }
             Self::Write(_) => formatter.write_str("could not write benchmark report"),
         }
     }
@@ -84,7 +74,7 @@ impl Error for ReportError {
             Self::Corpus(source) => Some(source),
             Self::Measurement(source) => Some(source),
             Self::Profile { source, .. } => Some(source),
-            Self::Environment { source, .. } | Self::Write(source) => Some(source),
+            Self::Write(source) => Some(source),
             Self::NondeterministicProfile { .. }
             | Self::InvalidEnvironmentField { .. }
             | Self::DebugBuild => None,

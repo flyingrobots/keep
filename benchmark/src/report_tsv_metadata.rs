@@ -12,6 +12,8 @@ pub(super) fn write(writer: &mut impl Write, report: &BaselineReport) -> Result<
         ("git-tree", environment.source_tree.name()),
         ("rustc-version", &environment.rustc_version),
         ("target-triple", &environment.target_triple),
+        ("os-description", &environment.host.os_description),
+        ("cpu-model", &environment.host.cpu_model),
         ("cpu-clock", "process"),
         ("peak-memory", "incremental-live-heap"),
         ("verification", "mandatory"),
@@ -24,7 +26,7 @@ pub(super) fn write(writer: &mut impl Write, report: &BaselineReport) -> Result<
     writeln!(
         writer,
         "metadata\tlogical-cpu-count\t{}",
-        environment.logical_cpu_count
+        environment.host.logical_cpu_count
     )?;
     writeln!(
         writer,

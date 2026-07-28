@@ -19,6 +19,17 @@ pub struct BaselineEnvironment {
     pub(super) source_tree: SourceTreeState,
     pub(super) rustc_version: String,
     pub(super) target_triple: String,
+    pub(super) host: HostDescription,
+}
+
+/// Validated operating-system and processor coordinates for one report.
+///
+/// Fields remain private so callers cannot bypass admission. Construction
+/// takes ownership of existing strings, performs no I/O, and does not allocate
+/// beyond caller-provided storage.
+pub struct HostDescription {
+    pub(super) os_description: String,
+    pub(super) cpu_model: String,
     pub(super) logical_cpu_count: NonZeroUsize,
 }
 
@@ -44,7 +55,7 @@ impl BaselineEnvironment {
         source_tree: SourceTreeState,
         rustc_version: String,
         target_triple: String,
-        logical_cpu_count: NonZeroUsize,
+        host: HostDescription,
     ) -> Result<Self, ReportError> {
         if git_commit.len() != 40
             || !git_commit
@@ -62,6 +73,29 @@ impl BaselineEnvironment {
             source_tree,
             rustc_version,
             target_triple,
+            host,
+        })
+    }
+}
+
+impl HostDescription {
+    /// Admits unambiguous, nonzero host coordinates.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ReportError`] if the OS or CPU description is empty, contains
+    /// controls, or exceeds 1,024 bytes. This synchronous validation performs
+    /// no I/O and takes ownership of both strings without copying them.
+    pub fn new(
+        os_description: String,
+        cpu_model: String,
+        logical_cpu_count: NonZeroUsize,
+    ) -> Result<Self, ReportError> {
+        validate_field("os-description", &os_description)?;
+        validate_field("cpu-model", &cpu_model)?;
+        Ok(Self {
+            os_description,
+            cpu_model,
             logical_cpu_count,
         })
     }

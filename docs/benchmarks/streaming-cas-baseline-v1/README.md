@@ -158,6 +158,7 @@ optimized baselines on the designated runner class with the same:
 - scenario and profile catalogs;
 - sample and warmup counts;
 - target triple and measurement semantics;
+- operating-system, kernel, CPU model, and logical CPU count;
 - verification posture;
 - compiler policy.
 

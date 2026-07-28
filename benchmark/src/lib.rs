@@ -134,7 +134,7 @@ pub use measurement_error::MeasurementError;
 pub use profile::{ChunkPartition, ChunkingProfile};
 pub use profile_error::ProfileError;
 pub use report::{BaselineReport, BuildProfile};
-pub use report_environment::{BaselineEnvironment, SourceTreeState};
+pub use report_environment::{BaselineEnvironment, HostDescription, SourceTreeState};
 pub use report_error::ReportError;
 pub use scenario::{PreparedScenario, Scenario, ScenarioObservation, VerificationPosture};
 pub use scenario_error::ScenarioError;
