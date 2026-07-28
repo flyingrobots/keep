@@ -43,6 +43,12 @@ fn logical_range_coordinates_have_a_named_domain_owner() {
 }
 
 #[test]
+fn range_documentation_separates_coordinate_validation_from_target_bounds() {
+    assert!(ARCHITECTURE.contains("including an empty range at `u64::MAX`"));
+    assert!(ARCHITECTURE.contains("`AdmittedLayout::plan_range` proves that a range is within"));
+}
+
+#[test]
 fn exact_range_reads_are_current_in_contract_rationale_and_roadmap() {
     assert!(ROOT_README.contains("authenticated exact byte-range reads"));
     assert!(ARCHITECTURE.contains("## Exact byte-range reads"));

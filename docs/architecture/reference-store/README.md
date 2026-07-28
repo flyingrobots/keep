@@ -89,8 +89,11 @@ the output.
 ## Exact byte-range reads
 
 `ByteRange` is a validated half-open `[offset, end)` coordinate whose checked
-end cannot wrap. A zero-length range is valid at every coordinate from zero
-through end-of-blob. A nonempty range must end at or before the target length.
+end cannot wrap. It does not know a target length, so any non-wrapping range,
+including an empty range at `u64::MAX`, may be constructed. Only
+`AdmittedLayout::plan_range` proves that a range is within the target length:
+planning permits an empty range at or before the target end and requires a
+nonempty range to end at or before the target length.
 
 Planning traverses admitted layout metadata without allocation and selects the
 minimal ordered entry interval that overlaps the request. Committed-layout
