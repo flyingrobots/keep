@@ -77,3 +77,20 @@ fn discard_fingerprints_refuse_oversized_evidence_before_hashing() {
         );
     }
 }
+
+#[test]
+fn discard_receipts_follow_the_actual_stage_parent_directory() {
+    for required in [
+        "`current.seg` and `current.cat` select `staging`",
+        "`KEEP-CRASH-027` and `KEEP-CRASH-028`",
+        "`head.next` selects the store root",
+        "`head.next` selects the store root, using `KEEP-CRASH-029` and\n  `KEEP-CRASH-030`",
+        "Only synchronization of the\n\
+         selected parent directory",
+    ] {
+        assert!(
+            SPECIFICATION.contains(required),
+            "missing stage-parent discard law: {required}"
+        );
+    }
+}

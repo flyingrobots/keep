@@ -77,11 +77,11 @@ stage. It repeats any required directory synchronization and returns a
 valid-orphan receipt only after the fixed staging name is durably absent.
 This action never creates or finalizes a publication head.
 
-Discard is one explicit two-step protocol. The recovery request binds the
-canonical stage name, observed byte length, and a domain-separated digest of
-the complete observed truncated bytes. Under the writer lock, the executor
-reopens the stage without following links and refuses replacement or
-fingerprint drift.
+Discard uses one fingerprint protocol and one name-selected namespace
+sequence. The recovery request binds the canonical stage name, observed byte
+length, and a domain-separated digest of the complete observed truncated
+bytes. Under the writer lock, the executor reopens the stage without following
+links and refuses replacement or fingerprint drift.
 
 The canonical name selects one protocol maximum:
 
@@ -104,14 +104,19 @@ stage_fingerprint =
 bounded streaming reader after this size admission. The request admits only
 algorithm value `1`.
 
-For admitted evidence, the executor:
+The canonical name also selects its actual parent and crash sequence:
 
-1. unlinks only that verified stage (`KEEP-CRASH-027`); and
-2. synchronizes `staging` (`KEEP-CRASH-028`).
+- `current.seg` and `current.cat` select `staging`, using
+  `KEEP-CRASH-027` and `KEEP-CRASH-028`; and
+- `head.next` selects the store root, using `KEEP-CRASH-029` and
+  `KEEP-CRASH-030`.
 
-Only step 2 returns the discard receipt. On retry, the same request either
-removes the reappeared exact stage, synchronizes an already absent name, or
-refuses different evidence as unrecoverable ambiguity.
+For admitted evidence, the executor unlinks only the fingerprint-bound stage
+and then synchronizes the selected parent. Only synchronization of the
+selected parent directory returns the discard receipt. On retry, the same
+request either removes the reappeared exact stage, synchronizes an already
+absent name in the correct parent, or refuses different evidence as
+unrecoverable ambiguity.
 
 ## Leftover next head
 
