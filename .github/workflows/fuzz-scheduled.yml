@@ -25,11 +25,11 @@ jobs:
           persist-credentials: false
 
       - name: Verify fuzz campaign laws
-        run: python3 -m unittest discover -s fuzz -p 'test_*.py' -v
+        run: cargo test --locked --package xtask fuzz_campaign
 
       - name: Load bounded fuzz policy
         run: |
-          python3 fuzz/run_campaign.py github-env --profile scheduled \
+          cargo xtask fuzz github-env --profile scheduled \
             >> "$GITHUB_ENV"
 
       - name: Install pinned fuzz toolchain
@@ -51,7 +51,7 @@ jobs:
       - name: Validate restored corpus
         id: restored_corpus
         continue-on-error: true
-        run: python3 fuzz/check_corpus.py
+        run: cargo xtask fuzz check-corpus
 
       - name: Discard a refused corpus restore
         if: >-
@@ -67,27 +67,27 @@ jobs:
         run: cargo xtask prepare-fuzz-corpus
 
       - name: Validate prepared corpus
-        run: python3 fuzz/check_corpus.py
+        run: cargo xtask fuzz check-corpus
 
       - name: Build every fuzz target
-        run: python3 fuzz/run_campaign.py build --profile scheduled
+        run: cargo xtask fuzz build --profile scheduled
 
       - name: Exercise every fuzz target
         id: campaign
         continue-on-error: true
-        run: python3 fuzz/run_campaign.py run --profile scheduled
+        run: cargo xtask fuzz run --profile scheduled
 
       - name: Minimize evolving corpora
         id: minimize
         if: steps.campaign.outcome == 'success'
-        run: python3 fuzz/run_campaign.py minimize --profile scheduled
+        run: cargo xtask fuzz minimize --profile scheduled
 
       - name: Validate retained corpus bounds
         id: retained_corpus
         if: >-
           always() && !cancelled() &&
           steps.campaign.outcome != 'skipped'
-        run: python3 fuzz/check_corpus.py
+        run: cargo xtask fuzz check-corpus
 
       - name: Retain fuzz failures
         if: always() && steps.campaign.outcome == 'failure'

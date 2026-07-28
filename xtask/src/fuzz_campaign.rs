@@ -8,6 +8,8 @@ mod policy;
 mod process;
 mod profile;
 mod target;
+#[cfg(test)]
+mod workflow_tests;
 
 use std::ffi::OsString;
 use std::io::Write;
