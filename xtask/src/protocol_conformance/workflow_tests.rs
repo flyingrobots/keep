@@ -1,5 +1,7 @@
 //! Repository-level laws for conformance routing and Python removal.
 
+use std::fs::{self, Metadata};
+use std::io;
 use std::path::Path;
 
 const CDC_GUIDE: &str = include_str!("../../../conformance/cdc-profile/v1/README.md");
@@ -28,9 +30,36 @@ fn superseded_conformance_python_programs_are_absent() {
         "conformance/cdc-profile/v1/scalar_fastcdc.py",
         "conformance/chunk-id/v1/check_vectors.py",
     ] {
+        let path = root.join(relative);
         assert!(
-            !root.join(relative).exists(),
-            "superseded Python program remains: {relative}"
+            matches!(
+                classify_metadata(fs::symlink_metadata(path)),
+                PathState::Absent
+            ),
+            "superseded Python program was not proven absent: {relative}"
         );
     }
+}
+
+enum PathState {
+    Absent,
+    Present,
+    Uninspectable(io::Error),
+}
+
+fn classify_metadata(result: Result<Metadata, io::Error>) -> PathState {
+    match result {
+        Ok(_) => PathState::Present,
+        Err(source) if source.kind() == io::ErrorKind::NotFound => PathState::Absent,
+        Err(source) => PathState::Uninspectable(source),
+    }
+}
+
+#[test]
+fn metadata_failures_are_not_treated_as_absence() {
+    let denied = io::Error::from(io::ErrorKind::PermissionDenied);
+    assert!(matches!(
+        classify_metadata(Err(denied)),
+        PathState::Uninspectable(source) if source.kind() == io::ErrorKind::PermissionDenied
+    ));
 }
