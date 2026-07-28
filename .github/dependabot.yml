@@ -3,6 +3,7 @@ updates:
   - package-ecosystem: cargo
     directories:
       - /
+      - /benchmark
       - /fuzz
       - /xtask
     schedule:
