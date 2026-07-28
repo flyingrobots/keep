@@ -1,5 +1,7 @@
 //! This module owns the committed Node documentation-tool graph contract.
 
+mod unique_json;
+
 use serde_json::{Map, Value};
 
 use crate::repository_file::RepositoryRoot;
@@ -108,7 +110,7 @@ fn admit_installer(installer: &str) -> Result<(), DocumentationError> {
 }
 
 fn parse(path: &'static str, raw: &str) -> Result<Value, DocumentationError> {
-    serde_json::from_str(raw).map_err(|source| DocumentationError::RepositoryJson { path, source })
+    unique_json::parse(raw).map_err(|source| DocumentationError::RepositoryJson { path, source })
 }
 
 fn require_package_value(

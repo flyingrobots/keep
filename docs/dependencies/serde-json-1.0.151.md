@@ -8,12 +8,14 @@
 
 ## Admitted use
 
-Keep admits the exactly pinned `serde_json` 1.0.151 package only behind the
-`xtask` crate's `repository-tasks` feature. It parses the committed Node
-documentation-tool manifest and lockfile so the Rust documentation integrity
-task can validate their structure and reviewed dependency versions.
+Keep admits the exactly pinned `serde_json` 1.0.151 and `serde` 1.0.229
+packages only behind the `xtask` crate's `repository-tasks` feature. They parse
+the committed Node documentation-tool manifest and lockfile so the Rust
+documentation integrity task can validate their structure and reviewed
+dependency versions. A Keep-owned recursive visitor rejects duplicate object
+members at every depth before returning a JSON value.
 
-The dependency is absent from Keep's published library graph, public API,
+The dependencies are absent from Keep's published library graph, public API,
 content identities, durable formats, and production behavior. No
 dependency-owned type crosses out of the private repository-task adapter.
 
@@ -31,24 +33,24 @@ capability-relative, no-follow file boundary before parsing them.
 
 ## Features and resolved graph
 
-The direct dependency disables default features and enables only `std`. It is
-optional and activated solely by `repository-tasks`.
+Both direct dependencies disable default features and enable only `std`. They
+are optional and activated solely by `repository-tasks`.
 
 The active normal dependency graph introduced for this boundary consists of:
 
 - `itoa` 1.0.18;
 - `memchr` 2.8.3;
-- `serde_core` 1.0.229; and
+- `serde` and `serde_core` 1.0.229; and
 - `zmij` 1.0.23.
 
-Cargo's all-target resolution also retains `serde` 1.0.229, `serde_derive`
-1.0.229, and `syn` 3.0.3. Their procedural-macro dependencies were already
-present in the workspace lockfile.
+Cargo's all-target resolution also retains `serde_derive` 1.0.229 and `syn`
+3.0.3. Their procedural-macro dependencies were already present in the
+workspace lockfile.
 
 ## Safety, licensing, and compatibility
 
-`serde_json` declares the MIT OR Apache-2.0 license expression. Its manifest
-declares Rust 1.71 as its minimum supported Rust version, below Keep's pinned
+`serde_json` and `serde` declare the MIT OR Apache-2.0 license expression.
+Their manifests declare minimum supported Rust versions below Keep's pinned
 toolchain.
 
 Keep-owned code invokes only safe APIs. The parser and its transitive

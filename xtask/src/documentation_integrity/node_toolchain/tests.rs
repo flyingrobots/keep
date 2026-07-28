@@ -58,6 +58,28 @@ fn manifest_dependency_version_drift_is_refused() {
 }
 
 #[test]
+fn duplicate_object_members_are_refused_at_every_depth() {
+    let manifest = concat!(
+        r#"{"dependencies":{"markdownlint-cli2":"999.0.0"},"#,
+        r#""dependencies":{"markdownlint-cli2":"0.23.2"}}"#,
+    );
+    let lock = LOCK.replacen(
+        r#""version": "14.3.0","#,
+        r#""version": "999.0.0", "version": "14.3.0","#,
+        1,
+    );
+    for result in [
+        super::admit(manifest, LOCK, INSTALLER),
+        super::admit(MANIFEST, &lock, INSTALLER),
+    ] {
+        assert!(matches!(
+            result,
+            Err(super::DocumentationError::RepositoryJson { .. })
+        ));
+    }
+}
+
+#[test]
 fn dependency_version_drift_is_refused() {
     let lock = LOCK.replacen("\"5.2.2\"", "\"5.2.1\"", 1);
     let error = super::admit(MANIFEST, &lock, INSTALLER);
