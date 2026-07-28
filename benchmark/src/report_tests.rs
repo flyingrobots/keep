@@ -8,7 +8,7 @@ use crate::{
     ReportError, SourceTreeState,
 };
 
-const REFERENCE_BASELINE: &str = include_str!("../baselines/159863e-aarch64-apple-darwin.tsv");
+const REFERENCE_BASELINE: &str = include_str!("../baselines/fe06324-aarch64-apple-darwin.tsv");
 
 #[test]
 fn report_environment_rejects_ambiguous_tsv_fields() -> Result<(), ReportError> {
@@ -124,9 +124,18 @@ fn committed_reference_baseline_is_field_complete_and_source_bound() {
     );
     assert!(
         REFERENCE_BASELINE.lines().any(|line| {
-            line == "metadata\tgit-commit\t159863e21f7de8b5ba76902f44568e545701ade9"
+            line == "metadata\tgit-commit\tfe06324fd2e62b2f223c208107e6454f607a4b12"
         })
     );
+    for metadata in [
+        "metadata\tgit-tree\tclean",
+        "metadata\ttarget-triple\taarch64-apple-darwin",
+        "metadata\tos-description\tDarwin 25.3.0 arm64",
+        "metadata\tcpu-model\tApple M1 Pro",
+        "metadata\tlogical-cpu-count\t10",
+    ] {
+        assert!(REFERENCE_BASELINE.lines().any(|line| line == metadata));
+    }
     assert!(REFERENCE_BASELINE.lines().any(|line| {
         line == "threshold\tall-performance-metrics\tunconfigured\t\
                  requires-controlled-baseline-history"

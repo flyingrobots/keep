@@ -8,10 +8,10 @@ It is implemented by the non-published `keep-benchmark` workspace crate and
 the repository-owned `cargo xtask benchmark-baseline` command.
 
 The first reviewed evidence artifact measures source commit
-`159863e21f7de8b5ba76902f44568e545701ade9` on
+`fe06324fd2e62b2f223c208107e6454f607a4b12` on
 `aarch64-apple-darwin` with Rust 1.96.0:
 
-- [159863e-aarch64-apple-darwin.tsv](../../../benchmark/baselines/159863e-aarch64-apple-darwin.tsv)
+- [fe06324-aarch64-apple-darwin.tsv](../../../benchmark/baselines/fe06324-aarch64-apple-darwin.tsv)
 
 This single-host result is a methodology and baseline witness, not a marketing
 claim, portability claim, optimization mandate, or correctness proof.
@@ -27,15 +27,16 @@ cargo xtask benchmark-baseline
 The command:
 
 1. captures `HEAD`, complete tracked and untracked worktree state, `rustc`
-   version, and the host target triple, then refuses a dirty source tree;
+   version, target triple, operating system and kernel, CPU model, and logical
+   CPU count, then refuses a dirty source tree;
 2. runs the benchmark executable through locked Cargo in release mode;
 3. collects exactly 100 timed samples after five untimed warmups;
 4. bounds standard output to 1 MiB and diagnostics to 256 KiB while draining
    both pipes concurrently;
-5. recaptures the source and compiler coordinates and refuses any drift during
-   compilation or measurement;
-6. validates the schema, source coordinates, optimized build marker, scenario
-   and profile cardinalities, and threshold policy;
+5. recaptures every source, compiler, and host coordinate and refuses any drift
+   during compilation or measurement;
+6. validates the schema, captured coordinates, optimized build marker,
+   scenario and profile cardinalities, and threshold policy;
 7. atomically publishes
    `target/benchmark/streaming-cas-baseline-v1.tsv`.
 
