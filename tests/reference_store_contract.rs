@@ -177,6 +177,10 @@ fn exact_range_reads_are_current_in_contract_rationale_and_roadmap() {
     assert!(FORMAT_RATIONALE.contains("Exact range planning and reads are"));
     assert!(FORMAT_RATIONALE.contains("implemented in issue #11."));
     assert!(CAPABILITIES.contains("keep.range.minimal-overlap/v1\trequired\tM2\t11\t"));
+    assert!(!RANGE_READ_RECEIPT.contains("Returns the verified canonical layout identity used."));
+    assert!(
+        RANGE_READ_RECEIPT.contains("Returns the canonical identity of the admitted layout used.")
+    );
 }
 
 #[test]

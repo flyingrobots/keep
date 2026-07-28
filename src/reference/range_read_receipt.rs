@@ -38,7 +38,7 @@ impl RangeReadReceipt {
         self.target
     }
 
-    /// Returns the verified canonical layout identity used.
+    /// Returns the canonical identity of the admitted layout used.
     #[must_use]
     pub const fn layout_id(self) -> LayoutId {
         self.layout_id
