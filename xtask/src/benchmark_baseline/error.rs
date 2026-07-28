@@ -6,7 +6,7 @@ use std::io;
 use std::path::PathBuf;
 use std::string::FromUtf8Error;
 
-use crate::diagnostic::escaped_controls;
+use crate::diagnostic::{escaped_controls, escaped_path};
 
 pub(crate) enum BenchmarkBaselineError {
     Io {
@@ -47,6 +47,12 @@ pub(crate) enum BenchmarkBaselineError {
     },
     InvalidValue {
         coordinate: &'static str,
+    },
+    AmbientBuildSetting {
+        setting: String,
+    },
+    ExternalCargoConfiguration {
+        path: PathBuf,
     },
     ReportViolation {
         reason: &'static str,
@@ -99,6 +105,16 @@ impl fmt::Display for BenchmarkBaselineError {
             Self::InvalidValue { coordinate } => {
                 write!(formatter, "`{coordinate}` output is invalid")
             }
+            Self::AmbientBuildSetting { setting } => {
+                write!(formatter, "ambient build setting `")?;
+                escaped_controls(formatter, setting)?;
+                write!(formatter, "` makes benchmark evidence incomparable")
+            }
+            Self::ExternalCargoConfiguration { path } => {
+                write!(formatter, "external Cargo configuration `")?;
+                escaped_path(formatter, path)?;
+                write!(formatter, "` makes benchmark evidence incomparable")
+            }
             Self::ReportViolation { reason } => {
                 write!(formatter, "benchmark report violates `{reason}`")
             }
@@ -118,6 +134,8 @@ impl Error for BenchmarkBaselineError {
             | Self::OutputBound { .. }
             | Self::ProcessFailed { .. }
             | Self::InvalidValue { .. }
+            | Self::AmbientBuildSetting { .. }
+            | Self::ExternalCargoConfiguration { .. }
             | Self::ReportViolation { .. } => None,
         }
     }

@@ -1,6 +1,7 @@
 //! Repository-owned optimized benchmark execution and artifact publication.
 
 mod artifact;
+mod build_environment;
 mod environment;
 mod error;
 mod host_environment;
@@ -16,6 +17,7 @@ const DIAGNOSTIC_LIMIT: usize = 262_144;
 const REPORT_LIMIT: usize = 1_048_576;
 
 pub(crate) fn run(repository_root: &Path) -> Result<(), BenchmarkBaselineError> {
+    build_environment::admit(repository_root)?;
     let environment = environment::capture(repository_root)?;
     admit_clean_source(&environment)?;
     let output = process::run(
@@ -25,6 +27,8 @@ pub(crate) fn run(repository_root: &Path) -> Result<(), BenchmarkBaselineError> 
                 "--quiet",
                 "--release",
                 "--locked",
+                "--target",
+                &environment.target_triple,
                 "--package",
                 "keep-benchmark",
                 "--bin",

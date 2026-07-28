@@ -68,9 +68,10 @@ after its public API and format compatibility policies are established.
   partitioning scenarios. The versioned TSV report records exact semantic I/O,
   amplification and reuse ratios, p50/p95/p99 wall latency, process CPU time,
   throughput, allocations, incremental peak live heap, five chunking-profile
-  comparisons, compiler/target/Git/host identity bound across execution, and
-  an explicit refusal to invent regression thresholds before controlled
-  baseline history exists.
+  comparisons, compiler/target/Git/host identity bound across execution,
+  refusal of ambient code-generation settings and external Cargo
+  configuration, and an explicit refusal to invent regression thresholds
+  before controlled baseline history exists.
 - Validated half-open `ByteRange` coordinates and allocation-free range
   planning, plus exact synchronous reference-store range reads that load only
   overlapping chunks, authenticate each selected complete chunk before

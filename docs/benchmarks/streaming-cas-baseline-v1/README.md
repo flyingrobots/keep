@@ -26,18 +26,21 @@ cargo xtask benchmark-baseline
 
 The command:
 
-1. captures `HEAD`, complete tracked and untracked worktree state, `rustc`
+1. refuses ambient code-generation settings and Cargo configuration outside
+   the source-bound repository;
+2. captures `HEAD`, complete tracked and untracked worktree state, `rustc`
    version, target triple, operating system and kernel, CPU model, and logical
    CPU count, then refuses a dirty source tree;
-2. runs the benchmark executable through locked Cargo in release mode;
-3. collects exactly 100 timed samples after five untimed warmups;
-4. bounds standard output to 1 MiB and diagnostics to 256 KiB while draining
+3. runs the benchmark executable through locked Cargo in release mode for the
+   captured host target;
+4. collects exactly 100 timed samples after five untimed warmups;
+5. bounds standard output to 1 MiB and diagnostics to 256 KiB while draining
    both pipes concurrently;
-5. recaptures every source, compiler, and host coordinate and refuses any drift
+6. recaptures every source, compiler, and host coordinate and refuses any drift
    during compilation or measurement;
-6. validates the schema, captured coordinates, optimized build marker,
+7. validates the schema, captured coordinates, optimized build marker,
    scenario and profile cardinalities, and threshold policy;
-7. atomically publishes
+8. atomically publishes
    `target/benchmark/streaming-cas-baseline-v1.tsv`.
 
 The `target` artifact is intentionally ignored. Promoting evidence into

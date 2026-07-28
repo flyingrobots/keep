@@ -72,6 +72,23 @@ fn command_diagnostics_escape_terminal_controls() -> Result<(), io::Error> {
 }
 
 #[test]
+fn optimized_baselines_refuse_ambient_codegen_settings() -> Result<(), io::Error> {
+    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .arg("benchmark-baseline")
+        .env("CARGO_PROFILE_RELEASE_OPT_LEVEL", "0")
+        .output()?;
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        output.stderr,
+        b"Error: ambient build setting `CARGO_PROFILE_RELEASE_OPT_LEVEL` \
+          makes benchmark evidence incomparable\n"
+    );
+    Ok(())
+}
+
+#[test]
 fn extra_argument_is_a_silent_stdout_refusal() -> Result<(), io::Error> {
     let output = invoke(&["verify", "extra"])?;
     assert_eq!(output.status.code(), Some(1));
