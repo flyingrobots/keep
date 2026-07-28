@@ -65,11 +65,15 @@ fn git_path_stream_refuses_empty_records() {
     for stream in [&b"\0"[..], &b"a\0\0"[..]] {
         let result = read_paths_with(Cursor::new(stream), "test paths", TEST_LIMITS);
         assert!(matches!(
-            result,
-            Err(GitInventoryError::OutputFraming {
+            &result,
+            Err(GitInventoryError::EmptyPath {
                 operation: "test paths"
             })
         ));
+        assert_eq!(
+            result.err().map(|error| error.to_string()),
+            Some(String::from("`test paths` returned an empty path"))
+        );
     }
 }
 

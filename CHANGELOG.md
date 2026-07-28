@@ -48,7 +48,8 @@ after its public API and format compatibility policies are established.
   `.py`, `.pyw`, and extensionless executable Python shebangs.
 - Git path inventory failures now remain primary when child cleanup, waiting,
   or diagnostic collection also fails; the secondary failure remains typed and
-  inspectable.
+  inspectable. Empty path records and unterminated path bytes produce distinct,
+  accurate typed diagnostics.
 - The repository `cargo xtask` alias and Rust command contract are now
   explicitly silent on success and emit one typed `Error:` diagnostic with
   exit status 1 on refusal; untrusted control characters are escaped so the

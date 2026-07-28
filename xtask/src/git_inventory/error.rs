@@ -19,6 +19,9 @@ pub(crate) enum GitInventoryError {
         cleanup: Box<Self>,
     },
     DuplicatePath(Vec<u8>),
+    EmptyPath {
+        operation: &'static str,
+    },
     Failed {
         operation: &'static str,
         code: Option<i32>,
@@ -71,6 +74,9 @@ impl fmt::Display for GitInventoryError {
                 formatter.write_str("git returned duplicate path `")?;
                 escaped_bytes(formatter, path)?;
                 formatter.write_str("`")
+            }
+            Self::EmptyPath { operation } => {
+                write!(formatter, "`{operation}` returned an empty path")
             }
             Self::Failed {
                 operation,
@@ -131,6 +137,7 @@ impl Error for GitInventoryError {
             Self::DiagnosticEncoding { source, .. } => Some(source),
             Self::Run { source, .. } => Some(source),
             Self::DuplicatePath(_)
+            | Self::EmptyPath { .. }
             | Self::Failed { .. }
             | Self::OutputBound { .. }
             | Self::OutputFraming { .. }

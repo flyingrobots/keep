@@ -130,7 +130,7 @@ impl GitPathDecoder {
 
     fn admit_path(&mut self) -> Result<(), GitInventoryError> {
         if self.current.is_empty() {
-            return Err(GitInventoryError::OutputFraming {
+            return Err(GitInventoryError::EmptyPath {
                 operation: self.operation,
             });
         }
