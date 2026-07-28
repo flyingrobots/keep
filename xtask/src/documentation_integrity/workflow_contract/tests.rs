@@ -9,6 +9,10 @@ jobs:
     steps:
       - name: Install Rust
         run: rustup show
+      - name: Install pinned Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.18.0
       - name: Install documentation tools
         run: |
           documentation_tools="$RUNNER_TEMP/documentation-tools"
@@ -69,6 +73,10 @@ fn inert_yaml_cannot_impersonate_documentation_commands() {
 jobs:
   documentation:
     steps:
+      - name: Install pinned Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: 24.18.0
       # run: rustup show
       - name: "run: cargo xtask documentation-integrity-check"
         uses: example/action@0123456789abcdef
@@ -153,6 +161,76 @@ fn failure_tolerant_required_commands_do_not_satisfy_the_contract() {
         Err(super::DocumentationError::RepositoryContract {
             path: super::CI_PATH,
             requirement: "documentation job run steps are failure-intolerant",
+        })
+    ));
+}
+
+#[test]
+fn documentation_job_requires_the_pinned_node_action_once() {
+    let setup = concat!(
+        "      - name: Install pinned Node.js\n",
+        "        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020\n",
+        "        with:\n",
+        "          node-version: 24.18.0\n"
+    );
+    let missing = WORKFLOW.replace(setup, "");
+    let drifted = WORKFLOW.replace(
+        "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+        "actions/setup-node@0123456789abcdef0123456789abcdef01234567",
+    );
+
+    for workflow in [&missing, &drifted] {
+        assert!(matches!(
+            super::admit(workflow),
+            Err(super::DocumentationError::RepositoryContract {
+                path: super::CI_PATH,
+                requirement: "documentation job installs pinned Node.js exactly once",
+            })
+        ));
+    }
+}
+
+#[test]
+fn guarded_node_setup_does_not_satisfy_the_contract() {
+    let workflow = WORKFLOW.replace(
+        "        uses: actions/setup-node@",
+        "        if: false\n        uses: actions/setup-node@",
+    );
+    assert!(matches!(
+        super::admit(&workflow),
+        Err(super::DocumentationError::RepositoryContract {
+            path: super::CI_PATH,
+            requirement: "documentation Node.js setup is unguarded",
+        })
+    ));
+}
+
+#[test]
+fn failure_tolerant_node_setup_does_not_satisfy_the_contract() {
+    let workflow = WORKFLOW.replace(
+        "        uses: actions/setup-node@",
+        "        continue-on-error: true\n        uses: actions/setup-node@",
+    );
+    assert!(matches!(
+        super::admit(&workflow),
+        Err(super::DocumentationError::RepositoryContract {
+            path: super::CI_PATH,
+            requirement: "documentation Node.js setup is failure-intolerant",
+        })
+    ));
+}
+
+#[test]
+fn documentation_job_requires_the_reviewed_node_version() {
+    let workflow = WORKFLOW.replace(
+        "          node-version: 24.18.0",
+        "          node-version: 24.18.1",
+    );
+    assert!(matches!(
+        super::admit(&workflow),
+        Err(super::DocumentationError::RepositoryContract {
+            path: super::CI_PATH,
+            requirement: "documentation Node.js version is 24.18.0",
         })
     ));
 }

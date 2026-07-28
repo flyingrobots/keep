@@ -10,6 +10,8 @@ use super::repository_text;
 const CI_PATH: &str = ".github/workflows/ci.yml";
 const MALFORMED_INPUT_COMMAND: &str = r"cargo test --locked --package xtask \
   documentation_integrity::execution::external_tests -- --ignored";
+const SETUP_NODE_ACTION: &str = "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
+const NODE_VERSION: &str = "24.18.0";
 const XTASK_COMMAND: &str = "cargo xtask documentation-integrity-check";
 const REVIEWED_RUNS: &[&str] = &[
     "rustup show",
@@ -60,7 +62,27 @@ fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError>
         return Err(contract("workflow defines documentation job steps"));
     };
     let mut runs = Vec::new();
+    let mut node_setup_seen = false;
     for step in steps {
+        if step["uses"].as_str() == Some(SETUP_NODE_ACTION) {
+            if node_setup_seen {
+                return Err(contract(
+                    "documentation job installs pinned Node.js exactly once",
+                ));
+            }
+            node_setup_seen = true;
+            if !step["if"].is_badvalue() {
+                return Err(contract("documentation Node.js setup is unguarded"));
+            }
+            if !step["continue-on-error"].is_badvalue() {
+                return Err(contract(
+                    "documentation Node.js setup is failure-intolerant",
+                ));
+            }
+            if step["with"]["node-version"].as_str() != Some(NODE_VERSION) {
+                return Err(contract("documentation Node.js version is 24.18.0"));
+            }
+        }
         let run = &step["run"];
         if run.is_badvalue() {
             continue;
@@ -77,6 +99,11 @@ fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError>
             return Err(contract("documentation job run values are strings"));
         };
         runs.push(run.trim_end_matches('\n').to_owned());
+    }
+    if !node_setup_seen {
+        return Err(contract(
+            "documentation job installs pinned Node.js exactly once",
+        ));
     }
     Ok(runs)
 }
