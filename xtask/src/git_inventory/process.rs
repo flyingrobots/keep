@@ -52,18 +52,18 @@ fn start_git(
             source,
         })?;
     let Some(stdout) = child.stdout.take() else {
-        cleanup_child(&mut child, operation)?;
-        return Err(GitInventoryError::Pipe {
+        let primary = GitInventoryError::Pipe {
             operation,
             stream: "stdout",
-        });
+        };
+        return Err(cleanup_child(&mut child, operation, primary));
     };
     let Some(stderr) = child.stderr.take() else {
-        cleanup_child(&mut child, operation)?;
-        return Err(GitInventoryError::Pipe {
+        let primary = GitInventoryError::Pipe {
             operation,
             stream: "stderr",
-        });
+        };
+        return Err(cleanup_child(&mut child, operation, primary));
     };
     let diagnostic_worker = thread::Builder::new()
         .name(String::from("xtask-git-diagnostic"))
@@ -71,12 +71,12 @@ fn start_git(
     let diagnostic_worker = match diagnostic_worker {
         Ok(worker) => worker,
         Err(source) => {
-            cleanup_child(&mut child, operation)?;
-            return Err(GitInventoryError::Run {
+            let primary = GitInventoryError::Run {
                 operation,
                 action: "start the diagnostic reader for",
                 source,
-            });
+            };
+            return Err(cleanup_child(&mut child, operation, primary));
         }
     };
     Ok(GitProcess {
@@ -102,18 +102,28 @@ fn collect_git_result(
         action: "wait for",
         source,
     });
-    let diagnostic = diagnostic_worker
-        .join()
-        .map_err(|_| GitInventoryError::Worker { operation })?;
-
-    stop?;
-    let paths = paths?;
-    let status = status?;
-    let diagnostic = diagnostic.map_err(|source| GitInventoryError::Run {
-        operation,
-        action: "read diagnostics from",
-        source,
-    })?;
+    let diagnostic = diagnostic_worker.join();
+    let paths = match paths {
+        Ok(paths) => paths,
+        Err(primary) => {
+            return Err(preserve_collection_failure(
+                primary, stop, status, diagnostic, operation,
+            ));
+        }
+    };
+    let status = match status {
+        Ok(status) => status,
+        Err(primary) => {
+            return Err(preserve_diagnostic_failure(primary, diagnostic, operation));
+        }
+    };
+    let diagnostic = diagnostic
+        .map_err(|_| GitInventoryError::Worker { operation })?
+        .map_err(|source| GitInventoryError::Run {
+            operation,
+            action: "read diagnostics from",
+            source,
+        })?;
     if diagnostic.exceeded {
         return Err(GitInventoryError::OutputBound {
             operation,
@@ -145,15 +155,61 @@ fn request_stop(child: &mut Child, operation: &'static str) -> Result<(), GitInv
         })
 }
 
-fn cleanup_child(child: &mut Child, operation: &'static str) -> Result<(), GitInventoryError> {
+fn cleanup_child(
+    child: &mut Child,
+    operation: &'static str,
+    primary: GitInventoryError,
+) -> GitInventoryError {
     let stop = request_stop(child, operation);
     let wait = child.wait().map_err(|source| GitInventoryError::Run {
         operation,
         action: "wait for",
         source,
     });
-    stop?;
-    wait.map(|_| ())
+    let primary = preserve_error(primary, stop);
+    preserve_error(primary, wait.map(|_| ()))
+}
+
+fn preserve_collection_failure(
+    primary: GitInventoryError,
+    stop: Result<(), GitInventoryError>,
+    status: Result<std::process::ExitStatus, GitInventoryError>,
+    diagnostic: thread::Result<Result<BoundedBytes, io::Error>>,
+    operation: &'static str,
+) -> GitInventoryError {
+    let primary = preserve_error(primary, stop);
+    let primary = preserve_error(primary, status.map(|_| ()));
+    preserve_diagnostic_failure(primary, diagnostic, operation)
+}
+
+fn preserve_diagnostic_failure(
+    primary: GitInventoryError,
+    diagnostic: thread::Result<Result<BoundedBytes, io::Error>>,
+    operation: &'static str,
+) -> GitInventoryError {
+    let cleanup = match diagnostic {
+        Ok(Ok(_)) => return primary,
+        Ok(Err(source)) => GitInventoryError::Run {
+            operation,
+            action: "read diagnostics from",
+            source,
+        },
+        Err(_) => GitInventoryError::Worker { operation },
+    };
+    preserve_error(primary, Err(cleanup))
+}
+
+fn preserve_error(
+    primary: GitInventoryError,
+    cleanup: Result<(), GitInventoryError>,
+) -> GitInventoryError {
+    match cleanup {
+        Ok(()) => primary,
+        Err(cleanup) => GitInventoryError::Cleanup {
+            primary: Box::new(primary),
+            cleanup: Box::new(cleanup),
+        },
+    }
 }
 
 fn git_failure(

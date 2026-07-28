@@ -14,6 +14,10 @@ pub(crate) enum GitOutputUnit {
 }
 
 pub(crate) enum GitInventoryError {
+    Cleanup {
+        primary: Box<Self>,
+        cleanup: Box<Self>,
+    },
     DuplicatePath(Vec<u8>),
     Failed {
         operation: &'static str,
@@ -57,6 +61,12 @@ impl fmt::Debug for GitInventoryError {
 impl fmt::Display for GitInventoryError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Cleanup { primary, cleanup } => {
+                write!(
+                    formatter,
+                    "{primary}; additionally, cleanup failed: {cleanup}"
+                )
+            }
             Self::DuplicatePath(path) => {
                 formatter.write_str("git returned duplicate path `")?;
                 escaped_bytes(formatter, path)?;
@@ -117,6 +127,7 @@ impl GitOutputUnit {
 impl Error for GitInventoryError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::Cleanup { primary, .. } => Some(primary),
             Self::DiagnosticEncoding { source, .. } => Some(source),
             Self::Run { source, .. } => Some(source),
             Self::DuplicatePath(_)
