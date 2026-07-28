@@ -1,5 +1,6 @@
 //! This module owns documentation and workflow integrity orchestration.
 
+mod contributor_contract;
 mod corpus;
 mod dependabot;
 mod error;
@@ -23,6 +24,7 @@ pub(super) fn check(repository_path: &Path) -> Result<(), DocumentationError> {
         }
     })?;
     verify_root(&repository_root, repository_path)?;
+    contributor_contract::check(&repository_root)?;
     node_toolchain::check(&repository_root)?;
     dependabot::check(repository_path, &repository_root)?;
     workflow_contract::check(&repository_root)?;
