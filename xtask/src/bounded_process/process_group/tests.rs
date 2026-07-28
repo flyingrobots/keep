@@ -5,7 +5,7 @@ use std::io::{self, Write};
 use std::os::unix::net::UnixStream;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -15,12 +15,41 @@ use super::{
     DESCENDANT_PARENT, DESCENDANT_READY, DESCENDANT_SOCKET, INTERRUPT_SUPERVISOR, wait_for_ready,
 };
 use crate::bounded_process::cleanup::cleanup_process;
-use crate::bounded_process::{ProcessError, capture};
+use crate::bounded_process::{ProcessError, capture_with};
 use crate::test_directory::TestDirectory;
 
 const CHILD_PROCESS: &str =
     "bounded_process::process_group::child_tests::process_child_leaves_descendant_pipe_open";
 const SUPERVISOR_PROCESS: &str = "bounded_process::process_group::child_tests::process_supervisor_captures_descendant_until_interrupted";
+
+fn spawn_ready_descendant(
+    executable: &Path,
+    ready: &Path,
+    socket: &Path,
+) -> Result<Child, Box<dyn std::error::Error>> {
+    let mut child = Command::new(executable)
+        .args(["--exact", CHILD_PROCESS])
+        .env(DESCENDANT_PARENT, "1")
+        .env(DESCENDANT_READY, ready)
+        .env(DESCENDANT_SOCKET, socket)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .process_group(0)
+        .spawn()?;
+    if let Err(source) = wait_for_ready(ready) {
+        let error = cleanup_process(
+            &mut child,
+            ProcessError::Io {
+                program: "test process",
+                action: "wait for descendant readiness in",
+                source,
+            },
+        );
+        return Err(Box::new(error));
+    }
+    Ok(child)
+}
 
 #[test]
 fn terminal_interrupt_terminates_the_isolated_descendant_group()
@@ -60,22 +89,22 @@ fn terminal_interrupt_terminates_the_isolated_descendant_group()
 #[test]
 fn inherited_descendant_pipe_obeys_the_process_deadline() -> Result<(), Box<dyn std::error::Error>>
 {
-    let directory = TestDirectory::create("process-descendant-deadline")?;
-    let ready = directory.path().join("ready");
-    let socket = directory.path().join("descendant.sock");
+    let directory = TestDirectory::create("pd")?;
+    let ready = directory.path().join("r");
+    let socket = directory.path().join("d");
     let executable = env::current_exe()?;
-    let mut command = Command::new(executable);
-    command
-        .args(["--exact", CHILD_PROCESS])
-        .env(DESCENDANT_PARENT, "1")
-        .env(DESCENDANT_READY, &ready)
-        .env(DESCENDANT_SOCKET, &socket)
-        .stdin(Stdio::null());
+    let child = spawn_ready_descendant(&executable, &ready, &socket)?;
 
-    let result = capture(
+    assert!(
+        ready.is_file(),
+        "descendant must hold the output pipe before the deadline starts"
+    );
+    let mut admitted = Command::new("pre-spawned descendant fixture");
+    let result = capture_with(
         "test process",
-        &mut command,
+        &mut admitted,
         Some(Duration::from_millis(25)),
+        |_command| Ok(child),
     );
 
     assert!(matches!(
