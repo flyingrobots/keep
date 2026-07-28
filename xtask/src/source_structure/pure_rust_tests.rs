@@ -51,6 +51,32 @@ fn extensionless_executable_python_is_refused_by_the_pure_rust_boundary()
 }
 
 #[test]
+fn extension_bearing_executable_python_is_refused_by_the_pure_rust_boundary()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::create("extension-bearing-python")?;
+    let repository = directory.path().join("repository");
+    fs::create_dir(&repository)?;
+    let script = repository.join("check.sh");
+    fs::write(&script, b"#!/usr/bin/python3\nprint('forbidden')\n")?;
+    let mut permissions = fs::metadata(&script)?.permissions();
+    permissions.set_mode(0o755);
+    fs::set_permissions(&script, permissions)?;
+    let present = BTreeSet::from([GitPath::new(b"check.sh".to_vec())]);
+
+    let paths = super::select_source_paths(&present, &BTreeSet::new())?;
+    let source_root = RepositoryRoot::open(&repository)?;
+    let result = super::source_violations(&source_root, paths);
+
+    assert!(matches!(
+        result,
+        Err(super::SourceStructureError::PythonSource(ref path)) if path == "check.sh"
+    ));
+    drop(source_root);
+    directory.close()?;
+    Ok(())
+}
+
+#[test]
 fn extensionless_nonexecutable_text_is_not_a_source_module()
 -> Result<(), Box<dyn std::error::Error>> {
     let directory = TestDirectory::create("extensionless-text")?;

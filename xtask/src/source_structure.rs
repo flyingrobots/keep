@@ -110,8 +110,8 @@ fn source_violations(
 ) -> Result<Vec<String>, SourceStructureError> {
     let mut violations = Vec::new();
     for relative in paths {
+        refuse_executable_python(source_root, &relative)?;
         if is_extensionless_file(relative.as_str().as_bytes()) {
-            refuse_executable_python(source_root, &relative)?;
             continue;
         }
         let lines = source_line_count(source_root, &relative)?;
