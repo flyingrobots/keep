@@ -9,7 +9,15 @@ mod fixture_oracle;
 
 const ADR_INDEX: &str = include_str!("../../docs/adr/README.md");
 const ADR: &str = include_str!("../../docs/adr/0005-durable-segment-store-protocol.md");
-const SPECIFICATION: &str = include_str!("../../docs/formats/segment-store-v1/README.md");
+const SPECIFICATION_INDEX: &str = include_str!("../../docs/formats/segment-store-v1/README.md");
+const SPECIFICATION: &str = concat!(
+    include_str!("../../docs/formats/segment-store-v1/README.md"),
+    include_str!("../../docs/formats/segment-store-v1/segment.md"),
+    include_str!("../../docs/formats/segment-store-v1/catalog.md"),
+    include_str!("../../docs/formats/segment-store-v1/publication.md"),
+    include_str!("../../docs/formats/segment-store-v1/recovery.md"),
+    include_str!("../../docs/formats/segment-store-v1/requirements.md"),
+);
 const RATIONALE: &str = include_str!("../../docs/formats/segment-store-v1/rationale.md");
 const CONFORMANCE_GUIDE: &str = include_str!("../../conformance/segment-store/v1/README.md");
 const CONFORMANCE_ORIGIN: &str = include_str!("../../conformance/segment-store/v1/ORIGIN.md");
@@ -18,6 +26,11 @@ const TRANSITIONS: &str = include_str!("../../conformance/segment-store/v1/trans
 const REQUIRED_PROTOCOL_PAGES: &[&str] = &[
     "docs/adr/0005-durable-segment-store-protocol.md",
     "docs/formats/segment-store-v1/README.md",
+    "docs/formats/segment-store-v1/segment.md",
+    "docs/formats/segment-store-v1/catalog.md",
+    "docs/formats/segment-store-v1/publication.md",
+    "docs/formats/segment-store-v1/recovery.md",
+    "docs/formats/segment-store-v1/requirements.md",
     "docs/formats/segment-store-v1/rationale.md",
     "conformance/segment-store/v1/README.md",
     "conformance/segment-store/v1/ORIGIN.md",
@@ -188,6 +201,26 @@ fn physical_namespace_refuses_aliasing_filesystems() {
         assert!(
             SPECIFICATION.contains(required),
             "missing physical-namespace capability: {required}"
+        );
+    }
+}
+
+#[test]
+fn protocol_index_routes_each_semantic_owner() {
+    assert!(
+        SPECIFICATION_INDEX.lines().count() <= 200,
+        "protocol index exceeds the repository target file size"
+    );
+    for page in [
+        "segment.md",
+        "catalog.md",
+        "publication.md",
+        "recovery.md",
+        "requirements.md",
+    ] {
+        assert!(
+            SPECIFICATION_INDEX.contains(page),
+            "protocol index does not route to {page}"
         );
     }
 }
