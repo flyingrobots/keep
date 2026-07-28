@@ -52,6 +52,7 @@ fn scenario_metrics_preserve_reuse_and_verification_meaning() -> Result<(), Box<
     let partitioned = PreparedScenario::new(Scenario::VariedInputPartitioning, &corpus)?.run()?;
 
     assert_eq!(warm.materialized_bytes_written(), 0);
+    assert_eq!(warm.authenticated_chunk_bytes_read(), warm.logical_bytes());
     assert!(warm.reused_unique_chunks() > 0);
     assert!(high.reused_unique_chunks() > 0);
     assert_eq!(zero.reused_unique_chunks(), 0);

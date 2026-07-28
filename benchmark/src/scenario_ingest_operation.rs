@@ -26,6 +26,7 @@ pub(super) fn ingest(
         })?;
     let unique_chunks = unique_chunks(staged.layout().entries())?;
     let pending_chunks = to_u64(staged.pending_chunk_count(), "pending-chunk-count")?;
+    let pending_materialized_bytes = staged.pending_materialized_bytes();
     let reused_unique_chunks =
         unique_chunks
             .checked_sub(pending_chunks)
@@ -37,8 +38,12 @@ pub(super) fn ingest(
     let counters = WorkCounters {
         logical_bytes: to_u64(source.len(), "logical-bytes")?,
         source_bytes_read: reader.bytes_read(),
+        authenticated_chunk_bytes_read: compared_chunk_bytes(
+            source.len(),
+            pending_materialized_bytes,
+        )?,
         materialized_bytes_written: to_u64(
-            staged.pending_materialized_bytes(),
+            pending_materialized_bytes,
             "materialized-bytes-written",
         )?,
         chunk_instances: to_u64(staged.layout().entries().len(), "chunk-instances")?,
@@ -53,6 +58,20 @@ pub(super) fn ingest(
             source: Box::new(source),
         })?;
     observation.add(counters)
+}
+
+fn compared_chunk_bytes(logical: usize, pending: usize) -> Result<u64, ScenarioError> {
+    // Staging compares every chunk occurrence except the first occurrence of
+    // each newly materialized identity; `pending` is exactly that byte sum.
+    let logical = to_u64(logical, "logical-bytes")?;
+    let pending = to_u64(pending, "materialized-bytes-written")?;
+    logical
+        .checked_sub(pending)
+        .ok_or(ScenarioError::MetricOverflow {
+            metric: "authenticated-chunk-bytes-read",
+            current: logical,
+            incoming: pending,
+        })
 }
 
 fn unique_chunks(entries: &[LayoutEntry]) -> Result<u64, ScenarioError> {
