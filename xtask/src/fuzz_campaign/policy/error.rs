@@ -5,6 +5,8 @@ use std::fmt;
 use std::io;
 use std::path::PathBuf;
 
+use crate::diagnostic::escaped_path;
+
 pub(crate) enum PolicyError {
     Bound {
         key: &'static str,
@@ -67,7 +69,10 @@ impl fmt::Display for PolicyError {
             }
             Self::Line { line } => write!(formatter, "line {line} is not KEY=VALUE"),
             Self::Missing(keys) => write!(formatter, "campaign policy is missing: {keys:?}"),
-            Self::Read { path, .. } => write!(formatter, "cannot read {}", path.display()),
+            Self::Read { path, .. } => {
+                formatter.write_str("cannot read ")?;
+                escaped_path(formatter, path)
+            }
             Self::Whitespace { line } => {
                 write!(formatter, "line {line} contains whitespace")
             }

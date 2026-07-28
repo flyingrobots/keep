@@ -5,7 +5,7 @@ use std::fmt;
 use std::io;
 use std::path::PathBuf;
 
-use crate::diagnostic::escaped_controls;
+use crate::diagnostic::{escaped_controls, escaped_path};
 use crate::fuzz_campaign::process::ProcessError;
 
 pub(crate) enum TargetError {
@@ -57,7 +57,8 @@ impl fmt::Display for TargetError {
             Self::EmptyHarnesses => formatter.write_str("checked-in fuzz target set is empty"),
             Self::EmptyRegistry => formatter.write_str("cargo fuzz list returned no targets"),
             Self::Inspect { path, .. } => {
-                write!(formatter, "cannot inspect fuzz harness {}", path.display())
+                formatter.write_str("cannot inspect fuzz harness ")?;
+                escaped_path(formatter, path)
             }
             Self::InvalidEncoding => {
                 formatter.write_str("cargo fuzz list output is not valid UTF-8")
@@ -72,26 +73,17 @@ impl fmt::Display for TargetError {
                 formatter.write_str("`")
             }
             Self::MalformedPath(path) => {
-                write!(
-                    formatter,
-                    "fuzz harness path is not valid Unicode: {}",
-                    path.display()
-                )
+                formatter.write_str("fuzz harness path is not valid Unicode: ")?;
+                escaped_path(formatter, path)
             }
             Self::NonRegular(path) => {
-                write!(
-                    formatter,
-                    "fuzz harness is not a regular file: {}",
-                    path.display()
-                )
+                formatter.write_str("fuzz harness is not a regular file: ")?;
+                escaped_path(formatter, path)
             }
             Self::Process(error) => write!(formatter, "{error}"),
             Self::ReadDirectory { path, .. } => {
-                write!(
-                    formatter,
-                    "cannot read fuzz harness directory {}",
-                    path.display()
-                )
+                formatter.write_str("cannot read fuzz harness directory ")?;
+                escaped_path(formatter, path)
             }
             Self::ReadEntry { .. } => formatter.write_str("cannot read fuzz harness entry"),
         }

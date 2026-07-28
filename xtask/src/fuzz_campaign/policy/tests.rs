@@ -1,4 +1,6 @@
 use super::{CampaignPolicy, PolicyError};
+use std::io;
+use std::path::PathBuf;
 
 const POLICY: &str = include_str!("../../../../fuzz/campaign.env");
 
@@ -89,4 +91,16 @@ fn cross_field_bounds_refuse_unsafe_campaign_relationships() {
         CampaignPolicy::parse(&undersized),
         Err(PolicyError::CorpusCapacity)
     ));
+}
+
+#[test]
+fn policy_paths_cannot_forge_diagnostic_lines() {
+    let error = PolicyError::Read {
+        path: PathBuf::from("first\nError: forged\rrewrite"),
+        source: io::Error::other("test refusal"),
+    };
+    assert_eq!(
+        error.to_string(),
+        "cannot read first\\nError: forged\\rrewrite"
+    );
 }
