@@ -3,6 +3,13 @@
 use std::io;
 use std::process::Child;
 
+#[cfg(test)]
+use std::io::Read;
+#[cfg(test)]
+use std::os::unix::net::UnixListener;
+#[cfg(test)]
+use std::path::Path;
+
 use rustix::io::Errno;
 use rustix::process::{Pid, Signal, kill_process_group};
 
@@ -28,6 +35,8 @@ impl ProcessGroup {
 #[cfg(test)]
 const DESCENDANT_CHILD: &str = "KEEP_XTASK_DESCENDANT_CHILD";
 #[cfg(test)]
+const DESCENDANT_CHILD_READY: &str = "KEEP_XTASK_DESCENDANT_CHILD_READY";
+#[cfg(test)]
 const DESCENDANT_PARENT: &str = "KEEP_XTASK_DESCENDANT_PARENT";
 #[cfg(test)]
 const DESCENDANT_READY: &str = "KEEP_XTASK_DESCENDANT_READY";
@@ -37,25 +46,49 @@ const DESCENDANT_SOCKET: &str = "KEEP_XTASK_DESCENDANT_SOCKET";
 const INTERRUPT_SUPERVISOR: &str = "KEEP_XTASK_INTERRUPT_SUPERVISOR";
 
 #[cfg(test)]
-fn wait_for_ready(path: &std::path::Path) -> Result<(), io::Error> {
-    let expires = std::time::Instant::now()
-        .checked_add(std::time::Duration::from_secs(2))
-        .ok_or_else(|| io::Error::other("descendant readiness deadline overflow"))?;
-    while !path.is_file() {
-        if std::time::Instant::now() >= expires {
-            return Err(io::Error::new(
-                io::ErrorKind::TimedOut,
-                "descendant did not become ready",
-            ));
+fn readiness_listener(path: &Path) -> Result<UnixListener, io::Error> {
+    let listener = UnixListener::bind(path)?;
+    listener.set_nonblocking(true)?;
+    Ok(listener)
+}
+
+#[cfg(test)]
+fn wait_for_ready(listener: &UnixListener, child: &mut Child) -> Result<(), io::Error> {
+    loop {
+        match listener.accept() {
+            Ok((mut stream, _address)) => {
+                stream.set_nonblocking(false)?;
+                let mut signal = [0_u8; 1];
+                stream.read_exact(&mut signal)?;
+                if signal != [b'r'] {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        "descendant sent an invalid readiness signal",
+                    ));
+                }
+                return Ok(());
+            }
+            Err(source) if source.kind() == io::ErrorKind::WouldBlock => {
+                if let Some(status) = child.try_wait()? {
+                    return Err(io::Error::new(
+                        io::ErrorKind::UnexpectedEof,
+                        format!("child exited before descendant readiness: {status}"),
+                    ));
+                }
+                std::thread::yield_now();
+            }
+            Err(source) => return Err(source),
         }
-        std::thread::yield_now();
     }
-    Ok(())
 }
 
 #[cfg(test)]
 #[path = "process_group/child_tests.rs"]
 mod child_tests;
+
+#[cfg(test)]
+#[path = "process_group/readiness_tests.rs"]
+mod readiness_tests;
 
 #[cfg(test)]
 #[path = "process_group/tests.rs"]

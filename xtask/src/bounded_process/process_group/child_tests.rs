@@ -1,15 +1,13 @@
 //! This module owns subprocess fixtures for process-group regression tests.
 
 use std::env;
-use std::fs;
-use std::io;
-use std::os::unix::net::UnixListener;
-use std::path::Path;
+use std::io::{self, Write};
+use std::os::unix::net::{UnixListener, UnixStream};
 use std::process::Command;
 
 use super::{
-    DESCENDANT_CHILD, DESCENDANT_PARENT, DESCENDANT_READY, DESCENDANT_SOCKET, INTERRUPT_SUPERVISOR,
-    wait_for_ready,
+    DESCENDANT_CHILD, DESCENDANT_CHILD_READY, DESCENDANT_PARENT, DESCENDANT_READY,
+    DESCENDANT_SOCKET, INTERRUPT_SUPERVISOR, readiness_listener, wait_for_ready,
 };
 use crate::bounded_process::{ProcessError, capture};
 
@@ -26,6 +24,15 @@ fn process_supervisor_captures_descendant_until_interrupted() -> Result<(), io::
             "bounded_process::process_group::child_tests::process_child_leaves_descendant_pipe_open",
         ])
         .env(DESCENDANT_PARENT, "1")
+        .env(
+            DESCENDANT_CHILD_READY,
+            env::var_os(DESCENDANT_CHILD_READY).ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "missing descendant child-ready path",
+                )
+            })?,
+        )
         .env(
             DESCENDANT_READY,
             env::var_os(DESCENDANT_READY).ok_or_else(|| {
@@ -61,26 +68,33 @@ fn process_child_leaves_descendant_pipe_open() -> Result<(), io::Error> {
     let ready = env::var_os(DESCENDANT_READY).ok_or_else(|| {
         io::Error::new(io::ErrorKind::InvalidInput, "missing descendant ready path")
     })?;
-    drop(
-        Command::new(executable)
-            .args([
-                "--exact",
-                "bounded_process::process_group::child_tests::process_descendant_holds_pipe",
-            ])
-            .env(DESCENDANT_CHILD, "1")
-            .env(DESCENDANT_READY, &ready)
-            .env(
-                DESCENDANT_SOCKET,
-                env::var_os(DESCENDANT_SOCKET).ok_or_else(|| {
-                    io::Error::new(
-                        io::ErrorKind::InvalidInput,
-                        "missing descendant socket path",
-                    )
-                })?,
-            )
-            .spawn()?,
-    );
-    wait_for_ready(Path::new(&ready))?;
+    let child_ready = env::var_os(DESCENDANT_CHILD_READY).ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "missing descendant child-ready path",
+        )
+    })?;
+    let listener = readiness_listener(std::path::Path::new(&child_ready))?;
+    let mut descendant = Command::new(executable)
+        .args([
+            "--exact",
+            "bounded_process::process_group::child_tests::process_descendant_holds_pipe",
+        ])
+        .env(DESCENDANT_CHILD, "1")
+        .env(DESCENDANT_READY, &child_ready)
+        .env(
+            DESCENDANT_SOCKET,
+            env::var_os(DESCENDANT_SOCKET).ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "missing descendant socket path",
+                )
+            })?,
+        )
+        .spawn()?;
+    wait_for_ready(&listener, &mut descendant)?;
+    let mut readiness = UnixStream::connect(ready)?;
+    readiness.write_all(b"r")?;
     Ok(())
 }
 
@@ -99,7 +113,8 @@ fn process_descendant_holds_pipe() -> Result<(), io::Error> {
         io::Error::new(io::ErrorKind::InvalidInput, "missing descendant ready path")
     })?;
     let listener = UnixListener::bind(socket)?;
-    fs::write(ready, b"ready")?;
+    let mut readiness = UnixStream::connect(ready)?;
+    readiness.write_all(b"r")?;
     loop {
         let (mut stream, _) = listener.accept()?;
         let mut command = [0_u8; 1];
