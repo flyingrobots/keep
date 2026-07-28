@@ -215,15 +215,15 @@ fn parse_rows(
             "{table}: unexpected columns"
         )));
     }
-    let rows = lines
-        .enumerate()
-        .map(|(offset, line)| parse_row(table, offset, &line, columns))
-        .collect::<Result<Vec<_>, _>>()?;
-    if rows.is_empty() || rows.len() > maximum_rows {
+    if lines.len() == 0 || lines.len() > maximum_rows {
         return Err(ConformanceError::violation(format!(
             "{table}: row count is outside its bound"
         )));
     }
+    let rows = lines
+        .enumerate()
+        .map(|(offset, line)| parse_row(table, offset, &line, columns))
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(rows)
 }
 
@@ -250,4 +250,30 @@ fn parse_row(
         .zip(values.into_iter().map(str::to_owned))
         .collect();
     Ok(TableRow { fields })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ConformanceError, parse_rows};
+
+    #[test]
+    fn table_row_bound_precedes_later_row_semantics() {
+        let lines = vec![
+            String::from("example/v1"),
+            String::from("case\tvalue"),
+            String::from("first\tvalid"),
+            String::from("malformed"),
+        ];
+        assert!(matches!(
+            parse_rows(
+                "example.tsv",
+                "example/v1",
+                &["case", "value"],
+                lines,
+                1,
+            ),
+            Err(ConformanceError::Violation(ref message))
+                if message == "example.tsv: row count is outside its bound"
+        ));
+    }
 }
