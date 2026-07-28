@@ -67,6 +67,9 @@ impl fmt::Display for DocumentationError {
             Self::RepositoryJson { path, .. } => {
                 write!(formatter, "repository file `{path}` is not valid JSON")
             }
+            Self::RepositoryYaml { path, .. } => {
+                write!(formatter, "repository file `{path}` is not valid YAML")
+            }
             Self::RepositoryRootChanged(path) => {
                 repository_root(formatter, RepositoryRootDiagnostic::Changed, path)
             }

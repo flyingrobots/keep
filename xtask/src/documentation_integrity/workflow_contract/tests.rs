@@ -30,7 +30,50 @@ fn documentation_job_refuses_python_execution() {
         super::admit(&workflow),
         Err(super::DocumentationError::RepositoryContract {
             path: super::CI_PATH,
-            requirement: "documentation job contains no Python execution",
+            requirement: concat!(
+                "documentation job run commands are reviewed and required ",
+                "commands execute once"
+            ),
+        })
+    ));
+}
+
+#[test]
+fn inert_yaml_cannot_impersonate_documentation_commands() {
+    let workflow = r#"name: CI
+jobs:
+  documentation:
+    steps:
+      # run: rustup show
+      - name: "run: cargo xtask documentation-integrity-check"
+        uses: example/action@0123456789abcdef
+"#;
+    assert!(matches!(
+        super::admit(workflow),
+        Err(super::DocumentationError::RepositoryContract {
+            path: super::CI_PATH,
+            requirement: concat!(
+                "documentation job run commands are reviewed and required ",
+                "commands execute once"
+            ),
+        })
+    ));
+}
+
+#[test]
+fn unreviewed_python_executables_are_refused() {
+    let workflow = WORKFLOW.replace(
+        "  next-job:",
+        "      - name: Unreviewed executable\n        run: python --version\n  next-job:",
+    );
+    assert!(matches!(
+        super::admit(&workflow),
+        Err(super::DocumentationError::RepositoryContract {
+            path: super::CI_PATH,
+            requirement: concat!(
+                "documentation job run commands are reviewed and required ",
+                "commands execute once"
+            ),
         })
     ));
 }

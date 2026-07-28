@@ -16,8 +16,9 @@ after its public API and format compatibility policies are established.
   boundary, and the seven superseded Python checkers have been removed. The
   boundary rejects duplicate repository JSON fields and unlocked installer
   substitutions, admits only the exact reviewed Node lock artifact, retains
-  simultaneous Markdown and link failures, and applies one deadline across
-  child execution and output collection.
+  simultaneous Markdown and link failures, parses documentation workflow
+  commands as YAML, and applies one deadline across child execution and output
+  collection.
 - ChunkId v1 and CDC profile v1 conformance now run through one bounded Rust
   `cargo xtask conformance-check` command, including the external `b3sum`
   witness, reproducible Gear-table recipe, scalar and streaming FastCDC laws,

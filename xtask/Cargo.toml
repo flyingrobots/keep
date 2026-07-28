@@ -17,6 +17,7 @@ repository-tasks = [
     "dep:rustix",
     "dep:serde",
     "dep:serde_json",
+    "dep:yaml-rust2",
 ]
 
 [dependencies]
@@ -33,6 +34,8 @@ rustix = { version = "=1.1.4", default-features = false, features = ["process", 
 serde = { version = "=1.0.229", default-features = false, features = ["std"], optional = true }
 # Typed JSON admission checks the committed documentation-tool lock graph.
 serde_json = { version = "=1.0.151", default-features = false, features = ["std"], optional = true }
+# Pure Rust YAML admission identifies executable GitHub Actions steps.
+yaml-rust2 = { version = "=0.11.0", default-features = false, optional = true }
 
 [[bin]]
 name = "xtask"

@@ -62,6 +62,10 @@ pub(crate) enum DocumentationError {
         path: &'static str,
         source: serde_json::Error,
     },
+    RepositoryYaml {
+        path: &'static str,
+        source: yaml_rust2::ScanError,
+    },
     RepositoryRootChanged(PathBuf),
     RepositoryRootInspect {
         path: PathBuf,
@@ -115,6 +119,7 @@ impl Error for DocumentationError {
                 Some(source)
             }
             Self::RepositoryJson { source, .. } => Some(source),
+            Self::RepositoryYaml { source, .. } => Some(source),
             Self::RepositoryRootInspect { source, .. } => Some(source),
             Self::ToolOutputEncoding { source, .. } => Some(source),
             Self::ToolUnavailable { source, .. } => Some(source),
