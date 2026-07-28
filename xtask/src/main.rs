@@ -48,6 +48,11 @@ mod process_output;
 mod protocol_conformance;
 #[allow(
     clippy::redundant_pub_crate,
+    reason = "repository file admission is shared by sibling repository tasks"
+)]
+mod repository_file;
+#[allow(
+    clippy::redundant_pub_crate,
     reason = "the parent command dispatcher is the only consumer"
 )]
 mod source_structure;

@@ -137,10 +137,16 @@ fn git_diagnostics_cannot_inject_terminal_control_lines() {
 
 #[test]
 fn source_read_policy_enables_reads_and_refuses_blocking_io() {
-    use super::source_file::{BlockingIoPolicy, ReadAccessPolicy, SOURCE_READ_POLICY};
+    use crate::repository_file::{BlockingIoPolicy, REPOSITORY_READ_POLICY, ReadAccessPolicy};
 
-    assert_eq!(SOURCE_READ_POLICY.read_access(), ReadAccessPolicy::Enabled);
-    assert_eq!(SOURCE_READ_POLICY.blocking_io(), BlockingIoPolicy::Refuse);
+    assert_eq!(
+        REPOSITORY_READ_POLICY.read_access(),
+        ReadAccessPolicy::Enabled
+    );
+    assert_eq!(
+        REPOSITORY_READ_POLICY.blocking_io(),
+        BlockingIoPolicy::Refuse
+    );
 }
 
 #[cfg(unix)]
@@ -148,8 +154,9 @@ fn source_read_policy_enables_reads_and_refuses_blocking_io() {
 fn source_scan_keeps_the_admitted_repository_root() -> Result<(), Box<dyn std::error::Error>> {
     use std::fs;
 
+    use crate::repository_file::RepositoryRoot;
+
     use super::repository_path::RepositoryPath;
-    use super::source_file::SourceRoot;
     use super::source_line_count;
 
     let directory = TestDirectory::create("source-root")?;
@@ -157,7 +164,7 @@ fn source_scan_keeps_the_admitted_repository_root() -> Result<(), Box<dyn std::e
     let retained_root = directory.path().join("retained");
     fs::create_dir(&root)?;
     fs::write(root.join("source.rs"), "safe\n")?;
-    let source_root = SourceRoot::open(&root)?;
+    let source_root = RepositoryRoot::open(&root)?;
     let relative = RepositoryPath::admit(String::from("source.rs"))?;
 
     fs::rename(&root, &retained_root)?;
@@ -176,13 +183,13 @@ fn source_scan_keeps_the_admitted_repository_root() -> Result<(), Box<dyn std::e
 fn source_scan_detects_a_replaced_repository_root() -> Result<(), Box<dyn std::error::Error>> {
     use std::fs;
 
-    use super::source_file::SourceRoot;
+    use crate::repository_file::RepositoryRoot;
 
     let directory = TestDirectory::create("source-identity")?;
     let root = directory.path().join("repository");
     let retained_root = directory.path().join("retained");
     fs::create_dir(&root)?;
-    let source_root = SourceRoot::open(&root)?;
+    let source_root = RepositoryRoot::open(&root)?;
 
     fs::rename(&root, &retained_root)?;
     fs::create_dir(&root)?;
@@ -202,8 +209,9 @@ fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructur
     use std::fs;
     use std::os::unix::fs::symlink;
 
+    use crate::repository_file::{OpenRepositoryFileError, RepositoryRoot};
+
     use super::repository_path::RepositoryPath;
-    use super::source_file::SourceRoot;
     use super::source_line_count_with;
 
     let directory = TestDirectory::create("source-replacement").map_err(|source| {
@@ -231,7 +239,7 @@ fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructur
         }
     })?;
     let source_root =
-        SourceRoot::open(&root).map_err(|source| super::SourceStructureError::Inspect {
+        RepositoryRoot::open(&root).map_err(|source| super::SourceStructureError::Inspect {
             path: root.clone(),
             source,
         })?;
@@ -239,8 +247,8 @@ fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructur
 
     let result = source_line_count_with(&source_root, &relative, |source_root, relative| {
         let admitted = source_root.display_path(relative);
-        fs::rename(&admitted, &retained_path).map_err(super::OpenSourceError::Io)?;
-        symlink(&target_path, &admitted).map_err(super::OpenSourceError::Io)?;
+        fs::rename(&admitted, &retained_path).map_err(OpenRepositoryFileError::Io)?;
+        symlink(&target_path, &admitted).map_err(OpenRepositoryFileError::Io)?;
         source_root.open_file(relative)
     });
     let refused = matches!(

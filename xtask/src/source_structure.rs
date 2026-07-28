@@ -2,16 +2,15 @@
 
 mod repository_path;
 mod source_error;
-mod source_file;
 
 use std::collections::BTreeSet;
 use std::io::{self, BufRead, BufReader};
 use std::path::Path;
 
 use crate::git_inventory::{GitPath, paths as git_paths};
+use crate::repository_file::{OpenRepositoryFileError, RepositoryRoot};
 use repository_path::RepositoryPath;
 pub(super) use source_error::SourceStructureError;
-use source_file::{OpenSourceError, SourceRoot};
 
 const SOURCE_MODULE_HARD_LIMIT_LINES: u64 = 500;
 const SOURCE_SUFFIXES: [[u8; 2]; 3] = [*b"py", *b"rs", *b"sh"];
@@ -25,7 +24,7 @@ const PRESENT_PATH_ARGUMENTS: [&str; 5] = [
 
 pub(super) fn check(repository_root: &Path) -> Result<(), SourceStructureError> {
     let source_root =
-        SourceRoot::open(repository_root).map_err(|source| SourceStructureError::Inspect {
+        RepositoryRoot::open(repository_root).map_err(|source| SourceStructureError::Inspect {
             path: repository_root.to_owned(),
             source,
         })?;
@@ -43,7 +42,7 @@ pub(super) fn check(repository_root: &Path) -> Result<(), SourceStructureError> 
 }
 
 fn verify_source_root(
-    source_root: &SourceRoot,
+    source_root: &RepositoryRoot,
     repository_root: &Path,
 ) -> Result<(), SourceStructureError> {
     match source_root.is_current_path() {
@@ -94,7 +93,7 @@ fn admit_source_path(path: &GitPath) -> Result<RepositoryPath, SourceStructureEr
 }
 
 fn source_violations(
-    source_root: &SourceRoot,
+    source_root: &RepositoryRoot,
     paths: Vec<RepositoryPath>,
 ) -> Result<Vec<String>, SourceStructureError> {
     let mut violations = Vec::new();
@@ -108,24 +107,24 @@ fn source_violations(
 }
 
 fn source_line_count(
-    source_root: &SourceRoot,
+    source_root: &RepositoryRoot,
     relative: &RepositoryPath,
 ) -> Result<SourceLineCount, SourceStructureError> {
-    source_line_count_with(source_root, relative, SourceRoot::open_file)
+    source_line_count_with(source_root, relative, RepositoryRoot::open_file)
 }
 
 fn source_line_count_with(
-    source_root: &SourceRoot,
+    source_root: &RepositoryRoot,
     relative: &RepositoryPath,
-    open_source: impl FnOnce(&SourceRoot, &Path) -> Result<std::fs::File, OpenSourceError>,
+    open_source: impl FnOnce(&RepositoryRoot, &Path) -> Result<std::fs::File, OpenRepositoryFileError>,
 ) -> Result<SourceLineCount, SourceStructureError> {
     let path = source_root.display_path(relative.as_path());
     let file = open_source(source_root, relative.as_path()).map_err(|error| match error {
-        OpenSourceError::Io(source) => SourceStructureError::Inspect {
+        OpenRepositoryFileError::Io(source) => SourceStructureError::Inspect {
             path: path.clone(),
             source,
         },
-        OpenSourceError::NonRegular => SourceStructureError::NonRegular(path.clone()),
+        OpenRepositoryFileError::NonRegular => SourceStructureError::NonRegular(path.clone()),
     })?;
     line_count(BufReader::new(file))
         .map_err(|source| SourceStructureError::Inspect { path, source })
