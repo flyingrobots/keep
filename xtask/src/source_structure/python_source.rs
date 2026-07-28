@@ -1,5 +1,7 @@
 //! This module owns bounded executable Python-shebang admission.
 
+mod environment;
+
 use std::fs::File;
 use std::io::{self, Read};
 use std::os::unix::fs::PermissionsExt;
@@ -71,10 +73,9 @@ fn is_python_shebang(prefix: &[u8]) -> bool {
     else {
         return false;
     };
-    let mut words = line
-        .split(u8::is_ascii_whitespace)
-        .filter(|word| !word.is_empty());
-    let Some(interpreter) = words.next() else {
+    let line = line.trim_ascii_start();
+    let mut fields = line.splitn(2, u8::is_ascii_whitespace);
+    let Some(interpreter) = fields.next().filter(|field| !field.is_empty()) else {
         return false;
     };
     if is_python_program(interpreter) {
@@ -83,17 +84,10 @@ fn is_python_shebang(prefix: &[u8]) -> bool {
     if !program_name(interpreter).eq_ignore_ascii_case(b"env") {
         return false;
     }
-    words.any(environment_word_selects_python)
-}
-
-fn environment_word_selects_python(word: &[u8]) -> bool {
-    if let Some(split) = word.strip_prefix(b"--split-string=") {
-        return is_python_program(split);
-    }
-    if let Some(split) = word.strip_prefix(b"-S").filter(|split| !split.is_empty()) {
-        return is_python_program(split);
-    }
-    !word.starts_with(b"-") && !word.contains(&b'=') && is_python_program(word)
+    fields
+        .next()
+        .and_then(environment::selected_utility)
+        .is_some_and(|utility| is_python_program(&utility))
 }
 
 fn is_python_program(program: &[u8]) -> bool {
@@ -143,6 +137,9 @@ mod tests {
         for prefix in [
             b"#!/bin/sh\n".as_slice(),
             b"#!/usr/bin/env bash\n",
+            b"#!/usr/bin/env sh -c python3\n",
+            b"#!/usr/bin/env -S sh -c 'echo python3'\n",
+            b"#!/usr/bin/env -S \"sh -c 'echo python3'\"\n",
             b"python3\n",
             b"first line\n#!/usr/bin/python3\n",
         ] {
