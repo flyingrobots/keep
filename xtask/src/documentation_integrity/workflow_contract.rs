@@ -10,6 +10,10 @@ use super::repository_text;
 const CI_PATH: &str = ".github/workflows/ci.yml";
 const CHECKOUT_ACTION: &str = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1";
 const CHECKOUT_ACTION_PREFIX: &str = "actions/checkout@";
+const DOCUMENTATION_JOB_FIELDS: &[&str] = &["name", "runs-on", "timeout-minutes", "steps"];
+const DOCUMENTATION_JOB_NAME: &str = "Documentation and workflow integrity";
+const DOCUMENTATION_RUNNER: &str = "ubuntu-latest";
+const DOCUMENTATION_TIMEOUT_MINUTES: i64 = 10;
 const MALFORMED_INPUT_COMMAND: &str = r"cargo test --locked --package xtask \
   documentation_integrity::execution::external_tests -- --ignored";
 const SETUP_NODE_ACTION: &str = "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
@@ -58,12 +62,29 @@ fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError>
 }
 
 fn documentation_steps(document: &Yaml) -> Result<&Vec<Yaml>, DocumentationError> {
+    if !document["defaults"].is_badvalue() || !document["env"].is_badvalue() {
+        return Err(contract(
+            "workflow does not override documentation execution",
+        ));
+    }
     let job = &document["jobs"]["documentation"];
     if !job["if"].is_badvalue() {
         return Err(contract("documentation job is unguarded"));
     }
     if !job["continue-on-error"].is_badvalue() {
         return Err(contract("documentation job is failure-intolerant"));
+    }
+    if job["name"].as_str() != Some(DOCUMENTATION_JOB_NAME) {
+        return Err(contract("documentation job name is reviewed"));
+    }
+    if job["runs-on"].as_str() != Some(DOCUMENTATION_RUNNER) {
+        return Err(contract("documentation job uses ubuntu-latest"));
+    }
+    if job["timeout-minutes"].as_i64() != Some(DOCUMENTATION_TIMEOUT_MINUTES) {
+        return Err(contract("documentation job timeout is ten minutes"));
+    }
+    if !mapping_has_exact_fields(job, DOCUMENTATION_JOB_FIELDS) {
+        return Err(contract("documentation job fields are reviewed"));
     }
     let Some(steps) = job["steps"].as_vec() else {
         return Err(contract("workflow defines documentation job steps"));
@@ -165,6 +186,9 @@ fn admit_action_execution(
     if !step["run"].is_badvalue() {
         return Err(contract("documentation action steps do not define run"));
     }
+    if !mapping_has_exact_fields(step, &["name", "uses", "with"]) {
+        return Err(contract("documentation action step fields are reviewed"));
+    }
     Ok(())
 }
 
@@ -181,6 +205,9 @@ fn admit_run(step: &Yaml) -> Result<Option<String>, DocumentationError> {
             "documentation job run steps are failure-intolerant",
         ));
     }
+    if !mapping_has_exact_fields(step, &["name", "run"]) {
+        return Err(contract("documentation job run step fields are reviewed"));
+    }
     let Some(run) = run.as_str() else {
         return Err(contract("documentation job run values are strings"));
     };
@@ -192,6 +219,15 @@ fn runs_are_reviewed(runs: &[String]) -> bool {
         && REVIEWED_RUNS
             .iter()
             .all(|required| runs.iter().filter(|run| run.as_str() == *required).count() == 1)
+}
+
+fn mapping_has_exact_fields(mapping: &Yaml, fields: &[&str]) -> bool {
+    mapping.as_hash().is_some_and(|mapping| {
+        mapping.len() == fields.len()
+            && mapping
+                .keys()
+                .all(|field| field.as_str().is_some_and(|field| fields.contains(&field)))
+    })
 }
 
 const REVIEWED_ACTIONS: &[DocumentationAction] =

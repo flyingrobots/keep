@@ -553,7 +553,11 @@ manifest coverage, and the documentation job's delegation to this command.
 The dedicated `documentation` job in `.github/workflows/ci.yml` installs the
 pinned tools, runs malformed-input refusal laws and the repository-owned
 command, and verifies repository whitespace before admitting the result as CI
-evidence.
+evidence. The Rust workflow contract pins that job to `ubuntu-latest` with a
+ten-minute deadline, rejects workflow and job run defaults, and admits only the
+reviewed action and command step fields. A custom shell, working directory,
+environment, or other unreviewed execution modifier cannot impersonate a
+required command.
 
 CI SHOULD block on facts it can determine reliably:
 

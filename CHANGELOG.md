@@ -24,7 +24,9 @@ after its public API and format compatibility policies are established.
   admits only the exact pinned checkout and Node setup actions in their reviewed
   order, rejects checkout overrides and unreviewed action steps, refuses
   alternate setup-node actions, requires the reviewed Node version, rejects
-  guarded or failure-tolerant documentation jobs and required steps,
+  unreviewed workflow/job run defaults and step execution fields, pins the
+  documentation runner and job deadline, rejects guarded or failure-tolerant
+  documentation jobs and required steps,
   and applies one deadline across captured and inherited child execution and
   output collection.
   Git-backed process fixtures ignore system and global Git configuration and

@@ -3,12 +3,15 @@ use std::path::Path;
 use crate::repository_file::RepositoryRoot;
 
 mod action_steps;
+mod execution_context;
 mod node_setup;
 
 const WORKFLOW: &str = r#"name: CI
 jobs:
   documentation:
-    name: Documentation
+    name: Documentation and workflow integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -79,6 +82,9 @@ fn inert_yaml_cannot_impersonate_documentation_commands() {
     let workflow = r#"name: CI
 jobs:
   documentation:
+    name: Documentation and workflow integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
