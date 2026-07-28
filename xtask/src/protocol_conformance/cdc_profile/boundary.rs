@@ -39,21 +39,39 @@ impl Boundaries {
 }
 
 pub(super) fn read(corpus: &Corpus, sources: &Sources) -> Result<Boundaries, ConformanceError> {
+    let source_lengths = sources
+        .iter()
+        .map(|(name, source)| (name.to_owned(), source.len()))
+        .collect();
+    read_values(corpus, &source_lengths)
+}
+
+fn read_values(
+    corpus: &Corpus,
+    source_lengths: &BTreeMap<String, usize>,
+) -> Result<Boundaries, ConformanceError> {
     let mut values = BTreeMap::new();
     for row in corpus.rows("boundaries.tsv", BOUNDARY_POLICY)? {
         let name = case_name(row.field("case")?, "boundaries.tsv")?;
-        if values.contains_key(name) || !sources.names().contains(name) {
+        if values.contains_key(name) {
             return Err(ConformanceError::violation(format!(
-                "boundaries.tsv: duplicate or unknown case {name:?}"
+                "boundaries.tsv: duplicate case {name:?}"
             )));
         }
-        let source = sources.get(name)?;
+        if !source_lengths.contains_key(name) {
+            return Err(ConformanceError::violation(format!(
+                "boundaries.tsv: case is outside the required exact source set: {name:?}"
+            )));
+        }
+        let source_length = source_lengths.get(name).copied().ok_or_else(|| {
+            ConformanceError::violation(format!("boundary source length is absent: {name}"))
+        })?;
         let count = decimal(
             row.field("chunk_count")?,
             &format!("{name} chunk count"),
             MAX_BOUNDARIES,
         )?;
-        let ends = parse_ends(row.field("boundaries")?, name, source.len())?;
+        let ends = parse_ends(row.field("boundaries")?, name, source_length)?;
         if ends.len() != count {
             return Err(ConformanceError::violation(format!(
                 "{name}: declared {count} chunks, recorded {}",
@@ -62,8 +80,7 @@ pub(super) fn read(corpus: &Corpus, sources: &Sources) -> Result<Boundaries, Con
         }
         values.insert(name.to_owned(), ends);
     }
-    let observed = values.keys().map(String::as_str).collect::<BTreeSet<_>>();
-    if observed != sources.names() {
+    if values.keys().ne(source_lengths.keys()) {
         return Err(ConformanceError::violation(
             "boundary cases differ from the required exact source set",
         ));
@@ -272,20 +289,4 @@ fn admit_stream(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{ConformanceError, partition_end};
-
-    #[test]
-    fn partition_offset_overflow_is_refused() {
-        assert!(matches!(
-            partition_end(
-                usize::MAX,
-                1,
-                usize::MAX,
-                "partition schedule",
-            ),
-            Err(ConformanceError::Violation(ref message))
-                if message == "partition schedule offset overflow"
-        ));
-    }
-}
+mod tests;

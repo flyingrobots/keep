@@ -53,10 +53,6 @@ impl Sources {
             .iter()
             .map(|(name, source)| (name.as_str(), source.as_slice()))
     }
-
-    pub(super) fn names(&self) -> BTreeSet<&str> {
-        self.values.keys().map(String::as_str).collect()
-    }
 }
 
 pub(super) fn load(corpus: &Corpus) -> Result<Sources, ConformanceError> {
