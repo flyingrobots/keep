@@ -15,6 +15,7 @@ const RECONSTRUCTION_ERROR: &str = include_str!("../src/reference/reconstruction
 const REFERENCE_INGESTION: &str = include_str!("../src/reference/ingestion.rs");
 const PUBLISHED_BLOB: &str = include_str!("../src/reference/published_blob.rs");
 const RECONSTRUCTION_RECEIPT: &str = include_str!("../src/reference/reconstruction_receipt.rs");
+const RANGE_READ_RECEIPT: &str = include_str!("../src/reference/range_read_receipt.rs");
 const STAGED_BLOB_TESTS: &str = include_str!("../src/reference/staged_blob_tests.rs");
 const GOLDEN_TEST_ENTRYPOINT: &str = include_str!("golden_file_worldline.rs");
 const STREAMING_TEST_ENTRYPOINT: &str = include_str!("streaming_cas.rs");
@@ -58,6 +59,7 @@ fn staged_corruption_laws_share_one_publication_fixture() {
 fn consequential_reference_store_receipts_are_must_use() {
     assert!(PUBLISHED_BLOB.contains("#[must_use ="));
     assert!(RECONSTRUCTION_RECEIPT.contains("#[must_use ="));
+    assert!(RANGE_READ_RECEIPT.contains("#[must_use ="));
 }
 
 #[test]
@@ -161,7 +163,25 @@ fn verified_layout_reconstruction_is_current_in_spec_rationale_and_corpus() {
 }
 
 #[test]
-fn shipped_public_read_and_bounded_ingest_capabilities_are_required() {
+fn exact_range_reads_are_current_in_contract_rationale_and_roadmap() {
+    assert!(ROOT_README.contains("authenticated exact byte-range reads"));
+    assert!(ARCHITECTURE.contains("## Exact byte-range reads"));
+    assert!(ARCHITECTURE.contains("It does not prove the"));
+    assert!(ARCHITECTURE.contains("complete `BlobId`, any unrequested chunk"));
+    assert!(
+        ARCHITECTURE_RATIONALE.contains("## Why range reads authenticate selected chunks only")
+    );
+    assert!(FORMAT_SPEC.contains(
+        "| `KEEP-LAYOUT-017` | Exact range planning selects only the minimal ordered overlap | Range-plan and instrumented chunk-lookup laws | Implemented in #11 |"
+    ));
+    assert!(FORMAT_RATIONALE.contains("Exact range planning and reads are"));
+    assert!(FORMAT_RATIONALE.contains("implemented in issue #11."));
+    assert!(CAPABILITIES.contains("keep.range.minimal-overlap/v1\trequired\tM2\t11\t"));
+}
+
+#[test]
+fn shipped_public_reads_and_bounded_ingest_capabilities_are_required() {
     assert!(CAPABILITIES.contains("keep.content.exact-public-read/v1\trequired\tM2\t13\t"));
     assert!(CAPABILITIES.contains("keep.ingest.bounded-stream/v1\trequired\tM2\t13\t"));
+    assert!(CAPABILITIES.contains("keep.range.minimal-overlap/v1\trequired\tM2\t11\t"));
 }

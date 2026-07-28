@@ -316,6 +316,12 @@ Implementations MUST keep these states distinct:
 Parsing, structural validation, or admission alone MUST NOT be reported as
 content verification.
 
+Exact range planning is an operation over an admitted layout, not another
+admission state. A half-open range selects only the minimal ordered entry
+interval whose logical spans overlap it. An authenticated range read verifies
+each selected complete chunk before slicing, but does not thereby verify the
+complete target `BlobId`, unrequested chunks, or unselected profile boundaries.
+
 ## Deterministic refusal order
 
 A version-1 decoder validates in this order:
@@ -360,6 +366,7 @@ replace an earlier gap or overlap with another error.
 | `KEEP-LAYOUT-014` | Decoded, validated, admitted, and verified states remain distinct | State model | Implemented through admission in #10 and verification in #13 |
 | `KEEP-LAYOUT-015` | Flat v1 never silently becomes hierarchical | Compatibility section and rationale | Specified |
 | `KEEP-LAYOUT-016` | Verified reconstruction reproduces the declared spans under the bound storage profile | Verification state and profile-boundary mutation | Implemented in #13 |
+| `KEEP-LAYOUT-017` | Exact range planning selects only the minimal ordered overlap | Range-plan and instrumented chunk-lookup laws | Implemented in #11 |
 
 <!-- markdownlint-enable MD013 -->
 

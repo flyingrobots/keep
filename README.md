@@ -21,17 +21,18 @@ and mutation corpora.
 The public
 [non-durable reference CAS](docs/architecture/reference-store/README.md)
 provides capacity-bounded blocking ingestion, identity-based chunk
-deduplication, an explicit staged-to-visible transition, and authenticated
-whole-blob reconstruction. Reconstruction verifies every chunk, replays the
-registered storage profile, and verifies the complete named `BlobId` before
-writing any bytes.
+deduplication, an explicit staged-to-visible transition, authenticated
+whole-blob reconstruction, and authenticated exact byte-range reads.
+Reconstruction verifies every chunk, replays the registered storage profile,
+and verifies the complete named `BlobId` before writing any bytes. Range reads
+load only the minimal overlapping chunks and state their narrower verification
+claim explicitly.
 
 The reference CAS is executable evidence for M2 storage laws, not a durable
 backend. Its committed state is process memory; process death loses it all.
-Durable segment storage, exact range reads, retention, restart recovery,
-verification of durable structures, compaction, and garbage collection remain
-planned work. Presence in the reference CAS does not claim retention,
-crash-recovery, or durability.
+Durable segment storage, retention, restart recovery, verification of durable
+structures, compaction, and garbage collection remain planned work. Presence
+in the reference CAS does not claim retention, crash-recovery, or durability.
 
 ```rust
 use keep::BlobId;
@@ -103,8 +104,8 @@ The complete Golden File Worldline is planned to demonstrate that Keep can:
 Items 1 through 6 describe the multi-milestone destination. M1 establishes the
 canonical identity boundary. M2 now provides deterministic chunk detection,
 canonical layouts, capacity-bounded ingestion, and authenticated whole-blob
-reconstruction through the non-durable reference CAS. Durable retention and
-recovery, nearby-version workflows, minimal exact range reads, sealed-storage
+reconstruction and minimal exact range reads through the non-durable reference
+CAS. Durable retention and recovery, nearby-version workflows, sealed-storage
 verification, and restart recovery remain future milestones.
 
 See the [M1 conformance contract](docs/conformance/golden-file-worldline.md),
