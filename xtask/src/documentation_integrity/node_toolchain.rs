@@ -141,7 +141,7 @@ fn require_provenance(packages: &Map<String, Value>) -> Result<(), Documentation
     Ok(())
 }
 
-fn contract(path: &'static str, requirement: &'static str) -> DocumentationError {
+const fn contract(path: &'static str, requirement: &'static str) -> DocumentationError {
     DocumentationError::RepositoryContract { path, requirement }
 }
 

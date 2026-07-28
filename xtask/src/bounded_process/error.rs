@@ -35,6 +35,19 @@ pub(crate) enum ProcessError {
     },
 }
 
+impl ProcessError {
+    pub(crate) fn is_not_found(&self) -> bool {
+        match self {
+            Self::Cleanup { primary, .. } => primary.is_not_found(),
+            Self::Io { source, .. } => source.kind() == io::ErrorKind::NotFound,
+            Self::MissingStream { .. }
+            | Self::OutputLimit { .. }
+            | Self::ReaderPanic { .. }
+            | Self::Timeout { .. } => false,
+        }
+    }
+}
+
 impl fmt::Debug for ProcessError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, formatter)

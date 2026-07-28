@@ -14,6 +14,7 @@ use crate::process_output::{BoundedBytes, bounded_bytes};
 const OUTPUT_LIMIT: usize = 1_048_576;
 
 pub(crate) struct ProcessOutput {
+    pub(crate) code: Option<i32>,
     pub(crate) succeeded: bool,
     pub(crate) stdout: Vec<u8>,
     pub(crate) stderr: Vec<u8>,
@@ -29,6 +30,7 @@ pub(crate) fn status(
         source,
     })?;
     Ok(ProcessOutput {
+        code: status.code(),
         succeeded: status.success(),
         stdout: Vec::new(),
         stderr: Vec::new(),
@@ -79,6 +81,7 @@ pub(crate) fn capture(
     refuse_exceeded(program, "stdout", &stdout)?;
     refuse_exceeded(program, "stderr", &stderr)?;
     Ok(ProcessOutput {
+        code: status.code(),
         succeeded: status.success(),
         stdout: stdout.bytes,
         stderr: stderr.bytes,

@@ -156,14 +156,14 @@ impl DependencyScope {
     }
 }
 
-fn contract(requirement: &'static str) -> DocumentationError {
+const fn contract(requirement: &'static str) -> DocumentationError {
     DocumentationError::RepositoryContract {
         path: DEPENDABOT_PATH,
         requirement,
     }
 }
 
-fn contract_at(subject: String, requirement: &'static str) -> DocumentationError {
+const fn contract_at(subject: String, requirement: &'static str) -> DocumentationError {
     DocumentationError::RepositoryContractAt {
         path: DEPENDABOT_PATH,
         subject,

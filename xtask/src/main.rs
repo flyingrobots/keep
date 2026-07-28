@@ -14,7 +14,10 @@ mod benchmark_baseline;
 )]
 mod bounded_process;
 mod diagnostic;
-#[cfg(test)]
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "the command and task-error boundaries are sibling consumers"
+)]
 mod documentation_integrity;
 #[allow(
     clippy::redundant_pub_crate,
@@ -105,6 +108,9 @@ fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
         }
         "conformance-check" => {
             protocol_conformance::check(repository_root)?;
+        }
+        "documentation-integrity-check" => {
+            documentation_integrity::check(repository_root)?;
         }
         "prepare-fuzz-corpus" => {
             fuzz_seed_corpus::prepare(repository_root)?;

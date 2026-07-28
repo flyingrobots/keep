@@ -5,6 +5,7 @@ use std::fmt;
 
 use crate::benchmark_baseline::BenchmarkBaselineError;
 use crate::diagnostic::escaped_controls;
+use crate::documentation_integrity::DocumentationError;
 use crate::fuzz_campaign::FuzzCampaignError;
 use crate::fuzz_seed_corpus::FuzzSeedError;
 use crate::golden_file_worldline::GoldenError;
@@ -14,6 +15,7 @@ use crate::source_structure::SourceStructureError;
 pub(super) enum TaskError {
     BenchmarkBaseline(BenchmarkBaselineError),
     Conformance(ConformanceError),
+    Documentation(DocumentationError),
     FuzzCampaign(FuzzCampaignError),
     FuzzSeed(FuzzSeedError),
     Golden(GoldenError),
@@ -37,6 +39,7 @@ impl fmt::Display for TaskError {
         match self {
             Self::BenchmarkBaseline(error) => write!(formatter, "{error}"),
             Self::Conformance(error) => write!(formatter, "{error}"),
+            Self::Documentation(error) => write!(formatter, "{error}"),
             Self::FuzzCampaign(error) => write!(formatter, "{error}"),
             Self::FuzzSeed(error) => write!(formatter, "{error}"),
             Self::Golden(error) => write!(formatter, "{error}"),
@@ -62,7 +65,8 @@ impl fmt::Display for TaskError {
                 "usage: cargo xtask \
                  <benchmark-baseline|cdc-profile-conformance-check|\
                  chunk-id-conformance-check|conformance-check|\
-                 golden-file-worldline-check|prepare-fuzz-corpus|fuzz|\
+                 documentation-integrity-check|golden-file-worldline-check|\
+                 prepare-fuzz-corpus|fuzz|\
                  source-structure-check|verify>",
             ),
         }
@@ -74,6 +78,7 @@ impl Error for TaskError {
         match self {
             Self::BenchmarkBaseline(error) => Some(error),
             Self::Conformance(error) => Some(error),
+            Self::Documentation(error) => Some(error),
             Self::FuzzCampaign(error) => Some(error),
             Self::FuzzSeed(error) => Some(error),
             Self::Golden(error) => Some(error),
@@ -97,6 +102,12 @@ impl From<BenchmarkBaselineError> for TaskError {
 impl From<ConformanceError> for TaskError {
     fn from(error: ConformanceError) -> Self {
         Self::Conformance(error)
+    }
+}
+
+impl From<DocumentationError> for TaskError {
+    fn from(error: DocumentationError) -> Self {
+        Self::Documentation(error)
     }
 }
 

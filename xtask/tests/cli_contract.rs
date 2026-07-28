@@ -96,7 +96,8 @@ fn missing_command_returns_the_versioned_usage_contract() -> Result<(), io::Erro
         b"Error: usage: cargo xtask \
           <benchmark-baseline|cdc-profile-conformance-check|\
           chunk-id-conformance-check|conformance-check|\
-          golden-file-worldline-check|prepare-fuzz-corpus|fuzz|\
+          documentation-integrity-check|golden-file-worldline-check|\
+          prepare-fuzz-corpus|fuzz|\
           source-structure-check|verify>\n"
     );
     Ok(())

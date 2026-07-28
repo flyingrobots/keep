@@ -83,6 +83,7 @@ fn policy() -> Result<CampaignPolicy, Box<dyn Error>> {
 
 fn output(succeeded: bool, stdout: &[u8], stderr: &[u8]) -> ProcessOutput {
     ProcessOutput {
+        code: Some(i32::from(!succeeded)),
         succeeded,
         stdout: stdout.to_vec(),
         stderr: stderr.to_vec(),

@@ -5,11 +5,13 @@ mod display;
 use std::error::Error;
 use std::fmt;
 use std::io;
+use std::path::PathBuf;
 use std::string::FromUtf8Error;
 
+use crate::bounded_process::ProcessError;
 use crate::git_inventory::GitInventoryError;
 
-pub(super) enum DocumentationError {
+pub(crate) enum DocumentationError {
     EmptyCorpus(&'static str),
     GitInventory(GitInventoryError),
     Inspect {
@@ -29,6 +31,7 @@ pub(super) enum DocumentationError {
         corpus: &'static str,
         source: FromUtf8Error,
     },
+    Process(ProcessError),
     RepositoryFileEncoding {
         path: &'static str,
         source: FromUtf8Error,
@@ -55,6 +58,11 @@ pub(super) enum DocumentationError {
         path: &'static str,
         source: serde_json::Error,
     },
+    RepositoryRootChanged(PathBuf),
+    RepositoryRootInspect {
+        path: PathBuf,
+        source: io::Error,
+    },
     RepositoryValue {
         path: &'static str,
         field: &'static str,
@@ -65,6 +73,22 @@ pub(super) enum DocumentationError {
         program: &'static str,
         expected: &'static str,
         observed: String,
+    },
+    ToolFailed {
+        program: &'static str,
+        code: Option<i32>,
+        stdout: String,
+        stderr: String,
+    },
+    ToolOutputEncoding {
+        program: &'static str,
+        stream: &'static str,
+        source: FromUtf8Error,
+    },
+    ToolUnavailable {
+        program: &'static str,
+        install_version: &'static str,
+        source: ProcessError,
     },
 }
 
@@ -78,6 +102,7 @@ impl Error for DocumentationError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::GitInventory(error) => Some(error),
+            Self::Process(error) => Some(error),
             Self::Inspect { source, .. } | Self::RepositoryFileInspect { source, .. } => {
                 Some(source)
             }
@@ -85,6 +110,9 @@ impl Error for DocumentationError {
                 Some(source)
             }
             Self::RepositoryJson { source, .. } => Some(source),
+            Self::RepositoryRootInspect { source, .. } => Some(source),
+            Self::ToolOutputEncoding { source, .. } => Some(source),
+            Self::ToolUnavailable { source, .. } => Some(source),
             Self::EmptyCorpus(_)
             | Self::InvalidPath { .. }
             | Self::NonRegular { .. }
@@ -92,7 +120,9 @@ impl Error for DocumentationError {
             | Self::RepositoryFileTooLarge { .. }
             | Self::RepositoryContract { .. }
             | Self::RepositoryContractAt { .. }
+            | Self::RepositoryRootChanged(_)
             | Self::RepositoryValue { .. }
+            | Self::ToolFailed { .. }
             | Self::VersionMismatch { .. } => None,
         }
     }
