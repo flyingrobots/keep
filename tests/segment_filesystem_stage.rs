@@ -7,6 +7,8 @@ mod support;
 use std::error::Error;
 use std::fs;
 use std::io::ErrorKind;
+use std::sync::{Arc, Barrier};
+use std::thread;
 
 use keep::{
     AdmittedSegmentRecord, FilesystemSegmentStage, SegmentHeader, SegmentRecordLimit,
@@ -37,6 +39,47 @@ fn exclusive_creation_never_truncates_existing_stage() -> Result<(), Box<dyn Err
             if source.kind() == ErrorKind::AlreadyExists
     ));
     assert_eq!(fs::read(stage_path)?, b"preserved evidence");
+    sandbox.remove()?;
+    Ok(())
+}
+
+#[test]
+fn racing_stage_creation_admits_exactly_one_owner() -> Result<(), Box<dyn Error>> {
+    let sandbox = TestDirectory::create("exclusive-create-race")?;
+    let staging = sandbox.path().join("staging");
+    fs::create_dir(&staging)?;
+    let barrier = Arc::new(Barrier::new(3));
+    let contender = |barrier: Arc<Barrier>| {
+        let staging = staging.clone();
+        thread::spawn(move || {
+            barrier.wait();
+            FilesystemSegmentStage::create(&staging)
+        })
+    };
+    let first = contender(Arc::clone(&barrier));
+    let second = contender(Arc::clone(&barrier));
+    barrier.wait();
+    let first = first.join().map_err(|_panic| "first contender panicked")?;
+    let second = second
+        .join()
+        .map_err(|_panic| "second contender panicked")?;
+    let refusal = match (first, second) {
+        (Ok(stage), Err(error)) | (Err(error), Ok(stage)) => {
+            drop(stage);
+            error
+        }
+        (Ok(_first), Ok(_second)) => return Err("both stage contenders were admitted".into()),
+        (Err(first), Err(second)) => {
+            return Err(format!("both stage contenders were refused: {first}; {second}").into());
+        }
+    };
+
+    assert!(matches!(
+        refusal,
+        SegmentStageCreateError::Create { ref source }
+            if source.kind() == ErrorKind::AlreadyExists
+    ));
+    assert!(staging.join("current.seg").is_file());
     sandbox.remove()?;
     Ok(())
 }
