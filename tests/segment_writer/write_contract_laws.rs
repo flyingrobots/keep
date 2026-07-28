@@ -37,7 +37,7 @@ fn partial_header_failure_preserves_phase_offset_and_source() -> Result<(), Box<
         WriteAction::Limit(1),
         WriteAction::Error(ErrorKind::PermissionDenied),
     ];
-    let (stage, _probe) = ScriptedStage::new(&actions, None, None);
+    let (stage, probe) = ScriptedStage::new(&actions, None, None);
     let error = begin_refusal(stage)?;
     let SegmentWriteError::Write {
         phase,
@@ -51,12 +51,23 @@ fn partial_header_failure_preserves_phase_offset_and_source() -> Result<(), Box<
     assert_eq!(phase, SegmentWritePhase::Header);
     assert_eq!(bytes_written, 1);
     assert_eq!(source.kind(), ErrorKind::PermissionDenied);
+    let canonical = decode_hex(
+        ONE_ZERO_SEGMENT_HEX
+            .strip_suffix('\n')
+            .ok_or("segment fixture must end in one LF")?,
+    )?;
+    assert_eq!(
+        probe.bytes(),
+        canonical
+            .get(..1)
+            .ok_or("segment fixture lacks its first byte")?
+    );
     Ok(())
 }
 
 #[test]
 fn zero_progress_header_write_has_an_exact_refusal() -> Result<(), Box<dyn Error>> {
-    let (stage, _probe) = ScriptedStage::new(&[WriteAction::Zero], None, None);
+    let (stage, probe) = ScriptedStage::new(&[WriteAction::Zero], None, None);
     let error = begin_refusal(stage)?;
 
     assert!(matches!(
@@ -66,12 +77,13 @@ fn zero_progress_header_write_has_an_exact_refusal() -> Result<(), Box<dyn Error
             bytes_written: 0,
         }
     ));
+    assert!(probe.bytes().is_empty());
     Ok(())
 }
 
 #[test]
 fn overreported_header_write_count_has_an_exact_refusal() -> Result<(), Box<dyn Error>> {
-    let (stage, _probe) = ScriptedStage::new(&[WriteAction::Overreport(1)], None, None);
+    let (stage, probe) = ScriptedStage::new(&[WriteAction::Overreport(1)], None, None);
     let error = begin_refusal(stage)?;
 
     assert!(matches!(
@@ -83,6 +95,7 @@ fn overreported_header_write_count_has_an_exact_refusal() -> Result<(), Box<dyn 
             bytes_written: 0,
         }
     ));
+    assert!(probe.bytes().is_empty());
     Ok(())
 }
 

@@ -4,11 +4,13 @@ use std::error::Error;
 use std::io::ErrorKind;
 
 use keep::{
-    AdmittedSegmentRecord, SegmentDurabilityPhase, SegmentRecordLimit, SegmentWriteError,
-    SegmentWritePhase, StagedSegment,
+    AdmittedSegmentRecord, SegmentDurabilityPhase, SegmentHeader, SegmentRecordLimit, SegmentSeal,
+    SegmentWriteError, SegmentWritePhase, StagedSegment,
 };
 
 use super::stage_double::{ScriptedStage, WriteAction};
+use super::support::decode_hex;
+use super::{EMPTY_SEGMENT_HEX, ONE_ZERO_SEGMENT_HEX};
 
 #[test]
 fn seal_write_failure_preserves_the_complete_prefix_offset() -> Result<(), Box<dyn Error>> {
@@ -19,12 +21,28 @@ fn seal_write_failure_preserves_the_complete_prefix_offset() -> Result<(), Box<d
         WriteAction::Full,
         WriteAction::Error(ErrorKind::StorageFull),
     ];
-    let (stage, _probe) = ScriptedStage::new(&actions, None, None);
+    let (stage, probe) = ScriptedStage::new(&actions, None, None);
     let staged = StagedSegment::begin(stage, SegmentRecordLimit::MAXIMUM)?;
     let staged = staged.append(AdmittedSegmentRecord::for_chunk(&[0])?)?;
     let error = seal_refusal(staged)?;
+    let canonical = decode_hex(
+        ONE_ZERO_SEGMENT_HEX
+            .strip_suffix('\n')
+            .ok_or("segment fixture must end in one LF")?,
+    )?;
+    let prefix_length = canonical
+        .len()
+        .checked_sub(SegmentSeal::ENCODED_LENGTH)
+        .ok_or("segment fixture lacks its seal")?;
 
-    assert_write_error(error, SegmentWritePhase::Seal, 209, ErrorKind::StorageFull)
+    assert_write_error(error, SegmentWritePhase::Seal, 209, ErrorKind::StorageFull)?;
+    assert_eq!(
+        probe.bytes(),
+        canonical
+            .get(..prefix_length)
+            .ok_or("segment fixture lacks its record prefix")?
+    );
+    Ok(())
 }
 
 #[test]
@@ -88,7 +106,7 @@ fn assert_durability_refusal(
     phase: SegmentDurabilityPhase,
     failure: DurabilityFailure,
 ) -> Result<(), Box<dyn Error>> {
-    let (stage, _probe) = ScriptedStage::new(&[], flush_failure, sync_failure);
+    let (stage, probe) = ScriptedStage::new(&[], flush_failure, sync_failure);
     let staged = StagedSegment::begin(stage, SegmentRecordLimit::MAXIMUM)?;
     let error = seal_refusal(staged)?;
     let observed = match error {
@@ -101,6 +119,21 @@ fn assert_durability_refusal(
         other => return Err(format!("unexpected durability refusal: {other}").into()),
     };
     assert_eq!(observed, phase);
+    let canonical = decode_hex(
+        EMPTY_SEGMENT_HEX
+            .strip_suffix('\n')
+            .ok_or("segment fixture must end in one LF")?,
+    )?;
+    let retained_length = match phase {
+        SegmentDurabilityPhase::RecordPrefix => SegmentHeader::ENCODED_LENGTH,
+        SegmentDurabilityPhase::SealedSegment => canonical.len(),
+    };
+    assert_eq!(
+        probe.bytes(),
+        canonical
+            .get(..retained_length)
+            .ok_or("segment fixture lacks the retained durability prefix")?
+    );
     Ok(())
 }
 
