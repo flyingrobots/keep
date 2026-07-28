@@ -8,6 +8,7 @@ publish = false
 
 [dependencies]
 allocation-counter = { version = "=0.8.1", default-features = false }
+cpu-time = { version = "=1.0.0", default-features = false }
 keep = { path = ".." }
 
 [lints]

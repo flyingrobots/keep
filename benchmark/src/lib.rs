@@ -29,6 +29,29 @@ mod counting_writer;
 mod fixed_profile;
 mod git_cas_profile;
 mod keep_profile;
+mod measurement;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "measurement sequencing delegates checked aggregation here"
+)]
+mod measurement_aggregate;
+mod measurement_error;
+mod measurement_metrics;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "aggregation and its law tests share exact percentile selection"
+)]
+mod measurement_percentile;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "the public measurement facade delegates private execution here"
+)]
+mod measurement_run;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "the private aggregator consumes isolated sample evidence"
+)]
+mod measurement_sample;
 #[allow(
     clippy::redundant_pub_crate,
     reason = "sibling scenario adapters share one private input meter"
@@ -73,6 +96,8 @@ mod scenario_read;
 
 pub use corpus::BenchmarkCorpus;
 pub use corpus_error::CorpusError;
+pub use measurement::{BaselineMeasurements, MeasurementSettings, ScenarioMetrics};
+pub use measurement_error::MeasurementError;
 pub use profile::{ChunkPartition, ChunkingProfile};
 pub use profile_error::ProfileError;
 pub use scenario::{PreparedScenario, Scenario, ScenarioObservation, VerificationPosture};
