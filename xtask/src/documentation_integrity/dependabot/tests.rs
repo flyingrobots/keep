@@ -42,6 +42,25 @@ fn complete_uniform_dependabot_policy_is_admitted() {
 }
 
 #[test]
+fn list_termination_preserves_the_following_scope_declaration() {
+    let block = [
+        "  - package-ecosystem: cargo",
+        "    directories:",
+        "      - /",
+        "    directory: /xtask",
+    ];
+
+    let scopes = super::block_scopes(&block);
+    assert!(matches!(
+        scopes,
+        Ok(scopes) if scopes == vec![
+            DependencyScope::new("cargo", "/"),
+            DependencyScope::new("cargo", "/xtask"),
+        ]
+    ));
+}
+
+#[test]
 fn missing_manifest_scope_is_refused() {
     let policy = POLICY.replace("      - /xtask\n", "");
     assert!(matches!(

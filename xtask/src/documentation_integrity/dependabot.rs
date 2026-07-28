@@ -87,17 +87,19 @@ fn block_scopes(block: &[&str]) -> Result<Vec<DependencyScope>, DocumentationErr
         .map(unquote)
         .ok_or_else(|| contract("every update block names an ecosystem"))?;
     let mut scopes = Vec::new();
-    let mut lines = block.iter();
-    while let Some(line) = lines.next() {
+    let mut remaining = block;
+    while let Some((line, rest)) = remaining.split_first() {
+        remaining = rest;
         if let Some(directory) = line.strip_prefix("    directory: ") {
             scopes.push(DependencyScope::new(ecosystem, unquote(directory)));
         } else if *line == "    directories:" {
-            scopes.extend(
-                lines
-                    .by_ref()
-                    .map_while(|entry| entry.strip_prefix("      - "))
-                    .map(|directory| DependencyScope::new(ecosystem, unquote(directory))),
-            );
+            while let Some((entry, rest)) = remaining.split_first() {
+                let Some(directory) = entry.strip_prefix("      - ") else {
+                    break;
+                };
+                scopes.push(DependencyScope::new(ecosystem, unquote(directory)));
+                remaining = rest;
+            }
         }
     }
     if scopes.is_empty() {
