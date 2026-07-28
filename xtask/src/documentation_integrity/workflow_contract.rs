@@ -11,6 +11,7 @@ const CI_PATH: &str = ".github/workflows/ci.yml";
 const MALFORMED_INPUT_COMMAND: &str = r"cargo test --locked --package xtask \
   documentation_integrity::execution::external_tests -- --ignored";
 const SETUP_NODE_ACTION: &str = "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
+const SETUP_NODE_ACTION_PREFIX: &str = "actions/setup-node@";
 const NODE_VERSION: &str = "24.18.0";
 const XTASK_COMMAND: &str = "cargo xtask documentation-integrity-check";
 const REVIEWED_RUNS: &[&str] = &[
@@ -64,7 +65,11 @@ fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError>
     let mut runs = Vec::new();
     let mut node_setup_seen = false;
     for step in steps {
-        if step["uses"].as_str() == Some(SETUP_NODE_ACTION) {
+        let action = step["uses"].as_str();
+        if action.is_some_and(|value| value.starts_with(SETUP_NODE_ACTION_PREFIX)) {
+            if action != Some(SETUP_NODE_ACTION) {
+                return Err(contract("documentation Node.js setup action is pinned"));
+            }
             if node_setup_seen {
                 return Err(contract(
                     "documentation job installs pinned Node.js exactly once",
