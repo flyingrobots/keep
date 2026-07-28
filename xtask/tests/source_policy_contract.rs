@@ -56,6 +56,7 @@ fn process_fixtures_isolate_git_from_host_configuration() {
     assert!(BOUNDED_PROCESS_TESTS.contains(".env(\"GIT_CONFIG_NOSYSTEM\", \"1\")"));
     assert!(BOUNDED_PROCESS_TESTS.contains(".env(\"GIT_CONFIG_GLOBAL\""));
     assert!(BOUNDED_PROCESS_TESTS.contains("--template="));
+    assert!(!BOUNDED_PROCESS_TESTS.contains("template.display()"));
 }
 
 #[test]

@@ -1,8 +1,10 @@
 //! This module owns bounded child-process regression evidence.
 
 use std::env;
+use std::ffi::OsString;
 use std::fs;
 use std::io;
+use std::path::Path;
 use std::process::{Command, Stdio};
 use std::str;
 use std::time::Duration;
@@ -24,7 +26,7 @@ fn external_output_is_drained_but_refused_above_the_bound() -> Result<(), Box<dy
     fs::create_dir(&template)?;
     let initialized = fixture_git_command(&repository)?
         .args(["init", "--quiet"])
-        .arg(format!("--template={}", template.display()))
+        .arg(template_argument(&template))
         .status()?;
     if !initialized.success() {
         return Err(io::Error::other("cannot initialize fixture repository").into());
@@ -67,6 +69,25 @@ fn fixture_git_command(repository: &TestDirectory) -> Result<Command, io::Error>
         .env("LC_ALL", "C")
         .current_dir(repository.path());
     Ok(command)
+}
+
+fn template_argument(template: &Path) -> OsString {
+    let mut argument = OsString::from("--template=");
+    argument.push(template);
+    argument
+}
+
+#[test]
+fn fixture_template_argument_preserves_non_utf8_paths() {
+    use std::os::unix::ffi::{OsStrExt, OsStringExt};
+
+    let template = OsString::from_vec(b"/tmp/non-utf8-\xff".to_vec());
+    let argument = template_argument(Path::new(&template));
+
+    assert_eq!(
+        argument.as_os_str().as_bytes(),
+        b"--template=/tmp/non-utf8-\xff"
+    );
 }
 
 #[test]
