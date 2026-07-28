@@ -5,12 +5,14 @@ use std::fmt;
 
 use crate::benchmark_baseline::BenchmarkBaselineError;
 use crate::diagnostic::escaped_controls;
+use crate::fuzz_campaign::FuzzCampaignError;
 use crate::fuzz_seed_corpus::FuzzSeedError;
 use crate::golden_file_worldline::GoldenError;
 use crate::source_structure::SourceStructureError;
 
 pub(super) enum TaskError {
     BenchmarkBaseline(BenchmarkBaselineError),
+    FuzzCampaign(FuzzCampaignError),
     FuzzSeed(FuzzSeedError),
     Golden(GoldenError),
     InvalidCommandEncoding,
@@ -32,6 +34,7 @@ impl fmt::Display for TaskError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::BenchmarkBaseline(error) => write!(formatter, "{error}"),
+            Self::FuzzCampaign(error) => write!(formatter, "{error}"),
             Self::FuzzSeed(error) => write!(formatter, "{error}"),
             Self::Golden(error) => write!(formatter, "{error}"),
             Self::InvalidCommandEncoding => {
@@ -55,7 +58,7 @@ impl fmt::Display for TaskError {
             Self::Usage => formatter.write_str(
                 "usage: cargo xtask \
                  <benchmark-baseline|golden-file-worldline-check|prepare-fuzz-corpus|\
-                 source-structure-check|verify>",
+                 fuzz|source-structure-check|verify>",
             ),
         }
     }
@@ -65,6 +68,7 @@ impl Error for TaskError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::BenchmarkBaseline(error) => Some(error),
+            Self::FuzzCampaign(error) => Some(error),
             Self::FuzzSeed(error) => Some(error),
             Self::Golden(error) => Some(error),
             Self::SourceStructure(error) => Some(error),
@@ -81,6 +85,12 @@ impl Error for TaskError {
 impl From<BenchmarkBaselineError> for TaskError {
     fn from(error: BenchmarkBaselineError) -> Self {
         Self::BenchmarkBaseline(error)
+    }
+}
+
+impl From<FuzzCampaignError> for TaskError {
+    fn from(error: FuzzCampaignError) -> Self {
+        Self::FuzzCampaign(error)
     }
 }
 
