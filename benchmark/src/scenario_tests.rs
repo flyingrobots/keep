@@ -4,6 +4,8 @@ use std::error::Error;
 
 use crate::{BenchmarkCorpus, PreparedScenario, Scenario};
 
+const TIMED_RANGE_SOURCE: &str = include_str!("scenario_read.rs");
+
 #[test]
 fn scenario_catalog_covers_every_required_workload() {
     assert_eq!(
@@ -67,4 +69,11 @@ fn scenario_metrics_preserve_reuse_and_verification_meaning() -> Result<(), Box<
     );
     assert_eq!(partitioned.source_bytes_read(), partitioned.logical_bytes());
     Ok(())
+}
+
+#[test]
+fn timed_range_execution_contains_no_accounting_plans() {
+    assert!(!TIMED_RANGE_SOURCE.contains("authenticated_range_bytes"));
+    assert!(!TIMED_RANGE_SOURCE.contains("selected_entry_count"));
+    assert!(!TIMED_RANGE_SOURCE.contains("plan_range"));
 }

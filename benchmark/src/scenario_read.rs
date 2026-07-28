@@ -3,32 +3,30 @@
 use crate::counting_writer::CountingWriter;
 use crate::scenario_ingest_operation::to_u64;
 use crate::scenario_observation::WorkCounters;
-use crate::scenario_range_metrics::{authenticated_range_bytes, selected_entry_count};
+use crate::scenario_range_metrics::PreparedRange;
 use crate::{Scenario, ScenarioError, ScenarioObservation, VerificationPosture};
-use keep::{AdmittedLayout, BlobId, ByteRange, ReferenceStore};
+use keep::{AdmittedLayout, BlobId, ReferenceStore};
 
 pub(super) fn run_ranges(
     scenario: Scenario,
     store: &ReferenceStore,
     target: BlobId,
-    layout: &AdmittedLayout,
-    ranges: &[ByteRange],
+    ranges: &[PreparedRange],
 ) -> Result<ScenarioObservation, ScenarioError> {
     let mut observation = ScenarioObservation::new(scenario, VerificationPosture::SelectedChunks);
-    for requested in ranges.iter().copied() {
+    for range in ranges.iter().copied() {
         let mut output = CountingWriter::default();
         let _receipt = store
-            .read_range(target, requested, &mut output)
+            .read_range(target, range.requested(), &mut output)
             .map_err(|source| ScenarioError::RangeRead {
                 scenario,
                 source: Box::new(source),
             })?;
-        let authenticated = authenticated_range_bytes(scenario, layout, requested)?;
         let counters = WorkCounters {
-            logical_bytes: requested.length().get(),
-            authenticated_chunk_bytes_read: authenticated,
+            logical_bytes: range.requested().length().get(),
+            authenticated_chunk_bytes_read: range.authenticated_bytes(),
             output_bytes_written: output.bytes_written(),
-            chunk_instances: selected_entry_count(scenario, layout, requested)?,
+            chunk_instances: range.chunk_instances(),
             operation_count: 1,
             ..WorkCounters::default()
         };

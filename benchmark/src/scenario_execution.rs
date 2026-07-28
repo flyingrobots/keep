@@ -1,10 +1,11 @@
 //! Prepared-state dispatch for integrated benchmark workloads.
 
-use keep::{AdmittedLayout, BlobId, ByteRange, ReferenceStore};
+use keep::{AdmittedLayout, BlobId, ReferenceStore};
 
+use crate::scenario_range_metrics::PreparedRange;
 use crate::{
     BenchmarkCorpus, Scenario, ScenarioError, ScenarioObservation, VerificationPosture,
-    scenario_ingest, scenario_ranges, scenario_read,
+    scenario_ingest, scenario_range_metrics, scenario_ranges, scenario_read,
 };
 
 /// Prepared state for repeatable execution of one scenario.
@@ -20,8 +21,7 @@ enum PreparedState {
     Read {
         store: ReferenceStore,
         target: BlobId,
-        layout: AdmittedLayout,
-        ranges: Box<[ByteRange]>,
+        ranges: Box<[PreparedRange]>,
     },
     Verify {
         store: ReferenceStore,
@@ -46,11 +46,11 @@ impl<'a> PreparedScenario<'a> {
             Scenario::SequentialRangeReads | Scenario::RandomRangeReads => {
                 let (store, target, layout) =
                     scenario_ingest::published_store(corpus.large_binary(), scenario)?;
-                let ranges = scenario_ranges::ranges(scenario, corpus.large_binary().len())?;
+                let requests = scenario_ranges::ranges(scenario, corpus.large_binary().len())?;
+                let ranges = scenario_range_metrics::prepare(scenario, &layout, &requests)?;
                 PreparedState::Read {
                     store,
                     target,
-                    layout,
                     ranges,
                 }
             }
@@ -95,9 +95,8 @@ impl<'a> PreparedScenario<'a> {
             PreparedState::Read {
                 store,
                 target,
-                layout,
                 ranges,
-            } => scenario_read::run_ranges(self.scenario, store, *target, layout, ranges),
+            } => scenario_read::run_ranges(self.scenario, store, *target, ranges),
             PreparedState::Verify {
                 store,
                 target,
