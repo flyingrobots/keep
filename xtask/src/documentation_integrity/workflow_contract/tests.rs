@@ -61,6 +61,21 @@ jobs:
 }
 
 #[test]
+fn non_string_run_values_are_refused() {
+    let workflow = WORKFLOW.replace(
+        "  next-job:",
+        "      - name: Invalid executable\n        run: true\n  next-job:",
+    );
+    assert!(matches!(
+        super::admit(&workflow),
+        Err(super::DocumentationError::RepositoryContract {
+            path: super::CI_PATH,
+            requirement: "documentation job run values are strings",
+        })
+    ));
+}
+
+#[test]
 fn unreviewed_python_executables_are_refused() {
     let workflow = WORKFLOW.replace(
         "  next-job:",

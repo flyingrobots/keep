@@ -51,11 +51,18 @@ fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError>
     let Some(steps) = document["jobs"]["documentation"]["steps"].as_vec() else {
         return Err(contract("workflow defines documentation job steps"));
     };
-    Ok(steps
-        .iter()
-        .filter_map(|step| step["run"].as_str())
-        .map(|run| run.trim_end_matches('\n').to_owned())
-        .collect())
+    let mut runs = Vec::new();
+    for step in steps {
+        let run = &step["run"];
+        if run.is_badvalue() {
+            continue;
+        }
+        let Some(run) = run.as_str() else {
+            return Err(contract("documentation job run values are strings"));
+        };
+        runs.push(run.trim_end_matches('\n').to_owned());
+    }
+    Ok(runs)
 }
 
 fn runs_are_reviewed(runs: &[String]) -> bool {
