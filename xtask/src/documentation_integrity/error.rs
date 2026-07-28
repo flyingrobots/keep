@@ -28,6 +28,11 @@ pub(super) enum DocumentationError {
         corpus: &'static str,
         source: FromUtf8Error,
     },
+    VersionMismatch {
+        program: &'static str,
+        expected: &'static str,
+        observed: String,
+    },
 }
 
 impl fmt::Debug for DocumentationError {
@@ -59,6 +64,14 @@ impl fmt::Display for DocumentationError {
             Self::PathEncoding { corpus, .. } => {
                 write!(formatter, "{corpus} corpus contains a non-UTF-8 path")
             }
+            Self::VersionMismatch {
+                program,
+                expected,
+                observed,
+            } => write!(
+                formatter,
+                "{program} version mismatch: expected {expected:?}, observed {observed:?}"
+            ),
         }
     }
 }
@@ -69,7 +82,10 @@ impl Error for DocumentationError {
             Self::GitInventory(error) => Some(error),
             Self::Inspect { source, .. } => Some(source),
             Self::PathEncoding { source, .. } => Some(source),
-            Self::EmptyCorpus(_) | Self::InvalidPath { .. } | Self::NonRegular { .. } => None,
+            Self::EmptyCorpus(_)
+            | Self::InvalidPath { .. }
+            | Self::NonRegular { .. }
+            | Self::VersionMismatch { .. } => None,
         }
     }
 }

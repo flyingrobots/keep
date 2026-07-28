@@ -194,3 +194,7 @@ fn cleanup(child: &mut std::process::Child, primary: ProcessError) -> ProcessErr
     }
     primary
 }
+
+#[cfg(test)]
+#[path = "bounded_process/tests.rs"]
+mod tests;
