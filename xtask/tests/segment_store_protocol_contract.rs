@@ -209,9 +209,17 @@ fn conformance_provenance_has_one_issue_prefix_per_owner() {
         .split_whitespace()
         .collect::<Vec<_>>()
         .join(" ");
-    assert!(
-        !normalized.contains("Issue Issue"),
-        "conformance provenance repeats an issue prefix"
+    for owner in ["Issue #15", "Issue #16", "Issue #17"] {
+        assert_eq!(
+            normalized.matches(owner).count(),
+            1,
+            "conformance provenance must name {owner} exactly once"
+        );
+    }
+    assert_eq!(
+        normalized.matches("flyingrobots/keep/issues/14").count(),
+        1,
+        "conformance provenance must name issue #14 exactly once"
     );
 }
 
