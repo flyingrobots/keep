@@ -1,5 +1,7 @@
 use std::collections::BTreeSet;
 use std::error::Error;
+use std::fs;
+use std::path::Path;
 
 const CI: &str = include_str!("../../../.github/workflows/ci.yml");
 const SCHEDULED: &str = include_str!("../../../.github/workflows/fuzz-scheduled.yml");
@@ -14,8 +16,8 @@ fn checkout_pin_is_consistent_across_fuzz_workflows() {
 
 #[test]
 fn every_fuzz_workflow_action_uses_an_immutable_commit() -> Result<(), Box<dyn Error>> {
-    for workflow in [CI, SCHEDULED] {
-        let references = action_references(workflow).collect::<Vec<_>>();
+    for workflow in workflow_sources()? {
+        let references = action_references(&workflow).collect::<Vec<_>>();
         if references.is_empty() {
             return Err("workflow has no third-party action references".into());
         }
@@ -99,6 +101,30 @@ fn action_references(workflow: &str) -> impl Iterator<Item = (&str, &str)> {
                     .map(|reference| (action, reference))
             })
     })
+}
+
+fn workflow_sources() -> Result<Vec<String>, Box<dyn Error>> {
+    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let repository_root = manifest.parent().map_or(manifest, |parent| parent);
+    let directory = repository_root.join(".github/workflows");
+    let mut sources = Vec::new();
+    for entry in fs::read_dir(directory)? {
+        let entry = entry?;
+        let path = entry.path();
+        let extension = path.extension().and_then(|value| value.to_str());
+        if !matches!(extension, Some("yaml" | "yml")) {
+            continue;
+        }
+        if !entry.file_type()?.is_file() {
+            return Err(format!("workflow is not a regular file: {}", path.display()).into());
+        }
+        sources.push((entry.file_name(), fs::read_to_string(path)?));
+    }
+    sources.sort_by(|left, right| left.0.cmp(&right.0));
+    if sources.is_empty() {
+        return Err("repository workflow corpus is empty".into());
+    }
+    Ok(sources.into_iter().map(|(_, source)| source).collect())
 }
 
 fn step<'a>(workflow: &'a str, name: &str) -> Result<&'a str, Box<dyn Error>> {
