@@ -1,0 +1,19 @@
+[package]
+name = "keep-benchmark"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.96"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+allocation-counter = { version = "=0.8.1", default-features = false }
+cpu-time = { version = "=1.0.0", default-features = false }
+keep = { path = ".." }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "keep-benchmark-baseline"
+path = "src/main.rs"

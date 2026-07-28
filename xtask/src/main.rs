@@ -3,6 +3,11 @@
 #![deny(warnings)]
 #![forbid(unsafe_code)]
 
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "the command dispatcher owns this private repository task"
+)]
+mod benchmark_baseline;
 mod diagnostic;
 #[allow(
     clippy::redundant_pub_crate,
@@ -60,6 +65,9 @@ fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
     }
     let repository_root = repository_root()?;
     match command.as_str() {
+        "benchmark-baseline" => {
+            benchmark_baseline::run(repository_root)?;
+        }
         "prepare-fuzz-corpus" => {
             fuzz_seed_corpus::prepare(repository_root)?;
         }

@@ -44,7 +44,7 @@ fn missing_command_returns_the_versioned_usage_contract() -> Result<(), io::Erro
     assert_eq!(
         output.stderr,
         b"Error: usage: cargo xtask \
-          <golden-file-worldline-check|prepare-fuzz-corpus|\
+          <benchmark-baseline|golden-file-worldline-check|prepare-fuzz-corpus|\
           source-structure-check|verify>\n"
     );
     Ok(())
@@ -67,6 +67,23 @@ fn command_diagnostics_escape_terminal_controls() -> Result<(), io::Error> {
     assert_eq!(
         output.stderr,
         b"Error: unknown xtask command `first\\nError: forged\\rrewrite\\u{1b}[31m`\n"
+    );
+    Ok(())
+}
+
+#[test]
+fn optimized_baselines_refuse_ambient_codegen_settings() -> Result<(), io::Error> {
+    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .arg("benchmark-baseline")
+        .env("CARGO_PROFILE_RELEASE_OPT_LEVEL", "0")
+        .output()?;
+
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        output.stderr,
+        b"Error: ambient build setting `CARGO_PROFILE_RELEASE_OPT_LEVEL` \
+          makes benchmark evidence incomparable\n"
     );
     Ok(())
 }

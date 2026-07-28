@@ -114,7 +114,10 @@ the [CDC profile corpus](conformance/cdc-profile/v1/README.md), the
 [Flat Chunk Layout v1 specification](docs/formats/flat-chunk-layout-v1/README.md),
 the [layout corpus](conformance/layout/v1/README.md), and the
 [reference CAS contract](docs/architecture/reference-store/README.md) for the
-implemented proof boundaries and explicit nonclaims.
+implemented proof boundaries and explicit nonclaims. The
+[streaming CAS baseline protocol](docs/benchmarks/streaming-cas-baseline-v1/README.md)
+defines reproducible performance evidence without treating measurements as
+correctness proof or weakening verification.
 
 ## Contributing
 

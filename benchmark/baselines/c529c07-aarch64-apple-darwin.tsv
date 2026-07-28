@@ -1,0 +1,39 @@
+schema	keep.streaming-cas-baseline/v1
+metadata	build-profile	optimized-release
+metadata	git-commit	c529c07f385b5bcd76a4e57c1987001d496f9135
+metadata	git-tree	clean
+metadata	rustc-version	rustc 1.96.0 (ac68faa20 2026-05-25)
+metadata	target-triple	aarch64-apple-darwin
+metadata	os-description	Darwin 25.3.0 arm64
+metadata	cpu-model	Apple M1 Pro
+metadata	cpu-clock	process
+metadata	peak-memory	incremental-live-heap
+metadata	verification	mandatory
+metadata	timing-unit	nanoseconds
+metadata	byte-unit	bytes
+metadata	ratio-encoding	exact-numerator-denominator
+metadata	logical-cpu-count	10
+metadata	sample-count	100
+metadata	warmup-count	5
+scenario-header	name	verification	sample-count	logical-bytes	physical-bytes-read	physical-bytes-written	source-bytes-read	output-bytes-written	read-amplification-numerator	read-amplification-denominator	write-amplification-numerator	write-amplification-denominator	deduplication-ratio-numerator	deduplication-ratio-denominator	reused-unique-chunks	chunk-instances	operation-count	logical-bytes-per-second	total-wall-time-ns	p50-wall-time-ns	p95-wall-time-ns	p99-wall-time-ns	total-cpu-time-ns	p50-cpu-time-ns	p95-cpu-time-ns	p99-cpu-time-ns	total-allocation-count	total-allocated-bytes	peak-live-allocation-count	peak-live-heap-bytes
+scenario	cold-ingest	ingest-chunk-and-blob-identity	100	1048576	0	1048576	1048576	0	0	1048576	1048576	1048576	1048576	1048576	0	13	1	166506928	629749169	6298583	6503458	6542334	627657000	6279000	6449000	6519000	2800	132013200	20	1313464
+scenario	warm-ingest	ingest-chunk-and-blob-identity	100	1048576	1048576	0	1048576	0	1048576	1048576	0	1048576	1048576	0	13	13	1	167338095	626621210	6273375	6423542	6434000	625238000	6257000	6394000	6432000	600	26508400	3	263488
+scenario	repeated-near-neighbor-edits	ingest-chunk-and-blob-identity	100	8388608	6191702	2196906	8388608	0	6191702	8388608	2196906	8388608	8388608	2196906	74	100	4	166768219	5030099881	50107875	50793084	54297209	5008308000	50048000	50692000	50982000	6800	327809000	40	2470386
+scenario	early-insertion	ingest-chunk-and-blob-identity	100	4198400	1997398	2201002	4198400	0	1997398	4198400	2201002	4198400	4198400	2201002	24	50	2	167658943	2504131253	25054250	25365709	25447958	2500806000	25025000	25317000	25418000	5400	274622600	38	2472826
+scenario	early-deletion	ingest-chunk-and-blob-identity	100	4190208	1997398	2192810	4190208	0	1997398	4190208	2192810	4190208	4190208	2192810	24	50	2	167264596	2505137422	25024208	25459959	25742250	2501207000	24989000	25433000	25615000	5400	273803400	38	2464634
+scenario	many-tiny-blobs	ingest-chunk-and-blob-identity	100	32896	0	32896	32896	0	0	32896	32896	32896	32896	32896	0	256	256	29992422	109681038	1092167	1148083	1215084	109608000	1092000	1145000	1192000	191200	6764795200	889	538368
+scenario	large-binary	ingest-chunk-and-blob-identity	100	1048576	0	1048576	1048576	0	0	1048576	1048576	1048576	1048576	1048576	0	15	1	167222556	627054162	6263167	6503875	6570917	625365000	6250000	6450000	6516000	3000	132031600	22	1313464
+scenario	high-deduplication	ingest-chunk-and-blob-identity	100	4194304	2097152	2097152	4194304	0	2097152	4194304	2097152	4194304	4194304	2097152	25	50	2	167996833	2496656585	24941875	25412958	25535917	2491440000	24916000	25262000	25358000	5000	264075200	36	2368392
+scenario	zero-deduplication	ingest-chunk-and-blob-identity	100	3145728	0	3145728	3145728	0	0	3145728	3145728	3145728	3145728	3145728	0	44	2	166996092	1883713540	18824542	19128542	20287833	1877599000	18786000	19077000	19190000	7500	369104000	58	3417440
+scenario	sequential-range-reads	selected-complete-chunks	100	1048576	6826822	0	0	1048576	6826822	1048576	0	1048576	1048576	0	0	46	32	121341656	864151708	8611500	8883833	8962250	862410000	8592000	8855000	8933000	0	0	0	0
+scenario	random-range-reads	selected-complete-chunks	100	131072	4793596	0	0	131072	4793596	131072	0	131072	131072	0	0	33	32	21659870	605137502	6045041	6207750	6252208	603606000	6041000	6189000	6241000	0	0	0	0
+scenario	whole-blob-verification	chunks-profile-and-blob	100	1048576	2097152	0	0	1048576	2097152	1048576	0	1048576	1048576	0	0	15	1	139415201	752124583	7506125	7674375	7709417	751366000	7503000	7665000	7707000	0	0	0	0
+scenario	varied-input-partitioning	ingest-chunk-and-blob-identity	100	262144	0	262144	262144	0	0	262144	262144	262144	262144	262144	0	4	4	74905311	349967171	3497750	3582667	3633584	349477000	3495000	3570000	3613000	4000	132846400	6	328488
+profile-header	name	provenance	minimum-kib	target-kib	maximum-kib	timed-input	sample-count	logical-bytes-per-second	total-wall-time-ns	p50-wall-time-ns	p95-wall-time-ns	p99-wall-time-ns	total-cpu-time-ns	total-allocation-count	total-allocated-bytes	peak-live-heap-bytes	base-unique-chunks	base-materialized-bytes	insertion-reused-chunks	deletion-reused-chunks	neighbor-reused-chunks
+profile	keep-fastcdc-4-16-64	keep.fastcdc-gear64/v1	4	16	64	large-text	100	464361817	225810125	2253583	2325500	2353167	225592000	200	364000	3640	86	2097152	81	85	85
+profile	keep-fastcdc-16-64-256	keep.fastcdc-gear64/v1	16	64	256	large-text	100	471282545	222494130	2227708	2306625	2338709	221965000	200	98800	988	25	2097152	24	24	24
+profile	keep-fastcdc-64-256-1024	keep.fastcdc-gear64/v1	64	256	1024	large-text	100	471152152	222555706	2226167	2314583	2360833	221899000	200	24400	244	5	2097152	4	4	4
+profile	fixed-64	benchmark.fixed-size/v1	64	64	64	large-text	100	794667466	131951545	1317708	1373875	1435375	131728000	200	71200	712	32	2097152	0	0	31
+profile	git-cas-buzhash-64-256-1024	git-cas@432c5d9effb12c9f66536f1386791bb4421f3cea	64	256	1024	large-text	100	266178373	393937338	3941667	4052167	4132125	393135000	200	24400	244	5	2097152	4	4	4
+threshold-header	metric	status	rationale
+threshold	all-performance-metrics	unconfigured	requires-controlled-baseline-history
