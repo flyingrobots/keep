@@ -242,16 +242,16 @@ fn protocol_index_routes_each_semantic_owner() {
         SPECIFICATION_INDEX.lines().count() <= 200,
         "protocol index exceeds the repository target file size"
     );
-    for page in [
-        "segment.md",
-        "catalog.md",
-        "publication.md",
-        "recovery.md",
-        "requirements.md",
+    for route in [
+        "[Segment bytes](segment.md)",
+        "[Catalog and publication-head bytes](catalog.md)",
+        "[Publication and reader visibility](publication.md)",
+        "[Recovery and platform contract](recovery.md)",
+        "[Requirements, compatibility, and evidence](requirements.md)",
     ] {
         assert!(
-            SPECIFICATION_INDEX.contains(page),
-            "protocol index does not route to {page}"
+            SPECIFICATION_INDEX.contains(route),
+            "protocol index does not preserve the exact route: {route}"
         );
     }
 }
