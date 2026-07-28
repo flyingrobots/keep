@@ -2,22 +2,47 @@ use std::path::Path;
 
 use crate::repository_file::RepositoryRoot;
 
-const WORKFLOW: &str = r"name: CI
+const WORKFLOW: &str = r#"name: CI
 jobs:
   documentation:
     name: Documentation
     steps:
       - name: Install Rust
         run: rustup show
+      - name: Install documentation tools
+        run: |
+          documentation_tools="$RUNNER_TEMP/documentation-tools"
+          scripts/install_documentation_tools.sh "$documentation_tools"
+          printf '%s\n' \
+            "$documentation_tools/bin" \
+            "$documentation_tools/npm/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: Verify malformed inputs
+        run: |
+          cargo test --locked --package xtask \
+            documentation_integrity::execution::external_tests -- --ignored
       - name: Verify
         run: cargo xtask documentation-integrity-check
+      - name: Check whitespace
+        run: git diff --check "$(git hash-object -t tree /dev/null)" HEAD
   next-job:
     steps: []
-";
+"#;
 
 #[test]
 fn documentation_job_delegates_once_to_the_rust_boundary() {
     assert!(super::admit(WORKFLOW).is_ok());
+}
+
+#[test]
+fn documentation_job_requires_the_malformed_input_regressions() {
+    let runs = super::REVIEWED_RUNS
+        .iter()
+        .copied()
+        .filter(|run| *run != super::MALFORMED_INPUT_COMMAND)
+        .map(String::from)
+        .collect::<Vec<_>>();
+
+    assert!(!super::runs_are_reviewed(&runs));
 }
 
 #[test]

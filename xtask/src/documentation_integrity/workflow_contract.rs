@@ -8,6 +8,8 @@ use super::error::DocumentationError;
 use super::repository_text;
 
 const CI_PATH: &str = ".github/workflows/ci.yml";
+const MALFORMED_INPUT_COMMAND: &str = r"cargo test --locked --package xtask \
+  documentation_integrity::execution::external_tests -- --ignored";
 const XTASK_COMMAND: &str = "cargo xtask documentation-integrity-check";
 const REVIEWED_RUNS: &[&str] = &[
     "rustup show",
@@ -16,8 +18,7 @@ scripts/install_documentation_tools.sh "$documentation_tools"
 printf '%s\n' \
   "$documentation_tools/bin" \
   "$documentation_tools/npm/node_modules/.bin" >> "$GITHUB_PATH""#,
-    r"cargo test --locked --package xtask \
-  documentation_integrity::execution::external_tests -- --ignored",
+    MALFORMED_INPUT_COMMAND,
     XTASK_COMMAND,
     r#"git diff --check "$(git hash-object -t tree /dev/null)" HEAD"#,
 ];
@@ -69,17 +70,10 @@ fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError>
 }
 
 fn runs_are_reviewed(runs: &[String]) -> bool {
-    runs.iter().all(|run| REVIEWED_RUNS.contains(&run.as_str()))
-        && runs
+    runs.len() == REVIEWED_RUNS.len()
+        && REVIEWED_RUNS
             .iter()
-            .filter(|run| run.as_str() == "rustup show")
-            .count()
-            == 1
-        && runs
-            .iter()
-            .filter(|run| run.as_str() == XTASK_COMMAND)
-            .count()
-            == 1
+            .all(|required| runs.iter().filter(|run| run.as_str() == *required).count() == 1)
 }
 
 const fn contract(requirement: &'static str) -> DocumentationError {
