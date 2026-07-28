@@ -22,6 +22,9 @@ after its public API and format compatibility policies are established.
   and inherited child execution and output collection. Git-backed process
   fixtures ignore system and global Git configuration and preserve non-UTF-8
   template paths without lossy conversion.
+- Fuzz build and run plans now carry external process deadlines from the
+  reviewed campaign policy. Run deadlines use checked addition of the
+  exploration budget and process-grace interval before process-group execution.
 - ChunkId v1 and CDC profile v1 conformance now run through one bounded Rust
   `cargo xtask conformance-check` command, including the external `b3sum`
   witness, reproducible Gear-table recipe, scalar and streaming FastCDC laws,

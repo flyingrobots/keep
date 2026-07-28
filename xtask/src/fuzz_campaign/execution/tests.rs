@@ -35,7 +35,7 @@ fn every_target_runs_after_an_earlier_failure() -> Result<(), Box<dyn Error>> {
 fn swallowed_minimization_failure_is_refused() -> Result<(), Box<dyn Error>> {
     let policy = policy()?;
     let target = FuzzTarget::admit("first".to_owned())?;
-    let plan = CommandPlan::new(&policy, CampaignOperation::Minimize, target);
+    let plan = CommandPlan::new(&policy, CampaignOperation::Minimize, target)?;
     let mut runner =
         ScriptedRunner::new([output(true, b"Failed to minimize corpus: signal 6", b"")]);
     let Err(error) = execute_all(Path::new("."), "corpus minimization", &[plan], &mut runner)
@@ -69,7 +69,7 @@ fn plans(operation: CampaignOperation) -> Result<Vec<CommandPlan>, Box<dyn Error
         .into_iter()
         .map(|name| {
             let target = FuzzTarget::admit(name.to_owned())?;
-            Ok(CommandPlan::new(&policy, operation, target))
+            Ok(CommandPlan::new(&policy, operation, target)?)
         })
         .collect()
 }

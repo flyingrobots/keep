@@ -61,12 +61,14 @@ fn fuzz_description_emits_the_admitted_smoke_policy() -> Result<(), io::Error> {
     assert_eq!(
         output.stdout,
         b"CARGO_FUZZ_VERSION: 0.13.2\n\
+          FUZZ_BUILD_TIMEOUT_SECONDS: 600\n\
           FUZZ_CMIN_SECONDS_PER_TARGET: 120\n\
           FUZZ_CORPUS_MAX_BYTES: 536870912\n\
           FUZZ_CORPUS_MAX_FILES: 20000\n\
           FUZZ_CORPUS_RETENTION_DAYS: 14\n\
           FUZZ_INPUT_TIMEOUT_SECONDS: 5\n\
           FUZZ_MAX_INPUT_BYTES: 1048576\n\
+          FUZZ_PROCESS_GRACE_SECONDS: 60\n\
           FUZZ_RSS_LIMIT_MB: 1024\n\
           FUZZ_SCHEDULED_FAILURE_RETENTION_DAYS: 30\n\
           FUZZ_SECONDS_PER_TARGET: 15\n\

@@ -8,6 +8,7 @@ mod tests;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
+use std::time::Duration;
 
 use super::profile::CampaignProfile;
 pub(crate) use error::PolicyError;
@@ -16,8 +17,10 @@ use syntax::{bounded, is_dated_nightly, is_exact_version, parse_assignments, val
 pub(super) struct CampaignPolicy {
     cargo_fuzz_version: String,
     toolchain: String,
+    build_timeout_seconds: u64,
     input_timeout_seconds: u64,
     max_input_bytes: u64,
+    process_grace_seconds: u64,
     rss_limit_mb: u64,
     smoke_seconds_per_target: u64,
     scheduled_seconds_per_target: u64,
@@ -55,6 +58,10 @@ impl CampaignPolicy {
         [
             ("CARGO_FUZZ_VERSION", self.cargo_fuzz_version.clone()),
             (
+                "FUZZ_BUILD_TIMEOUT_SECONDS",
+                self.build_timeout_seconds.to_string(),
+            ),
+            (
                 "FUZZ_CMIN_SECONDS_PER_TARGET",
                 self.cmin_seconds_per_target.to_string(),
             ),
@@ -69,6 +76,10 @@ impl CampaignPolicy {
                 self.input_timeout_seconds.to_string(),
             ),
             ("FUZZ_MAX_INPUT_BYTES", self.max_input_bytes.to_string()),
+            (
+                "FUZZ_PROCESS_GRACE_SECONDS",
+                self.process_grace_seconds.to_string(),
+            ),
             ("FUZZ_RSS_LIMIT_MB", self.rss_limit_mb.to_string()),
             (
                 "FUZZ_SCHEDULED_FAILURE_RETENTION_DAYS",
@@ -94,6 +105,17 @@ impl CampaignPolicy {
 
     pub(super) const fn cmin_seconds(&self) -> u64 {
         self.cmin_seconds_per_target
+    }
+
+    pub(super) const fn build_timeout(&self) -> Duration {
+        Duration::from_secs(self.build_timeout_seconds)
+    }
+
+    pub(super) fn run_timeout(&self, profile: CampaignProfile) -> Result<Duration, PolicyError> {
+        self.seconds_per_target(profile)
+            .checked_add(self.process_grace_seconds)
+            .map(Duration::from_secs)
+            .ok_or(PolicyError::CampaignDeadline)
     }
 
     pub(super) const fn corpus_max_bytes(&self) -> u64 {
@@ -124,8 +146,10 @@ impl CampaignPolicy {
         Ok(Self {
             cargo_fuzz_version,
             toolchain,
+            build_timeout_seconds: bounded(values, "FUZZ_BUILD_TIMEOUT_SECONDS", 60, 3_600)?,
             input_timeout_seconds: bounded(values, "FUZZ_INPUT_TIMEOUT_SECONDS", 1, 60)?,
             max_input_bytes: bounded(values, "FUZZ_MAX_INPUT_BYTES", 1, 1_048_576)?,
+            process_grace_seconds: bounded(values, "FUZZ_PROCESS_GRACE_SECONDS", 1, 600)?,
             rss_limit_mb: bounded(values, "FUZZ_RSS_LIMIT_MB", 128, 8_192)?,
             smoke_seconds_per_target: bounded(values, "FUZZ_SMOKE_SECONDS_PER_TARGET", 1, 60)?,
             scheduled_seconds_per_target: bounded(

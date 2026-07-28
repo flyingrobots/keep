@@ -6,7 +6,7 @@ mod tests;
 use std::ffi::OsString;
 use std::time::Duration;
 
-use super::policy::CampaignPolicy;
+use super::policy::{CampaignPolicy, PolicyError};
 use super::profile::CampaignProfile;
 use super::target::FuzzTarget;
 
@@ -38,7 +38,7 @@ impl CommandPlan {
         policy: &CampaignPolicy,
         operation: CampaignOperation,
         target: FuzzTarget,
-    ) -> Self {
+    ) -> Result<Self, PolicyError> {
         let mut arguments = vec![
             OsString::from(format!("+{}", policy.toolchain())),
             OsString::from("fuzz"),
@@ -46,7 +46,7 @@ impl CommandPlan {
         let (deadline, output_mode, refused_output_marker) = match operation {
             CampaignOperation::Build => {
                 arguments.extend([OsString::from("build"), OsString::from(target.as_str())]);
-                (None, OutputMode::Inherit, None)
+                (Some(policy.build_timeout()), OutputMode::Inherit, None)
             }
             CampaignOperation::Minimize => {
                 arguments.extend([OsString::from("cmin"), OsString::from(target.as_str())]);
@@ -60,16 +60,20 @@ impl CommandPlan {
             CampaignOperation::Run(profile) => {
                 arguments.extend([OsString::from("run"), OsString::from(target.as_str())]);
                 push_fuzzer_arguments(&mut arguments, policy.seconds_per_target(profile), policy);
-                (None, OutputMode::Inherit, None)
+                (
+                    Some(policy.run_timeout(profile)?),
+                    OutputMode::Inherit,
+                    None,
+                )
             }
         };
-        Self {
+        Ok(Self {
             target,
             arguments,
             deadline,
             output_mode,
             refused_output_marker,
-        }
+        })
     }
 
     pub(super) const fn target(&self) -> &FuzzTarget {

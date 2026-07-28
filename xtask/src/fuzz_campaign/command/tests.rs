@@ -15,7 +15,7 @@ fn run_plan_preserves_every_reviewed_resource_bound() -> Result<(), Box<dyn Erro
         &policy,
         CampaignOperation::Run(CampaignProfile::Smoke),
         target,
-    );
+    )?;
     assert_eq!(
         plan.arguments(),
         [
@@ -31,7 +31,18 @@ fn run_plan_preserves_every_reviewed_resource_bound() -> Result<(), Box<dyn Erro
             "-print_final_stats=1",
         ]
     );
-    assert_eq!(plan.deadline(), None);
+    assert_eq!(plan.deadline(), Some(Duration::from_secs(75)));
+    assert_eq!(plan.output_mode(), OutputMode::Inherit);
+    Ok(())
+}
+
+#[test]
+fn build_plan_has_an_external_deadline() -> Result<(), Box<dyn Error>> {
+    let policy = policy()?;
+    let target = FuzzTarget::admit("segment_format".to_owned())?;
+    let plan = CommandPlan::new(&policy, CampaignOperation::Build, target)?;
+
+    assert_eq!(plan.deadline(), Some(Duration::from_mins(10)));
     assert_eq!(plan.output_mode(), OutputMode::Inherit);
     Ok(())
 }
@@ -40,7 +51,7 @@ fn run_plan_preserves_every_reviewed_resource_bound() -> Result<(), Box<dyn Erro
 fn minimization_plan_has_an_external_deadline_and_failure_marker() -> Result<(), Box<dyn Error>> {
     let policy = policy()?;
     let target = FuzzTarget::admit("blob_hasher".to_owned())?;
-    let plan = CommandPlan::new(&policy, CampaignOperation::Minimize, target);
+    let plan = CommandPlan::new(&policy, CampaignOperation::Minimize, target)?;
     assert_eq!(plan.deadline(), Some(Duration::from_mins(2)));
     assert_eq!(
         plan.refused_output_marker(),

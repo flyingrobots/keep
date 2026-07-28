@@ -111,7 +111,7 @@ fn execute_plans(
     let plans = target::registered(repository_root, policy)?
         .into_iter()
         .map(|target| CommandPlan::new(policy, operation, target))
-        .collect::<Vec<_>>();
+        .collect::<Result<Vec<_>, _>>()?;
     execution::run(repository_root, name, &plans)?;
     Ok(())
 }
