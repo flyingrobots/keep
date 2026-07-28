@@ -36,5 +36,6 @@ pub use layout::{
 pub use profile::{RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId};
 pub use reference::{
     IngestionAllocation, IngestionError, ProfileBoundary, PublishError, PublishedBlob,
-    ReconstructionError, ReconstructionReceipt, ReferenceStore, ReferenceStoreCapacity, StagedBlob,
+    RangeReadError, RangeReadReceipt, ReconstructionError, ReconstructionReceipt, ReferenceStore,
+    ReferenceStoreCapacity, StagedBlob,
 };

@@ -1,12 +1,13 @@
 //! Whole-blob authentication followed by exact synchronous emission.
 
-use std::io::{ErrorKind, Write};
+use std::io::Write;
 
 use crate::{
-    AdmittedLayout, BlobHasher, BlobId, BlobLength, ChunkId, LayoutDecodePolicy, LayoutEntry,
-    LayoutId, ReferenceStore,
+    AdmittedLayout, BlobHasher, BlobId, BlobLength, LayoutDecodePolicy, LayoutId, ReferenceStore,
 };
 
+use super::chunk_verification::{ChunkVerificationError, verified_chunk};
+use super::output_write::{OutputWriteError, write_all};
 use super::profile_verification::ProfileVerifier;
 use super::{ReconstructionError, ReconstructionReceipt};
 
@@ -159,7 +160,8 @@ fn verify_complete_blob(
     let mut hasher = BlobHasher::new();
     let mut profile = ProfileVerifier::new(layout_id, layout)?;
     for (index, entry) in layout.entries().iter().copied().enumerate() {
-        let bytes = verified_chunk(store, layout_id, index, entry)?;
+        let bytes =
+            verified_chunk(store, layout_id, index, entry).map_err(reconstruction_chunk_error)?;
         profile.feed(bytes)?;
         hasher
             .update(bytes)
@@ -189,41 +191,11 @@ where
 {
     let mut written = 0_u64;
     for (index, entry) in layout.entries().iter().copied().enumerate() {
-        let bytes = verified_chunk(store, layout_id, index, entry)?;
+        let bytes =
+            verified_chunk(store, layout_id, index, entry).map_err(reconstruction_chunk_error)?;
         write_chunk(output, layout_id, bytes, &mut written)?;
     }
     Ok(BlobLength::new(written))
-}
-
-fn verified_chunk(
-    store: &ReferenceStore,
-    layout_id: LayoutId,
-    index: usize,
-    entry: LayoutEntry,
-) -> Result<&[u8], ReconstructionError> {
-    let expected = entry.chunk_id();
-    let bytes = store
-        .chunk(expected)
-        .ok_or(ReconstructionError::ChunkMissing {
-            layout: layout_id,
-            index,
-            requested: expected,
-        })?;
-    let observed = ChunkId::hash_bytes(bytes).map_err(|source| ReconstructionError::ChunkHash {
-        layout: layout_id,
-        index,
-        expected,
-        source,
-    })?;
-    if observed != expected {
-        return Err(ReconstructionError::ChunkIdentityMismatch {
-            layout: layout_id,
-            index,
-            expected,
-            observed,
-        });
-    }
-    Ok(bytes)
 }
 
 fn write_chunk<W>(
@@ -235,58 +207,78 @@ fn write_chunk<W>(
 where
     W: Write + ?Sized,
 {
-    let mut remaining = bytes;
-    while !remaining.is_empty() {
-        match output.write(remaining) {
-            Ok(0) => {
-                return Err(ReconstructionError::WriteZero {
-                    layout: layout_id,
-                    bytes_written: BlobLength::new(*written),
-                });
-            }
-            Ok(observed) => {
-                let accepted = remaining.get(observed..).ok_or_else(|| {
-                    ReconstructionError::InvalidWriteCount {
-                        layout: layout_id,
-                        maximum: remaining.len(),
-                        observed,
-                        bytes_written: BlobLength::new(*written),
-                    }
-                })?;
-                *written = checked_written(layout_id, *written, observed)?;
-                remaining = accepted;
-            }
-            Err(source) if source.kind() == ErrorKind::Interrupted => {}
-            Err(source) => {
-                return Err(ReconstructionError::Write {
-                    layout: layout_id,
-                    bytes_written: BlobLength::new(*written),
-                    source,
-                });
-            }
-        }
-    }
-    Ok(())
+    write_all(output, bytes, written).map_err(|error| reconstruction_output_error(layout_id, error))
 }
 
-fn checked_written(
-    layout_id: LayoutId,
-    written: u64,
-    incoming: usize,
-) -> Result<u64, ReconstructionError> {
-    let incoming_u64 =
-        u64::try_from(incoming).map_err(|_source| ReconstructionError::WrittenLengthOverflow {
-            layout: layout_id,
-            bytes_written: BlobLength::new(written),
+const fn reconstruction_chunk_error(error: ChunkVerificationError) -> ReconstructionError {
+    match error {
+        ChunkVerificationError::Missing {
+            layout,
+            index,
+            requested,
+        } => ReconstructionError::ChunkMissing {
+            layout,
+            index,
+            requested,
+        },
+        ChunkVerificationError::Hash {
+            layout,
+            index,
+            expected,
+            source,
+        } => ReconstructionError::ChunkHash {
+            layout,
+            index,
+            expected,
+            source,
+        },
+        ChunkVerificationError::IdentityMismatch {
+            layout,
+            index,
+            expected,
+            observed,
+        } => ReconstructionError::ChunkIdentityMismatch {
+            layout,
+            index,
+            expected,
+            observed,
+        },
+    }
+}
+
+fn reconstruction_output_error(layout: LayoutId, error: OutputWriteError) -> ReconstructionError {
+    match error {
+        OutputWriteError::WriteZero { bytes_written } => ReconstructionError::WriteZero {
+            layout,
+            bytes_written: BlobLength::new(bytes_written),
+        },
+        OutputWriteError::InvalidWriteCount {
+            maximum,
+            observed,
+            bytes_written,
+        } => ReconstructionError::InvalidWriteCount {
+            layout,
+            maximum,
+            observed,
+            bytes_written: BlobLength::new(bytes_written),
+        },
+        OutputWriteError::Write {
+            bytes_written,
+            source,
+        } => ReconstructionError::Write {
+            layout,
+            bytes_written: BlobLength::new(bytes_written),
+            source,
+        },
+        OutputWriteError::LengthOverflow {
+            bytes_written,
             incoming,
-        })?;
-    written
-        .checked_add(incoming_u64)
-        .ok_or_else(|| ReconstructionError::WrittenLengthOverflow {
-            layout: layout_id,
-            bytes_written: BlobLength::new(written),
+        } => ReconstructionError::WrittenLengthOverflow {
+            layout,
+            bytes_written: BlobLength::new(bytes_written),
             incoming,
-        })
+        },
+    }
 }
 
 #[cfg(test)]

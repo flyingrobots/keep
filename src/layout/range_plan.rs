@@ -17,6 +17,7 @@ pub struct RangePlan {
     requested: ByteRange,
     first_entry: Option<usize>,
     entry_count: usize,
+    end_entry: usize,
 }
 
 impl RangePlan {
@@ -37,6 +38,10 @@ impl RangePlan {
     pub const fn entry_count(self) -> usize {
         self.entry_count
     }
+
+    pub(crate) const fn end_entry(self) -> usize {
+        self.end_entry
+    }
 }
 
 impl AdmittedLayout {
@@ -56,6 +61,7 @@ impl AdmittedLayout {
                 requested,
                 first_entry: None,
                 entry_count: 0,
+                end_entry: 0,
             });
         }
         plan_nonempty(self, requested)
@@ -112,6 +118,7 @@ fn plan_nonempty(
         requested,
         first_entry: Some(first),
         entry_count,
+        end_entry,
     })
 }
 
