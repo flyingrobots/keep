@@ -114,30 +114,41 @@ fn durable_transition_ledger_is_complete_and_stable() -> Result<(), String> {
     for exact_transition in [
         "KEEP-CRASH-009\tsegment\tlink-sealed-stage\t\
          durable-sealed-stage\t\
-         valid-sealed-stage-or-valid-orphan-or-ambiguity",
+         valid-sealed-stage-or-valid-orphan-or-ambiguity\t\
+         linked-segment-orphan\tverify-no-clobber-link-and-digest",
         "KEEP-CRASH-017\tcatalog\tlink-generation\t\
          durable-catalog-stage\t\
-         valid-catalog-stage-or-valid-orphan-or-ambiguity",
+         valid-catalog-stage-or-valid-orphan-or-ambiguity\t\
+         linked-catalog-orphan\tverify-no-clobber-link-and-digest",
         "KEEP-CRASH-025\thead\treplace-current-head\t\
          durable-next-head\t\
-         valid-next-head-or-published-generation-or-ambiguity",
+         valid-next-head-or-published-generation-or-ambiguity\t\
+         replaced-current-head\tverify-one-atomic-head",
         "KEEP-CRASH-026\thead\tsync-root-directory\t\
-         replaced-current-head\tpublished-generation-or-ambiguity",
+         replaced-current-head\tpublished-generation-or-ambiguity\t\
+         published-generation-admitted\tverify-complete-reader-snapshot",
         "KEEP-CRASH-027\trecovery\tunlink-truncated-stage\t\
          named-truncated-stage\t\
-         named-truncated-stage-or-unlinked-stage",
+         named-truncated-stage-or-unlinked-stage\t\
+         unlinked-truncated-stage\tverify-requested-stage-fingerprint",
         "KEEP-CRASH-028\trecovery\tsync-staging-after-discard\t\
          unlinked-truncated-stage\t\
-         named-truncated-stage-or-discarded-stage",
+         named-truncated-stage-or-discarded-stage\t\
+         discarded-truncated-stage\treport-explicit-discard",
         "KEEP-CRASH-029\trecovery\tunlink-next-head\t\
          named-unpublishable-next-head\t\
-         named-unpublishable-next-head-or-unlinked-next-head",
+         named-unpublishable-next-head-or-unlinked-next-head\t\
+         unlinked-next-head\tverify-requested-next-head-fingerprint",
         "KEEP-CRASH-030\trecovery\tsync-root-after-next-head-discard\t\
          unlinked-next-head\t\
-         named-unpublishable-next-head-or-discarded-next-head",
+         named-unpublishable-next-head-or-discarded-next-head\t\
+         discarded-next-head\treport-explicit-next-head-discard",
     ] {
         assert!(
-            TRANSITIONS.contains(exact_transition),
+            TRANSITIONS
+                .lines()
+                .skip(2)
+                .any(|row| row == exact_transition),
             "imprecise atomic-transition state: {exact_transition}"
         );
     }
