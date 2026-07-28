@@ -83,6 +83,9 @@ after its public API and format compatibility policies are established.
 - Exclusive `FilesystemSegmentStage` creation for the fixed `current.seg`
   staging name, with atomic no-replacement admission, preserved existing
   evidence, zero-origin writing, and no implicit cleanup from `Drop`.
+- Rust cargo-fuzz coverage for the public segment header, record header,
+  complete record, seal, and complete-segment parser boundaries, seeded from
+  the canonical version-1 segment fixtures through `cargo xtask`.
 - ADR-0005 and the implementation-independent `keep.segment-store/v1`
   protocol: exact immutable segment, catalog-generation, and publication-head
   grammars; canonical ordering, bounds, and domain-separated checksums;

@@ -4,6 +4,7 @@ mod cdc_seeds;
 mod filesystem;
 mod identity_seeds;
 mod layout_seeds;
+mod segment_seeds;
 
 use std::error::Error;
 use std::fmt;
@@ -66,6 +67,7 @@ pub(super) fn prepare(repository_root: &Path) -> Result<(), FuzzSeedError> {
     seeds.extend(cdc_seeds::seeds()?);
     seeds.extend(golden_protocol_seeds_from(&files)?);
     seeds.extend(layout_seeds::seeds(&files)?);
+    seeds.extend(segment_seeds::seeds(&files)?);
     files.write_seeds(&seeds)
 }
 

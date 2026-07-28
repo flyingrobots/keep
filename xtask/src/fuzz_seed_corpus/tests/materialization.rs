@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use super::super::{FuzzSeedError, layout_seeds::FIXTURES, prepare};
+use super::super::{FuzzSeedError, layout_seeds, prepare, segment_seeds};
 use crate::test_directory::TestDirectory;
 
 const TABLES: [&str; 5] = [
@@ -37,13 +37,15 @@ fn seed_preparation_materializes_the_complete_deterministic_set()
             .map_err(|source| FuzzSeedError::io("copy test table", &destination, source))?;
     }
     copy_layout_fixtures(source_root, root)?;
+    copy_segment_fixtures(source_root, root)?;
 
     prepare(root)?;
     let corpus = root.join("fuzz/corpus");
     let first = seed_contents(&corpus)?;
-    assert_eq!(first.len(), 26);
+    assert_eq!(first.len(), 34);
     assert_eq!(target_seed_count(&first, "golden_protocol/"), 9);
     assert_eq!(target_seed_count(&first, "layout_record/"), 4);
+    assert_eq!(target_seed_count(&first, "segment_format/"), 8);
     prepare(root)?;
     assert_eq!(seed_contents(&corpus)?, first);
 
@@ -62,11 +64,33 @@ fn copy_layout_fixtures(source_root: &Path, root: &Path) -> Result<(), FuzzSeedE
             source,
         )
     })?;
-    for fixture in FIXTURES {
+    for fixture in layout_seeds::FIXTURES {
         let source_path = source_root.join("conformance/layout/v1").join(fixture);
         let destination = layout_directory.join(fixture);
         fs::copy(&source_path, &destination)
             .map_err(|source| FuzzSeedError::io("copy test layout", &destination, source))?;
+    }
+    Ok(())
+}
+
+fn copy_segment_fixtures(source_root: &Path, root: &Path) -> Result<(), FuzzSeedError> {
+    use std::fs;
+
+    let segment_directory = root.join("conformance/segment-store/v1");
+    fs::create_dir_all(&segment_directory).map_err(|source| {
+        FuzzSeedError::io(
+            "create test segment conformance root",
+            &segment_directory,
+            source,
+        )
+    })?;
+    for fixture in segment_seeds::FIXTURES {
+        let source_path = source_root
+            .join("conformance/segment-store/v1")
+            .join(fixture);
+        let destination = segment_directory.join(fixture);
+        fs::copy(&source_path, &destination)
+            .map_err(|source| FuzzSeedError::io("copy test segment", &destination, source))?;
     }
     Ok(())
 }
