@@ -2,6 +2,7 @@ use std::path::Path;
 
 use crate::repository_file::RepositoryRoot;
 
+mod action_steps;
 mod node_setup;
 
 const WORKFLOW: &str = r#"name: CI
@@ -9,6 +10,10 @@ jobs:
   documentation:
     name: Documentation
     steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
       - name: Install Rust
         run: rustup show
       - name: Install pinned Node.js
@@ -75,13 +80,16 @@ fn inert_yaml_cannot_impersonate_documentation_commands() {
 jobs:
   documentation:
     steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
       - name: Install pinned Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
           node-version: 24.18.0
       # run: rustup show
       - name: "run: cargo xtask documentation-integrity-check"
-        uses: example/action@0123456789abcdef
 "#;
     assert!(matches!(
         super::admit(workflow),
