@@ -1,6 +1,7 @@
 //! Repository-owned optimized benchmark execution and artifact publication.
 
 mod artifact;
+mod artifact_publication;
 mod build_environment;
 mod environment;
 mod error;
@@ -60,7 +61,7 @@ pub(crate) fn run(repository_root: &Path) -> Result<(), BenchmarkBaselineError> 
         });
     }
     artifact::validate(&output.stdout, &environment)?;
-    artifact::persist(repository_root, &output.stdout)
+    artifact_publication::persist(repository_root, &output.stdout)
 }
 
 fn admit_clean_source(

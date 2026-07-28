@@ -1,13 +1,7 @@
 //! Admission and atomic persistence of generated baseline bytes.
 
-use std::fs::{self, OpenOptions};
-use std::io::Write;
-use std::path::Path;
-
 use super::BenchmarkBaselineError;
 use super::environment::CapturedEnvironment;
-
-const REPORT_RELATIVE_PATH: &str = "target/benchmark/streaming-cas-baseline-v1.tsv";
 
 pub(super) fn validate(
     bytes: &[u8],
@@ -95,32 +89,6 @@ pub(super) fn validate(
     Ok(())
 }
 
-pub(super) fn persist(repository_root: &Path, bytes: &[u8]) -> Result<(), BenchmarkBaselineError> {
-    let output = repository_root.join(REPORT_RELATIVE_PATH);
-    let parent = output
-        .parent()
-        .ok_or(BenchmarkBaselineError::ReportViolation {
-            reason: "report-output-has-no-parent",
-        })?;
-    fs::create_dir_all(parent).map_err(|source| io_error("create directory", parent, source))?;
-    let temporary = parent.join(format!(
-        ".streaming-cas-baseline-v1.tsv.tmp-{}",
-        std::process::id()
-    ));
-    let mut file = OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .open(&temporary)
-        .map_err(|source| io_error("create temporary report", &temporary, source))?;
-    file.write_all(bytes)
-        .map_err(|source| io_error("write temporary report", &temporary, source))?;
-    file.sync_all()
-        .map_err(|source| io_error("sync temporary report", &temporary, source))?;
-    fs::rename(&temporary, &output)
-        .map_err(|source| io_error("publish report", &output, source))?;
-    Ok(())
-}
-
 fn require_line(
     report: &str,
     expected: &str,
@@ -135,12 +103,4 @@ fn require_line(
 
 const fn violation<T>(reason: &'static str) -> Result<T, BenchmarkBaselineError> {
     Err(BenchmarkBaselineError::ReportViolation { reason })
-}
-
-fn io_error(action: &'static str, target: &Path, source: std::io::Error) -> BenchmarkBaselineError {
-    BenchmarkBaselineError::Io {
-        action,
-        target: target.to_path_buf(),
-        source,
-    }
 }

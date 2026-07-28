@@ -70,8 +70,9 @@ after its public API and format compatibility policies are established.
   throughput, allocations, incremental peak live heap, five chunking-profile
   comparisons, compiler/target/Git/host identity bound across execution,
   refusal of ambient code-generation settings and external Cargo
-  configuration, and an explicit refusal to invent regression thresholds
-  before controlled baseline history exists.
+  configuration, single-writer recoverable artifact publication, and an
+  explicit refusal to invent regression thresholds before controlled baseline
+  history exists.
 - Validated half-open `ByteRange` coordinates and allocation-free range
   planning, plus exact synchronous reference-store range reads that load only
   overlapping chunks, authenticate each selected complete chunk before

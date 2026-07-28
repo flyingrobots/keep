@@ -40,8 +40,8 @@ The command:
    during compilation or measurement;
 7. validates the schema, captured coordinates, optimized build marker,
    scenario and profile cardinalities, and threshold policy;
-8. atomically publishes
-   `target/benchmark/streaming-cas-baseline-v1.tsv`.
+8. acquires a single-writer lock, recovers an interrupted stage, and
+   atomically publishes `target/benchmark/streaming-cas-baseline-v1.tsv`.
 
 Tracked-source admission reconstructs a temporary index directly from `HEAD`
 and compares it with the working tree. It does not trust mutable index hints
