@@ -4,6 +4,7 @@ use crate::{BlobId, BlobLength, LayoutId};
 
 /// Exact identities and length successfully written by reconstruction.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[must_use = "the reconstruction receipt records authenticated identity and length"]
 pub struct ReconstructionReceipt {
     target: BlobId,
     layout_id: LayoutId,

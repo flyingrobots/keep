@@ -4,6 +4,7 @@ use crate::{BlobId, LayoutId};
 
 /// Semantic identities made visible by an explicit reference-store commit.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[must_use = "the publication receipt identifies the committed blob and layout"]
 pub struct PublishedBlob {
     target: BlobId,
     layout_id: LayoutId,

@@ -166,7 +166,7 @@ fn intervening_capacity_refusal_publishes_no_partial_state() -> Result<(), Box<d
                 .ok_or("fixture length overflow")?
     ));
     let mut first_output = Vec::new();
-    store.reconstruct(first_published.target(), &mut first_output)?;
+    let _receipt = store.reconstruct(first_published.target(), &mut first_output)?;
     assert_eq!(first_output, first_bytes);
     assert!(matches!(
         store.reconstruct(second_target, &mut Vec::new()),
@@ -182,7 +182,7 @@ fn cross_store_publication_refuses_chunks_not_owned_by_staged_work() -> Result<(
     let capacity = ReferenceStoreCapacity::new(1_048_576);
     let mut origin = ReferenceStore::new(capacity);
     let mut initial_source = Cursor::new(source);
-    origin
+    let _published = origin
         .stage(&mut initial_source, LayoutEntryLimit::MAXIMUM)?
         .commit(&mut origin)?;
     let mut repeated_source = Cursor::new(source);

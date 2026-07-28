@@ -39,7 +39,7 @@ fn whole_blob_mismatch_refuses_before_writing_any_bytes() -> Result<(), Box<dyn 
     let observed_target = BlobId::hash_bytes(&source)?;
     let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
     let mut reader = Cursor::new(&source);
-    store
+    let _published = store
         .stage(&mut reader, LayoutEntryLimit::MAXIMUM)?
         .commit(&mut store)?;
     let mismatched = AdmittedLayout::from_spans(

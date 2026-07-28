@@ -11,6 +11,14 @@ const ARCHITECTURE_RATIONALE: &str =
 const RECONSTRUCTION_ERROR_DISPLAY: &str =
     include_str!("../src/reference/reconstruction_error_display.rs");
 const REFERENCE_INGESTION: &str = include_str!("../src/reference/ingestion.rs");
+const PUBLISHED_BLOB: &str = include_str!("../src/reference/published_blob.rs");
+const RECONSTRUCTION_RECEIPT: &str = include_str!("../src/reference/reconstruction_receipt.rs");
+
+#[test]
+fn consequential_reference_store_receipts_are_must_use() {
+    assert!(PUBLISHED_BLOB.contains("#[must_use ="));
+    assert!(RECONSTRUCTION_RECEIPT.contains("#[must_use ="));
+}
 
 #[test]
 fn ingestion_read_width_is_bound_to_the_registered_minimum_chunk_length() {

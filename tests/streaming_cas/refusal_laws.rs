@@ -49,7 +49,7 @@ fn content_correct_false_profile_boundaries_are_refused_before_output() -> Resul
     let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
     for bytes in [vec![0_u8; 262_143], vec![0_u8; 2]] {
         let mut source = Cursor::new(bytes);
-        store
+        let _published = store
             .stage(&mut source, LayoutEntryLimit::MAXIMUM)?
             .commit(&mut store)?;
     }
