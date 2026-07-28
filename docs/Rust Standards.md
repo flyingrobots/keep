@@ -2041,6 +2041,8 @@ Also forbidden:
 - hidden filesystem access;
 - hidden network access;
 - hidden allocation proportional to input;
+- Python source files, including `.py`, `.pyw`, and extensionless executable
+  Python shebangs;
 - random IDs where content identity is required;
 - wall-clock time in deterministic algorithms;
 - hashing arbitrary serializer output;

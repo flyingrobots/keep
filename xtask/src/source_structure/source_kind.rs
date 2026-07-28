@@ -1,18 +1,29 @@
 //! This module owns repository source-module classification.
 
-const SOURCE_SUFFIXES: [[u8; 2]; 3] = [*b"py", *b"rs", *b"sh"];
-
 pub(super) fn is_source_module(path: &[u8]) -> bool {
     let Some(suffix) = source_suffix(path) else {
         return false;
     };
-    SOURCE_SUFFIXES.iter().any(|candidate| {
-        suffix == candidate || (*candidate == *b"py" && suffix.eq_ignore_ascii_case(b"py"))
-    })
+    suffix == b"rs" || suffix == b"sh" || is_python_suffix(suffix)
 }
 
 pub(super) fn is_python_module(path: &[u8]) -> bool {
-    source_suffix(path).is_some_and(|suffix| suffix.eq_ignore_ascii_case(b"py"))
+    source_suffix(path).is_some_and(is_python_suffix)
+}
+
+pub(super) fn is_source_candidate(path: &[u8]) -> bool {
+    is_source_module(path) || is_extensionless_file(path)
+}
+
+pub(super) fn is_extensionless_file(path: &[u8]) -> bool {
+    let Some(file_name) = path.rsplit(|byte| *byte == b'/').next() else {
+        return false;
+    };
+    !file_name.is_empty() && !file_name.contains(&b'.')
+}
+
+const fn is_python_suffix(suffix: &[u8]) -> bool {
+    suffix.eq_ignore_ascii_case(b"py") || suffix.eq_ignore_ascii_case(b"pyw")
 }
 
 fn source_suffix(path: &[u8]) -> Option<&[u8]> {

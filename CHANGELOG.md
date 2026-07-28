@@ -41,7 +41,8 @@ after its public API and format compatibility policies are established.
 - Repository source verification now uses capability-relative, no-follow file
   opens and verifies repository-root identity after Git inventory, so a
   persistent root replacement or source path replaced with a symlink is
-  refused before source bytes are read.
+  refused before source bytes are read. The pure Rust boundary also refuses
+  `.py`, `.pyw`, and extensionless executable Python shebangs.
 - The repository `cargo xtask` alias and Rust command contract are now
   explicitly silent on success and emit one typed `Error:` diagnostic with
   exit status 1 on refusal; untrusted control characters are escaped so the

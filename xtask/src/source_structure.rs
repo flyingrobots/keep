@@ -1,5 +1,6 @@
 //! This module owns source inventory orchestration and the 500-line law.
 
+mod python_source;
 mod repository_path;
 mod source_error;
 mod source_kind;
@@ -10,9 +11,10 @@ use std::path::Path;
 
 use crate::git_inventory::{GitPath, paths as git_paths};
 use crate::repository_file::{OpenRepositoryFileError, RepositoryRoot};
+use python_source::refuse_executable_python;
 use repository_path::RepositoryPath;
 pub(super) use source_error::SourceStructureError;
-use source_kind::{is_python_module, is_source_module};
+use source_kind::{is_extensionless_file, is_python_module, is_source_candidate};
 
 const SOURCE_MODULE_HARD_LIMIT_LINES: u64 = 500;
 const PRESENT_PATH_ARGUMENTS: [&str; 5] = [
@@ -78,7 +80,7 @@ fn select_source_paths(
 ) -> Result<Vec<RepositoryPath>, SourceStructureError> {
     present
         .difference(deleted)
-        .filter(|path| is_source_module(path.as_bytes()))
+        .filter(|path| is_source_candidate(path.as_bytes()))
         .map(admit_source_path)
         .collect()
 }
@@ -107,6 +109,10 @@ fn source_violations(
 ) -> Result<Vec<String>, SourceStructureError> {
     let mut violations = Vec::new();
     for relative in paths {
+        if is_extensionless_file(relative.as_str().as_bytes()) {
+            refuse_executable_python(source_root, &relative)?;
+            continue;
+        }
         let lines = source_line_count(source_root, &relative)?;
         if lines == SourceLineCount::Exceeded {
             violations.push(relative.as_str().to_owned());

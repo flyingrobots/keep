@@ -1,8 +1,7 @@
 //! This module owns source-line, selection, and replacement-race tests.
 
-use super::{
-    PRESENT_PATH_ARGUMENTS, SourceLineCount, exceeds_hard_limit, is_source_module, line_count,
-};
+use super::source_kind::is_source_module;
+use super::{PRESENT_PATH_ARGUMENTS, SourceLineCount, exceeds_hard_limit, line_count};
 use crate::test_directory::TestDirectory;
 use std::io::{self, BufReader, Cursor, Read};
 
@@ -276,6 +275,7 @@ fn source_module_limit_accepts_five_hundred_and_refuses_five_hundred_one() {
 fn source_module_classification_is_explicit() {
     assert!(is_source_module(b"src/lib.rs"));
     assert!(is_source_module(b"scripts/check.py"));
+    assert!(is_source_module(b"scripts/check.pyw"));
     assert!(is_source_module(b"scripts/check.sh"));
     assert!(!is_source_module(b"README.md"));
     assert!(!is_source_module(b"src/lib.RS"));
