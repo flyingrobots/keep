@@ -7,7 +7,7 @@ use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::BenchmarkBaselineError;
-use super::process::{ProcessOutput, run};
+use super::process::{ProcessOutput, require_success, run, run_status};
 
 const CREATION_ATTEMPTS: u16 = 1_024;
 const DIAGNOSTIC_LIMIT: usize = 65_536;
@@ -23,6 +23,7 @@ pub(super) fn matches_head(repository_root: &Path) -> Result<bool, BenchmarkBase
         INVENTORY_LIMIT,
     )?;
     require_silent(&read_tree)?;
+    refresh(repository_root, index.path())?;
     let diff = git(
         repository_root,
         index.path(),
@@ -38,6 +39,23 @@ pub(super) fn matches_head(repository_root: &Path) -> Result<bool, BenchmarkBase
     )?;
     require_no_diagnostics(&diff)?;
     Ok(diff.stdout.is_empty())
+}
+
+fn refresh(repository_root: &Path, index: &Path) -> Result<(), BenchmarkBaselineError> {
+    let output = run_status(
+        Command::new("git")
+            .arg("-C")
+            .arg(repository_root)
+            .env("GIT_INDEX_FILE", index)
+            .args(["update-index", "--really-refresh", "-q"]),
+        "git",
+        INVENTORY_LIMIT,
+        DIAGNOSTIC_LIMIT,
+    )?;
+    match output.status.code() {
+        Some(0 | 1) => Ok(()),
+        _other => require_success(output, "git").map(|_output| ()),
+    }
 }
 
 fn git(
@@ -135,3 +153,7 @@ fn io_error(action: &'static str, target: &Path) -> BenchmarkBaselineError {
         source: io::Error::other(action),
     }
 }
+
+#[cfg(test)]
+#[path = "tracked_source_tests.rs"]
+mod tests;

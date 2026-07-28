@@ -1,7 +1,7 @@
 //! Bounded, deadlock-free child-process collection for the baseline task.
 
 use std::io;
-use std::process::{Command, Stdio};
+use std::process::{Command, ExitStatus, Stdio};
 use std::thread::{self, JoinHandle};
 
 use crate::process_output::{BoundedBytes, bounded_bytes};
@@ -9,11 +9,24 @@ use crate::process_output::{BoundedBytes, bounded_bytes};
 use super::BenchmarkBaselineError;
 
 pub(super) struct ProcessOutput {
+    pub(super) status: ExitStatus,
     pub(super) stdout: Vec<u8>,
     pub(super) stderr: Vec<u8>,
 }
 
 pub(super) fn run(
+    command: &mut Command,
+    program: &'static str,
+    stdout_limit: usize,
+    stderr_limit: usize,
+) -> Result<ProcessOutput, BenchmarkBaselineError> {
+    require_success(
+        run_status(command, program, stdout_limit, stderr_limit)?,
+        program,
+    )
+}
+
+pub(super) fn run_status(
     command: &mut Command,
     program: &'static str,
     stdout_limit: usize,
@@ -73,18 +86,26 @@ pub(super) fn run(
     let stderr = stderr?;
     refuse_exceeded(program, "stdout", stdout_limit, &stdout)?;
     refuse_exceeded(program, "stderr", stderr_limit, &stderr)?;
-    if !status.success() {
-        let stderr = String::from_utf8(stderr.bytes)
-            .map_err(|source| BenchmarkBaselineError::DiagnosticEncoding { program, source })?;
-        return Err(BenchmarkBaselineError::ProcessFailed {
-            program,
-            code: status.code(),
-            stderr,
-        });
-    }
     Ok(ProcessOutput {
+        status,
         stdout: stdout.bytes,
         stderr: stderr.bytes,
+    })
+}
+
+pub(super) fn require_success(
+    output: ProcessOutput,
+    program: &'static str,
+) -> Result<ProcessOutput, BenchmarkBaselineError> {
+    if output.status.success() {
+        return Ok(output);
+    }
+    let stderr = String::from_utf8(output.stderr)
+        .map_err(|source| BenchmarkBaselineError::DiagnosticEncoding { program, source })?;
+    Err(BenchmarkBaselineError::ProcessFailed {
+        program,
+        code: output.status.code(),
+        stderr,
     })
 }
 
