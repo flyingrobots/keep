@@ -16,6 +16,7 @@ const REPORT_LIMIT: usize = 1_048_576;
 
 pub(crate) fn run(repository_root: &Path) -> Result<(), BenchmarkBaselineError> {
     let environment = environment::capture(repository_root)?;
+    admit_clean_source(&environment)?;
     let output = process::run(
         Command::new(env!("CARGO"))
             .args([
@@ -37,6 +38,8 @@ pub(crate) fn run(repository_root: &Path) -> Result<(), BenchmarkBaselineError> 
         REPORT_LIMIT,
         DIAGNOSTIC_LIMIT,
     )?;
+    let observed_after = environment::capture(repository_root)?;
+    admit_stable_environment(&environment, &observed_after)?;
     if !output.stderr.is_empty() {
         return Err(BenchmarkBaselineError::ReportViolation {
             reason: "successful-benchmark-wrote-diagnostics",
@@ -55,6 +58,31 @@ pub(crate) fn run(repository_root: &Path) -> Result<(), BenchmarkBaselineError> 
         target: Path::new("stdout").to_path_buf(),
         source,
     })
+}
+
+fn admit_clean_source(
+    environment: &environment::CapturedEnvironment,
+) -> Result<(), BenchmarkBaselineError> {
+    if environment.tree == "clean" {
+        Ok(())
+    } else {
+        Err(BenchmarkBaselineError::ReportViolation {
+            reason: "benchmark-source-is-dirty",
+        })
+    }
+}
+
+fn admit_stable_environment(
+    expected: &environment::CapturedEnvironment,
+    observed: &environment::CapturedEnvironment,
+) -> Result<(), BenchmarkBaselineError> {
+    if expected == observed {
+        Ok(())
+    } else {
+        Err(BenchmarkBaselineError::ReportViolation {
+            reason: "benchmark-environment-changed-during-run",
+        })
+    }
 }
 
 #[cfg(test)]

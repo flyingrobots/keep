@@ -2,9 +2,9 @@
 
 use std::fmt::Write;
 
-use super::BenchmarkBaselineError;
 use super::artifact;
 use super::environment::CapturedEnvironment;
+use super::{BenchmarkBaselineError, admit_clean_source, admit_stable_environment};
 
 #[test]
 fn report_admission_binds_release_evidence_to_captured_git_state() {
@@ -45,6 +45,34 @@ fn report_admission_requires_complete_scenario_and_profile_catalogs() {
             reason: "report-profile-count"
         })
     ));
+}
+
+#[test]
+fn optimized_baselines_refuse_dirty_or_drifting_source_coordinates() {
+    let clean = environment();
+    let dirty = CapturedEnvironment {
+        tree: "dirty",
+        ..environment()
+    };
+    let changed = CapturedEnvironment {
+        commit: String::from("ffffffffffffffffffffffffffffffffffffffff"),
+        ..environment()
+    };
+
+    assert!(matches!(
+        admit_clean_source(&dirty),
+        Err(BenchmarkBaselineError::ReportViolation {
+            reason: "benchmark-source-is-dirty"
+        })
+    ));
+    assert!(admit_clean_source(&clean).is_ok());
+    assert!(matches!(
+        admit_stable_environment(&clean, &changed),
+        Err(BenchmarkBaselineError::ReportViolation {
+            reason: "benchmark-environment-changed-during-run"
+        })
+    ));
+    assert!(admit_stable_environment(&clean, &clean).is_ok());
 }
 
 fn environment() -> CapturedEnvironment {

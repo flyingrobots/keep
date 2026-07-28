@@ -9,6 +9,7 @@ use super::process::{ProcessOutput, run};
 const DIAGNOSTIC_LIMIT: usize = 65_536;
 const VALUE_LIMIT: usize = 4_096;
 
+#[derive(Eq, PartialEq)]
 pub(super) struct CapturedEnvironment {
     pub(super) commit: String,
     pub(super) tree: &'static str,
