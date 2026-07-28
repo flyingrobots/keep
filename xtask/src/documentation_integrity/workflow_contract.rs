@@ -57,6 +57,9 @@ fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError>
         if run.is_badvalue() {
             continue;
         }
+        if !step["if"].is_badvalue() {
+            return Err(contract("documentation job run steps are unguarded"));
+        }
         let Some(run) = run.as_str() else {
             return Err(contract("documentation job run values are strings"));
         };

@@ -35,11 +35,11 @@ The Rust `cargo xtask documentation-integrity-check` boundary verifies the
 structure and exact BLAKE3 digest of the committed Node lock artifact and the
 exact BLAKE3 digest of the reviewed installer. The byte-exact lock admission
 refuses altered, omitted, or additional package records. The boundary parses
-the CI workflow as YAML and admits only reviewed `run` fields from the
-documentation job, then verifies each executable's reported version before
-admitting its output as evidence. A missing tool, changed archive, unexpected
-version, empty input corpus, unreviewed command, or tool failure refuses the
-check.
+the CI workflow as YAML and admits only reviewed, unguarded `run` fields from
+the documentation job, then verifies each executable's reported version
+before admitting its output as evidence. A missing tool, changed archive,
+unexpected version, empty input corpus, guarded or unreviewed command, or tool
+failure refuses the check.
 
 ## Determinism and network posture
 

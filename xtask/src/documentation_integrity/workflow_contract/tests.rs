@@ -76,6 +76,21 @@ fn non_string_run_values_are_refused() {
 }
 
 #[test]
+fn guarded_required_commands_do_not_satisfy_the_contract() {
+    let workflow = WORKFLOW.replace(
+        "      - name: Verify\n        run:",
+        "      - name: Verify\n        if: false\n        run:",
+    );
+    assert!(matches!(
+        super::admit(&workflow),
+        Err(super::DocumentationError::RepositoryContract {
+            path: super::CI_PATH,
+            requirement: "documentation job run steps are unguarded",
+        })
+    ));
+}
+
+#[test]
 fn unreviewed_python_executables_are_refused() {
     let workflow = WORKFLOW.replace(
         "  next-job:",

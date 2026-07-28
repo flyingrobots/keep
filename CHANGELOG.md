@@ -17,11 +17,11 @@ after its public API and format compatibility policies are established.
   boundary rejects duplicate repository JSON fields and unlocked installer
   substitutions, admits only the exact reviewed Node lock artifact, retains
   simultaneous Markdown and link failures, parses documentation workflow
-  commands as YAML, rejects non-string `run` values, preserves declarations
-  after Dependabot directory lists, and applies one deadline across captured
-  and inherited child execution and output collection. Git-backed process
-  fixtures ignore system and global Git configuration and preserve non-UTF-8
-  template paths without lossy conversion.
+  commands as YAML, rejects guarded or non-string `run` values, preserves
+  declarations after Dependabot directory lists, and applies one deadline
+  across captured and inherited child execution and output collection.
+  Git-backed process fixtures ignore system and global Git configuration and
+  preserve non-UTF-8 template paths without lossy conversion.
 - Fuzz build and run plans now carry external process deadlines from the
   reviewed campaign policy. Run deadlines use checked addition of the
   exploration budget and process-grace interval before process-group execution.
