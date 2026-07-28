@@ -84,10 +84,15 @@ they must not replace or regenerate them silently.
 stop before, during, or after the named operation; repeated record appends use
 the same stable identifier plus a nonidentity occurrence counter.
 
-The final four rows own explicit recovery discard. Two bind truncated-stage
-unlink and staging-directory synchronization to distinct crash boundaries.
-Two bind unpublishable `head.next` unlink and root-directory synchronization.
-Publication unlink identifiers are not reused with false preconditions.
+`KEEP-CRASH-027`–`KEEP-CRASH-030` own explicit recovery discard. The first
+pair binds truncated-stage unlink and staging-directory synchronization; the
+second binds unpublishable `head.next` unlink and root-directory
+synchronization. Publication unlink identifiers are not reused with false
+preconditions.
+
+`KEEP-CRASH-031`–`KEEP-CRASH-035` own crash-safe initialization. They bind
+writer-lock establishment, each canonical directory creation, and final
+root-directory synchronization to explicit partial-state recovery.
 
 The `interrupted_class` column names the weakest state that interruption may
 leave. Recovery must inspect exact bytes and may refine that state only after

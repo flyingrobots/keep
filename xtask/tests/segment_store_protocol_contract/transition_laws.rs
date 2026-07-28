@@ -1,6 +1,6 @@
 //! Stable crash-transition ledger laws.
 
-use super::{SPECIFICATION, TRANSITIONS};
+use super::{CONFORMANCE_GUIDE, SPECIFICATION, TRANSITIONS};
 
 const EXACT_TRANSITIONS: &[&str] = &[
     "KEEP-CRASH-008\tsegment\tsync-sealed-stage\t\
@@ -65,6 +65,20 @@ const EXACT_TRANSITIONS: &[&str] = &[
      recoverable-initialization-or-uninitialized-store\t\
      uninitialized-store-admitted\treport-initialization",
 ];
+
+#[test]
+fn conformance_guide_routes_recovery_and_initialization_transitions() {
+    for required in [
+        "`KEEP-CRASH-027`–`KEEP-CRASH-030` own explicit recovery discard",
+        "`KEEP-CRASH-031`–`KEEP-CRASH-035` own crash-safe initialization",
+    ] {
+        assert!(
+            CONFORMANCE_GUIDE.contains(required),
+            "missing transition-range ownership: {required}"
+        );
+    }
+    assert!(!CONFORMANCE_GUIDE.contains("The final four rows"));
+}
 
 #[test]
 fn durable_transition_ledger_is_complete_and_stable() -> Result<(), String> {
