@@ -110,7 +110,7 @@ fn durable_transition_ledger_is_complete_and_stable() -> Result<(), String> {
             .checked_add(1)
             .ok_or("transition count overflow")?;
     }
-    assert_eq!(row_count, 26);
+    assert_eq!(row_count, 28);
     for exact_transition in [
         "KEEP-CRASH-009\tsegment\tlink-sealed-stage\t\
          durable-sealed-stage\t\
@@ -123,6 +123,12 @@ fn durable_transition_ledger_is_complete_and_stable() -> Result<(), String> {
          valid-next-head-or-published-generation-or-ambiguity",
         "KEEP-CRASH-026\thead\tsync-root-directory\t\
          replaced-current-head\tpublished-generation-or-ambiguity",
+        "KEEP-CRASH-027\trecovery\tunlink-truncated-stage\t\
+         named-truncated-stage\t\
+         named-truncated-stage-or-unlinked-stage",
+        "KEEP-CRASH-028\trecovery\tsync-staging-after-discard\t\
+         unlinked-truncated-stage\t\
+         named-truncated-stage-or-discarded-stage",
     ] {
         assert!(
             TRANSITIONS.contains(exact_transition),

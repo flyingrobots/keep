@@ -51,6 +51,19 @@ idempotent. It may not silently promote the newest artifact, truncate to the
 last plausible boundary, rewrite a checksum, delete a valid orphan, or select
 by timestamp.
 
+Discard is one explicit two-step protocol. The recovery request binds the
+canonical stage name, observed byte length, and a domain-separated digest of
+the complete observed truncated bytes. Under the writer lock, the executor
+reopens the stage without following links and refuses replacement or
+fingerprint drift. It then:
+
+1. unlinks only that verified stage (`KEEP-CRASH-027`); and
+2. synchronizes `staging` (`KEEP-CRASH-028`).
+
+Only step 2 returns the discard receipt. On retry, the same request either
+removes the reappeared exact stage, synchronizes an already absent name, or
+refuses different evidence as unrecoverable ambiguity.
+
 ## Deterministic refusal order
 
 Artifact decoders validate:

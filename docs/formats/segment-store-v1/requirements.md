@@ -26,6 +26,7 @@ nonclaims, and golden evidence for `keep.segment-store/v1`.
 | `KEEP-STORE-015` | Unsupported filesystem semantics fail closed | Platform contract | Specified in #14 |
 | `KEEP-STORE-016` | No Echo, Graft, Git, or application policy enters the protocol | ADR-0005 and physical namespace | Specified in #14 |
 | `KEEP-STORE-017` | Catalog locations equal verified top-level segment-record spans | Catalog-entry admission | Specified in #14 |
+| `KEEP-STORE-018` | Truncated-stage discard has explicit unlink and directory-sync crash boundaries | `KEEP-CRASH-027`–`028` | Specified in #14 |
 
 <!-- markdownlint-enable MD013 -->
 
@@ -71,7 +72,7 @@ contains:
 - a publication head naming that cross-kind catalog;
 - exact canonical bytes, checksums, physical digests, lengths, counts, and
   offsets; and
-- the complete `KEEP-CRASH-001`–`KEEP-CRASH-026` transition ledger.
+- the complete `KEEP-CRASH-001`–`KEEP-CRASH-028` transition ledger.
 
 The test-only Rust oracle reconstructs every artifact directly from these
 tables and formulas. Production implementations must match the frozen corpus
