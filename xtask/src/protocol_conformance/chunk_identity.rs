@@ -3,9 +3,10 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
-use xtask::protocol_admission::{EmptyHex, HexError, decode_lower_hex};
+use xtask::protocol_admission::EmptyHex;
 
 use super::ConformanceError;
+use super::canonical::{case_name, decimal, exact_hex, lower_hex};
 use super::corpus::{Corpus, TablePolicy, TableRow};
 use super::external_digest;
 
@@ -83,9 +84,9 @@ fn read_cases(corpus: &Corpus) -> Result<Vec<IdentityCase>, ConformanceError> {
 
 fn read_case(row: &TableRow) -> Result<IdentityCase, ConformanceError> {
     let name = row.field("case")?;
-    admit_case_name(name)?;
-    let count = canonical_decimal(row.field("count")?, "recipe count", MAX_CHUNK_BYTES)?;
-    let declared = canonical_decimal(row.field("chunk_length")?, "chunk length", MAX_CHUNK_BYTES)?;
+    case_name(name, "identities.tsv")?;
+    let count = decimal(row.field("count")?, "recipe count", MAX_CHUNK_BYTES)?;
+    let declared = decimal(row.field("chunk_length")?, "chunk length", MAX_CHUNK_BYTES)?;
     let payload = payload_for(row.field("recipe")?, row.field("parameter")?, count)?;
     if payload.is_empty() || payload.len() != declared {
         return Err(ConformanceError::violation(
@@ -102,71 +103,15 @@ fn read_case(row: &TableRow) -> Result<IdentityCase, ConformanceError> {
     })
 }
 
-fn admit_case_name(value: &str) -> Result<(), ConformanceError> {
-    let bytes = value.as_bytes();
-    let canonical = !bytes.is_empty()
-        && bytes.first().is_some_and(u8::is_ascii_alphanumeric)
-        && bytes.last().is_some_and(u8::is_ascii_alphanumeric)
-        && bytes
-            .iter()
-            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || *byte == b'-')
-        && !bytes.windows(2).any(|pair| pair == b"--");
-    if canonical {
-        Ok(())
-    } else {
-        Err(ConformanceError::violation("identity case name is invalid"))
-    }
-}
-
-fn canonical_decimal(value: &str, field: &str, maximum: usize) -> Result<usize, ConformanceError> {
-    let canonical = value == "0"
-        || (!value.is_empty()
-            && value
-                .as_bytes()
-                .first()
-                .is_some_and(|byte| matches!(byte, b'1'..=b'9'))
-            && value.bytes().all(|byte| byte.is_ascii_digit()));
-    if !canonical {
-        return Err(ConformanceError::violation(format!(
-            "{field} is noncanonical unsigned decimal"
-        )));
-    }
-    let parsed = value
-        .parse::<usize>()
-        .map_err(|source| ConformanceError::Integer {
-            field: field.to_owned(),
-            source,
-        })?;
-    if parsed > maximum {
-        return Err(ConformanceError::violation(format!(
-            "{field} exceeds {maximum}"
-        )));
-    }
-    Ok(parsed)
-}
-
-fn exact_hex(value: &str, field: &str, exact: usize) -> Result<Vec<u8>, ConformanceError> {
-    let decoded = decode_lower_hex(value, exact, EmptyHex::Refuse)
-        .map_err(|error| hex_error(field, error))?;
-    if decoded.len() != exact {
-        return Err(ConformanceError::violation(format!(
-            "{field} has the wrong width"
-        )));
-    }
-    Ok(decoded)
-}
-
-fn hex_error(field: &str, error: HexError) -> ConformanceError {
-    ConformanceError::violation(format!(
-        "{field} is not canonical lowercase hexadecimal: {error}"
-    ))
-}
-
 fn payload_for(recipe: &str, parameter: &str, count: usize) -> Result<Vec<u8>, ConformanceError> {
     let pattern = match recipe {
         "repeated-byte-v1" => exact_hex(parameter, "repeated-byte parameter", 1)?,
-        "hex-repeat-v1" => decode_lower_hex(parameter, MAX_CHUNK_BYTES, EmptyHex::Refuse)
-            .map_err(|error| hex_error("hex-repeat parameter", error))?,
+        "hex-repeat-v1" => lower_hex(
+            parameter,
+            "hex-repeat parameter",
+            MAX_CHUNK_BYTES,
+            EmptyHex::Refuse,
+        )?,
         _ => {
             return Err(ConformanceError::violation(format!(
                 "unsupported recipe {recipe:?}"
@@ -200,19 +145,19 @@ fn digest(payload: &[u8]) -> Result<[u8; 32], ConformanceError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{ConformanceError, admit_case_name, canonical_decimal, payload_for};
+    use super::{ConformanceError, case_name, decimal, payload_for};
 
     #[test]
     fn ambiguous_decimal_and_identifier_spellings_are_refused() {
         assert!(matches!(
-            canonical_decimal("01", "recipe count", 16),
+            decimal("01", "recipe count", 16),
             Err(ConformanceError::Violation(ref message))
-                if message == "recipe count is noncanonical unsigned decimal"
+                if message == "recipe count: noncanonical unsigned decimal \"01\""
         ));
         assert!(matches!(
-            admit_case_name("two--hyphens"),
+            case_name("two--hyphens", "identities.tsv"),
             Err(ConformanceError::Violation(ref message))
-                if message == "identity case name is invalid"
+                if message == "identities.tsv: noncanonical case name \"two--hyphens\""
         ));
     }
 

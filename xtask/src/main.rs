@@ -80,6 +80,9 @@ fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
         "benchmark-baseline" => {
             benchmark_baseline::run(repository_root)?;
         }
+        "cdc-profile-conformance-check" => {
+            protocol_conformance::check_cdc_profile(repository_root)?;
+        }
         "chunk-id-conformance-check" => {
             protocol_conformance::check_chunk_identity(repository_root)?;
         }

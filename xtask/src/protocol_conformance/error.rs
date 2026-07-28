@@ -9,6 +9,7 @@ use std::string::FromUtf8Error;
 use std::time::Duration;
 
 use crate::diagnostic::{escaped_controls, escaped_path};
+use xtask::protocol_admission::RelativePathError;
 
 pub(crate) enum ConformanceError {
     Cleanup {
@@ -24,6 +25,10 @@ pub(crate) enum ConformanceError {
         action: &'static str,
         path: PathBuf,
         source: io::Error,
+    },
+    Path {
+        parameter: String,
+        source: RelativePathError,
     },
     ProcessDiagnosticEncoding {
         program: &'static str,
@@ -99,6 +104,11 @@ impl fmt::Display for ConformanceError {
                 escaped_path(formatter, path)?;
                 formatter.write_str("`")
             }
+            Self::Path { parameter, source } => {
+                formatter.write_str("unsafe corpus path: ")?;
+                escaped_controls(formatter, parameter)?;
+                write!(formatter, ": {source}")
+            }
             Self::ProcessDiagnosticEncoding { program, code, .. } => write!(
                 formatter,
                 "{program} failed with status {code:?} and non-UTF-8 diagnostics"
@@ -139,6 +149,7 @@ impl Error for ConformanceError {
         match self {
             Self::Cleanup { source, .. } | Self::Io { source, .. } => Some(source),
             Self::Integer { source, .. } => Some(source),
+            Self::Path { source, .. } => Some(source),
             Self::ProcessDiagnosticEncoding { source, .. } | Self::Utf8 { source, .. } => {
                 Some(source)
             }

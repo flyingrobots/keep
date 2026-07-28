@@ -37,6 +37,15 @@ fn chunk_identity_conformance_is_repository_owned_and_silent() -> Result<(), io:
 }
 
 #[test]
+fn cdc_profile_conformance_is_repository_owned_and_silent() -> Result<(), io::Error> {
+    let output = invoke(&["cdc-profile-conformance-check"])?;
+    assert!(output.status.success());
+    assert!(output.stdout.is_empty());
+    assert!(output.stderr.is_empty());
+    Ok(())
+}
+
+#[test]
 fn repository_alias_preserves_silent_success() -> Result<(), io::Error> {
     let output = invoke_alias(&["golden-file-worldline-check"])?;
     assert!(output.status.success());
@@ -76,7 +85,8 @@ fn missing_command_returns_the_versioned_usage_contract() -> Result<(), io::Erro
     assert_eq!(
         output.stderr,
         b"Error: usage: cargo xtask \
-          <benchmark-baseline|chunk-id-conformance-check|\
+          <benchmark-baseline|cdc-profile-conformance-check|\
+          chunk-id-conformance-check|\
           golden-file-worldline-check|prepare-fuzz-corpus|fuzz|\
           source-structure-check|verify>\n"
     );

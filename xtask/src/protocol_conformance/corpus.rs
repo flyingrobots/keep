@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions};
-use xtask::protocol_admission::{FramedLinesError, framed_lines, tab_fields};
+use xtask::protocol_admission::{FramedLinesError, framed_lines, posix_relative_path, tab_fields};
 
 use super::ConformanceError;
 
@@ -64,6 +64,14 @@ impl Corpus {
             lines,
             policy.maximum_rows,
         )
+    }
+
+    pub(super) fn source_file(&self, parameter: &str) -> Result<CorpusFile, ConformanceError> {
+        let relative = posix_relative_path(parameter).map_err(|source| ConformanceError::Path {
+            parameter: parameter.to_owned(),
+            source,
+        })?;
+        self.open_file(&relative, parameter)
     }
 
     fn open_file(&self, relative: &Path, label: &str) -> Result<CorpusFile, ConformanceError> {
