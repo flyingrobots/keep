@@ -5,9 +5,9 @@ durable segment store. It specifies bytes, publication, crash states, reader
 visibility, and recovery as one contract.
 
 ADR-0005 records the cross-cutting decision. These pages are a protocol
-commitment, not a claim that the production adapter has shipped. Production
-implementation belongs to issues #15 and #16; executable crash evidence
-belongs to issue #17.
+commitment. Segment writing and verified reading are implemented in issue #15.
+Catalog publication remains owned by issue #16, and complete executable crash
+and recovery evidence remains owned by issue #17.
 
 ## Core law
 
