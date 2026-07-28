@@ -18,13 +18,14 @@ mod profile;
 mod reference;
 
 pub use adapters::{
-    AdmittedSegmentRecord, BlobIdBinaryParseError, BlobIdTextParseError, CanonicalLayoutRecord,
-    ChecksummedSegmentRecord, LayoutDecodeError, LayoutDecodePolicy, LayoutEncodeError,
-    LayoutIdBinaryParseError, LayoutIdTextParseError, SegmentDigest, SegmentHeader,
-    SegmentHeaderError, SegmentRecordAdmissionError, SegmentRecordChecksum,
-    SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity,
-    SegmentRecordLength, SegmentRecordPayloadLength, SegmentSeal, SegmentSealError,
-    StorageProfileIdParseError,
+    AdmittedSegment, AdmittedSegmentRecord, BlobIdBinaryParseError, BlobIdTextParseError,
+    CanonicalLayoutRecord, ChecksummedSegmentRecord, LayoutDecodeError, LayoutDecodePolicy,
+    LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError, SegmentDigest,
+    SegmentHeader, SegmentHeaderError, SegmentReadError, SegmentReadPolicy,
+    SegmentRecordAdmissionError, SegmentRecordChecksum, SegmentRecordDecodeError,
+    SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity, SegmentRecordLength,
+    SegmentRecordLimit, SegmentRecordLimitError, SegmentRecordPayloadLength, SegmentRecords,
+    SegmentSeal, SegmentSealError, StorageProfileIdParseError,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

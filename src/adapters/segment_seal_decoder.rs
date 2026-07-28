@@ -30,7 +30,7 @@ pub(super) fn decode(prefix: &[u8], encoded: &[u8]) -> Result<SegmentSeal, Segme
     segment_seal_admission::admit(prefix, &fields)
 }
 
-fn decode_fields(encoded: &[u8]) -> Result<DecodedSeal, SegmentSealError> {
+pub(super) fn decode_fields(encoded: &[u8]) -> Result<DecodedSeal, SegmentSealError> {
     let observed = encoded.len();
     let (magic, remainder) = read_array::<16>(encoded, observed)?;
     let (version, remainder) = read_u16(remainder, observed)?;

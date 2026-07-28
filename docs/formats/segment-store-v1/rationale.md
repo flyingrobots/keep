@@ -59,6 +59,20 @@ The seal includes redundant lengths and counts so a decoder can compare
 declared, calculated, and actual framing before trusting offsets. Redundancy is
 checked evidence, not permission to select whichever value looks plausible.
 
+Complete-segment admission also refuses a repeated logical identity inside one
+segment. Even byte-identical duplicates would create multiple physical
+locations for one catalog key and make later location selection needlessly
+ambiguous. The reader records one identity coordinate per policy-admitted
+record, sorts that temporary bounded index only to detect duplicates, and
+retains the segment's physical record order for iteration.
+
+Seal admission is deliberately phased for readers. Fixed seal coordinates and
+the seal checksum are established before its count bounds the record walk.
+Every record checksum and logical identity is then admitted before the
+physical segment digest. The admitted segment is published to the caller only
+after all phases succeed, while ordinary record corruption still reports the
+more local record boundary instead of collapsing into a digest-only refusal.
+
 ## Canonical catalog ordering
 
 Catalog entries sort by record kind and then by the exact meaningful identity

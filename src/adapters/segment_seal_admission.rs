@@ -8,10 +8,7 @@ use super::segment_seal_decoder::DecodedSeal;
 use super::{SegmentDigest, SegmentSealError, segment_seal_hash};
 
 pub(super) fn admit(prefix: &[u8], fields: &DecodedSeal) -> Result<SegmentSeal, SegmentSealError> {
-    validate_coordinates(fields)?;
-    let prefix_length = prefix_length(prefix.len())?;
-    validate_lengths(fields, prefix_length)?;
-    validate_algorithms(fields)?;
+    validate_fields(prefix, fields)?;
     let canonical = from_prefix(prefix, fields.record_count)?;
     let observed_digest = SegmentDigest::from_validated(fields.digest);
     if observed_digest != canonical.digest() {
@@ -27,6 +24,14 @@ pub(super) fn admit(prefix: &[u8], fields: &DecodedSeal) -> Result<SegmentSeal, 
         });
     }
     Ok(canonical)
+}
+
+pub(super) fn validate_fields(prefix: &[u8], fields: &DecodedSeal) -> Result<(), SegmentSealError> {
+    validate_coordinates(fields)?;
+    let prefix_length = prefix_length(prefix.len())?;
+    validate_lengths(fields, prefix_length)?;
+    validate_algorithms(fields)?;
+    Ok(())
 }
 
 pub(super) fn from_prefix(

@@ -74,6 +74,9 @@ after its public API and format compatibility policies are established.
 - Public, allocation-free `SegmentSeal` admission and emission for the exact
   128-byte immutable-segment terminator, with checked physical coordinates,
   domain-separated digest verification, and seal-checksum corruption laws.
+- Borrowed `AdmittedSegment` reading with explicit record and layout resource
+  limits, exact nested framing and identity admission, physical-order record
+  iteration, trailing-byte refusal, and bounded duplicate-identity detection.
 - ADR-0005 and the implementation-independent `keep.segment-store/v1`
   protocol: exact immutable segment, catalog-generation, and publication-head
   grammars; canonical ordering, bounds, and domain-separated checksums;
