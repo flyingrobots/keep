@@ -110,7 +110,7 @@ fn durable_transition_ledger_is_complete_and_stable() -> Result<(), String> {
             .checked_add(1)
             .ok_or("transition count overflow")?;
     }
-    assert_eq!(row_count, 28);
+    assert_eq!(row_count, 30);
     for exact_transition in [
         "KEEP-CRASH-009\tsegment\tlink-sealed-stage\t\
          durable-sealed-stage\t\
@@ -129,6 +129,12 @@ fn durable_transition_ledger_is_complete_and_stable() -> Result<(), String> {
         "KEEP-CRASH-028\trecovery\tsync-staging-after-discard\t\
          unlinked-truncated-stage\t\
          named-truncated-stage-or-discarded-stage",
+        "KEEP-CRASH-029\trecovery\tunlink-next-head\t\
+         named-unpublishable-next-head\t\
+         named-unpublishable-next-head-or-unlinked-next-head",
+        "KEEP-CRASH-030\trecovery\tsync-root-after-next-head-discard\t\
+         unlinked-next-head\t\
+         named-unpublishable-next-head-or-discarded-next-head",
     ] {
         assert!(
             TRANSITIONS.contains(exact_transition),
@@ -250,6 +256,22 @@ fn immutable_pool_links_are_verified_after_namespace_resolution() {
         assert!(
             SPECIFICATION.contains(required),
             "missing post-link verification law: {required}"
+        );
+    }
+}
+
+#[test]
+fn leftover_next_head_has_explicit_finalization_or_discard() {
+    for required in [
+        "Recovery finalizes it only when it",
+        "exactly extends the verified current head",
+        "never rewrites a retained `head.next`",
+        "unlinks the fingerprint-bound `head.next` (`KEEP-CRASH-029`)",
+        "synchronizes the store root (`KEEP-CRASH-030`)",
+    ] {
+        assert!(
+            SPECIFICATION.contains(required),
+            "missing leftover next-head law: {required}"
         );
     }
 }

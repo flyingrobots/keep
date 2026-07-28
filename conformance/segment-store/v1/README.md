@@ -76,9 +76,10 @@ they must not replace or regenerate them silently.
 stop before, during, or after the named operation; repeated record appends use
 the same stable identifier plus a nonidentity occurrence counter.
 
-The final two rows own explicit truncated-stage discard. They bind unlink and
-staging-directory synchronization to distinct recovery crash boundaries;
-publication unlink identifiers are not reused with false preconditions.
+The final four rows own explicit recovery discard. Two bind truncated-stage
+unlink and staging-directory synchronization to distinct crash boundaries.
+Two bind unpublishable `head.next` unlink and root-directory synchronization.
+Publication unlink identifiers are not reused with false preconditions.
 
 The `interrupted_class` column names the weakest state that interruption may
 leave. Recovery must inspect exact bytes and may refine that state only after

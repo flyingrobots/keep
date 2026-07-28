@@ -154,6 +154,10 @@ until the publication head names it.
 
 Only completion of step 6 returns a `#[must_use]` publication receipt.
 
+An existing `head.next` always routes through recovery before step 1. The
+writer never truncates, replaces, or silently removes it to make the exclusive
+create succeed.
+
 The normative pre-state, interrupted-state class, post-state, and recovery
 posture for every identifier are frozen in
 [`transitions.tsv`](../../../conformance/segment-store/v1/transitions.tsv).

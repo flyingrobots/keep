@@ -72,6 +72,30 @@ Only step 2 returns the discard receipt. On retry, the same request either
 removes the reappeared exact stage, synchronizes an already absent name, or
 refuses different evidence as unrecoverable ambiguity.
 
+## Leftover next head
+
+Recovery opens an existing `head.next` without following links and validates
+its exact 128-byte grammar, checksum, generation, catalog length and digest,
+and complete transitive catalog view. Recovery finalizes it only when it
+exactly extends the verified current head. A lawful generation-1 candidate may
+instead extend a verified uninitialized root. Finalization reuses
+`KEEP-CRASH-025` and `KEEP-CRASH-026` without rewriting the candidate.
+
+A truncated, corrupt, stale, or otherwise unpublishable candidate remains
+invisible and blocks new publication.
+Recovery never rewrites a retained `head.next`.
+An explicit discard request binds its canonical name, observed length, and
+`stage_fingerprint`; different evidence is unrecoverable ambiguity. The
+executor:
+
+1. unlinks the fingerprint-bound `head.next` (`KEEP-CRASH-029`); and
+2. synchronizes the store root (`KEEP-CRASH-030`).
+
+Only step 2 returns the next-head discard receipt. Retrying the same request
+either safely finalizes the exact publishable candidate, removes the exact
+unpublishable candidate, synchronizes its already absent name, or refuses
+changed evidence.
+
 ## Deterministic refusal order
 
 Artifact decoders validate:

@@ -28,3 +28,5 @@ KEEP-CRASH-025	head	replace-current-head	durable-next-head	valid-next-head-or-pu
 KEEP-CRASH-026	head	sync-root-directory	replaced-current-head	published-generation-or-ambiguity	published-generation-admitted	verify-complete-reader-snapshot
 KEEP-CRASH-027	recovery	unlink-truncated-stage	named-truncated-stage	named-truncated-stage-or-unlinked-stage	unlinked-truncated-stage	verify-requested-stage-fingerprint
 KEEP-CRASH-028	recovery	sync-staging-after-discard	unlinked-truncated-stage	named-truncated-stage-or-discarded-stage	discarded-truncated-stage	report-explicit-discard
+KEEP-CRASH-029	recovery	unlink-next-head	named-unpublishable-next-head	named-unpublishable-next-head-or-unlinked-next-head	unlinked-next-head	verify-requested-next-head-fingerprint
+KEEP-CRASH-030	recovery	sync-root-after-next-head-discard	unlinked-next-head	named-unpublishable-next-head-or-discarded-next-head	discarded-next-head	report-explicit-next-head-discard
