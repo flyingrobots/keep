@@ -101,6 +101,11 @@ hard link, unlink, head replacement, and directory sync is explicit and
 fallible. An error returns no publication receipt. `Drop` performs cleanup
 only and cannot publish.
 
+A crash during directory synchronization may expose either the namespace
+state that preceded the synchronization or the fully synchronized state.
+Recovery classifies and verifies both possibilities; it never infers that the
+preceding namespace mutation became durable merely because it was issued.
+
 ### Seal each new segment
 
 1. Create `staging/current.seg` exclusively

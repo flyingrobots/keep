@@ -31,16 +31,23 @@ fn durable_transition_ledger_is_complete_and_stable() -> Result<(), String> {
          durable-sealed-stage\t\
          valid-sealed-stage-or-valid-orphan-or-ambiguity\t\
          linked-segment-orphan\tverify-no-clobber-link-and-digest",
+        "KEEP-CRASH-010\tsegment\tsync-segment-directory\t\
+         linked-segment-orphan\tvalid-sealed-stage-or-valid-orphan\t\
+         durable-linked-segment-orphan\tpreserve-invisible",
         "KEEP-CRASH-017\tcatalog\tlink-generation\t\
          durable-catalog-stage\t\
          valid-catalog-stage-or-valid-orphan-or-ambiguity\t\
          linked-catalog-orphan\tverify-no-clobber-link-and-digest",
+        "KEEP-CRASH-018\tcatalog\tsync-catalog-directory\t\
+         linked-catalog-orphan\tvalid-catalog-stage-or-valid-orphan\t\
+         durable-linked-catalog-orphan\tpreserve-invisible",
         "KEEP-CRASH-025\thead\treplace-current-head\t\
          durable-next-head\t\
          valid-next-head-or-published-generation-or-ambiguity\t\
          replaced-current-head\tverify-one-atomic-head",
         "KEEP-CRASH-026\thead\tsync-root-directory\t\
-         replaced-current-head\tpublished-generation-or-ambiguity\t\
+         replaced-current-head\t\
+         valid-next-head-or-published-generation-or-ambiguity\t\
          published-generation-admitted\tverify-complete-reader-snapshot",
         "KEEP-CRASH-027\trecovery\tunlink-truncated-stage\t\
          named-truncated-stage\t\

@@ -68,8 +68,9 @@ after its public API and format compatibility policies are established.
   one-writer/many-reader publication with explicit flush, synchronization,
   atomic replacement, and directory-synchronization order; stable
   `KEEP-CRASH-001`–`030` transitions; typed recovery classifications; and
-  golden physical artifacts. Production storage remains assigned to issues
-  #15–#17.
+  golden physical artifacts. Directory-synchronization crash classes admit
+  both the lawful pre-sync and durable namespace states. Production storage
+  remains assigned to issues #15–#17.
 - A deterministic, bounded, license-safe streaming CAS benchmark corpus and
   release-only `cargo xtask benchmark-baseline` workflow covering all required
   ingestion, edit, deduplication, range-read, verification, and input
