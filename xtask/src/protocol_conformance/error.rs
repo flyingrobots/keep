@@ -91,13 +91,17 @@ impl fmt::Debug for ConformanceError {
     }
 }
 
-impl fmt::Display for ConformanceError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str("protocol conformance check failed: ")?;
+impl ConformanceError {
+    fn fmt_body(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Cleanup {
-                primary, action, ..
-            } => write!(formatter, "{primary}; cleanup could not {action}"),
+                primary,
+                action,
+                source,
+            } => {
+                primary.fmt_body(formatter)?;
+                write!(formatter, "; cleanup could not {action}: {source}")
+            }
             Self::Integer { field, .. } => {
                 formatter.write_str("cannot parse canonical ")?;
                 escaped_controls(formatter, field)
@@ -148,10 +152,18 @@ impl fmt::Display for ConformanceError {
     }
 }
 
+impl fmt::Display for ConformanceError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("protocol conformance check failed: ")?;
+        self.fmt_body(formatter)
+    }
+}
+
 impl Error for ConformanceError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::Cleanup { source, .. } | Self::Io { source, .. } => Some(source),
+            Self::Cleanup { primary, .. } => Some(primary.as_ref()),
+            Self::Io { source, .. } => Some(source),
             Self::Integer { source, .. } => Some(source),
             Self::Path { source, .. } => Some(source),
             Self::ProcessDiagnosticEncoding { source, .. } | Self::Utf8 { source, .. } => {
@@ -164,5 +176,33 @@ impl Error for ConformanceError {
             | Self::WriterPanic { .. }
             | Self::Violation(_) => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::error::Error;
+    use std::io;
+
+    use super::ConformanceError;
+
+    #[test]
+    fn cleanup_preserves_one_prefix_and_the_primary_source() {
+        let error = ConformanceError::cleanup(
+            ConformanceError::violation("primary refusal"),
+            "close witness",
+            io::Error::other("cleanup refusal"),
+        );
+        assert_eq!(
+            error.to_string(),
+            "protocol conformance check failed: primary refusal; \
+             cleanup could not close witness: cleanup refusal"
+        );
+        assert!(matches!(
+            error.source(),
+            Some(source)
+                if source.to_string()
+                    == "protocol conformance check failed: primary refusal"
+        ));
     }
 }
