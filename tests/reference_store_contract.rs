@@ -161,7 +161,7 @@ fn verified_layout_reconstruction_is_current_in_spec_rationale_and_corpus() {
 }
 
 #[test]
-fn shipped_public_read_and_bounded_ingest_capabilities_are_required() {
+fn shipped_public_reads_and_bounded_ingest_capabilities_are_required() {
     assert!(CAPABILITIES.contains("keep.content.exact-public-read/v1\trequired\tM2\t13\t"));
     assert!(CAPABILITIES.contains("keep.ingest.bounded-stream/v1\trequired\tM2\t13\t"));
 }

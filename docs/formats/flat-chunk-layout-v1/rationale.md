@@ -12,7 +12,8 @@ This decision governs the canonical record, `LayoutId`, validation stages,
 resource bounds, migration posture, and first durable layout compatibility
 surface. The production codec implements those laws. The non-durable reference
 adapter implements ingestion and verified reconstruction in issue #13. Durable
-storage remains a separate future boundary.
+storage remains a separate future boundary. Exact range planning and reads are
+implemented in issue #11.
 
 ## Why a flat first codec
 

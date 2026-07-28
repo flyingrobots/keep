@@ -1,7 +1,9 @@
 # Non-Durable Reference CAS
 
 - Status: Implemented public reference adapter
-- Related issue: [#13](https://github.com/flyingrobots/keep/issues/13)
+- Related issues:
+  [#11](https://github.com/flyingrobots/keep/issues/11) and
+  [#13](https://github.com/flyingrobots/keep/issues/13)
 - Storage profile: `fastcdc-64k-v1`
 - Layout format: `keep.flat-chunks/v1`
 - Durability: None
@@ -22,6 +24,10 @@ power-loss durability.
 layouts name one blob, reconstruction chooses the lowest canonical `LayoutId`.
 Chunk deduplication is keyed by `ChunkId`; it is a storage fact, not a retention
 claim.
+
+Exact range reads use the same deterministic layout choice. A successful range
+receipt proves only the exact claim described under
+[Exact byte-range reads](#exact-byte-range-reads).
 
 ## Ingestion
 
@@ -80,6 +86,40 @@ memory; any allocation by the supplied writer belongs to that writer.
 Reconstruction does not flush the writer and makes no durability claim about
 the output.
 
+## Exact byte-range reads
+
+`ByteRange` is a validated half-open `[offset, end)` coordinate whose checked
+end cannot wrap. It does not know a target length, so any non-wrapping range,
+including an empty range at `u64::MAX`, may be constructed. Only
+`AdmittedLayout::plan_range` proves that a range is within the target length:
+planning permits an empty range at or before the target end and requires a
+nonempty range to end at or before the target length.
+
+Planning traverses admitted layout metadata without allocation and selects the
+minimal ordered entry interval that overlaps the request. Committed-layout
+reads load no prefix or suffix chunk outside that interval and allocate no
+adapter-owned heap memory. Caller-supplied admitted layouts and encoded layout
+records may allocate bounded layout-record or decoded-entry metadata to
+calculate a canonical identity. That identity must name a committed layout;
+planning, receipt coordinates, and chunk lookup use only the committed layout.
+None of the range APIs materializes the complete blob.
+
+Before any output, a range read authenticates every selected complete chunk
+against its `ChunkId`. During the output pass it reauthenticates each chunk,
+slices only the overlap, completes short writes, retries interruptions, and
+uses checked output accounting. Invalid layouts, out-of-bounds coordinates,
+missing or mismatched selected chunks, broken writers, and output failures are
+typed refusals.
+
+The resulting `RangeReadReceipt` proves that the requested bytes came from
+authenticated complete chunks under the admitted layout. It does not prove the
+complete `BlobId`, any unrequested chunk, or any storage-profile boundary.
+Applications that require those stronger claims must use whole-blob
+reconstruction.
+
+Range reads are synchronous and do not flush the writer. The in-memory chunks
+remain non-durable before, during, and after the operation.
+
 ## Evidence
 
 - `tests/streaming_cas/ingestion_laws.rs` covers staging, deduplication,
@@ -90,8 +130,15 @@ the output.
   profile boundaries, and broken writers.
 - `tests/streaming_cas/model_laws.rs` compares all 216 exhaustive three-step
   operation sequences with a boring reference model.
-- `tests/streaming_cas_memory.rs` proves the committed-layout reconstruction
-  path allocates no adapter-owned heap memory.
+- `tests/range_plan.rs` covers checked coordinates and minimal ordered overlap.
+- `tests/range_read.rs` covers public range boundaries, short writes, and
+  malformed-layout refusal.
+- `tests/range_read_properties.rs` compares exhaustive short and generated
+  multi-chunk ranges with direct reference slicing.
+- `src/reference/range_read_tests.rs` proves prefix and suffix chunks are not
+  loaded and selected-chunk corruption refuses before output.
+- `tests/streaming_cas_memory.rs` proves committed-layout reconstruction and
+  range reads allocate no adapter-owned heap memory.
 - `tests/golden_file_worldline/storage_assertions.rs` executes the Golden File
   Worldline through the public API.
 

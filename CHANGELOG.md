@@ -62,6 +62,13 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Validated half-open `ByteRange` coordinates and allocation-free range
+  planning, plus exact synchronous reference-store range reads that load only
+  overlapping chunks, authenticate each selected complete chunk before
+  slicing, reauthenticate before output, and return a receipt whose deliberately
+  narrow verification scope excludes the complete blob, unrequested chunks,
+  and storage-profile boundaries. Caller-supplied layouts and records must
+  resolve to a committed target-layout binding before chunk lookup.
 - Expected-`BlobId` staging with typed complete-stream mismatch refusal; the
   Golden File Worldline scenario and every claimed-content mutation now run
   through public stage, commit, and reconstruct APIs instead of only the

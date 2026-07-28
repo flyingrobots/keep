@@ -21,7 +21,7 @@ const CAPABILITY_CONTRACTS: [CapabilityContract; 16] = [
     CapabilityContract::required("keep.content.exact-public-read/v1", 2, &[13]),
     CapabilityContract::future("keep.cdc.nearby-state-reuse/v1", 2, &[7, 8, 13]),
     CapabilityContract::required("keep.ingest.bounded-stream/v1", 2, &[13]),
-    CapabilityContract::future("keep.range.minimal-overlap/v1", 2, &[11]),
+    CapabilityContract::required("keep.range.minimal-overlap/v1", 2, &[11]),
     CapabilityContract::future("keep.segment.verified-read/v1", 3, &[14, 15]),
     CapabilityContract::future("keep.restart.lawful-recovery/v1", 3, &[17]),
     CapabilityContract::future("keep.retention.both-states/v1", 4, &[18, 19]),
