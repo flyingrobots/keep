@@ -14,6 +14,24 @@ const RECONSTRUCTION_ERROR: &str = include_str!("../src/reference/reconstruction
 const REFERENCE_INGESTION: &str = include_str!("../src/reference/ingestion.rs");
 const PUBLISHED_BLOB: &str = include_str!("../src/reference/published_blob.rs");
 const RECONSTRUCTION_RECEIPT: &str = include_str!("../src/reference/reconstruction_receipt.rs");
+const GOLDEN_TEST_ENTRYPOINT: &str = include_str!("golden_file_worldline.rs");
+const STREAMING_TEST_ENTRYPOINT: &str = include_str!("streaming_cas.rs");
+const TEST_SUPPORT: &str = include_str!("support/mod.rs");
+const TEST_READERS: &str = include_str!("support/byte_readers.rs");
+const TEST_WRITERS: &str = include_str!("support/byte_writers.rs");
+
+#[test]
+fn integration_fixtures_are_visible_only_within_their_test_crate() {
+    assert!(GOLDEN_TEST_ENTRYPOINT.contains("\npub(crate) mod support;"));
+    assert!(STREAMING_TEST_ENTRYPOINT.contains("\npub(crate) mod layout_mutation_support;"));
+    assert!(STREAMING_TEST_ENTRYPOINT.contains("\npub(crate) mod support;"));
+    assert!(!TEST_SUPPORT.contains("\npub use byte_"));
+    assert!(!TEST_READERS.contains("\npub struct"));
+    assert!(!TEST_READERS.contains("\n    pub fn new"));
+    assert!(!TEST_WRITERS.contains("\npub struct"));
+    assert!(!TEST_WRITERS.contains("\n    pub fn new"));
+    assert!(!TEST_WRITERS.contains("\n    pub fn bytes"));
+}
 
 #[test]
 fn consequential_reference_store_receipts_are_must_use() {

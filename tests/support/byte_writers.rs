@@ -3,14 +3,14 @@
 use std::io::{self, ErrorKind, Write};
 
 /// Writer that cycles through exact short-write widths and injects one retry.
-pub struct PartitionWriter<'a> {
+pub(crate) struct PartitionWriter<'a> {
     bytes: Vec<u8>,
     widths: std::iter::Cycle<std::slice::Iter<'a, usize>>,
     interrupt_next: bool,
 }
 
 /// Writer that deterministically refuses every byte.
-pub struct FailingWriter;
+pub(crate) struct FailingWriter;
 
 impl Write for FailingWriter {
     fn write(&mut self, _buffer: &[u8]) -> io::Result<usize> {
@@ -26,7 +26,7 @@ impl Write for FailingWriter {
 }
 
 /// Broken writer that reports one byte beyond the supplied buffer.
-pub struct LyingWriter;
+pub(crate) struct LyingWriter;
 
 impl Write for LyingWriter {
     fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
@@ -42,7 +42,7 @@ impl Write for LyingWriter {
 }
 
 /// Writer that lawfully reports no progress for nonempty input.
-pub struct ZeroWriter;
+pub(crate) struct ZeroWriter;
 
 impl Write for ZeroWriter {
     fn write(&mut self, _buffer: &[u8]) -> io::Result<usize> {
@@ -60,7 +60,7 @@ impl<'a> PartitionWriter<'a> {
     /// # Errors
     ///
     /// Returns [`ErrorKind::InvalidInput`] for an empty plan or a zero width.
-    pub fn new(widths: &'a [usize]) -> io::Result<Self> {
+    pub(crate) fn new(widths: &'a [usize]) -> io::Result<Self> {
         super::validate_partition_widths(widths)?;
         Ok(Self {
             bytes: Vec::new(),
@@ -71,7 +71,7 @@ impl<'a> PartitionWriter<'a> {
 
     /// Returns every byte accepted by the sink.
     #[must_use]
-    pub fn bytes(&self) -> &[u8] {
+    pub(crate) fn bytes(&self) -> &[u8] {
         &self.bytes
     }
 }

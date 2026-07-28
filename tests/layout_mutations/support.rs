@@ -1,4 +1,9 @@
 //! Independent application of the frozen flat-layout mutation protocol.
+#![allow(
+    clippy::redundant_pub_crate,
+    dead_code,
+    reason = "shared fixtures are crate-visible across binary integration-test modules"
+)]
 
 use std::io;
 
@@ -8,7 +13,7 @@ const MUTATIONS: &str = include_str!("../../conformance/layout/v1/mutations.tsv"
 const CHECKSUM_DOMAIN: &[u8; 16] = b"KEEP:LAYOUT:SUM\0";
 
 /// One parsed immutable mutation-ledger row.
-pub struct MutationCase<'a> {
+pub(crate) struct MutationCase<'a> {
     case: &'a str,
     base_case: &'a str,
     operation: &'a str,
@@ -23,19 +28,19 @@ pub struct MutationCase<'a> {
 impl MutationCase<'_> {
     /// Returns the stable mutation case name.
     #[must_use]
-    pub const fn case(&self) -> &str {
+    pub(crate) const fn case(&self) -> &str {
         self.case
     }
 
     /// Returns the trust phase expected to refuse the mutation.
     #[must_use]
-    pub const fn decision_phase(&self) -> &str {
+    pub(crate) const fn decision_phase(&self) -> &str {
         self.decision_phase
     }
 
     /// Returns the exact frozen refusal class.
     #[must_use]
-    pub const fn expected_outcome(&self) -> &str {
+    pub(crate) const fn expected_outcome(&self) -> &str {
         self.expected_outcome
     }
 
@@ -45,7 +50,7 @@ impl MutationCase<'_> {
     ///
     /// Returns an I/O-shaped corpus error for malformed fields, out-of-bounds
     /// spans, unsupported operations, or inconsistent mutation widths.
-    pub fn mutated_record(&self) -> Result<Vec<u8>, io::Error> {
+    pub(crate) fn mutated_record(&self) -> Result<Vec<u8>, io::Error> {
         let mut bytes = decode_hex(layout_record_fixture(self.base_case)?)?;
         match self.operation {
             "replace-v1" => replace(&mut bytes, self, &decode_parameter(self.parameter)?)?,
@@ -70,7 +75,7 @@ impl MutationCase<'_> {
 ///
 /// Returns an I/O-shaped corpus error when any row is missing a field or
 /// carries a noncanonical host-width integer.
-pub fn mutation_cases() -> Result<Vec<MutationCase<'static>>, io::Error> {
+pub(crate) fn mutation_cases() -> Result<Vec<MutationCase<'static>>, io::Error> {
     MUTATIONS
         .lines()
         .skip(2)
@@ -165,7 +170,7 @@ fn swap(bytes: &mut [u8], mutation: &MutationCase<'_>) -> Result<(), io::Error> 
 ///
 /// Returns an I/O-shaped corpus error when the record cannot contain an exact
 /// 32-byte checksum or its covered length cannot be represented by `u64`.
-pub fn recompute_record_checksum(bytes: &mut [u8]) -> Result<(), io::Error> {
+pub(crate) fn recompute_record_checksum(bytes: &mut [u8]) -> Result<(), io::Error> {
     let checksum_start = bytes
         .len()
         .checked_sub(32)

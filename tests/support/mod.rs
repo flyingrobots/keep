@@ -1,14 +1,20 @@
 //! Shared deterministic integration-corpus support.
+#![allow(
+    clippy::redundant_pub_crate,
+    dead_code,
+    unused_imports,
+    reason = "shared fixtures are crate-visible across binary integration-test modules"
+)]
 
-mod byte_readers;
-mod byte_writers;
+pub(crate) mod byte_readers;
+pub(crate) mod byte_writers;
 
 use std::io;
 
 use keep::{ChunkSpan, FastCdc};
 
-pub use byte_readers::{FailingReader, LyingReader, PartitionReader};
-pub use byte_writers::{FailingWriter, LyingWriter, PartitionWriter, ZeroWriter};
+pub(crate) use byte_readers::{FailingReader, LyingReader, PartitionReader};
+pub(crate) use byte_writers::{FailingWriter, LyingWriter, PartitionWriter, ZeroWriter};
 
 const LAYOUTS: &str = include_str!("../../conformance/layout/v1/layouts.tsv");
 
@@ -27,13 +33,13 @@ fn validate_partition_widths(widths: &[usize]) -> io::Result<()> {
 /// # Errors
 ///
 /// Returns a corpus error when the row has no field at `index`.
-pub fn field(row: &str, index: usize) -> Result<&str, io::Error> {
+pub(crate) fn field(row: &str, index: usize) -> Result<&str, io::Error> {
     field_unchecked(row, index).ok_or_else(|| invalid_corpus("TSV row is missing a field"))
 }
 
 /// Returns one tab-separated corpus field when present.
 #[must_use]
-pub fn field_unchecked(row: &str, index: usize) -> Option<&str> {
+pub(crate) fn field_unchecked(row: &str, index: usize) -> Option<&str> {
     row.split('\t').nth(index)
 }
 
@@ -42,7 +48,7 @@ pub fn field_unchecked(row: &str, index: usize) -> Option<&str> {
 /// # Errors
 ///
 /// Returns a corpus error when the case or requested field is missing.
-pub fn layout_case_field(case: &str, index: usize) -> Result<&'static str, io::Error> {
+pub(crate) fn layout_case_field(case: &str, index: usize) -> Result<&'static str, io::Error> {
     let row = LAYOUTS
         .lines()
         .skip(2)
@@ -56,7 +62,7 @@ pub fn layout_case_field(case: &str, index: usize) -> Result<&'static str, io::E
 /// # Errors
 ///
 /// Returns a corpus error when the case has no frozen record.
-pub fn layout_record_fixture(case: &str) -> Result<&'static str, io::Error> {
+pub(crate) fn layout_record_fixture(case: &str) -> Result<&'static str, io::Error> {
     match case {
         "empty" => Ok(include_str!("../../conformance/layout/v1/empty.layout.hex").trim_end()),
         "one-zero" => {
@@ -78,7 +84,7 @@ pub fn layout_record_fixture(case: &str) -> Result<&'static str, io::Error> {
 /// # Errors
 ///
 /// Returns a corpus error for an unknown case or malformed hexadecimal fixture.
-pub fn layout_record_bytes(case: &str) -> Result<Vec<u8>, io::Error> {
+pub(crate) fn layout_record_bytes(case: &str) -> Result<Vec<u8>, io::Error> {
     decode_hex(layout_record_fixture(case)?)
 }
 
@@ -88,7 +94,7 @@ pub fn layout_record_bytes(case: &str) -> Result<Vec<u8>, io::Error> {
 ///
 /// Returns a corpus error for an unknown case, malformed length, or failed
 /// bounded allocation.
-pub fn layout_source_bytes(case: &str, count: &str) -> Result<Vec<u8>, io::Error> {
+pub(crate) fn layout_source_bytes(case: &str, count: &str) -> Result<Vec<u8>, io::Error> {
     if !matches!(
         case,
         "empty" | "one-zero" | "max-plus-one-zeros" | "zeros-long"
@@ -111,7 +117,7 @@ pub fn layout_source_bytes(case: &str, count: &str) -> Result<Vec<u8>, io::Error
 /// # Errors
 ///
 /// Returns the detector's typed failure.
-pub fn detect_spans(bytes: &[u8]) -> Result<Vec<ChunkSpan>, keep::ChunkingError> {
+pub(crate) fn detect_spans(bytes: &[u8]) -> Result<Vec<ChunkSpan>, keep::ChunkingError> {
     let mut spans = Vec::new();
     let mut detector = FastCdc::new();
     detector.feed(bytes, |span| spans.push(span))?;
@@ -126,7 +132,10 @@ pub fn detect_spans(bytes: &[u8]) -> Result<Vec<ChunkSpan>, keep::ChunkingError>
 /// # Errors
 ///
 /// Returns a corpus error when the operation unexpectedly succeeds.
-pub fn require_error<T, E>(result: Result<T, E>, message: &'static str) -> Result<E, io::Error> {
+pub(crate) fn require_error<T, E>(
+    result: Result<T, E>,
+    message: &'static str,
+) -> Result<E, io::Error> {
     match result {
         Ok(_) => Err(invalid_corpus(message)),
         Err(error) => Ok(error),
@@ -139,7 +148,7 @@ pub fn require_error<T, E>(result: Result<T, E>, message: &'static str) -> Resul
 ///
 /// Returns an I/O-shaped corpus error for odd width, invalid digits, or
 /// impossible checked arithmetic.
-pub fn decode_hex(encoded: &str) -> Result<Vec<u8>, io::Error> {
+pub(crate) fn decode_hex(encoded: &str) -> Result<Vec<u8>, io::Error> {
     if !encoded.len().is_multiple_of(2) {
         return Err(invalid_corpus("hex input has odd length"));
     }
@@ -169,7 +178,7 @@ pub fn decode_hex(encoded: &str) -> Result<Vec<u8>, io::Error> {
 }
 
 /// Constructs a deterministic malformed-corpus failure.
-pub fn invalid_corpus(message: &'static str) -> io::Error {
+pub(crate) fn invalid_corpus(message: &'static str) -> io::Error {
     io::Error::other(message)
 }
 

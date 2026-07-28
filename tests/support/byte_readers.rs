@@ -3,7 +3,7 @@
 use std::io::{self, ErrorKind, Read};
 
 /// Reader that cycles through exact short-read widths and injects one retry.
-pub struct PartitionReader<'a> {
+pub(crate) struct PartitionReader<'a> {
     remaining: &'a [u8],
     widths: std::iter::Cycle<std::slice::Iter<'a, usize>>,
     interrupt_next: bool,
@@ -15,7 +15,7 @@ impl<'a> PartitionReader<'a> {
     /// # Errors
     ///
     /// Returns [`ErrorKind::InvalidInput`] for an empty plan or a zero width.
-    pub fn new(bytes: &'a [u8], widths: &'a [usize]) -> io::Result<Self> {
+    pub(crate) fn new(bytes: &'a [u8], widths: &'a [usize]) -> io::Result<Self> {
         super::validate_partition_widths(widths)?;
         Ok(Self {
             remaining: bytes,
@@ -57,7 +57,7 @@ impl Read for PartitionReader<'_> {
 }
 
 /// Reader that deterministically returns a non-interruption source failure.
-pub struct FailingReader;
+pub(crate) struct FailingReader;
 
 impl Read for FailingReader {
     fn read(&mut self, _buffer: &mut [u8]) -> io::Result<usize> {
@@ -69,7 +69,7 @@ impl Read for FailingReader {
 }
 
 /// Broken reader that reports one byte beyond the supplied buffer.
-pub struct LyingReader;
+pub(crate) struct LyingReader;
 
 impl Read for LyingReader {
     fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
