@@ -274,6 +274,8 @@ fn source_module_limit_accepts_five_hundred_and_refuses_five_hundred_one() {
 #[test]
 fn source_module_classification_is_explicit() {
     assert!(is_source_module(b"src/lib.rs"));
+    assert!(is_source_module(b".py"));
+    assert!(is_source_module(b"scripts/.PYW"));
     assert!(is_source_module(b"scripts/check.py"));
     assert!(is_source_module(b"scripts/check.pyw"));
     assert!(is_source_module(b"scripts/check.sh"));

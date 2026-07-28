@@ -60,10 +60,11 @@ after its public API and format compatibility policies are established.
   opens and verifies repository-root identity after Git inventory and again
   after source scanning, so a persistent root replacement or source path
   replaced with a symlink is refused. The pure Rust boundary also refuses
-  `.py`, `.pyw`, and Python shebangs in every executable source candidate,
-  including attached `env -S` interpreter strings. Environment shebangs parse
-  options, assignments, quoting, and split strings before classifying only the
-  selected utility, so later command arguments cannot impersonate Python.
+  `.py`, `.pyw`, dot-only Python basenames, and Python shebangs in every
+  executable source candidate, including attached `env -S` interpreter
+  strings. Environment shebangs parse options, assignments, quoting, and split
+  strings before classifying only the selected utility, so later command
+  arguments cannot impersonate Python.
 - Git path inventory failures now remain primary when child cleanup, waiting,
   or diagnostic collection also fails; the secondary failure remains typed and
   inspectable. Empty path records and unterminated path bytes produce distinct,

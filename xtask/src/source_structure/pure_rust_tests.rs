@@ -11,13 +11,16 @@ use crate::test_directory::TestDirectory;
 #[test]
 fn python_source_is_refused_by_the_pure_rust_boundary() {
     for path in [
+        ".py",
+        "scripts/.PYW",
         "scripts/check.py",
         "scripts/check.PY",
         "scripts/check.pyw",
         "scripts/check.PYW",
     ] {
+        let present = BTreeSet::from([GitPath::new(path.as_bytes().to_vec())]);
         assert!(matches!(
-            super::admit_source_path(&GitPath::new(path.as_bytes().to_vec())),
+            super::select_source_paths(&present, &BTreeSet::new()),
             Err(super::SourceStructureError::PythonSource(ref observed))
                 if observed == path
         ));
