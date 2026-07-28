@@ -6,6 +6,9 @@
 /scripts/documentation-tools/node_modules/
 **/*.rs.bk
 
+# Agent workspace state
+.graft/
+
 # Python checker bytecode
 __pycache__/
 *.py[cod]
