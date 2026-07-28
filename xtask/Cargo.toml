@@ -9,7 +9,13 @@ publish = false
 [features]
 default = ["repository-tasks"]
 golden-protocol-fuzz = []
-repository-tasks = ["dep:blake3", "dep:cap-fs-ext", "dep:cap-std", "dep:md-5"]
+repository-tasks = [
+    "dep:blake3",
+    "dep:cap-fs-ext",
+    "dep:cap-std",
+    "dep:md-5",
+    "dep:serde_json",
+]
 
 [dependencies]
 # Independent Golden File Worldline oracle recomputes BLAKE3 corpus witnesses.
@@ -19,6 +25,8 @@ cap-fs-ext = { version = "=4.0.2", default-features = false, features = ["std"],
 cap-std = { version = "=4.0.2", default-features = false, optional = true }
 # Pure Rust MD5 regenerates the public Gear-table recipe; it is not an identity primitive.
 md-5 = { version = "=0.11.0", default-features = false, optional = true }
+# Typed JSON admission checks the committed documentation-tool lock graph.
+serde_json = { version = "=1.0.151", default-features = false, features = ["std"], optional = true }
 
 [[bin]]
 name = "xtask"

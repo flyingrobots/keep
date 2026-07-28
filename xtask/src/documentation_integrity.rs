@@ -2,4 +2,6 @@
 
 mod corpus;
 mod error;
+mod node_toolchain;
+mod repository_text;
 mod tool;

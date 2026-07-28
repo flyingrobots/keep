@@ -28,6 +28,38 @@ pub(super) enum DocumentationError {
         corpus: &'static str,
         source: FromUtf8Error,
     },
+    RepositoryFileEncoding {
+        path: &'static str,
+        source: FromUtf8Error,
+    },
+    RepositoryFileInspect {
+        path: &'static str,
+        source: io::Error,
+    },
+    RepositoryFileNonRegular(&'static str),
+    RepositoryFileTooLarge {
+        path: &'static str,
+        maximum: u64,
+    },
+    RepositoryContract {
+        path: &'static str,
+        requirement: &'static str,
+    },
+    RepositoryContractAt {
+        path: &'static str,
+        subject: String,
+        requirement: &'static str,
+    },
+    RepositoryJson {
+        path: &'static str,
+        source: serde_json::Error,
+    },
+    RepositoryValue {
+        path: &'static str,
+        field: &'static str,
+        expected: &'static str,
+        observed: Option<String>,
+    },
     VersionMismatch {
         program: &'static str,
         expected: &'static str,
@@ -64,6 +96,59 @@ impl fmt::Display for DocumentationError {
             Self::PathEncoding { corpus, .. } => {
                 write!(formatter, "{corpus} corpus contains a non-UTF-8 path")
             }
+            Self::RepositoryFileEncoding { path, .. } => {
+                write!(formatter, "repository file `{path}` is not UTF-8")
+            }
+            Self::RepositoryFileInspect { path, .. } => {
+                write!(formatter, "cannot inspect repository file `{path}`")
+            }
+            Self::RepositoryFileNonRegular(path) => {
+                write!(formatter, "repository file is not regular: `{path}`")
+            }
+            Self::RepositoryFileTooLarge { path, maximum } => write!(
+                formatter,
+                "repository file `{path}` exceeds the {maximum}-byte bound"
+            ),
+            Self::RepositoryContract { path, requirement } => {
+                write!(
+                    formatter,
+                    "repository file `{path}` violates: {requirement}"
+                )
+            }
+            Self::RepositoryContractAt {
+                path,
+                subject,
+                requirement,
+            } => {
+                write!(
+                    formatter,
+                    "repository file `{path}` violates {requirement} at `"
+                )?;
+                escaped_controls(formatter, subject)?;
+                formatter.write_str("`")
+            }
+            Self::RepositoryJson { path, .. } => {
+                write!(formatter, "repository file `{path}` is not valid JSON")
+            }
+            Self::RepositoryValue {
+                path,
+                field,
+                expected,
+                observed,
+            } => {
+                write!(
+                    formatter,
+                    "repository file `{path}` requires `{field}` to be {expected:?}; observed "
+                )?;
+                match observed {
+                    Some(value) => {
+                        formatter.write_str("\"")?;
+                        escaped_controls(formatter, value)?;
+                        formatter.write_str("\"")
+                    }
+                    None => formatter.write_str("missing"),
+                }
+            }
             Self::VersionMismatch {
                 program,
                 expected,
@@ -80,11 +165,21 @@ impl Error for DocumentationError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::GitInventory(error) => Some(error),
-            Self::Inspect { source, .. } => Some(source),
-            Self::PathEncoding { source, .. } => Some(source),
+            Self::Inspect { source, .. } | Self::RepositoryFileInspect { source, .. } => {
+                Some(source)
+            }
+            Self::PathEncoding { source, .. } | Self::RepositoryFileEncoding { source, .. } => {
+                Some(source)
+            }
+            Self::RepositoryJson { source, .. } => Some(source),
             Self::EmptyCorpus(_)
             | Self::InvalidPath { .. }
             | Self::NonRegular { .. }
+            | Self::RepositoryFileNonRegular(_)
+            | Self::RepositoryFileTooLarge { .. }
+            | Self::RepositoryContract { .. }
+            | Self::RepositoryContractAt { .. }
+            | Self::RepositoryValue { .. }
             | Self::VersionMismatch { .. } => None,
         }
     }
