@@ -7,7 +7,9 @@ mod support;
 use std::error::Error;
 
 use allocation_counter::{AllocationInfo, measure};
-use keep::{AdmittedSegment, SegmentReadError, SegmentReadPolicy};
+use keep::{
+    AdmittedSegment, SegmentHeader, SegmentReadError, SegmentReadPolicy, SegmentRecordHeader,
+};
 use support::decode_hex;
 
 use format_oracle::seal_segment;
@@ -47,6 +49,43 @@ fn duplicate_index_allocation_scales_exactly_with_admitted_record_count()
     assert_eq!(duplicate_allocations.count_max, 1);
     assert_eq!(duplicate_allocations.count_current, 0);
     assert_eq!(duplicate_allocations.bytes_total, doubled_bytes);
+    Ok(())
+}
+
+#[test]
+fn impossible_record_count_cannot_amplify_identity_index_allocation() -> Result<(), Box<dyn Error>>
+{
+    let empty = segment_bytes(EMPTY_SEGMENT_HEX)?;
+    let header = empty
+        .get(..SegmentHeader::ENCODED_LENGTH)
+        .ok_or("empty segment fixture lacks its header")?;
+    let encoded = seal_segment(header, 65_536)?;
+    let mut result = None;
+    let allocations = measure(|| {
+        result = Some(AdmittedSegment::decode(
+            &encoded,
+            SegmentReadPolicy::MAXIMUM,
+        ));
+    });
+    let error = match result.ok_or("segment allocation measurement did not run")? {
+        Ok(_admitted) => return Err("impossible record count was admitted".into()),
+        Err(error) => error,
+    };
+
+    let SegmentReadError::RecordHeaderTruncated {
+        record_index,
+        offset,
+        required,
+        observed,
+    } = error
+    else {
+        return Err(format!("unexpected impossible-count refusal: {error}").into());
+    };
+    assert_eq!(record_index, 0);
+    assert_eq!(offset, u64::try_from(SegmentHeader::ENCODED_LENGTH)?);
+    assert_eq!(required, SegmentRecordHeader::ENCODED_LENGTH);
+    assert_eq!(observed, 0);
+    assert_eq!(allocations, AllocationInfo::default());
     Ok(())
 }
 

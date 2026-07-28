@@ -1,7 +1,7 @@
 //! Deterministic bounded duplicate-identity detection for segment admission.
 
 use super::segment_record_cursor::SegmentRecordCursor;
-use super::{SegmentReadError, SegmentReadPolicy, SegmentRecordIdentity};
+use super::{SegmentReadError, SegmentReadPolicy, SegmentRecordHeader, SegmentRecordIdentity};
 
 #[derive(Clone, Copy)]
 struct IdentityCoordinate {
@@ -15,11 +15,15 @@ pub(super) fn validate(
     record_count: u32,
     policy: SegmentReadPolicy,
 ) -> Result<(), SegmentReadError> {
-    let capacity = usize::try_from(record_count).map_err(|_source| {
+    let declared_capacity = usize::try_from(record_count).map_err(|_source| {
         SegmentReadError::RecordCountHostWidth {
             observed: record_count,
         }
     })?;
+    let physical_capacity = records
+        .chunks_exact(SegmentRecordHeader::ENCODED_LENGTH)
+        .len();
+    let capacity = declared_capacity.min(physical_capacity);
     let mut coordinates = Vec::new();
     coordinates.try_reserve_exact(capacity).map_err(|source| {
         SegmentReadError::IdentityIndexAllocation {

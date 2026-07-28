@@ -76,7 +76,8 @@ after its public API and format compatibility policies are established.
   domain-separated digest verification, and seal-checksum corruption laws.
 - Borrowed `AdmittedSegment` reading with explicit record and layout resource
   limits, exact nested framing and identity admission, physical-order record
-  iteration, trailing-byte refusal, and bounded duplicate-identity detection.
+  iteration, trailing-byte refusal, and duplicate-identity index reservation
+  bounded by both the configured count and physical record-header capacity.
 - Consuming `StagedSegment` transitions and immutable `SealedSegment` receipts
   for exact append-only record writing, streaming seal construction, explicit
   prefix/sealed flush-and-sync order, and phase-typed I/O refusals.
