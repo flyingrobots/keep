@@ -10,6 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Documentation corpus selection, pinned tool admission, Markdown and fragment
+  checks, workflow linting, Dependabot coverage, and Node lock-graph policy now
+  run through bounded Rust `xtask` code; CI and `cargo xtask verify` use that
+  boundary, and the seven superseded Python checkers have been removed.
 - ChunkId v1 and CDC profile v1 conformance now run through one bounded Rust
   `cargo xtask conformance-check` command, including the external `b3sum`
   witness, reproducible Gear-table recipe, scalar and streaming FastCDC laws,

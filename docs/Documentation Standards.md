@@ -533,35 +533,31 @@ Documentation quality requires both deterministic checks and human judgment.
 Run for documentation changes:
 
 ```bash
-python3 scripts/check_markdown.py
+cargo xtask documentation-integrity-check
 git diff --check
 git diff --cached --check
 ```
 
-Use `markdownlint-cli2` 0.23.2. The repository-owned configuration defines
-the default Markdown input set, imports `.gitignore`, and records deliberate
-rule choices. The checker admits tracked Markdown plus nonignored new
-Markdown, disables config globs for that invocation, and refuses a different
-tool version. It also runs `lychee` 0.21.0 offline with fragment checking, so
-external-site availability cannot affect the result. Run it from the
-repository root. The two Git commands inspect unstaged and staged whitespace
-errors separately.
+Use `markdownlint-cli2` 0.23.2. The repository-owned configuration records
+deliberate rule choices. The Rust checker selects tracked Markdown plus
+nonignored new Markdown, disables configuration globs for that invocation,
+and refuses a different tool version. It also runs `lychee` 0.21.0 offline
+with fragment checking, so external-site availability cannot affect the
+result. Run it from the repository root. The two Git commands inspect
+unstaged and staged whitespace errors separately.
 
-When workflows change, also run:
-
-```bash
-python3 scripts/check_workflows.py
-```
-
-The workflow checker requires `actionlint` 1.7.12 and refuses another version.
+The same Rust command checks workflows with `actionlint` 1.7.12 and refuses
+another version. It also verifies the committed Node lock graph, Dependabot
+manifest coverage, and the documentation job's delegation to this command.
 The dedicated `documentation` job in `.github/workflows/ci.yml` installs the
-pinned tools, runs these repository-owned checks, and verifies repository
-whitespace before admitting the result as CI evidence.
+pinned tools, runs malformed-input refusal laws and the repository-owned
+command, and verifies repository whitespace before admitting the result as CI
+evidence.
 
 CI SHOULD block on facts it can determine reliably:
 
 - malformed Markdown;
-- broken internal links and anchors, once link checking is available;
+- broken internal links and anchors;
 - failed doctests declared runnable (`cargo test --workspace --doc
   --locked`);
 - stale generated reference — public API documentation that no longer

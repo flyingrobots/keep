@@ -7,6 +7,7 @@ mod execution;
 mod node_toolchain;
 mod repository_text;
 mod tool;
+mod workflow_contract;
 
 use std::path::{Path, PathBuf};
 
@@ -24,6 +25,7 @@ pub(super) fn check(repository_path: &Path) -> Result<(), DocumentationError> {
     verify_root(&repository_root, repository_path)?;
     node_toolchain::check(&repository_root)?;
     dependabot::check(repository_path, &repository_root)?;
+    workflow_contract::check(&repository_root)?;
     let markdown = corpus::SourceCorpus::markdown(repository_path)?;
     let workflows = corpus::SourceCorpus::workflow(repository_path)?;
     execution::run(repository_path, markdown.paths(), workflows.paths())?;

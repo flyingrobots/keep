@@ -2,6 +2,7 @@
 
 mod repository_path;
 mod source_error;
+mod source_kind;
 
 use std::collections::BTreeSet;
 use std::io::{self, BufRead, BufReader};
@@ -11,9 +12,9 @@ use crate::git_inventory::{GitPath, paths as git_paths};
 use crate::repository_file::{OpenRepositoryFileError, RepositoryRoot};
 use repository_path::RepositoryPath;
 pub(super) use source_error::SourceStructureError;
+use source_kind::{is_python_module, is_source_module};
 
 const SOURCE_MODULE_HARD_LIMIT_LINES: u64 = 500;
-const SOURCE_SUFFIXES: [[u8; 2]; 3] = [*b"py", *b"rs", *b"sh"];
 const PRESENT_PATH_ARGUMENTS: [&str; 5] = [
     "ls-files",
     "-z",
@@ -83,13 +84,21 @@ fn select_source_paths(
 }
 
 fn admit_source_path(path: &GitPath) -> Result<RepositoryPath, SourceStructureError> {
+    let python = is_python_module(path.as_bytes());
     let text = String::from_utf8(path.as_bytes().to_vec()).map_err(|source| {
         SourceStructureError::GitPathEncoding {
             operation: "source path admission",
             source,
         }
     })?;
-    RepositoryPath::admit(text)
+    let relative = RepositoryPath::admit(text)?;
+    if python {
+        Err(SourceStructureError::PythonSource(
+            relative.as_str().to_owned(),
+        ))
+    } else {
+        Ok(relative)
+    }
 }
 
 fn source_violations(
@@ -128,20 +137,6 @@ fn source_line_count_with(
     })?;
     line_count(BufReader::new(file))
         .map_err(|source| SourceStructureError::Inspect { path, source })
-}
-
-fn is_source_module(path: &[u8]) -> bool {
-    let Some(file_name) = path.rsplit(|byte| *byte == b'/').next() else {
-        return false;
-    };
-    let mut components = file_name.rsplitn(2, |byte| *byte == b'.');
-    let Some(suffix) = components.next() else {
-        return false;
-    };
-    let Some(stem) = components.next() else {
-        return false;
-    };
-    !stem.is_empty() && SOURCE_SUFFIXES.iter().any(|candidate| suffix == candidate)
 }
 
 const fn exceeds_hard_limit(lines: u64) -> bool {
@@ -209,5 +204,8 @@ impl LineCounter {
     }
 }
 
+#[cfg(test)]
+#[path = "source_structure/pure_rust_tests.rs"]
+mod pure_rust_tests;
 #[cfg(test)]
 mod tests;

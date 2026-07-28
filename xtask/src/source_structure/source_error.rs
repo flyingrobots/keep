@@ -21,6 +21,7 @@ pub(crate) enum SourceStructureError {
     },
     InvalidPath(String),
     NonRegular(PathBuf),
+    PythonSource(String),
     RepositoryRootChanged(PathBuf),
     Violations {
         maximum: u64,
@@ -56,6 +57,11 @@ impl fmt::Display for SourceStructureError {
                 escaped_path(formatter, path)?;
                 formatter.write_str("`")
             }
+            Self::PythonSource(path) => {
+                formatter.write_str("pure Rust source boundary refuses Python module `")?;
+                escaped_controls(formatter, path)?;
+                formatter.write_str("`")
+            }
             Self::RepositoryRootChanged(path) => {
                 formatter.write_str("repository root changed during source inspection: `")?;
                 escaped_path(formatter, path)?;
@@ -74,6 +80,7 @@ impl Error for SourceStructureError {
             Self::Inspect { source, .. } => Some(source),
             Self::InvalidPath(_)
             | Self::NonRegular(_)
+            | Self::PythonSource(_)
             | Self::RepositoryRootChanged(_)
             | Self::Violations { .. } => None,
         }

@@ -122,6 +122,7 @@ fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
             source_structure::check(repository_root)?;
         }
         "verify" => {
+            documentation_integrity::check(repository_root)?;
             golden_file_worldline::check(repository_root)?;
             protocol_conformance::check(repository_root)?;
             source_structure::check(repository_root)?;

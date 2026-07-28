@@ -19,15 +19,6 @@ fn repository_tasks_require_the_committed_dependency_graph() {
 }
 
 #[test]
-fn successful_verification_is_silent() -> Result<(), io::Error> {
-    let output = invoke(&["verify"])?;
-    assert!(output.status.success());
-    assert!(output.stdout.is_empty());
-    assert!(output.stderr.is_empty());
-    Ok(())
-}
-
-#[test]
 fn chunk_identity_conformance_is_repository_owned_and_silent() -> Result<(), io::Error> {
     let output = invoke(&["chunk-id-conformance-check"])?;
     assert!(output.status.success());

@@ -151,5 +151,8 @@ impl ToolRunner for ExternalToolRunner<'_> {
 }
 
 #[cfg(test)]
+#[path = "execution/external_tests.rs"]
+mod external_tests;
+#[cfg(test)]
 #[path = "execution/tests.rs"]
 mod tests;
