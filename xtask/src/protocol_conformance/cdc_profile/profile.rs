@@ -68,6 +68,10 @@ pub(super) fn check(corpus: &Corpus) -> Result<GearTable, ConformanceError> {
     decode_gear_table(&table)
 }
 
+/// Reproduces the versioned, deterministic Gear-table recipe.
+///
+/// `MD5` is intentionally part of this non-cryptographic public recipe. The
+/// typed table checksum is verified separately through [`external_digest`].
 fn generated_gear_table() -> Vec<u8> {
     let mut table = Vec::with_capacity(TABLE_BYTES);
     for value in 0_u8..=u8::MAX {
