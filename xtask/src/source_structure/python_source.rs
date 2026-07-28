@@ -74,6 +74,9 @@ fn environment_word_selects_python(word: &[u8]) -> bool {
     if let Some(split) = word.strip_prefix(b"--split-string=") {
         return is_python_program(split);
     }
+    if let Some(split) = word.strip_prefix(b"-S").filter(|split| !split.is_empty()) {
+        return is_python_program(split);
+    }
     !word.starts_with(b"-") && !word.contains(&b'=') && is_python_program(word)
 }
 
@@ -110,6 +113,8 @@ mod tests {
             b"#! /usr/bin/env python3 -I\n",
             b"#!/usr/bin/env -S python3 -I\n",
             b"#!/usr/bin/env -S \"python3 -I\"\n",
+            b"#!/usr/bin/env -Spython3 -I\n",
+            b"#!/usr/bin/env -S/opt/PyPy3 -I\n",
             b"#!/usr/bin/env --split-string=python3\n",
             b"#!/opt/PyPy3\n",
         ] {
