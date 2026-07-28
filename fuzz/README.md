@@ -56,7 +56,7 @@ Run that target alone under the reviewed smoke bounds with:
 
 ```bash
 source fuzz/campaign.env
-cargo +"$FUZZ_TOOLCHAIN" fuzz run layout_record -- \
+cargo +"$FUZZ_TOOLCHAIN" fuzz run segment_format -- \
   -max_total_time="$FUZZ_SMOKE_SECONDS_PER_TARGET" \
   -timeout="$FUZZ_INPUT_TIMEOUT_SECONDS" \
   -max_len="$FUZZ_MAX_INPUT_BYTES" \

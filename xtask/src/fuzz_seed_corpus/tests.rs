@@ -8,6 +8,7 @@ use crate::test_directory::TestDirectory;
 mod materialization;
 
 const FILESYSTEM_SOURCE: &str = include_str!("filesystem.rs");
+const FUZZ_README: &str = include_str!("../../../fuzz/README.md");
 
 #[test]
 fn golden_protocol_seeds_reach_every_production_parser() -> Result<(), FuzzSeedError> {
@@ -47,6 +48,11 @@ fn fuzz_workflows_delegate_seed_preparation_to_the_rust_task() -> Result<(), Fuz
         assert!(!workflow.contains("python3 fuzz/prepare_corpus.py"));
     }
     Ok(())
+}
+
+#[test]
+fn segment_format_documentation_runs_the_documented_target() {
+    assert!(FUZZ_README.contains("fuzz run segment_format"));
 }
 
 #[test]
