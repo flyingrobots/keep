@@ -10,6 +10,16 @@ const ARCHITECTURE_RATIONALE: &str =
     include_str!("../docs/architecture/reference-store/rationale.md");
 const RECONSTRUCTION_ERROR_DISPLAY: &str =
     include_str!("../src/reference/reconstruction_error_display.rs");
+const REFERENCE_INGESTION: &str = include_str!("../src/reference/ingestion.rs");
+
+#[test]
+fn ingestion_read_width_is_bound_to_the_registered_minimum_chunk_length() {
+    assert!(
+        REFERENCE_INGESTION
+            .contains("assert!(read_buffer_bytes!() <= FastCdc::MINIMUM_CHUNK_LENGTH.get());"),
+        "the one-boundary feed law must be enforced at compile time"
+    );
+}
 
 #[test]
 fn reconstruction_error_formatters_stay_below_the_hard_function_limit() {

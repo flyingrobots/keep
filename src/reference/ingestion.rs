@@ -9,7 +9,15 @@ use super::chunk_staging::ReferenceChunkStaging;
 use super::ingestion_error::IngestionAllocation;
 use super::{IngestionError, ReferenceStore, StagedBlob};
 
-const READ_BUFFER_BYTES: usize = 8_192;
+macro_rules! read_buffer_bytes {
+    () => {
+        8_192
+    };
+}
+
+const READ_BUFFER_BYTES: usize = read_buffer_bytes!();
+// This bound makes more than one detector boundary per read impossible.
+const _: () = assert!(read_buffer_bytes!() <= FastCdc::MINIMUM_CHUNK_LENGTH.get());
 
 impl ReferenceStore {
     /// Reads one logical stream into invisible, validated staged work.
