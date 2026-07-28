@@ -239,7 +239,7 @@ fn admit_stream(
     chunker: &mut StreamingChunker<'_>,
 ) -> Result<(), ConformanceError> {
     chunker.finish()?;
-    if chunker.boundaries()? != case.expected || chunker.reconstruct() != case.source {
+    if chunker.boundaries()? != case.expected || chunker.reconstruct()? != case.source {
         return Err(ConformanceError::violation(format!(
             "{}: partition schedule {schedule} moved boundaries",
             case.name

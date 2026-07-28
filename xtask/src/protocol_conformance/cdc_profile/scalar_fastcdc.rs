@@ -141,6 +141,9 @@ impl<'a> StreamingChunker<'a> {
         Ok(())
     }
 
+    /// Flushes a non-empty trailing chunk and finalizes result access.
+    ///
+    /// Repeated calls are idempotent while no additional bytes are fed.
     pub(super) fn finish(&mut self) -> Result<(), ConformanceError> {
         if !self.current.is_empty() {
             self.emit()?;
@@ -148,7 +151,13 @@ impl<'a> StreamingChunker<'a> {
         Ok(())
     }
 
+    /// Returns cumulative end offsets for the finalized chunks.
+    ///
+    /// Call [`Self::finish`] first. A non-empty unfinished tail is refused, and
+    /// cumulative-length overflow returns [`ConformanceError`]. The returned
+    /// vector allocates storage proportional to the completed chunk count.
     pub(super) fn boundaries(&self) -> Result<Vec<usize>, ConformanceError> {
+        self.require_finished()?;
         let mut total = 0_usize;
         self.completed
             .iter()
@@ -161,8 +170,23 @@ impl<'a> StreamingChunker<'a> {
             .collect()
     }
 
-    pub(super) fn reconstruct(&self) -> Vec<u8> {
-        self.completed.concat()
+    /// Materializes the exact finalized byte stream.
+    ///
+    /// Call [`Self::finish`] first. A non-empty unfinished tail is refused.
+    /// Success allocates the complete reconstructed source.
+    pub(super) fn reconstruct(&self) -> Result<Vec<u8>, ConformanceError> {
+        self.require_finished()?;
+        Ok(self.completed.concat())
+    }
+
+    fn require_finished(&self) -> Result<(), ConformanceError> {
+        if self.current.is_empty() {
+            Ok(())
+        } else {
+            Err(ConformanceError::violation(
+                "streaming results require a finished stream",
+            ))
+        }
     }
 
     pub(super) fn snapshot(&self) -> StreamingSnapshot {
@@ -195,7 +219,7 @@ pub(super) fn probe_fingerprint(
 
 #[cfg(test)]
 mod tests {
-    use super::{GearTable, MINIMUM, StreamingChunker, reference_boundaries};
+    use super::{ConformanceError, GearTable, MINIMUM, StreamingChunker, reference_boundaries};
 
     #[test]
     fn matching_probe_byte_starts_the_next_streaming_chunk() {
@@ -215,6 +239,26 @@ mod tests {
             chunker.boundaries(),
             Ok(ref boundaries) if boundaries == &[MINIMUM, MINIMUM + 2]
         ));
-        assert_eq!(chunker.reconstruct(), source);
+        assert!(matches!(
+            chunker.reconstruct(),
+            Ok(ref reconstructed) if reconstructed == &source
+        ));
+    }
+
+    #[test]
+    fn unfinished_nonempty_stream_refuses_result_access() {
+        let gear: GearTable = [0; 256];
+        let mut chunker = StreamingChunker::new(&gear);
+        assert!(chunker.feed(b"unfinished").is_ok());
+        assert!(matches!(
+            chunker.boundaries(),
+            Err(ConformanceError::Violation(ref message))
+                if message == "streaming results require a finished stream"
+        ));
+        assert!(matches!(
+            chunker.reconstruct(),
+            Err(ConformanceError::Violation(ref message))
+                if message == "streaming results require a finished stream"
+        ));
     }
 }
