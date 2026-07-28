@@ -4,8 +4,16 @@
 
 use std::path::Path;
 
+#[path = "segment_store_protocol_contract/documentation_laws.rs"]
+mod documentation_laws;
 #[path = "segment_store_protocol_contract/fixture_oracle.rs"]
 mod fixture_oracle;
+#[path = "segment_store_protocol_contract/publication_laws.rs"]
+mod publication_laws;
+#[path = "segment_store_protocol_contract/recovery_laws.rs"]
+mod recovery_laws;
+#[path = "segment_store_protocol_contract/transition_laws.rs"]
+mod transition_laws;
 
 const ADR_INDEX: &str = include_str!("../../docs/adr/README.md");
 const ADR: &str = include_str!("../../docs/adr/0005-durable-segment-store-protocol.md");
@@ -22,6 +30,7 @@ const RATIONALE: &str = include_str!("../../docs/formats/segment-store-v1/ration
 const CONFORMANCE_GUIDE: &str = include_str!("../../conformance/segment-store/v1/README.md");
 const CONFORMANCE_ORIGIN: &str = include_str!("../../conformance/segment-store/v1/ORIGIN.md");
 const TRANSITIONS: &str = include_str!("../../conformance/segment-store/v1/transitions.tsv");
+const CONTRACT_SOURCE: &str = include_str!("segment_store_protocol_contract.rs");
 
 const REQUIRED_PROTOCOL_PAGES: &[&str] = &[
     "docs/adr/0005-durable-segment-store-protocol.md",
@@ -88,105 +97,6 @@ fn durable_protocol_freezes_every_cross_cutting_law() {
 }
 
 #[test]
-fn durable_transition_ledger_is_complete_and_stable() -> Result<(), String> {
-    assert!(TRANSITIONS.starts_with(
-        "keep.segment-store.transitions/v1\n\
-         crash_id\tphase\toperation\tpre_state\tinterrupted_class\t\
-         post_state\trecovery_posture\n"
-    ));
-
-    let mut row_count = 0usize;
-    for (offset, row) in TRANSITIONS.lines().skip(2).enumerate() {
-        let ordinal = offset.checked_add(1).ok_or("transition ordinal overflow")?;
-        let expected_id = format!("KEEP-CRASH-{ordinal:03}");
-        let mut fields = row.split('\t');
-        assert_eq!(fields.next(), Some(expected_id.as_str()));
-        assert_eq!(
-            fields.count(),
-            6,
-            "transition {expected_id} must have seven fields"
-        );
-        row_count = row_count
-            .checked_add(1)
-            .ok_or("transition count overflow")?;
-    }
-    assert_eq!(row_count, 30);
-    for exact_transition in [
-        "KEEP-CRASH-009\tsegment\tlink-sealed-stage\t\
-         durable-sealed-stage\t\
-         valid-sealed-stage-or-valid-orphan-or-ambiguity\t\
-         linked-segment-orphan\tverify-no-clobber-link-and-digest",
-        "KEEP-CRASH-017\tcatalog\tlink-generation\t\
-         durable-catalog-stage\t\
-         valid-catalog-stage-or-valid-orphan-or-ambiguity\t\
-         linked-catalog-orphan\tverify-no-clobber-link-and-digest",
-        "KEEP-CRASH-025\thead\treplace-current-head\t\
-         durable-next-head\t\
-         valid-next-head-or-published-generation-or-ambiguity\t\
-         replaced-current-head\tverify-one-atomic-head",
-        "KEEP-CRASH-026\thead\tsync-root-directory\t\
-         replaced-current-head\tpublished-generation-or-ambiguity\t\
-         published-generation-admitted\tverify-complete-reader-snapshot",
-        "KEEP-CRASH-027\trecovery\tunlink-truncated-stage\t\
-         named-truncated-stage\t\
-         named-truncated-stage-or-unlinked-stage\t\
-         unlinked-truncated-stage\tverify-requested-stage-fingerprint",
-        "KEEP-CRASH-028\trecovery\tsync-staging-after-discard\t\
-         unlinked-truncated-stage\t\
-         named-truncated-stage-or-discarded-stage\t\
-         discarded-truncated-stage\treport-explicit-discard",
-        "KEEP-CRASH-029\trecovery\tunlink-next-head\t\
-         named-unpublishable-next-head\t\
-         named-unpublishable-next-head-or-unlinked-next-head\t\
-         unlinked-next-head\tverify-requested-next-head-fingerprint",
-        "KEEP-CRASH-030\trecovery\tsync-root-after-next-head-discard\t\
-         unlinked-next-head\t\
-         named-unpublishable-next-head-or-discarded-next-head\t\
-         discarded-next-head\treport-explicit-next-head-discard",
-    ] {
-        assert!(
-            TRANSITIONS
-                .lines()
-                .skip(2)
-                .any(|row| row == exact_transition),
-            "imprecise atomic-transition state: {exact_transition}"
-        );
-    }
-
-    for recovery_class in [
-        "reusable-stage",
-        "valid-orphan",
-        "truncated-tail",
-        "corrupt",
-        "stale-generation",
-        "ambiguity",
-    ] {
-        assert!(
-            format!("{SPECIFICATION}\n{TRANSITIONS}").contains(recovery_class),
-            "missing recovery class: {recovery_class}"
-        );
-    }
-
-    Ok(())
-}
-
-#[test]
-fn recovery_inventory_is_bounded_before_names_are_retained() {
-    for required in [
-        "`MAX_RECOVERY_INVENTORY_ENTRY_COUNT` | `2,097,152`",
-        "recovery counts entries",
-        "before retaining or sorting their names",
-        "observed-at-least",
-        "`2,097,153`",
-    ] {
-        assert!(
-            SPECIFICATION.contains(required),
-            "missing bounded recovery-inventory law: {required}"
-        );
-    }
-}
-
-#[test]
 fn catalog_locations_name_only_top_level_segment_records() {
     for required in [
         "scans the complete segment grammar from byte 64",
@@ -199,114 +109,6 @@ fn catalog_locations_name_only_top_level_segment_records() {
         assert!(
             SPECIFICATION.contains(required),
             "missing top-level catalog-span law: {required}"
-        );
-    }
-}
-
-#[test]
-fn conformance_provenance_has_one_issue_prefix_per_owner() {
-    let normalized = CONFORMANCE_ORIGIN
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ");
-    for owner in ["Issue #15", "Issue #16", "Issue #17"] {
-        assert_eq!(
-            normalized.matches(owner).count(),
-            1,
-            "conformance provenance must name {owner} exactly once"
-        );
-    }
-    assert_eq!(
-        normalized.matches("flyingrobots/keep/issues/14").count(),
-        1,
-        "conformance provenance must name issue #14 exactly once"
-    );
-}
-
-#[test]
-fn physical_namespace_refuses_aliasing_filesystems() {
-    for required in [
-        "case-sensitive, byte-preserving directory names",
-        "case-folding or normalization aliases",
-    ] {
-        assert!(
-            SPECIFICATION.contains(required),
-            "missing physical-namespace capability: {required}"
-        );
-    }
-}
-
-#[test]
-fn protocol_index_routes_each_semantic_owner() {
-    assert!(
-        SPECIFICATION_INDEX.lines().count() <= 200,
-        "protocol index exceeds the repository target file size"
-    );
-    for route in [
-        "[Segment bytes](segment.md)",
-        "[Catalog and publication-head bytes](catalog.md)",
-        "[Publication and reader visibility](publication.md)",
-        "[Recovery and platform contract](recovery.md)",
-        "[Requirements, compatibility, and evidence](requirements.md)",
-    ] {
-        assert!(
-            SPECIFICATION_INDEX.contains(route),
-            "protocol index does not preserve the exact route: {route}"
-        );
-    }
-}
-
-#[test]
-fn truncated_stage_discard_fingerprint_has_one_preimage() {
-    assert!(
-        SPECIFICATION.contains("framed_blake3_v1(ASCII(\"KEEP:RECOVERY:STAGE\\0\"), stage_bytes)"),
-        "truncated-stage discard fingerprint lacks its exact preimage"
-    );
-}
-
-#[test]
-fn immutable_pool_links_are_verified_after_namespace_resolution() {
-    for required in [
-        "After either a new link or an existing-name result",
-        "reopens the pool entry without following links",
-        "against the pre-link verified bytes and digest",
-        "Only that post-link verification advances the protocol",
-    ] {
-        assert!(
-            SPECIFICATION.contains(required),
-            "missing post-link verification law: {required}"
-        );
-    }
-}
-
-#[test]
-fn leftover_next_head_has_explicit_finalization_or_discard() {
-    for required in [
-        "Recovery finalizes it only when it",
-        "exactly extends the verified current head",
-        "never rewrites a retained `head.next`",
-        "unlinks the fingerprint-bound `head.next` (`KEEP-CRASH-029`)",
-        "synchronizes the store root (`KEEP-CRASH-030`)",
-    ] {
-        assert!(
-            SPECIFICATION.contains(required),
-            "missing leftover next-head law: {required}"
-        );
-    }
-}
-
-#[test]
-fn discard_fingerprints_refuse_oversized_evidence_before_hashing() {
-    for required in [
-        "`current.seg` uses `MAX_SEGMENT_LENGTH`",
-        "`current.cat` uses `MAX_CATALOG_LENGTH`",
-        "`head.next` uses `PUBLICATION_HEAD_LENGTH`",
-        "reads at most the selected limit plus one byte",
-        "before any discard fingerprint is admitted",
-    ] {
-        assert!(
-            SPECIFICATION.contains(required),
-            "missing discard input bound: {required}"
         );
     }
 }
