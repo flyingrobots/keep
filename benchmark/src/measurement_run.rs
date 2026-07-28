@@ -70,7 +70,7 @@ fn measure_scenario(
     let mut expected = None;
     for _index in 0..settings.sample_count {
         let sample = measure_sample(&mut prepared)?;
-        admit_observation(scenario, &mut expected, sample.observation)?;
+        admit_observation(scenario, &mut expected, sample.value)?;
         samples.push(sample);
     }
     aggregate(expected, &samples)

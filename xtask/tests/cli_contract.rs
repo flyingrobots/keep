@@ -44,7 +44,7 @@ fn missing_command_returns_the_versioned_usage_contract() -> Result<(), io::Erro
     assert_eq!(
         output.stderr,
         b"Error: usage: cargo xtask \
-          <golden-file-worldline-check|prepare-fuzz-corpus|\
+          <benchmark-baseline|golden-file-worldline-check|prepare-fuzz-corpus|\
           source-structure-check|verify>\n"
     );
     Ok(())

@@ -25,6 +25,15 @@ pub struct ChunkPartition {
 }
 
 impl ChunkingProfile {
+    /// Complete stable comparison-profile order.
+    pub const ALL: [Self; 5] = [
+        Self::KeepFastCdcSmall,
+        Self::KeepFastCdcRegistered,
+        Self::KeepFastCdcLarge,
+        Self::Fixed64KiB,
+        Self::GitCasDefault,
+    ];
+
     /// Returns the stable benchmark profile name.
     #[must_use]
     pub const fn name(self) -> &'static str {

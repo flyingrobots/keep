@@ -60,6 +60,39 @@ mod metered_reader;
 mod profile;
 mod profile_error;
 mod profile_partition;
+mod report;
+mod report_environment;
+mod report_error;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "report collection and serialization share profile evidence"
+)]
+mod report_profile;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "profile sequencing delegates checked aggregation here"
+)]
+mod report_profile_aggregate;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "the public report facade delegates canonical serialization here"
+)]
+mod report_tsv;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "the TSV sequencer delegates metadata rows here"
+)]
+mod report_tsv_metadata;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "the TSV sequencer delegates profile rows here"
+)]
+mod report_tsv_profile;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "the TSV sequencer delegates scenario rows here"
+)]
+mod report_tsv_scenario;
 mod scenario;
 mod scenario_error;
 mod scenario_execution;
@@ -100,5 +133,8 @@ pub use measurement::{BaselineMeasurements, MeasurementSettings, ScenarioMetrics
 pub use measurement_error::MeasurementError;
 pub use profile::{ChunkPartition, ChunkingProfile};
 pub use profile_error::ProfileError;
+pub use report::{BaselineReport, BuildProfile};
+pub use report_environment::{BaselineEnvironment, SourceTreeState};
+pub use report_error::ReportError;
 pub use scenario::{PreparedScenario, Scenario, ScenarioObservation, VerificationPosture};
 pub use scenario_error::ScenarioError;

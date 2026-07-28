@@ -13,3 +13,7 @@ keep = { path = ".." }
 
 [lints]
 workspace = true
+
+[[bin]]
+name = "keep-benchmark-baseline"
+path = "src/main.rs"
