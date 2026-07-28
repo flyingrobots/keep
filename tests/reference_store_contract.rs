@@ -51,16 +51,41 @@ fn reconstruction_error_formatters_stay_below_the_hard_function_limit() {
         !RECONSTRUCTION_ERROR_DISPLAY.contains("Err(fmt::Error)"),
         "reconstruction diagnostics must not reject routed variants"
     );
-    for function in RECONSTRUCTION_ERROR_DISPLAY.split("\nfn ").skip(1) {
-        let body = function
-            .split_once("\n}\n\n")
-            .map_or(function, |(body, _)| body);
-        let name = function.split_once('(').map_or(function, |(name, _)| name);
+    let lines: Vec<_> = RECONSTRUCTION_ERROR_DISPLAY.lines().collect();
+    let mut discovered = false;
+    for (start, line) in lines.iter().enumerate() {
+        let Some(name) = rust_function_name(line) else {
+            continue;
+        };
+        discovered = true;
+        let indentation: String = line
+            .chars()
+            .take_while(|character| character.is_whitespace())
+            .collect();
+        let terminator = format!("{indentation}}}");
+        let terminator_offset = lines
+            .iter()
+            .skip(start)
+            .skip(1)
+            .position(|candidate| *candidate == terminator);
         assert!(
-            body.lines().count() <= 59,
+            matches!(terminator_offset, Some(offset) if offset <= 58),
             "{name} exceeds the 60-line hard limit"
         );
     }
+    assert!(discovered, "no reconstruction formatter was measured");
+}
+
+fn rust_function_name(line: &str) -> Option<&str> {
+    let signature = line.trim_start();
+    let signature = ["pub ", "pub(crate) ", "pub(super) "]
+        .into_iter()
+        .find_map(|visibility| signature.strip_prefix(visibility))
+        .unwrap_or(signature);
+    let signature = signature.strip_prefix("const ").unwrap_or(signature);
+    signature
+        .strip_prefix("fn ")
+        .map(|function| function.split_once('(').map_or(function, |(name, _)| name))
 }
 
 #[test]
