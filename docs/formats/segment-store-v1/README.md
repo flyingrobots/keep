@@ -346,6 +346,7 @@ Version 1 defines:
 | `MAX_CATALOG_ENTRY_COUNT` | 1,048,576 |
 | `MAX_CATALOG_LENGTH` | 167,772,352 bytes |
 | `PUBLICATION_HEAD_LENGTH` | 128 bytes |
+| `MAX_RECOVERY_INVENTORY_ENTRY_COUNT` | `2,097,152` |
 
 <!-- markdownlint-enable MD013 -->
 
@@ -526,11 +527,18 @@ Opening is read-only. It returns an admitted reader snapshot, an uninitialized
 state, a typed recovery inventory and plan, or a refusal. It never changes
 durable bytes.
 
-Recovery inventory reads only protocol-owned canonical names, sorts them by
-raw canonical bytes, and verifies complete content before classification.
-Unknown names, symlinks, conflicting canonical coordinates, duplicate digests,
-multiple fixed-name stages, or a head that cannot be proven atomic are
-unrecoverable ambiguity.
+Recovery inventory reads only protocol-owned canonical names. Across the
+store root, `staging`, `segments`, and `catalogs`, recovery counts entries
+before retaining or sorting their names. The scan stops with a typed limit
+refusal when the count exceeds `MAX_RECOVERY_INVENTORY_ENTRY_COUNT`; because
+it stops on the first excess entry, the refusal reports an observed-at-least
+count of `2,097,153`, not a host-order-dependent exact total. A configured
+limit may be lower but never higher.
+
+After the count is admitted, recovery sorts names by raw canonical bytes and
+verifies complete content before classification. Unknown names, symlinks,
+conflicting canonical coordinates, duplicate digests, multiple fixed-name
+stages, or a head that cannot be proven atomic are unrecoverable ambiguity.
 
 The required classes are:
 

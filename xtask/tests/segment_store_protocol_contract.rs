@@ -132,3 +132,19 @@ fn durable_transition_ledger_is_complete_and_stable() -> Result<(), String> {
 
     Ok(())
 }
+
+#[test]
+fn recovery_inventory_is_bounded_before_names_are_retained() {
+    for required in [
+        "`MAX_RECOVERY_INVENTORY_ENTRY_COUNT` | `2,097,152`",
+        "recovery counts entries",
+        "before retaining or sorting their names",
+        "observed-at-least",
+        "`2,097,153`",
+    ] {
+        assert!(
+            SPECIFICATION.contains(required),
+            "missing bounded recovery-inventory law: {required}"
+        );
+    }
+}
