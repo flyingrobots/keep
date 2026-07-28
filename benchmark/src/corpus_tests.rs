@@ -28,11 +28,11 @@ fn generated_corpus_is_bounded_reproducible_and_scenario_complete() -> Result<()
     );
     assert_eq!(first.large_text().len(), 1_048_576);
     assert_eq!(first.large_binary().len(), 1_048_576);
-    assert_eq!(first.edit_base().len(), 524_288);
-    assert_eq!(first.early_insertion().len(), 528_384);
-    assert_eq!(first.early_deletion().len(), 520_192);
-    assert_eq!(first.near_neighbor().len(), 524_288);
-    assert_eq!(first.zero_dedup().len(), 524_288);
+    assert_eq!(first.edit_base().len(), 2_097_152);
+    assert_eq!(first.early_insertion().len(), 2_101_248);
+    assert_eq!(first.early_deletion().len(), 2_093_056);
+    assert_eq!(first.near_neighbor().len(), 2_097_152);
+    assert_eq!(first.zero_dedup().len(), 2_097_152);
     assert_eq!(first.tiny_blobs().len(), 256);
     assert!(first.tiny_blobs().iter().all(|blob| blob.len() <= 256));
 
@@ -105,31 +105,31 @@ fn generated_members_match_frozen_logical_identity_witnesses() -> Result<(), Box
     let expected = [
         concat!(
             "keep:blob:v1:blake3-256:1048576:",
-            "ae1cd25c858113e4be9aaa5a896b039200a5efbd86121eac05c360cca86db40e"
+            "ce9299ba09e28adc20eb12881344636393b207af13857e1b1c0fd1c1b6179d62"
         ),
         concat!(
             "keep:blob:v1:blake3-256:1048576:",
             "9088c68986d0d4fac38cded718d2f6a0e7e62de07b6b88b9a3cd26e9ecd068e3"
         ),
         concat!(
-            "keep:blob:v1:blake3-256:524288:",
-            "3e5191ad2325e530a58fd7268eef8b27cd20cbf9b40c85cca1620143cc81343a"
+            "keep:blob:v1:blake3-256:2097152:",
+            "87a01fb55b86d2f45dd84a8971ba5ef9c24c3c7cd4999f767e9ddd96d437436b"
         ),
         concat!(
-            "keep:blob:v1:blake3-256:528384:",
-            "177a0811abb4bdc29e91038497dadac68d8bc67c606a3117f85d5dcf73f46a11"
+            "keep:blob:v1:blake3-256:2101248:",
+            "ebb0bb45f64668c92509c6a781cc35e98136c00bb30b2ea68267ad8681b8a233"
         ),
         concat!(
-            "keep:blob:v1:blake3-256:520192:",
-            "c6ac8ef4aa685ccfcd358b74a227ecba6e09b399b094747d6e729d54fc539713"
+            "keep:blob:v1:blake3-256:2093056:",
+            "1a36ce7e2ffeea866576e1c3bb6145c4a09c0ce48e3a087aa55b8a26b273ac94"
         ),
         concat!(
-            "keep:blob:v1:blake3-256:524288:",
-            "47ddd8c58f0f9d1bb51b801779365aa4518768943895ceca71d6c22670e7ff5a"
+            "keep:blob:v1:blake3-256:2097152:",
+            "8dbc9def23a5e04e31cd2330b4a6ed031c92e89c650b82c5c2eb135a23d418a4"
         ),
         concat!(
-            "keep:blob:v1:blake3-256:524288:",
-            "44445b7fb1b1ad9f3326f0cab7ed278c0012c028f531d9b0f1c5deb9422a56a6"
+            "keep:blob:v1:blake3-256:2097152:",
+            "aa2f0d2e8f06da8fe0c34496287efa1f7cdedc949462bf003e3930fabf3a5eed"
         ),
     ];
 

@@ -21,7 +21,7 @@ pub struct BenchmarkCorpus {
 
 impl BenchmarkCorpus {
     /// Maximum aggregate bytes retained by one generated corpus.
-    pub const TOTAL_BYTE_LIMIT: usize = 8_388_608;
+    pub const TOTAL_BYTE_LIMIT: usize = 16_777_216;
     /// Number of named large or edit-oriented corpus members.
     pub const MEMBER_COUNT: usize = 7;
 

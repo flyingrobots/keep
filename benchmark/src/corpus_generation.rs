@@ -5,12 +5,14 @@ use keep::BlobId;
 use crate::{BenchmarkCorpus, CorpusError};
 
 const LARGE_BYTES: usize = 1_048_576;
-const EDIT_BYTES: usize = 524_288;
+const EDIT_BYTES: usize = 2_097_152;
 const EDIT_OFFSET: usize = 4_096;
 const EDIT_LENGTH: usize = 4_096;
 const NEIGHBOR_OFFSET: usize = 8_192;
 const TINY_COUNT: usize = 256;
-const TEXT_PATTERN: &[u8] = b"pub fn keep_exact_bytes() { assert!(identity_is_stable); }\n";
+const TEXT_VARIATION_LENGTH: usize = 16;
+const TEXT_VARIATION_OFFSET: usize = 12;
+const TEXT_PATTERN: &[u8] = b"pub fn keep_aaaaaaaaaaaaaaaa() { assert!(identity_is_stable); }\n";
 
 impl BenchmarkCorpus {
     /// Generates the fixed, bounded, license-safe benchmark corpus.
@@ -20,9 +22,9 @@ impl BenchmarkCorpus {
     /// Returns [`CorpusError`] for bounded allocation, identity, coordinate,
     /// aggregate-overflow, or aggregate-limit failures.
     pub fn generate() -> Result<Self, CorpusError> {
-        let large_text = repeated_pattern(LARGE_BYTES, TEXT_PATTERN, "large-text")?;
+        let large_text = source_text(LARGE_BYTES, "large-text")?;
         let large_binary = deterministic_binary(LARGE_BYTES, 0x0123_4567_89ab_cdef)?;
-        let edit_base = repeated_pattern(EDIT_BYTES, TEXT_PATTERN, "edit-base")?;
+        let edit_base = source_text(EDIT_BYTES, "edit-base")?;
         let insertion = repeated_pattern(EDIT_LENGTH, b"KEEP-INSERT\n", "insertion")?;
         let early_insertion = insert(&edit_base, &insertion)?;
         let early_deletion = delete(&edit_base)?;
@@ -60,6 +62,36 @@ impl BenchmarkCorpus {
             total_bytes,
         })
     }
+}
+
+fn source_text(length: usize, target: &'static str) -> Result<Vec<u8>, CorpusError> {
+    let mut output = repeated_pattern(length, TEXT_PATTERN, target)?;
+    let mut cursor = TEXT_VARIATION_OFFSET;
+    let mut state = 0x243f_6a88_85a3_08d3_u64;
+    while cursor < output.len() {
+        let end = cursor
+            .checked_add(TEXT_VARIATION_LENGTH)
+            .ok_or(CorpusError::TotalLengthOverflow)?;
+        let slots = output
+            .get_mut(cursor..end)
+            .ok_or(CorpusError::InvalidGeneratedRange { target })?;
+        for slot in slots {
+            state ^= state.wrapping_shl(13);
+            state ^= state.wrapping_shr(7);
+            state ^= state.wrapping_shl(17);
+            let [variation, ..] = state.to_le_bytes();
+            *slot = b'a'
+                .checked_add(variation & 0x0f)
+                .ok_or(CorpusError::TotalLengthOverflow)?;
+        }
+        cursor =
+            cursor
+                .checked_add(TEXT_PATTERN.len())
+                .ok_or(CorpusError::InvalidGeneratedRange {
+                    target: "source-text-variation",
+                })?;
+    }
+    Ok(output)
 }
 
 fn repeated_pattern(
