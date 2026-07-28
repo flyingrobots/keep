@@ -163,8 +163,14 @@ fn decode_hex(input: &str) -> Result<Vec<u8>, &'static str> {
 }
 
 fn hex_nibble(byte: u8) -> Result<u8, &'static str> {
-    let digit = char::from(byte)
-        .to_digit(16)
-        .ok_or("hex fixture contains a nonhexadecimal byte")?;
-    u8::try_from(digit).map_err(|_| "hexadecimal digit conversion failed")
+    const ERROR: &str = "hex fixture contains a nonhexadecimal byte";
+
+    match byte {
+        b'0'..=b'9' => byte.checked_sub(b'0').ok_or(ERROR),
+        b'a'..=b'f' => byte
+            .checked_sub(b'a')
+            .and_then(|digit| digit.checked_add(10))
+            .ok_or(ERROR),
+        _ => Err(ERROR),
+    }
 }

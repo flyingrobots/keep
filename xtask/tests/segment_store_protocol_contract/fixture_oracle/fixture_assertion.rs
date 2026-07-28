@@ -73,3 +73,11 @@ fn golden_artifacts_match_the_independent_fixture_oracle() -> Result<(), String>
     assert_eq!(ARTIFACTS, manifest);
     Ok(())
 }
+
+#[test]
+fn fixture_transport_refuses_uppercase_hexadecimal() {
+    assert_eq!(
+        decode_hex("AA\n"),
+        Err("hex fixture contains a nonhexadecimal byte")
+    );
+}
