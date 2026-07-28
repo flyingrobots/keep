@@ -2,7 +2,7 @@
 
 use std::fs::{self, OpenOptions};
 use std::io::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use super::BenchmarkBaselineError;
 use super::environment::CapturedEnvironment;
@@ -95,10 +95,7 @@ pub(super) fn validate(
     Ok(())
 }
 
-pub(super) fn persist(
-    repository_root: &Path,
-    bytes: &[u8],
-) -> Result<PathBuf, BenchmarkBaselineError> {
+pub(super) fn persist(repository_root: &Path, bytes: &[u8]) -> Result<(), BenchmarkBaselineError> {
     let output = repository_root.join(REPORT_RELATIVE_PATH);
     let parent = output
         .parent()
@@ -121,7 +118,7 @@ pub(super) fn persist(
         .map_err(|source| io_error("sync temporary report", &temporary, source))?;
     fs::rename(&temporary, &output)
         .map_err(|source| io_error("publish report", &output, source))?;
-    Ok(output)
+    Ok(())
 }
 
 fn require_line(

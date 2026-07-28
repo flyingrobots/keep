@@ -8,7 +8,6 @@ mod host_environment;
 mod process;
 mod tracked_source;
 
-use std::io::Write;
 use std::path::Path;
 use std::process::Command;
 
@@ -61,18 +60,7 @@ pub(crate) fn run(repository_root: &Path) -> Result<(), BenchmarkBaselineError> 
         });
     }
     artifact::validate(&output.stdout, &environment)?;
-    let path = artifact::persist(repository_root, &output.stdout)?;
-    let relative = path.strip_prefix(repository_root).map_err(|_source| {
-        BenchmarkBaselineError::ReportViolation {
-            reason: "report-path-escaped-repository",
-        }
-    })?;
-    let mut stdout = std::io::stdout().lock();
-    writeln!(stdout, "{}", relative.display()).map_err(|source| BenchmarkBaselineError::Io {
-        action: "write report path to",
-        target: Path::new("stdout").to_path_buf(),
-        source,
-    })
+    artifact::persist(repository_root, &output.stdout)
 }
 
 fn admit_clean_source(

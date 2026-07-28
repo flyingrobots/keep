@@ -14,6 +14,8 @@ use super::host_environment::CapturedHost;
 use super::{BenchmarkBaselineError, admit_clean_source, admit_stable_environment};
 use crate::test_directory::TestDirectory;
 
+const BENCHMARK_TASK_SOURCE: &str = include_str!("mod.rs");
+
 #[test]
 fn report_admission_binds_release_evidence_to_captured_git_state() {
     let environment = environment();
@@ -93,6 +95,12 @@ fn optimized_baselines_refuse_dirty_or_drifting_source_coordinates() {
         })
     ));
     assert!(admit_stable_environment(&clean, &clean).is_ok());
+}
+
+#[test]
+fn successful_benchmark_publication_has_no_stdout_boundary() {
+    assert!(!BENCHMARK_TASK_SOURCE.contains("std::io::stdout"));
+    assert!(!BENCHMARK_TASK_SOURCE.contains("use std::io::Write"));
 }
 
 #[test]
