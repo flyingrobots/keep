@@ -1,4 +1,6 @@
-use super::{FuzzTarget, TargetError, parse_list};
+use super::{FuzzTarget, TargetError, harnesses, parse_list};
+use std::error::Error;
+use std::path::Path;
 use std::path::PathBuf;
 
 #[test]
@@ -7,6 +9,28 @@ fn cargo_registry_is_sorted_before_reconciliation() -> Result<(), TargetError> {
     assert_eq!(
         targets.iter().map(FuzzTarget::as_str).collect::<Vec<_>>(),
         ["blob_hasher", "segment_format"]
+    );
+    Ok(())
+}
+
+#[test]
+fn checked_in_harness_set_is_exact_and_sorted() -> Result<(), Box<dyn Error>> {
+    let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let repository_root = manifest
+        .parent()
+        .ok_or("xtask manifest has no repository parent")?;
+    let targets = harnesses(repository_root)?;
+    assert_eq!(
+        targets.iter().map(FuzzTarget::as_str).collect::<Vec<_>>(),
+        [
+            "blob_hasher",
+            "blob_id_binary",
+            "blob_id_text",
+            "fast_cdc",
+            "golden_protocol",
+            "layout_record",
+            "segment_format",
+        ]
     );
     Ok(())
 }
