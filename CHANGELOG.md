@@ -27,6 +27,10 @@ after its public API and format compatibility policies are established.
   directories without following links, verifies child-directory identity
   before and after bounded scanning, and preserves raw Linux entry-name bytes
   without mutating protocol state.
+- Fixed recovery stages can now be fingerprinted relative to the pinned
+  recovery inventory capability. Observation admits only regular files, never
+  follows links, streams under the name-selected bound, and refuses entry
+  replacement or length drift without mutating protocol state.
 - Store initialization now exposes one storage-port state machine that admits
   the platform before mutation, opens and locks `writer.lock`, admits the three
   protocol directories in order, synchronizes the root, and preserves the

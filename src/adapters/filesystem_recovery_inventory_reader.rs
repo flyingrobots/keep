@@ -8,10 +8,12 @@ use cap_std::ambient_authority;
 use cap_std::fs::Dir;
 
 use super::{
-    RecoveryEntryName, RecoveryInventory, RecoveryInventoryError, RecoveryInventoryLimit,
-    RecoveryInventoryOperation, RecoveryInventoryStorage, RecoveryNamespace,
+    FilesystemRecoveryStageError, RecoveryEntryName, RecoveryInventory, RecoveryInventoryError,
+    RecoveryInventoryLimit, RecoveryInventoryOperation, RecoveryInventoryStorage,
+    RecoveryNamespace, RecoveryStage, RecoveryStageEvidence, RecoveryStageNamespacePhase,
     filesystem_platform_profile, filesystem_recovery_inventory_scan,
-    filesystem_recovery_namespace::PinnedRecoveryDirectory, read_recovery_inventory,
+    filesystem_recovery_namespace::PinnedRecoveryDirectory, filesystem_recovery_stage,
+    read_recovery_inventory,
 };
 
 const STAGING_NAME: &str = "staging";
@@ -103,10 +105,65 @@ impl FilesystemRecoveryInventoryReader {
         Ok(inventory)
     }
 
+    /// Produces bounded exact evidence for one fixed recovery stage.
+    ///
+    /// Opens relative to the pinned root or staging capability without
+    /// following links, admits only a regular file, streams under the
+    /// name-selected bound, then verifies the handle, entry, and namespaces.
+    /// The synchronous call allocates no content-sized memory, may block on
+    /// filesystem I/O, and performs no protocol mutation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FilesystemRecoveryStageError`] on namespace drift, link or
+    /// file refusal, oversized evidence, entry replacement, length drift, or
+    /// underlying I/O failure.
+    pub fn fingerprint_stage(
+        &self,
+        stage: RecoveryStage,
+    ) -> Result<RecoveryStageEvidence, FilesystemRecoveryStageError> {
+        self.verify_stage_namespaces(stage, RecoveryStageNamespacePhase::BeforeObservation)?;
+        let evidence = filesystem_recovery_stage::fingerprint(self.stage_directory(stage), stage)?;
+        self.verify_stage_namespaces(stage, RecoveryStageNamespacePhase::AfterObservation)?;
+        Ok(evidence)
+    }
+
+    #[cfg(test)]
+    pub(super) fn fingerprint_stage_with<F>(
+        &self,
+        stage: RecoveryStage,
+        after_open: F,
+    ) -> Result<RecoveryStageEvidence, FilesystemRecoveryStageError>
+    where
+        F: FnOnce(),
+    {
+        self.verify_stage_namespaces(stage, RecoveryStageNamespacePhase::BeforeObservation)?;
+        let evidence = filesystem_recovery_stage::fingerprint_with(
+            self.stage_directory(stage),
+            stage,
+            after_open,
+        )?;
+        self.verify_stage_namespaces(stage, RecoveryStageNamespacePhase::AfterObservation)?;
+        Ok(evidence)
+    }
+
     fn verify_namespaces(&self) -> Result<(), RecoveryInventoryError> {
         self.staging.verify(&self.root)?;
         self.segments.verify(&self.root)?;
         self.catalogs.verify(&self.root)
+    }
+
+    fn verify_stage_namespaces(
+        &self,
+        stage: RecoveryStage,
+        phase: RecoveryStageNamespacePhase,
+    ) -> Result<(), FilesystemRecoveryStageError> {
+        self.verify_namespaces()
+            .map_err(|source| FilesystemRecoveryStageError::Namespace {
+                stage,
+                phase,
+                source,
+            })
     }
 
     const fn directory(&self, namespace: RecoveryNamespace) -> &Dir {
@@ -115,6 +172,15 @@ impl FilesystemRecoveryInventoryReader {
             RecoveryNamespace::Staging => self.staging.directory(),
             RecoveryNamespace::Segments => self.segments.directory(),
             RecoveryNamespace::Catalogs => self.catalogs.directory(),
+        }
+    }
+
+    const fn stage_directory(&self, stage: RecoveryStage) -> &Dir {
+        match stage {
+            RecoveryStage::Segment | RecoveryStage::Catalog => {
+                self.directory(RecoveryNamespace::Staging)
+            }
+            RecoveryStage::NextHead => self.directory(RecoveryNamespace::Root),
         }
     }
 }

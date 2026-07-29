@@ -69,7 +69,10 @@ protocol namespaces before retaining names, applies a configurable ceiling no
 greater than 2,097,152 entries, and returns duplicate-free deterministic raw
 name order. `FilesystemRecoveryInventoryReader` implements that contract with
 pinned, no-follow namespace capabilities and pre/post identity verification on
-the admitted Linux ext4 profile. Artifact classification remains planned.
+the admitted Linux ext4 profile. Its bounded stage-fingerprint operation opens
+fixed stages relative to those capabilities, refuses links and nonregular
+files, and verifies entry identity and length after reading. Semantic artifact
+classification remains planned.
 Crash-injection execution, explicit recovery, retention, compaction, and
 garbage collection remain planned. Presence in the reference CAS does not
 claim retention, crash recovery, or durability.

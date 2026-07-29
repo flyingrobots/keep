@@ -35,8 +35,11 @@ coordinate, and refuses an unknown or conflicting name without artifact I/O.
 `fingerprint_recovery_stage` then reads a fixed stage through a zero-allocation
 bounded stream, refuses metadata or observed bytes above the name-selected
 maximum, and returns its exact observed length and
-`KEEP:RECOVERY:STAGE\0` fingerprint. Semantic content classification remains
-unimplemented.
+`KEEP:RECOVERY:STAGE\0` fingerprint.
+`FilesystemRecoveryInventoryReader::fingerprint_stage` binds that stream to
+the pinned root or staging capability, opens without following links, admits
+only regular files, and refuses entry replacement or length drift after
+reading. Semantic content classification remains unimplemented.
 
 The sole admissible duplicate digest is one fixed staging name and its exact
 digest-derived pool name after a link transition. Recovery admits that pair

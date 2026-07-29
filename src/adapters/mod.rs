@@ -84,6 +84,10 @@ mod filesystem_recovery_inventory_scan;
 #[cfg(all(test, unix))]
 mod filesystem_recovery_inventory_tests;
 mod filesystem_recovery_namespace;
+mod filesystem_recovery_stage;
+mod filesystem_recovery_stage_error;
+#[cfg(all(test, unix))]
+mod filesystem_recovery_stage_tests;
 mod filesystem_segment_stage;
 #[cfg(test)]
 mod filesystem_segment_stage_tests;
@@ -248,6 +252,9 @@ pub use filesystem_catalog_publisher::FilesystemCatalogPublisher;
 pub use filesystem_catalog_snapshot::FilesystemCatalogSnapshot;
 pub use filesystem_platform_admission::FilesystemPlatformAdmission;
 pub use filesystem_recovery_inventory_reader::FilesystemRecoveryInventoryReader;
+pub use filesystem_recovery_stage_error::{
+    FilesystemRecoveryStageError, RecoveryStageNamespacePhase,
+};
 pub use filesystem_segment_stage::FilesystemSegmentStage;
 pub use filesystem_writer_lock::FilesystemWriterLock;
 pub use layout_decode_error::LayoutDecodeError;
