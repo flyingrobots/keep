@@ -73,14 +73,19 @@ fn block_scopes(update: &Yaml) -> Result<Vec<DependencyScope>, DocumentationErro
     let ecosystem = update["package-ecosystem"]
         .as_str()
         .ok_or_else(|| contract("every update block names an ecosystem"))?;
+    let has_directory = !update["directory"].is_badvalue();
+    let has_directories = !update["directories"].is_badvalue();
+    if has_directory && has_directories {
+        return Err(contract("update block chooses one directory form"));
+    }
     let mut scopes = Vec::new();
-    if !update["directory"].is_badvalue() {
+    if has_directory {
         let directory = update["directory"]
             .as_str()
             .ok_or_else(|| contract("update directory is a string"))?;
         scopes.push(DependencyScope::new(ecosystem, directory));
     }
-    if !update["directories"].is_badvalue() {
+    if has_directories {
         let directories = update["directories"]
             .as_vec()
             .ok_or_else(|| contract("update directories is a sequence"))?;

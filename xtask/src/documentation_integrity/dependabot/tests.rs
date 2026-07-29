@@ -42,14 +42,20 @@ fn complete_uniform_dependabot_policy_is_admitted() {
 }
 
 #[test]
-fn list_termination_preserves_the_following_scope_declaration() {
+fn update_block_with_both_directory_forms_is_refused() {
     let policy = POLICY.replacen("      - /xtask\n", "", 1).replacen(
         "    schedule:\n",
         "    directory: /xtask\n    schedule:\n",
         1,
     );
 
-    assert!(super::admit(&policy, &required()).is_ok());
+    assert!(matches!(
+        super::admit(&policy, &required()),
+        Err(super::DocumentationError::RepositoryContract {
+            path: super::DEPENDABOT_PATH,
+            requirement: "update block chooses one directory form",
+        })
+    ));
 }
 
 #[test]
