@@ -1,30 +1,25 @@
-//! This module owns bounded Git path process execution and collection.
+//! This module owns deadline-bounded Git path process execution.
 
 use std::collections::BTreeSet;
 use std::io;
 use std::path::Path;
-use std::process::{Child, ChildStdout, Command, Stdio};
-use std::thread::{self, JoinHandle};
+use std::process::{Child, Command, Stdio};
+use std::time::Duration;
 
-use crate::process_output::{BoundedBytes, bounded_bytes};
+use crate::bounded_process::{self, CaptureLimits, ProcessError};
 
-use super::path_stream::{GitPath, read_paths};
+use super::path_stream::{GIT_PATH_STREAM_LIMIT_BYTES, GitPath, read_paths};
 use super::{GitInventoryError, GitOutputUnit};
 
+const GIT_DEADLINE: Duration = Duration::from_mins(2);
 const GIT_DIAGNOSTIC_LIMIT_BYTES: usize = 65_536;
+const GIT_CAPTURE_LIMITS: CaptureLimits =
+    CaptureLimits::new(GIT_PATH_STREAM_LIMIT_BYTES, GIT_DIAGNOSTIC_LIMIT_BYTES);
 
-struct GitProcess {
-    child: Child,
-    diagnostic_worker: JoinHandle<Result<BoundedBytes, io::Error>>,
-    stdout: ChildStdout,
-}
-
-/// Lists repository paths without allowing either child pipe to block.
+/// Lists repository paths through a deadline-bounded Git process group.
 ///
-/// Standard error is drained concurrently before standard output is read.
-/// Collection reads standard output before requesting termination, waits for
-/// the child before joining the diagnostic reader, and then preserves the
-/// established error precedence.
+/// The adapter materializes at most the 16 MiB path-stream bound before
+/// deterministic NUL-framed decoding.
 pub(crate) fn paths(
     repository_root: &Path,
     arguments: &[&str],
@@ -35,189 +30,68 @@ pub(crate) fn paths(
     })
 }
 
+/// Lists paths through an injected capability-bound spawn operation.
+///
+/// The adapter materializes at most the 16 MiB path-stream bound before
+/// deterministic NUL-framed decoding.
 pub(crate) fn paths_with(
     arguments: &[&str],
     operation: &'static str,
     spawn: impl FnOnce(&mut Command) -> Result<Child, io::Error>,
 ) -> Result<BTreeSet<GitPath>, GitInventoryError> {
-    let process = start_git(arguments, operation, spawn)?;
-    let paths = read_paths(process.stdout, operation);
-    collect_git_result(process.child, process.diagnostic_worker, paths, operation)
+    paths_with_deadline(arguments, operation, GIT_DEADLINE, spawn)
 }
 
-fn start_git(
+fn paths_with_deadline(
     arguments: &[&str],
     operation: &'static str,
+    deadline: Duration,
     spawn: impl FnOnce(&mut Command) -> Result<Child, io::Error>,
-) -> Result<GitProcess, GitInventoryError> {
-    let mut command = Command::new("git");
-    command
-        .args(arguments)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    let mut child = spawn(&mut command).map_err(|source| GitInventoryError::Run {
-        operation,
-        action: "start",
-        source,
-    })?;
-    let Some(stdout) = child.stdout.take() else {
-        let primary = GitInventoryError::Pipe {
-            operation,
-            stream: "stdout",
-        };
-        return Err(cleanup_child(&mut child, operation, primary));
-    };
-    let Some(stderr) = child.stderr.take() else {
-        let primary = GitInventoryError::Pipe {
-            operation,
-            stream: "stderr",
-        };
-        return Err(cleanup_child(&mut child, operation, primary));
-    };
-    let diagnostic_worker = thread::Builder::new()
-        .name(String::from("xtask-git-diagnostic"))
-        .spawn(move || bounded_bytes(stderr, GIT_DIAGNOSTIC_LIMIT_BYTES));
-    let diagnostic_worker = match diagnostic_worker {
-        Ok(worker) => worker,
-        Err(source) => {
-            let primary = GitInventoryError::Run {
-                operation,
-                action: "start the diagnostic reader for",
-                source,
-            };
-            return Err(cleanup_child(&mut child, operation, primary));
-        }
-    };
-    Ok(GitProcess {
-        child,
-        diagnostic_worker,
-        stdout,
-    })
-}
-
-fn collect_git_result(
-    mut child: Child,
-    diagnostic_worker: JoinHandle<Result<BoundedBytes, io::Error>>,
-    paths: Result<BTreeSet<GitPath>, GitInventoryError>,
-    operation: &'static str,
 ) -> Result<BTreeSet<GitPath>, GitInventoryError> {
-    let stop = if paths.is_err() {
-        request_stop(&mut child, operation)
+    let mut command = Command::new("git");
+    command.args(arguments).stdin(Stdio::null());
+    let output = bounded_process::capture_with_limits(
+        "git",
+        &mut command,
+        Some(deadline),
+        GIT_CAPTURE_LIMITS,
+        spawn,
+    )
+    .map_err(|source| process_failure(operation, source))?;
+    let paths = read_paths(output.stdout.as_slice(), operation)?;
+    if output.succeeded {
+        Ok(paths)
     } else {
-        Ok(())
-    };
-    let status = child.wait().map_err(|source| GitInventoryError::Run {
-        operation,
-        action: "wait for",
-        source,
-    });
-    let diagnostic = diagnostic_worker.join();
-    let paths = match paths {
-        Ok(paths) => paths,
-        Err(primary) => {
-            return Err(preserve_collection_failure(
-                primary, stop, status, diagnostic, operation,
-            ));
-        }
-    };
-    let status = match status {
-        Ok(status) => status,
-        Err(primary) => {
-            return Err(preserve_diagnostic_failure(primary, diagnostic, operation));
-        }
-    };
-    let diagnostic = diagnostic
-        .map_err(|_| GitInventoryError::Worker { operation })?
-        .map_err(|source| GitInventoryError::Run {
-            operation,
-            action: "read diagnostics from",
-            source,
-        })?;
-    if diagnostic.exceeded {
-        return Err(GitInventoryError::OutputBound {
-            operation,
-            stream: "diagnostic bytes",
-            maximum: GIT_DIAGNOSTIC_LIMIT_BYTES,
-            unit: GitOutputUnit::Bytes,
-        });
+        Err(git_failure(operation, output.code, output.stderr))
     }
-    if !status.success() {
-        return Err(git_failure(operation, status.code(), diagnostic.bytes));
+}
+
+fn process_failure(operation: &'static str, source: ProcessError) -> GitInventoryError {
+    match source {
+        ProcessError::OutputLimit {
+            stream: "stdout",
+            maximum,
+            ..
+        } => output_bound(operation, "path stream bytes", maximum),
+        ProcessError::OutputLimit {
+            stream: "stderr",
+            maximum,
+            ..
+        } => output_bound(operation, "diagnostic bytes", maximum),
+        source => GitInventoryError::Process { operation, source },
     }
-    Ok(paths)
 }
 
-fn request_stop(child: &mut Child, operation: &'static str) -> Result<(), GitInventoryError> {
-    child
-        .kill()
-        .or_else(|source| {
-            if source.kind() == io::ErrorKind::InvalidInput {
-                Ok(())
-            } else {
-                Err(source)
-            }
-        })
-        .map_err(|source| GitInventoryError::Run {
-            operation,
-            action: "stop",
-            source,
-        })
-}
-
-fn cleanup_child(
-    child: &mut Child,
+const fn output_bound(
     operation: &'static str,
-    primary: GitInventoryError,
+    stream: &'static str,
+    maximum: usize,
 ) -> GitInventoryError {
-    let stop = request_stop(child, operation);
-    let wait = child.wait().map_err(|source| GitInventoryError::Run {
+    GitInventoryError::OutputBound {
         operation,
-        action: "wait for",
-        source,
-    });
-    let primary = preserve_error(primary, stop);
-    preserve_error(primary, wait.map(|_| ()))
-}
-
-fn preserve_collection_failure(
-    primary: GitInventoryError,
-    stop: Result<(), GitInventoryError>,
-    status: Result<std::process::ExitStatus, GitInventoryError>,
-    diagnostic: thread::Result<Result<BoundedBytes, io::Error>>,
-    operation: &'static str,
-) -> GitInventoryError {
-    let primary = preserve_error(primary, stop);
-    let primary = preserve_error(primary, status.map(|_| ()));
-    preserve_diagnostic_failure(primary, diagnostic, operation)
-}
-
-fn preserve_diagnostic_failure(
-    primary: GitInventoryError,
-    diagnostic: thread::Result<Result<BoundedBytes, io::Error>>,
-    operation: &'static str,
-) -> GitInventoryError {
-    let cleanup = match diagnostic {
-        Ok(Ok(_)) => return primary,
-        Ok(Err(source)) => GitInventoryError::Run {
-            operation,
-            action: "read diagnostics from",
-            source,
-        },
-        Err(_) => GitInventoryError::Worker { operation },
-    };
-    preserve_error(primary, Err(cleanup))
-}
-
-fn preserve_error(
-    primary: GitInventoryError,
-    cleanup: Result<(), GitInventoryError>,
-) -> GitInventoryError {
-    match cleanup {
-        Ok(()) => primary,
-        Err(cleanup) => GitInventoryError::Cleanup {
-            primary: Box::new(primary),
-            cleanup: Box::new(cleanup),
-        },
+        stream,
+        maximum,
+        unit: GitOutputUnit::Bytes,
     }
 }
 

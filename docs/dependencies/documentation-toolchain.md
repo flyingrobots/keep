@@ -51,6 +51,12 @@ deletions; Git-trackable nonregular paths such as symlinks and tracked paths
 replaced by FIFOs are refused. Non-trackable special files cannot enter the
 Git-selected corpus.
 
+Each Git path inventory runs in a dedicated process group under a two-minute
+deadline that covers the child and both output readers. Standard output retains
+at most the 16 MiB path-stream bound, and diagnostics retain at most 64 KiB. A
+timeout, terminal signal, reader failure, or exceeded bound terminates the
+whole group and reaps the child before the task refuses.
+
 Git inventory and each validation tool start through one retained repository
 directory handle. Child-only setup changes directory through that handle after
 fork and before exec; the parent working directory does not change. Replacing

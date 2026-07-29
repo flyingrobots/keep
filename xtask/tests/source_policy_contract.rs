@@ -3,6 +3,7 @@
 const RUST_STANDARDS: &str = include_str!("../../docs/Rust Standards.md");
 const BOUNDED_PROCESS: &str = include_str!("../src/bounded_process.rs");
 const BOUNDED_PROCESS_CAPTURE: &str = include_str!("../src/bounded_process/capture.rs");
+const BOUNDED_PROCESS_CAPTURE_LIMIT: &str = include_str!("../src/bounded_process/capture_limit.rs");
 const BOUNDED_PROCESS_ERROR: &str = include_str!("../src/bounded_process/error.rs");
 const BOUNDED_PROCESS_INTERRUPT: &str = include_str!("../src/bounded_process/interrupt.rs");
 const BOUNDED_PROCESS_GROUP: &str = include_str!("../src/bounded_process/process_group.rs");
@@ -42,6 +43,12 @@ fn source_scan_revalidates_repository_identity_after_reading() {
 }
 
 #[test]
+fn git_inventory_uses_the_deadline_bounded_process_layer() {
+    assert!(GIT_PROCESS.contains("const GIT_DEADLINE: Duration"));
+    assert!(GIT_PROCESS.contains("bounded_process::capture_with_limits("));
+}
+
+#[test]
 fn process_fixtures_do_not_write_to_rust_stdout() {
     assert!(!BOUNDED_PROCESS_TESTS.contains("io::stdout()"));
 }
@@ -68,7 +75,21 @@ fn repository_process_boundaries_document_every_exported_contract() -> Result<()
         BOUNDED_PROCESS,
         &["pub(crate) struct ProcessOutput", "pub(crate) fn status("],
     )?;
-    require_docs(BOUNDED_PROCESS_CAPTURE, &["pub(crate) fn capture("])?;
+    require_docs(
+        BOUNDED_PROCESS_CAPTURE,
+        &[
+            "pub(crate) fn capture(",
+            "pub(crate) fn capture_with(",
+            "pub(crate) fn capture_with_limits(",
+        ],
+    )?;
+    require_docs(
+        BOUNDED_PROCESS_CAPTURE_LIMIT,
+        &[
+            "pub(crate) struct CaptureLimits",
+            "    pub(crate) const fn new(",
+        ],
+    )?;
     require_docs(
         BOUNDED_PROCESS_ERROR,
         &[
@@ -116,16 +137,14 @@ fn repository_process_boundaries_document_every_exported_contract() -> Result<()
             "    Bytes,",
             "    Items,",
             "pub(crate) enum GitInventoryError",
-            "    Cleanup {",
             "    DuplicatePath(",
             "    EmptyPath {",
             "    Failed {",
             "    DiagnosticEncoding {",
             "    OutputBound {",
             "    OutputFraming {",
-            "    Pipe {",
+            "    Process {",
             "    Run {",
-            "    Worker {",
         ],
     )?;
     require_docs(
@@ -147,7 +166,8 @@ fn require_docs(source: &str, declarations: &[&str]) -> Result<(), String> {
             .ok_or_else(|| format!("missing declaration `{declaration}`"))?;
         let documented = before
             .lines()
-            .next_back()
+            .rev()
+            .find(|line| !line.trim_start().starts_with("#["))
             .is_some_and(|line| line.trim_start().starts_with("///"));
         if !documented {
             return Err(format!("missing rustdoc for `{declaration}`"));

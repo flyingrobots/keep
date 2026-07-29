@@ -18,6 +18,9 @@ Captured output creates a second wait boundary. A child leader can exit while
 a descendant retains an inherited pipe, so guarding only the child wait does
 not cover the complete operation.
 
+Git path inventory has the same boundary. A damaged repository can stall Git,
+and a descendant can retain either output pipe after Git exits.
+
 ## Decision
 
 While an external repository task is active, `xtask` installs one process-wide
@@ -25,6 +28,11 @@ guard for `SIGINT`, `SIGTERM`, `SIGHUP`, and `SIGQUIT`. A dedicated signal
 thread records the first signal for every active operation. Child waits and
 captured-output readers poll that state at the existing ten-millisecond process
 interval.
+
+Git path inventory and documentation validators use the same two-minute
+deadline, process-group isolation, signal guard, and reader cleanup. Git keeps
+its 16 MiB path-stream and 64 KiB diagnostic bounds through explicit
+per-stream capture limits.
 
 An observed terminal signal becomes a typed `ProcessError::Interrupted`
 refusal. The normal failure path then sends `SIGKILL` to the dedicated child

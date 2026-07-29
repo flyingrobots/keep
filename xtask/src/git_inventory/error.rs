@@ -5,6 +5,7 @@ use std::fmt::{self, Write as _};
 use std::io;
 use std::string::FromUtf8Error;
 
+use crate::bounded_process::ProcessError;
 use crate::diagnostic::escaped_controls;
 
 #[derive(Clone, Copy)]
@@ -18,11 +19,6 @@ pub(crate) enum GitOutputUnit {
 
 /// A typed failure while listing or decoding repository paths from Git.
 pub(crate) enum GitInventoryError {
-    /// Cleanup failed after an earlier inventory failure was already detected.
-    Cleanup {
-        primary: Box<Self>,
-        cleanup: Box<Self>,
-    },
     /// Git emitted the same path record more than once.
     DuplicatePath(Vec<u8>),
     /// Git emitted an empty NUL-framed path record.
@@ -48,10 +44,10 @@ pub(crate) enum GitInventoryError {
     },
     /// Git ended its output with bytes not terminated by a NUL delimiter.
     OutputFraming { operation: &'static str },
-    /// A Git child configured for capture did not expose a requested pipe.
-    Pipe {
+    /// Deadline-bounded Git process execution failed.
+    Process {
         operation: &'static str,
-        stream: &'static str,
+        source: ProcessError,
     },
     /// A named operating-system action for the Git child failed.
     Run {
@@ -59,8 +55,6 @@ pub(crate) enum GitInventoryError {
         action: &'static str,
         source: io::Error,
     },
-    /// The concurrent diagnostic-reader thread stopped by panicking.
-    Worker { operation: &'static str },
 }
 
 impl fmt::Debug for GitInventoryError {
@@ -72,12 +66,6 @@ impl fmt::Debug for GitInventoryError {
 impl fmt::Display for GitInventoryError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Cleanup { primary, cleanup } => {
-                write!(
-                    formatter,
-                    "{primary}; additionally, cleanup failed: {cleanup}"
-                )
-            }
             Self::DuplicatePath(path) => {
                 formatter.write_str("git returned duplicate path `")?;
                 escaped_bytes(formatter, path)?;
@@ -113,18 +101,12 @@ impl fmt::Display for GitInventoryError {
                     "`{operation}` returned a non-NUL-terminated path"
                 )
             }
-            Self::Pipe { operation, stream } => {
-                write!(formatter, "`{operation}` did not provide its {stream} pipe")
+            Self::Process { operation, source } => {
+                write!(formatter, "{source} while running `{operation}`")
             }
             Self::Run {
                 operation, action, ..
             } => write!(formatter, "cannot {action} `{operation}`"),
-            Self::Worker { operation } => {
-                write!(
-                    formatter,
-                    "`{operation}` diagnostic reader stopped unexpectedly"
-                )
-            }
         }
     }
 }
@@ -141,16 +123,14 @@ impl GitOutputUnit {
 impl Error for GitInventoryError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::Cleanup { primary, .. } => Some(primary),
             Self::DiagnosticEncoding { source, .. } => Some(source),
+            Self::Process { source, .. } => Some(source),
             Self::Run { source, .. } => Some(source),
             Self::DuplicatePath(_)
             | Self::EmptyPath { .. }
             | Self::Failed { .. }
             | Self::OutputBound { .. }
-            | Self::OutputFraming { .. }
-            | Self::Pipe { .. }
-            | Self::Worker { .. } => None,
+            | Self::OutputFraming { .. } => None,
         }
     }
 }

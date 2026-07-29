@@ -34,8 +34,8 @@ after its public API and format compatibility policies are established.
   to 64 MiB before external tools start, retains every selected source
   identity, refuses device, inode, size, modification-time, or change-time
   drift before and after each external tool,
-  and applies one deadline across captured and inherited child execution and
-  output collection.
+  and applies a two-minute deadline across Git inventory, validation-tool
+  execution, and output collection.
   Git-backed process fixtures ignore system and global Git configuration and
   preserve non-UTF-8 template paths without lossy conversion. Documentation
   Git inventory and tools start from one retained repository directory handle,

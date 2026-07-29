@@ -1,6 +1,7 @@
 //! This module owns bounded external child-process collection.
 
 mod capture;
+mod capture_limit;
 mod cleanup;
 mod deadline;
 mod error;
@@ -13,7 +14,8 @@ use std::process::Command;
 use std::time::Duration;
 
 use capture::wait_for_child;
-pub(crate) use capture::{capture, capture_with};
+pub(crate) use capture::{capture, capture_with, capture_with_limits};
+pub(crate) use capture_limit::CaptureLimits;
 use deadline::ProcessDeadline;
 pub(crate) use error::ProcessError;
 use interrupt::InterruptGuard;
@@ -21,9 +23,9 @@ use reader::ReaderWorker;
 
 /// The completed child status and any output retained by the selected mode.
 ///
-/// Captured execution retains at most one mebibyte per output stream.
-/// Inherited execution leaves both byte vectors empty because the child writes
-/// directly to the parent's configured streams.
+/// Captured execution retains at most the selected limit for each output
+/// stream. Inherited execution leaves both byte vectors empty because the child
+/// writes directly to the parent's configured streams.
 pub(crate) struct ProcessOutput {
     /// The platform exit code, or `None` when the process ended by signal.
     pub(crate) code: Option<i32>,

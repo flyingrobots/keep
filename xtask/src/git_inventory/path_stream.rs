@@ -5,9 +5,12 @@ use std::io::Read;
 
 use super::{GitInventoryError, GitOutputUnit};
 
+/// Maximum retained bytes in one complete Git path stream.
+pub(super) const GIT_PATH_STREAM_LIMIT_BYTES: usize = 16_777_216;
+
 const GIT_PATH_LIMITS: GitPathLimits = GitPathLimits {
     path_bytes: 4_096,
-    stream_bytes: 16_777_216,
+    stream_bytes: GIT_PATH_STREAM_LIMIT_BYTES,
     paths: 100_000,
 };
 
