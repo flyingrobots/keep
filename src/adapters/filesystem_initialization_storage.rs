@@ -95,6 +95,8 @@ impl StoreInitializationStorage for FilesystemInitializationStorage {
                 "root synchronization requires writer authority",
             ));
         }
-        self.directory.try_clone()?.into_std_file().sync_all()
+        sync_capable_directory::open(&self.directory, ".")?
+            .into_std_file()
+            .sync_all()
     }
 }

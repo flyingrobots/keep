@@ -26,6 +26,18 @@ fn empty_namespace_is_admitted_only_with_the_complete_root_shape() -> Result<(),
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
+#[test]
+fn linux_initializer_synchronizes_an_opath_root() -> Result<(), Box<dyn Error>> {
+    let sandbox = TestDirectory::create("store-initialization-opath-sync")?;
+
+    let admission = FilesystemPlatformAdmission::initialize_unchecked_for_tests(sandbox.path())?;
+
+    drop(admission);
+    sandbox.remove()?;
+    Ok(())
+}
+
 #[test]
 fn partial_canonical_namespace_is_completed_without_replacing_evidence()
 -> Result<(), Box<dyn Error>> {
