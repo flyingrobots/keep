@@ -38,6 +38,10 @@ pub enum FilesystemCatalogPublicationError {
     CatalogRecoveryRequired,
     /// A leftover `staging/current.seg` requires explicit recovery.
     SegmentRecoveryRequired,
+    /// An absent head cannot authorize retained immutable segment bytes.
+    SegmentPoolRecoveryRequired,
+    /// An absent head cannot authorize retained immutable catalog bytes.
+    CatalogPoolRecoveryRequired,
 }
 
 impl fmt::Display for FilesystemCatalogPublicationError {
@@ -61,6 +65,12 @@ impl fmt::Display for FilesystemCatalogPublicationError {
             }
             Self::SegmentRecoveryRequired => {
                 formatter.write_str("current.seg requires explicit recovery")
+            }
+            Self::SegmentPoolRecoveryRequired => {
+                formatter.write_str("segment pool requires explicit recovery")
+            }
+            Self::CatalogPoolRecoveryRequired => {
+                formatter.write_str("catalog pool requires explicit recovery")
             }
         }
     }

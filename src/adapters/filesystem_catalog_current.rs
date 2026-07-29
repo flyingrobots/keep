@@ -49,6 +49,7 @@ pub(super) fn verify(
             }
         }
         Err(source) if head_is_absent(&source) && expected.current_generation().is_none() => {
+            require_empty_durable_pools(publisher)?;
             Ok(CatalogPublicationReadiness::Ready)
         }
         Err(source) => Err(filesystem_catalog_artifact::invalid_data(source)),
@@ -99,6 +100,28 @@ fn require_no_segment_stage(publisher: &FilesystemCatalogPublisher) -> io::Resul
         filesystem_catalog_publisher::CURRENT_SEGMENT,
         FilesystemCatalogPublicationError::SegmentRecoveryRequired,
     )
+}
+
+fn require_empty_durable_pools(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
+    require_empty_pool(
+        &publisher.segments,
+        FilesystemCatalogPublicationError::SegmentPoolRecoveryRequired,
+    )?;
+    require_empty_pool(
+        &publisher.catalogs,
+        FilesystemCatalogPublicationError::CatalogPoolRecoveryRequired,
+    )
+}
+
+fn require_empty_pool(
+    directory: &cap_std::fs::Dir,
+    error: FilesystemCatalogPublicationError,
+) -> io::Result<()> {
+    match directory.entries()?.next() {
+        None => Ok(()),
+        Some(Err(source)) => Err(source),
+        Some(Ok(_entry)) => Err(filesystem_catalog_artifact::invalid_data(error)),
+    }
 }
 
 fn require_absent(

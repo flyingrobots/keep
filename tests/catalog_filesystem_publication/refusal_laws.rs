@@ -5,9 +5,9 @@ use std::fs;
 
 use keep::{
     AdmittedSegment, CanonicalCatalog, CatalogGeneration, CatalogPublicationError,
-    CatalogPublicationExpectation, CatalogPublicationPhase, FilesystemCatalogPublicationError,
-    FilesystemCatalogPublisher, FilesystemWriterLock, SegmentPublication,
-    publish_catalog_generation,
+    CatalogPublicationExpectation, CatalogPublicationPhase, CatalogRestartError,
+    FilesystemCatalogPublicationError, FilesystemCatalogPublisher, FilesystemCatalogSnapshot,
+    FilesystemWriterLock, SegmentPublication, publish_catalog_generation,
 };
 
 use super::{
@@ -21,33 +21,53 @@ fn conflicting_immutable_pool_bytes_refuse_before_visibility() -> Result<(), Box
     let store = StoreFixture::create("catalog-filesystem-conflict")?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
     let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let initial_segments = [];
+    let initial_catalog =
+        CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &initial_segments)?;
+    let _initial_receipt = publish_catalog_generation(
+        &mut publisher,
+        CatalogPublicationExpectation::uninitialized(),
+        SegmentPublication::none(),
+        &initial_catalog,
+        &initial_segments,
+    )?;
+    let initial_head = fs::read(store.path().join("HEAD"))?;
+    let current = FilesystemCatalogSnapshot::load(store.path(), restart_policy()?)?;
+    let current_snapshot = current.snapshot()?;
+    let expectation = CatalogPublicationExpectation::successor_of(&current_snapshot);
     let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;
-    fs::write(store.segment_path(), fixture(EMPTY_SEGMENT_HEX)?)?;
+    let conflicting_bytes = fixture(EMPTY_SEGMENT_HEX)?;
+    let conflicting_segment =
+        AdmittedSegment::decode(&conflicting_bytes, maximum_segment_policy())?;
+    let conflicting_digest = conflicting_segment.digest();
+    fs::write(store.segment_path(), conflicting_bytes)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
+    let segment_digest = segment.digest();
     let segments = [segment];
-    let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
+    let catalog = CanonicalCatalog::from_segments(
+        CatalogGeneration::new(2)?,
+        Some(current.catalog_digest()),
+        &segments,
+    )?;
     let selection = publisher.select_segment(sealed, &segments[0])?;
 
     let error = require_error(
-        publish_catalog_generation(
-            &mut publisher,
-            CatalogPublicationExpectation::uninitialized(),
-            selection,
-            &catalog,
-            &segments,
-        ),
+        publish_catalog_generation(&mut publisher, expectation, selection, &catalog, &segments),
         "conflicting immutable segment was published",
     )?;
-    drop(publisher);
-
+    let CatalogPublicationError::Storage { phase, source } = error else {
+        return Err("segment conflict reached the wrong refusal boundary".into());
+    };
+    assert_eq!(phase, CatalogPublicationPhase::VerifySegmentPool);
     assert!(matches!(
-        error,
-        CatalogPublicationError::Storage {
-            phase: CatalogPublicationPhase::VerifySegmentPool,
-            ..
-        }
+        source
+            .get_ref()
+            .and_then(|error| error.downcast_ref::<CatalogRestartError>()),
+        Some(CatalogRestartError::SegmentCoordinate { expected, observed })
+            if *expected == segment_digest && *observed == conflicting_digest
     ));
-    assert!(!store.path().join("HEAD").exists());
+    drop(publisher);
+    assert_eq!(fs::read(store.path().join("HEAD"))?, initial_head);
     assert!(store.staging().join("current.seg").exists());
     store.remove()
 }

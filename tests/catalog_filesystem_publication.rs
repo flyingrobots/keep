@@ -4,6 +4,8 @@
 mod authority_laws;
 #[path = "catalog_filesystem_publication/directory_laws.rs"]
 mod directory_laws;
+#[path = "catalog_filesystem_publication/initialization_laws.rs"]
+mod initialization_laws;
 #[path = "catalog_filesystem_publication/refusal_laws.rs"]
 mod refusal_laws;
 #[path = "segment_filesystem_stage/sandbox.rs"]

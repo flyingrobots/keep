@@ -158,8 +158,10 @@ Issue #16 does not implement store-root initialization or explicit recovery. A
 caller must supply the exact canonical directories and persistent lock file
 before opening a publisher. Any retained `head.next` or `current.cat`, and any
 `current.seg` not owned by the selected staged segment, causes publication to
-refuse before mutation and requires issue #17 recovery. An already-current
-retry refuses every fixed-name stage.
+refuse before mutation and requires issue #17 recovery. When `HEAD` is absent,
+the publisher probes both immutable pools and admits first publication only
+when both are empty; any entry is preserved as recovery evidence and refuses
+the operation. An already-current retry refuses every fixed-name stage.
 
 ## Forward publication protocol
 

@@ -58,10 +58,11 @@ The durable boundary does not yet initialize or recover a store root.
 Callers must supply the exact existing `writer.lock`, `staging`, `segments`,
 and `catalogs` namespace before opening a filesystem publisher. Leftover
 `head.next`, staged recovery evidence, unknown namespace entries, and
-ambiguous crash states remain explicit recovery work in issue #17. Retention,
-complete namespace verification, compaction, and garbage collection remain
-planned. Presence in the reference CAS does not claim retention, crash
-recovery, or durability.
+ambiguous crash states remain explicit recovery work in issue #17. An absent
+`HEAD` is admitted for first publication only when both immutable pools are
+empty. Retention, complete namespace verification, compaction, and garbage
+collection remain planned. Presence in the reference CAS does not claim
+retention, crash recovery, or durability.
 
 ```rust
 use keep::BlobId;

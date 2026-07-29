@@ -14,6 +14,9 @@ after its public API and format compatibility policies are established.
   that created them. Process-local publisher authority prevents an unrelated
   metadata-equivalent `ClosedSegment` from authorizing retained
   `staging/current.seg` bytes.
+- First catalog publication now admits an absent `HEAD` only after proving that
+  both immutable pools are empty. Retained segment or catalog bytes require
+  explicit recovery and remain untouched.
 - Filesystem catalog publishers now retain no-follow, read-capable directory
   handles so required durability synchronization works on Linux instead of
   failing on `O_PATH` descriptors.
@@ -215,7 +218,8 @@ after its public API and format compatibility policies are established.
   without repeating publication mutations. Retained `head.next` or
   `current.cat`, an unselected `current.seg`, and every fixed-name stage on an
   already-current retry now refuse at current-state verification before any
-  publication mutation.
+  publication mutation. An absent `HEAD` with any retained segment-pool or
+  catalog-pool entry also refuses before mutation.
 - Bounded `FilesystemCatalogSnapshot` restart loading that follows only exact
   checksummed head, catalog, and segment coordinates; refuses symbolic links,
   nonregular files, malformed or conflicting bytes, dangling entries, and
