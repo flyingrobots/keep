@@ -43,9 +43,12 @@ after its public API and format compatibility policies are established.
   retained source identities after each rebuilt membership set so same-path
   replacement cannot cross the inventory boundary, executes the tools against
   a private snapshot copied from the admitted source descriptors so transient
-  path substitution cannot redirect their reads, retains each
-  fixed policy file identity through semantic admission and external tool
-  execution so a replaced path cannot validate bytes from a superseded file,
+  path substitution cannot redirect their reads, copies bounded regular
+  non-Markdown namespace files exactly so link-fragment checks observe admitted
+  target bytes, refuses nonregular namespace targets instead of substituting
+  placeholders, retains each fixed policy file identity through semantic
+  admission and external tool execution so a replaced path cannot validate
+  bytes from a superseded file,
   and applies a two-minute deadline across Git inventory, validation-tool
   execution, and output collection. Validation tools clear the inherited
   environment and admit only the executable search path and `C` locale, so

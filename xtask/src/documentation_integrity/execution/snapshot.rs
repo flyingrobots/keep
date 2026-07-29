@@ -1,5 +1,7 @@
 //! This module owns immutable documentation-tool input snapshots.
 
+mod namespace;
+
 use std::collections::BTreeSet;
 use std::fs::{self, DirBuilder, OpenOptions};
 use std::io::{self, Write};
@@ -7,32 +9,22 @@ use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use xtask::protocol_admission::posix_relative_path;
-
 use crate::documentation_integrity::corpus::SourceCorpus;
 use crate::documentation_integrity::error::DocumentationError;
 use crate::documentation_integrity::repository_text::{self, RepositoryText};
-use crate::git_inventory::{GitPath, paths_with};
 use crate::repository_file::{RepositoryProcessDirectory, RepositoryRoot};
 
 const CREATION_ATTEMPTS: u16 = 1_024;
 const MARKDOWNLINT_CONFIG: &str = ".markdownlint-cli2.yaml";
-const NAMESPACE_PRESENT: [&str; 5] = [
-    "ls-files",
-    "-z",
-    "--cached",
-    "--others",
-    "--exclude-per-directory=.gitignore",
-];
-const NAMESPACE_DELETED: [&str; 3] = ["ls-files", "-z", "--deleted"];
 static NEXT_SNAPSHOT: AtomicU64 = AtomicU64::new(0);
 
 /// Private repository-shaped inputs and process authority for documentation tools.
 ///
 /// Selected sources and the Markdown configuration contain the exact admitted
-/// bytes. Other present repository paths are read-only placeholders so offline
-/// link validation observes the reviewed namespace without reopening source
-/// paths. The owned directory has no durability role and is removed explicitly.
+/// bytes. Other representable present regular files are copied exactly through
+/// descriptor-bound, identity-checked reads so offline link validation observes
+/// faithful target bytes and file types. The owned directory has no durability
+/// role and is removed explicitly.
 pub(super) struct DocumentationSnapshot {
     directory: SnapshotDirectory,
     process_directory: RepositoryProcessDirectory,
@@ -53,7 +45,12 @@ impl DocumentationSnapshot {
         let config = repository_text::read(source_root, MARKDOWNLINT_CONFIG)?;
         let directory = SnapshotDirectory::create()?;
         let materialized = materialize(directory.path(), corpora, &config)?;
-        materialize_namespace(directory.path(), source_process_directory, &materialized)?;
+        namespace::materialize(
+            directory.path(),
+            source_root,
+            source_process_directory,
+            &materialized,
+        )?;
         verify_sources(source_root, source_process_directory, corpora, &config)?;
         let repository_root = open_snapshot_root(directory.path())?;
         let process_directory = repository_root.process_directory().map_err(|source| {
@@ -122,62 +119,6 @@ fn write_config(destination: &Path, config: &RepositoryText) -> Result<(), Docum
     output
         .write_all(config.as_str().as_bytes())
         .map_err(|source| snapshot_io("write documentation snapshot configuration", source))
-}
-
-fn materialize_namespace(
-    destination: &Path,
-    process_directory: &RepositoryProcessDirectory,
-    materialized: &BTreeSet<PathBuf>,
-) -> Result<(), DocumentationError> {
-    let present = paths_with(
-        &NAMESPACE_PRESENT,
-        "git documentation snapshot present paths",
-        |command| process_directory.spawn(command),
-    )?;
-    let deleted = paths_with(
-        &NAMESPACE_DELETED,
-        "git documentation snapshot deleted paths",
-        |command| process_directory.spawn(command),
-    )?;
-    for path in present.difference(&deleted) {
-        if let Some(relative) = snapshot_relative(path)?
-            && !materialized.contains(&relative)
-        {
-            create_placeholder(destination, &relative)?;
-        }
-    }
-    Ok(())
-}
-
-fn snapshot_relative(path: &GitPath) -> Result<Option<PathBuf>, DocumentationError> {
-    let Ok(text) = std::str::from_utf8(path.as_bytes()) else {
-        return Ok(None);
-    };
-    posix_relative_path(text)
-        .map(Some)
-        .map_err(|_| DocumentationError::InvalidPath {
-            corpus: "documentation snapshot namespace",
-            path: text.to_owned(),
-        })
-}
-
-fn create_placeholder(destination: &Path, relative: &Path) -> Result<(), DocumentationError> {
-    let path = destination.join(relative);
-    let parent = path.parent().ok_or_else(|| {
-        snapshot_io(
-            "resolve documentation snapshot namespace parent",
-            io::Error::other("namespace path has no parent"),
-        )
-    })?;
-    fs::create_dir_all(parent)
-        .map_err(|source| snapshot_io("create documentation snapshot namespace", source))?;
-    OpenOptions::new()
-        .write(true)
-        .create_new(true)
-        .mode(0o400)
-        .open(path)
-        .map(|_| ())
-        .map_err(|source| snapshot_io("create documentation snapshot placeholder", source))
 }
 
 fn verify_sources(
@@ -264,3 +205,7 @@ fn next_sequence() -> Result<u64, DocumentationError> {
 const fn snapshot_io(action: &'static str, source: io::Error) -> DocumentationError {
     DocumentationError::Snapshot { action, source }
 }
+
+#[cfg(test)]
+#[path = "snapshot/tests.rs"]
+mod tests;

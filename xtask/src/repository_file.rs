@@ -5,6 +5,8 @@
 //! replacement cannot silently redirect a read. Supporting another host requires
 //! an equivalent stable directory-identity contract before enabling these tasks.
 
+mod exact_copy;
+
 use std::fs::File;
 use std::io;
 use std::os::fd::{OwnedFd, RawFd};
@@ -16,6 +18,8 @@ use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt, OpenOptionsS
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, OpenOptions};
 use repository_process_spawn::set_working_directory;
+
+pub(crate) use exact_copy::copy_exact;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum ReadAccessPolicy {

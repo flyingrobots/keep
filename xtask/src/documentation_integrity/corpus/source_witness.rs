@@ -2,14 +2,16 @@
 
 use std::fs::File;
 use std::fs::{self, OpenOptions};
-use std::io::{self, Write};
-use std::os::unix::fs::{FileExt, OpenOptionsExt};
+use std::io;
+use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 use std::path::PathBuf;
 
 use super::CorpusKind;
 use crate::documentation_integrity::error::DocumentationError;
-use crate::repository_file::{OpenRepositoryFileError, RepositoryFileIdentity, RepositoryRoot};
+use crate::repository_file::{
+    OpenRepositoryFileError, RepositoryFileIdentity, RepositoryRoot, copy_exact,
+};
 
 pub(super) struct AdmittedSource {
     file: File,
@@ -113,38 +115,6 @@ impl AdmittedSource {
             Err(changed(kind, &self.path))
         }
     }
-}
-
-fn copy_exact(source: &File, destination: &mut File, expected: u64) -> Result<(), io::Error> {
-    let mut offset = 0_u64;
-    let mut buffer = [0_u8; 16_384];
-    while offset < expected {
-        let remaining = expected
-            .checked_sub(offset)
-            .ok_or_else(|| io::Error::other("snapshot source offset exceeded its length"))?;
-        let limit =
-            usize::try_from(remaining).map_or(buffer.len(), |bytes| bytes.min(buffer.len()));
-        let chunk = buffer
-            .get_mut(..limit)
-            .ok_or_else(|| io::Error::other("snapshot read bound exceeded its buffer"))?;
-        let read = source.read_at(chunk, offset)?;
-        if read == 0 {
-            return Err(io::Error::new(
-                io::ErrorKind::UnexpectedEof,
-                "snapshot source ended before its admitted length",
-            ));
-        }
-        let copied = buffer
-            .get(..read)
-            .ok_or_else(|| io::Error::other("snapshot write bound exceeded its buffer"))?;
-        destination.write_all(copied)?;
-        offset = offset
-            .checked_add(u64::try_from(read).map_err(|_| {
-                io::Error::other("snapshot source read length is not representable")
-            })?)
-            .ok_or_else(|| io::Error::other("snapshot source offset overflowed"))?;
-    }
-    Ok(())
 }
 
 fn identity(
