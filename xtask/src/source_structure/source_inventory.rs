@@ -5,7 +5,8 @@ use std::ffi::OsString;
 use std::os::unix::ffi::OsStringExt;
 use std::path::{Component, Path, PathBuf};
 
-use crate::git_inventory::{GitPath, paths as git_paths};
+use crate::git_inventory::{GitPath, paths_with};
+use crate::repository_file::RepositoryProcessDirectory;
 
 use super::repository_path::RepositoryPath;
 use super::source_error::SourceStructureError;
@@ -34,16 +35,16 @@ impl InspectionPath {
     }
 }
 
-pub(super) fn collect(repository_root: &Path) -> Result<SourceInventory, SourceStructureError> {
-    let present = git_paths(
-        repository_root,
-        &PRESENT_PATH_ARGUMENTS,
-        "git ls-files present",
-    )?;
-    let deleted = git_paths(
-        repository_root,
+pub(super) fn collect(
+    process_directory: &RepositoryProcessDirectory,
+) -> Result<SourceInventory, SourceStructureError> {
+    let present = paths_with(&PRESENT_PATH_ARGUMENTS, "git ls-files present", |command| {
+        process_directory.spawn(command)
+    })?;
+    let deleted = paths_with(
         &["ls-files", "-z", "--deleted"],
         "git ls-files deleted",
+        |command| process_directory.spawn(command),
     )?;
     select(&present, &deleted)
 }

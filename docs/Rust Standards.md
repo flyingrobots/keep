@@ -485,6 +485,11 @@ different files. The scanner MUST revalidate both the descriptor identity and
 the current repository path after each read phase, and refuse concurrent
 replacement or in-place mutation.
 
+Source Git inventory and source-file admission MUST descend from the same
+opened repository capability. Inventory MUST start through a descriptor-bound
+child working directory; an ambient pathname passed to
+`Command::current_dir` cannot establish the required authority continuity.
+
 A file above 300 lines MUST begin with a decomposition issue or contain an approved exception explaining why splitting it would damage locality.
 
 A file above 500 lines does not merge.

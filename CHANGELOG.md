@@ -89,9 +89,12 @@ after its public API and format compatibility policies are established.
   executable sources regardless of filename suffix.
 - Repository source verification now uses capability-relative, no-follow file
   opens, normalizes symlink refusal at that capability boundary across Unix
-  error conventions, and verifies repository-root identity after Git inventory
-  and again after source scanning, so a persistent root replacement or source
-  path replaced with a symlink is refused. The pure Rust boundary also refuses
+  error conventions, starts Git inventory through a descriptor duplicated from
+  that same admitted root, and verifies repository-root identity before
+  inventory, after inventory, and after source scanning. Persistent or
+  transient ambient-root substitution therefore cannot split path selection
+  from source reads, and a source path replaced with a symlink is refused. The
+  pure Rust boundary also refuses
   `.py`, `.pyw`, dot-only Python basenames, and Python shebangs in every
   executable regular file regardless of filename suffix, including raw
   non-UTF-8 Git paths and attached `env -S` interpreter strings. Environment

@@ -29,7 +29,15 @@ pub(super) fn check(repository_root: &Path) -> Result<(), SourceStructureError> 
             path: repository_root.to_owned(),
             source,
         })?;
-    let paths = source_paths(repository_root)?;
+    verify_source_root(&source_root, repository_root)?;
+    let process_directory =
+        source_root
+            .process_directory()
+            .map_err(|source| SourceStructureError::Inspect {
+                path: repository_root.to_owned(),
+                source,
+            })?;
+    let paths = source_paths(&process_directory)?;
     verify_source_root(&source_root, repository_root)?;
     let violations = inventory_violations(&source_root, paths)?;
     verify_source_root(&source_root, repository_root)?;

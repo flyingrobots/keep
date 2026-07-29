@@ -18,6 +18,7 @@ const GIT_PATH_STREAM: &str = include_str!("../src/git_inventory/path_stream.rs"
 const GIT_PROCESS: &str = include_str!("../src/git_inventory/process.rs");
 const REPOSITORY_FILE: &str = include_str!("../src/repository_file.rs");
 const SOURCE_STRUCTURE: &str = include_str!("../src/source_structure.rs");
+const SOURCE_INVENTORY: &str = include_str!("../src/source_structure/source_inventory.rs");
 
 #[test]
 fn written_source_limit_matches_the_executable_law() {
@@ -42,8 +43,16 @@ fn source_scan_revalidates_repository_identity_after_reading() {
         SOURCE_STRUCTURE
             .matches("verify_source_root(&source_root, repository_root)?;")
             .count(),
-        2
+        3
     );
+}
+
+#[test]
+fn source_inventory_uses_the_admitted_repository_directory() {
+    assert!(SOURCE_STRUCTURE.contains(".process_directory()"));
+    assert!(SOURCE_INVENTORY.contains("paths_with("));
+    assert!(!SOURCE_INVENTORY.contains("paths as git_paths"));
+    assert!(!GIT_PROCESS.contains("current_dir("));
 }
 
 #[test]
@@ -220,7 +229,7 @@ fn repository_process_boundaries_document_every_exported_contract() -> Result<()
             "    pub(crate) fn as_bytes(",
         ],
     )?;
-    require_docs(GIT_PROCESS, &["pub(crate) fn paths("])
+    require_docs(GIT_PROCESS, &["pub(crate) fn paths_with("])
 }
 
 fn require_docs(source: &str, declarations: &[&str]) -> Result<(), String> {

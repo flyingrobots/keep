@@ -6,4 +6,4 @@ mod process;
 
 pub(crate) use error::{GitInventoryError, GitOutputUnit};
 pub(crate) use path_stream::GitPath;
-pub(crate) use process::{paths, paths_with};
+pub(crate) use process::paths_with;

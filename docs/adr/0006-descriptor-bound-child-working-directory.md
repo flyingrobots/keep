@@ -8,11 +8,12 @@
 
 ## Context
 
-Documentation verification inventories Git paths and runs pinned validation
+Repository verification inventories Git paths and runs pinned validation
 tools. Opening the repository as a capability protects file reads, but passing
 its ambient pathname to a child creates another replacement window. An
 attacker could move the admitted directory, substitute another repository
-while the tools run, and restore the original before the final identity check.
+while source or documentation inventory runs, and restore the original before
+the final identity check.
 
 Retaining the directory alone does not bind a selected corpus path to the file
 admitted at that path. A source can be renamed, replaced while a tool reads it,
@@ -71,9 +72,9 @@ network, or application policy.
 
 ## Consequences
 
-Git inventory and documentation tools start in the exact opened repository
-even if its pathname is replaced. Parent process state remains unchanged, so
-parallel tests and readers are deterministic.
+Source inventory, documentation inventory, and documentation tools start in
+the exact opened repository even if its pathname is replaced. Parent process
+state remains unchanged, so parallel tests and readers are deterministic.
 
 External tool output is admitted only while every selected path still has the
 admitted device, inode, size, modification time, and change time

@@ -4,7 +4,6 @@ use std::collections::BTreeSet;
 use std::env;
 use std::ffi::OsStr;
 use std::io;
-use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
@@ -17,20 +16,6 @@ const GIT_DEADLINE: Duration = Duration::from_mins(2);
 const GIT_DIAGNOSTIC_LIMIT_BYTES: usize = 65_536;
 const GIT_CAPTURE_LIMITS: CaptureLimits =
     CaptureLimits::new(GIT_PATH_STREAM_LIMIT_BYTES, GIT_DIAGNOSTIC_LIMIT_BYTES);
-
-/// Lists repository paths through a deadline-bounded Git process group.
-///
-/// The adapter materializes at most the 16 MiB path-stream bound before
-/// deterministic NUL-framed decoding.
-pub(crate) fn paths(
-    repository_root: &Path,
-    arguments: &[&str],
-    operation: &'static str,
-) -> Result<BTreeSet<GitPath>, GitInventoryError> {
-    paths_with(arguments, operation, |command| {
-        command.current_dir(repository_root).spawn()
-    })
-}
 
 /// Lists paths through an injected capability-bound spawn operation.
 ///
