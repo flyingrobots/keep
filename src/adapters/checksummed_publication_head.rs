@@ -1,6 +1,9 @@
 //! Framing- and checksum-verified borrowed publication head.
 
-use super::{PublicationHeadDecodeError, publication_head_decoder};
+use super::{
+    AdmittedCatalog, CatalogSnapshot, CatalogSnapshotError, PublicationHeadDecodeError,
+    catalog_snapshot_admission, publication_head_decoder,
+};
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
 /// Borrowed publication-head bytes with canonical framing and checksum proof.
@@ -28,6 +31,19 @@ impl<'a> ChecksummedPublicationHead<'a> {
     /// noncanonical fields, invalid coordinates, or checksum disagreement.
     pub fn decode(encoded: &'a [u8]) -> Result<Self, PublicationHeadDecodeError> {
         publication_head_decoder::decode(encoded)
+    }
+
+    /// Pins this head to one fully admitted catalog generation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CatalogSnapshotError`] when the generation, catalog length, or
+    /// physical catalog digest differs.
+    pub fn admit<'catalog, 'records>(
+        self,
+        catalog: AdmittedCatalog<'catalog, 'records>,
+    ) -> Result<CatalogSnapshot<'a, 'catalog, 'records>, CatalogSnapshotError> {
+        catalog_snapshot_admission::admit(self, catalog)
     }
 
     /// Returns the exact borrowed canonical bytes.

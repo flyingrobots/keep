@@ -4,7 +4,7 @@ use super::{
     AdmittedCatalog, AdmittedSegment, CatalogAdmissionError, CatalogDecodeError, CatalogEntries,
     catalog_admission, catalog_decoder,
 };
-use crate::{CatalogDigest, CatalogGeneration};
+use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
 /// Borrowed catalog bytes with canonical framing, ordering, and integrity proof.
 ///
@@ -15,10 +15,40 @@ use crate::{CatalogDigest, CatalogGeneration};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ChecksummedCatalog<'a> {
     encoded: &'a [u8],
+    metadata: CatalogMetadata,
+    digest: CatalogDigest,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct CatalogMetadata {
     generation: CatalogGeneration,
     previous_catalog_digest: Option<CatalogDigest>,
     entry_count: u64,
-    digest: CatalogDigest,
+    length: CatalogLength,
+}
+
+impl CatalogMetadata {
+    pub(super) const fn new(
+        generation: CatalogGeneration,
+        previous_catalog_digest: Option<CatalogDigest>,
+        entry_count: u64,
+        length: CatalogLength,
+    ) -> Self {
+        Self {
+            generation,
+            previous_catalog_digest,
+            entry_count,
+            length,
+        }
+    }
+
+    pub(super) const fn entry_count(self) -> u64 {
+        self.entry_count
+    }
+
+    pub(super) const fn length(self) -> CatalogLength {
+        self.length
+    }
 }
 
 impl<'a> ChecksummedCatalog<'a> {
@@ -61,19 +91,24 @@ impl<'a> ChecksummedCatalog<'a> {
 
     /// Returns the positive catalog generation.
     pub const fn generation(self) -> CatalogGeneration {
-        self.generation
+        self.metadata.generation
     }
 
     /// Returns the predecessor witness, absent only for generation 1.
     #[must_use]
     pub const fn previous_catalog_digest(self) -> Option<CatalogDigest> {
-        self.previous_catalog_digest
+        self.metadata.previous_catalog_digest
     }
 
     /// Returns the exact bounded entry count.
     #[must_use]
     pub const fn entry_count(self) -> u64 {
-        self.entry_count
+        self.metadata.entry_count
+    }
+
+    /// Returns the exact canonical catalog byte length.
+    pub const fn length(self) -> CatalogLength {
+        self.metadata.length
     }
 
     /// Returns the verified physical catalog digest.
@@ -82,21 +117,17 @@ impl<'a> ChecksummedCatalog<'a> {
     }
 
     pub(super) fn entries(self) -> Result<CatalogEntries<'a>, CatalogDecodeError> {
-        CatalogEntries::new(self.encoded, self.entry_count)
+        CatalogEntries::new(self.encoded, self.metadata.entry_count)
     }
 
     pub(super) const fn from_verified_parts(
         encoded: &'a [u8],
-        generation: CatalogGeneration,
-        previous_catalog_digest: Option<CatalogDigest>,
-        entry_count: u64,
+        metadata: CatalogMetadata,
         digest: CatalogDigest,
     ) -> Self {
         Self {
             encoded,
-            generation,
-            previous_catalog_digest,
-            entry_count,
+            metadata,
             digest,
         }
     }

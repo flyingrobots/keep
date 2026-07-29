@@ -4,9 +4,9 @@ use super::{
     AdmittedSegmentRecord, CatalogRecordBinding, CatalogSuccessor, CatalogTransitionError,
     ChecksummedCatalog, SegmentRecordIdentity, catalog_transition,
 };
-use crate::{CatalogDigest, CatalogGeneration};
+use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
-/// Immutable catalog snapshot over exact content-admitted segment records.
+/// Immutable admitted catalog over exact content-admitted segment records.
 ///
 /// Lookups expose logical identities and verified record bytes. Physical
 /// segment names, offsets, and lengths remain representation details.
@@ -32,6 +32,10 @@ impl<'catalog, 'records> AdmittedCatalog<'catalog, 'records> {
     #[must_use]
     pub const fn previous_catalog_digest(&self) -> Option<CatalogDigest> {
         self.catalog.previous_catalog_digest()
+    }
+
+    pub(crate) const fn length(&self) -> CatalogLength {
+        self.catalog.length()
     }
 
     /// Returns the exact number of logical record bindings.

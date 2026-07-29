@@ -2,7 +2,7 @@
 
 use super::{
     CatalogDecodeError, ChecksummedCatalog, catalog_entry_sequence, catalog_header_decoder,
-    catalog_integrity,
+    catalog_integrity, checksummed_catalog::CatalogMetadata,
 };
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
@@ -14,22 +14,20 @@ const ALGORITHM: u8 = 1;
 
 pub(super) fn decode(encoded: &[u8]) -> Result<ChecksummedCatalog<'_>, CatalogDecodeError> {
     let fields = catalog_header_decoder::decode(encoded)?;
-    let (generation, predecessor, catalog_length) = validate_header(&fields)?;
-    validate_observed_length(encoded, catalog_length)?;
-    catalog_entry_sequence::validate(encoded, fields.entry_count)?;
+    let metadata = validate_header(&fields)?;
+    validate_observed_length(encoded, metadata.length())?;
+    catalog_entry_sequence::validate(encoded, metadata.entry_count())?;
     let digest = catalog_integrity::validate(encoded)?;
     Ok(ChecksummedCatalog::from_verified_parts(
         encoded,
-        generation,
-        predecessor,
-        fields.entry_count,
+        metadata,
         CatalogDigest::from_validated(digest),
     ))
 }
 
 fn validate_header(
     fields: &catalog_header_decoder::DecodedCatalogHeader,
-) -> Result<(CatalogGeneration, Option<CatalogDigest>, CatalogLength), CatalogDecodeError> {
+) -> Result<CatalogMetadata, CatalogDecodeError> {
     validate_fixed_fields(fields)?;
     let generation = CatalogGeneration::new(fields.generation)
         .map_err(|source| CatalogDecodeError::Generation { source })?;
@@ -43,7 +41,12 @@ fn validate_header(
     let catalog_length = CatalogLength::new(fields.catalog_length)
         .map_err(|source| CatalogDecodeError::CatalogLength { source })?;
     validate_count_length(fields.entry_count, catalog_length)?;
-    Ok((generation, predecessor, catalog_length))
+    Ok(CatalogMetadata::new(
+        generation,
+        predecessor,
+        fields.entry_count,
+        catalog_length,
+    ))
 }
 
 fn validate_fixed_fields(
