@@ -15,7 +15,6 @@ use std::process::{Command, Output};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 static SEQUENCE: AtomicU64 = AtomicU64::new(0);
-const MARKER_ENVIRONMENT: &str = "KEEP_TEST_TOOL_MARKERS";
 
 pub(crate) struct DocumentationTools {
     root: Option<PathBuf>,
@@ -48,7 +47,6 @@ impl DocumentationTools {
         Command::new(env!("CARGO_BIN_EXE_xtask"))
             .args(arguments)
             .env("PATH", self.path_environment()?)
-            .env(MARKER_ENVIRONMENT, self.markers()?)
             .output()
     }
 
@@ -78,9 +76,10 @@ impl DocumentationTools {
         version_argument: &str,
         version: &str,
     ) -> Result<(), io::Error> {
+        let marker = shell_word(&self.markers()?.join(program))?;
         let script = format!(
             "#!/bin/sh\n\
-             : > \"${{{MARKER_ENVIRONMENT}}}/{program}\"\n\
+             : > {marker}\n\
              for argument in \"$@\"; do\n\
              \x20 if [ \"$argument\" = \"{version_argument}\" ]; then\n\
              \x20   printf '%s\\n' '{version}'\n\
@@ -115,6 +114,13 @@ impl DocumentationTools {
             .as_deref()
             .ok_or_else(|| io::Error::other("documentation tool directory is closed"))
     }
+}
+
+fn shell_word(path: &Path) -> Result<String, io::Error> {
+    let text = path
+        .to_str()
+        .ok_or_else(|| io::Error::other("documentation tool path is not UTF-8"))?;
+    Ok(format!("'{}'", text.replace('\'', "'\\''")))
 }
 
 impl Drop for DocumentationTools {
