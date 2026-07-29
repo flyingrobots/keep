@@ -56,6 +56,28 @@ retention, or garbage collection.
 
 <!-- markdownlint-enable MD013 -->
 
+## Catalog implementation evidence
+
+Issue #16 owns catalog-generation admission, publication, and immutable reader
+snapshots. The following cases are planned evidence, not current behavior.
+
+<!-- markdownlint-disable MD013 -->
+
+| ID | Planned requirement | Oracle | Planned evidence | Status |
+| --- | --- | --- | --- | --- |
+| `KEEP-CATALOG-001` | `CatalogGeneration` admits positive values and refuses overflow when deriving a successor | Checked scalar model | `tests/catalog_generation.rs` | Planned in #16 |
+| `KEEP-CATALOG-002` | Catalog and publication-head codecs reproduce every frozen version-1 artifact and refuse noncanonical bytes | Independent golden corpus | `tests/catalog.rs`, `tests/publication_head.rs` | Planned in #16 |
+| `KEEP-CATALOG-003` | Catalog entries are sorted by logical identity and duplicate keys are refused independently of input order | Ordered reference map | `tests/catalog_ordering.rs` | Planned in #16 |
+| `KEEP-CATALOG-004` | Every admitted catalog location equals a verified top-level record span in the exact named segment | Segment parser and golden artifacts | `tests/catalog_locations.rs` | Planned in #16 |
+| `KEEP-CATALOG-005` | Publication admits only the exact expected successor and reports expected and observed generation and digest on staleness | Generation transition model | `tests/catalog_transition.rs` | Planned in #16 |
+| `KEEP-CATALOG-006` | A reader retains one complete catalog generation and never combines it with a concurrent head | Immutable snapshot model | `tests/catalog_snapshot.rs` | Planned in #16 |
+| `KEEP-CATALOG-007` | One persistent kernel-managed writer lock excludes a second writer without deleting or replacing the lock file | Two-handle lock model | `tests/catalog_writer_lock.rs` | Planned in #16 |
+| `KEEP-CATALOG-008` | Segment, catalog, and head publication follows the documented file and directory synchronization order | Fault-recording filesystem port | `tests/catalog_publication.rs` | Planned in #16 |
+| `KEEP-CATALOG-009` | Restart loading refuses corrupt, unsupported, noncanonical, dangling, and conflicting catalog state | Corruption matrix | `tests/catalog_restart.rs` | Planned in #16 |
+| `KEEP-CATALOG-010` | Model-based transitions and lookups agree with a deterministic `BTreeMap` catalog | Boring reference catalog | `tests/catalog_model.rs` | Planned in #16 |
+
+<!-- markdownlint-enable MD013 -->
+
 ## Compatibility and migration
 
 The byte grammars, magic values, field widths and order, endianness, kinds,
