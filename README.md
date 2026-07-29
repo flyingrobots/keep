@@ -77,10 +77,13 @@ complete admitted segment, or exact truncation. Catalog and next-head stages
 likewise distinguish exact truncation from complete canonical bytes.
 Materialized bytes enter read-only semantic assessment only after their stage,
 length, and recomputed fingerprint match prior observation evidence.
-Transitive publication-view admission and filesystem-streaming classification
-remain planned.
-Crash-injection execution, explicit recovery, retention, compaction, and
-garbage collection remain planned. Presence in the reference CAS does not
+Only an exact truncation assessment may form an explicit discard request; the
+semantic executor refuses evidence drift and returns a receipt only after
+exact removal or admitted prior absence is followed by parent synchronization.
+The pinned-filesystem discard adapter, transitive publication-view admission,
+and filesystem-streaming classification remain planned.
+Crash-injection execution, remaining recovery actions, retention, compaction,
+and garbage collection remain planned. Presence in the reference CAS does not
 claim retention, crash recovery, or durability.
 
 ```rust

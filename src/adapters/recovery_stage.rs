@@ -2,7 +2,7 @@
 
 use std::fmt;
 
-use super::segment_header;
+use super::{RecoveryStageParent, segment_header};
 use crate::CatalogLength;
 
 /// One fixed mutable artifact retained for explicit recovery.
@@ -22,6 +22,14 @@ impl RecoveryStage {
             Self::Segment => "current.seg",
             Self::Catalog => "current.cat",
             Self::NextHead => "head.next",
+        }
+    }
+
+    /// Returns the only protocol parent containing this fixed stage.
+    pub const fn parent(self) -> RecoveryStageParent {
+        match self {
+            Self::Segment | Self::Catalog => RecoveryStageParent::Staging,
+            Self::NextHead => RecoveryStageParent::Root,
         }
     }
 

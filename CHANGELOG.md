@@ -43,6 +43,11 @@ after its public API and format compatibility policies are established.
   their canonical-name stage, exact length, and recomputed versioned
   fingerprint equal prior observation evidence, then dispatches through the
   stage-selected semantic classifier.
+- Explicit truncated-stage recovery now plans only from an exact semantic
+  truncation, retains its evidence and reason, refuses changed evidence before
+  mutation, and returns a discard receipt only after the name-selected parent
+  directory is synchronized. An already absent stage remains an idempotent
+  input and still requires synchronization.
 - Store initialization now exposes one storage-port state machine that admits
   the platform before mutation, opens and locks `writer.lock`, admits the three
   protocol directories in order, synchronizes the root, and preserves the

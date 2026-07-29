@@ -92,8 +92,10 @@ machine to a fail-closed Linux ext4 adapter and canonical namespace. These
 slices now also classify canonical recovery names before opening artifact
 bytes, bind materialized bytes back to prior stage evidence, and dispatch
 complete caller-supplied fixed-stage bytes through their name-selected
-classifiers. They do not yet claim transitive publication-view admission,
-process-death injection, or recovery execution.
+classifiers. An exact truncation assessment may now authorize one
+evidence-bound, retry-safe discard through a semantic storage port. These
+slices do not yet claim a pinned-filesystem discard implementation, transitive
+publication-view admission, or process-death injection.
 
 <!-- markdownlint-disable MD013 -->
 
@@ -111,6 +113,7 @@ process-death injection, or recovery execution.
 | `KEEP-RECOVERY-010` | Whole-byte segment-stage classification distinguishes a validated reusable prefix, a complete admitted immutable segment, and exact header, record, or seal truncation; complete-looking corruption, duplicates, and resource-limit excess remain typed refusals | Canonical prefix and corruption matrix | `tests/recovery_segment_classification.rs`, `tests/recovery_segment_classification/*.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-011` | Whole-byte catalog and next-head stage classification distinguishes exact fixed-header, declared-body, and fixed-width truncation from complete canonical bytes; complete-looking corruption and oversize remain typed format or metadata refusals | Canonical publication-artifact truncation and corruption matrix | `tests/recovery_publication_stage_classification.rs`, `tests/recovery_publication_stage_classification/*.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-012` | Read-only semantic assessment admits materialized stage bytes only when the canonical-name stage, exact observed length, and `KEEP:RECOVERY:STAGE\0` fingerprint equal prior evidence, then dispatches through the name-selected segment, catalog, or next-head classifier | Evidence-binding mutation matrix and canonical stage assessments | `tests/recovery_stage_assessment.rs`, `tests/recovery_stage_assessment/*.rs` | Implemented in #17 |
+| `KEEP-RECOVERY-013` | Explicit discard plans only from an exact truncation assessment, retains the observation evidence and typed truncation reason, refuses changed evidence without mutation, synchronizes the name-selected parent after exact removal or admitted absence, and returns a receipt only after synchronization | Truncation-planning, evidence-drift, operation-order, and retry matrix | `tests/recovery_stage_discard.rs`, `tests/recovery_stage_discard/*.rs` | Implemented in #17 |
 
 <!-- markdownlint-enable MD013 -->
 
