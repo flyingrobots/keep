@@ -32,7 +32,11 @@ global budget, preserves raw Linux name bytes, and verifies child-directory
 identity before and after inventory. `classify_recovery_names` requires the
 four initialized root entries, types each fixed name and immutable-pool
 coordinate, and refuses an unknown or conflicting name without artifact I/O.
-Content classification remains unimplemented.
+`fingerprint_recovery_stage` then reads a fixed stage through a zero-allocation
+bounded stream, refuses metadata or observed bytes above the name-selected
+maximum, and returns its exact observed length and
+`KEEP:RECOVERY:STAGE\0` fingerprint. Semantic content classification remains
+unimplemented.
 
 The sole admissible duplicate digest is one fixed staging name and its exact
 digest-derived pool name after a link transition. Recovery admits that pair

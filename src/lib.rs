@@ -15,9 +15,10 @@
 //! generations, platform-gated filesystem publication mechanics, bounded
 //! immutable restart snapshots, typed store-initialization orchestration, and
 //! production initialization for the admitted Linux ext4 profile. Recovery
-//! inventory and name classification are read-only; explicit recovery
-//! execution, retention, and garbage collection APIs remain intentionally
-//! absent until their contracts have executable specifications.
+//! inventory, name classification, and bounded stage fingerprinting are
+//! read-only; semantic recovery planning, execution, retention, and garbage
+//! collection APIs remain intentionally absent until their contracts have
+//! executable specifications.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -49,15 +50,18 @@ pub use adapters::{
     RecoveryInventoryLimit, RecoveryInventoryLimitError, RecoveryInventoryOperation,
     RecoveryInventoryStorage, RecoveryNameClassificationError, RecoveryNameManifest,
     RecoveryNamedEntry, RecoveryNamespace, RecoveryPoolNameError, RecoveryRequiredEntry,
-    SealedSegment, SegmentDigest, SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError,
-    SegmentPublication, SegmentPublicationError, SegmentReadError, SegmentReadPolicy,
-    SegmentRecordAdmissionError, SegmentRecordChecksum, SegmentRecordDecodeError,
-    SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity, SegmentRecordLength,
-    SegmentRecordLimit, SegmentRecordLimitError, SegmentRecordPayloadLength, SegmentRecords,
-    SegmentSeal, SegmentSealError, SegmentStage, SegmentStageCreateError, SegmentWriteError,
-    SegmentWritePhase, StagedSegment, StorageProfileIdParseError, StoreInitializationError,
-    StoreInitializationPhase, StoreInitializationReceipt, StoreInitializationStorage,
-    WriterLockAcquireError, WriterLockAcquirePhase, classify_recovery_names, initialize_store,
+    RecoveryStage, RecoveryStageEvidence, RecoveryStageFingerprint,
+    RecoveryStageFingerprintAlgorithm, RecoveryStageFingerprintError, RecoveryStageLength,
+    RecoveryStageMetadata, RecoveryStageMetadataError, SealedSegment, SegmentDigest,
+    SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError, SegmentPublication,
+    SegmentPublicationError, SegmentReadError, SegmentReadPolicy, SegmentRecordAdmissionError,
+    SegmentRecordChecksum, SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError,
+    SegmentRecordIdentity, SegmentRecordLength, SegmentRecordLimit, SegmentRecordLimitError,
+    SegmentRecordPayloadLength, SegmentRecords, SegmentSeal, SegmentSealError, SegmentStage,
+    SegmentStageCreateError, SegmentWriteError, SegmentWritePhase, StagedSegment,
+    StorageProfileIdParseError, StoreInitializationError, StoreInitializationPhase,
+    StoreInitializationReceipt, StoreInitializationStorage, WriterLockAcquireError,
+    WriterLockAcquirePhase, classify_recovery_names, fingerprint_recovery_stage, initialize_store,
     publish_catalog_generation, read_recovery_inventory,
 };
 pub use blob::{
