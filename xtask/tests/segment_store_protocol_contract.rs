@@ -99,7 +99,8 @@ fn durable_protocol_freezes_every_cross_cutting_law() {
 #[test]
 fn catalog_locations_name_only_top_level_segment_records() {
     for required in [
-        "scans the complete segment grammar from byte 64",
+        "scans each referenced\nsegment exactly once",
+        "Each scan runs from byte 64",
         "must equal one discovered",
         "top-level record span",
         "record header, payload, checksum",

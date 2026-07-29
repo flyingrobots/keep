@@ -111,6 +111,19 @@ fn catalog_location_must_equal_one_discovered_top_level_record_span() -> Result<
     Ok(())
 }
 
+#[test]
+fn catalog_admission_does_not_rescan_segment_records_per_entry() -> Result<(), Box<dyn Error>> {
+    let admission = include_str!("../src/adapters/catalog_admission.rs");
+    let plan = include_str!("../src/adapters/catalog_entry_plan.rs");
+    if admission.contains(".record_cursor()") {
+        return Err("catalog entry iteration owns a segment record cursor".into());
+    }
+    if plan.matches(".record_cursor()").count() != 1 || !plan.contains("entries.chunk_by_mut") {
+        return Err("physical entry planning does not own one grouped cursor site".into());
+    }
+    Ok(())
+}
+
 const fn maximum_policy() -> SegmentReadPolicy {
     SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM)
 }

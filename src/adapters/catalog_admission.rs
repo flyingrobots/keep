@@ -1,5 +1,6 @@
 //! Binding of catalog-local coordinates to exact admitted segment records.
 
+use super::catalog_entry_plan::{self, CatalogEntryPlan};
 use super::{
     AdmittedCatalog, AdmittedSegment, AdmittedSegmentRecord, CatalogAdmissionError,
     CatalogAllocationPhase, CatalogRecordBinding, ChecksummedCatalog, DecodedCatalogEntry,
@@ -22,6 +23,9 @@ pub(super) fn admit<'catalog, 'records>(
         });
     }
     let segment_index = index_segments(segments)?;
+    let mut plan = plan_entries(catalog, &segment_index, requested)?;
+    catalog_entry_plan::bind(&mut plan)?;
+    plan.sort_unstable_by_key(CatalogEntryPlan::ordinal);
     let mut bindings = Vec::new();
     bindings
         .try_reserve_exact(requested)
@@ -30,17 +34,35 @@ pub(super) fn admit<'catalog, 'records>(
             requested,
             source,
         })?;
-    let entries = catalog
-        .entries()
-        .map_err(|source| CatalogAdmissionError::Catalog { source })?;
-    for entry in entries {
-        let entry = entry.map_err(|source| CatalogAdmissionError::Catalog { source })?;
-        let segment = find_segment(&segment_index, entry.segment_digest())?;
-        let record = locate_record(segment, entry)?;
+    for planned in plan {
+        let (entry, record) = planned.into_bound()?;
         validate_record(entry, record)?;
         bindings.push(CatalogRecordBinding::new(entry.identity(), record));
     }
     Ok(AdmittedCatalog::from_verified_parts(catalog, bindings))
+}
+
+fn plan_entries<'segments, 'records>(
+    catalog: ChecksummedCatalog<'_>,
+    segments: &[&'segments AdmittedSegment<'records>],
+    requested: usize,
+) -> Result<Vec<CatalogEntryPlan<'segments, 'records>>, CatalogAdmissionError> {
+    let mut plan = Vec::new();
+    plan.try_reserve_exact(requested)
+        .map_err(|source| CatalogAdmissionError::Allocation {
+            phase: CatalogAllocationPhase::EntryPlan,
+            requested,
+            source,
+        })?;
+    let entries = catalog
+        .entries()
+        .map_err(|source| CatalogAdmissionError::Catalog { source })?;
+    for (ordinal, entry) in entries.enumerate() {
+        let entry = entry.map_err(|source| CatalogAdmissionError::Catalog { source })?;
+        let segment = find_segment(segments, entry.segment_digest())?;
+        plan.push(CatalogEntryPlan::new(ordinal, entry, segment));
+    }
+    Ok(plan)
 }
 
 fn index_segments<'slice, 'records>(
@@ -70,10 +92,10 @@ fn index_segments<'slice, 'records>(
     Ok(indexed)
 }
 
-fn find_segment<'slice, 'records>(
-    segments: &'slice [&AdmittedSegment<'records>],
+fn find_segment<'segments, 'records>(
+    segments: &[&'segments AdmittedSegment<'records>],
     digest: SegmentDigest,
-) -> Result<&'slice AdmittedSegment<'records>, CatalogAdmissionError> {
+) -> Result<&'segments AdmittedSegment<'records>, CatalogAdmissionError> {
     let index = segments
         .binary_search_by_key(&digest, |segment| segment.digest())
         .map_err(|_source| CatalogAdmissionError::MissingSegment { digest })?;
@@ -81,41 +103,6 @@ fn find_segment<'slice, 'records>(
         .get(index)
         .copied()
         .ok_or(CatalogAdmissionError::MissingSegment { digest })
-}
-
-fn locate_record<'records>(
-    segment: &AdmittedSegment<'records>,
-    entry: DecodedCatalogEntry,
-) -> Result<AdmittedSegmentRecord<'records>, CatalogAdmissionError> {
-    let digest = segment.digest();
-    let mut cursor = segment.record_cursor();
-    let mut found = None;
-    while let Some(located) =
-        cursor
-            .next_record()
-            .map_err(|source| CatalogAdmissionError::Segment {
-                digest,
-                source: Box::new(source),
-            })?
-    {
-        if located.offset == entry.record_offset()
-            && located.record.header().record_length() == entry.record_length()
-        {
-            found = Some(located.record);
-        }
-    }
-    cursor
-        .finish()
-        .map_err(|source| CatalogAdmissionError::Segment {
-            digest,
-            source: Box::new(source),
-        })?;
-    found.ok_or_else(|| CatalogAdmissionError::LocationNotTopLevel {
-        identity: entry.identity(),
-        segment_digest: entry.segment_digest(),
-        record_offset: entry.record_offset(),
-        record_length: entry.record_length().get(),
-    })
 }
 
 fn validate_record(

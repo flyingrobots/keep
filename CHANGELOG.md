@@ -185,7 +185,8 @@ after its public API and format compatibility policies are established.
 ### Added
 
 - Checked catalog generations; canonical catalog and publication-head codecs;
-  exact logical-record-to-segment admission; deterministic successor proofs;
+  exact logical-record-to-segment admission with one bounded physical lookup
+  plan and one scan per referenced segment; deterministic successor proofs;
   immutable reader snapshots; and `BTreeMap` transition-model evidence for
   `keep.segment-store/v1`.
 - Blocking `FilesystemCatalogPublisher` publication under a persistent

@@ -29,6 +29,7 @@ mod catalog_entry_decode_error;
 mod catalog_entry_decode_error_display;
 mod catalog_entry_decoder;
 mod catalog_entry_fields;
+mod catalog_entry_plan;
 mod catalog_entry_sequence;
 mod catalog_header_decoder;
 mod catalog_header_encoding;

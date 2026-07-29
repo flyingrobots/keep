@@ -27,7 +27,7 @@ pub enum CatalogAdmissionError {
         /// Caller-supplied segment count.
         observed: usize,
     },
-    /// A bounded segment-index or record-binding allocation failed.
+    /// A bounded segment-index, entry-plan, or record-binding allocation failed.
     Allocation {
         /// Semantic allocation phase.
         phase: CatalogAllocationPhase,

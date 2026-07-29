@@ -78,9 +78,10 @@ The named segment must exist at the digest-derived immutable-pool name and
 verify completely. The record at the declared span must reproduce the entry's
 kind, identity, lengths, and checksum exactly.
 
-Catalog admission scans the complete segment grammar from byte 64 through the
-declared record count and records every top-level record span before admitting
-locations. Each `(record_offset, record_length)` pair must equal one discovered
+Catalog admission creates one bounded plan over the declared entries, groups
+that plan by segment digest and physical offset, and scans each referenced
+segment exactly once. Each scan runs from byte 64 through the declared record
+count. Each `(record_offset, record_length)` pair must equal one discovered
 top-level record span. A location into a record header, payload, checksum, or
 segment seal is refused even when those embedded bytes independently resemble
 a valid record.
