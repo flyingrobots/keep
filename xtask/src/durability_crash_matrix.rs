@@ -18,7 +18,12 @@ pub(crate) fn run(
     repository_root: &Path,
     mut arguments: impl Iterator<Item = OsString>,
 ) -> Result<(), DurabilityCrashMatrixError> {
-    let flag = arguments.next().ok_or(DurabilityCrashMatrixError::Usage)?;
+    let Some(flag) = arguments.next() else {
+        for case in DurabilityCrashCase::all() {
+            process::run(repository_root, case)?;
+        }
+        return Ok(());
+    };
     if flag != OsStr::new(CASE_ARGUMENT) {
         return Err(DurabilityCrashMatrixError::Usage);
     }

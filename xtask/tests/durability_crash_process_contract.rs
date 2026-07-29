@@ -22,3 +22,18 @@ fn one_selected_case_reaches_readiness_and_survives_process_death() -> Result<()
     assert_eq!(output.stderr, b"");
     Ok(())
 }
+
+#[test]
+fn complete_matrix_terminates_all_canonical_cases() -> Result<(), Box<dyn Error>> {
+    let output = Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .arg("durability-crash-matrix")
+        .output()?;
+
+    assert!(
+        output.status.success(),
+        "complete crash matrix failed: {output:?}"
+    );
+    assert_eq!(output.stdout, b"");
+    assert_eq!(output.stderr, b"");
+    Ok(())
+}

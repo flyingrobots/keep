@@ -30,9 +30,9 @@ pub(super) fn run(
         .checked_add(DEADLINE)
         .ok_or(DurabilityCrashMatrixError::Timeout { duration: DEADLINE })?;
     let (mut child, group) = spawn(repository_root, directory.path(), &socket_path, case)?;
-    let readiness = wait_for_ready(&listener, &mut child, deadline);
+    let readiness_stream = wait_for_ready(&listener, &mut child, deadline);
     let termination = terminate(group, &mut child);
-    readiness?;
+    let _readiness_stream = readiness_stream?;
     termination?;
     verify_marker(directory.path(), case)?;
     drop(listener);
@@ -90,7 +90,7 @@ fn wait_for_ready(
     listener: &UnixListener,
     child: &mut Child,
     deadline: Instant,
-) -> Result<(), DurabilityCrashMatrixError> {
+) -> Result<UnixStream, DurabilityCrashMatrixError> {
     loop {
         match listener.accept() {
             Ok((stream, _address)) => return read_ready(stream, child, deadline),
@@ -113,14 +113,14 @@ fn read_ready(
     mut stream: UnixStream,
     child: &mut Child,
     deadline: Instant,
-) -> Result<(), DurabilityCrashMatrixError> {
+) -> Result<UnixStream, DurabilityCrashMatrixError> {
     stream
         .set_nonblocking(true)
         .map_err(|source| DurabilityCrashMatrixError::io("configure child readiness", source))?;
     let mut signal = [0_u8; 1];
     loop {
         match stream.read_exact(&mut signal) {
-            Ok(()) if signal == [READY] => return Ok(()),
+            Ok(()) if signal == [READY] => return Ok(stream),
             Ok(()) => {
                 return Err(DurabilityCrashMatrixError::InvalidReadinessSignal {
                     observed: signal[0],
