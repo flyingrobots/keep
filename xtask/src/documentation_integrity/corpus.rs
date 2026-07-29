@@ -6,6 +6,7 @@ mod source_witness;
 #[cfg(test)]
 pub(super) mod test_repository;
 
+use std::cmp::Ordering;
 use std::io;
 
 use xtask::protocol_admission::posix_relative_path;
@@ -47,9 +48,17 @@ impl SourceCorpus {
     pub(super) fn verify_unchanged(
         &self,
         repository_root: &RepositoryRoot,
+        process_directory: &RepositoryProcessDirectory,
     ) -> Result<(), DocumentationError> {
         for source in &self.sources {
             source.verify(repository_root, self.kind)?;
+        }
+        let current = Self::read(repository_root, process_directory, self.kind)?;
+        if let Some(path) = membership_change(&self.paths, &current.paths) {
+            return Err(DocumentationError::CorpusChanged {
+                corpus: self.kind.label(),
+                path,
+            });
         }
         Ok(())
     }
@@ -83,6 +92,25 @@ impl SourceCorpus {
                 paths,
                 sources,
             })
+        }
+    }
+}
+
+fn membership_change(expected: &[String], observed: &[String]) -> Option<String> {
+    let mut expected = expected.iter().peekable();
+    let mut observed = observed.iter().peekable();
+    loop {
+        match (expected.peek(), observed.peek()) {
+            (Some(left), Some(right)) => match left.cmp(right) {
+                Ordering::Equal => {
+                    expected.next();
+                    observed.next();
+                }
+                Ordering::Less => return Some((*left).clone()),
+                Ordering::Greater => return Some((*right).clone()),
+            },
+            (Some(path), None) | (None, Some(path)) => return Some((*path).clone()),
+            (None, None) => return None,
         }
     }
 }

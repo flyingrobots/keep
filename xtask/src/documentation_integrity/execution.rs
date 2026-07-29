@@ -38,7 +38,8 @@ pub(super) fn run(
 ) -> Result<(), DocumentationError> {
     let corpora = [markdown, workflows];
     let external = ExternalToolRunner { process_directory };
-    let mut runner = CorpusGuardedRunner::new(external, repository_root, &corpora);
+    let mut runner =
+        CorpusGuardedRunner::new(external, process_directory, repository_root, &corpora);
     run_with(&mut runner, markdown.paths(), workflows.paths())
 }
 

@@ -164,7 +164,8 @@ fn corpus_guard_refuses_a_source_restored_after_transient_replacement()
         selected: root.join("selected.md"),
         retained: root.join("retained.md"),
     };
-    let mut runner = CorpusGuardedRunner::new(replacing, &repository_root, &corpora);
+    let mut runner =
+        CorpusGuardedRunner::new(replacing, &process_directory, &repository_root, &corpora);
 
     let result = runner.capture(DocumentationTool::Markdownlint, &[]);
 
