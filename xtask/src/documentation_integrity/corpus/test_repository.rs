@@ -11,6 +11,14 @@ use crate::bounded_process;
 
 const GIT_FIXTURE_DEADLINE: Duration = Duration::from_mins(2);
 
+/// Runs one Git fixture command under the repository's bounded process policy.
+///
+/// The call blocks for at most two minutes, starts Git in a dedicated process
+/// group, discards both output streams, and terminates descendants on timeout
+/// or interruption. The child inherits only the admitted executable search
+/// path, deterministic locale, and null system and global Git configuration.
+/// Process failures retain their typed source; a nonzero Git status reports the
+/// attempted arguments without admitting tool output.
 pub(in crate::documentation_integrity) fn run_git(
     root: &Path,
     arguments: &[&str],

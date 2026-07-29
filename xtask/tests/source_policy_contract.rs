@@ -191,6 +191,10 @@ fn repository_process_boundaries_document_every_exported_contract() -> Result<()
         ],
     )?;
     require_docs(
+        DOCUMENTATION_TEST_REPOSITORY,
+        &["pub(in crate::documentation_integrity) fn run_git("],
+    )?;
+    require_docs(
         GIT_INVENTORY_ERROR,
         &[
             "pub(crate) enum GitOutputUnit",
