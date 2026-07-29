@@ -171,7 +171,8 @@ The initial production adapter is supported only on Linux when it proves:
 - directory synchronization that makes create, link, unlink, rename, and
   replacement durable;
 - process-scoped exclusive advisory locking; and
-- one retained writer-lock handle for the writer-authority lifetime.
+- post-acquisition device-and-inode verification of the retained writer-lock
+  handle.
 
 The adapter refuses every non-ext4 filesystem, read-only mount, casefolded store
 root, symlinked selected path, or platform other than Linux. A single local

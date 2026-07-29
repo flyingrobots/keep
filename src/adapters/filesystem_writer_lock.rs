@@ -4,13 +4,42 @@ use std::fs::{File, TryLockError};
 use std::io;
 use std::path::Path;
 
-use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
+use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt, OpenOptionsSyncExt};
 use cap_std::ambient_authority;
-use cap_std::fs::{Dir, OpenOptions};
+use cap_std::fs::{Dir, Metadata, OpenOptions};
 
 use super::{WriterLockAcquireError, WriterLockAcquirePhase};
 
+#[cfg(test)]
+#[path = "filesystem_writer_lock_tests.rs"]
+mod tests;
+
 const LOCK_FILE_NAME: &str = "writer.lock";
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+struct FileIdentity {
+    device: u64,
+    inode: u64,
+}
+
+impl FileIdentity {
+    fn read(file: &cap_std::fs::File) -> Result<Self, WriterLockAcquireError> {
+        file.metadata()
+            .map(|metadata| Self::from(&metadata))
+            .map_err(|source| {
+                WriterLockAcquireError::io(WriterLockAcquirePhase::VerifyFileIdentity, source)
+            })
+    }
+}
+
+impl From<&Metadata> for FileIdentity {
+    fn from(metadata: &Metadata) -> Self {
+        Self {
+            device: metadata.dev(),
+            inode: metadata.ino(),
+        }
+    }
+}
 
 /// Exclusive kernel-managed writer authority over one pinned store root.
 ///
@@ -28,7 +57,9 @@ impl FilesystemWriterLock {
     ///
     /// The store root is pinned before `writer.lock` is opened relative to it.
     /// The lock entry must already exist as a regular file and is opened
-    /// without following symbolic links.
+    /// without following symbolic links. After nonblocking kernel acquisition,
+    /// the adapter reopens the directory entry and proves that it still names
+    /// the locked device and inode before returning authority.
     ///
     /// # Errors
     ///
@@ -63,12 +94,16 @@ impl FilesystemWriterLock {
         if !metadata.is_file() {
             return Err(WriterLockAcquireError::NotRegular);
         }
+        let expected_identity = FileIdentity::from(&metadata);
         let lock_file = lock_file.into_std();
         match lock_file.try_lock() {
-            Ok(()) => Ok(Self {
-                directory,
-                lock_file,
-            }),
+            Ok(()) => {
+                verify_current_identity(&directory, expected_identity)?;
+                Ok(Self {
+                    directory,
+                    lock_file,
+                })
+            }
             Err(TryLockError::WouldBlock) => Err(WriterLockAcquireError::Busy),
             Err(TryLockError::Error(source)) => Err(WriterLockAcquireError::io(
                 WriterLockAcquirePhase::Acquire,
@@ -80,6 +115,28 @@ impl FilesystemWriterLock {
     pub(super) fn clone_directory(&self) -> std::io::Result<Dir> {
         self.directory.try_clone()
     }
+}
+
+fn verify_current_identity(
+    directory: &Dir,
+    expected: FileIdentity,
+) -> Result<(), WriterLockAcquireError> {
+    let observed_file = directory
+        .open_with(LOCK_FILE_NAME, &lock_options())
+        .map_err(|source| {
+            WriterLockAcquireError::io(WriterLockAcquirePhase::VerifyFileIdentity, source)
+        })?;
+    let observed = FileIdentity::read(&observed_file)?;
+    if observed == expected {
+        return Ok(());
+    }
+    Err(WriterLockAcquireError::io(
+        WriterLockAcquirePhase::VerifyFileIdentity,
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            "writer.lock changed identity during acquisition",
+        ),
+    ))
 }
 
 fn open_or_create(directory: &Dir) -> Result<cap_std::fs::File, WriterLockAcquireError> {
