@@ -18,8 +18,9 @@ after its public API and format compatibility policies are established.
   substitutions, admits only the exact reviewed Node lock artifact, retains
   simultaneous Markdown and link failures, retains both the primary tool
   failure and a simultaneous snapshot-cleanup failure, parses documentation
-  workflow commands as YAML, rejects guarded or non-string `run` values, preserves
-  declarations after Dependabot directory lists, compares Dependabot
+  workflow commands as YAML, rejects guarded or non-string `run` values,
+  preserves declarations after Dependabot directory lists, refuses duplicate
+  Dependabot YAML mapping keys before semantic admission, compares Dependabot
   maintenance fields as typed YAML values, requires every reviewed
   documentation CI command and the pinned Node setup action exactly once,
   admits only the exact pinned checkout and Node setup actions, requires actions

@@ -85,6 +85,25 @@ fn duplicate_update_scope_is_refused() {
 }
 
 #[test]
+fn duplicate_yaml_mapping_keys_are_refused_before_policy_admission() {
+    let top_level = format!("{POLICY}updates: []\n");
+    let nested = POLICY.replacen(
+        "      interval: weekly\n",
+        "      interval: weekly\n      interval: daily\n",
+        1,
+    );
+    for policy in [top_level, nested] {
+        assert!(matches!(
+            super::admit(&policy, &required()),
+            Err(super::DocumentationError::RepositoryYaml {
+                path: super::DEPENDABOT_PATH,
+                ..
+            })
+        ));
+    }
+}
+
+#[test]
 fn nonuniform_maintenance_policy_is_refused() {
     let policy = POLICY.replacen("      interval: weekly", "      interval: daily", 1);
     assert!(matches!(
