@@ -5,12 +5,16 @@ const BOUNDED_PROCESS: &str = include_str!("../src/bounded_process.rs");
 const BOUNDED_PROCESS_CAPTURE: &str = include_str!("../src/bounded_process/capture.rs");
 const BOUNDED_PROCESS_CAPTURE_LIMIT: &str = include_str!("../src/bounded_process/capture_limit.rs");
 const BOUNDED_PROCESS_ERROR: &str = include_str!("../src/bounded_process/error.rs");
+const BOUNDED_PROCESS_INPUT: &str = include_str!("../src/bounded_process/input.rs");
 const BOUNDED_PROCESS_INTERRUPT: &str = include_str!("../src/bounded_process/interrupt.rs");
 const BOUNDED_PROCESS_GROUP: &str = include_str!("../src/bounded_process/process_group.rs");
 const BOUNDED_PROCESS_GROUP_TESTS: &str =
     include_str!("../src/bounded_process/process_group/tests.rs");
 const BOUNDED_PROCESS_READER: &str = include_str!("../src/bounded_process/reader.rs");
 const BOUNDED_PROCESS_TESTS: &str = include_str!("../src/bounded_process/tests.rs");
+const CONFORMANCE_B3SUM: &str = include_str!("../src/protocol_conformance/external_digest.rs");
+const EXTERNAL_DIGEST: &str = include_str!("../src/external_digest.rs");
+const GOLDEN_B3SUM: &str = include_str!("../src/golden_file_worldline/b3sum_oracle.rs");
 const REPOSITORY_FIXTURE: &str = include_str!("../src/repository_fixture.rs");
 const GIT_INVENTORY_ERROR: &str = include_str!("../src/git_inventory/error.rs");
 const GIT_PATH_STREAM: &str = include_str!("../src/git_inventory/path_stream.rs");
@@ -71,6 +75,19 @@ fn sanitized_git_fixture_has_one_process_authority() {
     let definitions = REPOSITORY_FIXTURE.matches("fn run_git(").count()
         + SOURCE_PURE_RUST_TESTS.matches("fn run_git(").count();
     assert_eq!(definitions, 1);
+}
+
+#[test]
+fn external_digest_has_one_process_authority() {
+    let process_authorities = CONFORMANCE_B3SUM.matches("Command::new(").count()
+        + EXTERNAL_DIGEST.matches("Command::new(").count()
+        + GOLDEN_B3SUM.matches("Command::new(").count();
+    assert_eq!(process_authorities, 1);
+    assert!(EXTERNAL_DIGEST.contains("capture_with_input_limits("));
+    assert!(!CONFORMANCE_B3SUM.contains("Command::new("));
+    assert!(!GOLDEN_B3SUM.contains("Command::new("));
+    assert!(!GOLDEN_B3SUM.contains(".wait()"));
+    assert!(!GOLDEN_B3SUM.contains(".write_all("));
 }
 
 #[test]
@@ -157,7 +174,7 @@ fn process_fixtures_isolate_git_from_host_configuration() {
 }
 
 #[test]
-fn repository_process_boundaries_document_every_exported_contract() -> Result<(), String> {
+fn bounded_process_capture_documents_every_exported_contract() -> Result<(), String> {
     require_docs(
         BOUNDED_PROCESS,
         &["pub(crate) struct ProcessOutput", "pub(crate) fn status("],
@@ -167,6 +184,7 @@ fn repository_process_boundaries_document_every_exported_contract() -> Result<()
         &[
             "pub(crate) fn capture(",
             "pub(crate) fn capture_with(",
+            "pub(crate) fn capture_with_input_limits(",
             "pub(crate) fn capture_with_limits(",
         ],
     )?;
@@ -191,7 +209,12 @@ fn repository_process_boundaries_document_every_exported_contract() -> Result<()
             "    Timeout {",
             "    pub(crate) fn is_not_found(",
         ],
-    )?;
+    )
+}
+
+#[test]
+fn bounded_process_support_documents_every_exported_contract() -> Result<(), String> {
+    require_docs(BOUNDED_PROCESS_INPUT, &["pub(super) fn write_input("])?;
     require_docs(
         BOUNDED_PROCESS_INTERRUPT,
         &[
@@ -215,6 +238,23 @@ fn repository_process_boundaries_document_every_exported_contract() -> Result<()
             "    pub(super) fn start(",
             "    pub(super) fn receive(",
             "    pub(super) fn join(",
+        ],
+    )
+}
+
+#[test]
+fn repository_process_adapters_document_every_exported_contract() -> Result<(), String> {
+    require_docs(
+        EXTERNAL_DIGEST,
+        &[
+            "pub(crate) enum ExternalDigestError",
+            "    Environment {",
+            "    Process {",
+            "    DiagnosticEncoding {",
+            "    Failed {",
+            "    UnexpectedDiagnostic,",
+            "    Width {",
+            "pub(crate) fn b3sum(",
         ],
     )?;
     require_docs(REPOSITORY_FIXTURE, &["pub(crate) fn run_git("])?;

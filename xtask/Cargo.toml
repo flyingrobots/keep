@@ -32,8 +32,8 @@ cap-std = { version = "=4.0.2", default-features = false, optional = true }
 md-5 = { version = "=0.11.0", default-features = false, optional = true }
 # Dedicated unsafe boundary sets exact child working directories by descriptor.
 repository-process-spawn = { path = "../repository-process-spawn", optional = true }
-# Safe POSIX process-group signaling bounds failed repository-tool subprocesses.
-rustix = { version = "=1.1.4", default-features = false, features = ["process", "std"], optional = true }
+# Safe POSIX descriptor flags and process-group signaling bound repository tools.
+rustix = { version = "=1.1.4", default-features = false, features = ["fs", "process", "std"], optional = true }
 # Serde drives duplicate-refusing repository JSON admission; no types escape xtask.
 serde = { version = "=1.0.229", default-features = false, features = ["std"], optional = true }
 # Typed JSON admission checks the committed documentation-tool lock graph.

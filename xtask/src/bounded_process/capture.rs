@@ -6,6 +6,7 @@ use std::thread;
 use std::time::Duration;
 
 use super::cleanup::{cleanup_process, join_after_cleanup, join_readers};
+use super::input::write_input;
 use super::{
     CaptureLimits, InterruptGuard, ProcessDeadline, ProcessError, ProcessOutput, ReaderWorker,
 };
@@ -55,6 +56,25 @@ pub(crate) fn capture_with_limits(
     let deadline = ProcessDeadline::new(program, deadline)?;
     let interrupts = InterruptGuard::begin(program)?;
     CapturedProcess::start(program, command, spawn, interrupts, limits)?.finish(program, &deadline)
+}
+
+/// Runs one captured child with bounded streaming input and exact stream limits.
+///
+/// The complete deadline starts before spawn and covers every nonblocking stdin
+/// write, both output readers, child execution, and cleanup. Input slices are
+/// streamed directly without constructing a combined preimage allocation.
+pub(crate) fn capture_with_input_limits(
+    program: &'static str,
+    command: &mut Command,
+    input: &[&[u8]],
+    deadline: Option<Duration>,
+    limits: CaptureLimits,
+) -> Result<ProcessOutput, ProcessError> {
+    let deadline = ProcessDeadline::new(program, deadline)?;
+    let interrupts = InterruptGuard::begin(program)?;
+    command.stdin(Stdio::piped());
+    CapturedProcess::start(program, command, Command::spawn, interrupts, limits)?
+        .finish_with_input(program, input, &deadline)
 }
 
 struct CapturedProcess {
@@ -149,6 +169,26 @@ impl CapturedProcess {
             stdout: stdout.bytes,
             stderr: stderr.bytes,
         })
+    }
+
+    fn finish_with_input(
+        mut self,
+        program: &'static str,
+        input: &[&[u8]],
+        deadline: &ProcessDeadline,
+    ) -> Result<ProcessOutput, ProcessError> {
+        let Some(mut stdin) = self.child.stdin.take() else {
+            let error = ProcessError::MissingStream {
+                program,
+                stream: "stdin",
+            };
+            return Err(self.cleanup_readers(error));
+        };
+        if let Err(error) = write_input(program, &mut stdin, input, deadline, &self.interrupts) {
+            return Err(self.cleanup_readers(error));
+        }
+        drop(stdin);
+        self.finish(program, deadline)
     }
 
     fn cleanup_readers(self, error: ProcessError) -> ProcessError {
