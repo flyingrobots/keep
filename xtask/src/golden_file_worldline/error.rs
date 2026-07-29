@@ -8,11 +8,12 @@ use std::path::PathBuf;
 use std::string::FromUtf8Error;
 
 use crate::diagnostic::{escaped_controls, escaped_path};
+use crate::external_digest::ExternalDigestError;
 use xtask::protocol_admission::RelativePathError;
 
 pub(crate) enum GoldenError {
     ExternalDigest {
-        source: Box<dyn Error + Send + Sync>,
+        source: ExternalDigestError,
     },
     Integer {
         field: String,
@@ -35,10 +36,8 @@ pub(crate) enum GoldenError {
 }
 
 impl GoldenError {
-    pub(super) fn external_digest(source: impl Error + Send + Sync + 'static) -> Self {
-        Self::ExternalDigest {
-            source: Box::new(source),
-        }
+    pub(super) const fn external_digest(source: ExternalDigestError) -> Self {
+        Self::ExternalDigest { source }
     }
 
     pub(super) fn io(action: &'static str, path: impl Into<PathBuf>, source: io::Error) -> Self {
@@ -91,12 +90,30 @@ impl fmt::Display for GoldenError {
 impl Error for GoldenError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::ExternalDigest { source } => Some(source.as_ref()),
+            Self::ExternalDigest { source } => Some(source),
             Self::Integer { source, .. } => Some(source),
             Self::Io { source, .. } => Some(source),
             Self::Utf8 { source, .. } => Some(source),
             Self::Path { source, .. } => Some(source),
             Self::Violation(_) => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::GoldenError;
+    use crate::external_digest::ExternalDigestError;
+
+    #[test]
+    fn external_digest_refusal_retains_its_typed_variant() {
+        let error = GoldenError::external_digest(ExternalDigestError::Width { observed: 31 });
+
+        assert!(matches!(
+            error,
+            GoldenError::ExternalDigest {
+                source: ExternalDigestError::Width { observed: 31 },
+            }
+        ));
     }
 }
