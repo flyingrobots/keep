@@ -81,10 +81,11 @@ fn is_python_shebang(prefix: &[u8]) -> bool {
     if !program_name(interpreter).eq_ignore_ascii_case(b"env") {
         return false;
     }
-    fields
-        .next()
-        .and_then(environment::selected_utility)
-        .is_some_and(|utility| is_python_program(&utility))
+    match fields.next().and_then(environment::selected_utility) {
+        Some(environment::UtilitySelection::Known(utility)) => is_python_program(&utility),
+        Some(environment::UtilitySelection::Ambiguous) => true,
+        None => false,
+    }
 }
 
 fn is_python_program(program: &[u8]) -> bool {
@@ -142,5 +143,12 @@ mod tests {
         ] {
             assert!(!is_python_shebang(prefix));
         }
+    }
+
+    #[test]
+    fn unresolved_environment_utility_substitution_fails_closed() {
+        assert!(is_python_shebang(
+            b"#!/usr/bin/env -S '${UNSET_INTERPRETER}sh'\n"
+        ));
     }
 }

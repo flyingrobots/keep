@@ -6,7 +6,20 @@ use std::collections::VecDeque;
 
 use word_split::split_words;
 
-pub(super) fn selected_utility(arguments: &[u8]) -> Option<Vec<u8>> {
+/// The selected `env` utility when repository bytes determine it safely.
+#[derive(Debug, Eq, PartialEq)]
+pub(super) enum UtilitySelection {
+    /// The exact utility word selected after options and assignments.
+    Known(Vec<u8>),
+    /// Runtime environment substitution can change the selected utility.
+    Ambiguous,
+}
+
+/// Selects the utility executed by an `env` shebang.
+///
+/// Invalid word framing returns absence. A selected word containing unresolved
+/// `${VAR}` syntax remains explicitly ambiguous so callers can fail closed.
+pub(super) fn selected_utility(arguments: &[u8]) -> Option<UtilitySelection> {
     let mut words = VecDeque::from(split_words(arguments)?);
     let mut options = true;
     let mut split_budget = arguments.len().checked_add(1)?;
@@ -40,7 +53,10 @@ pub(super) fn selected_utility(arguments: &[u8]) -> Option<Vec<u8>> {
             options = false;
             continue;
         }
-        return Some(word);
+        if word.windows(2).any(|window| window == b"${") {
+            return Some(UtilitySelection::Ambiguous);
+        }
+        return Some(UtilitySelection::Known(word));
     }
     None
 }
@@ -131,7 +147,7 @@ mod tests {
         ] {
             assert_eq!(
                 super::selected_utility(arguments),
-                Some(b"python3".to_vec())
+                Some(super::UtilitySelection::Known(b"python3".to_vec()))
             );
         }
     }
@@ -143,7 +159,18 @@ mod tests {
             b"-S sh -c 'echo python3'",
             b"-S \"sh -c 'echo python3'\"",
         ] {
-            assert_eq!(super::selected_utility(arguments), Some(b"sh".to_vec()));
+            assert_eq!(
+                super::selected_utility(arguments),
+                Some(super::UtilitySelection::Known(b"sh".to_vec()))
+            );
         }
+    }
+
+    #[test]
+    fn unresolved_selected_utility_is_ambiguous() {
+        assert_eq!(
+            super::selected_utility(b"-S '${UNSET_INTERPRETER}sh'"),
+            Some(super::UtilitySelection::Ambiguous)
+        );
     }
 }
