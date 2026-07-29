@@ -16,6 +16,14 @@ mod diagnostic;
 )]
 mod golden_protocol_fuzz;
 
+#[cfg(feature = "repository-json-fuzz")]
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "the library facade deliberately hides the repository parser implementation"
+)]
+#[path = "documentation_integrity/node_toolchain/unique_json.rs"]
+mod repository_json;
+
 pub mod protocol_admission;
 
 #[cfg(test)]
@@ -48,5 +56,36 @@ pub fn admit_golden_protocol(selector: u8, input: &[u8]) -> GoldenProtocolAdmiss
         GoldenProtocolAdmission::Admitted
     } else {
         GoldenProtocolAdmission::Refused
+    }
+}
+
+/// Whether bounded duplicate-refusing repository JSON admission accepted input.
+#[cfg(feature = "repository-json-fuzz")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RepositoryJsonAdmission {
+    /// UTF-8 JSON within the byte and nesting limits was admitted.
+    Admitted,
+    /// Encoding, syntax, size, nesting, or duplicate members were refused.
+    Refused,
+}
+
+/// Exercises the exact duplicate-refusing repository JSON parser.
+///
+/// Input above one mebibyte is refused before UTF-8 decoding or recursive
+/// parsing. No serializer-owned value escapes this fuzz-only boundary.
+#[cfg(feature = "repository-json-fuzz")]
+#[must_use]
+pub fn admit_repository_json(input: &[u8]) -> RepositoryJsonAdmission {
+    const MAXIMUM_BYTES: usize = 1_048_576;
+    if input.len() > MAXIMUM_BYTES {
+        return RepositoryJsonAdmission::Refused;
+    }
+    let Ok(raw) = std::str::from_utf8(input) else {
+        return RepositoryJsonAdmission::Refused;
+    };
+    if repository_json::parse(raw).is_ok() {
+        RepositoryJsonAdmission::Admitted
+    } else {
+        RepositoryJsonAdmission::Refused
     }
 }

@@ -3,6 +3,8 @@ use std::error::Error;
 use std::fs;
 use std::path::Path;
 
+use yaml_rust2::{Yaml, YamlLoader};
+
 const CI: &str = include_str!("../../../.github/workflows/ci.yml");
 const SCHEDULED: &str = include_str!("../../../.github/workflows/fuzz-scheduled.yml");
 
@@ -65,22 +67,93 @@ fn only_successfully_minimized_corpora_are_retained() -> Result<(), Box<dyn Erro
 
 #[test]
 fn fuzz_workflows_delegate_campaign_policy_and_execution_to_xtask() -> Result<(), Box<dyn Error>> {
-    let (_, ci_fuzz) = CI
-        .split_once("  fuzz-smoke:\n")
-        .ok_or("CI has no fuzz-smoke job")?;
-    let (ci_fuzz, _) = ci_fuzz
-        .split_once("\n  dependency-policy:")
-        .ok_or("CI fuzz-smoke job has no closing job")?;
-    for workflow in [ci_fuzz, SCHEDULED] {
-        assert!(!workflow.contains("python"));
-        assert!(!workflow.contains(".py"));
-        assert!(workflow.contains("cargo xtask fuzz github-env"));
-        assert!(workflow.contains("cargo xtask fuzz run"));
+    for (workflow, job) in [(CI, "fuzz-smoke"), (SCHEDULED, "fuzz")] {
+        workflow_delegates_to_xtask(workflow, job)?;
     }
-    assert!(SCHEDULED.contains("cargo xtask fuzz check-corpus"));
-    assert!(SCHEDULED.contains("cargo xtask fuzz build"));
-    assert!(SCHEDULED.contains("cargo xtask fuzz minimize"));
+    let scheduled_commands = run_commands(SCHEDULED, "fuzz")?;
+    if command_index(&scheduled_commands, "cargo xtask fuzz check-corpus").is_none() {
+        return Err("scheduled workflow does not validate its corpus".into());
+    }
+    if command_index(&scheduled_commands, "cargo xtask fuzz minimize").is_none() {
+        return Err("scheduled workflow does not minimize its corpus".into());
+    }
     Ok(())
+}
+
+#[test]
+fn non_run_scalar_cannot_impersonate_the_fuzz_build_step() {
+    let disguised = CI.replace(
+        "        run: cargo xtask fuzz build --profile smoke",
+        "        env:\n          BUILD_NOTE: cargo xtask fuzz build --profile smoke",
+    );
+
+    assert!(workflow_delegates_to_xtask(&disguised, "fuzz-smoke").is_err());
+}
+
+fn workflow_delegates_to_xtask(workflow: &str, job: &str) -> Result<(), Box<dyn Error>> {
+    let commands = run_commands(workflow, job)?;
+    if commands
+        .iter()
+        .any(|command| command.contains("python") || command.contains(".py"))
+    {
+        return Err("fuzz workflow delegates to Python".into());
+    }
+    if command_index(&commands, "cargo xtask fuzz github-env").is_none() {
+        return Err("fuzz workflow does not load xtask policy".into());
+    }
+    let build = command_index(&commands, "cargo xtask fuzz build")
+        .ok_or("fuzz workflow does not build targets")?;
+    let run = command_index(&commands, "cargo xtask fuzz run")
+        .ok_or("fuzz workflow does not run targets")?;
+    if build >= run {
+        return Err("fuzz workflow does not build before running targets".into());
+    }
+    Ok(())
+}
+
+fn run_commands(workflow: &str, job: &str) -> Result<Vec<String>, Box<dyn Error>> {
+    let documents = YamlLoader::load_from_str(workflow)?;
+    let [document] = documents.as_slice() else {
+        return Err("fuzz workflow must contain exactly one YAML document".into());
+    };
+    let jobs = mapping_field(document, "jobs")
+        .and_then(Yaml::as_hash)
+        .ok_or("fuzz workflow jobs must be a mapping")?;
+    let job = jobs
+        .get(&Yaml::String(job.to_owned()))
+        .ok_or("fuzz workflow has no reviewed fuzz job")?;
+    let steps = mapping_field(job, "steps")
+        .and_then(Yaml::as_vec)
+        .ok_or("fuzz workflow job steps must be a sequence")?;
+    let mut commands = Vec::new();
+    for step in steps {
+        let Some(run) = mapping_field(step, "run") else {
+            continue;
+        };
+        let run = run
+            .as_str()
+            .ok_or("fuzz workflow run step must be a string")?;
+        commands.push(run.to_owned());
+    }
+    Ok(commands)
+}
+
+fn mapping_field<'a>(node: &'a Yaml, field: &str) -> Option<&'a Yaml> {
+    node.as_hash()?.get(&Yaml::String(field.to_owned()))
+}
+
+fn command_index(commands: &[String], expected: &str) -> Option<usize> {
+    commands.iter().position(|command| {
+        command.lines().any(|line| {
+            line.trim().strip_prefix(expected).is_some_and(|suffix| {
+                suffix.is_empty()
+                    || suffix
+                        .as_bytes()
+                        .first()
+                        .is_some_and(u8::is_ascii_whitespace)
+            })
+        })
+    })
 }
 
 fn checkout_references(workflow: &str) -> BTreeSet<&str> {

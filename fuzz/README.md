@@ -12,6 +12,13 @@ versions and resource limits. `cargo xtask fuzz` parses that file without shell
 substitution and refuses missing, duplicate, unknown, malformed, or
 out-of-bound values.
 
+The external `cargo fuzz build` process uses the reviewed build timeout. Each
+`cargo fuzz run` process uses its profile's exploration budget plus the
+reviewed process-grace interval; the addition is checked before execution.
+Expiry terminates and reaps the complete child process group. The grace
+interval covers Cargo startup and libFuzzer shutdown without enlarging
+libFuzzer's exploration budget.
+
 The Rust task compares `cargo fuzz list` with the checked-in target files,
 sorts the exact target names, bounds child-process output, and exercises every
 target even if an earlier target fails. Run:
@@ -41,6 +48,12 @@ The `golden_protocol` seeds deterministically reach all five corpus table
 schemas plus canonical case, canonical decimal, invalid-identity
 classification, and mutation parsing under the campaign's one-mebibyte input
 bound.
+
+The `repository_json` target feeds arbitrary bytes through the same
+duplicate-refusing parser used for the documentation-tool manifest and lock
+graph. Its facade refuses inputs over one mebibyte before parsing; integration
+laws cover valid nested JSON, malformed bytes, excessive nesting, and duplicate
+members below an enclosing object and array.
 
 The `layout_record` seeds are the four exact canonical binary records derived
 from the reviewed hexadecimal fixtures. The target feeds arbitrary bytes

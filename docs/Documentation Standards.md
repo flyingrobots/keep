@@ -52,6 +52,7 @@ Keep keeps its durable truth in a small set of known places.
 | `docs/recovery/` | The crash-point catalog, the publication protocol, and the documented lawful state recovery must reach. |
 | `docs/adr/` | Slugged ADRs for decisions that cut across subsystems or predate a colocated home. See §3.10. |
 | `docs/<category>/<concept>/rationale.md` | Colocated decision record for a decision scoped to one concept: the decision, alternatives rejected, and why. See §3.10. |
+| `docs/dependencies/` | Dependency and development-tool admission records: scope, selected features, resolved graph, risks, and review triggers. |
 | `CONTRIBUTING.md` | Contributor-facing operational contract: what to read, required local checks, and PR expectations. |
 | `CHANGELOG.md` | Release-visible historical ledger. |
 | `SECURITY.md` | Vulnerability reporting and support posture. |
@@ -533,35 +534,40 @@ Documentation quality requires both deterministic checks and human judgment.
 Run for documentation changes:
 
 ```bash
-python3 scripts/check_markdown.py
+cargo xtask documentation-integrity-check
 git diff --check
 git diff --cached --check
 ```
 
-Use `markdownlint-cli2` 0.23.2. The repository-owned configuration defines
-the default Markdown input set, imports `.gitignore`, and records deliberate
-rule choices. The checker admits tracked Markdown plus nonignored new
-Markdown, disables config globs for that invocation, and refuses a different
-tool version. It also runs `lychee` 0.21.0 offline with fragment checking, so
-external-site availability cannot affect the result. Run it from the
-repository root. The two Git commands inspect unstaged and staged whitespace
-errors separately.
+Use `markdownlint-cli2` 0.23.2. The repository-owned configuration records
+deliberate rule choices. The Rust checker selects tracked Markdown plus
+nonignored new Markdown, disables configuration globs for that invocation,
+and refuses a different tool version. It also runs `lychee` 0.21.0 offline
+with fragment checking, so external-site availability cannot affect the
+result. Before external tools start, corpus admission refuses any source over
+4 MiB and any selected corpus over 64 MiB. Run it from the repository root.
+The two Git commands inspect
+unstaged and staged whitespace errors separately.
 
-When workflows change, also run:
-
-```bash
-python3 scripts/check_workflows.py
-```
-
-The workflow checker requires `actionlint` 1.7.12 and refuses another version.
+The same Rust command checks workflows with `actionlint` 1.7.12 and refuses
+another version. It also verifies the committed Node lock graph, Dependabot
+manifest coverage, and the documentation job's delegation to this command.
 The dedicated `documentation` job in `.github/workflows/ci.yml` installs the
-pinned tools, runs these repository-owned checks, and verifies repository
-whitespace before admitting the result as CI evidence.
+pinned tools, runs `cargo xtask documentation-refusal-check`, runs the
+repository-owned integrity command, and verifies repository whitespace before
+admitting the result as CI evidence. The named refusal command constructs and
+executes both malformed-input scenarios directly, so removing or renaming
+either scenario breaks the command instead of producing a successful
+zero-test result. The Rust workflow contract pins that job to `ubuntu-latest`
+with a ten-minute deadline, rejects workflow and job run defaults, and admits
+only the reviewed action and command step fields. A custom shell, working
+directory, environment, or other unreviewed execution modifier cannot
+impersonate a required command.
 
 CI SHOULD block on facts it can determine reliably:
 
 - malformed Markdown;
-- broken internal links and anchors, once link checking is available;
+- broken internal links and anchors;
 - failed doctests declared runnable (`cargo test --workspace --doc
   --locked`);
 - stale generated reference — public API documentation that no longer

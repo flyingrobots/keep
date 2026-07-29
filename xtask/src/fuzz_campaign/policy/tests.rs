@@ -9,9 +9,11 @@ fn repository_policy_preserves_every_reviewed_runtime_bound() -> Result<(), Poli
     let policy = CampaignPolicy::parse(POLICY)?;
     assert_eq!(policy.cargo_fuzz_version, "0.13.2");
     assert_eq!(policy.toolchain, "nightly-2026-07-24");
+    assert_eq!(policy.build_timeout_seconds, 600);
     assert_eq!(policy.smoke_seconds_per_target, 15);
     assert_eq!(policy.scheduled_seconds_per_target, 600);
     assert_eq!(policy.cmin_seconds_per_target, 120);
+    assert_eq!(policy.process_grace_seconds, 60);
     assert_eq!(policy.input_timeout_seconds, 5);
     assert_eq!(policy.max_input_bytes, 1_048_576);
     assert_eq!(policy.rss_limit_mb, 1_024);

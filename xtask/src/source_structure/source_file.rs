@@ -1,125 +1,176 @@
-//! This module owns capability-relative, no-follow source-file admission.
-//!
-//! The repository source verifier is intentionally supported only on Unix hosts.
-//! It binds an opened source root to Unix device and inode identity so that path
-//! replacement cannot silently redirect a scan. Supporting another host requires
-//! an equivalent stable directory-identity contract before enabling this task.
+//! This module owns one-handle admission of a repository source file.
 
-use std::fs::File;
+use std::fs::{File, Metadata};
 use std::io;
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
 
-use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt, OpenOptionsSyncExt};
-use cap_std::ambient_authority;
-use cap_std::fs::{Dir, OpenOptions};
+use crate::repository_file::{OpenRepositoryFileError, RepositoryFileIdentity, RepositoryRoot};
+
+use super::SourceStructureError;
+use super::python_source::executable_uses_python;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum ReadAccessPolicy {
-    Enabled,
+pub(super) enum FileExecution {
+    Executable,
+    NonExecutable,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum BlockingIoPolicy {
-    Refuse,
+/// Canonical Git index mode admitted for one tracked source path.
+pub(super) enum TrackedFileMode {
+    /// The index records a symlink or gitlink rather than a regular source.
+    NonRegular,
+    /// The index records a regular file with the contained executable state.
+    Regular(FileExecution),
 }
 
-#[derive(Clone, Copy)]
-pub(super) struct SourceReadPolicy {
-    read_access: ReadAccessPolicy,
-    blocking_io: BlockingIoPolicy,
-}
-
-pub(super) const SOURCE_READ_POLICY: SourceReadPolicy = SourceReadPolicy {
-    read_access: ReadAccessPolicy::Enabled,
-    blocking_io: BlockingIoPolicy::Refuse,
-};
-
-pub(super) struct SourceRoot {
-    directory: Dir,
-    identity: DirectoryIdentity,
-    path: PathBuf,
-}
-
-#[derive(Eq, PartialEq)]
-struct DirectoryIdentity {
-    device: u64,
-    inode: u64,
-}
-
-pub(super) enum OpenSourceError {
-    Io(io::Error),
+pub(super) enum SourceFileAdmission {
+    Regular(AdmittedSource),
     NonRegular,
 }
 
-impl SourceRoot {
-    pub(super) fn open(path: &Path) -> Result<Self, io::Error> {
-        let directory = Dir::open_ambient_dir(path, ambient_authority())?;
-        let identity = DirectoryIdentity::from(&directory.dir_metadata()?);
-        Ok(Self {
-            directory,
-            identity,
-            path: path.to_owned(),
-        })
+pub(super) struct AdmittedSource {
+    execution: FileExecution,
+    file: File,
+    identity: RepositoryFileIdentity,
+    path: PathBuf,
+    relative: PathBuf,
+}
+
+impl AdmittedSource {
+    pub(super) fn admit(
+        source_root: &RepositoryRoot,
+        relative: &Path,
+        tracked_execution: Option<TrackedFileMode>,
+    ) -> Result<SourceFileAdmission, SourceStructureError> {
+        let path = source_root.display_path(relative);
+        let file = match source_root.open_file(relative) {
+            Ok(file) => file,
+            Err(OpenRepositoryFileError::NonRegular) => {
+                if let Some(TrackedFileMode::Regular(execution)) = tracked_execution {
+                    return Err(mode_changed(&path, execution.label(), "nonregular"));
+                }
+                return Ok(SourceFileAdmission::NonRegular);
+            }
+            Err(OpenRepositoryFileError::Io(source)) => {
+                return Err(SourceStructureError::Inspect { path, source });
+            }
+        };
+        let metadata = file
+            .metadata()
+            .map_err(|source| SourceStructureError::Inspect {
+                path: path.clone(),
+                source,
+            })?;
+        let execution = file_execution(&metadata);
+        admit_execution(&path, tracked_execution, execution)?;
+        let python = execution == FileExecution::Executable
+            && executable_uses_python(&file).map_err(|source| SourceStructureError::Inspect {
+                path: path.clone(),
+                source,
+            })?;
+        let source = Self {
+            execution,
+            file,
+            identity: RepositoryFileIdentity::from(&metadata),
+            path,
+            relative: relative.to_owned(),
+        };
+        source.verify_current(source_root)?;
+        if python {
+            return Err(SourceStructureError::PythonSource(relative.to_owned()));
+        }
+        Ok(SourceFileAdmission::Regular(source))
     }
 
-    pub(super) fn display_path(&self, relative: &Path) -> PathBuf {
-        self.path.join(relative)
+    pub(super) const fn execution(&self) -> FileExecution {
+        self.execution
     }
 
-    pub(super) fn is_current_path(&self) -> Result<bool, io::Error> {
-        let current = Dir::open_ambient_dir(&self.path, ambient_authority())?;
-        let identity = DirectoryIdentity::from(&current.dir_metadata()?);
-        Ok(self.identity == identity)
+    pub(super) const fn file(&self) -> &File {
+        &self.file
     }
 
-    pub(super) fn open_file(&self, relative: &Path) -> Result<File, OpenSourceError> {
-        let file = self
-            .directory
-            .open_with(relative, &SOURCE_READ_POLICY.options())
-            .map_err(OpenSourceError::Io)?
-            .into_std();
-        let metadata = file.metadata().map_err(OpenSourceError::Io)?;
-        if metadata.is_file() {
-            Ok(file)
+    pub(super) fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub(super) fn verify_current(
+        &self,
+        source_root: &RepositoryRoot,
+    ) -> Result<(), SourceStructureError> {
+        let observed = RepositoryFileIdentity::read(&self.file).map_err(|source| {
+            SourceStructureError::Inspect {
+                path: self.path.clone(),
+                source,
+            }
+        })?;
+        let current = match source_root.open_file(&self.relative) {
+            Ok(file) => RepositoryFileIdentity::read(&file),
+            Err(OpenRepositoryFileError::Io(source))
+                if source.kind() == io::ErrorKind::NotFound =>
+            {
+                return Err(SourceStructureError::SourceFileChanged(self.path.clone()));
+            }
+            Err(OpenRepositoryFileError::Io(source)) => Err(source),
+            Err(OpenRepositoryFileError::NonRegular) => {
+                return Err(SourceStructureError::SourceFileChanged(self.path.clone()));
+            }
+        }
+        .map_err(|source| SourceStructureError::Inspect {
+            path: self.path.clone(),
+            source,
+        })?;
+        if observed == self.identity && current == self.identity {
+            Ok(())
         } else {
-            Err(OpenSourceError::NonRegular)
+            Err(SourceStructureError::SourceFileChanged(self.path.clone()))
         }
     }
 }
 
-impl SourceReadPolicy {
-    #[cfg(test)]
-    pub(super) const fn read_access(self) -> ReadAccessPolicy {
-        self.read_access
-    }
-
-    #[cfg(test)]
-    pub(super) const fn blocking_io(self) -> BlockingIoPolicy {
-        self.blocking_io
-    }
-
-    fn options(self) -> OpenOptions {
-        let mut options = OpenOptions::new();
-        match self.read_access {
-            ReadAccessPolicy::Enabled => {
-                options.read(true);
-            }
+fn admit_execution(
+    path: &Path,
+    tracked: Option<TrackedFileMode>,
+    worktree: FileExecution,
+) -> Result<(), SourceStructureError> {
+    match tracked {
+        Some(TrackedFileMode::Regular(tracked)) if tracked != worktree => {
+            Err(mode_changed(path, tracked.label(), worktree.label()))
         }
-        options.follow(FollowSymlinks::No);
-        match self.blocking_io {
-            BlockingIoPolicy::Refuse => {
-                options.nonblock(true);
-            }
+        Some(TrackedFileMode::NonRegular) => {
+            Err(mode_changed(path, "nonregular", worktree.label()))
         }
-        options
+        Some(TrackedFileMode::Regular(_)) | None => Ok(()),
     }
 }
 
-impl From<&cap_std::fs::Metadata> for DirectoryIdentity {
-    fn from(metadata: &cap_std::fs::Metadata) -> Self {
-        Self {
-            device: metadata.dev(),
-            inode: metadata.ino(),
+fn mode_changed(
+    path: &Path,
+    tracked: &'static str,
+    worktree: &'static str,
+) -> SourceStructureError {
+    SourceStructureError::ExecutionModeChanged {
+        path: path.to_owned(),
+        tracked,
+        worktree,
+    }
+}
+
+impl FileExecution {
+    const fn label(self) -> &'static str {
+        match self {
+            Self::Executable => "executable",
+            Self::NonExecutable => "nonexecutable",
         }
+    }
+}
+
+fn file_execution(metadata: &Metadata) -> FileExecution {
+    if metadata.permissions().mode() & 0o111 == 0 {
+        FileExecution::NonExecutable
+    } else {
+        FileExecution::Executable
     }
 }

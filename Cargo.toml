@@ -24,14 +24,14 @@ name = "streaming_cdc"
 harness = false
 
 [workspace]
-members = [".", "benchmark", "xtask"]
+members = [".", "benchmark", "repository-process-spawn", "xtask"]
 resolver = "3"
 
 [lints]
 workspace = true
 
 [workspace.lints.rust]
-unsafe_code = "forbid"
+unsafe_code = "deny"
 missing_docs = "deny"
 unused_must_use = "deny"
 unreachable_pub = "deny"

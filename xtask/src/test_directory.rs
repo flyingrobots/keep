@@ -8,12 +8,14 @@ use std::sync::atomic::{AtomicU64, Ordering};
 const CREATION_ATTEMPTS: u16 = 1_024;
 static NEXT_DIRECTORY: AtomicU64 = AtomicU64::new(0);
 
+/// A collision-resistant temporary directory removed at the explicit boundary.
 pub(crate) struct TestDirectory {
     path: PathBuf,
     active: bool,
 }
 
 impl TestDirectory {
+    /// Creates one unique directory beneath the platform temporary directory.
     pub(crate) fn create(label: &str) -> Result<Self, io::Error> {
         for _ in 0_u16..CREATION_ATTEMPTS {
             let sequence = next_sequence()?;
@@ -31,10 +33,12 @@ impl TestDirectory {
         ))
     }
 
+    /// Returns the exact directory path owned by this scope.
     pub(crate) fn path(&self) -> &Path {
         &self.path
     }
 
+    /// Removes the exact owned directory tree and disables drop fallback.
     pub(crate) fn close(mut self) -> Result<(), io::Error> {
         let removal = match fs::remove_dir_all(&self.path) {
             Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(()),

@@ -4,9 +4,9 @@ use std::io;
 use std::path::Path;
 
 use super::{CommandRunner, execute_all};
+use crate::bounded_process::{ProcessError, ProcessOutput};
 use crate::fuzz_campaign::command::{CampaignOperation, CommandPlan};
 use crate::fuzz_campaign::policy::CampaignPolicy;
-use crate::fuzz_campaign::process::{ProcessError, ProcessOutput};
 use crate::fuzz_campaign::profile::CampaignProfile;
 use crate::fuzz_campaign::target::FuzzTarget;
 
@@ -35,7 +35,7 @@ fn every_target_runs_after_an_earlier_failure() -> Result<(), Box<dyn Error>> {
 fn swallowed_minimization_failure_is_refused() -> Result<(), Box<dyn Error>> {
     let policy = policy()?;
     let target = FuzzTarget::admit("first".to_owned())?;
-    let plan = CommandPlan::new(&policy, CampaignOperation::Minimize, target);
+    let plan = CommandPlan::new(&policy, CampaignOperation::Minimize, target)?;
     let mut runner =
         ScriptedRunner::new([output(true, b"Failed to minimize corpus: signal 6", b"")]);
     let Err(error) = execute_all(Path::new("."), "corpus minimization", &[plan], &mut runner)
@@ -69,7 +69,7 @@ fn plans(operation: CampaignOperation) -> Result<Vec<CommandPlan>, Box<dyn Error
         .into_iter()
         .map(|name| {
             let target = FuzzTarget::admit(name.to_owned())?;
-            Ok(CommandPlan::new(&policy, operation, target))
+            Ok(CommandPlan::new(&policy, operation, target)?)
         })
         .collect()
 }
@@ -83,6 +83,7 @@ fn policy() -> Result<CampaignPolicy, Box<dyn Error>> {
 
 fn output(succeeded: bool, stdout: &[u8], stderr: &[u8]) -> ProcessOutput {
     ProcessOutput {
+        code: Some(i32::from(!succeeded)),
         succeeded,
         stdout: stdout.to_vec(),
         stderr: stderr.to_vec(),
@@ -103,6 +104,7 @@ impl CommandRunner for RefusingRunner {
         _plan: &CommandPlan,
     ) -> Result<ProcessOutput, ProcessError> {
         Err(ProcessError::Io {
+            program: "cargo-fuzz",
             action: "spawn",
             source: io::Error::other("scripted refusal"),
         })
@@ -126,7 +128,10 @@ impl CommandRunner for ScriptedRunner {
     ) -> Result<ProcessOutput, ProcessError> {
         self.observed.push(plan.target().as_str().to_owned());
         let Some(output) = self.outcomes.pop_front() else {
-            return Err(ProcessError::MissingStream("scripted outcome"));
+            return Err(ProcessError::MissingStream {
+                program: "cargo-fuzz",
+                stream: "scripted outcome",
+            });
         };
         Ok(output)
     }

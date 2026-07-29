@@ -1,40 +1,47 @@
 //! This module owns source inventory orchestration and the 500-line law.
 
-mod git_path_inventory;
-mod git_path_stream;
+mod python_source;
 mod repository_path;
 mod source_error;
 mod source_file;
+mod source_inventory;
+mod source_kind;
 
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 use std::io::{self, BufRead, BufReader};
 use std::path::Path;
 
-use git_path_inventory::git_paths;
-use git_path_stream::GitPathRecord;
+use crate::repository_file::RepositoryRoot;
 use repository_path::RepositoryPath;
-pub(super) use source_error::{GitOutputUnit, SourceStructureError};
-use source_file::{OpenSourceError, SourceRoot};
+pub(super) use source_error::SourceStructureError;
+use source_file::{AdmittedSource, FileExecution, SourceFileAdmission, TrackedFileMode};
+#[cfg(test)]
+use source_inventory::{
+    PRESENT_PATH_ARGUMENTS, select as select_source_inventory, select_source_paths,
+};
+use source_inventory::{SourceInventory, collect as source_paths};
+use source_kind::is_extensionless_file;
 
 const SOURCE_MODULE_HARD_LIMIT_LINES: u64 = 500;
-const SOURCE_SUFFIXES: [[u8; 2]; 3] = [*b"py", *b"rs", *b"sh"];
-const PRESENT_PATH_ARGUMENTS: [&str; 5] = [
-    "ls-files",
-    "-z",
-    "--cached",
-    "--others",
-    "--exclude-per-directory=.gitignore",
-];
 
 pub(super) fn check(repository_root: &Path) -> Result<(), SourceStructureError> {
     let source_root =
-        SourceRoot::open(repository_root).map_err(|source| SourceStructureError::Inspect {
+        RepositoryRoot::open(repository_root).map_err(|source| SourceStructureError::Inspect {
             path: repository_root.to_owned(),
             source,
         })?;
-    let paths = source_paths(repository_root)?;
     verify_source_root(&source_root, repository_root)?;
-    let violations = source_violations(&source_root, paths)?;
+    let process_directory =
+        source_root
+            .process_directory()
+            .map_err(|source| SourceStructureError::Inspect {
+                path: repository_root.to_owned(),
+                source,
+            })?;
+    let paths = source_paths(&process_directory)?;
+    verify_source_root(&source_root, repository_root)?;
+    let violations = inventory_violations(&source_root, paths)?;
+    verify_source_root(&source_root, repository_root)?;
     if violations.is_empty() {
         Ok(())
     } else {
@@ -46,7 +53,7 @@ pub(super) fn check(repository_root: &Path) -> Result<(), SourceStructureError> 
 }
 
 fn verify_source_root(
-    source_root: &SourceRoot,
+    source_root: &RepositoryRoot,
     repository_root: &Path,
 ) -> Result<(), SourceStructureError> {
     match source_root.is_current_path() {
@@ -61,91 +68,89 @@ fn verify_source_root(
     }
 }
 
-fn source_paths(repository_root: &Path) -> Result<Vec<RepositoryPath>, SourceStructureError> {
-    let present = git_paths(
-        repository_root,
-        &PRESENT_PATH_ARGUMENTS,
-        "git ls-files present",
-    )?;
-    let deleted = git_paths(
-        repository_root,
-        &["ls-files", "-z", "--deleted"],
-        "git ls-files deleted",
-    )?;
-    select_source_paths(&present, &deleted)
-}
-
-fn select_source_paths(
-    present: &BTreeSet<GitPathRecord>,
-    deleted: &BTreeSet<GitPathRecord>,
-) -> Result<Vec<RepositoryPath>, SourceStructureError> {
-    present
-        .difference(deleted)
-        .filter(|path| is_source_module(path.as_bytes()))
-        .map(admit_source_path)
-        .collect()
-}
-
-fn admit_source_path(path: &GitPathRecord) -> Result<RepositoryPath, SourceStructureError> {
-    let text = String::from_utf8(path.as_bytes().to_vec()).map_err(|source| {
-        SourceStructureError::GitPathEncoding {
-            operation: "source path admission",
-            source,
+fn inventory_violations(
+    source_root: &RepositoryRoot,
+    inventory: SourceInventory,
+) -> Result<Vec<std::path::PathBuf>, SourceStructureError> {
+    let SourceInventory {
+        modules,
+        executable_candidates,
+        tracked_modes,
+    } = inventory;
+    let mut violations = Vec::new();
+    for relative in executable_candidates {
+        let tracked_mode = tracked_modes.get(relative.as_path()).copied();
+        let source = admit_regular(source_root, relative.as_path(), tracked_mode)?;
+        if source.execution() == FileExecution::Executable
+            && source_line_count(source_root, &source)? == SourceLineCount::Exceeded
+        {
+            violations.push(relative.as_path().to_owned());
         }
-    })?;
-    RepositoryPath::admit(text)
+    }
+    violations.extend(source_violations_with_modes(
+        source_root,
+        modules,
+        &tracked_modes,
+    )?);
+    violations.sort();
+    Ok(violations)
 }
 
+#[cfg(test)]
 fn source_violations(
-    source_root: &SourceRoot,
+    source_root: &RepositoryRoot,
     paths: Vec<RepositoryPath>,
-) -> Result<Vec<String>, SourceStructureError> {
+) -> Result<Vec<std::path::PathBuf>, SourceStructureError> {
+    source_violations_with_modes(source_root, paths, &BTreeMap::new())
+}
+
+fn source_violations_with_modes(
+    source_root: &RepositoryRoot,
+    paths: Vec<RepositoryPath>,
+    tracked_modes: &BTreeMap<std::path::PathBuf, TrackedFileMode>,
+) -> Result<Vec<std::path::PathBuf>, SourceStructureError> {
     let mut violations = Vec::new();
     for relative in paths {
-        let lines = source_line_count(source_root, &relative)?;
+        let tracked_mode = tracked_modes.get(relative.as_path()).copied();
+        let source = admit_regular(source_root, relative.as_path(), tracked_mode)?;
+        if is_extensionless_file(relative.as_str().as_bytes())
+            && source.execution() == FileExecution::NonExecutable
+        {
+            continue;
+        }
+        let lines = source_line_count(source_root, &source)?;
         if lines == SourceLineCount::Exceeded {
-            violations.push(relative.as_str().to_owned());
+            violations.push(relative.as_path().to_owned());
         }
     }
     Ok(violations)
 }
 
+fn admit_regular(
+    source_root: &RepositoryRoot,
+    relative: &Path,
+    tracked_mode: Option<TrackedFileMode>,
+) -> Result<AdmittedSource, SourceStructureError> {
+    match AdmittedSource::admit(source_root, relative, tracked_mode)? {
+        SourceFileAdmission::Regular(source) => Ok(source),
+        SourceFileAdmission::NonRegular => Err(SourceStructureError::NonRegular(
+            source_root.display_path(relative),
+        )),
+    }
+}
+
 fn source_line_count(
-    source_root: &SourceRoot,
-    relative: &RepositoryPath,
+    source_root: &RepositoryRoot,
+    source: &AdmittedSource,
 ) -> Result<SourceLineCount, SourceStructureError> {
-    source_line_count_with(source_root, relative, SourceRoot::open_file)
-}
-
-fn source_line_count_with(
-    source_root: &SourceRoot,
-    relative: &RepositoryPath,
-    open_source: impl FnOnce(&SourceRoot, &Path) -> Result<std::fs::File, OpenSourceError>,
-) -> Result<SourceLineCount, SourceStructureError> {
-    let path = source_root.display_path(relative.as_path());
-    let file = open_source(source_root, relative.as_path()).map_err(|error| match error {
-        OpenSourceError::Io(source) => SourceStructureError::Inspect {
-            path: path.clone(),
-            source,
-        },
-        OpenSourceError::NonRegular => SourceStructureError::NonRegular(path.clone()),
+    let lines = line_count(BufReader::new(source.file())).map_err(|error| {
+        SourceStructureError::Inspect {
+            path: source.path().to_owned(),
+            source: error,
+        }
     })?;
-    line_count(BufReader::new(file))
-        .map_err(|source| SourceStructureError::Inspect { path, source })
-}
-
-fn is_source_module(path: &[u8]) -> bool {
-    let Some(file_name) = path.rsplit(|byte| *byte == b'/').next() else {
-        return false;
-    };
-    let mut components = file_name.rsplitn(2, |byte| *byte == b'.');
-    let Some(suffix) = components.next() else {
-        return false;
-    };
-    let Some(stem) = components.next() else {
-        return false;
-    };
-    !stem.is_empty() && SOURCE_SUFFIXES.iter().any(|candidate| suffix == candidate)
+    source.verify_current(source_root)?;
+    Ok(lines)
 }
 
 const fn exceeds_hard_limit(lines: u64) -> bool {
@@ -213,5 +218,11 @@ impl LineCounter {
     }
 }
 
+#[cfg(test)]
+#[path = "source_structure/executable_candidate_tests.rs"]
+mod executable_candidate_tests;
+#[cfg(test)]
+#[path = "source_structure/pure_rust_tests.rs"]
+mod pure_rust_tests;
 #[cfg(test)]
 mod tests;

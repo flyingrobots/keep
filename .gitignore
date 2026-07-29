@@ -6,9 +6,8 @@
 /scripts/documentation-tools/node_modules/
 **/*.rs.bk
 
-# Python checker bytecode
-__pycache__/
-*.py[cod]
+# Agent workspace state
+.graft/
 
 # macOS
 .DS_Store

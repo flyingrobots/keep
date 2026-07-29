@@ -14,6 +14,7 @@ pub(crate) enum PolicyError {
         maximum: u64,
     },
     CampaignOrder,
+    CampaignDeadline,
     CorpusCapacity,
     InvalidInteger(&'static str),
     InvalidToolchain,
@@ -51,6 +52,9 @@ impl fmt::Display for PolicyError {
             Self::CampaignOrder => {
                 formatter.write_str("scheduled fuzzing must exceed the smoke budget")
             }
+            Self::CampaignDeadline => {
+                formatter.write_str("fuzz process deadline exceeds the duration range")
+            }
             Self::CorpusCapacity => {
                 formatter.write_str("corpus bytes cannot be smaller than one input")
             }
@@ -85,6 +89,7 @@ impl Error for PolicyError {
         match self {
             Self::Read { source, .. } => Some(source),
             Self::Bound { .. }
+            | Self::CampaignDeadline
             | Self::CampaignOrder
             | Self::CorpusCapacity
             | Self::InvalidInteger(_)

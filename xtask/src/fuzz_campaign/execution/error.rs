@@ -3,7 +3,7 @@
 use std::error::Error;
 use std::fmt;
 
-use crate::fuzz_campaign::process::ProcessError;
+use crate::bounded_process::ProcessError;
 
 pub(crate) struct ExecutionError {
     pub(super) operation: &'static str,

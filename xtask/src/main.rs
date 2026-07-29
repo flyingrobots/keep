@@ -8,7 +8,17 @@
     reason = "the command dispatcher owns this private repository task"
 )]
 mod benchmark_baseline;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "bounded process execution is shared by sibling repository tasks"
+)]
+mod bounded_process;
 mod diagnostic;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "the command and task-error boundaries are sibling consumers"
+)]
+mod documentation_integrity;
 #[allow(
     clippy::redundant_pub_crate,
     reason = "the command and task-error boundaries are sibling consumers"
@@ -19,6 +29,11 @@ mod fuzz_campaign;
     reason = "the parent command dispatcher is the only consumer"
 )]
 mod fuzz_seed_corpus;
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "bounded Git inventory is shared by sibling repository tasks"
+)]
+mod git_inventory;
 #[allow(
     clippy::redundant_pub_crate,
     reason = "the parent command dispatcher is the only consumer"
@@ -36,6 +51,17 @@ mod process_output;
 mod protocol_conformance;
 #[allow(
     clippy::redundant_pub_crate,
+    reason = "repository file admission is shared by sibling repository tasks"
+)]
+mod repository_file;
+#[cfg(test)]
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "repository fixture execution is shared by sibling test modules"
+)]
+mod repository_fixture;
+#[allow(
+    clippy::redundant_pub_crate,
     reason = "the parent command dispatcher is the only consumer"
 )]
 mod source_structure;
@@ -44,10 +70,9 @@ mod source_structure;
     reason = "the parent command dispatcher is the only consumer"
 )]
 mod task_error;
-#[cfg(test)]
 #[allow(
     clippy::redundant_pub_crate,
-    reason = "scoped test directories are shared by sibling test modules"
+    reason = "scoped evidence directories are shared by verification and test modules"
 )]
 mod test_directory;
 
@@ -89,6 +114,12 @@ fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
         "conformance-check" => {
             protocol_conformance::check(repository_root)?;
         }
+        "documentation-integrity-check" => {
+            documentation_integrity::check(repository_root)?;
+        }
+        "documentation-refusal-check" => {
+            documentation_integrity::check_refusals()?;
+        }
         "prepare-fuzz-corpus" => {
             fuzz_seed_corpus::prepare(repository_root)?;
         }
@@ -99,6 +130,7 @@ fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
             source_structure::check(repository_root)?;
         }
         "verify" => {
+            documentation_integrity::check(repository_root)?;
             golden_file_worldline::check(repository_root)?;
             protocol_conformance::check(repository_root)?;
             source_structure::check(repository_root)?;

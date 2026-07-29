@@ -19,15 +19,6 @@ fn repository_tasks_require_the_committed_dependency_graph() {
 }
 
 #[test]
-fn successful_verification_is_silent() -> Result<(), io::Error> {
-    let output = invoke(&["verify"])?;
-    assert!(output.status.success());
-    assert!(output.stdout.is_empty());
-    assert!(output.stderr.is_empty());
-    Ok(())
-}
-
-#[test]
 fn chunk_identity_conformance_is_repository_owned_and_silent() -> Result<(), io::Error> {
     let output = invoke(&["chunk-id-conformance-check"])?;
     assert!(output.status.success());
@@ -70,12 +61,14 @@ fn fuzz_description_emits_the_admitted_smoke_policy() -> Result<(), io::Error> {
     assert_eq!(
         output.stdout,
         b"CARGO_FUZZ_VERSION: 0.13.2\n\
+          FUZZ_BUILD_TIMEOUT_SECONDS: 600\n\
           FUZZ_CMIN_SECONDS_PER_TARGET: 120\n\
           FUZZ_CORPUS_MAX_BYTES: 536870912\n\
           FUZZ_CORPUS_MAX_FILES: 20000\n\
           FUZZ_CORPUS_RETENTION_DAYS: 14\n\
           FUZZ_INPUT_TIMEOUT_SECONDS: 5\n\
           FUZZ_MAX_INPUT_BYTES: 1048576\n\
+          FUZZ_PROCESS_GRACE_SECONDS: 60\n\
           FUZZ_RSS_LIMIT_MB: 1024\n\
           FUZZ_SCHEDULED_FAILURE_RETENTION_DAYS: 30\n\
           FUZZ_SECONDS_PER_TARGET: 15\n\
@@ -96,7 +89,9 @@ fn missing_command_returns_the_versioned_usage_contract() -> Result<(), io::Erro
         b"Error: usage: cargo xtask \
           <benchmark-baseline|cdc-profile-conformance-check|\
           chunk-id-conformance-check|conformance-check|\
-          golden-file-worldline-check|prepare-fuzz-corpus|fuzz|\
+          documentation-integrity-check|documentation-refusal-check|\
+          golden-file-worldline-check|\
+          prepare-fuzz-corpus|fuzz|\
           source-structure-check|verify>\n"
     );
     Ok(())

@@ -10,6 +10,87 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Documentation corpus selection, pinned tool admission, Markdown and fragment
+  checks, workflow linting, Dependabot coverage, and Node lock-graph policy now
+  run through bounded Rust `xtask` code; CI and `cargo xtask verify` use that
+  boundary, and the seven superseded Python checkers have been removed. The
+  boundary rejects duplicate repository JSON fields and unlocked installer
+  substitutions, admits only the exact reviewed Node lock artifact, retains
+  simultaneous Markdown and link failures, retains both the primary tool
+  failure and a simultaneous snapshot-cleanup failure, parses documentation
+  workflow commands as YAML, rejects guarded or non-string `run` values,
+  preserves declarations after Dependabot directory lists, refuses duplicate
+  Dependabot YAML mapping keys before semantic admission, compares Dependabot
+  maintenance fields as typed YAML values, requires every reviewed
+  documentation CI command and the pinned Node setup action exactly once,
+  admits only the exact pinned checkout and Node setup actions, requires actions
+  and commands to execute in one reviewed order, rejects checkout overrides and
+  unreviewed action steps, refuses
+  alternate setup-node actions, requires the reviewed Node version, rejects
+  unreviewed workflow/job run defaults and step execution fields, pins the
+  documentation runner and job deadline, requires the exact top-level
+  `contents: read` permission mapping, rejects guarded or failure-tolerant
+  documentation jobs and required steps, refuses step mappings that define
+  neither a reviewed action nor a run command, requires each Dependabot update
+  block to choose exactly one directory field form, and requires the
+  documentation workflow to run for pushes to `main` and every pull request,
+  executes malformed Markdown and workflow evidence through the named
+  `cargo xtask documentation-refusal-check` boundary instead of a
+  zero-match-successful libtest substring filter,
+  bounds each admitted documentation source to 4 MiB and each selected corpus
+  to 64 MiB before external tools start, retains every selected source
+  identity, refuses device, inode, size, modification-time, or change-time
+  drift before and after each external tool, re-inventories complete corpus
+  membership so newly added sources cannot bypass those tools, revalidates
+  retained source identities after each rebuilt membership set so same-path
+  replacement cannot cross the inventory boundary, executes the tools against
+  a private snapshot copied from the admitted source descriptors so transient
+  path substitution cannot redirect their reads, copies bounded regular
+  non-Markdown namespace files exactly so link-fragment checks observe admitted
+  target bytes, refuses nonregular namespace targets instead of substituting
+  placeholders, retains each fixed policy file identity through semantic
+  admission and external tool execution so a replaced path cannot validate
+  bytes from a superseded file,
+  and applies a two-minute deadline across Git inventory, validation-tool
+  execution, and output collection. Validation tools clear the inherited
+  environment and admit only the executable search path and `C` locale, so
+  preload hooks and host-specific configuration cannot alter evidence.
+  Git inventory uses a separate explicit profile that also nulls system and
+  global configuration and disables optional locking, so repository overrides
+  cannot redirect selection or cause incidental index writes. Failed Git
+  inventory commands report their exit status and diagnostic before attempting
+  path-stream decoding, so malformed stdout cannot mask the authoritative
+  failure.
+  Git-backed process fixtures clear the inherited environment, explicitly
+  admit the executable search path and `C` locale, ignore system and global Git
+  configuration, and preserve non-UTF-8 template paths without lossy
+  conversion. Repository-backed Git fixtures share one bounded process
+  authority with dedicated groups, null standard streams, and a two-minute
+  deadline. Documentation Git inventory and tools start from one retained
+  repository directory handle, so transient replacement of the ambient
+  repository path cannot redirect validation. Retained and per-spawn directory
+  descriptors are allocated at descriptor 3 or above, so child standard-stream
+  setup cannot overwrite the working-directory authority.
+  Source-structure inspection refuses nonregular executable candidates instead
+  of silently omitting them from the Python and hard-line-limit policy.
+  Terminal signals now become typed refusals while an external repository task
+  is active, so captured and inherited child groups are killed and reaped
+  before `xtask` returns. Captured-output readers finish while the process-group
+  leader remains waitable, and no cleanup path can address its numeric group
+  identity after the child has been reaped. Descendant cleanup evidence now
+  uses a pre-established socket disconnect instead of elapsed-time reachability
+  polling.
+- Fuzz build and run plans now carry external process deadlines from the
+  reviewed campaign policy. Both smoke and scheduled CI campaigns build every
+  target under the separate build deadline before applying per-target run
+  deadlines. Workflow contract evidence parses only executable `run` scalars in
+  the reviewed fuzz jobs, so comments, names, and environment values cannot
+  impersonate required build or run commands. Run deadlines use checked
+  addition of the exploration budget and process-grace interval before
+  process-group execution.
+- The fuzz dependency-policy gate now grants exact MIT license exceptions to
+  the reviewed `memchr` 2.8.3 and `zmij` 1.0.23 transitive dependencies while
+  retaining Apache-2.0 as the default license allowlist.
 - ChunkId v1 and CDC profile v1 conformance now run through one bounded Rust
   `cargo xtask conformance-check` command, including the external `b3sum`
   witness, reproducible Gear-table recipe, scalar and streaming FastCDC laws,
@@ -30,11 +111,33 @@ after its public API and format compatibility policies are established.
 - Golden File Worldline verification now runs through a dependency-isolated
   Rust `xtask`, cross-checks every identity-bearing digest against external
   `b3sum`, and CI refuses Rust, Python, or shell source modules that exceed the
-  documented 500-physical-line hard maximum, including test modules.
+  documented 500-physical-line hard maximum, including test modules and
+  executable sources regardless of filename suffix.
 - Repository source verification now uses capability-relative, no-follow file
-  opens and verifies repository-root identity after Git inventory, so a
-  persistent root replacement or source path replaced with a symlink is
-  refused before source bytes are read.
+  opens, normalizes symlink refusal at that capability boundary across Unix
+  error conventions, starts Git inventory through a descriptor duplicated from
+  that same admitted root, and verifies repository-root identity before
+  inventory, after inventory, and after source scanning. Persistent or
+  transient ambient-root substitution therefore cannot split path selection
+  from source reads, and a source path replaced with a symlink is refused. The
+  pure Rust boundary also refuses
+  `.py`, `.pyw`, dot-only Python basenames, and Python shebangs in every
+  executable regular file regardless of filename suffix, including raw
+  non-UTF-8 Git paths and attached `env -S` interpreter strings. Environment
+  shebangs parse exact and unambiguous abbreviated long options, combined
+  short-option clusters, assignments, quoting, and split strings before
+  classifying only the selected utility, so later command arguments cannot
+  impersonate Python and unresolved utility substitutions fail closed. Tracked
+  file modes are admitted from the Git index and must agree with the worktree,
+  so a staged executable cannot defer Python screening until the next checkout.
+  Source execution, shebang, and physical-line evidence now come from one
+  admitted file descriptor whose identity is revalidated after each read phase,
+  so path replacement or in-place mutation cannot splice different file states
+  into one verification result.
+- Git path inventory failures now remain primary when child cleanup, waiting,
+  or diagnostic collection also fails; the secondary failure remains typed and
+  inspectable. Empty path records and unterminated path bytes produce distinct,
+  accurate typed diagnostics.
 - The repository `cargo xtask` alias and Rust command contract are now
   explicitly silent on success and emit one typed `Error:` diagnostic with
   exit status 1 on refusal; untrusted control characters are escaped so the
@@ -42,6 +145,9 @@ after its public API and format compatibility policies are established.
 - Golden protocol framing, field, hexadecimal, path, mutation-operation, and
   fixed-width value decoders now share a bounded fuzz surface backed by
   precise table-driven malformed-corpus refusals.
+- Duplicate-refusing repository JSON admission now has a one-mebibyte fuzz
+  boundary with deterministic evidence for valid nested input, malformed JSON,
+  excessive nesting, and duplicate members at nested object depth.
 - Deterministic fuzz seed materialization now uses a capability-bound Rust
   `xtask`, syncs and atomically publishes derived seed files without mutating
   hard-link targets, recovers interrupted fixed-name staging files, cleans
