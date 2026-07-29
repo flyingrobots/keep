@@ -64,7 +64,8 @@ impl SourceCorpus {
     /// Each retained source must still match the device, inode, byte length,
     /// modification time, and change time admitted for this corpus kind. The
     /// method then reruns the bounded Git present/deleted inventories for the
-    /// same kind and requires the sorted selected path set to remain identical.
+    /// same kind, requires the sorted selected path set to remain identical,
+    /// and revalidates every retained identity after re-inventory.
     ///
     /// This operation performs repository metadata I/O and starts bounded Git
     /// child processes. It reports path replacement, in-place mutation, added
@@ -77,15 +78,30 @@ impl SourceCorpus {
         repository_root: &RepositoryRoot,
         process_directory: &RepositoryProcessDirectory,
     ) -> Result<(), DocumentationError> {
-        for source in &self.sources {
-            source.verify(repository_root, self.kind)?;
-        }
+        self.verify_unchanged_with(repository_root, process_directory, || Ok(()))
+    }
+
+    fn verify_unchanged_with(
+        &self,
+        repository_root: &RepositoryRoot,
+        process_directory: &RepositoryProcessDirectory,
+        after_identity_verification: impl FnOnce() -> Result<(), DocumentationError>,
+    ) -> Result<(), DocumentationError> {
+        self.verify_sources(repository_root)?;
+        after_identity_verification()?;
         let current = Self::read(repository_root, process_directory, self.kind)?;
         if let Some(path) = membership_change(&self.paths, &current.paths) {
             return Err(DocumentationError::CorpusChanged {
                 corpus: self.kind.label(),
                 path,
             });
+        }
+        self.verify_sources(repository_root)
+    }
+
+    fn verify_sources(&self, repository_root: &RepositoryRoot) -> Result<(), DocumentationError> {
+        for source in &self.sources {
+            source.verify(repository_root, self.kind)?;
         }
         Ok(())
     }

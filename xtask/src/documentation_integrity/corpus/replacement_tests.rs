@@ -60,3 +60,36 @@ fn added_source_refuses_the_admitted_corpus() -> Result<(), Box<dyn std::error::
     directory.close()?;
     Ok(())
 }
+
+#[test]
+fn source_replaced_between_identity_and_membership_checks_is_refused()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::create("documentation-source-verification-race")?;
+    let root = directory.path();
+    run_git(root, &["init", "--quiet", "--template="])?;
+    fs::write(root.join("selected.md"), "# Original\n")?;
+    fs::write(root.join("substitute.bin"), "# Substitute\n")?;
+    let repository_root = RepositoryRoot::open(root)?;
+    let process_directory = repository_root.process_directory()?;
+    let corpus = SourceCorpus::markdown(&repository_root, &process_directory)?;
+
+    let result = corpus.verify_unchanged_with(&repository_root, &process_directory, || {
+        fs::rename(root.join("substitute.bin"), root.join("selected.md")).map_err(|source| {
+            DocumentationError::Snapshot {
+                action: "replace source between corpus verification phases",
+                source,
+            }
+        })
+    });
+
+    assert!(matches!(
+        result,
+        Err(DocumentationError::CorpusChanged {
+            corpus: "Markdown",
+            ref path,
+        }) if path == "selected.md"
+    ));
+    drop(corpus);
+    directory.close()?;
+    Ok(())
+}
