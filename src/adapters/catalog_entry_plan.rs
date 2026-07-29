@@ -68,12 +68,32 @@ impl<'segments, 'records> CatalogEntryPlan<'segments, 'records> {
     }
 }
 
-pub(super) fn bind(entries: &mut [CatalogEntryPlan<'_, '_>]) -> Result<(), CatalogAdmissionError> {
+pub(super) fn bind(
+    entries: &mut [CatalogEntryPlan<'_, '_>],
+    segments: &[&AdmittedSegment<'_>],
+) -> Result<(), CatalogAdmissionError> {
     entries.sort_unstable_by_key(CatalogEntryPlan::physical_order);
+    refuse_unreferenced_segments(entries, segments)?;
     for group in
         entries.chunk_by_mut(|first, second| first.segment_digest() == second.segment_digest())
     {
         bind_segment(group)?;
+    }
+    Ok(())
+}
+
+fn refuse_unreferenced_segments(
+    entries: &[CatalogEntryPlan<'_, '_>],
+    segments: &[&AdmittedSegment<'_>],
+) -> Result<(), CatalogAdmissionError> {
+    for segment in segments {
+        let digest = segment.digest();
+        if entries
+            .binary_search_by_key(&digest, CatalogEntryPlan::segment_digest)
+            .is_err()
+        {
+            return Err(CatalogAdmissionError::UnreferencedSegment { digest });
+        }
     }
     Ok(())
 }

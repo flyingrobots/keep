@@ -24,7 +24,7 @@ pub(super) fn admit<'catalog, 'records>(
     }
     let segment_index = index_segments(segments)?;
     let mut plan = plan_entries(catalog, &segment_index, requested)?;
-    catalog_entry_plan::bind(&mut plan)?;
+    catalog_entry_plan::bind(&mut plan, &segment_index)?;
     plan.sort_unstable_by_key(CatalogEntryPlan::ordinal);
     let mut bindings = Vec::new();
     bindings

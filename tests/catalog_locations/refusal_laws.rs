@@ -106,6 +106,25 @@ fn segment_input_is_bounded_and_duplicate_free() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+#[test]
+fn catalog_refuses_every_unreferenced_admitted_segment() -> Result<(), Box<dyn Error>> {
+    let catalog_bytes = fixture(BUNDLE_CATALOG_HEX)?;
+    let catalog = ChecksummedCatalog::decode(&catalog_bytes)?;
+    let referenced_bytes = fixture(BUNDLE_SEGMENT_HEX)?;
+    let unreferenced_bytes = fixture(SEGMENT_HEX)?;
+    let referenced = AdmittedSegment::decode(&referenced_bytes, maximum_policy())?;
+    let unreferenced = AdmittedSegment::decode(&unreferenced_bytes, maximum_policy())?;
+    let error = require_error(
+        catalog.admit(&[referenced, unreferenced]),
+        "unreferenced physical segment input was admitted",
+    )?;
+    assert!(matches!(
+        error,
+        CatalogAdmissionError::UnreferencedSegment { .. }
+    ));
+    Ok(())
+}
+
 fn replace_byte(target: &mut [u8], offset: usize) -> Result<(), Box<dyn Error>> {
     let byte = target
         .get_mut(offset)

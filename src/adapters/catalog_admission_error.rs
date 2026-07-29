@@ -46,6 +46,11 @@ pub enum CatalogAdmissionError {
         /// Required physical segment coordinate.
         digest: SegmentDigest,
     },
+    /// Caller input supplied a segment absent from every catalog entry.
+    UnreferencedSegment {
+        /// Unreferenced physical segment coordinate.
+        digest: SegmentDigest,
+    },
     /// Revalidating an admitted segment's immutable records failed.
     Segment {
         /// Physical segment being scanned.

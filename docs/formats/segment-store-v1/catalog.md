@@ -76,7 +76,9 @@ payload_length + 144 = record_length
 
 The named segment must exist at the digest-derived immutable-pool name and
 verify completely. The record at the declared span must reproduce the entry's
-kind, identity, lengths, and checksum exactly.
+kind, identity, lengths, and checksum exactly. A supplied admitted segment
+must be named by at least one entry; admission refuses extra unreferenced
+segments.
 
 Catalog admission creates one bounded plan over the declared entries, groups
 that plan by segment digest and physical offset, and scans each referenced

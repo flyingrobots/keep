@@ -31,6 +31,9 @@ impl fmt::Display for CatalogAdmissionError {
                 formatter.write_str("duplicate admitted segment digest")
             }
             Self::MissingSegment { .. } => formatter.write_str("catalog segment is missing"),
+            Self::UnreferencedSegment { .. } => {
+                formatter.write_str("admitted segment is not referenced by the catalog")
+            }
             Self::Segment { source, .. } => {
                 write!(formatter, "catalog segment revalidation failed: {source}")
             }
