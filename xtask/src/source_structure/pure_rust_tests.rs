@@ -14,8 +14,10 @@ fn python_source_is_refused_by_the_pure_rust_boundary() {
         ".py",
         "scripts/.PYW",
         "scripts/check.py",
+        "scripts/check.Py",
         "scripts/check.PY",
         "scripts/check.pyw",
+        "scripts/check.pYw",
         "scripts/check.PYW",
     ] {
         let present = BTreeSet::from([GitPath::new(path.as_bytes().to_vec())]);
