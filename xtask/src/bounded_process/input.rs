@@ -35,14 +35,15 @@ pub(super) fn write_input(
 
 fn write_part(
     program: &'static str,
-    stdin: &mut ChildStdin,
+    writer: &mut impl Write,
     part: &[u8],
     deadline: &ProcessDeadline,
     interrupts: &InterruptGuard,
 ) -> Result<(), ProcessError> {
     let mut remaining = part;
     while !remaining.is_empty() {
-        match stdin.write(remaining) {
+        observe_input_boundary(program, deadline, interrupts)?;
+        match writer.write(remaining) {
             Ok(0) => {
                 return Err(process_io(
                     program,
@@ -72,6 +73,18 @@ fn write_part(
     Ok(())
 }
 
+fn observe_input_boundary(
+    program: &'static str,
+    deadline: &ProcessDeadline,
+    interrupts: &InterruptGuard,
+) -> Result<(), ProcessError> {
+    if let Some(error) = interrupts.refusal(program) {
+        return Err(error);
+    }
+    deadline.remaining(program)?;
+    Ok(())
+}
+
 fn wait_for_input(
     program: &'static str,
     deadline: &ProcessDeadline,
@@ -97,5 +110,46 @@ const fn process_io(
         program,
         action,
         source,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_PROGRAM: &str = "input-progress-test";
+
+    struct OneByteWriter;
+
+    impl Write for OneByteWriter {
+        fn write(&mut self, bytes: &[u8]) -> Result<usize, io::Error> {
+            Ok(usize::from(!bytes.is_empty()))
+        }
+
+        fn flush(&mut self) -> Result<(), io::Error> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn continuous_input_progress_still_obeys_the_complete_deadline() -> Result<(), ProcessError> {
+        let deadline = ProcessDeadline::new(TEST_PROGRAM, Some(Duration::ZERO))?;
+        let interrupts = InterruptGuard::begin(TEST_PROGRAM)?;
+        let result = write_part(
+            TEST_PROGRAM,
+            &mut OneByteWriter,
+            b"deadline",
+            &deadline,
+            &interrupts,
+        );
+
+        assert!(matches!(
+            result,
+            Err(ProcessError::Timeout {
+                program: TEST_PROGRAM,
+                duration: Duration::ZERO,
+            })
+        ));
+        Ok(())
     }
 }
