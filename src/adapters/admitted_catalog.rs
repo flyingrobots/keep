@@ -1,7 +1,8 @@
 //! Catalog whose logical records are bound to admitted segment bytes.
 
 use super::{
-    AdmittedSegmentRecord, CatalogRecordBinding, ChecksummedCatalog, SegmentRecordIdentity,
+    AdmittedSegmentRecord, CatalogRecordBinding, CatalogSuccessor, CatalogTransitionError,
+    ChecksummedCatalog, SegmentRecordIdentity, catalog_transition,
 };
 use crate::{CatalogDigest, CatalogGeneration};
 
@@ -27,6 +28,12 @@ impl<'catalog, 'records> AdmittedCatalog<'catalog, 'records> {
         self.catalog.digest()
     }
 
+    /// Returns the predecessor witness, absent only for generation 1.
+    #[must_use]
+    pub const fn previous_catalog_digest(&self) -> Option<CatalogDigest> {
+        self.catalog.previous_catalog_digest()
+    }
+
     /// Returns the exact number of logical record bindings.
     #[must_use]
     pub const fn record_count(&self) -> u64 {
@@ -47,6 +54,20 @@ impl<'catalog, 'records> AdmittedCatalog<'catalog, 'records> {
             .get(index)
             .copied()
             .map(CatalogRecordBinding::record)
+    }
+
+    /// Admits a fully verified candidate as this snapshot's exact successor.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CatalogTransitionError`] when generation arithmetic is
+    /// exhausted, the candidate is not exactly one generation later, or its
+    /// predecessor digest does not equal this catalog's verified digest.
+    pub fn validate_successor<'next_catalog, 'next_records>(
+        &self,
+        candidate: AdmittedCatalog<'next_catalog, 'next_records>,
+    ) -> Result<CatalogSuccessor<'next_catalog, 'next_records>, CatalogTransitionError> {
+        catalog_transition::validate(self, candidate)
     }
 
     pub(super) const fn from_verified_parts(
