@@ -27,10 +27,10 @@ pub(super) fn validate(encoded: &[u8], entry_count: u64) -> Result<(), CatalogDe
     {
         let index = u64::try_from(host_index)
             .map_err(|_source| CatalogDecodeError::LengthArithmetic { entry_count })?;
-        let identity = catalog_entry_decoder::decode(entry)
+        let decoded = catalog_entry_decoder::decode(entry)
             .map_err(|source| CatalogDecodeError::Entry { index, source })?;
-        validate_order(previous, index, identity)?;
-        previous = Some((index, identity));
+        validate_order(previous, index, decoded.identity())?;
+        previous = Some((index, decoded.identity()));
     }
     Ok(())
 }

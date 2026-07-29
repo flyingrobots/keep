@@ -1,5 +1,6 @@
 //! Structurally and logically admitted borrowed immutable segment.
 
+use super::segment_record_cursor::SegmentRecordCursor;
 use super::{
     SegmentDigest, SegmentReadError, SegmentReadPolicy, SegmentRecords, SegmentSeal, segment_reader,
 };
@@ -54,6 +55,10 @@ impl<'a> AdmittedSegment<'a> {
     #[must_use]
     pub const fn records(&self) -> SegmentRecords<'a> {
         SegmentRecords::new(self.records, self.seal.record_count(), self.policy)
+    }
+
+    pub(super) const fn record_cursor(&self) -> SegmentRecordCursor<'a> {
+        SegmentRecordCursor::new(self.records, self.seal.record_count(), self.policy)
     }
 
     pub(super) const fn admitted(

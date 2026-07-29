@@ -20,12 +20,13 @@ mod profile;
 mod reference;
 
 pub use adapters::{
-    AdmittedSegment, AdmittedSegmentRecord, BlobIdBinaryParseError, BlobIdTextParseError,
-    CanonicalLayoutRecord, CatalogDecodeError, CatalogEntryDecodeError, ChecksummedCatalog,
-    ChecksummedPublicationHead, ChecksummedSegmentRecord, FilesystemSegmentStage,
-    LayoutDecodeError, LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError,
-    LayoutIdTextParseError, PublicationHeadDecodeError, SealedSegment, SegmentDigest,
-    SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError, SegmentReadError, SegmentReadPolicy,
+    AdmittedCatalog, AdmittedSegment, AdmittedSegmentRecord, BlobIdBinaryParseError,
+    BlobIdTextParseError, CanonicalLayoutRecord, CatalogAdmissionError, CatalogAllocationPhase,
+    CatalogDecodeError, CatalogEntryDecodeError, ChecksummedCatalog, ChecksummedPublicationHead,
+    ChecksummedSegmentRecord, FilesystemSegmentStage, LayoutDecodeError, LayoutDecodePolicy,
+    LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
+    PublicationHeadDecodeError, SealedSegment, SegmentDigest, SegmentDurabilityPhase,
+    SegmentHeader, SegmentHeaderError, SegmentReadError, SegmentReadPolicy,
     SegmentRecordAdmissionError, SegmentRecordChecksum, SegmentRecordDecodeError,
     SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity, SegmentRecordLength,
     SegmentRecordLimit, SegmentRecordLimitError, SegmentRecordPayloadLength, SegmentRecords,

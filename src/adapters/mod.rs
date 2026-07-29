@@ -5,15 +5,21 @@
 //! ingress and egress. It does not own identity calculation, logical layout
 //! policy, physical location, namespace publication, recovery, or retention.
 
+mod admitted_catalog;
 mod admitted_segment;
 mod admitted_segment_record;
 mod blob_id_binary;
 mod blob_id_binary_error;
 mod blob_id_text;
 mod blob_id_text_error;
+mod catalog_admission;
+mod catalog_admission_error;
+mod catalog_admission_error_display;
+mod catalog_allocation_phase;
 mod catalog_decode_error;
 mod catalog_decode_error_display;
 mod catalog_decoder;
+mod catalog_entries;
 mod catalog_entry_decode_error;
 mod catalog_entry_decode_error_display;
 mod catalog_entry_decoder;
@@ -21,9 +27,11 @@ mod catalog_entry_fields;
 mod catalog_entry_sequence;
 mod catalog_header_decoder;
 mod catalog_integrity;
+mod catalog_record_binding;
 mod checksummed_catalog;
 mod checksummed_publication_head;
 mod checksummed_segment_record;
+mod decoded_catalog_entry;
 mod filesystem_segment_stage;
 mod framed_blake3;
 mod layout_decode_error;
@@ -101,10 +109,13 @@ mod staged_segment;
 mod storage_profile_id_text;
 mod storage_profile_id_text_error;
 
+pub use admitted_catalog::AdmittedCatalog;
 pub use admitted_segment::AdmittedSegment;
 pub use admitted_segment_record::AdmittedSegmentRecord;
 pub use blob_id_binary_error::BlobIdBinaryParseError;
 pub use blob_id_text_error::BlobIdTextParseError;
+pub use catalog_admission_error::CatalogAdmissionError;
+pub use catalog_allocation_phase::CatalogAllocationPhase;
 pub use catalog_decode_error::CatalogDecodeError;
 pub use catalog_entry_decode_error::CatalogEntryDecodeError;
 pub use checksummed_catalog::ChecksummedCatalog;
@@ -142,3 +153,7 @@ pub use segment_write_error::SegmentWriteError;
 pub use segment_write_phase::{SegmentDurabilityPhase, SegmentWritePhase};
 pub use staged_segment::StagedSegment;
 pub use storage_profile_id_text_error::StorageProfileIdParseError;
+
+use catalog_entries::CatalogEntries;
+use catalog_record_binding::CatalogRecordBinding;
+use decoded_catalog_entry::DecodedCatalogEntry;

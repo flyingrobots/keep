@@ -1,7 +1,8 @@
 //! Canonical fixed-width catalog-entry decoder.
 
 use super::{
-    CatalogEntryDecodeError, SegmentRecordIdentity,
+    CatalogEntryDecodeError, DecodedCatalogEntry, SegmentDigest, SegmentRecordChecksum,
+    SegmentRecordIdentity, SegmentRecordLength,
     catalog_entry_fields::{self, read_array, read_u8, read_u16, read_u64},
 };
 use crate::{ChunkId, ChunkLength, LayoutId};
@@ -16,7 +17,7 @@ const SEGMENT_HEADER_LENGTH: u64 = 64;
 const RECORD_FRAMING_LENGTH: u64 = 144;
 const MAXIMUM_RECORD_PAYLOAD_LENGTH: u64 = 67_108_864;
 
-pub(super) fn decode(encoded: &[u8]) -> Result<SegmentRecordIdentity, CatalogEntryDecodeError> {
+pub(super) fn decode(encoded: &[u8]) -> Result<DecodedCatalogEntry, CatalogEntryDecodeError> {
     if encoded.len() != ENCODED_LENGTH {
         return Err(CatalogEntryDecodeError::WrongLength {
             expected: ENCODED_LENGTH,
@@ -33,9 +34,11 @@ pub(super) fn decode(encoded: &[u8]) -> Result<SegmentRecordIdentity, CatalogEnt
     }
     let identity_length = read_u16(encoded, 2)?;
     let identity_slot = read_array(encoded, 4)?;
+    let segment_digest = read_array(encoded, 64)?;
     let record_offset = read_u64(encoded, 96)?;
     let record_length = read_u64(encoded, 104)?;
     let payload_length = read_u64(encoded, 112)?;
+    let checksum = read_array(encoded, 120)?;
     let reserved = read_array(encoded, 152)?;
     let identity = decode_identity(kind, identity_length, identity_slot, payload_length)?;
     validate_payload_bounds(kind, payload_length)?;
@@ -47,7 +50,13 @@ pub(super) fn decode(encoded: &[u8]) -> Result<SegmentRecordIdentity, CatalogEnt
             observed: reserved,
         });
     }
-    Ok(identity)
+    Ok(DecodedCatalogEntry::new(
+        identity,
+        SegmentDigest::from_validated(segment_digest),
+        record_offset,
+        SegmentRecordLength::from_validated(record_length),
+        SegmentRecordChecksum::from_validated(checksum),
+    ))
 }
 
 fn decode_identity(

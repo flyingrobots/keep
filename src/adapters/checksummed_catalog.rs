@@ -1,6 +1,9 @@
 //! Canonically framed, checksum- and digest-verified borrowed catalog.
 
-use super::{CatalogDecodeError, catalog_decoder};
+use super::{
+    AdmittedCatalog, AdmittedSegment, CatalogAdmissionError, CatalogDecodeError, CatalogEntries,
+    catalog_admission, catalog_decoder,
+};
 use crate::{CatalogDigest, CatalogGeneration};
 
 /// Borrowed catalog bytes with canonical framing, ordering, and integrity proof.
@@ -31,6 +34,25 @@ impl<'a> ChecksummedCatalog<'a> {
         catalog_decoder::decode(encoded)
     }
 
+    /// Binds every logical entry to one exact top-level admitted segment record.
+    ///
+    /// This operation performs no I/O. It temporarily allocates one sorted
+    /// borrowed segment index and retains one logical record binding per entry.
+    /// Both allocations are bounded by caller input or the verified catalog
+    /// entry count.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`CatalogAdmissionError`] for allocation refusal, duplicate or
+    /// missing segments, failed immutable revalidation, interior locations, or
+    /// disagreement between catalog fields and the selected record.
+    pub fn admit<'records>(
+        self,
+        segments: &[AdmittedSegment<'records>],
+    ) -> Result<AdmittedCatalog<'a, 'records>, CatalogAdmissionError> {
+        catalog_admission::admit(self, segments)
+    }
+
     /// Returns the exact borrowed canonical bytes.
     #[must_use]
     pub const fn encoded(self) -> &'a [u8] {
@@ -57,6 +79,10 @@ impl<'a> ChecksummedCatalog<'a> {
     /// Returns the verified physical catalog digest.
     pub const fn digest(self) -> CatalogDigest {
         self.digest
+    }
+
+    pub(super) fn entries(self) -> Result<CatalogEntries<'a>, CatalogDecodeError> {
+        CatalogEntries::new(self.encoded, self.entry_count)
     }
 
     pub(super) const fn from_verified_parts(
