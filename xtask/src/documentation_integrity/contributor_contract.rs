@@ -67,7 +67,13 @@ mod tests {
             "git diff --cached --check\n",
         );
 
-        assert!(super::admit("guide.md", invalid).is_err());
+        assert!(matches!(
+            super::admit("guide.md", invalid),
+            Err(super::DocumentationError::RepositoryContract {
+                path: "guide.md",
+                requirement: "contributor command does not replace change checks with a whole-tree check",
+            })
+        ));
     }
 
     #[test]
