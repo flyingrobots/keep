@@ -194,7 +194,8 @@ after its public API and format compatibility policies are established.
   explicit file and directory synchronization, transitive `head.next`
   verification, atomic `HEAD` replacement, and stale or recovery-required
   refusal before mutation. New segment publication consumes a handle-free
-  `ClosedSegment` proof before any immutable-pool link.
+  `ClosedSegment` proof before any immutable-pool link, and publisher teardown
+  closes every retained writable handle before releasing writer authority.
 - Bounded `FilesystemCatalogSnapshot` restart loading that follows only exact
   checksummed head, catalog, and segment coordinates; refuses symbolic links,
   nonregular files, malformed or conflicting bytes, dangling entries, and

@@ -135,3 +135,22 @@ const fn maximum_segment_policy() -> SegmentReadPolicy {
 fn fixture(hex: &str) -> Result<Vec<u8>, Box<dyn Error>> {
     decode_hex(hex.strip_suffix('\n').ok_or("fixture must end in one LF")?).map_err(Into::into)
 }
+
+#[test]
+fn publisher_drop_closes_writable_stages_before_releasing_writer_authority()
+-> Result<(), Box<dyn Error>> {
+    let source = include_str!("../src/adapters/filesystem_catalog_publisher.rs");
+    let catalog_stage = source
+        .find("pub(super) catalog_stage:")
+        .ok_or("publisher must retain the catalog stage")?;
+    let head_stage = source
+        .find("pub(super) head_stage:")
+        .ok_or("publisher must retain the head stage")?;
+    let writer_lock = source
+        .find("pub(super) _lock:")
+        .ok_or("publisher must retain writer authority")?;
+
+    assert!(catalog_stage < writer_lock);
+    assert!(head_stage < writer_lock);
+    Ok(())
+}

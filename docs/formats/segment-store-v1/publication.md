@@ -131,7 +131,8 @@ the forward segment, catalog, and head protocols below. Every writable catalog
 or head handle is closed before the synchronized stage is reopened read-only.
 Existing immutable-pool coordinates are never replaced; their bytes are
 reopened and compared against the preflighted canonical artifact before the
-protocol advances.
+protocol advances. Publisher teardown closes retained writable handles and
+pinned directory capabilities before releasing the writer lock.
 
 Publishing a new segment additionally requires a checked
 `SegmentPublication::one` selection. The caller must first consume

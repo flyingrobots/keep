@@ -18,11 +18,10 @@ pub(super) const NEXT_HEAD: &str = "head.next";
 ///
 /// The publisher owns the writer lock and pinned root, staging, segment-pool,
 /// and catalog-pool directory capabilities until it is dropped. Dropping it
-/// closes open stages and releases the writer lock but never publishes,
-/// removes, truncates, or repairs protocol state.
+/// closes open stages and directory capabilities before releasing the writer
+/// lock, but never publishes, removes, truncates, or repairs protocol state.
 #[must_use]
 pub struct FilesystemCatalogPublisher {
-    pub(super) _lock: FilesystemWriterLock,
     pub(super) root: Dir,
     pub(super) staging: Dir,
     pub(super) segments: Dir,
@@ -30,6 +29,9 @@ pub struct FilesystemCatalogPublisher {
     pub(super) policy: CatalogRestartPolicy,
     pub(super) catalog_stage: Option<File>,
     pub(super) head_stage: Option<File>,
+    // Fields drop in declaration order. Writer authority must outlive every
+    // directory capability and retained writable stage.
+    pub(super) _lock: FilesystemWriterLock,
 }
 
 impl FilesystemCatalogPublisher {
@@ -45,7 +47,6 @@ impl FilesystemCatalogPublisher {
         let segments = root.open_dir_nofollow("segments")?;
         let catalogs = root.open_dir_nofollow("catalogs")?;
         Ok(Self {
-            _lock: lock,
             root,
             staging,
             segments,
@@ -53,6 +54,7 @@ impl FilesystemCatalogPublisher {
             policy,
             catalog_stage: None,
             head_stage: None,
+            _lock: lock,
         })
     }
 
