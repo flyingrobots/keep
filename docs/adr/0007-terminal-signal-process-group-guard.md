@@ -37,9 +37,17 @@ per-stream capture limits.
 An observed terminal signal becomes a typed `ProcessError::Interrupted`
 refusal. The normal failure path then sends `SIGKILL` to the dedicated child
 process group, kills and reaps the child, and joins captured-output readers
-before returning. The terminal signal is not sent directly to the child group;
-one cleanup authority avoids races between signal delivery and mandatory
-process-group termination.
+before returning. Captured processes collect and join both readers before the
+successful child wait consumes the process-group leader's waitable identity.
+Every reader failure that can invoke group cleanup therefore occurs while that
+identity is still owned, and no cleanup path addresses a numeric process-group
+ID after the child has been reaped. Output-limit and late-interrupt refusals
+found after a successful wait require no cleanup because the child and readers
+have already terminated.
+
+The terminal signal is not sent directly to the child group; one cleanup
+authority avoids races between signal delivery and mandatory process-group
+termination.
 
 When no external operation is active, the guard restores the signal's default
 behavior. A signal observed while the final operation retires, or a second

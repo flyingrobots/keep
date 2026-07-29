@@ -121,10 +121,6 @@ impl CapturedProcess {
         program: &'static str,
         deadline: &ProcessDeadline,
     ) -> Result<ProcessOutput, ProcessError> {
-        let status = match wait_for_child(program, &mut self.child, deadline, &self.interrupts) {
-            Ok(status) => status,
-            Err(error) => return Err(join_readers(self.stdout, self.stderr, error)),
-        };
         let stdout = match self.stdout.receive(deadline, &self.interrupts) {
             Ok(output) => output,
             Err(error) => return Err(self.cleanup_readers(error)),
@@ -140,11 +136,12 @@ impl CapturedProcess {
         if let Err(error) = self.stderr.join() {
             return Err(cleanup_process(&mut self.child, error));
         }
-        refuse_exceeded(program, "stdout", self.limits.stdout_bytes(), &stdout)
-            .and_then(|()| refuse_exceeded(program, "stderr", self.limits.stderr_bytes(), &stderr))
-            .map_err(|error| cleanup_process(&mut self.child, error))?;
+        let status = wait_for_child(program, &mut self.child, deadline, &self.interrupts)?;
+        refuse_exceeded(program, "stdout", self.limits.stdout_bytes(), &stdout).and_then(|()| {
+            refuse_exceeded(program, "stderr", self.limits.stderr_bytes(), &stderr)
+        })?;
         if let Some(error) = self.interrupts.refusal(program) {
-            return Err(cleanup_process(&mut self.child, error));
+            return Err(error);
         }
         Ok(ProcessOutput {
             code: status.code(),

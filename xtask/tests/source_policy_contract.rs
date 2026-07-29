@@ -49,6 +49,40 @@ fn git_inventory_uses_the_deadline_bounded_process_layer() {
 }
 
 #[test]
+fn captured_process_keeps_the_group_leader_until_reader_collection_finishes()
+-> Result<(), &'static str> {
+    let (_, after_signature) = BOUNDED_PROCESS_CAPTURE
+        .split_once("    fn finish(")
+        .ok_or("captured process must retain its finish boundary")?;
+    let (body, _) = after_signature
+        .split_once("\n    fn cleanup_readers")
+        .ok_or("captured process finish boundary must remain inspectable")?;
+    let wait = body
+        .find("wait_for_child")
+        .ok_or("captured process must reap its child")?;
+
+    for operation in [
+        "self.stdout.receive",
+        "self.stderr.receive",
+        "self.stdout.join",
+        "self.stderr.join",
+    ] {
+        let position = body
+            .find(operation)
+            .ok_or("captured process must collect and join both output streams")?;
+        assert!(position < wait, "child wait precedes {operation}");
+    }
+    assert!(
+        !body
+            .get(wait..)
+            .unwrap_or_default()
+            .contains("cleanup_process"),
+        "cleanup may group-kill after the child ownership lifetime ends"
+    );
+    Ok(())
+}
+
+#[test]
 fn process_fixtures_do_not_write_to_rust_stdout() {
     assert!(!BOUNDED_PROCESS_TESTS.contains("io::stdout()"));
 }
