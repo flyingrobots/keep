@@ -60,6 +60,7 @@ impl fmt::Display for DocumentationError {
                 refusal_mismatch(formatter, scenario, observed.as_deref())
             }
             error @ (Self::RepositoryFileEncoding { .. }
+            | Self::RepositoryFileChanged(_)
             | Self::RepositoryFileInspect { .. }
             | Self::RepositoryFileNonRegular(_)
             | Self::RepositoryFileTooLarge { .. }
@@ -116,6 +117,12 @@ fn corpus(formatter: &mut fmt::Formatter<'_>, error: &DocumentationError) -> fmt
 
 fn repository_file(formatter: &mut fmt::Formatter<'_>, error: &DocumentationError) -> fmt::Result {
     match error {
+        DocumentationError::RepositoryFileChanged(path) => {
+            write!(
+                formatter,
+                "repository file changed during validation: `{path}`"
+            )
+        }
         DocumentationError::RepositoryFileEncoding { path, .. } => {
             write!(formatter, "repository file `{path}` is not UTF-8")
         }

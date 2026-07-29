@@ -25,8 +25,11 @@ pub(super) fn check(repository_root: &RepositoryRoot) -> Result<(), Documentatio
     let manifest = repository_text::read(repository_root, MANIFEST_PATH)?;
     let lock = repository_text::read(repository_root, LOCK_PATH)?;
     let installer = repository_text::read(repository_root, INSTALLER_PATH)?;
-    admit(&manifest, &lock, &installer)?;
-    admit_lock_bytes(&lock)
+    admit(manifest.as_str(), lock.as_str(), installer.as_str())?;
+    admit_lock_bytes(lock.as_str())?;
+    manifest.verify(repository_root)?;
+    lock.verify(repository_root)?;
+    installer.verify(repository_root)
 }
 
 fn admit(manifest: &str, lock: &str, installer: &str) -> Result<(), DocumentationError> {

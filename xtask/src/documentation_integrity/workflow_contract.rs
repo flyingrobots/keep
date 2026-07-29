@@ -23,7 +23,8 @@ const NODE_VERSION: &str = "24.18.0";
 
 pub(super) fn check(repository_root: &RepositoryRoot) -> Result<(), DocumentationError> {
     let workflow = repository_text::read(repository_root, CI_PATH)?;
-    admit(&workflow)
+    admit(workflow.as_str())?;
+    workflow.verify(repository_root)
 }
 
 fn admit(workflow: &str) -> Result<(), DocumentationError> {

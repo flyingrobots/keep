@@ -26,7 +26,8 @@ pub(super) fn check(
 ) -> Result<(), DocumentationError> {
     let raw = repository_text::read(repository_root, DEPENDABOT_PATH)?;
     let required = tracked_scopes(process_directory)?;
-    admit(&raw, &required)
+    admit(raw.as_str(), &required)?;
+    raw.verify(repository_root)
 }
 
 fn admit(raw: &str, required: &BTreeSet<DependencyScope>) -> Result<(), DocumentationError> {

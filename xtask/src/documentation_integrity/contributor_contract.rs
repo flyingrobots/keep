@@ -14,7 +14,8 @@ const WHOLE_TREE_CHECK: &str = r#"git diff --check "$(git hash-object -t tree /d
 pub(super) fn check(repository_root: &RepositoryRoot) -> Result<(), DocumentationError> {
     for path in [CONTRIBUTING_PATH, STANDARDS_PATH] {
         let raw = repository_text::read(repository_root, path)?;
-        admit(path, &raw)?;
+        admit(path, raw.as_str())?;
+        raw.verify(repository_root)?;
     }
     Ok(())
 }

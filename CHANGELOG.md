@@ -38,7 +38,9 @@ after its public API and format compatibility policies are established.
   bounds each admitted documentation source to 4 MiB and each selected corpus
   to 64 MiB before external tools start, retains every selected source
   identity, refuses device, inode, size, modification-time, or change-time
-  drift before and after each external tool,
+  drift before and after each external tool, retains each fixed policy file
+  identity through semantic admission so a replaced path cannot validate bytes
+  from a superseded file,
   and applies a two-minute deadline across Git inventory, validation-tool
   execution, and output collection. Validation tools clear the inherited
   environment and admit only the executable search path and `C` locale, so

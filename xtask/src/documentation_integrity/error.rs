@@ -71,6 +71,8 @@ pub(crate) enum DocumentationError {
         path: &'static str,
         source: io::Error,
     },
+    /// A fixed policy path no longer names the file identity admitted for validation.
+    RepositoryFileChanged(&'static str),
     RepositoryFileNonRegular(&'static str),
     RepositoryFileTooLarge {
         path: &'static str,
@@ -163,6 +165,7 @@ impl Error for DocumentationError {
             | Self::InvalidPath { .. }
             | Self::NonRegular { .. }
             | Self::RefusalMismatch { observed: None, .. }
+            | Self::RepositoryFileChanged(_)
             | Self::RepositoryFileNonRegular(_)
             | Self::RepositoryFileTooLarge { .. }
             | Self::RepositoryContract { .. }
