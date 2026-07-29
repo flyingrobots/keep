@@ -45,6 +45,22 @@ impl fmt::Display for DocumentationError {
                 write!(formatter, "{corpus} corpus contains a non-UTF-8 path")
             }
             Self::Process(error) => write!(formatter, "{error}"),
+            Self::RefusalFixture { action, .. } => {
+                write!(
+                    formatter,
+                    "cannot {action} for documentation refusal evidence"
+                )
+            }
+            Self::RefusalMismatch { scenario, observed } => {
+                write!(
+                    formatter,
+                    "documentation refusal scenario `{scenario}` did not produce its reviewed error"
+                )?;
+                if let Some(error) = observed {
+                    write!(formatter, ": {error}")?;
+                }
+                Ok(())
+            }
             error @ (Self::RepositoryFileEncoding { .. }
             | Self::RepositoryFileInspect { .. }
             | Self::RepositoryFileNonRegular(_)

@@ -99,9 +99,7 @@ jobs:
             "$documentation_tools/npm/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Verify malformed-input refusal laws
-        run: |
-          cargo test --locked --package xtask \
-            documentation_integrity::execution::external_tests -- --ignored
+        run: cargo xtask documentation-refusal-check
 
       - name: Check documentation and workflows
         run: cargo xtask documentation-integrity-check

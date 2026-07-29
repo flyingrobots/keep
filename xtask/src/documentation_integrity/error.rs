@@ -52,6 +52,16 @@ pub(crate) enum DocumentationError {
         source: FromUtf8Error,
     },
     Process(ProcessError),
+    /// A filesystem operation could not construct or remove a refusal fixture.
+    RefusalFixture {
+        action: &'static str,
+        source: io::Error,
+    },
+    /// A malformed-input scenario did not produce its exact reviewed refusal.
+    RefusalMismatch {
+        scenario: &'static str,
+        observed: Option<Box<Self>>,
+    },
     RepositoryFileEncoding {
         path: &'static str,
         source: FromUtf8Error,
@@ -128,15 +138,19 @@ impl Error for DocumentationError {
             Self::CheckFailures { first, .. } => Some(first),
             Self::GitInventory(error) => Some(error),
             Self::Process(error) => Some(error),
-            Self::Inspect { source, .. } | Self::RepositoryFileInspect { source, .. } => {
-                Some(source)
-            }
+            Self::Inspect { source, .. }
+            | Self::RefusalFixture { source, .. }
+            | Self::RepositoryFileInspect { source, .. }
+            | Self::RepositoryRootInspect { source, .. } => Some(source),
             Self::PathEncoding { source, .. } | Self::RepositoryFileEncoding { source, .. } => {
                 Some(source)
             }
+            Self::RefusalMismatch {
+                observed: Some(error),
+                ..
+            } => Some(error),
             Self::RepositoryJson { source, .. } => Some(source),
             Self::RepositoryYaml { source, .. } => Some(source),
-            Self::RepositoryRootInspect { source, .. } => Some(source),
             Self::ToolOutputEncoding { source, .. } => Some(source),
             Self::ToolUnavailable { source, .. } => Some(source),
             Self::CorpusFileTooLarge { .. }
@@ -146,6 +160,7 @@ impl Error for DocumentationError {
             | Self::EmptyCorpus(_)
             | Self::InvalidPath { .. }
             | Self::NonRegular { .. }
+            | Self::RefusalMismatch { observed: None, .. }
             | Self::RepositoryFileNonRegular(_)
             | Self::RepositoryFileTooLarge { .. }
             | Self::RepositoryContract { .. }

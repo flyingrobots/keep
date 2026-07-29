@@ -553,13 +553,16 @@ The same Rust command checks workflows with `actionlint` 1.7.12 and refuses
 another version. It also verifies the committed Node lock graph, Dependabot
 manifest coverage, and the documentation job's delegation to this command.
 The dedicated `documentation` job in `.github/workflows/ci.yml` installs the
-pinned tools, runs malformed-input refusal laws and the repository-owned
-command, and verifies repository whitespace before admitting the result as CI
-evidence. The Rust workflow contract pins that job to `ubuntu-latest` with a
-ten-minute deadline, rejects workflow and job run defaults, and admits only the
-reviewed action and command step fields. A custom shell, working directory,
-environment, or other unreviewed execution modifier cannot impersonate a
-required command.
+pinned tools, runs `cargo xtask documentation-refusal-check`, runs the
+repository-owned integrity command, and verifies repository whitespace before
+admitting the result as CI evidence. The named refusal command constructs and
+executes both malformed-input scenarios directly, so removing or renaming
+either scenario breaks the command instead of producing a successful
+zero-test result. The Rust workflow contract pins that job to `ubuntu-latest`
+with a ten-minute deadline, rejects workflow and job run defaults, and admits
+only the reviewed action and command step fields. A custom shell, working
+directory, environment, or other unreviewed execution modifier cannot
+impersonate a required command.
 
 CI SHOULD block on facts it can determine reliably:
 

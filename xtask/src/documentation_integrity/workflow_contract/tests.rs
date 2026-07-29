@@ -37,9 +37,7 @@ jobs:
             "$documentation_tools/bin" \
             "$documentation_tools/npm/node_modules/.bin" >> "$GITHUB_PATH"
       - name: Verify malformed inputs
-        run: |
-          cargo test --locked --package xtask \
-            documentation_integrity::execution::external_tests -- --ignored
+        run: cargo xtask documentation-refusal-check
       - name: Verify
         run: cargo xtask documentation-integrity-check
       - name: Check whitespace

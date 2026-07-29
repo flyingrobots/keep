@@ -64,10 +64,9 @@ mod source_structure;
     reason = "the parent command dispatcher is the only consumer"
 )]
 mod task_error;
-#[cfg(test)]
 #[allow(
     clippy::redundant_pub_crate,
-    reason = "scoped test directories are shared by sibling test modules"
+    reason = "scoped evidence directories are shared by verification and test modules"
 )]
 mod test_directory;
 
@@ -111,6 +110,9 @@ fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
         }
         "documentation-integrity-check" => {
             documentation_integrity::check(repository_root)?;
+        }
+        "documentation-refusal-check" => {
+            documentation_integrity::check_refusals()?;
         }
         "prepare-fuzz-corpus" => {
             fuzz_seed_corpus::prepare(repository_root)?;

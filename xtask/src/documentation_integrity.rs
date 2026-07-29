@@ -16,6 +16,11 @@ use crate::repository_file::RepositoryRoot;
 
 pub(super) use error::DocumentationError;
 
+/// Runs the pinned-tool malformed-input refusal evidence.
+pub(super) fn check_refusals() -> Result<(), DocumentationError> {
+    execution::check_refusals()
+}
+
 pub(super) fn check(repository_path: &Path) -> Result<(), DocumentationError> {
     let repository_root = RepositoryRoot::open(repository_path).map_err(|source| {
         DocumentationError::RepositoryRootInspect {

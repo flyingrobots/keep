@@ -31,6 +31,9 @@ after its public API and format compatibility policies are established.
   documentation jobs and required steps, requires each Dependabot update block
   to choose exactly one directory field form, and requires the documentation
   workflow to run for pushes to `main` and every pull request,
+  executes malformed Markdown and workflow evidence through the named
+  `cargo xtask documentation-refusal-check` boundary instead of a
+  zero-match-successful libtest substring filter,
   bounds each admitted documentation source to 4 MiB and each selected corpus
   to 64 MiB before external tools start, retains every selected source
   identity, refuses device, inode, size, modification-time, or change-time

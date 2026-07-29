@@ -112,6 +112,10 @@ state and requires no recovery; a subsequent job starts from a fresh runner.
 The Rust workflow contract requires the exact top-level `contents: read`
 permission mapping and refuses `write-all`, write authority, additional scopes,
 or omitted permissions before admitting any documentation step.
+The job invokes `cargo xtask documentation-refusal-check` after installing the
+pinned tools. That named Rust command directly executes the broken-fragment and
+invalid-workflow scenarios and requires their exact tool refusals; it does not
+depend on a libtest substring filter or accept a zero-test run.
 
 ## Review triggers
 

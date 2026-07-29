@@ -1,6 +1,7 @@
 //! This module owns bounded execution of admitted documentation tools.
 
 mod corpus_guard;
+mod refusal_check;
 
 use std::process::{Command, Stdio};
 use std::time::Duration;
@@ -37,6 +38,11 @@ pub(super) fn run(
     let external = ExternalToolRunner { process_directory };
     let mut runner = CorpusGuardedRunner::new(external, repository_root, &corpora);
     run_with(&mut runner, markdown.paths(), workflows.paths())
+}
+
+/// Executes both named malformed-input scenarios through the production runner.
+pub(super) fn check_refusals() -> Result<(), DocumentationError> {
+    refusal_check::check()
 }
 
 fn run_with(
@@ -168,9 +174,6 @@ impl ToolRunner for ExternalToolRunner<'_> {
     }
 }
 
-#[cfg(test)]
-#[path = "execution/external_tests.rs"]
-mod external_tests;
 #[cfg(test)]
 #[path = "execution/tests.rs"]
 mod tests;

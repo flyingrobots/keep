@@ -1,7 +1,6 @@
 //! This module owns the exact documentation-job step sequence.
 
-const MALFORMED_INPUT_COMMAND: &str = r"cargo test --locked --package xtask \
-  documentation_integrity::execution::external_tests -- --ignored";
+const MALFORMED_INPUT_COMMAND: &str = "cargo xtask documentation-refusal-check";
 const INSTALL_TOOLS_COMMAND: &str = r#"documentation_tools="$RUNNER_TEMP/documentation-tools"
 scripts/install_documentation_tools.sh "$documentation_tools"
 printf '%s\n' \
