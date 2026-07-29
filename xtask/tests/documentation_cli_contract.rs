@@ -27,18 +27,18 @@ fn documentation_error_formatter_stays_below_the_hard_function_limit() -> Result
 }
 
 #[test]
-fn workflow_parser_stays_below_the_hard_function_limit() -> Result<(), &'static str> {
+fn workflow_admission_parser_stays_below_the_hard_function_limit() -> Result<(), &'static str> {
     let (_, after_signature) = WORKFLOW_CONTRACT
         .split_once(
-            "fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError> {",
+            "fn admitted_steps(workflow: &str) -> Result<Vec<DocumentationStep>, DocumentationError> {",
         )
         .ok_or("workflow contract must retain its parser")?;
     let (body, _) = after_signature
-        .split_once("\n}\n\nfn documentation_steps")
+        .split_once("\n}\n\nfn triggers_are_reviewed")
         .ok_or("workflow parser must remain a directly inspectable function")?;
     assert!(
         body.lines().count() <= 59,
-        "documentation_runs exceeds the 60-line hard limit"
+        "admitted_steps exceeds the 60-line hard limit"
     );
     Ok(())
 }
