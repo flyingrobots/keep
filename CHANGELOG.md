@@ -10,6 +10,12 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Repository crash-matrix execution now terminates isolated writer process
+  groups at all 105 canonical before/during/after coordinates, retains open
+  writer and stage authority until termination, and verifies exact Golden File
+  Worldline namespaces, bytes, hard links, released locks, recovery
+  classifications, immutable artifacts, and published visible state after
+  restart. CI runs the complete matrix in debug and optimized profiles.
 - Production filesystem initialization now admits only the documented writable,
   non-casefolded Linux ext4 profile, refuses ambiguous root namespaces before
   mutation, completes the canonical directory shape idempotently, retains

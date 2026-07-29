@@ -101,8 +101,9 @@ the filesystem completer now binds that transition to pinned writer-authorized
 storage. A complete next-head assessment and exact transitive catalog snapshot
 may now authorize a transition-checked finalization through a semantic storage
 port, and the filesystem finalizer binds that transition to pinned
-writer-authorized storage. These slices do not yet claim reusable-stage
-continuation or process-death injection.
+writer-authorized storage. These slices now include reusable-stage continuation
+and the complete process-death crash matrix. Retention, compaction, garbage
+collection, and host-power-loss simulation remain outside issue #17.
 
 <!-- markdownlint-disable MD013 -->
 
@@ -128,6 +129,7 @@ continuation or process-death injection.
 | `KEEP-RECOVERY-018` | Filesystem next-head finalization retains root and `writer.lock` authority, pins every protocol directory, revalidates namespace identity and exact stage evidence around bounded complete current and candidate loads, synchronizes and reverifies the exact candidate before atomic replacement, refuses current drift, missing or reappeared candidates, links, corrupt transitive views, and namespace replacement, and returns only after root synchronization | Initial and successor finalization, exact retry, candidate-sync, evidence-drift, missing, link, corruption, namespace-replacement, current-drift, and writer-exclusion matrix | `src/adapters/filesystem_recovery_next_head_finalization_tests.rs`, `src/adapters/filesystem_recovery_next_head_finalization_tests/*.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-019` | Reusable-segment continuation plans only from an exact reusable `current.seg` assessment within the selected record policy, consumes the storage authority that reopens the stage, re-admits the complete materialized prefix against prior evidence, rebuilds digest and duplicate-identity state, and returns the ordinary append-only stage without rewriting admitted bytes | Reusable-only planning, policy refusal, changed-evidence, storage-failure, duplicate-identity, append, seal, and independent decode matrix | `tests/recovery_segment_resume.rs`, `tests/recovery_segment_resume/*.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-020` | Filesystem reusable-segment continuation retains root and `writer.lock` authority in the returned stage, pins every protocol directory, opens `current.seg` read-write without following links or truncation, bounds and re-admits its complete bytes, positions the handle at the exact validated append boundary, refuses missing, changed, linked, replaced, or namespace-drifted evidence, and preserves the prefix on append or empty seal | Empty and nonempty continuation, writer exclusion, missing, changed evidence, link, namespace replacement, writable-handoff replacement, append, seal, and independent decode matrix | `src/adapters/filesystem_recovery_segment_resume_tests.rs`, `src/adapters/filesystem_recovery_segment_resume_tests/*.rs` | Implemented in #17 |
+| `KEEP-RECOVERY-021` | Every crash point has exact before, during, and after coordinates; a deadline-bounded parent receives readiness over a Unix socket, retains that socket, terminates the isolated child process group, and independently verifies the exact Golden File Worldline namespace, bytes, hard-link identity, released writer lock, recovery-stage class, immutable-artifact admission, generation, and visible chunk after restart | Ordered 105-case model, independent expected-state model, production recovery classifiers, production restart loader, and explicit debug/optimized CI commands | `xtask/tests/durability_crash_case_contract.rs`, `xtask/tests/durability_crash_process_contract.rs`, `xtask/src/durability_crash_matrix/`, `.github/workflows/ci.yml` | Implemented in #17 |
 
 <!-- markdownlint-enable MD013 -->
 

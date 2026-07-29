@@ -99,9 +99,24 @@ authority, reconstructs the complete current and candidate views without
 following links, verifies namespace and stage identity, synchronizes and
 reverifies the exact candidate, atomically replaces `HEAD`, and synchronizes
 the root. An already-finalized retry requires `head.next` to be absent.
-Process-death injection, retention, compaction, and garbage collection remain
-planned. Presence in the reference CAS does not claim retention, crash
+The repository-owned process-death matrix executes all 105
+`KEEP-CRASH-001`–`KEEP-CRASH-035` before/during/after coordinates in isolated
+process groups. Restart verification compares the exact Golden File Worldline
+namespace and bytes, checks hard-link identity and writer-lock release, runs
+the production recovery classifiers and immutable-artifact admission, and
+reconstructs the exact published generation and visible one-zero chunk when
+`HEAD` exists. This matrix proves application process-death behavior; it does
+not simulate host power loss. Retention, compaction, and garbage collection
+remain planned. Presence in the reference CAS does not claim retention, crash
 recovery, or durability.
+
+Run the complete debug-profile matrix:
+
+```bash
+cargo xtask durability-crash-matrix
+```
+
+CI also runs the command through an optimized `xtask` build.
 
 ```rust
 use keep::BlobId;

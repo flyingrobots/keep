@@ -105,6 +105,9 @@ complete validation. A `truncated-tail-or-reusable-stage` result, for example,
 means the observed prefix decides between those two typed outcomes; it does
 not authorize truncation.
 
-The table is a planned oracle for issue #17. Until a production recovery
-adapter and crash harness exist, its evidence status is specification, not
-implementation.
+The issue #17 harness executes 105 canonical process-death cases from this
+table. It terminates an isolated writer process group, compares
+the exact restarted namespace and bytes against an independent expected-state
+model, and exercises the production recovery classifiers and Golden File
+Worldline restart loader. The harness proves application process-death
+behavior; host power loss remains outside its claim.

@@ -96,6 +96,49 @@ same crash points and must be idempotent. It may not silently promote the
 newest artifact, truncate to the last plausible boundary, rewrite a checksum,
 delete a valid orphan, or select by timestamp.
 
+## Process-death crash matrix
+
+Run the repository-owned matrix:
+
+```bash
+cargo xtask durability-crash-matrix
+```
+
+The command executes the three ordered positions for each stable
+`KEEP-CRASH-001`–`KEEP-CRASH-035` point: 105 canonical cases. Each case owns a
+fresh filesystem store and an isolated child process group. The child retains
+the writer lock and any open staged artifact, prepares the point-selected
+state, sends one readiness byte over a Unix socket, and waits on the retained
+connection. The parent keeps the accepted socket open, sends `SIGKILL` to the
+complete process group, reaps the child, and only then begins restart
+inspection. A ten-second deadline bounds failure handling; successful
+synchronization does not depend on elapsed time, sleeps, or test ordering.
+
+The state constructor and expected-state model are separate implementations.
+Restart inspection proves the complete path set and exact Golden File
+Worldline bytes. It additionally verifies hard-link identity at link
+transitions, reacquires `writer.lock` after process death, classifies
+`current.seg`, `current.cat`, and `head.next` through the production recovery
+classifiers, admits immutable segment and catalog bytes through the production
+decoders, and loads the exact generation-1 snapshot when `HEAD` is present.
+That snapshot must expose the one-zero chunk with the exact payload `00`.
+
+For byte writes, a `during` case retains a deterministic proper prefix and its
+open file handle at termination. Atomic create, hard-link, unlink, and rename
+operations admit their completed namespace state because no torn namespace
+operation is representable through the documented filesystem contract.
+Flush and synchronization cases preserve the exact application-visible bytes
+on both sides of the durability call. The matrix proves process-death
+recovery; it does not simulate host power loss, torn media writes, or a
+filesystem that violates the admitted atomicity contract.
+
+CI runs the complete command once through the debug `xtask` binary and once
+through an optimized `xtask` binary. To isolate one coordinate locally, run:
+
+```bash
+cargo xtask durability-crash-matrix --case KEEP-CRASH-006 during
+```
+
 ## Resume a reusable segment
 
 The public semantic boundary admits only
