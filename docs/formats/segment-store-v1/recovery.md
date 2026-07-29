@@ -25,8 +25,11 @@ cannot be proven atomic are unrecoverable ambiguity.
 The current public `read_recovery_inventory` slice implements this fixed-order
 count-before-retain orchestration through a read-only storage port. It enforces
 the configured and protocol ceilings, count stability, duplicate refusal, and
-namespace-plus-raw-byte ordering. The concrete filesystem inventory adapter and
-artifact classification remain unimplemented.
+namespace-plus-raw-byte ordering. `FilesystemRecoveryInventoryReader` pins the
+root and three no-follow child directories, bounds each scan by the remaining
+global budget, preserves raw Linux name bytes, and verifies child-directory
+identity before and after inventory. Artifact classification remains
+unimplemented.
 
 The sole admissible duplicate digest is one fixed staging name and its exact
 digest-derived pool name after a link transition. Recovery admits that pair

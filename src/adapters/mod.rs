@@ -79,6 +79,11 @@ mod filesystem_initialization_storage;
 mod filesystem_platform_admission;
 mod filesystem_platform_profile;
 mod filesystem_publisher_authority;
+mod filesystem_recovery_inventory_reader;
+mod filesystem_recovery_inventory_scan;
+#[cfg(all(test, unix))]
+mod filesystem_recovery_inventory_tests;
+mod filesystem_recovery_namespace;
 mod filesystem_segment_stage;
 #[cfg(test)]
 mod filesystem_segment_stage_tests;
@@ -226,6 +231,7 @@ pub use filesystem_catalog_publication_error::FilesystemCatalogPublicationError;
 pub use filesystem_catalog_publisher::FilesystemCatalogPublisher;
 pub use filesystem_catalog_snapshot::FilesystemCatalogSnapshot;
 pub use filesystem_platform_admission::FilesystemPlatformAdmission;
+pub use filesystem_recovery_inventory_reader::FilesystemRecoveryInventoryReader;
 pub use filesystem_segment_stage::FilesystemSegmentStage;
 pub use filesystem_writer_lock::FilesystemWriterLock;
 pub use layout_decode_error::LayoutDecodeError;

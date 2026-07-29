@@ -4,11 +4,20 @@
 pub mod inventory_double;
 #[path = "recovery_inventory/refusal_laws.rs"]
 mod refusal_laws;
+#[cfg(not(target_os = "linux"))]
+#[path = "segment_filesystem_stage/sandbox.rs"]
+pub mod sandbox;
 
 use std::error::Error;
+#[cfg(not(target_os = "linux"))]
+use std::fs;
 
 use inventory_double::{InventoryCall, InventoryDouble};
+#[cfg(not(target_os = "linux"))]
+use keep::{FilesystemRecoveryInventoryReader, RecoveryInventoryError, RecoveryInventoryOperation};
 use keep::{RecoveryEntryName, RecoveryInventoryLimit, RecoveryNamespace, read_recovery_inventory};
+#[cfg(not(target_os = "linux"))]
+use sandbox::TestDirectory;
 
 #[test]
 fn every_count_precedes_name_retention_in_fixed_namespace_order() -> Result<(), Box<dyn Error>> {
@@ -49,6 +58,28 @@ fn every_count_precedes_name_retention_in_fixed_namespace_order() -> Result<(), 
             (RecoveryNamespace::Catalogs, b"catalog-2".as_slice()),
         ]
     );
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+#[test]
+fn unsupported_platform_refuses_before_filesystem_inventory_mutation() -> Result<(), Box<dyn Error>>
+{
+    let sandbox = TestDirectory::create("recovery-inventory-unsupported")?;
+    let Err(error) = FilesystemRecoveryInventoryReader::open(sandbox.path()) else {
+        return Err("filesystem inventory admitted an unsupported platform".into());
+    };
+
+    assert!(matches!(
+        error,
+        RecoveryInventoryError::Io {
+            namespace: RecoveryNamespace::Root,
+            operation: RecoveryInventoryOperation::OpenNamespace,
+            ref source,
+        } if source.kind() == std::io::ErrorKind::Unsupported
+    ));
+    assert_eq!(fs::read_dir(sandbox.path())?.count(), 0);
+    sandbox.remove()?;
     Ok(())
 }
 

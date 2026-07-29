@@ -23,6 +23,10 @@ after its public API and format compatibility policies are established.
   stops namespace counting at the first globally excessive entry, refuses
   count drift and duplicates exactly, and returns deterministic
   namespace-and-raw-byte ordering through a read-only storage port.
+- Filesystem recovery inventory now pins the root and all three protocol
+  directories without following links, verifies child-directory identity
+  before and after bounded scanning, and preserves raw Linux entry-name bytes
+  without mutating protocol state.
 - Store initialization now exposes one storage-port state machine that admits
   the platform before mutation, opens and locks `writer.lock`, admits the three
   protocol directories in order, synchronizes the root, and preserves the

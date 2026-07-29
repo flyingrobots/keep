@@ -67,11 +67,12 @@ evidence, and ambiguous crash states remain explicit recovery work. An absent
 empty. The public storage-independent recovery inventory counts all four
 protocol namespaces before retaining names, applies a configurable ceiling no
 greater than 2,097,152 entries, and returns duplicate-free deterministic raw
-name order; its concrete filesystem reader and artifact classification remain
-planned. Crash-injection execution, explicit recovery, retention, complete
-namespace verification after initialization, compaction, and garbage
-collection remain planned. Presence in the reference CAS does not claim
-retention, crash recovery, or durability.
+name order. `FilesystemRecoveryInventoryReader` implements that contract with
+pinned, no-follow namespace capabilities and pre/post identity verification on
+the admitted Linux ext4 profile. Artifact classification remains planned.
+Crash-injection execution, explicit recovery, retention, compaction, and
+garbage collection remain planned. Presence in the reference CAS does not
+claim retention, crash recovery, or durability.
 
 ```rust
 use keep::BlobId;
