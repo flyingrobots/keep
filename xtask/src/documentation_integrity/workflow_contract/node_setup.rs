@@ -22,6 +22,25 @@ fn documentation_job_requires_the_pinned_node_action_once() {
 }
 
 #[test]
+fn duplicate_pinned_node_setup_is_refused_for_multiplicity() {
+    let setup = concat!(
+        "      - name: Install pinned Node.js\n",
+        "        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020\n",
+        "        with:\n",
+        "          node-version: 24.18.0\n"
+    );
+    let workflow = WORKFLOW.replace(setup, &setup.repeat(2));
+
+    assert!(matches!(
+        admit(&workflow),
+        Err(DocumentationError::RepositoryContract {
+            path: CI_PATH,
+            requirement: "documentation job installs pinned Node.js exactly once",
+        })
+    ));
+}
+
+#[test]
 fn drifted_node_setup_does_not_satisfy_the_contract() {
     let workflow = WORKFLOW.replace(
         "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
