@@ -1,6 +1,10 @@
 #![deny(warnings)]
 #![forbid(unsafe_code)]
 #![warn(clippy::cargo)]
+#![allow(
+    clippy::multiple_crate_versions,
+    reason = "the audited capability dependencies retain documented platform-only version overlap"
+)]
 
 //! Correctness-first content-addressed storage.
 //!
@@ -24,15 +28,16 @@ pub use adapters::{
     BlobIdTextParseError, CanonicalLayoutRecord, CatalogAdmissionError, CatalogAllocationPhase,
     CatalogDecodeError, CatalogEntryDecodeError, CatalogSnapshot, CatalogSnapshotError,
     CatalogSuccessor, CatalogTransitionError, ChecksummedCatalog, ChecksummedPublicationHead,
-    ChecksummedSegmentRecord, FilesystemSegmentStage, LayoutDecodeError, LayoutDecodePolicy,
-    LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
+    ChecksummedSegmentRecord, FilesystemSegmentStage, FilesystemWriterLock, LayoutDecodeError,
+    LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
     PublicationHeadDecodeError, SealedSegment, SegmentDigest, SegmentDurabilityPhase,
     SegmentHeader, SegmentHeaderError, SegmentReadError, SegmentReadPolicy,
     SegmentRecordAdmissionError, SegmentRecordChecksum, SegmentRecordDecodeError,
     SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity, SegmentRecordLength,
     SegmentRecordLimit, SegmentRecordLimitError, SegmentRecordPayloadLength, SegmentRecords,
     SegmentSeal, SegmentSealError, SegmentStage, SegmentStageCreateError, SegmentWriteError,
-    SegmentWritePhase, StagedSegment, StorageProfileIdParseError,
+    SegmentWritePhase, StagedSegment, StorageProfileIdParseError, WriterLockAcquireError,
+    WriterLockAcquirePhase,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
