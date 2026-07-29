@@ -11,9 +11,11 @@
 //! Keep currently exposes exact logical byte and physical chunk identity,
 //! deterministic streaming chunk detection, canonical flat-layout identity
 //! and codecs, a capacity-bounded non-durable reference CAS, and explicit
-//! immutable-segment writing and verified reading. Durable namespace
-//! publication, retention, and recovery APIs remain intentionally absent until
-//! their contracts have executable specifications.
+//! immutable-segment writing and verified reading, canonical catalog
+//! generations, writer-locked filesystem publication, and bounded immutable
+//! restart snapshots. Store initialization, recovery, retention, and garbage
+//! collection APIs remain intentionally absent until their contracts have
+//! executable specifications.
 
 mod adapters;
 mod blob;

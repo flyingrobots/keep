@@ -116,6 +116,35 @@ renames, truncates, or replaces the lock file to break a purported stale
 owner. Process death releases the kernel lock. Filesystems without proven
 process-scoped exclusion are unsupported.
 
+## Implemented publication boundary
+
+`FilesystemWriterLock::try_acquire` opens the existing regular `writer.lock`
+without following symbolic links and acquires its exclusive advisory lock
+without blocking. `FilesystemCatalogPublisher::open` consumes that authority
+and pins the existing store root plus `staging`, `segments`, and `catalogs`.
+Both operations perform blocking filesystem I/O. Neither operation initializes,
+repairs, enumerates, or removes protocol state.
+
+`publish_catalog_generation` performs complete semantic preflight before the
+first storage transition. With `FilesystemCatalogPublisher`, it then executes
+the forward segment, catalog, and head protocols below. Every writable catalog
+or head handle is closed before the synchronized stage is reopened read-only.
+Existing immutable-pool coordinates are never replaced; their bytes are
+reopened and compared against the preflighted canonical artifact before the
+protocol advances.
+
+`FilesystemCatalogSnapshot::load` is the observational reader boundary. Its
+`CatalogRestartPolicy` combines segment parser limits with a positive maximum
+for aggregate retained segment bytes. The loader follows only exact
+head-selected coordinates, refuses symbolic links and nonregular artifacts,
+checks every length before allocation, and reconstructs logical bindings only
+after all canonical bytes and physical coordinates verify.
+
+Issue #16 does not implement store-root initialization or explicit recovery. A
+caller must supply the exact canonical directories and persistent lock file
+before opening a publisher. Any retained `head.next` causes publication to
+refuse before mutation and requires issue #17 recovery.
+
 ## Forward publication protocol
 
 The writer starts with an expected current generation and catalog digest. It

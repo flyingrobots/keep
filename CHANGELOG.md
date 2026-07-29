@@ -184,6 +184,21 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Checked catalog generations; canonical catalog and publication-head codecs;
+  exact logical-record-to-segment admission; deterministic successor proofs;
+  immutable reader snapshots; and `BTreeMap` transition-model evidence for
+  `keep.segment-store/v1`.
+- Blocking `FilesystemCatalogPublisher` publication under a persistent
+  kernel-managed writer lock, with pinned directory capabilities,
+  no-replacement immutable-pool links, complete post-link verification,
+  explicit file and directory synchronization, transitive `head.next`
+  verification, atomic `HEAD` replacement, and stale or recovery-required
+  refusal before mutation.
+- Bounded `FilesystemCatalogSnapshot` restart loading that follows only exact
+  checksummed head, catalog, and segment coordinates; refuses symbolic links,
+  nonregular files, malformed or conflicting bytes, dangling entries, and
+  resource-limit violations; and retains immutable bytes for pinned logical
+  reads.
 - Public, allocation-free `SegmentHeader` admission and emission for the exact
   `keep.segment-store/v1` 64-byte header, with field-complete typed refusals
   and golden-corpus evidence.
@@ -225,10 +240,10 @@ after its public API and format compatibility policies are established.
   fixed-name stage into its immutable pool and durably clear the stage without
   promoting a publication head. Explicit discard receipts now follow
   synchronization of the stage's actual parent: `staging` for segment and
-  catalog stages, or the store root for `head.next`. Production storage
-  remains assigned to issues #15–#17. The golden corpus now includes a
-  generation-2 catalog/head pair whose predecessor field is the exact
-  generation-1 catalog digest.
+  catalog stages, or the store root for `head.next`. Segment and catalog
+  production are implemented; crash recovery remains assigned to issue #17.
+  The golden corpus now includes a generation-2 catalog/head pair whose
+  predecessor field is the exact generation-1 catalog digest.
 - A deterministic, bounded, license-safe streaming CAS benchmark corpus and
   release-only `cargo xtask benchmark-baseline` workflow covering all required
   ingestion, edit, deduplication, range-read, verification, and input

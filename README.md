@@ -28,21 +28,34 @@ and verifies the complete named `BlobId` before writing any bytes. Range reads
 load only the minimal overlapping chunks and state their narrower verification
 claim explicitly.
 
-The public `keep.segment-store/v1` boundary provides exact segment, record, and
-seal codecs plus explicit immutable-segment transitions. `StagedSegment`
-writes only content-admitted chunk or layout records, while `AdmittedSegment`
-exposes payloads only after complete framing, checksum, logical-identity,
-duplicate, and physical-digest verification. `FilesystemSegmentStage`
-exclusively creates the fixed `current.seg` stage without truncating existing
-evidence.
+The public `keep.segment-store/v1` boundary provides exact segment, record,
+seal, catalog, and publication-head codecs plus explicit immutable-segment and
+catalog-generation transitions. `StagedSegment` writes only content-admitted
+chunk or layout records, while `AdmittedSegment` exposes payloads only after
+complete framing, checksum, logical-identity, duplicate, and physical-digest
+verification. `FilesystemSegmentStage` exclusively creates the fixed
+`current.seg` stage without truncating existing evidence.
+
+`FilesystemCatalogPublisher` retains one kernel-managed writer lock and pinned
+root, staging, segment-pool, and catalog-pool capabilities for the complete
+blocking publication. It reopens and verifies synchronized stages, uses
+no-replacement immutable-pool links, synchronizes every required file and
+directory, verifies the complete `head.next` view, atomically replaces `HEAD`,
+and returns a receipt only after root synchronization.
+`FilesystemCatalogSnapshot` follows only the exact checksummed head, catalog,
+and segment coordinates and retains caller-bounded immutable bytes for pinned
+logical reads.
 
 The reference CAS is executable evidence for M2 storage laws, not a durable
 backend. Its committed state is process memory; process death loses it all.
-The segment boundary does not publish catalogs, synchronize its containing
-directory, open a durable namespace, or perform restart recovery. Catalog
-publication, retention, recovery, verification of complete durable namespaces,
-compaction, and garbage collection remain planned work. Presence in the
-reference CAS does not claim retention, crash recovery, or durability.
+The durable boundary does not yet initialize or recover a store root.
+Callers must supply the exact existing `writer.lock`, `staging`, `segments`,
+and `catalogs` namespace before opening a filesystem publisher. Leftover
+`head.next`, staged recovery evidence, unknown namespace entries, and
+ambiguous crash states remain explicit recovery work in issue #17. Retention,
+complete namespace verification, compaction, and garbage collection remain
+planned. Presence in the reference CAS does not claim retention, crash
+recovery, or durability.
 
 ```rust
 use keep::BlobId;
