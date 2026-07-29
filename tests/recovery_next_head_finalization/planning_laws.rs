@@ -137,8 +137,11 @@ fn only_a_complete_next_head_can_enter_finalization() -> Result<(), Box<dyn Erro
     let catalog = fixture(CATALOG_ONE_HEX)?;
     let head = fixture(HEAD_ONE_HEX)?;
     let candidate = snapshot(&head, &catalog, &segment)?;
-    let truncated = assessment(RecoveryStage::NextHead, &[0_u8])?;
-    let wrong_stage = assessment(RecoveryStage::Catalog, &[0_u8])?;
+    let truncated_bytes = head
+        .get(..1)
+        .ok_or("canonical next-head fixture is unexpectedly empty")?;
+    let truncated = assessment(RecoveryStage::NextHead, truncated_bytes)?;
+    let wrong_stage = assessment(RecoveryStage::Catalog, truncated_bytes)?;
 
     let truncated_error = plan_recovery_next_head_finalization(
         &truncated,
