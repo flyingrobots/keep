@@ -8,6 +8,8 @@ use std::path::Path;
 mod documentation_laws;
 #[path = "segment_store_protocol_contract/fixture_oracle.rs"]
 mod fixture_oracle;
+#[path = "segment_store_protocol_contract/parser_fuzz_laws.rs"]
+mod parser_fuzz_laws;
 #[path = "segment_store_protocol_contract/publication_laws.rs"]
 mod publication_laws;
 #[path = "segment_store_protocol_contract/recovery_laws.rs"]
@@ -99,7 +101,8 @@ fn durable_protocol_freezes_every_cross_cutting_law() {
 #[test]
 fn catalog_locations_name_only_top_level_segment_records() {
     for required in [
-        "scans the complete segment grammar from byte 64",
+        "scans each referenced\nsegment exactly once",
+        "Each scan runs from byte 64",
         "must equal one discovered",
         "top-level record span",
         "record header, payload, checksum",

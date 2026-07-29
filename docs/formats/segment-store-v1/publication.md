@@ -116,15 +116,71 @@ renames, truncates, or replaces the lock file to break a purported stale
 owner. Process death releases the kernel lock. Filesystems without proven
 process-scoped exclusion are unsupported.
 
+## Implemented publication boundary
+
+`FilesystemWriterLock::try_acquire` opens the existing regular `writer.lock`
+without following symbolic links and acquires its exclusive advisory lock
+without blocking. That lock alone cannot construct a publisher.
+`FilesystemCatalogPublisher::open` consumes `FilesystemPlatformAdmission`,
+which owns the lock after initialization and platform checks, then pins the
+existing store root plus `staging`, `segments`, and `catalogs`. Both operations
+perform blocking filesystem I/O. Neither operation repairs, enumerates, or
+removes protocol state.
+
+Issue #16 defines the proof type but deliberately exposes no public producer.
+The filesystem transition suite uses a crate-private, test-only unchecked proof
+to exercise publication mechanics. Issue #17 must implement initialization and
+the platform contract before production callers can obtain admission.
+
+`publish_catalog_generation` performs complete semantic preflight before the
+first storage transition. With `FilesystemCatalogPublisher`, it then executes
+the forward segment, catalog, and head protocols below. Every writable catalog
+or head handle is closed before the synchronized stage is reopened read-only.
+Existing immutable-pool coordinates are never replaced; their bytes are
+reopened and compared against the preflighted canonical artifact before the
+protocol advances. Publisher teardown closes retained writable handles and
+pinned directory capabilities before releasing the writer lock.
+
+Publishing a new filesystem segment additionally requires
+`FilesystemCatalogPublisher::select_segment`. The method consumes the
+`SealedSegment`, drops Keep's owned writable stage, proves that this publisher
+created the stage, and binds its record count, byte length, and digest to the
+exact `AdmittedSegment` bytes. A storage-agnostic
+`SegmentPublication::one` selection remains available to non-filesystem
+adapters, but its handle-free `ClosedSegment` receipt cannot authorize
+`staging/current.seg`. Catalog publication cannot select an unrelated or
+still-open sealed stage.
+`FilesystemCatalogPublisher::create_segment_stage` is the only public
+filesystem-stage constructor. Its returned lifetime keeps the acquired writer
+authority borrowed while `current.seg` remains writable.
+
+`FilesystemCatalogSnapshot::load` is the observational reader boundary. Its
+`CatalogRestartPolicy` combines segment parser limits with a positive maximum
+for aggregate retained segment bytes. The loader follows only exact
+head-selected coordinates, refuses symbolic links and nonregular artifacts,
+checks every length before allocation, and reconstructs logical bindings only
+after all canonical bytes and physical coordinates verify.
+
+Issue #16 does not implement store-root initialization, platform admission, or
+explicit recovery. A future admission producer must prove the exact canonical
+directories and persistent lock file before opening a publisher. Any retained
+`head.next` or `current.cat`, and any `current.seg` not owned by the selected
+staged segment, causes publication to refuse before mutation and requires issue
+recovery under #17. When `HEAD` is absent, the publisher probes both immutable pools
+and admits first publication only when both are empty; any entry is preserved
+as recovery evidence and refuses the operation. An already-current retry
+refuses every fixed-name stage.
+
 ## Forward publication protocol
 
 The writer starts with an expected current generation and catalog digest. It
 acquires the lock, validates the current head and catalog again, and refuses
 stale expectations before creating a stage. If the current verified head
 already equals the complete proposed generation, catalog length, and catalog
-digest, retry returns an explicit already-published receipt after
-synchronizing the root directory. A different observed generation or digest
-is a stale-generation refusal.
+digest, retry returns
+`CatalogPublicationOutcome::AlreadyPublished` after synchronizing the root
+directory. A different observed generation or digest is a stale-generation
+refusal.
 
 Every write handles short writes and interruption. Every flush, file sync,
 hard link, unlink, head replacement, and directory sync is explicit and
@@ -138,8 +194,8 @@ preceding namespace mutation became durable merely because it was issued.
 
 ### Seal each new segment
 
-1. Create `staging/current.seg` exclusively
-   (`KEEP-CRASH-001`).
+1. Under the acquired writer authority, create `staging/current.seg`
+   exclusively (`KEEP-CRASH-001`).
 2. Write the complete 64-byte header (`KEEP-CRASH-002`).
 3. Append each complete record and checksum (`KEEP-CRASH-003`, with an
    occurrence counter for tests).
@@ -187,10 +243,14 @@ until the publication head names it.
    atomically replace `HEAD` with `head.next` (`KEEP-CRASH-025`).
 6. Synchronize the store root (`KEEP-CRASH-026`).
 
-Only completion of step 6 returns a `#[must_use]` publication receipt.
+Only completion of step 6 returns a
+`CatalogPublicationOutcome::Published` receipt for a new publication. An
+already-current retry returns `CatalogPublicationOutcome::AlreadyPublished`
+only after complete candidate revalidation and a fresh root synchronization.
 
-An existing `head.next` always routes through recovery before step 1. The
-writer never truncates, replaces, or silently removes it to make the exclusive
+An existing `head.next` or `current.cat`, or an unselected `current.seg`,
+always routes through recovery before step 1. The writer never truncates,
+replaces, or silently removes retained stage evidence to make an exclusive
 create succeed.
 
 The normative pre-state, interrupted-state class, post-state, and recovery

@@ -1,6 +1,6 @@
 # Dependency Admission: cap-std, cap-fs-ext 4.0.2, and rustix 1.1.4
 
-- Status: Accepted for repository-task filesystem boundaries only
+- Status: Accepted for repository-task and segment-store filesystem boundaries
 - Date: 2026-07-26
 - Owner: Keep repository verification
 - Upstream:
@@ -8,9 +8,10 @@
 
 ## Admitted use
 
-Keep admits the exactly pinned `cap-std` 4.0.2, `cap-fs-ext` 4.0.2, and
-`rustix` 1.1.4 packages only behind the `xtask` crate's `repository-tasks`
-feature.
+Keep admits the exactly pinned `cap-std` 4.0.2 and `cap-fs-ext` 4.0.2 packages
+for the library's segment-store filesystem adapter and behind the `xtask`
+crate's `repository-tasks` feature. Rustix 1.1.4 remains admitted only behind
+that `xtask` feature.
 
 `cap-std::fs::Dir` pins the admitted repository or corpus directory and opens
 entries relative to that capability. `cap-fs-ext` supplies no-follow and
@@ -21,9 +22,11 @@ these operations let repository checks refuse persistent root replacement,
 path substitution, symlinked protocol tables, FIFOs, sockets, devices, and
 other ambiguous filesystem state before reading source or protocol bytes.
 
-These packages are absent from Keep's published library graph, public API,
-content identities, durable formats, and production behavior. No
-dependency-owned type crosses out of the private repository-task adapter.
+The capability packages are present in Keep's published library graph and
+production filesystem behavior. No dependency-owned type crosses Keep's public
+API or enters content identities or durable formats. The segment-store writer
+lock retains capability and file handles behind `FilesystemWriterLock`; its
+public acquisition boundary accepts only `std::path::Path`.
 
 The bounded subprocess adapter uses Rustix's safe filesystem API to mark child
 stdin nonblocking before deadline-bounded input transfer. It uses Rustix's safe
@@ -64,8 +67,10 @@ work, and require unsafe code that Keep otherwise forbids.
 
 All three direct dependencies disable default features. Keep enables only
 `cap-fs-ext`'s `std` feature and Rustix's `fs`, `process`, and `std` features;
-`cap-std` has no enabled feature. All declarations are optional and are
-activated solely by `repository-tasks`.
+`cap-std` has no enabled feature. The library's capability dependencies are
+unconditional because the production segment-store adapter requires them.
+The `xtask` declarations remain optional and are activated solely by
+`repository-tasks`; Rustix is not a direct library dependency.
 
 The locked non-Windows graph introduced for this boundary is:
 
@@ -86,12 +91,18 @@ The locked non-Windows graph introduced for this boundary is:
 
 Windows resolution additionally retains the locked `windows-sys`,
 `windows-targets`, and architecture packages recorded in `Cargo.lock`.
+The library therefore exempts only Clippy's `multiple_crate_versions` cargo
+lint; exact direct versions, the committed lockfile, dependency policy, and
+advisory checks remain authoritative.
 
 ## Safety, licensing, and compatibility
 
 The capability packages declare
 `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT`; Keep selects an admitted
 license through repository policy. Rustix declares `Apache-2.0 OR MIT`.
+The locked `winx` 0.36.4 transitive package declares only
+`Apache-2.0 WITH LLVM-exception`, so `deny.toml` admits that exact package and
+license combination rather than broadening the global license allowlist.
 Their manifests declare no Rust-version floor. Compatibility is therefore
 established only by Keep's pinned stable, MSRV, debug, release, Clippy,
 dependency-policy, and advisory lanes.
@@ -106,11 +117,15 @@ dependencies.
 
 ## Failure and recovery boundaries
 
-An open, metadata, read, descriptor-duplication, descriptor-flag,
-child-directory setup, child-spawn, stdin-write, output-collection, deadline,
-or cleanup failure is a typed refusal. The task never repairs, rewrites, or
-substitutes repository data. Retained handles exist only for one verification
-process and carry no durability or recovery semantics.
+An open, metadata, read, writer-lock acquisition, descriptor-duplication,
+descriptor-flag, child-directory setup, child-spawn, stdin-write,
+output-collection, deadline, or cleanup failure is a typed refusal.
+Repository tasks never repair, rewrite, or substitute repository data.
+Repository-task handles exist only for one verification process and carry no
+durability or recovery semantics. `FilesystemWriterLock` retains the pinned
+store root and persistent lock-file handles for the complete writer-authority
+lifetime; dropping the guard releases only the kernel lock and never mutates
+the lock file.
 
 Keep can remove these dependencies without changing public or durable behavior
 by replacing them with an equally portable, safe implementation that preserves

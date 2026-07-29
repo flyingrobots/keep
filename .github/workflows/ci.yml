@@ -170,7 +170,7 @@ jobs:
         run: cargo deny check
 
       - name: Check fuzz dependency policy
-        run: cargo deny --manifest-path fuzz/Cargo.toml check --config deny.toml
+        run: cargo deny --manifest-path fuzz/Cargo.toml check --config ../deny.toml
 
       - name: Check security advisories
         run: cargo audit

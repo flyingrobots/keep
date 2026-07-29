@@ -28,21 +28,44 @@ and verifies the complete named `BlobId` before writing any bytes. Range reads
 load only the minimal overlapping chunks and state their narrower verification
 claim explicitly.
 
-The public `keep.segment-store/v1` boundary provides exact segment, record, and
-seal codecs plus explicit immutable-segment transitions. `StagedSegment`
-writes only content-admitted chunk or layout records, while `AdmittedSegment`
-exposes payloads only after complete framing, checksum, logical-identity,
-duplicate, and physical-digest verification. `FilesystemSegmentStage`
-exclusively creates the fixed `current.seg` stage without truncating existing
-evidence.
+The public `keep.segment-store/v1` boundary provides exact segment, record,
+seal, catalog, and publication-head codecs plus explicit immutable-segment and
+catalog-generation transitions. `StagedSegment` writes only content-admitted
+chunk or layout records, while `AdmittedSegment` exposes payloads only after
+complete framing, checksum, logical-identity, duplicate, and physical-digest
+verification. A platform-admitted `FilesystemCatalogPublisher` exclusively
+creates the fixed `current.seg` stage without truncating existing evidence,
+and the `FilesystemSegmentStage` lifetime keeps that writer authority borrowed
+until the writable stage closes. Publisher construction consumes an
+unforgeable `FilesystemPlatformAdmission`; no public producer exists until
+issue #17 implements crash-tested initialization and platform admission.
+
+`FilesystemCatalogPublisher` retains one kernel-managed writer lock and pinned
+root, staging, segment-pool, and catalog-pool capabilities for the complete
+blocking publication. It reopens and verifies synchronized stages, uses
+no-replacement immutable-pool links, synchronizes every required file and
+directory, verifies the complete `head.next` view, atomically replaces `HEAD`,
+and returns a receipt only after root synchronization. New filesystem segment
+publication requires `FilesystemCatalogPublisher::select_segment` to consume
+the sealed writable stage, prove that this publisher created it, and bind its
+synchronized metadata to exact admitted bytes. A storage-agnostic
+`ClosedSegment` receipt alone cannot authorize a retained filesystem stage.
+`FilesystemCatalogSnapshot` follows only the exact checksummed head, catalog,
+and segment coordinates and retains caller-bounded immutable bytes for pinned
+logical reads.
 
 The reference CAS is executable evidence for M2 storage laws, not a durable
 backend. Its committed state is process memory; process death loses it all.
-The segment boundary does not publish catalogs, synchronize its containing
-directory, open a durable namespace, or perform restart recovery. Catalog
-publication, retention, recovery, verification of complete durable namespaces,
-compaction, and garbage collection remain planned work. Presence in the
-reference CAS does not claim retention, crash recovery, or durability.
+The durable boundary does not yet initialize, platform-admit, or recover a
+store root. Acquiring `FilesystemWriterLock` alone cannot construct a
+filesystem publisher. Issue #17 must admit the exact existing `writer.lock`,
+`staging`, `segments`, and `catalogs` namespace before it can return
+`FilesystemPlatformAdmission`. Leftover `head.next`, staged recovery evidence,
+unknown namespace entries, and ambiguous crash states remain explicit recovery
+work. An absent `HEAD` is admitted for first publication only when both
+immutable pools are empty. Retention, complete namespace verification,
+compaction, and garbage collection remain planned. Presence in the reference
+CAS does not claim retention, crash recovery, or durability.
 
 ```rust
 use keep::BlobId;

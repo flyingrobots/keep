@@ -31,9 +31,10 @@ the fuzz executable workspace. Keep-owned production crates remain
 `unsafe_code = "forbid"`, and fuzz inputs cross into Keep exclusively through
 safe public byte-slice and string APIs.
 
-The package is licensed as `(MIT OR Apache-2.0) AND NCSA`; the fuzz-specific
-dependency policy contains an exact package/version exception. No global NCSA
-or MIT license allowance follows from this admission.
+The package is licensed as `(MIT OR Apache-2.0) AND NCSA`; the repository
+dependency policy contains an exact package/version exception exercised
+against the separate fuzz graph. No global NCSA or MIT license allowance
+follows from this admission.
 
 ## Version, features, and transitive graph
 

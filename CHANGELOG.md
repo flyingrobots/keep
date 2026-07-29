@@ -10,6 +10,26 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Catalog decoding now verifies the catalog checksum and physical digest before
+  interpreting entry semantics. Corrupt identity-bearing bytes therefore fail
+  at the integrity boundary instead of producing a semantic entry error.
+- Filesystem catalog publisher construction now consumes an unforgeable
+  `FilesystemPlatformAdmission`. No public producer exists until crash-tested
+  initialization can establish the platform contract in issue #17; acquiring
+  `FilesystemWriterLock` alone no longer authorizes production construction.
+- Filesystem segment selection now consumes sealed stages through the publisher
+  that created them. Process-local publisher authority prevents an unrelated
+  metadata-equivalent `ClosedSegment` from authorizing retained
+  `staging/current.seg` bytes.
+- First catalog publication now admits an absent `HEAD` only after proving that
+  both immutable pools are empty. Retained segment or catalog bytes require
+  explicit recovery and remain untouched.
+- Filesystem catalog publishers now retain no-follow, read-capable directory
+  handles so required durability synchronization works on Linux instead of
+  failing on `O_PATH` descriptors.
+- The fuzz-workspace dependency gate now loads the reviewed repository
+  `deny.toml` explicitly and admits non-Apache licenses only through exact
+  package/version exceptions.
 - Documentation corpus selection, pinned tool admission, Markdown and fragment
   checks, workflow linting, Dependabot coverage, and Node lock-graph policy now
   run through bounded Rust `xtask` code; CI and `cargo xtask verify` use that
@@ -184,6 +204,35 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Checked catalog generations; canonical catalog and publication-head codecs;
+  exact logical-record-to-segment admission with one bounded physical lookup
+  plan, one scan per referenced segment, and refusal of every unreferenced
+  caller-supplied segment during construction or admission; deterministic
+  successor proofs; immutable reader snapshots; seeded parser fuzzing; and
+  `BTreeMap` transition-model evidence for `keep.segment-store/v1`.
+- Blocking `FilesystemCatalogPublisher` publication under a persistent
+  kernel-managed writer lock and required `FilesystemPlatformAdmission`, with
+  pinned directory capabilities,
+  no-replacement immutable-pool links, complete post-link verification,
+  explicit file and directory synchronization, transitive `head.next`
+  verification, atomic `HEAD` replacement, and stale or recovery-required
+  refusal before mutation. New filesystem segment publication consumes the
+  sealed stage through its creating publisher, checks process-local publisher
+  authority, and closes the writable handle before any immutable-pool link;
+  publisher teardown closes every retained writable handle before releasing
+  writer authority.
+  Retry of an already-current complete candidate re-synchronizes the root and
+  returns an explicit `CatalogPublicationOutcome::AlreadyPublished` receipt
+  without repeating publication mutations. Retained `head.next` or
+  `current.cat`, an unselected `current.seg`, and every fixed-name stage on an
+  already-current retry now refuse at current-state verification before any
+  publication mutation. An absent `HEAD` with any retained segment-pool or
+  catalog-pool entry also refuses before mutation.
+- Bounded `FilesystemCatalogSnapshot` restart loading that follows only exact
+  checksummed head, catalog, and segment coordinates; refuses symbolic links,
+  nonregular files, malformed or conflicting bytes, dangling entries, and
+  resource-limit violations; and retains immutable bytes for pinned logical
+  reads.
 - Public, allocation-free `SegmentHeader` admission and emission for the exact
   `keep.segment-store/v1` 64-byte header, with field-complete typed refusals
   and golden-corpus evidence.
@@ -204,9 +253,11 @@ after its public API and format compatibility policies are established.
   for exact append-only record writing, streaming seal construction, explicit
   prefix/sealed flush-and-sync order, phase-typed I/O refusals, and a fallibly
   reserved membership index for sublinear duplicate admission.
-- Exclusive `FilesystemSegmentStage` creation for the fixed `current.seg`
-  staging name, with atomic no-replacement admission, preserved existing
-  evidence, zero-origin writing, and no implicit cleanup from `Drop`.
+- Writer-authorized `FilesystemSegmentStage` creation for the fixed
+  `current.seg` staging name, with a lifetime that retains the
+  `FilesystemCatalogPublisher` lock, atomic no-replacement admission,
+  preserved existing evidence, zero-origin writing, and no implicit cleanup
+  from `Drop`.
 - Rust cargo-fuzz coverage for the public segment header, record header,
   complete record, seal, and complete-segment parser boundaries, seeded from
   the canonical version-1 segment fixtures through `cargo xtask`.
@@ -225,10 +276,10 @@ after its public API and format compatibility policies are established.
   fixed-name stage into its immutable pool and durably clear the stage without
   promoting a publication head. Explicit discard receipts now follow
   synchronization of the stage's actual parent: `staging` for segment and
-  catalog stages, or the store root for `head.next`. Production storage
-  remains assigned to issues #15–#17. The golden corpus now includes a
-  generation-2 catalog/head pair whose predecessor field is the exact
-  generation-1 catalog digest.
+  catalog stages, or the store root for `head.next`. Segment and catalog
+  production are implemented; crash recovery remains assigned to issue #17.
+  The golden corpus now includes a generation-2 catalog/head pair whose
+  predecessor field is the exact generation-1 catalog digest.
 - A deterministic, bounded, license-safe streaming CAS benchmark corpus and
   release-only `cargo xtask benchmark-baseline` workflow covering all required
   ingestion, edit, deduplication, range-read, verification, and input

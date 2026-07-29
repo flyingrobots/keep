@@ -1,37 +1,62 @@
 #![deny(warnings)]
 #![forbid(unsafe_code)]
 #![warn(clippy::cargo)]
+#![allow(
+    clippy::multiple_crate_versions,
+    reason = "the audited capability dependencies retain documented platform-only version overlap"
+)]
 
 //! Correctness-first content-addressed storage.
 //!
 //! Keep currently exposes exact logical byte and physical chunk identity,
 //! deterministic streaming chunk detection, canonical flat-layout identity
 //! and codecs, a capacity-bounded non-durable reference CAS, and explicit
-//! immutable-segment writing and verified reading. Durable namespace
-//! publication, retention, and recovery APIs remain intentionally absent until
-//! their contracts have executable specifications.
+//! immutable-segment writing and verified reading, canonical catalog
+//! generations, platform-gated filesystem publication mechanics, and bounded
+//! immutable restart snapshots. Production platform admission, store
+//! initialization, recovery, retention, and garbage collection APIs remain
+//! intentionally absent until their contracts have executable specifications.
+
+#[cfg(test)]
+extern crate self as keep;
 
 mod adapters;
 mod blob;
+mod catalog;
 mod chunk;
 mod layout;
 mod profile;
 mod reference;
 
 pub use adapters::{
-    AdmittedSegment, AdmittedSegmentRecord, BlobIdBinaryParseError, BlobIdTextParseError,
-    CanonicalLayoutRecord, ChecksummedSegmentRecord, FilesystemSegmentStage, LayoutDecodeError,
-    LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
-    SealedSegment, SegmentDigest, SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError,
+    AdmittedCatalog, AdmittedSegment, AdmittedSegmentRecord, BlobIdBinaryParseError,
+    BlobIdTextParseError, CanonicalCatalog, CanonicalLayoutRecord, CanonicalPublicationHead,
+    CatalogAdmissionError, CatalogAllocationPhase, CatalogDecodeError, CatalogEncodeError,
+    CatalogEntryDecodeError, CatalogPublicationError, CatalogPublicationExpectation,
+    CatalogPublicationOutcome, CatalogPublicationPhase, CatalogPublicationReadiness,
+    CatalogPublicationReceipt, CatalogPublicationStorage, CatalogRestartArtifact,
+    CatalogRestartByteLimit, CatalogRestartByteLimitError, CatalogRestartError,
+    CatalogRestartPhase, CatalogRestartPolicy, CatalogSnapshot, CatalogSnapshotError,
+    CatalogSuccessor, CatalogTransitionError, ChecksummedCatalog, ChecksummedPublicationHead,
+    ChecksummedSegmentRecord, ClosedSegment, FilesystemCatalogPublicationError,
+    FilesystemCatalogPublisher, FilesystemCatalogSnapshot, FilesystemPlatformAdmission,
+    FilesystemSegmentStage, FilesystemWriterLock, LayoutDecodeError, LayoutDecodePolicy,
+    LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
+    PublicationHeadDecodeError, SealedSegment, SegmentDigest, SegmentDurabilityPhase,
+    SegmentHeader, SegmentHeaderError, SegmentPublication, SegmentPublicationError,
     SegmentReadError, SegmentReadPolicy, SegmentRecordAdmissionError, SegmentRecordChecksum,
     SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity,
     SegmentRecordLength, SegmentRecordLimit, SegmentRecordLimitError, SegmentRecordPayloadLength,
     SegmentRecords, SegmentSeal, SegmentSealError, SegmentStage, SegmentStageCreateError,
     SegmentWriteError, SegmentWritePhase, StagedSegment, StorageProfileIdParseError,
+    WriterLockAcquireError, WriterLockAcquirePhase, publish_catalog_generation,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
     ByteRange, ByteRangeError,
+};
+pub use catalog::{
+    CatalogDigest, CatalogGeneration, CatalogGenerationError, CatalogLength, CatalogLengthError,
 };
 pub use chunk::{
     ChunkHashError, ChunkId, ChunkLength, ChunkOffset, ChunkSpan, ChunkingError, FastCdc,

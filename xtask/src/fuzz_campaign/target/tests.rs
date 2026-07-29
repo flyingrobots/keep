@@ -26,6 +26,7 @@ fn checked_in_harness_set_is_exact_and_sorted() -> Result<(), Box<dyn Error>> {
             "blob_hasher",
             "blob_id_binary",
             "blob_id_text",
+            "catalog_format",
             "fast_cdc",
             "golden_protocol",
             "layout_record",

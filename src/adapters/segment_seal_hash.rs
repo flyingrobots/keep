@@ -1,9 +1,7 @@
 //! Canonical physical segment digest and seal checksum calculation.
 
-use blake3::Hasher;
-
 use super::segment_seal::ENCODED_LENGTH;
-use super::{SegmentDigest, SegmentSealError};
+use super::{SegmentDigest, SegmentSealError, framed_blake3};
 
 pub(super) const VERSION: u16 = 1;
 pub(super) const ALGORITHM: u8 = 1;
@@ -29,7 +27,7 @@ pub(super) fn segment_digest(
         .ok_or(SegmentSealError::DigestLengthArithmetic {
             prefix_length: prefix.len(),
         })?;
-    Ok(SegmentDigest::from_validated(hash_parts(
+    Ok(SegmentDigest::from_validated(framed_blake3::hash(
         DIGEST_DOMAIN,
         &[prefix, q],
         input_length,
@@ -43,21 +41,9 @@ pub(super) fn seal_checksum(seal: &[u8]) -> Result<[u8; 32], SegmentSealError> {
             observed: seal.len(),
         },
     )?;
-    Ok(hash_parts(
+    Ok(framed_blake3::hash(
         CHECKSUM_DOMAIN,
         &[covered],
         u64::from(SEAL_CHECKSUM_INPUT_LENGTH),
     ))
-}
-
-fn hash_parts(domain: &[u8], parts: &[&[u8]], length: u64) -> [u8; 32] {
-    let mut hasher = Hasher::new();
-    hasher.update(domain);
-    hasher.update(&VERSION.to_be_bytes());
-    hasher.update(&[ALGORITHM]);
-    for part in parts {
-        hasher.update(part);
-    }
-    hasher.update(&length.to_be_bytes());
-    *hasher.finalize().as_bytes()
 }

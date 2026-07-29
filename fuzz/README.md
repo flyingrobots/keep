@@ -60,6 +60,11 @@ from the reviewed hexadecimal fixtures. The target feeds arbitrary bytes
 through the bounded decoder and, for every admitted record, requires exact
 decode-encode byte equality plus successful expected-`LayoutId` admission.
 
+The `catalog_format` seeds select the public catalog and publication-head
+decoders. Canonical generation-1, generation-2, and two-record bundle
+artifacts keep mutations inside framing, ordering, coordinate, checksum, and
+digest validation; every admitted value must retain its exact input bytes.
+
 The `segment_format` seeds select the public segment-header, record-header,
 complete-record, seal, and complete-segment boundaries. Canonical empty,
 one-record, and bundled segments keep mutations inside the nested parsers;

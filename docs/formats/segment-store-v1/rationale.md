@@ -143,6 +143,27 @@ This deliberately excludes multi-host and filesystems whose advisory locks do
 not provide the required exclusion. Weakening the lock would violate
 one-writer publication rather than improve availability.
 
+## Platform admission before publication
+
+The writer lock proves process-scoped exclusion; it does not prove
+case-sensitive names, single-host ownership, hard-link and replacement
+semantics, or directory durability. `FilesystemCatalogPublisher::open`
+therefore consumes an opaque `FilesystemPlatformAdmission` that owns the
+acquired lock. The proof is bound to that exact root authority and cannot be
+constructed from metadata or caller assertion.
+
+Issue #16 exposes no public proof producer. Its crate-internal transition tests
+use an explicitly test-only unchecked value, while issue #17 owns the
+crash-tested initializer and platform checks that may return production
+admission. This staging prevents an incomplete probe from turning successful
+syscalls into a durability claim.
+
+Rejected alternatives were treating `FilesystemWriterLock` as sufficient,
+accepting a caller-selected boolean or platform enum, and approving any
+filesystem whose individual operations returned success. Each would let an
+unsupported platform manufacture the authority that the proof is meant to
+represent.
+
 ## Observation before recovery
 
 Store opening performs no repair. It produces either one verified reader
