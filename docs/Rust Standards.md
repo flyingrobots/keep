@@ -478,7 +478,12 @@ Hard CI limits:
 Count physical lines for deterministic enforcement. Blank and comment lines
 remain part of the maintainability surface; reviewers should also examine
 logical structure. The hard maximum applies to every executable source file
-regardless of its filename suffix.
+regardless of its filename suffix. Source classification, executable-shebang
+inspection, and line counting MUST use one admitted file descriptor; reopening
+the pathname between checks would permit replacement to splice evidence from
+different files. The scanner MUST revalidate both the descriptor identity and
+the current repository path after each read phase, and refuse concurrent
+replacement or in-place mutation.
 
 A file above 300 lines MUST begin with a decomposition issue or contain an approved exception explaining why splitting it would damage locality.
 

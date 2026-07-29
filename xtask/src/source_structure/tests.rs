@@ -1,8 +1,9 @@
 //! This module owns source-line, selection, and replacement-race tests.
 
+mod replacement;
+
 use super::source_kind::is_source_module;
 use super::{PRESENT_PATH_ARGUMENTS, SourceLineCount, exceeds_hard_limit, line_count};
-use crate::test_directory::TestDirectory;
 use std::io::{self, BufReader, Cursor, Read};
 
 #[test]
@@ -68,6 +69,7 @@ fn source_structure_diagnostics_are_stable() {
         operation: "git inventory",
     });
     let non_regular = super::SourceStructureError::NonRegular("src/link.rs".into());
+    let changed = super::SourceStructureError::SourceFileChanged("src/replaced.rs".into());
     assert_eq!(
         framing.to_string(),
         "`git inventory` returned a non-NUL-terminated path"
@@ -75,6 +77,10 @@ fn source_structure_diagnostics_are_stable() {
     assert_eq!(
         non_regular.to_string(),
         "repository source module is not a regular file: `src/link.rs`"
+    );
+    assert_eq!(
+        changed.to_string(),
+        "repository source changed during inspection: `src/replaced.rs`"
     );
     let violations = super::SourceStructureError::Violations {
         maximum: 7,
@@ -146,121 +152,6 @@ fn source_read_policy_enables_reads_and_refuses_blocking_io() {
         REPOSITORY_READ_POLICY.blocking_io(),
         BlockingIoPolicy::Refuse
     );
-}
-
-#[cfg(unix)]
-#[test]
-fn source_scan_keeps_the_admitted_repository_root() -> Result<(), Box<dyn std::error::Error>> {
-    use std::fs;
-
-    use crate::repository_file::RepositoryRoot;
-
-    use super::repository_path::RepositoryPath;
-    use super::source_line_count;
-
-    let directory = TestDirectory::create("source-root")?;
-    let root = directory.path().join("repository");
-    let retained_root = directory.path().join("retained");
-    fs::create_dir(&root)?;
-    fs::write(root.join("source.rs"), "safe\n")?;
-    let source_root = RepositoryRoot::open(&root)?;
-    let relative = RepositoryPath::admit(String::from("source.rs"))?;
-
-    fs::rename(&root, &retained_root)?;
-    fs::create_dir(&root)?;
-    fs::write(root.join("source.rs"), "replacement\n".repeat(501))?;
-
-    let line_count = source_line_count(&source_root, relative.as_path())?;
-    assert_eq!(line_count, SourceLineCount::Within(1));
-    drop(source_root);
-    directory.close()?;
-    Ok(())
-}
-
-#[cfg(unix)]
-#[test]
-fn source_scan_detects_a_replaced_repository_root() -> Result<(), Box<dyn std::error::Error>> {
-    use std::fs;
-
-    use crate::repository_file::RepositoryRoot;
-
-    let directory = TestDirectory::create("source-identity")?;
-    let root = directory.path().join("repository");
-    let retained_root = directory.path().join("retained");
-    fs::create_dir(&root)?;
-    let source_root = RepositoryRoot::open(&root)?;
-
-    fs::rename(&root, &retained_root)?;
-    fs::create_dir(&root)?;
-    let result = super::verify_source_root(&source_root, &root);
-    assert!(matches!(
-        result,
-        Err(super::SourceStructureError::RepositoryRootChanged(ref path)) if path == &root
-    ));
-    drop(source_root);
-    directory.close()?;
-    Ok(())
-}
-
-#[cfg(unix)]
-#[test]
-fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructureError> {
-    use std::fs;
-    use std::os::unix::fs::symlink;
-
-    use crate::repository_file::{OpenRepositoryFileError, RepositoryRoot};
-
-    use super::repository_path::RepositoryPath;
-    use super::source_line_count_with;
-
-    let directory = TestDirectory::create("source-replacement").map_err(|source| {
-        super::SourceStructureError::Inspect {
-            path: "scoped test directory".into(),
-            source,
-        }
-    })?;
-    let root = directory.path().join("repository");
-    fs::create_dir(&root).map_err(|source| super::SourceStructureError::Inspect {
-        path: root.clone(),
-        source,
-    })?;
-    let source_path = root.join("source.rs");
-    let retained_path = root.join("retained.rs");
-    let target_path = root.join("target.rs");
-    fs::write(&source_path, "safe\n").map_err(|source| super::SourceStructureError::Inspect {
-        path: source_path.clone(),
-        source,
-    })?;
-    fs::write(&target_path, "outside\n".repeat(501)).map_err(|source| {
-        super::SourceStructureError::Inspect {
-            path: target_path.clone(),
-            source,
-        }
-    })?;
-    let source_root =
-        RepositoryRoot::open(&root).map_err(|source| super::SourceStructureError::Inspect {
-            path: root.clone(),
-            source,
-        })?;
-    let relative = RepositoryPath::admit(String::from("source.rs"))?;
-
-    let result =
-        source_line_count_with(&source_root, relative.as_path(), |source_root, relative| {
-            let admitted = source_root.display_path(relative);
-            fs::rename(&admitted, &retained_path).map_err(OpenRepositoryFileError::Io)?;
-            symlink(&target_path, &admitted).map_err(OpenRepositoryFileError::Io)?;
-            source_root.open_file(relative)
-        });
-    let refused = matches!(
-        result,
-        Err(super::SourceStructureError::NonRegular(ref path)) if path == &source_path
-    );
-    assert!(refused);
-    drop(source_root);
-    directory
-        .close()
-        .map_err(|source| super::SourceStructureError::Inspect { path: root, source })?;
-    Ok(())
 }
 
 #[test]

@@ -3,63 +3,47 @@
 mod environment;
 
 use std::fs::File;
-use std::io::{self, Read};
-use std::os::unix::fs::PermissionsExt;
+use std::io;
+use std::os::unix::fs::FileExt;
 
-use crate::repository_file::{OpenRepositoryFileError, RepositoryRoot};
+const SHEBANG_SCAN_BYTES: usize = 1_024;
 
-use super::SourceStructureError;
-use std::path::Path;
-
-const SHEBANG_SCAN_BYTES: u64 = 1_024;
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum FileExecution {
-    Executable,
-    NonExecutable,
-    NonRegular,
+pub(super) fn executable_uses_python(file: &File) -> Result<bool, io::Error> {
+    let mut prefix = [0_u8; SHEBANG_SCAN_BYTES];
+    let bytes = read_prefix(file, &mut prefix)?;
+    let admitted = prefix.get(..bytes).ok_or_else(prefix_bounds_error)?;
+    Ok(is_python_shebang(admitted))
 }
 
-pub(super) fn refuse_executable_python(
-    source_root: &RepositoryRoot,
-    relative: &Path,
-) -> Result<FileExecution, SourceStructureError> {
-    let path = source_root.display_path(relative);
-    let file = match source_root.open_file(relative) {
-        Ok(file) => file,
-        Err(OpenRepositoryFileError::NonRegular) => return Ok(FileExecution::NonRegular),
-        Err(OpenRepositoryFileError::Io(source)) => {
-            return Err(SourceStructureError::Inspect { path, source });
-        }
-    };
-    let execution = file_execution(&file).map_err(|source| SourceStructureError::Inspect {
-        path: path.clone(),
-        source,
-    })?;
-    let python = execution == FileExecution::Executable
-        && executable_uses_python(file).map_err(|source| SourceStructureError::Inspect {
-            path: path.clone(),
-            source,
+fn read_prefix(file: &File, prefix: &mut [u8]) -> Result<usize, io::Error> {
+    let mut filled = 0_usize;
+    while filled < prefix.len() {
+        let offset = u64::try_from(filled).map_err(|_| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                "shebang prefix offset exceeds u64",
+            )
         })?;
-    if python {
-        Err(SourceStructureError::PythonSource(relative.to_owned()))
-    } else {
-        Ok(execution)
+        let remaining = prefix.get_mut(filled..).ok_or_else(prefix_bounds_error)?;
+        let read = match file.read_at(remaining, offset) {
+            Err(source) if source.kind() == io::ErrorKind::Interrupted => continue,
+            result => result?,
+        };
+        if read == 0 {
+            break;
+        }
+        filled = filled.checked_add(read).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::InvalidData, "shebang prefix length overflow")
+        })?;
     }
+    Ok(filled)
 }
 
-fn file_execution(file: &File) -> Result<FileExecution, io::Error> {
-    if file.metadata()?.permissions().mode() & 0o111 == 0 {
-        Ok(FileExecution::NonExecutable)
-    } else {
-        Ok(FileExecution::Executable)
-    }
-}
-
-fn executable_uses_python(file: File) -> Result<bool, io::Error> {
-    let mut prefix = Vec::new();
-    file.take(SHEBANG_SCAN_BYTES).read_to_end(&mut prefix)?;
-    Ok(is_python_shebang(&prefix))
+fn prefix_bounds_error() -> io::Error {
+    io::Error::new(
+        io::ErrorKind::InvalidData,
+        "shebang prefix bounds are inconsistent",
+    )
 }
 
 fn is_python_shebang(prefix: &[u8]) -> bool {

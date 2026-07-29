@@ -8,6 +8,7 @@
 use std::fs::File;
 use std::io;
 use std::os::fd::OwnedFd;
+use std::os::unix::fs::MetadataExt as UnixMetadataExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 
@@ -57,9 +58,30 @@ struct DirectoryIdentity {
     inode: u64,
 }
 
+#[derive(Eq, PartialEq)]
+pub(crate) struct RepositoryFileIdentity {
+    device: u64,
+    inode: u64,
+    bytes: u64,
+    modified_seconds: i64,
+    modified_nanoseconds: i64,
+    changed_seconds: i64,
+    changed_nanoseconds: i64,
+}
+
 pub(crate) enum OpenRepositoryFileError {
     Io(io::Error),
     NonRegular,
+}
+
+impl RepositoryFileIdentity {
+    pub(crate) fn read(file: &File) -> Result<Self, io::Error> {
+        Ok(Self::from(&file.metadata()?))
+    }
+
+    pub(crate) const fn bytes(&self) -> u64 {
+        self.bytes
+    }
 }
 
 impl RepositoryRoot {
@@ -160,6 +182,20 @@ impl From<&cap_std::fs::Metadata> for DirectoryIdentity {
         Self {
             device: metadata.dev(),
             inode: metadata.ino(),
+        }
+    }
+}
+
+impl From<&std::fs::Metadata> for RepositoryFileIdentity {
+    fn from(metadata: &std::fs::Metadata) -> Self {
+        Self {
+            device: UnixMetadataExt::dev(metadata),
+            inode: UnixMetadataExt::ino(metadata),
+            bytes: metadata.len(),
+            modified_seconds: UnixMetadataExt::mtime(metadata),
+            modified_nanoseconds: UnixMetadataExt::mtime_nsec(metadata),
+            changed_seconds: UnixMetadataExt::ctime(metadata),
+            changed_nanoseconds: UnixMetadataExt::ctime_nsec(metadata),
         }
     }
 }

@@ -3,16 +3,17 @@
 mod python_source;
 mod repository_path;
 mod source_error;
+mod source_file;
 mod source_inventory;
 mod source_kind;
 
 use std::io::{self, BufRead, BufReader};
 use std::path::Path;
 
-use crate::repository_file::{OpenRepositoryFileError, RepositoryRoot};
-use python_source::{FileExecution, refuse_executable_python};
+use crate::repository_file::RepositoryRoot;
 use repository_path::RepositoryPath;
 pub(super) use source_error::SourceStructureError;
+use source_file::{AdmittedSource, FileExecution, SourceFileAdmission};
 #[cfg(test)]
 use source_inventory::{
     PRESENT_PATH_ARGUMENTS, select as select_source_inventory, select_source_paths,
@@ -64,9 +65,13 @@ fn inventory_violations(
 ) -> Result<Vec<std::path::PathBuf>, SourceStructureError> {
     let mut violations = Vec::new();
     for relative in inventory.executable_candidates {
-        let execution = refuse_executable_python(source_root, relative.as_path())?;
-        if execution == FileExecution::Executable
-            && source_line_count(source_root, relative.as_path())? == SourceLineCount::Exceeded
+        let SourceFileAdmission::Regular(source) =
+            AdmittedSource::admit(source_root, relative.as_path())?
+        else {
+            continue;
+        };
+        if source.execution() == FileExecution::Executable
+            && source_line_count(source_root, &source)? == SourceLineCount::Exceeded
         {
             violations.push(relative.as_path().to_owned());
         }
@@ -82,18 +87,19 @@ fn source_violations(
 ) -> Result<Vec<std::path::PathBuf>, SourceStructureError> {
     let mut violations = Vec::new();
     for relative in paths {
-        let execution = refuse_executable_python(source_root, relative.as_path())?;
-        if execution == FileExecution::NonRegular {
+        let SourceFileAdmission::Regular(source) =
+            AdmittedSource::admit(source_root, relative.as_path())?
+        else {
             return Err(SourceStructureError::NonRegular(
                 source_root.display_path(relative.as_path()),
             ));
-        }
+        };
         if is_extensionless_file(relative.as_str().as_bytes())
-            && execution == FileExecution::NonExecutable
+            && source.execution() == FileExecution::NonExecutable
         {
             continue;
         }
-        let lines = source_line_count(source_root, relative.as_path())?;
+        let lines = source_line_count(source_root, &source)?;
         if lines == SourceLineCount::Exceeded {
             violations.push(relative.as_path().to_owned());
         }
@@ -103,26 +109,16 @@ fn source_violations(
 
 fn source_line_count(
     source_root: &RepositoryRoot,
-    relative: &Path,
+    source: &AdmittedSource,
 ) -> Result<SourceLineCount, SourceStructureError> {
-    source_line_count_with(source_root, relative, RepositoryRoot::open_file)
-}
-
-fn source_line_count_with(
-    source_root: &RepositoryRoot,
-    relative: &Path,
-    open_source: impl FnOnce(&RepositoryRoot, &Path) -> Result<std::fs::File, OpenRepositoryFileError>,
-) -> Result<SourceLineCount, SourceStructureError> {
-    let path = source_root.display_path(relative);
-    let file = open_source(source_root, relative).map_err(|error| match error {
-        OpenRepositoryFileError::Io(source) => SourceStructureError::Inspect {
-            path: path.clone(),
-            source,
-        },
-        OpenRepositoryFileError::NonRegular => SourceStructureError::NonRegular(path.clone()),
+    let lines = line_count(BufReader::new(source.file())).map_err(|error| {
+        SourceStructureError::Inspect {
+            path: source.path().to_owned(),
+            source: error,
+        }
     })?;
-    line_count(BufReader::new(file))
-        .map_err(|source| SourceStructureError::Inspect { path, source })
+    source.verify_current(source_root)?;
+    Ok(lines)
 }
 
 const fn exceeds_hard_limit(lines: u64) -> bool {

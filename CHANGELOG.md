@@ -90,7 +90,11 @@ after its public API and format compatibility policies are established.
   non-UTF-8 Git paths and attached `env -S` interpreter strings. Environment
   shebangs parse options, assignments, quoting, and split strings before
   classifying only the selected utility, so later command arguments cannot
-  impersonate Python and unresolved utility substitutions fail closed.
+  impersonate Python and unresolved utility substitutions fail closed. Source
+  execution, shebang, and physical-line evidence now come from one admitted
+  file descriptor whose identity is revalidated after each read phase, so path
+  replacement or in-place mutation cannot splice different file states into
+  one verification result.
 - Git path inventory failures now remain primary when child cleanup, waiting,
   or diagnostic collection also fails; the secondary failure remains typed and
   inspectable. Empty path records and unterminated path bytes produce distinct,

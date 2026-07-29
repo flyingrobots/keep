@@ -23,6 +23,7 @@ pub(crate) enum SourceStructureError {
     NonRegular(PathBuf),
     PythonSource(PathBuf),
     RepositoryRootChanged(PathBuf),
+    SourceFileChanged(PathBuf),
     Violations {
         maximum: u64,
         paths: Vec<PathBuf>,
@@ -67,6 +68,11 @@ impl fmt::Display for SourceStructureError {
                 escaped_path(formatter, path)?;
                 formatter.write_str("`")
             }
+            Self::SourceFileChanged(path) => {
+                formatter.write_str("repository source changed during inspection: `")?;
+                escaped_path(formatter, path)?;
+                formatter.write_str("`")
+            }
             Self::Violations { maximum, paths } => violations_display(formatter, *maximum, paths),
         }
     }
@@ -82,6 +88,7 @@ impl Error for SourceStructureError {
             | Self::NonRegular(_)
             | Self::PythonSource(_)
             | Self::RepositoryRootChanged(_)
+            | Self::SourceFileChanged(_)
             | Self::Violations { .. } => None,
         }
     }
