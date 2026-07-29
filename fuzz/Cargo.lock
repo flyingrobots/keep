@@ -210,6 +210,7 @@ dependencies = [
  "blake3",
  "cap-fs-ext",
  "cap-std",
+ "rustix",
 ]
 
 [[package]]
