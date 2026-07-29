@@ -39,7 +39,9 @@ after its public API and format compatibility policies are established.
   to 64 MiB before external tools start, retains every selected source
   identity, refuses device, inode, size, modification-time, or change-time
   drift before and after each external tool, re-inventories complete corpus
-  membership so newly added sources cannot bypass those tools, retains each
+  membership so newly added sources cannot bypass those tools, executes the
+  tools against a private snapshot copied from the admitted source descriptors
+  so transient path substitution cannot redirect their reads, retains each
   fixed policy file identity through semantic admission so a replaced path
   cannot validate bytes from a superseded file,
   and applies a two-minute deadline across Git inventory, validation-tool

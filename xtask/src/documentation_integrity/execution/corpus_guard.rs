@@ -6,28 +6,36 @@ use crate::documentation_integrity::error::DocumentationError;
 use crate::repository_file::RepositoryProcessDirectory;
 use crate::repository_file::RepositoryRoot;
 
-use super::{DocumentationTool, ToolRunner};
+use super::snapshot::DocumentationSnapshot;
+use super::{DirectoryToolRunner, DocumentationTool, ToolRunner};
 
 pub(super) struct CorpusGuardedRunner<'a, Runner> {
     corpora: &'a [&'a SourceCorpus],
     inner: Runner,
     process_directory: &'a RepositoryProcessDirectory,
     repository_root: &'a RepositoryRoot,
+    snapshot: DocumentationSnapshot,
 }
 
 impl<'a, Runner> CorpusGuardedRunner<'a, Runner> {
-    pub(super) const fn new(
+    pub(super) fn new(
         inner: Runner,
         process_directory: &'a RepositoryProcessDirectory,
         repository_root: &'a RepositoryRoot,
         corpora: &'a [&'a SourceCorpus],
-    ) -> Self {
-        Self {
+    ) -> Result<Self, DocumentationError> {
+        let snapshot = DocumentationSnapshot::create(repository_root, process_directory, corpora)?;
+        Ok(Self {
             corpora,
             inner,
             process_directory,
             repository_root,
-        }
+            snapshot,
+        })
+    }
+
+    pub(super) fn close(self) -> Result<(), DocumentationError> {
+        self.snapshot.close()
     }
 
     fn verify(&self) -> Result<(), DocumentationError> {
@@ -40,7 +48,7 @@ impl<'a, Runner> CorpusGuardedRunner<'a, Runner> {
 
 impl<Runner> ToolRunner for CorpusGuardedRunner<'_, Runner>
 where
-    Runner: ToolRunner,
+    Runner: DirectoryToolRunner,
 {
     fn capture(
         &mut self,
@@ -48,7 +56,12 @@ where
         arguments: &[String],
     ) -> Result<ProcessOutput, DocumentationError> {
         self.verify()?;
-        let result = self.inner.capture(tool, arguments);
+        let result = self.inner.capture_in(
+            self.snapshot.repository_root(),
+            self.snapshot.process_directory(),
+            tool,
+            arguments,
+        );
         self.verify()?;
         result
     }

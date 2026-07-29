@@ -2,6 +2,7 @@
 
 mod corpus_guard;
 mod refusal_check;
+mod snapshot;
 
 use std::env;
 use std::ffi::OsStr;
@@ -26,6 +27,16 @@ trait ToolRunner {
     ) -> Result<ProcessOutput, DocumentationError>;
 }
 
+trait DirectoryToolRunner {
+    fn capture_in(
+        &mut self,
+        repository_root: &RepositoryRoot,
+        process_directory: &RepositoryProcessDirectory,
+        tool: DocumentationTool,
+        arguments: &[String],
+    ) -> Result<ProcessOutput, DocumentationError>;
+}
+
 struct ExternalToolRunner<'a> {
     process_directory: &'a RepositoryProcessDirectory,
 }
@@ -39,8 +50,11 @@ pub(super) fn run(
     let corpora = [markdown, workflows];
     let external = ExternalToolRunner { process_directory };
     let mut runner =
-        CorpusGuardedRunner::new(external, process_directory, repository_root, &corpora);
-    run_with(&mut runner, markdown.paths(), workflows.paths())
+        CorpusGuardedRunner::new(external, process_directory, repository_root, &corpora)?;
+    let result = run_with(&mut runner, markdown.paths(), workflows.paths());
+    let cleanup = runner.close();
+    result?;
+    cleanup
 }
 
 /// Executes both named malformed-input scenarios through the production runner.
@@ -155,26 +169,46 @@ impl ToolRunner for ExternalToolRunner<'_> {
         tool: DocumentationTool,
         arguments: &[String],
     ) -> Result<ProcessOutput, DocumentationError> {
-        let path = env::var_os("PATH").ok_or(DocumentationError::EnvironmentUnavailable("PATH"))?;
-        let mut command = documentation_command(tool, arguments, &path);
-        bounded_process::capture_with(
-            tool.program(),
-            &mut command,
-            Some(TOOL_DEADLINE),
-            |command| self.process_directory.spawn(command),
-        )
-        .map_err(|source| {
-            if source.is_not_found() {
-                DocumentationError::ToolUnavailable {
-                    program: tool.program(),
-                    install_version: tool.install_version(),
-                    source,
-                }
-            } else {
-                DocumentationError::Process(source)
-            }
-        })
+        capture_external(self.process_directory, tool, arguments)
     }
+}
+
+impl DirectoryToolRunner for ExternalToolRunner<'_> {
+    fn capture_in(
+        &mut self,
+        _repository_root: &RepositoryRoot,
+        process_directory: &RepositoryProcessDirectory,
+        tool: DocumentationTool,
+        arguments: &[String],
+    ) -> Result<ProcessOutput, DocumentationError> {
+        capture_external(process_directory, tool, arguments)
+    }
+}
+
+fn capture_external(
+    process_directory: &RepositoryProcessDirectory,
+    tool: DocumentationTool,
+    arguments: &[String],
+) -> Result<ProcessOutput, DocumentationError> {
+    let path = env::var_os("PATH").ok_or(DocumentationError::EnvironmentUnavailable("PATH"))?;
+    let mut command = documentation_command(tool, arguments, &path);
+    bounded_process::capture_with(
+        tool.program(),
+        &mut command,
+        Some(TOOL_DEADLINE),
+        |command| process_directory.spawn(command),
+    )
+    .map_err(|source| {
+        if source.is_not_found() {
+            DocumentationError::ToolUnavailable {
+                program: tool.program(),
+                install_version: tool.install_version(),
+                source,
+            }
+        } else {
+            DocumentationError::Process(source)
+        }
+    })
 }
 
 fn documentation_command(tool: DocumentationTool, arguments: &[String], path: &OsStr) -> Command {

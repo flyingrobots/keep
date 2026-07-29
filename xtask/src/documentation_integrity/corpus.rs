@@ -8,6 +8,7 @@ pub(super) mod test_repository;
 
 use std::cmp::Ordering;
 use std::io;
+use std::path::Path;
 
 use xtask::protocol_admission::posix_relative_path;
 
@@ -43,6 +44,13 @@ impl SourceCorpus {
 
     pub(super) fn paths(&self) -> &[String] {
         &self.paths
+    }
+
+    pub(super) fn materialize(&self, snapshot_root: &Path) -> Result<(), DocumentationError> {
+        for source in &self.sources {
+            source.materialize(snapshot_root, self.kind)?;
+        }
+        Ok(())
     }
 
     pub(super) fn verify_unchanged(
@@ -147,7 +155,7 @@ fn admit_path(
         path: text.clone(),
     })?;
     match repository_root.open_file(&relative) {
-        Ok(file) => Ok(Some(AdmittedSource::admit(&file, text, relative, kind)?)),
+        Ok(file) => Ok(Some(AdmittedSource::admit(file, text, relative, kind)?)),
         Err(OpenRepositoryFileError::Io(source)) if source.kind() == io::ErrorKind::NotFound => {
             Ok(None)
         }

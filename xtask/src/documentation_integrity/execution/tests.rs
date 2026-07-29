@@ -1,7 +1,8 @@
 use std::collections::{BTreeMap, VecDeque};
 use std::ffi::OsString;
 use std::fs;
-use std::path::PathBuf;
+use std::io::Read;
+use std::path::{Path, PathBuf};
 
 use crate::bounded_process::ProcessOutput;
 use crate::documentation_integrity::corpus::{SourceCorpus, test_repository::run_git};
@@ -9,7 +10,9 @@ use crate::repository_file::RepositoryRoot;
 use crate::test_directory::TestDirectory;
 
 use super::corpus_guard::CorpusGuardedRunner;
-use super::{DocumentationError, DocumentationTool, ToolRunner, documentation_command};
+use super::{
+    DirectoryToolRunner, DocumentationError, DocumentationTool, ToolRunner, documentation_command,
+};
 
 struct RecordingRunner {
     calls: Vec<(DocumentationTool, Vec<String>)>,
@@ -17,8 +20,7 @@ struct RecordingRunner {
 }
 
 struct ReplacingRunner {
-    selected: PathBuf,
-    retained: PathBuf,
+    repository: PathBuf,
 }
 
 #[test]
@@ -150,33 +152,31 @@ fn unreviewed_version_stops_before_tool_execution() {
 }
 
 #[test]
-fn corpus_guard_refuses_a_source_restored_after_transient_replacement()
+fn corpus_guard_executes_against_the_admitted_source_snapshot()
 -> Result<(), Box<dyn std::error::Error>> {
     let directory = TestDirectory::create("documentation-transient-source")?;
     let root = directory.path();
     run_git(root, &["init", "--quiet", "--template="])?;
-    fs::write(root.join("selected.md"), "# Original\n")?;
+    fs::create_dir(root.join("docs"))?;
+    fs::write(root.join("docs/selected.md"), "# Original\n")?;
+    fs::write(
+        root.join(".markdownlint-cli2.yaml"),
+        "config:\n  MD013: false\n",
+    )?;
     let repository_root = RepositoryRoot::open(root)?;
     let process_directory = repository_root.process_directory()?;
     let corpus = SourceCorpus::markdown(&repository_root, &process_directory)?;
     let corpora = [&corpus];
     let replacing = ReplacingRunner {
-        selected: root.join("selected.md"),
-        retained: root.join("retained.md"),
+        repository: root.to_owned(),
     };
     let mut runner =
-        CorpusGuardedRunner::new(replacing, &process_directory, &repository_root, &corpora);
+        CorpusGuardedRunner::new(replacing, &process_directory, &repository_root, &corpora)?;
 
-    let result = runner.capture(DocumentationTool::Markdownlint, &[]);
+    let output = runner.capture(DocumentationTool::Markdownlint, &[])?;
 
-    assert!(matches!(
-        result,
-        Err(DocumentationError::CorpusChanged {
-            corpus: "Markdown",
-            ref path,
-        }) if path == "selected.md"
-    ));
-    drop(runner);
+    assert_eq!(output.stdout, b"# Original\n");
+    runner.close()?;
     drop(corpus);
     directory.close()?;
     Ok(())
@@ -207,22 +207,50 @@ impl ToolRunner for RecordingRunner {
     }
 }
 
-impl ToolRunner for ReplacingRunner {
-    fn capture(
+impl DirectoryToolRunner for ReplacingRunner {
+    fn capture_in(
         &mut self,
+        execution_root: &RepositoryRoot,
+        _process_directory: &crate::repository_file::RepositoryProcessDirectory,
         _tool: DocumentationTool,
         _arguments: &[String],
     ) -> Result<ProcessOutput, DocumentationError> {
-        fs::rename(&self.selected, &self.retained)
-            .map_err(|source| fixture_io("retain selected source", source))?;
-        fs::write(&self.selected, "# Substitute\n")
+        let selected = self.repository.join("docs");
+        let retained = self.repository.join("retained-docs");
+        fs::rename(&selected, &retained)
+            .map_err(|source| fixture_io("retain selected directory", source))?;
+        fs::create_dir(&selected)
+            .map_err(|source| fixture_io("create substitute directory", source))?;
+        fs::write(selected.join("selected.md"), "# Substitute\n")
             .map_err(|source| fixture_io("write substitute source", source))?;
-        fs::remove_file(&self.selected)
-            .map_err(|source| fixture_io("remove substitute source", source))?;
-        fs::rename(&self.retained, &self.selected)
-            .map_err(|source| fixture_io("restore selected source", source))?;
-        Ok(success())
+        let observed = read_source(execution_root, Path::new("docs/selected.md"))?;
+        fs::remove_dir_all(&selected)
+            .map_err(|source| fixture_io("remove substitute directory", source))?;
+        fs::rename(&retained, &selected)
+            .map_err(|source| fixture_io("restore selected directory", source))?;
+        Ok(ProcessOutput {
+            code: Some(0),
+            succeeded: true,
+            stdout: observed,
+            stderr: Vec::new(),
+        })
     }
+}
+
+fn read_source(
+    repository_root: &RepositoryRoot,
+    relative: &Path,
+) -> Result<Vec<u8>, DocumentationError> {
+    let mut file = repository_root.open_file(relative).map_err(|_| {
+        fixture_io(
+            "open execution source",
+            std::io::Error::other("open failed"),
+        )
+    })?;
+    let mut bytes = Vec::new();
+    file.read_to_end(&mut bytes)
+        .map_err(|source| fixture_io("read execution source", source))?;
+    Ok(bytes)
 }
 
 fn fixture_io(requirement: &'static str, source: std::io::Error) -> DocumentationError {

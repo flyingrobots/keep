@@ -106,6 +106,11 @@ pub(crate) enum DocumentationError {
         expected: &'static str,
         observed: Option<String>,
     },
+    /// A filesystem operation could not construct or remove a tool-input snapshot.
+    Snapshot {
+        action: &'static str,
+        source: io::Error,
+    },
     VersionMismatch {
         program: &'static str,
         expected: &'static str,
@@ -144,7 +149,8 @@ impl Error for DocumentationError {
             Self::Inspect { source, .. }
             | Self::RefusalFixture { source, .. }
             | Self::RepositoryFileInspect { source, .. }
-            | Self::RepositoryRootInspect { source, .. } => Some(source),
+            | Self::RepositoryRootInspect { source, .. }
+            | Self::Snapshot { source, .. } => Some(source),
             Self::PathEncoding { source, .. } | Self::RepositoryFileEncoding { source, .. } => {
                 Some(source)
             }

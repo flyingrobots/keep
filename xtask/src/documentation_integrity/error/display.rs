@@ -75,6 +75,9 @@ impl fmt::Display for DocumentationError {
             Self::RepositoryRootInspect { path, .. } => {
                 repository_root(formatter, RepositoryRootDiagnostic::Inspect, path)
             }
+            Self::Snapshot { action, .. } => {
+                write!(formatter, "cannot {action}")
+            }
             error @ (Self::VersionMismatch { .. }
             | Self::ToolFailed { .. }
             | Self::ToolOutputEncoding { .. }
