@@ -7,7 +7,7 @@ use std::process::Command;
 use super::{CorpusKind, SourceCorpus, admit_path};
 use crate::documentation_integrity::error::DocumentationError;
 use crate::git_inventory::GitPath;
-use crate::repository_file::RepositoryRoot;
+use crate::repository_file::{OpenRepositoryFileError, RepositoryRoot};
 use crate::test_directory::TestDirectory;
 
 #[test]
@@ -134,6 +134,10 @@ fn symlinked_markdown_is_refused() -> Result<(), Box<dyn std::error::Error>> {
     symlink("target.txt", root.join("linked.md"))?;
 
     let repository_root = RepositoryRoot::open(root)?;
+    assert!(matches!(
+        repository_root.open_file(Path::new("linked.md")),
+        Err(OpenRepositoryFileError::NonRegular)
+    ));
     let process_directory = repository_root.process_directory()?;
     let result = SourceCorpus::markdown(&repository_root, &process_directory);
 

@@ -90,11 +90,22 @@ impl RepositoryRoot {
     }
 
     pub(crate) fn open_file(&self, relative: &Path) -> Result<File, OpenRepositoryFileError> {
-        let file = self
+        let file = match self
             .directory
             .open_with(relative, &REPOSITORY_READ_POLICY.options())
-            .map_err(OpenRepositoryFileError::Io)?
-            .into_std();
+        {
+            Ok(file) => file.into_std(),
+            Err(source) => {
+                if self
+                    .directory
+                    .symlink_metadata(relative)
+                    .is_ok_and(|metadata| metadata.file_type().is_symlink())
+                {
+                    return Err(OpenRepositoryFileError::NonRegular);
+                }
+                return Err(OpenRepositoryFileError::Io(source));
+            }
+        };
         let metadata = file.metadata().map_err(OpenRepositoryFileError::Io)?;
         if metadata.is_file() {
             Ok(file)

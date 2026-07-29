@@ -65,9 +65,10 @@ after its public API and format compatibility policies are established.
   documented 500-physical-line hard maximum, including test modules and
   executable sources regardless of filename suffix.
 - Repository source verification now uses capability-relative, no-follow file
-  opens and verifies repository-root identity after Git inventory and again
-  after source scanning, so a persistent root replacement or source path
-  replaced with a symlink is refused. The pure Rust boundary also refuses
+  opens, normalizes symlink refusal at that capability boundary across Unix
+  error conventions, and verifies repository-root identity after Git inventory
+  and again after source scanning, so a persistent root replacement or source
+  path replaced with a symlink is refused. The pure Rust boundary also refuses
   `.py`, `.pyw`, dot-only Python basenames, and Python shebangs in every
   executable regular file regardless of filename suffix, including raw
   non-UTF-8 Git paths and attached `env -S` interpreter strings. Environment

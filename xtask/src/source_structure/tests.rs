@@ -253,10 +253,7 @@ fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructur
         });
     let refused = matches!(
         result,
-        Err(super::SourceStructureError::Inspect {
-            ref path,
-            source: _,
-        }) if path == &source_path
+        Err(super::SourceStructureError::NonRegular(ref path)) if path == &source_path
     );
     assert!(refused);
     drop(source_root);

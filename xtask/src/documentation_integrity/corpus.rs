@@ -162,14 +162,6 @@ fn admit_path(
         Err(OpenRepositoryFileError::Io(source)) if source.kind() == io::ErrorKind::NotFound => {
             Ok(None)
         }
-        Err(OpenRepositoryFileError::Io(source))
-            if source.raw_os_error() == Some(rustix::io::Errno::LOOP.raw_os_error()) =>
-        {
-            Err(DocumentationError::NonRegular {
-                corpus: kind.label(),
-                path: text,
-            })
-        }
         Err(OpenRepositoryFileError::Io(source)) => Err(DocumentationError::Inspect {
             corpus: kind.label(),
             path: text,
