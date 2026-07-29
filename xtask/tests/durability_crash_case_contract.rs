@@ -75,7 +75,7 @@ fn occurrence_coordinates_exist_only_for_record_append() -> Result<(), Box<dyn E
 }
 
 #[test]
-fn identifiers_and_positions_round_trip_without_aliases() -> Result<(), Box<dyn Error>> {
+fn identifiers_and_positions_round_trip_without_aliases() {
     for point in DurabilityCrashPoint::ALL {
         assert_eq!(
             DurabilityCrashPoint::from_identifier(point.identifier()),
@@ -94,5 +94,4 @@ fn identifiers_and_positions_round_trip_without_aliases() -> Result<(), Box<dyn 
         );
     }
     assert_eq!(DurabilityCrashPosition::from_identifier("between"), None);
-    Ok(())
 }

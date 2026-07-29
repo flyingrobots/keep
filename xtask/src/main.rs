@@ -21,6 +21,11 @@ mod diagnostic;
 mod documentation_integrity;
 #[allow(
     clippy::redundant_pub_crate,
+    reason = "the command and task-error boundaries are sibling consumers"
+)]
+mod durability_crash_matrix;
+#[allow(
+    clippy::redundant_pub_crate,
     reason = "the external digest witness is shared by sibling repository tasks"
 )]
 mod external_digest;
@@ -103,6 +108,14 @@ fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
         let stdout = io::stdout();
         let mut output = stdout.lock();
         fuzz_campaign::run(repository_root, arguments, &mut output)?;
+        return Ok(());
+    }
+    if command == "durability-crash-matrix" {
+        durability_crash_matrix::run(repository_root, arguments)?;
+        return Ok(());
+    }
+    if command == "__durability-crash-child" {
+        durability_crash_matrix::run_child(arguments)?;
         return Ok(());
     }
     refuse_extra(&mut arguments)?;
