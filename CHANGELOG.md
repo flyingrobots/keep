@@ -59,6 +59,8 @@ after its public API and format compatibility policies are established.
   repository path cannot redirect validation. Retained and per-spawn directory
   descriptors are allocated at descriptor 3 or above, so child standard-stream
   setup cannot overwrite the working-directory authority.
+  Source-structure inspection refuses nonregular executable candidates instead
+  of silently omitting them from the Python and hard-line-limit policy.
   Terminal signals now become typed refusals while an external repository task
   is active, so captured and inherited child groups are killed and reaped
   before `xtask` returns. Captured-output readers finish while the process-group

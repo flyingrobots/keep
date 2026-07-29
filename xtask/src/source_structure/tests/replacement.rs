@@ -1,5 +1,6 @@
 //! This module owns source-root and source-file replacement-race tests.
 
+use std::collections::BTreeSet;
 use std::fs;
 use std::io;
 use std::os::unix::fs::{PermissionsExt, symlink};
@@ -9,7 +10,9 @@ use crate::test_directory::TestDirectory;
 
 use super::super::repository_path::RepositoryPath;
 use super::super::source_file::{AdmittedSource, FileExecution, SourceFileAdmission};
-use super::super::{SourceLineCount, source_line_count, verify_source_root};
+use super::super::source_inventory;
+use super::super::{SourceLineCount, inventory_violations, source_line_count, verify_source_root};
+use crate::git_inventory::GitPath;
 
 #[test]
 fn source_scan_keeps_the_admitted_repository_root() -> Result<(), Box<dyn std::error::Error>> {
@@ -124,6 +127,31 @@ fn source_open_refuses_replacement_symlink() -> Result<(), Box<dyn std::error::E
     symlink(&target_path, &source_path)?;
     let admission = AdmittedSource::admit(&source_root, relative.as_path())?;
     assert!(matches!(admission, SourceFileAdmission::NonRegular));
+    drop(source_root);
+    directory.close()?;
+    Ok(())
+}
+
+#[test]
+fn nonregular_executable_candidate_is_refused() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::create("nonregular-executable-candidate")?;
+    let root = directory.path().join("repository");
+    fs::create_dir(&root)?;
+    let candidate_path = root.join("script.bin");
+    let target_path = root.join("target");
+    fs::write(&target_path, "#!/bin/sh\n")?;
+    symlink(&target_path, &candidate_path)?;
+    let source_root = RepositoryRoot::open(&root)?;
+    let present = BTreeSet::from([GitPath::new(b"script.bin".to_vec())]);
+    let inventory = source_inventory::select(&present, &BTreeSet::new())?;
+
+    let result = inventory_violations(&source_root, inventory);
+
+    assert!(matches!(
+        result,
+        Err(super::super::SourceStructureError::NonRegular(ref path))
+            if path == &candidate_path
+    ));
     drop(source_root);
     directory.close()?;
     Ok(())

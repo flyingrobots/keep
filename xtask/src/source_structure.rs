@@ -76,7 +76,9 @@ fn inventory_violations(
         let SourceFileAdmission::Regular(source) =
             AdmittedSource::admit(source_root, relative.as_path())?
         else {
-            continue;
+            return Err(SourceStructureError::NonRegular(
+                source_root.display_path(relative.as_path()),
+            ));
         };
         if source.execution() == FileExecution::Executable
             && source_line_count(source_root, &source)? == SourceLineCount::Exceeded
