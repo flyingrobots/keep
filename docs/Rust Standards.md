@@ -477,7 +477,8 @@ Hard CI limits:
 
 Count physical lines for deterministic enforcement. Blank and comment lines
 remain part of the maintainability surface; reviewers should also examine
-logical structure.
+logical structure. The hard maximum applies to every executable source file
+regardless of its filename suffix.
 
 A file above 300 lines MUST begin with a decomposition issue or contain an approved exception explaining why splitting it would damage locality.
 

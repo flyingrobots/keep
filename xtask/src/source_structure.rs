@@ -61,17 +61,25 @@ fn verify_source_root(
 fn inventory_violations(
     source_root: &RepositoryRoot,
     inventory: SourceInventory,
-) -> Result<Vec<String>, SourceStructureError> {
+) -> Result<Vec<std::path::PathBuf>, SourceStructureError> {
+    let mut violations = Vec::new();
     for relative in inventory.executable_candidates {
-        let _execution = refuse_executable_python(source_root, relative.as_path())?;
+        let execution = refuse_executable_python(source_root, relative.as_path())?;
+        if execution == FileExecution::Executable
+            && source_line_count(source_root, relative.as_path())? == SourceLineCount::Exceeded
+        {
+            violations.push(relative.as_path().to_owned());
+        }
     }
-    source_violations(source_root, inventory.modules)
+    violations.extend(source_violations(source_root, inventory.modules)?);
+    violations.sort();
+    Ok(violations)
 }
 
 fn source_violations(
     source_root: &RepositoryRoot,
     paths: Vec<RepositoryPath>,
-) -> Result<Vec<String>, SourceStructureError> {
+) -> Result<Vec<std::path::PathBuf>, SourceStructureError> {
     let mut violations = Vec::new();
     for relative in paths {
         let execution = refuse_executable_python(source_root, relative.as_path())?;
@@ -85,9 +93,9 @@ fn source_violations(
         {
             continue;
         }
-        let lines = source_line_count(source_root, &relative)?;
+        let lines = source_line_count(source_root, relative.as_path())?;
         if lines == SourceLineCount::Exceeded {
-            violations.push(relative.as_str().to_owned());
+            violations.push(relative.as_path().to_owned());
         }
     }
     Ok(violations)
@@ -95,18 +103,18 @@ fn source_violations(
 
 fn source_line_count(
     source_root: &RepositoryRoot,
-    relative: &RepositoryPath,
+    relative: &Path,
 ) -> Result<SourceLineCount, SourceStructureError> {
     source_line_count_with(source_root, relative, RepositoryRoot::open_file)
 }
 
 fn source_line_count_with(
     source_root: &RepositoryRoot,
-    relative: &RepositoryPath,
+    relative: &Path,
     open_source: impl FnOnce(&RepositoryRoot, &Path) -> Result<std::fs::File, OpenRepositoryFileError>,
 ) -> Result<SourceLineCount, SourceStructureError> {
-    let path = source_root.display_path(relative.as_path());
-    let file = open_source(source_root, relative.as_path()).map_err(|error| match error {
+    let path = source_root.display_path(relative);
+    let file = open_source(source_root, relative).map_err(|error| match error {
         OpenRepositoryFileError::Io(source) => SourceStructureError::Inspect {
             path: path.clone(),
             source,

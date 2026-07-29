@@ -46,7 +46,7 @@ fn early_source_refusal_does_not_claim_an_exact_line_count() {
     let diagnostic = line_count(BufReader::new(reader)).map(|observed| match observed {
         SourceLineCount::Exceeded => super::SourceStructureError::Violations {
             maximum: 500,
-            paths: vec![String::from("src/large.rs")],
+            paths: vec![std::path::PathBuf::from("src/large.rs")],
         }
         .to_string(),
         SourceLineCount::Within(lines) => format!("unexpected exact count: {lines}"),
@@ -78,7 +78,7 @@ fn source_structure_diagnostics_are_stable() {
     );
     let violations = super::SourceStructureError::Violations {
         maximum: 7,
-        paths: vec![String::from("src/large.rs")],
+        paths: vec![std::path::PathBuf::from("src/large.rs")],
     };
     assert_eq!(
         violations.to_string(),
@@ -170,7 +170,7 @@ fn source_scan_keeps_the_admitted_repository_root() -> Result<(), Box<dyn std::e
     fs::create_dir(&root)?;
     fs::write(root.join("source.rs"), "replacement\n".repeat(501))?;
 
-    let line_count = source_line_count(&source_root, &relative)?;
+    let line_count = source_line_count(&source_root, relative.as_path())?;
     assert_eq!(line_count, SourceLineCount::Within(1));
     drop(source_root);
     directory.close()?;
@@ -244,12 +244,13 @@ fn source_open_refuses_replacement_symlink() -> Result<(), super::SourceStructur
         })?;
     let relative = RepositoryPath::admit(String::from("source.rs"))?;
 
-    let result = source_line_count_with(&source_root, &relative, |source_root, relative| {
-        let admitted = source_root.display_path(relative);
-        fs::rename(&admitted, &retained_path).map_err(OpenRepositoryFileError::Io)?;
-        symlink(&target_path, &admitted).map_err(OpenRepositoryFileError::Io)?;
-        source_root.open_file(relative)
-    });
+    let result =
+        source_line_count_with(&source_root, relative.as_path(), |source_root, relative| {
+            let admitted = source_root.display_path(relative);
+            fs::rename(&admitted, &retained_path).map_err(OpenRepositoryFileError::Io)?;
+            symlink(&target_path, &admitted).map_err(OpenRepositoryFileError::Io)?;
+            source_root.open_file(relative)
+        });
     let refused = matches!(
         result,
         Err(super::SourceStructureError::Inspect {

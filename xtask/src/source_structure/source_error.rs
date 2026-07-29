@@ -25,7 +25,7 @@ pub(crate) enum SourceStructureError {
     RepositoryRootChanged(PathBuf),
     Violations {
         maximum: u64,
-        paths: Vec<String>,
+        paths: Vec<PathBuf>,
     },
 }
 
@@ -96,7 +96,7 @@ impl From<GitInventoryError> for SourceStructureError {
 fn violations_display(
     formatter: &mut fmt::Formatter<'_>,
     maximum: u64,
-    paths: &[String],
+    paths: &[PathBuf],
 ) -> fmt::Result {
     write!(
         formatter,
@@ -104,7 +104,7 @@ fn violations_display(
     )?;
     for path in paths {
         formatter.write_str("; ")?;
-        escaped_controls(formatter, path)?;
+        escaped_path(formatter, path)?;
         write!(formatter, ": >{maximum}")?;
     }
     Ok(())

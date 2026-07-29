@@ -57,6 +57,27 @@ fn non_executable_text_remains_outside_the_python_boundary()
 }
 
 #[test]
+fn non_source_suffix_executable_obeys_the_line_limit() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::create("hidden-source-limit")?;
+    let repository = directory.path().join("repository");
+    fs::create_dir(&repository)?;
+    let script = repository.join("check.bash");
+    let limit = usize::try_from(super::SOURCE_MODULE_HARD_LIMIT_LINES)?;
+    fs::write(&script, format!("#!/bin/sh\n{}", ":\n".repeat(limit)))?;
+    make_executable(&script)?;
+    let present = BTreeSet::from([GitPath::new(b"check.bash".to_vec())]);
+
+    let paths = super::select_source_inventory(&present, &BTreeSet::new())?;
+    let source_root = RepositoryRoot::open(&repository)?;
+    let violations = super::inventory_violations(&source_root, paths)?;
+
+    assert_eq!(violations, vec![Path::new("check.bash").to_owned()]);
+    drop(source_root);
+    directory.close()?;
+    Ok(())
+}
+
+#[test]
 fn non_utf8_executable_candidate_preserves_path_bytes() -> Result<(), Box<dyn std::error::Error>> {
     let path_bytes = b"check-\xff.txt";
     let present = BTreeSet::from([GitPath::new(path_bytes.to_vec())]);
