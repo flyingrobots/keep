@@ -4,6 +4,9 @@ const RUST_STANDARDS: &str = include_str!("../../docs/Rust Standards.md");
 const BOUNDED_PROCESS: &str = include_str!("../src/bounded_process.rs");
 const BOUNDED_PROCESS_CAPTURE: &str = include_str!("../src/bounded_process/capture.rs");
 const BOUNDED_PROCESS_ERROR: &str = include_str!("../src/bounded_process/error.rs");
+const BOUNDED_PROCESS_INTERRUPT: &str = include_str!("../src/bounded_process/interrupt.rs");
+const BOUNDED_PROCESS_GROUP: &str = include_str!("../src/bounded_process/process_group.rs");
+const BOUNDED_PROCESS_READER: &str = include_str!("../src/bounded_process/reader.rs");
 const BOUNDED_PROCESS_TESTS: &str = include_str!("../src/bounded_process/tests.rs");
 const GIT_INVENTORY_ERROR: &str = include_str!("../src/git_inventory/error.rs");
 const GIT_PATH_STREAM: &str = include_str!("../src/git_inventory/path_stream.rs");
@@ -79,6 +82,31 @@ fn repository_process_boundaries_document_every_exported_contract() -> Result<()
             "    ReaderPanic {",
             "    Timeout {",
             "    pub(crate) fn is_not_found(",
+        ],
+    )?;
+    require_docs(
+        BOUNDED_PROCESS_INTERRUPT,
+        &[
+            "pub(super) struct InterruptGuard",
+            "    pub(super) fn begin(",
+            "    pub(super) fn refusal(",
+        ],
+    )?;
+    require_docs(
+        BOUNDED_PROCESS_GROUP,
+        &[
+            "pub(super) struct ProcessGroup",
+            "    pub(super) fn for_child(",
+            "    pub(super) fn terminate(",
+        ],
+    )?;
+    require_docs(
+        BOUNDED_PROCESS_READER,
+        &[
+            "pub(super) struct ReaderWorker",
+            "    pub(super) fn start(",
+            "    pub(super) fn receive(",
+            "    pub(super) fn join(",
         ],
     )?;
     require_docs(

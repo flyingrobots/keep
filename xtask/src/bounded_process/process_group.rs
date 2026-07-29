@@ -13,9 +13,14 @@ use std::path::Path;
 use rustix::io::Errno;
 use rustix::process::{Pid, Signal, kill_process_group};
 
+/// The dedicated process-group identity established for one spawned child.
 pub(super) struct ProcessGroup(Pid);
 
 impl ProcessGroup {
+    /// Admits the child's nonzero operating-system identifier as a group ID.
+    ///
+    /// Conversion fails when the unsigned child ID does not fit the platform's
+    /// signed PID representation or when the observed ID is zero.
     pub(super) fn for_child(child: &Child) -> Result<Self, io::Error> {
         let raw = i32::try_from(child.id())
             .map_err(|source| io::Error::new(io::ErrorKind::InvalidData, source))?;
@@ -24,6 +29,10 @@ impl ProcessGroup {
         Ok(Self(pid))
     }
 
+    /// Sends `SIGKILL` to every member of the admitted process group.
+    ///
+    /// An absent group is already terminated and succeeds. Other operating
+    /// system errors are preserved.
     pub(super) fn terminate(self) -> Result<(), io::Error> {
         match kill_process_group(self.0, Signal::KILL) {
             Ok(()) | Err(Errno::SRCH) => Ok(()),

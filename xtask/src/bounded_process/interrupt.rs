@@ -15,6 +15,10 @@ const HANDLED_SIGNALS: [i32; 4] = [SIGINT, SIGTERM, SIGHUP, SIGQUIT];
 static CONTROLLER: OnceLock<InterruptController> = OnceLock::new();
 static CONTROLLER_START: Mutex<()> = Mutex::new(());
 
+/// Registers one active child operation for typed terminal-signal refusal.
+///
+/// Dropping an unobserved guard restores the operating system's default
+/// handling for the pending signal rather than silently consuming it.
 pub(super) struct InterruptGuard {
     registry: Arc<Mutex<Vec<Weak<InterruptState>>>>,
     state: Arc<InterruptState>,
@@ -40,10 +44,18 @@ enum DispatchOutcome {
 }
 
 impl InterruptGuard {
+    /// Registers `program` with the shared signal controller.
+    ///
+    /// Initialization and registry-lock failures remain typed process I/O
+    /// failures. Registration does not block on signal delivery.
     pub(super) fn begin(program: &'static str) -> Result<Self, ProcessError> {
         interrupt_controller(program)?.register(program)
     }
 
+    /// Returns the first terminal signal observed for this operation.
+    ///
+    /// Observation is nonblocking. The returned refusal consumes the guard's
+    /// obligation to restore default handling for that signal on drop.
     pub(super) fn refusal(&self, program: &'static str) -> Option<ProcessError> {
         let signal = self.state.observe()?;
         let signal_name = signal_hook::low_level::signal_name(signal).unwrap_or("unknown signal");

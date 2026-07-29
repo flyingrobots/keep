@@ -10,6 +10,7 @@ use super::{InterruptGuard, ProcessDeadline, ProcessError};
 
 const INTERRUPT_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_millis(10);
 
+/// Owns one bounded stream reader and its single-result channel.
 pub(super) struct ReaderWorker {
     handle: JoinHandle<()>,
     program: &'static str,
@@ -18,6 +19,10 @@ pub(super) struct ReaderWorker {
 }
 
 impl ReaderWorker {
+    /// Starts a named reader that retains at most `maximum` stream bytes.
+    ///
+    /// Thread creation failure remains a typed process I/O error. The worker
+    /// sends exactly one bounded result and performs no unbounded buffering.
     pub(super) fn start(
         program: &'static str,
         stream: &'static str,
@@ -43,6 +48,10 @@ impl ReaderWorker {
         })
     }
 
+    /// Waits for the bounded result while polling the shared deadline and signal guard.
+    ///
+    /// This call blocks only for the smaller of the remaining deadline and the
+    /// fixed interrupt interval, so timeout and interruption remain observable.
     pub(super) fn receive(
         &self,
         deadline: &ProcessDeadline,
@@ -72,6 +81,7 @@ impl ReaderWorker {
         }
     }
 
+    /// Joins the completed reader and maps a worker panic to a typed failure.
     pub(super) fn join(self) -> Result<(), ProcessError> {
         self.handle
             .join()
