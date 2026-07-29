@@ -2,10 +2,16 @@
 
 use std::path::Path;
 
+#[cfg(test)]
+use cap_std::ambient_authority;
+#[cfg(test)]
+use cap_std::fs::Dir;
+
 use super::filesystem_initialization_storage::FilesystemInitializationStorage;
 use super::{
-    FilesystemPlatformAdmission, StoreInitializationError, StoreInitializationPhase,
-    initialize_store,
+    FilesystemPlatformAdmission, FilesystemPlatformAdmissionError, FilesystemWriterLock,
+    StoreInitializationError, StoreInitializationPhase, filesystem_initialization_namespace,
+    filesystem_platform_profile, initialize_store,
 };
 
 impl FilesystemPlatformAdmission {
@@ -30,6 +36,25 @@ impl FilesystemPlatformAdmission {
         initialize_storage(storage)
     }
 
+    /// Reacquires writer authority over one completely published store.
+    ///
+    /// The call mutates no protocol state. It admits the production platform,
+    /// acquires the existing writer lock, and requires the exact published root
+    /// namespace: `writer.lock`, `staging`, `segments`, `catalogs`, and a
+    /// regular `HEAD`. Publication and restart adapters perform content-level
+    /// validation under the returned authority. The synchronous call may block
+    /// on filesystem I/O.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FilesystemPlatformAdmissionError`] with the exact platform,
+    /// writer-lock, or namespace boundary and preserved source.
+    pub fn reopen(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
+        let root = filesystem_platform_profile::open(store_root)
+            .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
+        reopen_root(root)
+    }
+
     #[cfg(test)]
     pub(super) fn initialize_unchecked_for_tests(
         store_root: &Path,
@@ -40,6 +65,15 @@ impl FilesystemPlatformAdmission {
             })?;
         initialize_storage(storage)
     }
+
+    #[cfg(test)]
+    pub(super) fn reopen_unchecked_for_tests(
+        store_root: &Path,
+    ) -> Result<Self, FilesystemPlatformAdmissionError> {
+        let root = Dir::open_ambient_dir(store_root, ambient_authority())
+            .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
+        reopen_root(root)
+    }
 }
 
 fn initialize_storage(
@@ -49,5 +83,18 @@ fn initialize_storage(
     let lock = storage.into_lock().map_err(|source| {
         StoreInitializationError::io(StoreInitializationPhase::OpenAndLockWriterFile, source)
     })?;
+    Ok(FilesystemPlatformAdmission::initialized(lock))
+}
+
+fn reopen_root(
+    root: cap_std::fs::Dir,
+) -> Result<FilesystemPlatformAdmission, FilesystemPlatformAdmissionError> {
+    let lock = FilesystemWriterLock::try_acquire_in(root)
+        .map_err(|source| FilesystemPlatformAdmissionError::WriterLock { source })?;
+    let directory = lock
+        .clone_directory()
+        .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
+    filesystem_initialization_namespace::admit_published(&directory)
+        .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
     Ok(FilesystemPlatformAdmission::initialized(lock))
 }

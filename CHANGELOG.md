@@ -22,6 +22,9 @@ after its public API and format compatibility policies are established.
   non-casefolded Linux ext4 profile, refuses ambiguous root namespaces before
   mutation, completes the canonical directory shape idempotently, retains
   writer authority, and returns only after synchronizing the root.
+- Published filesystem stores can now reacquire writer authority without
+  mutation through a typed platform-admission boundary that requires the exact
+  initialized root shape plus a regular `HEAD`.
 - Writer-lock acquisition now reopens `writer.lock` after kernel locking and
   refuses when the resolved entry no longer has the locked device and inode.
 - Writer authority now also retains an advisory lock on the pinned store-root

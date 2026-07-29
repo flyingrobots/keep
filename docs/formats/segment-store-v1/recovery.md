@@ -36,6 +36,16 @@ coordinate, and refuses an unknown or conflicting name without artifact I/O.
 bounded stream, refuses metadata or observed bytes above the name-selected
 maximum, and returns its exact observed length and
 `KEEP:RECOVERY:STAGE\0` fingerprint.
+
+New stores obtain writer authority through
+`FilesystemPlatformAdmission::initialize`. A stable published store reacquires
+authority through `FilesystemPlatformAdmission::reopen`, which performs no
+protocol mutation, admits the production platform, acquires the existing
+writer lock, and requires exactly `writer.lock`, `staging`, `segments`,
+`catalogs`, and a regular `HEAD` in the root. Missing or additional root
+evidence remains a typed namespace refusal; content-level head, catalog, and
+segment verification stays at the publisher and restart boundaries.
+
 `FilesystemRecoveryInventoryReader::fingerprint_stage` binds that stream to
 the pinned root or staging capability, opens without following links, admits
 only regular files, and refuses entry replacement or length drift after

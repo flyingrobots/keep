@@ -25,9 +25,8 @@ pub(super) const NEXT_HEAD: &str = "head.next";
 /// closes open stages and directory capabilities before releasing the writer
 /// lock, but never publishes, removes, truncates, or repairs protocol state.
 ///
-/// Construction consumes a [`FilesystemPlatformAdmission`] proof. Keep exposes
-/// no public producer for that proof until issue #17 supplies crash-tested
-/// initialization and platform admission.
+/// Construction consumes a [`FilesystemPlatformAdmission`] proof created by
+/// initializing a new store or reopening a completely published store.
 #[must_use]
 pub struct FilesystemCatalogPublisher {
     pub(super) root: Dir,

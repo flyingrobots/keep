@@ -19,8 +19,8 @@ use crate::{
     AdmittedSegment, AdmittedSegmentRecord, CanonicalCatalog, CatalogGeneration,
     CatalogPublicationExpectation, CatalogPublicationOutcome, CatalogRestartByteLimit,
     CatalogRestartPolicy, FilesystemCatalogPublisher, FilesystemCatalogSnapshot,
-    FilesystemSegmentStage, FilesystemWriterLock, LayoutEntryLimit, SealedSegment,
-    SegmentPublication, SegmentReadPolicy, SegmentRecordLimit, StagedSegment,
+    FilesystemPlatformAdmission, FilesystemSegmentStage, FilesystemWriterLock, LayoutEntryLimit,
+    SealedSegment, SegmentPublication, SegmentReadPolicy, SegmentRecordLimit, StagedSegment,
     publish_catalog_generation,
 };
 
@@ -89,9 +89,8 @@ fn durable_publication_retry_returns_the_same_synchronized_receipt() -> Result<(
     )?;
     drop(publisher);
 
-    let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher =
-        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
+    let admission = FilesystemPlatformAdmission::reopen_unchecked_for_tests(store.path())?;
+    let mut publisher = FilesystemCatalogPublisher::open(admission, restart_policy()?)?;
     let retry = publish_catalog_generation(
         &mut publisher,
         CatalogPublicationExpectation::uninitialized(),

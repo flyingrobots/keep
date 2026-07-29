@@ -4,7 +4,10 @@ use std::error::Error;
 use std::fs;
 
 use super::filesystem_test_sandbox::TestDirectory;
-use super::{FilesystemPlatformAdmission, StoreInitializationError, StoreInitializationPhase};
+use super::{
+    FilesystemPlatformAdmission, FilesystemPlatformAdmissionError, StoreInitializationError,
+    StoreInitializationPhase,
+};
 
 const LOCK_NAME: &str = "writer.lock";
 const STAGING_NAME: &str = "staging";
@@ -104,6 +107,53 @@ fn retained_initializer_authority_excludes_a_second_initializer() -> Result<(), 
     drop(first);
     let successor = FilesystemPlatformAdmission::initialize_unchecked_for_tests(sandbox.path())?;
     drop(successor);
+    sandbox.remove()?;
+    Ok(())
+}
+
+#[test]
+fn published_reopen_requires_a_complete_root_namespace() -> Result<(), Box<dyn Error>> {
+    let sandbox = TestDirectory::create("store-reopen-incomplete")?;
+    let admission = FilesystemPlatformAdmission::initialize_unchecked_for_tests(sandbox.path())?;
+    drop(admission);
+
+    let error = FilesystemPlatformAdmission::reopen_unchecked_for_tests(sandbox.path())
+        .err()
+        .ok_or("published admission accepted a store without HEAD")?;
+
+    assert!(matches!(
+        error,
+        FilesystemPlatformAdmissionError::Namespace {
+            ref source,
+        } if source.kind() == std::io::ErrorKind::NotFound
+    ));
+    assert!(!sandbox.path().join("HEAD").exists());
+    sandbox.remove()?;
+    Ok(())
+}
+
+#[test]
+fn published_reopen_refuses_unknown_root_evidence() -> Result<(), Box<dyn Error>> {
+    let sandbox = TestDirectory::create("store-reopen-unknown")?;
+    let admission = FilesystemPlatformAdmission::initialize_unchecked_for_tests(sandbox.path())?;
+    drop(admission);
+    fs::write(sandbox.path().join("HEAD"), b"published head")?;
+    fs::write(sandbox.path().join("unknown"), b"retained evidence")?;
+
+    let error = FilesystemPlatformAdmission::reopen_unchecked_for_tests(sandbox.path())
+        .err()
+        .ok_or("published admission accepted an unknown root entry")?;
+
+    assert!(matches!(
+        error,
+        FilesystemPlatformAdmissionError::Namespace {
+            ref source,
+        } if source.kind() == std::io::ErrorKind::InvalidData
+    ));
+    assert_eq!(
+        fs::read(sandbox.path().join("unknown"))?,
+        b"retained evidence"
+    );
     sandbox.remove()?;
     Ok(())
 }

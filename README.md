@@ -41,7 +41,10 @@ unforgeable `FilesystemPlatformAdmission`. On Linux, its public initializer
 admits only a writable, non-casefolded ext4 root, refuses unknown or aliased
 namespace entries before mutation, creates or verifies the canonical
 `writer.lock`, `staging`, `segments`, and `catalogs` shape, and returns only
-after root synchronization with the writer lock retained.
+after root synchronization with the writer lock retained. After publication,
+`FilesystemPlatformAdmission::reopen` reacquires the existing writer lock
+without mutation and requires that exact initialized shape plus a regular
+`HEAD` before returning new publisher authority.
 
 `FilesystemCatalogPublisher` retains one kernel-managed writer lock and pinned
 root, staging, segment-pool, and catalog-pool capabilities for the complete
@@ -59,13 +62,13 @@ logical reads.
 
 The reference CAS is executable evidence for M2 storage laws, not a durable
 backend. Its committed state is process memory; process death loses it all.
-The durable boundary can initialize and platform-admit a store only under the
-documented Linux ext4 contract. Acquiring `FilesystemWriterLock` alone cannot
-construct a filesystem publisher. Ambiguous crash states remain explicit
-recovery work. An absent `HEAD` is admitted for first publication only when
-both immutable pools are empty. The public storage-independent recovery
-inventory counts all four protocol namespaces before retaining names, applies
-a configurable ceiling no greater than 2,097,152 entries, and returns
+The durable boundary can initialize or reopen and platform-admit a store only
+under the documented Linux ext4 contract. Acquiring `FilesystemWriterLock`
+alone cannot construct a filesystem publisher. Ambiguous crash states remain
+explicit recovery work. An absent `HEAD` is admitted for first publication
+only when both immutable pools are empty. The public storage-independent
+recovery inventory counts all four protocol namespaces before retaining names,
+applies a configurable ceiling no greater than 2,097,152 entries, and returns
 duplicate-free deterministic raw name order.
 `FilesystemRecoveryInventoryReader` implements that contract with pinned,
 no-follow namespace capabilities and pre/post identity verification on the
