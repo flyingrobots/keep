@@ -69,7 +69,7 @@ recovery.
 | ID | Implemented requirement | Oracle | Executable evidence | Status |
 | --- | --- | --- | --- | --- |
 | `KEEP-CATALOG-001` | `CatalogGeneration` admits positive values and refuses overflow when deriving a successor | Checked scalar model | `tests/catalog_generation.rs` | Implemented in #16 |
-| `KEEP-CATALOG-002` | Catalog and publication-head codecs reproduce every frozen version-1 artifact and refuse noncanonical bytes | Independent golden corpus | `tests/catalog.rs`, `tests/publication_head.rs` | Implemented in #16 |
+| `KEEP-CATALOG-002` | Catalog and publication-head codecs reproduce every frozen version-1 artifact and refuse noncanonical bytes; catalog checksum and digest admission precede entry semantics | Independent golden corpus and mutation precedence oracle | `tests/catalog.rs`, `tests/catalog/integrity_laws.rs`, `tests/publication_head.rs` | Implemented in #16 |
 | `KEEP-CATALOG-003` | Catalog entries are sorted by logical identity and duplicate keys are refused independently of input order | Ordered reference map | `tests/catalog_ordering.rs` | Implemented in #16 |
 | `KEEP-CATALOG-004` | Every catalog location equals a verified top-level record span in the exact named segment; construction and admission require every supplied segment to be referenced, and admission scans each referenced segment once | Bounded grouped lookup plan and golden artifacts | `tests/catalog_encoding.rs`, `tests/catalog_locations.rs` | Implemented in #16 |
 | `KEEP-CATALOG-005` | Publication admits only the exact expected successor and reports expected and observed generation and digest on staleness | Generation transition model | `tests/catalog_transition.rs` | Implemented in #16 |

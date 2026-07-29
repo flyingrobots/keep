@@ -10,6 +10,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Catalog decoding now verifies the catalog checksum and physical digest before
+  interpreting entry semantics. Corrupt identity-bearing bytes therefore fail
+  at the integrity boundary instead of producing a semantic entry error.
 - Filesystem catalog publisher construction now consumes an unforgeable
   `FilesystemPlatformAdmission`. No public producer exists until crash-tested
   initialization can establish the platform contract in issue #17; acquiring

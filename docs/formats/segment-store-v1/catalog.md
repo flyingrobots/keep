@@ -103,6 +103,11 @@ catalog_digest = framed_blake3_v1(
 )
 ```
 
+After admitting the fixed header and exact declared length, decoding verifies
+both trailer fields before interpreting any entry semantics. Covered-byte
+corruption therefore returns a checksum or digest disagreement even when the
+same bytes would also violate an entry field invariant.
+
 The catalog digest is a physical generation coordinate and predecessor
 witness. It does not establish retention or application history.
 

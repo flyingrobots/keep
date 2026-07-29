@@ -16,8 +16,8 @@ pub(super) fn decode(encoded: &[u8]) -> Result<ChecksummedCatalog<'_>, CatalogDe
     let fields = catalog_header_decoder::decode(encoded)?;
     let metadata = validate_header(&fields)?;
     validate_observed_length(encoded, metadata.length())?;
-    catalog_entry_sequence::validate(encoded, metadata.entry_count())?;
     let digest = catalog_integrity::validate(encoded)?;
+    catalog_entry_sequence::validate(encoded, metadata.entry_count())?;
     Ok(ChecksummedCatalog::from_verified_parts(
         encoded,
         metadata,

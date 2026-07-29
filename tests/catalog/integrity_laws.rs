@@ -4,8 +4,26 @@ use std::error::Error;
 
 use keep::{CatalogDecodeError, ChecksummedCatalog};
 
-use super::{GENERATION_ONE_HEX, catalog_bytes};
+use super::{FIRST_ENTRY_OFFSET, GENERATION_ONE_HEX, catalog_bytes};
 use crate::support::require_error;
+
+#[test]
+fn catalog_integrity_precedes_entry_semantics() -> Result<(), Box<dyn Error>> {
+    let mut encoded = catalog_bytes(GENERATION_ONE_HEX)?;
+    *encoded
+        .get_mut(FIRST_ENTRY_OFFSET)
+        .ok_or("catalog lacks its first entry")? = 3;
+
+    let error = require_error(
+        ChecksummedCatalog::decode(&encoded),
+        "catalog with stale integrity fields was admitted",
+    )?;
+    assert!(
+        matches!(error, CatalogDecodeError::ChecksumMismatch { .. }),
+        "unexpected refusal: {error:?}"
+    );
+    Ok(())
+}
 
 #[test]
 fn catalog_refuses_wrong_width_checksum_and_digest() -> Result<(), Box<dyn Error>> {
