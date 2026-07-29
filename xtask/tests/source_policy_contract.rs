@@ -56,6 +56,17 @@ fn source_inventory_uses_the_admitted_repository_directory() {
 }
 
 #[test]
+fn regular_source_admission_has_one_refusal_boundary() {
+    assert_eq!(
+        SOURCE_STRUCTURE
+            .matches("SourceFileAdmission::NonRegular")
+            .count(),
+        1
+    );
+    assert_eq!(SOURCE_STRUCTURE.matches("fn admit_regular(").count(), 1);
+}
+
+#[test]
 fn git_inventory_uses_the_deadline_bounded_process_layer() {
     assert!(GIT_PROCESS.contains("const GIT_DEADLINE: Duration"));
     assert!(GIT_PROCESS.contains("bounded_process::capture_with_limits("));

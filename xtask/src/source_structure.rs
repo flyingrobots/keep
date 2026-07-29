@@ -80,13 +80,7 @@ fn inventory_violations(
     let mut violations = Vec::new();
     for relative in executable_candidates {
         let tracked_mode = tracked_modes.get(relative.as_path()).copied();
-        let SourceFileAdmission::Regular(source) =
-            AdmittedSource::admit(source_root, relative.as_path(), tracked_mode)?
-        else {
-            return Err(SourceStructureError::NonRegular(
-                source_root.display_path(relative.as_path()),
-            ));
-        };
+        let source = admit_regular(source_root, relative.as_path(), tracked_mode)?;
         if source.execution() == FileExecution::Executable
             && source_line_count(source_root, &source)? == SourceLineCount::Exceeded
         {
@@ -118,13 +112,7 @@ fn source_violations_with_modes(
     let mut violations = Vec::new();
     for relative in paths {
         let tracked_mode = tracked_modes.get(relative.as_path()).copied();
-        let SourceFileAdmission::Regular(source) =
-            AdmittedSource::admit(source_root, relative.as_path(), tracked_mode)?
-        else {
-            return Err(SourceStructureError::NonRegular(
-                source_root.display_path(relative.as_path()),
-            ));
-        };
+        let source = admit_regular(source_root, relative.as_path(), tracked_mode)?;
         if is_extensionless_file(relative.as_str().as_bytes())
             && source.execution() == FileExecution::NonExecutable
         {
@@ -136,6 +124,19 @@ fn source_violations_with_modes(
         }
     }
     Ok(violations)
+}
+
+fn admit_regular(
+    source_root: &RepositoryRoot,
+    relative: &Path,
+    tracked_mode: Option<TrackedFileMode>,
+) -> Result<AdmittedSource, SourceStructureError> {
+    match AdmittedSource::admit(source_root, relative, tracked_mode)? {
+        SourceFileAdmission::Regular(source) => Ok(source),
+        SourceFileAdmission::NonRegular => Err(SourceStructureError::NonRegular(
+            source_root.display_path(relative),
+        )),
+    }
 }
 
 fn source_line_count(
