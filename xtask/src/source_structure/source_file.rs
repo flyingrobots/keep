@@ -16,6 +16,12 @@ pub(super) enum FileExecution {
     NonExecutable,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum TrackedFileMode {
+    NonRegular,
+    Regular(FileExecution),
+}
+
 pub(super) enum SourceFileAdmission {
     Regular(AdmittedSource),
     NonRegular,
@@ -33,11 +39,15 @@ impl AdmittedSource {
     pub(super) fn admit(
         source_root: &RepositoryRoot,
         relative: &Path,
+        tracked_execution: Option<TrackedFileMode>,
     ) -> Result<SourceFileAdmission, SourceStructureError> {
         let path = source_root.display_path(relative);
         let file = match source_root.open_file(relative) {
             Ok(file) => file,
             Err(OpenRepositoryFileError::NonRegular) => {
+                if let Some(TrackedFileMode::Regular(execution)) = tracked_execution {
+                    return Err(mode_changed(&path, execution.label(), "nonregular"));
+                }
                 return Ok(SourceFileAdmission::NonRegular);
             }
             Err(OpenRepositoryFileError::Io(source)) => {
@@ -51,6 +61,7 @@ impl AdmittedSource {
                 source,
             })?;
         let execution = file_execution(&metadata);
+        admit_execution(&path, tracked_execution, execution)?;
         let python = execution == FileExecution::Executable
             && executable_uses_python(&file).map_err(|source| SourceStructureError::Inspect {
                 path: path.clone(),
@@ -112,6 +123,43 @@ impl AdmittedSource {
             Ok(())
         } else {
             Err(SourceStructureError::SourceFileChanged(self.path.clone()))
+        }
+    }
+}
+
+fn admit_execution(
+    path: &Path,
+    tracked: Option<TrackedFileMode>,
+    worktree: FileExecution,
+) -> Result<(), SourceStructureError> {
+    match tracked {
+        Some(TrackedFileMode::Regular(tracked)) if tracked != worktree => {
+            Err(mode_changed(path, tracked.label(), worktree.label()))
+        }
+        Some(TrackedFileMode::NonRegular) => {
+            Err(mode_changed(path, "nonregular", worktree.label()))
+        }
+        Some(TrackedFileMode::Regular(_)) | None => Ok(()),
+    }
+}
+
+fn mode_changed(
+    path: &Path,
+    tracked: &'static str,
+    worktree: &'static str,
+) -> SourceStructureError {
+    SourceStructureError::ExecutionModeChanged {
+        path: path.to_owned(),
+        tracked,
+        worktree,
+    }
+}
+
+impl FileExecution {
+    const fn label(self) -> &'static str {
+        match self {
+            Self::Executable => "executable",
+            Self::NonExecutable => "nonexecutable",
         }
     }
 }

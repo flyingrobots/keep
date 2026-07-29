@@ -28,7 +28,11 @@ fn source_scan_keeps_the_admitted_repository_root() -> Result<(), Box<dyn std::e
     fs::create_dir(&root)?;
     fs::write(root.join("source.rs"), "replacement\n".repeat(501))?;
 
-    let source = regular_source(AdmittedSource::admit(&source_root, relative.as_path())?)?;
+    let source = regular_source(AdmittedSource::admit(
+        &source_root,
+        relative.as_path(),
+        None,
+    )?)?;
     assert_eq!(
         source_line_count(&source_root, &source)?,
         SourceLineCount::Within(1)
@@ -50,7 +54,11 @@ fn source_scan_keeps_one_admitted_file_identity() -> Result<(), Box<dyn std::err
     let source_root = RepositoryRoot::open(&root)?;
     let relative = RepositoryPath::admit(String::from("source"))?;
 
-    let source = regular_source(AdmittedSource::admit(&source_root, relative.as_path())?)?;
+    let source = regular_source(AdmittedSource::admit(
+        &source_root,
+        relative.as_path(),
+        None,
+    )?)?;
     assert_eq!(source.execution(), FileExecution::Executable);
     fs::rename(&source_path, &retained_path)?;
     fs::write(&source_path, "replacement\n".repeat(501))?;
@@ -75,7 +83,11 @@ fn source_scan_refuses_in_place_mutation() -> Result<(), Box<dyn std::error::Err
     fs::write(&source_path, "safe\n")?;
     let source_root = RepositoryRoot::open(&root)?;
     let relative = RepositoryPath::admit(String::from("source.rs"))?;
-    let source = regular_source(AdmittedSource::admit(&source_root, relative.as_path())?)?;
+    let source = regular_source(AdmittedSource::admit(
+        &source_root,
+        relative.as_path(),
+        None,
+    )?)?;
 
     fs::write(&source_path, "mutated\n".repeat(501))?;
 
@@ -125,7 +137,7 @@ fn source_open_refuses_replacement_symlink() -> Result<(), Box<dyn std::error::E
 
     fs::rename(&source_path, &retained_path)?;
     symlink(&target_path, &source_path)?;
-    let admission = AdmittedSource::admit(&source_root, relative.as_path())?;
+    let admission = AdmittedSource::admit(&source_root, relative.as_path(), None)?;
     assert!(matches!(admission, SourceFileAdmission::NonRegular));
     drop(source_root);
     directory.close()?;

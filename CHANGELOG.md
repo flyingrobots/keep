@@ -115,11 +115,13 @@ after its public API and format compatibility policies are established.
   shebangs parse exact and unambiguous abbreviated long options, combined
   short-option clusters, assignments, quoting, and split strings before
   classifying only the selected utility, so later command arguments cannot
-  impersonate Python and unresolved utility substitutions fail closed. Source
-  execution, shebang, and physical-line evidence now come from one admitted
-  file descriptor whose identity is revalidated after each read phase, so path
-  replacement or in-place mutation cannot splice different file states into
-  one verification result.
+  impersonate Python and unresolved utility substitutions fail closed. Tracked
+  file modes are admitted from the Git index and must agree with the worktree,
+  so a staged executable cannot defer Python screening until the next checkout.
+  Source execution, shebang, and physical-line evidence now come from one
+  admitted file descriptor whose identity is revalidated after each read phase,
+  so path replacement or in-place mutation cannot splice different file states
+  into one verification result.
 - Git path inventory failures now remain primary when child cleanup, waiting,
   or diagnostic collection also fails; the secondary failure remains typed and
   inspectable. Empty path records and unterminated path bytes produce distinct,

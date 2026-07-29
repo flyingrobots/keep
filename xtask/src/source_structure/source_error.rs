@@ -10,7 +10,13 @@ use crate::diagnostic::{escaped_controls, escaped_path};
 use crate::git_inventory::GitInventoryError;
 
 pub(crate) enum SourceStructureError {
+    ExecutionModeChanged {
+        path: PathBuf,
+        tracked: &'static str,
+        worktree: &'static str,
+    },
     GitInventory(GitInventoryError),
+    GitIndexRecord,
     GitPathEncoding {
         operation: &'static str,
         source: FromUtf8Error,
@@ -39,7 +45,22 @@ impl fmt::Debug for SourceStructureError {
 impl fmt::Display for SourceStructureError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::ExecutionModeChanged {
+                path,
+                tracked,
+                worktree,
+            } => {
+                formatter.write_str("repository execution mode differs from the index for `")?;
+                escaped_path(formatter, path)?;
+                write!(
+                    formatter,
+                    "`: tracked mode is {tracked}, worktree mode is {worktree}"
+                )
+            }
             Self::GitInventory(error) => write!(formatter, "{error}"),
+            Self::GitIndexRecord => {
+                formatter.write_str("git returned an invalid tracked file-mode record")
+            }
             Self::GitPathEncoding { operation, .. } => {
                 write!(formatter, "`{operation}` returned a non-UTF-8 path")
             }
@@ -84,7 +105,9 @@ impl Error for SourceStructureError {
             Self::GitInventory(error) => Some(error),
             Self::GitPathEncoding { source, .. } => Some(source),
             Self::Inspect { source, .. } => Some(source),
-            Self::InvalidPath(_)
+            Self::ExecutionModeChanged { .. }
+            | Self::GitIndexRecord
+            | Self::InvalidPath(_)
             | Self::NonRegular(_)
             | Self::PythonSource(_)
             | Self::RepositoryRootChanged(_)

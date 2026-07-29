@@ -4,7 +4,10 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
+use std::process::{Command, Stdio};
+use std::time::Duration;
 
+use crate::bounded_process;
 use crate::git_inventory::GitPath;
 use crate::repository_file::RepositoryRoot;
 use crate::test_directory::TestDirectory;
@@ -117,6 +120,33 @@ fn extensionless_nonexecutable_text_is_not_a_source_module()
     Ok(())
 }
 
+#[test]
+fn tracked_executable_mode_must_match_the_worktree() -> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::create("tracked-executable-mode")?;
+    let repository = directory.path().join("repository");
+    fs::create_dir(&repository)?;
+    run_git(&repository, &["init", "--quiet", "--template="])?;
+    fs::write(
+        repository.join("script"),
+        "#!/usr/bin/env python3\nprint('forbidden')\n",
+    )?;
+    run_git(&repository, &["add", "script"])?;
+    run_git(&repository, &["update-index", "--chmod=+x", "script"])?;
+
+    let result = super::check(&repository);
+
+    assert!(matches!(
+        result,
+        Err(super::SourceStructureError::ExecutionModeChanged {
+            ref path,
+            tracked: "executable",
+            worktree: "nonexecutable",
+        }) if path == &repository.join("script")
+    ));
+    directory.close()?;
+    Ok(())
+}
+
 #[derive(Clone, Copy)]
 enum FixtureMode {
     Executable,
@@ -157,5 +187,34 @@ impl SourceFixture {
     fn close(self) -> Result<(), Box<dyn std::error::Error>> {
         self.directory.close()?;
         Ok(())
+    }
+}
+
+fn run_git(
+    repository: &std::path::Path,
+    arguments: &[&str],
+) -> Result<(), Box<dyn std::error::Error>> {
+    let path = std::env::var_os("PATH").ok_or("test PATH is unavailable")?;
+    let mut command = Command::new("git");
+    command
+        .args(arguments)
+        .current_dir(repository)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .env_clear()
+        .env("PATH", path)
+        .env("LC_ALL", "C")
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", "/dev/null");
+    let output = bounded_process::status(
+        "git test fixture",
+        &mut command,
+        Some(Duration::from_secs(10)),
+    )?;
+    if output.succeeded {
+        Ok(())
+    } else {
+        Err(format!("git test fixture failed with status {:?}", output.code).into())
     }
 }

@@ -7,13 +7,14 @@ mod source_file;
 mod source_inventory;
 mod source_kind;
 
+use std::collections::BTreeMap;
 use std::io::{self, BufRead, BufReader};
 use std::path::Path;
 
 use crate::repository_file::RepositoryRoot;
 use repository_path::RepositoryPath;
 pub(super) use source_error::SourceStructureError;
-use source_file::{AdmittedSource, FileExecution, SourceFileAdmission};
+use source_file::{AdmittedSource, FileExecution, SourceFileAdmission, TrackedFileMode};
 #[cfg(test)]
 use source_inventory::{
     PRESENT_PATH_ARGUMENTS, select as select_source_inventory, select_source_paths,
@@ -71,10 +72,16 @@ fn inventory_violations(
     source_root: &RepositoryRoot,
     inventory: SourceInventory,
 ) -> Result<Vec<std::path::PathBuf>, SourceStructureError> {
+    let SourceInventory {
+        modules,
+        executable_candidates,
+        tracked_modes,
+    } = inventory;
     let mut violations = Vec::new();
-    for relative in inventory.executable_candidates {
+    for relative in executable_candidates {
+        let tracked_mode = tracked_modes.get(relative.as_path()).copied();
         let SourceFileAdmission::Regular(source) =
-            AdmittedSource::admit(source_root, relative.as_path())?
+            AdmittedSource::admit(source_root, relative.as_path(), tracked_mode)?
         else {
             return Err(SourceStructureError::NonRegular(
                 source_root.display_path(relative.as_path()),
@@ -86,19 +93,33 @@ fn inventory_violations(
             violations.push(relative.as_path().to_owned());
         }
     }
-    violations.extend(source_violations(source_root, inventory.modules)?);
+    violations.extend(source_violations_with_modes(
+        source_root,
+        modules,
+        &tracked_modes,
+    )?);
     violations.sort();
     Ok(violations)
 }
 
+#[cfg(test)]
 fn source_violations(
     source_root: &RepositoryRoot,
     paths: Vec<RepositoryPath>,
 ) -> Result<Vec<std::path::PathBuf>, SourceStructureError> {
+    source_violations_with_modes(source_root, paths, &BTreeMap::new())
+}
+
+fn source_violations_with_modes(
+    source_root: &RepositoryRoot,
+    paths: Vec<RepositoryPath>,
+    tracked_modes: &BTreeMap<std::path::PathBuf, TrackedFileMode>,
+) -> Result<Vec<std::path::PathBuf>, SourceStructureError> {
     let mut violations = Vec::new();
     for relative in paths {
+        let tracked_mode = tracked_modes.get(relative.as_path()).copied();
         let SourceFileAdmission::Regular(source) =
-            AdmittedSource::admit(source_root, relative.as_path())?
+            AdmittedSource::admit(source_root, relative.as_path(), tracked_mode)?
         else {
             return Err(SourceStructureError::NonRegular(
                 source_root.display_path(relative.as_path()),
