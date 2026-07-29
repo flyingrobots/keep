@@ -9,6 +9,7 @@ use keep::{
 };
 
 use super::recording_storage::RecordingStorage;
+use super::segment_selection;
 use super::{EMPTY_SEGMENT_HEX, SEGMENT_HEX, fixture, maximum_policy, publication_fixture};
 use crate::support::require_error;
 
@@ -19,12 +20,13 @@ fn staged_segment_must_belong_to_the_admitted_set_before_io() -> Result<(), Box<
     let staged_bytes = fixture(EMPTY_SEGMENT_HEX)?;
     let staged = AdmittedSegment::decode(&staged_bytes, maximum_policy())?;
     let expected = staged.digest();
+    let selection = segment_selection::for_segment(&staged)?;
     let mut storage = RecordingStorage::succeeding();
     let error = require_error(
         publish_catalog_generation(
             &mut storage,
             CatalogPublicationExpectation::uninitialized(),
-            SegmentPublication::One(&staged),
+            selection,
             &publication.catalog,
             &publication.segments,
         ),
@@ -49,7 +51,7 @@ fn catalog_location_refusal_precedes_every_storage_call() -> Result<(), Box<dyn 
         publish_catalog_generation(
             &mut storage,
             CatalogPublicationExpectation::uninitialized(),
-            SegmentPublication::None,
+            SegmentPublication::none(),
             &publication.catalog,
             &[],
         ),
@@ -80,7 +82,7 @@ fn current_snapshot_requires_and_admits_only_its_exact_successor() -> Result<(),
         publish_catalog_generation(
             &mut storage,
             expectation,
-            SegmentPublication::None,
+            SegmentPublication::none(),
             &publication.catalog,
             &publication.segments,
         ),
@@ -106,7 +108,7 @@ fn current_snapshot_requires_and_admits_only_its_exact_successor() -> Result<(),
         publish_catalog_generation(
             &mut storage,
             CatalogPublicationExpectation::uninitialized(),
-            SegmentPublication::None,
+            SegmentPublication::none(),
             &successor,
             &publication.segments,
         ),
@@ -121,7 +123,7 @@ fn current_snapshot_requires_and_admits_only_its_exact_successor() -> Result<(),
     let receipt = publish_catalog_generation(
         &mut storage,
         expectation,
-        SegmentPublication::None,
+        SegmentPublication::none(),
         &successor,
         &publication.segments,
     )?;

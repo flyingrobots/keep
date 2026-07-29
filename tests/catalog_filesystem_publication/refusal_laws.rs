@@ -11,27 +11,28 @@ use keep::{
 };
 
 use super::{
-    EMPTY_SEGMENT_HEX, SEGMENT_HEX, StoreFixture, fixture, maximum_segment_policy, restart_policy,
+    EMPTY_SEGMENT_HEX, StoreFixture, fixture, maximum_segment_policy, restart_policy,
+    stage_one_zero,
 };
 use crate::support::require_error;
 
 #[test]
 fn conflicting_immutable_pool_bytes_refuse_before_visibility() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-conflict")?;
-    let segment_bytes = fixture(SEGMENT_HEX)?;
-    fs::write(store.staging().join("current.seg"), &segment_bytes)?;
+    let (closed, segment_bytes) = stage_one_zero(&store)?;
     fs::write(store.segment_path(), fixture(EMPTY_SEGMENT_HEX)?)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
     let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let selection = SegmentPublication::one(closed, &segments[0])?;
 
     let error = require_error(
         publish_catalog_generation(
             &mut publisher,
             CatalogPublicationExpectation::uninitialized(),
-            SegmentPublication::One(&segments[0]),
+            selection,
             &catalog,
             &segments,
         ),
@@ -54,17 +55,17 @@ fn conflicting_immutable_pool_bytes_refuse_before_visibility() -> Result<(), Box
 #[test]
 fn stale_current_head_refuses_before_creating_catalog_state() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-stale")?;
-    let segment_bytes = fixture(SEGMENT_HEX)?;
-    fs::write(store.staging().join("current.seg"), &segment_bytes)?;
+    let (closed, segment_bytes) = stage_one_zero(&store)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
     let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let selection = SegmentPublication::one(closed, &segments[0])?;
     let _receipt = publish_catalog_generation(
         &mut publisher,
         CatalogPublicationExpectation::uninitialized(),
-        SegmentPublication::One(&segments[0]),
+        selection,
         &catalog,
         &segments,
     )?;
@@ -76,7 +77,7 @@ fn stale_current_head_refuses_before_creating_catalog_state() -> Result<(), Box<
         publish_catalog_generation(
             &mut publisher,
             CatalogPublicationExpectation::uninitialized(),
-            SegmentPublication::None,
+            SegmentPublication::none(),
             &catalog,
             &segments,
         ),
@@ -106,19 +107,19 @@ fn stale_current_head_refuses_before_creating_catalog_state() -> Result<(), Box<
 fn leftover_next_head_requires_recovery_before_any_mutation() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-next-head")?;
     fs::write(store.path().join("head.next"), [])?;
-    let segment_bytes = fixture(SEGMENT_HEX)?;
-    fs::write(store.staging().join("current.seg"), &segment_bytes)?;
+    let (closed, segment_bytes) = stage_one_zero(&store)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
     let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let selection = SegmentPublication::one(closed, &segments[0])?;
 
     let error = require_error(
         publish_catalog_generation(
             &mut publisher,
             CatalogPublicationExpectation::uninitialized(),
-            SegmentPublication::One(&segments[0]),
+            selection,
             &catalog,
             &segments,
         ),

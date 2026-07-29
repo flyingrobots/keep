@@ -1,9 +1,13 @@
 //! Catalog-generation publication ordering and fault laws.
 
+#[path = "catalog_publication/closed_stage_laws.rs"]
+mod closed_stage_laws;
 #[path = "catalog_publication/preflight_laws.rs"]
 mod preflight_laws;
 #[path = "catalog_publication/recording_storage.rs"]
 pub mod recording_storage;
+#[path = "catalog_publication/segment_selection.rs"]
+pub mod segment_selection;
 mod support;
 
 use std::error::Error;
@@ -24,12 +28,13 @@ fn one_generation_executes_every_durability_transition_in_order() -> Result<(), 
     let bytes = fixture(SEGMENT_HEX)?;
     let fixture = publication_fixture(&bytes)?;
     let staged = fixture.segments.first().ok_or("missing staged segment")?;
+    let selection = segment_selection::for_segment(staged)?;
     let mut storage = RecordingStorage::succeeding();
 
     let receipt = publish_catalog_generation(
         &mut storage,
         CatalogPublicationExpectation::uninitialized(),
-        SegmentPublication::One(staged),
+        selection,
         &fixture.catalog,
         &fixture.segments,
     )?;
@@ -50,12 +55,13 @@ fn every_publication_fault_stops_at_its_exact_phase() -> Result<(), Box<dyn Erro
     let staged = fixture.segments.first().ok_or("missing staged segment")?;
 
     for failing_phase in EXPECTED_WITH_SEGMENT {
+        let selection = segment_selection::for_segment(staged)?;
         let mut storage = RecordingStorage::failing_at(*failing_phase);
         let error = require_error(
             publish_catalog_generation(
                 &mut storage,
                 CatalogPublicationExpectation::uninitialized(),
-                SegmentPublication::One(staged),
+                selection,
                 &fixture.catalog,
                 &fixture.segments,
             ),
@@ -84,7 +90,7 @@ fn catalog_only_publication_skips_segment_transitions() -> Result<(), Box<dyn Er
     let _receipt = publish_catalog_generation(
         &mut storage,
         CatalogPublicationExpectation::uninitialized(),
-        SegmentPublication::None,
+        SegmentPublication::none(),
         &fixture.catalog,
         &fixture.segments,
     )?;

@@ -193,7 +193,8 @@ after its public API and format compatibility policies are established.
   no-replacement immutable-pool links, complete post-link verification,
   explicit file and directory synchronization, transitive `head.next`
   verification, atomic `HEAD` replacement, and stale or recovery-required
-  refusal before mutation.
+  refusal before mutation. New segment publication consumes a handle-free
+  `ClosedSegment` proof before any immutable-pool link.
 - Bounded `FilesystemCatalogSnapshot` restart loading that follows only exact
   checksummed head, catalog, and segment coordinates; refuses symbolic links,
   nonregular files, malformed or conflicting bytes, dangling entries, and

@@ -26,7 +26,7 @@ pub fn publish_catalog_generation(
     catalog: &CanonicalCatalog,
     segments: &[AdmittedSegment<'_>],
 ) -> Result<CatalogPublicationReceipt, CatalogPublicationError> {
-    validate_staged_segment(segment, segments)?;
+    validate_staged_segment(&segment, segments)?;
     let checksummed = catalog.checksummed();
     let admitted = checksummed.admit(segments).map_err(|source| {
         CatalogPublicationError::CatalogAdmission {
@@ -41,7 +41,7 @@ pub fn publish_catalog_generation(
         .admit(admitted)
         .map_err(|source| CatalogPublicationError::SnapshotAdmission { source })?;
     catalog_publication_execution::execute_current(storage, expectation)?;
-    if let SegmentPublication::One(segment) = segment {
+    if let Some(segment) = segment.into_admitted() {
         catalog_publication_execution::execute_segment(storage, segment)?;
     }
     catalog_publication_execution::execute_catalog(storage, catalog, checksummed)?;
@@ -98,10 +98,10 @@ const fn validate_initial(
 }
 
 fn validate_staged_segment(
-    selection: SegmentPublication<'_, '_>,
+    selection: &SegmentPublication<'_, '_>,
     segments: &[AdmittedSegment<'_>],
 ) -> Result<(), CatalogPublicationError> {
-    let SegmentPublication::One(staged) = selection else {
+    let Some(staged) = selection.admitted() else {
         return Ok(());
     };
     let digest = staged.digest();

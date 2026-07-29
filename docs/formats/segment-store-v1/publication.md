@@ -133,6 +133,13 @@ Existing immutable-pool coordinates are never replaced; their bytes are
 reopened and compared against the preflighted canonical artifact before the
 protocol advances.
 
+Publishing a new segment additionally requires a checked
+`SegmentPublication::one` selection. The caller must first consume
+`SealedSegment::close`, which drops Keep's owned writable stage before
+returning a handle-free `ClosedSegment` receipt. Selection binds that receipt's
+record count, byte length, and digest to the exact `AdmittedSegment` bytes.
+Catalog publication cannot select an unrelated or still-open sealed stage.
+
 `FilesystemCatalogSnapshot::load` is the observational reader boundary. Its
 `CatalogRestartPolicy` combines segment parser limits with a positive maximum
 for aggregate retained segment bytes. The loader follows only exact

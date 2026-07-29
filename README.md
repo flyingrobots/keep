@@ -41,7 +41,9 @@ root, staging, segment-pool, and catalog-pool capabilities for the complete
 blocking publication. It reopens and verifies synchronized stages, uses
 no-replacement immutable-pool links, synchronizes every required file and
 directory, verifies the complete `head.next` view, atomically replaces `HEAD`,
-and returns a receipt only after root synchronization.
+and returns a receipt only after root synchronization. New segment publication
+requires `SealedSegment::close` to consume the writable stage and bind its
+handle-free `ClosedSegment` receipt to exact admitted bytes.
 `FilesystemCatalogSnapshot` follows only the exact checksummed head, catalog,
 and segment coordinates and retains caller-bounded immutable bytes for pinned
 logical reads.

@@ -1,6 +1,6 @@
 //! Explicitly flushed and synchronized immutable segment stage.
 
-use super::{SegmentDigest, SegmentStage};
+use super::{ClosedSegment, SegmentDigest, SegmentStage};
 
 /// A complete segment stage whose record prefix and sealed bytes were each
 /// flushed and synchronized in protocol order.
@@ -22,6 +22,22 @@ impl<S> SealedSegment<S>
 where
     S: SegmentStage,
 {
+    /// Closes the owned writable stage and returns publication-safe metadata.
+    ///
+    /// The stage has already completed both required flush-and-sync
+    /// transitions. This consuming operation drops the only stage value Keep
+    /// owns before returning a handle-free [`ClosedSegment`] receipt.
+    pub fn close(self) -> ClosedSegment {
+        let Self {
+            _stage: stage,
+            record_count,
+            segment_length,
+            digest,
+        } = self;
+        drop(stage);
+        ClosedSegment::admitted(record_count, segment_length, digest)
+    }
+
     /// Returns the exact sealed record count.
     #[must_use]
     pub const fn record_count(&self) -> u32 {

@@ -11,10 +11,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use keep::{
-    AdmittedSegment, CanonicalCatalog, CatalogGeneration, CatalogPublicationExpectation,
-    CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemCatalogPublisher,
-    FilesystemCatalogSnapshot, FilesystemWriterLock, LayoutEntryLimit, SegmentPublication,
-    SegmentReadPolicy, SegmentRecordLimit, publish_catalog_generation,
+    AdmittedSegment, AdmittedSegmentRecord, CanonicalCatalog, CatalogGeneration,
+    CatalogPublicationExpectation, CatalogRestartByteLimit, CatalogRestartPolicy, ClosedSegment,
+    FilesystemCatalogPublisher, FilesystemCatalogSnapshot, FilesystemSegmentStage,
+    FilesystemWriterLock, LayoutEntryLimit, SegmentPublication, SegmentReadPolicy,
+    SegmentRecordLimit, StagedSegment, publish_catalog_generation,
 };
 use sandbox::TestDirectory;
 use support::decode_hex;
@@ -27,21 +28,24 @@ const CATALOG_DIGEST: &str = "04b82519b0399baefd0b9c0f32a871052e4c47e3a00226ab03
 const SEGMENT_DIGEST: &str = "b7542dced2ab770894a14d1d04b066e3a899942602c5986d35ba6df6c1a35cfc";
 const RETAINED_SEGMENT_LIMIT: u64 = 1_048_576;
 
+type StagedFixture = (ClosedSegment, Vec<u8>);
+
 #[test]
 fn successful_publication_materializes_only_the_exact_durable_view() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-success")?;
-    let segment_bytes = fixture(SEGMENT_HEX)?;
-    fs::write(store.staging().join("current.seg"), &segment_bytes)?;
+    let (closed, segment_bytes) = stage_one_zero(&store)?;
+    assert_eq!(segment_bytes, fixture(SEGMENT_HEX)?);
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
     let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let selection = SegmentPublication::one(closed, &segments[0])?;
 
     let receipt = publish_catalog_generation(
         &mut publisher,
         CatalogPublicationExpectation::uninitialized(),
-        SegmentPublication::One(&segments[0]),
+        selection,
         &catalog,
         &segments,
     )?;
@@ -108,6 +112,17 @@ fn restart_policy() -> Result<CatalogRestartPolicy, Box<dyn Error>> {
         maximum_segment_policy(),
         CatalogRestartByteLimit::new(RETAINED_SEGMENT_LIMIT)?,
     ))
+}
+
+fn stage_one_zero(store: &StoreFixture) -> Result<StagedFixture, Box<dyn Error>> {
+    let stage = FilesystemSegmentStage::create(&store.staging())?;
+    let record = AdmittedSegmentRecord::for_chunk(&[0])?;
+    let closed = StagedSegment::begin(stage, SegmentRecordLimit::MAXIMUM)?
+        .append(record)?
+        .seal()?
+        .close();
+    let bytes = fs::read(store.staging().join("current.seg"))?;
+    Ok((closed, bytes))
 }
 
 const fn maximum_segment_policy() -> SegmentReadPolicy {
