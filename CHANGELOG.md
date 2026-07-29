@@ -31,6 +31,10 @@ after its public API and format compatibility policies are established.
   recovery inventory capability. Observation admits only regular files, never
   follows links, streams under the name-selected bound, and refuses entry
   replacement or length drift without mutating protocol state.
+- Complete caller-supplied segment-stage bytes now classify as a validated
+  reusable prefix, a complete admitted immutable segment, or an exact
+  truncation. Complete-looking corruption, duplicate identities, and
+  caller-policy excess remain typed refusals.
 - Store initialization now exposes one storage-port state machine that admits
   the platform before mutation, opens and locks `writer.lock`, admits the three
   protocol directories in order, synchronizes the root, and preserves the

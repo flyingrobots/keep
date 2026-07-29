@@ -39,7 +39,11 @@ maximum, and returns its exact observed length and
 `FilesystemRecoveryInventoryReader::fingerprint_stage` binds that stream to
 the pinned root or staging capability, opens without following links, admits
 only regular files, and refuses entry replacement or length drift after
-reading. Semantic content classification remains unimplemented.
+reading. `classify_recovery_segment_stage` classifies complete caller-supplied
+stage bytes as a validated reusable prefix, a complete admitted segment, or an
+exact truncation and preserves complete-looking corruption as a typed refusal.
+Catalog-stage, head-stage, and filesystem-streaming semantic classification
+remain unimplemented.
 
 The sole admissible duplicate digest is one fixed staging name and its exact
 digest-derived pool name after a link transition. Recovery admits that pair
