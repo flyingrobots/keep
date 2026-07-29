@@ -10,6 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Store initialization now exposes one storage-port state machine that admits
+  the platform before mutation, opens and locks `writer.lock`, admits the three
+  protocol directories in order, synchronizes the root, and preserves the
+  exact failed phase without executing later transitions.
 - Repository crash-matrix tooling now exposes one typed, ordered vocabulary for
   `KEEP-CRASH-001` through `KEEP-CRASH-035`. Each identifier is bound to its
   segment, catalog, head, recovery-discard, or initialization sequence, and

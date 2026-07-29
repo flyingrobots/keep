@@ -86,14 +86,17 @@ recovery.
 
 Issue #17 implements crash injection and explicit recovery in independently
 reviewable slices. The first slice freezes executable crash-point identity and
-sequence ownership. It does not claim process-death injection, initialization,
-recovery classification, or recovery execution.
+sequence ownership. The second slice establishes the ordered initialization
+state machine and exact failure phases. It does not claim process-death
+injection, production platform admission, recovery classification, or recovery
+execution.
 
 <!-- markdownlint-disable MD013 -->
 
 | ID | Implemented requirement | Oracle | Executable evidence | Status |
 | --- | --- | --- | --- | --- |
 | `KEEP-RECOVERY-001` | Crash identifiers `KEEP-CRASH-001` through `KEEP-CRASH-035` form one contiguous typed vocabulary, map to the exact owning protocol sequence, and admit an occurrence counter only for record append | Ordered identifier-and-sequence ledger | `xtask/tests/durability_crash_point_contract.rs` | Implemented in #17 |
+| `KEEP-RECOVERY-002` | Initialization admits the platform before mutation, opens and locks the writer file, admits `staging`, `segments`, and `catalogs` in order, and returns a receipt only after root synchronization; every failed operation retains its exact phase and prevents later transitions | Fault-recording initialization port | `src/adapters/store_initialization_tests.rs` | Implemented in #17 |
 
 <!-- markdownlint-enable MD013 -->
 

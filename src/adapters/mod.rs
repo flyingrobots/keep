@@ -164,6 +164,11 @@ mod segment_write_phase;
 mod staged_segment;
 mod storage_profile_id_text;
 mod storage_profile_id_text_error;
+mod store_initialization;
+mod store_initialization_error;
+mod store_initialization_phase;
+mod store_initialization_receipt;
+mod store_initialization_storage;
 mod sync_capable_directory;
 #[cfg(test)]
 #[path = "../../tests/support/mod.rs"]
@@ -243,6 +248,11 @@ pub use segment_write_error::SegmentWriteError;
 pub use segment_write_phase::{SegmentDurabilityPhase, SegmentWritePhase};
 pub use staged_segment::StagedSegment;
 pub use storage_profile_id_text_error::StorageProfileIdParseError;
+pub use store_initialization::initialize_store;
+pub use store_initialization_error::StoreInitializationError;
+pub use store_initialization_phase::StoreInitializationPhase;
+pub use store_initialization_receipt::StoreInitializationReceipt;
+pub use store_initialization_storage::StoreInitializationStorage;
 pub use writer_lock_acquire_error::WriterLockAcquireError;
 pub use writer_lock_acquire_phase::WriterLockAcquirePhase;
 
