@@ -107,21 +107,27 @@ cargo xtask durability-crash-matrix
 The command executes the three ordered positions for each stable
 `KEEP-CRASH-001`–`KEEP-CRASH-035` point: 105 canonical cases. Each case owns a
 fresh filesystem store and an isolated child process group. The child retains
-the writer lock and any open staged artifact, prepares the point-selected
-state, sends one readiness byte over a Unix socket, and waits on the retained
-connection. The parent keeps the accepted socket open, sends `SIGKILL` to the
-complete process group, reaps the child, and only then begins restart
-inspection. A ten-second deadline bounds failure handling; successful
-synchronization does not depend on elapsed time, sleeps, or test ordering.
+the writer lock and any open staged artifact while it executes the production
+initialization, segment-writing, catalog-publication, or recovery-discard
+protocol. A fault-injecting port decorator sends one readiness byte at the
+selected semantic boundary and waits on the retained connection. The parent
+keeps the accepted socket open, sends `SIGKILL` to the complete process group,
+reaps the child, and only then begins restart inspection. A ten-second
+deadline bounds failure handling; successful synchronization does not depend
+on elapsed time, sleeps, or test ordering.
 
-The state constructor and expected-state model are separate implementations.
-Restart inspection proves the complete path set and exact Golden File
-Worldline bytes. It additionally verifies hard-link identity at link
-transitions, reacquires `writer.lock` after process death, classifies
-`current.seg`, `current.cat`, and `head.next` through the production recovery
-classifiers, admits immutable segment and catalog bytes through the production
-decoders, and loads the exact generation-1 snapshot when `HEAD` is present.
-That snapshot must expose the one-zero chunk with the exact payload `00`.
+The production protocol driver and expected-state model are separate
+implementations. The driver delegates every target mutation to the ordinary
+filesystem adapters. Repository-only partial-write methods share the same
+catalog and head stage writers and stop at deterministic proper prefixes;
+they do not hand-construct a replacement namespace. Restart inspection proves
+the complete path set and exact Golden File Worldline bytes. It additionally
+verifies hard-link identity at link transitions, reacquires `writer.lock`
+after process death, classifies `current.seg`, `current.cat`, and `head.next`
+through the production recovery classifiers, admits immutable segment and
+catalog bytes through the production decoders, and loads the exact
+generation-1 snapshot when `HEAD` is present. That snapshot must expose the
+one-zero chunk with the exact payload `00`.
 
 For byte writes, a `during` case retains a deterministic proper prefix and its
 open file handle at termination. Atomic create, hard-link, unlink, and rename

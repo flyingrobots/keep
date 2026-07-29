@@ -16,7 +16,9 @@ use super::expectation::{
     ArtifactBytes, CATALOG_STAGE, ExpectedStoreState, HEAD, NEXT_HEAD, SEGMENT_STAGE, WRITER_LOCK,
 };
 use crate::durability_crash_matrix::DurabilityCrashMatrixError;
-use crate::durability_crash_matrix::state::fixture::{CATALOG_POOL_PATH, SEGMENT_POOL_PATH};
+use crate::durability_crash_matrix::production_protocol::fixture::{
+    CATALOG_POOL_PATH, SEGMENT_POOL_PATH,
+};
 
 const RESTART_BYTE_LIMIT: u64 = 1_048_576;
 

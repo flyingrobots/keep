@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "repository-tasks"))]
 use cap_std::ambient_authority;
 use cap_std::fs::Dir;
 
@@ -10,7 +10,7 @@ use super::{
     FilesystemRecoveryInventoryReader, FilesystemRecoveryStageDiscardOpenError,
     FilesystemWriterLock, filesystem_platform_profile,
 };
-#[cfg(test)]
+#[cfg(any(test, feature = "repository-tasks"))]
 use super::{RecoveryInventoryError, RecoveryInventoryOperation, RecoveryNamespace};
 
 /// Writer-authorized pinned filesystem adapter for exact stage discard.
@@ -44,6 +44,25 @@ impl FilesystemRecoveryStageDiscarder {
     pub(super) fn open_unchecked_for_tests(
         store_root: &Path,
     ) -> Result<Self, FilesystemRecoveryStageDiscardOpenError> {
+        Self::open_unchecked(store_root)
+    }
+
+    /// Opens repository crash-test storage without the production platform
+    /// profile probe.
+    ///
+    /// # Errors
+    ///
+    /// Returns the exact root, writer-lock, or namespace admission failure.
+    #[cfg(feature = "repository-tasks")]
+    #[doc(hidden)]
+    pub fn open_unchecked_for_repository_tasks(
+        store_root: &Path,
+    ) -> Result<Self, FilesystemRecoveryStageDiscardOpenError> {
+        Self::open_unchecked(store_root)
+    }
+
+    #[cfg(any(test, feature = "repository-tasks"))]
+    fn open_unchecked(store_root: &Path) -> Result<Self, FilesystemRecoveryStageDiscardOpenError> {
         let root = Dir::open_ambient_dir(store_root, ambient_authority()).map_err(|source| {
             FilesystemRecoveryStageDiscardOpenError::Namespace {
                 source: RecoveryInventoryError::io(

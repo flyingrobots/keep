@@ -9,7 +9,7 @@ use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 use super::DurabilityCrashMatrixError;
-use super::state::fixture::GoldenFixture;
+use super::production_protocol::fixture::GoldenFixture;
 use expectation::ExpectedStoreState;
 use xtask::DurabilityCrashCase;
 

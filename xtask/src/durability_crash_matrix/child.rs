@@ -6,24 +6,18 @@ use std::os::unix::net::UnixStream;
 use std::path::Path;
 
 use super::DurabilityCrashMatrixError;
-use super::state;
+use super::production_protocol;
 use xtask::DurabilityCrashCase;
-
-const READY: u8 = b'r';
 
 pub(super) fn run(
     case: DurabilityCrashCase,
     case_root: &Path,
     readiness_socket: &Path,
 ) -> Result<(), DurabilityCrashMatrixError> {
-    let prepared = state::prepare(case, case_root)?;
     write_marker(case, case_root)?;
-    let mut stream = UnixStream::connect(readiness_socket)
+    let stream = UnixStream::connect(readiness_socket)
         .map_err(|source| DurabilityCrashMatrixError::io("connect readiness socket", source))?;
-    stream
-        .write_all(&[READY])
-        .map_err(|source| DurabilityCrashMatrixError::io("signal crash readiness", source))?;
-    prepared.await_process_death(&mut stream)
+    production_protocol::run(case, case_root, stream)
 }
 
 fn write_marker(

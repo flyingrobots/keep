@@ -11,7 +11,9 @@ use super::{
     SEGMENTS, STAGING, WRITER_LOCK,
 };
 use crate::durability_crash_matrix::DurabilityCrashMatrixError;
-use crate::durability_crash_matrix::state::fixture::{CATALOG_POOL_PATH, SEGMENT_POOL_PATH};
+use crate::durability_crash_matrix::production_protocol::fixture::{
+    CATALOG_POOL_PATH, SEGMENT_POOL_PATH,
+};
 use xtask::{DurabilityCrashCase, DurabilityCrashPoint, DurabilityCrashPosition};
 
 pub(super) fn segment(

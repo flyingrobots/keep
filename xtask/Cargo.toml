@@ -15,6 +15,7 @@ repository-tasks = [
     "dep:cap-fs-ext",
     "dep:cap-std",
     "dep:keep",
+    "keep/repository-tasks",
     "dep:md-5",
     "dep:repository-process-spawn",
     "dep:rustix",

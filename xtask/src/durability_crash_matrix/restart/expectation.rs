@@ -6,7 +6,7 @@ mod steps;
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::super::DurabilityCrashMatrixError;
-use super::super::state::fixture::GoldenFixture;
+use super::super::production_protocol::fixture::GoldenFixture;
 use xtask::{DurabilityCrashCase, DurabilityCrashSequence};
 
 pub(super) const WRITER_LOCK: &str = "writer.lock";

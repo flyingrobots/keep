@@ -1,4 +1,4 @@
-//! This module owns admitted Golden File Worldline crash fixtures.
+//! This module owns admitted Golden File Worldline production crash fixtures.
 
 use std::ops::Range;
 

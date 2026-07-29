@@ -3,7 +3,7 @@
 use std::io;
 use std::path::Path;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "repository-tasks"))]
 use cap_std::ambient_authority;
 use cap_std::fs::Dir;
 
@@ -32,6 +32,16 @@ impl FilesystemInitializationStorage {
 
     #[cfg(test)]
     pub(super) fn admit_unchecked_for_tests(store_root: &Path) -> io::Result<Self> {
+        Self::admit_unchecked(store_root)
+    }
+
+    #[cfg(feature = "repository-tasks")]
+    pub(super) fn admit_unchecked_for_repository_tasks(store_root: &Path) -> io::Result<Self> {
+        Self::admit_unchecked(store_root)
+    }
+
+    #[cfg(any(test, feature = "repository-tasks"))]
+    fn admit_unchecked(store_root: &Path) -> io::Result<Self> {
         let directory = Dir::open_ambient_dir(store_root, ambient_authority())?;
         Ok(Self {
             directory,

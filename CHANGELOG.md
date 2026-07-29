@@ -12,8 +12,10 @@ after its public API and format compatibility policies are established.
 
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
-  writer and stage authority until termination, and verifies exact Golden File
-  Worldline namespaces, bytes, hard links, released locks, recovery
+  writer and stage authority until termination, executes production
+  initialization, segment-writing, catalog-publication, and recovery-discard
+  protocols through fault-injecting port decorators, and verifies exact Golden
+  File Worldline namespaces, bytes, hard links, released locks, recovery
   classifications, immutable artifacts, and published visible state after
   restart. CI runs the complete matrix in debug and optimized profiles.
 - Production filesystem initialization now admits only the documented writable,

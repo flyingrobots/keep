@@ -35,6 +35,9 @@ mod layout;
 mod profile;
 mod reference;
 
+#[cfg(feature = "repository-tasks")]
+#[doc(hidden)]
+pub use adapters::RepositoryInitializationStorage;
 pub use adapters::{
     AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedSegment, AdmittedSegmentRecord,
     BlobIdBinaryParseError, BlobIdTextParseError, CanonicalCatalog, CanonicalLayoutRecord,

@@ -37,11 +37,9 @@ impl fmt::Display for DurabilityCrashMatrixError {
             | Self::UnknownPosition(_)
             | Self::Usage => format_command(self, formatter),
             Self::Io { .. }
-            | Self::MissingActiveFile
             | Self::NonUnicodeStatePath
             | Self::PointSequenceMismatch { .. }
-            | Self::Verification { .. }
-            | Self::WriterLock(_) => format_boundary(self, formatter),
+            | Self::Verification { .. } => format_boundary(self, formatter),
         }
     }
 }
@@ -220,9 +218,6 @@ fn format_boundary(
 ) -> fmt::Result {
     match error {
         DurabilityCrashMatrixError::Io { action, .. } => write!(formatter, "cannot {action}"),
-        DurabilityCrashMatrixError::MissingActiveFile => {
-            formatter.write_str("crash sequence has no active staged artifact")
-        }
         DurabilityCrashMatrixError::NonUnicodeStatePath => {
             formatter.write_str("post-crash store path is not valid Unicode")
         }
@@ -235,9 +230,6 @@ fn format_boundary(
             formatter,
             "post-crash verification failed while attempting to {phase}: {source}"
         ),
-        DurabilityCrashMatrixError::WriterLock(source) => {
-            write!(formatter, "cannot acquire crash-case writer lock: {source}")
-        }
         _ => Err(fmt::Error),
     }
 }

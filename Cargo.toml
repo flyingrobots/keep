@@ -12,6 +12,10 @@ keywords = ["cas", "storage", "content-addressed", "deduplication"]
 categories = ["data-structures", "filesystem"]
 publish = false
 
+[features]
+default = []
+repository-tasks = []
+
 [dependencies]
 blake3 = { version = "=1.8.5", default-features = false, features = ["pure", "std"] }
 cap-fs-ext = { version = "=4.0.2", default-features = false, features = ["std"] }

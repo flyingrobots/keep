@@ -21,6 +21,11 @@ impl FilesystemPlatformAdmission {
         Self { lock }
     }
 
+    #[cfg(feature = "repository-tasks")]
+    pub(super) const fn unchecked_for_repository_tasks(lock: FilesystemWriterLock) -> Self {
+        Self { lock }
+    }
+
     pub(super) fn into_lock(self) -> FilesystemWriterLock {
         self.lock
     }

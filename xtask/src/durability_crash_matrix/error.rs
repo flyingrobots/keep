@@ -7,7 +7,6 @@ use std::error::Error;
 use std::io;
 use std::time::Duration;
 
-use keep::WriterLockAcquireError;
 use xtask::protocol_admission::HexError;
 use xtask::{
     DurabilityCrashCase, DurabilityCrashCaseError, DurabilityCrashPoint, DurabilityCrashPosition,
@@ -72,7 +71,6 @@ pub(crate) enum DurabilityCrashMatrixError {
         target_device: u64,
         target_inode: u64,
     },
-    MissingActiveFile,
     MissingVisibleRecord {
         record: &'static str,
     },
@@ -102,7 +100,6 @@ pub(crate) enum DurabilityCrashMatrixError {
         phase: &'static str,
         source: Box<dyn Error>,
     },
-    WriterLock(WriterLockAcquireError),
 }
 
 impl DurabilityCrashMatrixError {
@@ -143,7 +140,6 @@ impl Error for DurabilityCrashMatrixError {
             Self::InvalidCase(error) => Some(error),
             Self::Io { source, .. } => Some(source),
             Self::Verification { source, .. } => Some(source.as_ref()),
-            Self::WriterLock(source) => Some(source),
             Self::ArtifactBytesMismatch { .. }
             | Self::ArtifactClassificationMismatch { .. }
             | Self::ChildExitedEarly { .. }
@@ -156,7 +152,6 @@ impl Error for DurabilityCrashMatrixError {
             | Self::InvalidReadinessSignal { .. }
             | Self::InventoryMismatch { .. }
             | Self::HardLinkIdentityMismatch { .. }
-            | Self::MissingActiveFile
             | Self::MissingVisibleRecord { .. }
             | Self::NonUnicodeStatePath
             | Self::PointSequenceMismatch { .. }
