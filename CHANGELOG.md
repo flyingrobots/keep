@@ -64,8 +64,8 @@ after its public API and format compatibility policies are established.
   Git-backed process fixtures clear the inherited environment, explicitly
   admit the executable search path and `C` locale, ignore system and global Git
   configuration, and preserve non-UTF-8 template paths without lossy
-  conversion. Documentation corpus fixture commands also use the bounded
-  process authority with dedicated groups, null output, and a two-minute
+  conversion. Repository-backed Git fixtures share one bounded process
+  authority with dedicated groups, null standard streams, and a two-minute
   deadline. Documentation Git inventory and tools start from one retained
   repository directory handle, so transient replacement of the ambient
   repository path cannot redirect validation. Retained and per-spawn directory
