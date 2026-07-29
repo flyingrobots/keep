@@ -121,6 +121,23 @@ canonical seal. The admitted prefix is never rewritten. A storage adapter that
 cannot prove the writable object, canonical entry, exact materialized bytes,
 and end position agree must refuse before returning the stage.
 
+`FilesystemRecoverySegmentResumer` binds this contract to the admitted
+filesystem profile. It pins the root and all protocol directories, acquires
+`writer.lock`, and is consumed by execution. The reopened `current.seg` is a
+regular read-write file opened without following links or truncation. Its
+complete protocol-bounded bytes are fingerprinted, materialized, and
+re-admitted; the handle and canonical entry retain one file identity and exact
+length, the pinned namespaces are reverified, and the handle is positioned at
+the admitted append boundary before handoff.
+
+The returned `FilesystemRecoverySegmentStage` owns the pinned authority and
+writer lock. Zero-record and nonempty prefixes both enter the same append and
+seal state machine. Missing stages, symbolic links, changed fingerprints,
+entry replacement, namespace replacement, allocation refusal, read failure,
+or position disagreement return typed failures without writing stage bytes.
+Dropping an unsealed resumed stage preserves its current bytes for another
+explicit recovery decision.
+
 ## Complete a durable stage
 
 The recovery plan may bind one fully verified `current.seg` or `current.cat`

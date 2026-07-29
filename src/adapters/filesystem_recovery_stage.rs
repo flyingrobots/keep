@@ -5,7 +5,7 @@ use cap_std::fs::{Dir, File, Metadata, OpenOptions};
 
 use super::{
     FilesystemRecoveryStageError, RecoveryStage, RecoveryStageEvidence, RecoveryStageLength,
-    RecoveryStageMetadata, fingerprint_recovery_stage,
+    RecoveryStageMetadata, filesystem_recovery_stage_materialization, fingerprint_recovery_stage,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -50,6 +50,28 @@ impl ObservedRecoveryStage {
             .map_err(|source| FilesystemRecoveryStageError::Synchronize { stage, source })?;
         verify_opened_handle(&self.file, stage, &self.admitted)?;
         verify_current_entry(directory, name, stage, &self.admitted)
+    }
+
+    pub(super) fn materialize_and_position(
+        &mut self,
+        stage: RecoveryStage,
+    ) -> Result<Box<[u8]>, FilesystemRecoveryStageError> {
+        let length = self.admitted.metadata.length();
+        filesystem_recovery_stage_materialization::read_and_position(&mut self.file, stage, length)
+    }
+
+    pub(super) fn verify(
+        &self,
+        directory: &Dir,
+        name: &str,
+        stage: RecoveryStage,
+    ) -> Result<(), FilesystemRecoveryStageError> {
+        verify_opened_handle(&self.file, stage, &self.admitted)?;
+        verify_current_entry(directory, name, stage, &self.admitted)
+    }
+
+    pub(super) fn into_file(self) -> File {
+        self.file
     }
 }
 
@@ -97,7 +119,36 @@ pub(super) fn observe_named_with<F>(
 where
     F: FnOnce(),
 {
-    let mut file = open_stage(directory, name, stage)?;
+    observe_named_with_options(directory, name, stage, &read_options(), after_open)
+}
+
+pub(super) fn observe_writable_segment_with<F>(
+    directory: &Dir,
+    after_open: F,
+) -> Result<ObservedRecoveryStage, FilesystemRecoveryStageError>
+where
+    F: FnOnce(),
+{
+    observe_named_with_options(
+        directory,
+        RecoveryStage::Segment.file_name(),
+        RecoveryStage::Segment,
+        &read_write_options(),
+        after_open,
+    )
+}
+
+fn observe_named_with_options<F>(
+    directory: &Dir,
+    name: &str,
+    stage: RecoveryStage,
+    options: &OpenOptions,
+    after_open: F,
+) -> Result<ObservedRecoveryStage, FilesystemRecoveryStageError>
+where
+    F: FnOnce(),
+{
+    let mut file = open_stage(directory, name, stage, options)?;
     let admitted = admit_stage(&file, stage)?;
     after_open();
     let evidence = fingerprint_recovery_stage(admitted.metadata, &mut file)
@@ -116,9 +167,10 @@ fn open_stage(
     directory: &Dir,
     name: &str,
     stage: RecoveryStage,
+    options: &OpenOptions,
 ) -> Result<File, FilesystemRecoveryStageError> {
     directory
-        .open_with(name, &read_options())
+        .open_with(name, options)
         .map_err(|source| FilesystemRecoveryStageError::Open { stage, source })
 }
 
@@ -189,5 +241,15 @@ const fn verify_length(
 fn read_options() -> OpenOptions {
     let mut options = OpenOptions::new();
     options.read(true).follow(FollowSymlinks::No).nonblock(true);
+    options
+}
+
+fn read_write_options() -> OpenOptions {
+    let mut options = OpenOptions::new();
+    options
+        .read(true)
+        .write(true)
+        .follow(FollowSymlinks::No)
+        .nonblock(true);
     options
 }

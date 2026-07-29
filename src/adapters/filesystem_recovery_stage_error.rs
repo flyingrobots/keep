@@ -1,7 +1,7 @@
 //! This module owns capability-relative recovery-stage observation failures.
 
+use std::collections::TryReserveError;
 use std::error::Error;
-use std::fmt;
 use std::io;
 
 use super::{
@@ -82,6 +82,47 @@ pub enum FilesystemRecoveryStageError {
         /// Length observed during or after reading.
         observed: u64,
     },
+    /// The admitted stage length cannot be represented for materialization.
+    MaterializeAddressSpace {
+        /// Fixed stage being materialized.
+        stage: RecoveryStage,
+        /// Admitted byte count that exceeds the host address space.
+        byte_count: u64,
+    },
+    /// Memory for exact bounded materialization could not be reserved.
+    MaterializeAllocation {
+        /// Fixed stage being materialized.
+        stage: RecoveryStage,
+        /// Exact admitted byte count requested.
+        byte_count: u64,
+        /// Allocation reservation failure.
+        source: TryReserveError,
+    },
+    /// The writable stage could not be rewound or its position inspected.
+    Position {
+        /// Fixed stage being positioned.
+        stage: RecoveryStage,
+        /// Exact underlying positioning failure.
+        source: io::Error,
+    },
+    /// Exact prefix materialization failed.
+    Materialize {
+        /// Fixed stage being materialized.
+        stage: RecoveryStage,
+        /// Exact admitted byte count requested.
+        expected: RecoveryStageLength,
+        /// Exact underlying read failure.
+        source: io::Error,
+    },
+    /// The writable handle is not positioned at the admitted append boundary.
+    PositionMismatch {
+        /// Fixed stage being positioned.
+        stage: RecoveryStage,
+        /// Exact admitted append boundary.
+        expected: RecoveryStageLength,
+        /// Observed writable-handle position.
+        observed: u64,
+    },
 }
 
 /// Namespace-verification position around stage observation.
@@ -93,72 +134,6 @@ pub enum RecoveryStageNamespacePhase {
     AfterObservation,
 }
 
-impl fmt::Display for FilesystemRecoveryStageError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Namespace {
-                stage,
-                phase,
-                source,
-            } => write!(
-                formatter,
-                "{stage} namespace verification failed {phase}: {source}"
-            ),
-            Self::Open { stage, source } => {
-                write!(formatter, "failed to open recovery stage {stage}: {source}")
-            }
-            Self::Inspect { stage, source } => {
-                write!(
-                    formatter,
-                    "failed to inspect recovery stage {stage}: {source}"
-                )
-            }
-            Self::NonRegular { stage } => {
-                write!(formatter, "recovery stage {stage} is not a regular file")
-            }
-            Self::MetadataAdmission { stage, source, .. } => write!(
-                formatter,
-                "recovery stage {stage} metadata was refused: {source}"
-            ),
-            Self::Fingerprint { stage, source, .. } => write!(
-                formatter,
-                "recovery stage {stage} fingerprint failed: {source}"
-            ),
-            Self::Synchronize { stage, source } => {
-                write!(
-                    formatter,
-                    "failed to synchronize recovery stage {stage}: {source}"
-                )
-            }
-            Self::VerifyEntry { stage, source } => write!(
-                formatter,
-                "failed to verify recovery stage entry {stage}: {source}"
-            ),
-            Self::Replaced { stage } => {
-                write!(formatter, "recovery stage {stage} changed file identity")
-            }
-            Self::LengthChanged {
-                stage,
-                expected,
-                observed,
-            } => write!(
-                formatter,
-                "recovery stage {stage} changed length from {} to {observed}",
-                expected.get()
-            ),
-        }
-    }
-}
-
-impl fmt::Display for RecoveryStageNamespacePhase {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(match self {
-            Self::BeforeObservation => "before observation",
-            Self::AfterObservation => "after observation",
-        })
-    }
-}
-
 impl Error for FilesystemRecoveryStageError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
@@ -166,10 +141,17 @@ impl Error for FilesystemRecoveryStageError {
             Self::Open { source, .. }
             | Self::Inspect { source, .. }
             | Self::Synchronize { source, .. }
-            | Self::VerifyEntry { source, .. } => Some(source),
+            | Self::VerifyEntry { source, .. }
+            | Self::Position { source, .. }
+            | Self::Materialize { source, .. } => Some(source),
             Self::MetadataAdmission { source, .. } => Some(source),
             Self::Fingerprint { source, .. } => Some(source),
-            Self::NonRegular { .. } | Self::Replaced { .. } | Self::LengthChanged { .. } => None,
+            Self::MaterializeAllocation { source, .. } => Some(source),
+            Self::NonRegular { .. }
+            | Self::Replaced { .. }
+            | Self::LengthChanged { .. }
+            | Self::MaterializeAddressSpace { .. }
+            | Self::PositionMismatch { .. } => None,
         }
     }
 }

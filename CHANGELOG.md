@@ -40,6 +40,12 @@ after its public API and format compatibility policies are established.
   authority, re-admits the materialized prefix against saved evidence, rebuilds
   digest and duplicate-identity state, and returns the ordinary append-only
   stage without rewriting admitted bytes.
+- Filesystem reusable-segment recovery now retains pinned root, namespace, and
+  writer-lock authority in the returned stage; reopens `current.seg` read-write
+  without following links or truncation; bounds, materializes, and re-admits
+  its exact prefix; verifies the final entry and append position; and refuses
+  missing, changed, linked, replaced, or namespace-drifted evidence before
+  writing.
 - Complete caller-supplied catalog and candidate-head stages now distinguish
   exact fixed-header, declared-body, or fixed-width truncation from canonical
   bytes. Complete-looking corruption and oversized stages remain typed

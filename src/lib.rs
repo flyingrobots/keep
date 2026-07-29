@@ -19,9 +19,10 @@
 //! truncated-stage discard, and complete-stage valid-orphan recovery are
 //! explicit. Exact next-head finalization now has a storage-independent
 //! contract and a pinned writer-authorized filesystem adapter. Reusable-stage
-//! continuation has a storage-independent planning and execution boundary.
-//! Its filesystem binding, retention, and garbage collection remain
-//! intentionally absent until their contracts have executable specifications.
+//! continuation has a storage-independent planning and execution boundary plus
+//! a pinned writer-authorized filesystem adapter. Retention and garbage
+//! collection remain intentionally absent until their contracts have
+//! executable specifications.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -48,27 +49,28 @@ pub use adapters::{
     FilesystemCatalogPublicationError, FilesystemCatalogPublisher, FilesystemCatalogSnapshot,
     FilesystemPlatformAdmission, FilesystemRecoveryInventoryReader,
     FilesystemRecoveryNextHeadFinalizationOpenError, FilesystemRecoveryNextHeadFinalizer,
-    FilesystemRecoveryStageCompleter, FilesystemRecoveryStageCompletionOpenError,
-    FilesystemRecoveryStageDiscardOpenError, FilesystemRecoveryStageDiscarder,
-    FilesystemRecoveryStageError, FilesystemSegmentStage, FilesystemWriterLock, LayoutDecodeError,
-    LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
-    OpenedReusableSegment, PublicationHeadDecodeError, RecoveryCatalogStage,
-    RecoveryCatalogStageError, RecoveryEntryName, RecoveryEntryNameError, RecoveryEntryRole,
-    RecoveryInventory, RecoveryInventoryEntry, RecoveryInventoryError, RecoveryInventoryLimit,
-    RecoveryInventoryLimitError, RecoveryInventoryOperation, RecoveryInventoryStorage,
-    RecoveryNameClassificationError, RecoveryNameManifest, RecoveryNamedEntry, RecoveryNamespace,
-    RecoveryNextHeadFinalizationError, RecoveryNextHeadFinalizationOutcome,
-    RecoveryNextHeadFinalizationPlanError, RecoveryNextHeadFinalizationReadiness,
-    RecoveryNextHeadFinalizationReceipt, RecoveryNextHeadFinalizationRequest,
-    RecoveryNextHeadFinalizationStorage, RecoveryNextHeadFinalizationStorageError,
-    RecoveryNextHeadFinalizationTarget, RecoveryNextHeadStage, RecoveryNextHeadStageError,
-    RecoveryPoolNameError, RecoveryRequiredEntry, RecoverySegmentResumeError,
-    RecoverySegmentResumePlanError, RecoverySegmentResumeRequest, RecoverySegmentResumeStorage,
-    RecoverySegmentResumeStorageError, RecoverySegmentStage, RecoverySegmentStageError,
-    RecoverySegmentTruncation, RecoveryStage, RecoveryStageAssessment,
-    RecoveryStageAssessmentError, RecoveryStageByteAdmissionError, RecoveryStageCompletionError,
-    RecoveryStageCompletionPlanError, RecoveryStageCompletionPool, RecoveryStageCompletionReceipt,
-    RecoveryStageCompletionRequest, RecoveryStageCompletionStorage,
+    FilesystemRecoverySegmentResumeOpenError, FilesystemRecoverySegmentResumer,
+    FilesystemRecoverySegmentStage, FilesystemRecoveryStageCompleter,
+    FilesystemRecoveryStageCompletionOpenError, FilesystemRecoveryStageDiscardOpenError,
+    FilesystemRecoveryStageDiscarder, FilesystemRecoveryStageError, FilesystemSegmentStage,
+    FilesystemWriterLock, LayoutDecodeError, LayoutDecodePolicy, LayoutEncodeError,
+    LayoutIdBinaryParseError, LayoutIdTextParseError, OpenedReusableSegment,
+    PublicationHeadDecodeError, RecoveryCatalogStage, RecoveryCatalogStageError, RecoveryEntryName,
+    RecoveryEntryNameError, RecoveryEntryRole, RecoveryInventory, RecoveryInventoryEntry,
+    RecoveryInventoryError, RecoveryInventoryLimit, RecoveryInventoryLimitError,
+    RecoveryInventoryOperation, RecoveryInventoryStorage, RecoveryNameClassificationError,
+    RecoveryNameManifest, RecoveryNamedEntry, RecoveryNamespace, RecoveryNextHeadFinalizationError,
+    RecoveryNextHeadFinalizationOutcome, RecoveryNextHeadFinalizationPlanError,
+    RecoveryNextHeadFinalizationReadiness, RecoveryNextHeadFinalizationReceipt,
+    RecoveryNextHeadFinalizationRequest, RecoveryNextHeadFinalizationStorage,
+    RecoveryNextHeadFinalizationStorageError, RecoveryNextHeadFinalizationTarget,
+    RecoveryNextHeadStage, RecoveryNextHeadStageError, RecoveryPoolNameError,
+    RecoveryRequiredEntry, RecoverySegmentResumeError, RecoverySegmentResumePlanError,
+    RecoverySegmentResumeRequest, RecoverySegmentResumeStorage, RecoverySegmentResumeStorageError,
+    RecoverySegmentStage, RecoverySegmentStageError, RecoverySegmentTruncation, RecoveryStage,
+    RecoveryStageAssessment, RecoveryStageAssessmentError, RecoveryStageByteAdmissionError,
+    RecoveryStageCompletionError, RecoveryStageCompletionPlanError, RecoveryStageCompletionPool,
+    RecoveryStageCompletionReceipt, RecoveryStageCompletionRequest, RecoveryStageCompletionStorage,
     RecoveryStageCompletionStorageError, RecoveryStageCompletionTarget, RecoveryStageDiscardError,
     RecoveryStageDiscardOutcome, RecoveryStageDiscardPlanError, RecoveryStageDiscardReason,
     RecoveryStageDiscardReceipt, RecoveryStageDiscardRequest, RecoveryStageDiscardStorage,

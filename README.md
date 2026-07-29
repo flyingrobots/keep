@@ -81,6 +81,10 @@ An exact reusable segment assessment can authorize storage-independent
 continuation: the executor consumes writer authority, re-admits the complete
 bounded prefix, rebuilds digest and duplicate-identity state, and returns the
 ordinary append-only stage without rewriting admitted bytes.
+`FilesystemRecoverySegmentResumer` implements that contract with pinned
+namespaces and writer authority, no-follow read-write reopening, exact bounded
+materialization, final entry and namespace revalidation, and an append
+position equal to the admitted prefix length.
 
 Exact truncation assessments can authorize durable, evidence-bound discard.
 Complete segment and catalog assessments can authorize verified immutable-pool
@@ -95,10 +99,9 @@ authority, reconstructs the complete current and candidate views without
 following links, verifies namespace and stage identity, synchronizes and
 reverifies the exact candidate, atomically replaces `HEAD`, and synchronizes
 the root. An already-finalized retry requires `head.next` to be absent.
-Process-death injection, the filesystem binding for reusable-stage
-continuation, retention, compaction, and garbage collection remain planned.
-Presence in the reference CAS does not claim retention, crash recovery, or
-durability.
+Process-death injection, retention, compaction, and garbage collection remain
+planned. Presence in the reference CAS does not claim retention, crash
+recovery, or durability.
 
 ```rust
 use keep::BlobId;
