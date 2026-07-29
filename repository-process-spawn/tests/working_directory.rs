@@ -24,7 +24,7 @@ fn child_uses_the_opened_directory_without_mutating_parent_state()
     fs::create_dir(&root)?;
     fs::write(root.join("marker"), b"substitute\n")?;
 
-    let mut command = Command::new("/bin/cat");
+    let mut command = Command::new("cat");
     command.arg("marker");
     set_working_directory(&mut command, directory);
     let output = command.output()?;
@@ -46,7 +46,7 @@ fn non_directory_descriptor_refuses_before_exec() -> Result<(), Box<dyn std::err
     let file_path = world.join("file");
     fs::write(&file_path, b"not a directory\n")?;
     let descriptor: OwnedFd = File::open(&file_path)?.into();
-    let mut command = Command::new("/bin/true");
+    let mut command = Command::new("true");
     set_working_directory(&mut command, descriptor);
 
     let result = command.spawn();
