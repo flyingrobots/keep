@@ -79,7 +79,14 @@ pub(super) fn fingerprint(
     directory: &Dir,
     stage: RecoveryStage,
 ) -> Result<RecoveryStageEvidence, FilesystemRecoveryStageError> {
-    fingerprint_named(directory, stage.file_name(), stage)
+    Ok(observe(directory, stage)?.evidence())
+}
+
+pub(super) fn observe(
+    directory: &Dir,
+    stage: RecoveryStage,
+) -> Result<ObservedRecoveryStage, FilesystemRecoveryStageError> {
+    observe_named(directory, stage.file_name(), stage)
 }
 
 pub(super) fn fingerprint_named(

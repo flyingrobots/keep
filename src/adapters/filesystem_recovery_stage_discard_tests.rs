@@ -136,6 +136,37 @@ fn replacement_after_open_refuses_without_removing_the_new_entry() -> Result<(),
     Ok(())
 }
 
+#[test]
+fn replacement_after_observation_refuses_without_removing_the_new_entry()
+-> Result<(), Box<dyn Error>> {
+    let fixture = DiscardFixture::new("filesystem-stage-discard-final-handoff")?;
+    let stage_path = fixture.stage_path(RecoveryStage::Segment);
+    let retained_path = fixture.root().join("retained-observed-stage");
+    fs::write(&stage_path, b"old")?;
+    let request = request(RecoveryStage::Segment, b"old")?;
+    let discarder = fixture.discarder()?;
+    let mut hook_result = Ok(());
+
+    let result = discarder.remove_if_matching_after_observation_with(request.evidence(), || {
+        hook_result =
+            fs::rename(&stage_path, &retained_path).and_then(|()| fs::write(&stage_path, b"new"));
+    });
+
+    hook_result?;
+    let error = result.err().ok_or("replacement at handoff was removed")?;
+    assert!(matches!(
+        filesystem_stage_source(&error)?,
+        FilesystemRecoveryStageError::Replaced {
+            stage: RecoveryStage::Segment,
+        }
+    ));
+    assert_eq!(fs::read(&stage_path)?, b"new");
+    assert_eq!(fs::read(&retained_path)?, b"old");
+    drop(discarder);
+    fixture.remove()?;
+    Ok(())
+}
+
 fn filesystem_stage_source(
     error: &RecoveryStageDiscardStorageError,
 ) -> Result<&FilesystemRecoveryStageError, &'static str> {

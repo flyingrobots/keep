@@ -4,6 +4,7 @@ use std::io;
 
 use cap_std::fs::Dir;
 
+use super::filesystem_recovery_stage::ObservedRecoveryStage;
 use super::{
     FilesystemRecoveryInventoryReader, FilesystemRecoveryStageDiscarder,
     FilesystemRecoveryStageError, RecoveryStage, RecoveryStageDiscardOutcome,
@@ -20,7 +21,8 @@ impl RecoveryStageDiscardStorage for FilesystemRecoveryStageDiscarder {
         remove_with(
             &self.inventory,
             expected,
-            filesystem_recovery_stage::fingerprint,
+            filesystem_recovery_stage::observe,
+            || {},
         )
     }
 
@@ -39,9 +41,36 @@ impl FilesystemRecoveryStageDiscarder {
     where
         F: FnOnce(),
     {
-        remove_with(&self.inventory, expected, |directory, stage| {
-            filesystem_recovery_stage::fingerprint_with(directory, stage, after_open)
-        })
+        remove_with(
+            &self.inventory,
+            expected,
+            |directory, stage| {
+                filesystem_recovery_stage::observe_named_with(
+                    directory,
+                    stage.file_name(),
+                    stage,
+                    after_open,
+                )
+            },
+            || {},
+        )
+    }
+
+    #[cfg(test)]
+    pub(super) fn remove_if_matching_after_observation_with<F>(
+        &self,
+        expected: RecoveryStageEvidence,
+        before_remove: F,
+    ) -> Result<RecoveryStageDiscardOutcome, RecoveryStageDiscardStorageError>
+    where
+        F: FnOnce(),
+    {
+        remove_with(
+            &self.inventory,
+            expected,
+            filesystem_recovery_stage::observe,
+            before_remove,
+        )
     }
 }
 
@@ -49,16 +78,23 @@ pub(super) fn remove_if_matching(
     inventory: &FilesystemRecoveryInventoryReader,
     expected: RecoveryStageEvidence,
 ) -> Result<RecoveryStageDiscardOutcome, RecoveryStageDiscardStorageError> {
-    remove_with(inventory, expected, filesystem_recovery_stage::fingerprint)
+    remove_with(
+        inventory,
+        expected,
+        filesystem_recovery_stage::observe,
+        || {},
+    )
 }
 
-fn remove_with<F>(
+fn remove_with<F, G>(
     inventory: &FilesystemRecoveryInventoryReader,
     expected: RecoveryStageEvidence,
     observe: F,
+    before_remove: G,
 ) -> Result<RecoveryStageDiscardOutcome, RecoveryStageDiscardStorageError>
 where
-    F: FnOnce(&Dir, RecoveryStage) -> Result<RecoveryStageEvidence, FilesystemRecoveryStageError>,
+    F: FnOnce(&Dir, RecoveryStage) -> Result<ObservedRecoveryStage, FilesystemRecoveryStageError>,
+    G: FnOnce(),
 {
     let stage = expected.stage();
     inventory
@@ -72,11 +108,18 @@ where
         return Ok(RecoveryStageDiscardOutcome::AlreadyAbsent);
     }
     let observed = observe(directory, stage).map_err(stage_error)?;
-    if observed != expected {
-        return Err(RecoveryStageDiscardStorageError::EvidenceMismatch { expected, observed });
+    if observed.evidence() != expected {
+        return Err(RecoveryStageDiscardStorageError::EvidenceMismatch {
+            expected,
+            observed: observed.evidence(),
+        });
     }
     inventory
         .verify_stage_namespaces(stage, RecoveryStageNamespacePhase::AfterObservation)
+        .map_err(stage_error)?;
+    before_remove();
+    observed
+        .verify(directory, stage.file_name(), stage)
         .map_err(stage_error)?;
     directory
         .remove_file(stage.file_name())
