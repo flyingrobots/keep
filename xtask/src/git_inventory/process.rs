@@ -7,7 +7,7 @@ use std::io;
 use std::process::{Child, Command, Stdio};
 use std::time::Duration;
 
-use crate::bounded_process::{self, CaptureLimits, ProcessError};
+use crate::bounded_process::{self, CaptureLimits, ProcessError, ProcessOutput};
 
 use super::path_stream::{GIT_PATH_STREAM_LIMIT_BYTES, GitPath, read_paths};
 use super::{GitInventoryError, GitOutputUnit};
@@ -49,12 +49,17 @@ fn paths_with_deadline(
         spawn,
     )
     .map_err(|source| process_failure(operation, source))?;
-    let paths = read_paths(output.stdout.as_slice(), operation)?;
-    if output.succeeded {
-        Ok(paths)
-    } else {
-        Err(git_failure(operation, output.code, output.stderr))
+    inventory_output(operation, output)
+}
+
+fn inventory_output(
+    operation: &'static str,
+    output: ProcessOutput,
+) -> Result<BTreeSet<GitPath>, GitInventoryError> {
+    if !output.succeeded {
+        return Err(git_failure(operation, output.code, output.stderr));
     }
+    read_paths(output.stdout.as_slice(), operation)
 }
 
 fn git_command(arguments: &[&str], path: &OsStr) -> Command {

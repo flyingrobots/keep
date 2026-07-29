@@ -9,9 +9,10 @@ use std::time::Duration;
 use std::os::unix::process::CommandExt;
 
 use super::{
-    GIT_DIAGNOSTIC_LIMIT_BYTES, git_command, git_failure, paths_with_deadline, process_failure,
+    GIT_DIAGNOSTIC_LIMIT_BYTES, git_command, git_failure, inventory_output, paths_with_deadline,
+    process_failure,
 };
-use crate::bounded_process::ProcessError;
+use crate::bounded_process::{ProcessError, ProcessOutput};
 use crate::git_inventory::GitInventoryError;
 
 const PARKED_CHILD: &str = "KEEP_XTASK_PARKED_GIT_CHILD";
@@ -61,6 +62,28 @@ fn git_diagnostic_encoding_failure_retains_exit_status() {
             code: Some(9),
             ..
         }
+    ));
+}
+
+#[test]
+fn failed_git_status_precedes_stdout_decoding() {
+    let result = inventory_output(
+        "test failure precedence",
+        ProcessOutput {
+            code: Some(23),
+            succeeded: false,
+            stdout: b"unterminated".to_vec(),
+            stderr: b"fatal: reviewed failure\n".to_vec(),
+        },
+    );
+
+    assert!(matches!(
+        result,
+        Err(GitInventoryError::Failed {
+            operation: "test failure precedence",
+            code: Some(23),
+            ref stderr,
+        }) if stderr == "fatal: reviewed failure\n"
     ));
 }
 

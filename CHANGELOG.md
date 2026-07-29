@@ -44,7 +44,10 @@ after its public API and format compatibility policies are established.
   preload hooks and host-specific configuration cannot alter evidence.
   Git inventory uses a separate explicit profile that also nulls system and
   global configuration and disables optional locking, so repository overrides
-  cannot redirect selection or cause incidental index writes.
+  cannot redirect selection or cause incidental index writes. Failed Git
+  inventory commands report their exit status and diagnostic before attempting
+  path-stream decoding, so malformed stdout cannot mask the authoritative
+  failure.
   Git-backed process fixtures clear the inherited environment, explicitly
   admit the executable search path and `C` locale, ignore system and global Git
   configuration, and preserve non-UTF-8 template paths without lossy
