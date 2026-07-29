@@ -66,7 +66,11 @@ fn verify_segment_stage(
         ArtifactBytes::Segment(337) => "complete",
         ArtifactBytes::Empty | ArtifactBytes::Segment(_) => "truncated",
         ArtifactBytes::Catalog(_) | ArtifactBytes::Head(_) => {
-            return Err(DurabilityCrashMatrixError::StateMismatch);
+            return Err(DurabilityCrashMatrixError::UnexpectedArtifactKind {
+                artifact: SEGMENT_STAGE,
+                expected: "segment",
+                observed: bytes.kind(),
+            });
         }
     };
     require_class(observed, expected_class)
@@ -92,7 +96,11 @@ fn verify_catalog_stage(
         ArtifactBytes::Catalog(352) => "complete",
         ArtifactBytes::Empty | ArtifactBytes::Catalog(_) => "truncated",
         ArtifactBytes::Segment(_) | ArtifactBytes::Head(_) => {
-            return Err(DurabilityCrashMatrixError::StateMismatch);
+            return Err(DurabilityCrashMatrixError::UnexpectedArtifactKind {
+                artifact: CATALOG_STAGE,
+                expected: "catalog",
+                observed: bytes.kind(),
+            });
         }
     };
     require_class(observed, expected_class)
@@ -117,7 +125,11 @@ fn verify_next_head(
         ArtifactBytes::Head(128) => "complete",
         ArtifactBytes::Empty | ArtifactBytes::Head(_) => "truncated",
         ArtifactBytes::Segment(_) | ArtifactBytes::Catalog(_) => {
-            return Err(DurabilityCrashMatrixError::StateMismatch);
+            return Err(DurabilityCrashMatrixError::UnexpectedArtifactKind {
+                artifact: NEXT_HEAD,
+                expected: "head",
+                observed: bytes.kind(),
+            });
         }
     };
     require_class(observed, expected_class)
@@ -155,21 +167,31 @@ fn verify_published_snapshot(
     }
     let loaded = FilesystemCatalogSnapshot::load(store_root, restart_policy()?)
         .map_err(|source| verification("load published restart snapshot", source))?;
-    if loaded.generation().get() != 1 {
-        return Err(DurabilityCrashMatrixError::StateMismatch);
+    let observed_generation = loaded.generation().get();
+    if observed_generation != 1 {
+        return Err(DurabilityCrashMatrixError::SnapshotGenerationMismatch {
+            expected: 1,
+            observed: observed_generation,
+        });
     }
     let snapshot = loaded
         .snapshot()
         .map_err(|source| verification("admit published restart snapshot", source))?;
     let chunk = ChunkId::hash_bytes(&[0])
         .map_err(|source| verification("construct Golden Worldline chunk identity", source))?;
-    let record = snapshot
-        .record(SegmentRecordIdentity::Chunk(chunk))
-        .ok_or(DurabilityCrashMatrixError::StateMismatch)?;
+    let record = snapshot.record(SegmentRecordIdentity::Chunk(chunk)).ok_or(
+        DurabilityCrashMatrixError::MissingVisibleRecord {
+            record: "one-zero chunk",
+        },
+    )?;
     if record.payload() == [0] {
         Ok(())
     } else {
-        Err(DurabilityCrashMatrixError::StateMismatch)
+        Err(DurabilityCrashMatrixError::artifact_bytes(
+            "visible one-zero record payload",
+            &[0],
+            record.payload(),
+        ))
     }
 }
 
@@ -190,7 +212,7 @@ fn require_class(
     if observed == expected {
         Ok(())
     } else {
-        Err(DurabilityCrashMatrixError::StateMismatch)
+        Err(DurabilityCrashMatrixError::ArtifactClassificationMismatch { expected, observed })
     }
 }
 
@@ -198,5 +220,23 @@ fn verification(phase: &'static str, source: impl Error + 'static) -> Durability
     DurabilityCrashMatrixError::Verification {
         phase,
         source: Box::new(source),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::require_class;
+
+    #[test]
+    fn classification_mismatch_names_expected_and_observed() -> Result<(), &'static str> {
+        let error = require_class("truncated", "complete")
+            .err()
+            .ok_or("mismatched classes were accepted")?;
+
+        assert_eq!(
+            error.to_string(),
+            "post-crash artifact classification mismatch: expected `complete`, observed `truncated`"
+        );
+        Ok(())
     }
 }

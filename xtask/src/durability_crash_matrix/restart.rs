@@ -20,7 +20,10 @@ pub(super) fn verify(
     let expected = ExpectedStoreState::for_case(case)?;
     let observed_paths = inventory(store_root)?;
     if observed_paths != expected.paths() {
-        return Err(DurabilityCrashMatrixError::StateMismatch);
+        return Err(DurabilityCrashMatrixError::InventoryMismatch {
+            expected: expected.paths(),
+            observed: observed_paths,
+        });
     }
     let segment = GoldenFixture::segment()?;
     let catalog = GoldenFixture::catalog()?;
@@ -30,7 +33,11 @@ pub(super) fn verify(
             .map_err(|source| DurabilityCrashMatrixError::io("read crash artifact", source))?;
         let expected_bytes = bytes.resolve(&segment, &catalog, &head)?;
         if observed != expected_bytes {
-            return Err(DurabilityCrashMatrixError::StateMismatch);
+            return Err(DurabilityCrashMatrixError::artifact_bytes(
+                relative,
+                expected_bytes,
+                &observed,
+            ));
         }
     }
     if let Some((source, target)) = expected.hard_link() {
@@ -57,7 +64,11 @@ fn inventory(store_root: &Path) -> Result<BTreeSet<String>, DurabilityCrashMatri
                 .ok_or(DurabilityCrashMatrixError::NonUnicodeStatePath)?
                 .into();
             if !paths.insert(text) {
-                return Err(DurabilityCrashMatrixError::StateMismatch);
+                let path = relative
+                    .to_str()
+                    .ok_or(DurabilityCrashMatrixError::NonUnicodeStatePath)?
+                    .into();
+                return Err(DurabilityCrashMatrixError::RepeatedInventoryPath { path });
             }
             let file_type = entry.file_type().map_err(|source| {
                 DurabilityCrashMatrixError::io("inspect crash-store entry", source)
@@ -72,8 +83,8 @@ fn inventory(store_root: &Path) -> Result<BTreeSet<String>, DurabilityCrashMatri
 
 fn verify_hard_link(
     store_root: &Path,
-    source: &str,
-    target: &str,
+    source: &'static str,
+    target: &'static str,
 ) -> Result<(), DurabilityCrashMatrixError> {
     let source_metadata = fs::metadata(store_root.join(source))
         .map_err(|error| DurabilityCrashMatrixError::io("inspect crash source link", error))?;
@@ -84,6 +95,13 @@ fn verify_hard_link(
     {
         Ok(())
     } else {
-        Err(DurabilityCrashMatrixError::StateMismatch)
+        Err(DurabilityCrashMatrixError::HardLinkIdentityMismatch {
+            source,
+            target,
+            source_device: source_metadata.dev(),
+            source_inode: source_metadata.ino(),
+            target_device: target_metadata.dev(),
+            target_inode: target_metadata.ino(),
+        })
     }
 }

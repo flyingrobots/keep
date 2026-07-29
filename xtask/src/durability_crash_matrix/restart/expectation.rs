@@ -26,6 +26,15 @@ pub(super) enum ArtifactBytes {
 }
 
 impl ArtifactBytes {
+    pub(super) const fn kind(&self) -> &'static str {
+        match self {
+            Self::Empty => "empty",
+            Self::Segment(_) => "segment",
+            Self::Catalog(_) => "catalog",
+            Self::Head(_) => "head",
+        }
+    }
+
     pub(super) fn resolve<'a>(
         &self,
         segment: &'a GoldenFixture,

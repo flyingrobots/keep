@@ -196,6 +196,10 @@ fn verify_marker(
     if observed == marker(case) {
         Ok(())
     } else {
-        Err(DurabilityCrashMatrixError::StateMismatch)
+        Err(DurabilityCrashMatrixError::artifact_bytes(
+            "prepared-case",
+            &marker(case),
+            &observed,
+        ))
     }
 }

@@ -1,7 +1,9 @@
 //! This module owns deterministic crash-matrix execution failures.
 
+mod display;
+
+use std::collections::BTreeSet;
 use std::error::Error;
-use std::fmt;
 use std::io;
 use std::time::Duration;
 
@@ -16,6 +18,18 @@ pub(crate) enum DurabilityCrashMatrixError {
         point: DurabilityCrashPoint,
         position: DurabilityCrashPosition,
         source: Box<Self>,
+    },
+    ArtifactBytesMismatch {
+        artifact: &'static str,
+        expected_length: usize,
+        observed_length: usize,
+        offset: usize,
+        expected: Option<u8>,
+        observed: Option<u8>,
+    },
+    ArtifactClassificationMismatch {
+        expected: &'static str,
+        observed: &'static str,
     },
     ChildExitedEarly {
         code: Option<i32>,
@@ -42,18 +56,44 @@ pub(crate) enum DurabilityCrashMatrixError {
     InvalidReadinessSignal {
         observed: u8,
     },
+    InventoryMismatch {
+        expected: BTreeSet<String>,
+        observed: BTreeSet<String>,
+    },
     Io {
         action: &'static str,
         source: io::Error,
     },
+    HardLinkIdentityMismatch {
+        source: &'static str,
+        target: &'static str,
+        source_device: u64,
+        source_inode: u64,
+        target_device: u64,
+        target_inode: u64,
+    },
     MissingActiveFile,
+    MissingVisibleRecord {
+        record: &'static str,
+    },
     NonUnicodeStatePath,
     PointSequenceMismatch {
         point: DurabilityCrashPoint,
     },
-    StateMismatch,
+    RepeatedInventoryPath {
+        path: String,
+    },
+    SnapshotGenerationMismatch {
+        expected: u64,
+        observed: u64,
+    },
     Timeout {
         duration: Duration,
+    },
+    UnexpectedArtifactKind {
+        artifact: &'static str,
+        expected: &'static str,
+        observed: &'static str,
     },
     UnknownPoint(String),
     UnknownPosition(String),
@@ -66,6 +106,22 @@ pub(crate) enum DurabilityCrashMatrixError {
 }
 
 impl DurabilityCrashMatrixError {
+    pub(crate) fn artifact_bytes(artifact: &'static str, expected: &[u8], observed: &[u8]) -> Self {
+        let offset = expected
+            .iter()
+            .zip(observed)
+            .position(|(expected, observed)| expected != observed)
+            .unwrap_or_else(|| expected.len().min(observed.len()));
+        Self::ArtifactBytesMismatch {
+            artifact,
+            expected_length: expected.len(),
+            observed_length: observed.len(),
+            offset,
+            expected: expected.get(offset).copied(),
+            observed: observed.get(offset).copied(),
+        }
+    }
+
     pub(crate) const fn io(action: &'static str, source: io::Error) -> Self {
         Self::Io { action, source }
     }
@@ -79,102 +135,6 @@ impl DurabilityCrashMatrixError {
     }
 }
 
-impl fmt::Debug for DurabilityCrashMatrixError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(self, formatter)
-    }
-}
-
-impl fmt::Display for DurabilityCrashMatrixError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Case {
-                point,
-                position,
-                source,
-            } => write!(
-                formatter,
-                "{} {}: {source}",
-                point.identifier(),
-                position.identifier()
-            ),
-            Self::ChildExitedEarly { code } => {
-                write!(
-                    formatter,
-                    "crash child exited before readiness with code {code:?}"
-                )
-            }
-            Self::ChildSurvivedTermination { code } => {
-                write!(
-                    formatter,
-                    "crash child survived termination with code {code:?}"
-                )
-            }
-            Self::Fixture { artifact, .. } => {
-                write!(formatter, "cannot decode {artifact} crash fixture")
-            }
-            Self::FixtureLength {
-                artifact,
-                expected,
-                observed,
-            } => write!(
-                formatter,
-                "{artifact} crash fixture has length {observed}, expected {expected}"
-            ),
-            Self::FixtureRange => formatter.write_str("crash fixture range is invalid"),
-            Self::FixtureTerminator { artifact } => {
-                write!(
-                    formatter,
-                    "{artifact} crash fixture lacks its final line feed"
-                )
-            }
-            Self::InvalidCase(error) => write!(formatter, "invalid crash case: {error}"),
-            Self::InvalidPointEncoding => formatter.write_str("crash point is not valid Unicode"),
-            Self::InvalidPositionEncoding => {
-                formatter.write_str("crash position is not valid Unicode")
-            }
-            Self::InvalidReadinessSignal { observed } => {
-                write!(formatter, "crash child sent readiness byte {observed}")
-            }
-            Self::Io { action, .. } => write!(formatter, "cannot {action}"),
-            Self::MissingActiveFile => {
-                formatter.write_str("crash sequence has no active staged artifact")
-            }
-            Self::NonUnicodeStatePath => {
-                formatter.write_str("post-crash store path is not valid Unicode")
-            }
-            Self::PointSequenceMismatch { point } => write!(
-                formatter,
-                "{} is outside the selected crash sequence",
-                point.identifier()
-            ),
-            Self::StateMismatch => {
-                formatter.write_str("post-crash store state does not match its case")
-            }
-            Self::Timeout { duration } => {
-                write!(formatter, "crash child exceeded its {duration:?} deadline")
-            }
-            Self::UnknownPoint(point) => write!(formatter, "unknown crash point `{point}`"),
-            Self::UnknownPosition(position) => {
-                write!(formatter, "unknown crash position `{position}`")
-            }
-            Self::Usage => formatter.write_str(
-                "usage: cargo xtask durability-crash-matrix \
-                 --case <KEEP-CRASH-NNN> <before|during|after>",
-            ),
-            Self::Verification { phase, source } => {
-                write!(
-                    formatter,
-                    "post-crash verification failed while attempting to {phase}: {source}"
-                )
-            }
-            Self::WriterLock(source) => {
-                write!(formatter, "cannot acquire crash-case writer lock: {source}")
-            }
-        }
-    }
-}
-
 impl Error for DurabilityCrashMatrixError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
@@ -184,7 +144,9 @@ impl Error for DurabilityCrashMatrixError {
             Self::Io { source, .. } => Some(source),
             Self::Verification { source, .. } => Some(source.as_ref()),
             Self::WriterLock(source) => Some(source),
-            Self::ChildExitedEarly { .. }
+            Self::ArtifactBytesMismatch { .. }
+            | Self::ArtifactClassificationMismatch { .. }
+            | Self::ChildExitedEarly { .. }
             | Self::ChildSurvivedTermination { .. }
             | Self::FixtureLength { .. }
             | Self::FixtureRange
@@ -192,11 +154,16 @@ impl Error for DurabilityCrashMatrixError {
             | Self::InvalidPointEncoding
             | Self::InvalidPositionEncoding
             | Self::InvalidReadinessSignal { .. }
+            | Self::InventoryMismatch { .. }
+            | Self::HardLinkIdentityMismatch { .. }
             | Self::MissingActiveFile
+            | Self::MissingVisibleRecord { .. }
             | Self::NonUnicodeStatePath
             | Self::PointSequenceMismatch { .. }
-            | Self::StateMismatch
+            | Self::RepeatedInventoryPath { .. }
+            | Self::SnapshotGenerationMismatch { .. }
             | Self::Timeout { .. }
+            | Self::UnexpectedArtifactKind { .. }
             | Self::UnknownPoint(_)
             | Self::UnknownPosition(_)
             | Self::Usage => None,
