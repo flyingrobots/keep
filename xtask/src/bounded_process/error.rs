@@ -83,8 +83,13 @@ impl fmt::Display for ProcessError {
                 additional,
             } => write!(formatter, "{primary}; additionally {additional}"),
             Self::Cleanup {
-                primary, action, ..
-            } => write!(formatter, "{primary}; additionally failed to {action}"),
+                primary,
+                action,
+                source,
+            } => write!(
+                formatter,
+                "{primary}; additionally failed to {action}: {source}"
+            ),
             Self::Io {
                 program, action, ..
             } => write!(formatter, "cannot {action} {program} process"),
@@ -117,13 +122,47 @@ impl fmt::Display for ProcessError {
 impl Error for ProcessError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::Additional { primary, .. } => Some(primary),
-            Self::Cleanup { source, .. } | Self::Io { source, .. } => Some(source),
+            Self::Additional { primary, .. } | Self::Cleanup { primary, .. } => {
+                Some(primary.as_ref())
+            }
+            Self::Io { source, .. } => Some(source),
             Self::Interrupted { .. }
             | Self::MissingStream { .. }
             | Self::OutputLimit { .. }
             | Self::ReaderPanic { .. }
             | Self::Timeout { .. } => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cleanup_failure_retains_the_primary_source_and_reports_cleanup_context() {
+        let error = ProcessError::Cleanup {
+            primary: Box::new(ProcessError::Timeout {
+                program: "source-test",
+                duration: Duration::from_secs(1),
+            }),
+            action: "reap child process",
+            source: io::Error::other("cleanup refused"),
+        };
+
+        assert!(matches!(
+            error
+                .source()
+                .and_then(|source| source.downcast_ref::<ProcessError>()),
+            Some(ProcessError::Timeout {
+                program: "source-test",
+                duration,
+            }) if *duration == Duration::from_secs(1)
+        ));
+        assert_eq!(
+            error.to_string(),
+            "source-test process exceeded its 1-second deadline; additionally failed to \
+             reap child process: cleanup refused"
+        );
     }
 }
