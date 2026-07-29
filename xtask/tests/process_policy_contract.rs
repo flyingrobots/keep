@@ -218,9 +218,9 @@ fn bounded_process_support_documents_every_exported_contract() -> Result<(), Str
     require_docs(
         BOUNDED_PROCESS_GROUP,
         &[
-            "pub(super) struct ProcessGroup",
-            "    pub(super) fn for_child(",
-            "    pub(super) fn terminate(",
+            "pub(crate) struct ProcessGroup",
+            "    pub(crate) fn for_child(",
+            "    pub(crate) fn terminate(",
         ],
     )?;
     require_docs(
