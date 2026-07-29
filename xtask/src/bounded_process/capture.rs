@@ -60,9 +60,10 @@ pub(crate) fn capture_with_limits(
 
 /// Runs one captured child with bounded streaming input and exact stream limits.
 ///
-/// The complete deadline starts before spawn and covers every nonblocking stdin
-/// write, both output readers, child execution, and cleanup. Input slices are
-/// streamed directly without constructing a combined preimage allocation.
+/// The deadline clock starts before synchronous spawn. After spawn returns, its
+/// remaining time bounds every nonblocking stdin write, both output readers,
+/// child execution, and cleanup. Input slices are streamed directly without
+/// constructing a combined preimage allocation.
 pub(crate) fn capture_with_input_limits(
     program: &'static str,
     command: &mut Command,

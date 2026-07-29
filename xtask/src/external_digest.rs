@@ -56,8 +56,10 @@ pub(crate) enum ExternalDigestError {
 /// Computes one raw BLAKE3 digest through the independent `b3sum` witness.
 ///
 /// Input parts are streamed without concatenation. The child receives only the
-/// admitted executable search path and `C` locale, and the complete operation
-/// is bounded by one ten-second deadline and independent output limits.
+/// admitted executable search path and `C` locale. One ten-second deadline
+/// clock starts before synchronous spawn; after spawn returns, its remaining
+/// time bounds input transfer, child execution, and independently limited
+/// output collection.
 pub(crate) fn b3sum(parts: &[&[u8]]) -> Result<[u8; DIGEST_BYTES], ExternalDigestError> {
     let mut command = b3sum_command()?;
     execute(&mut command, parts, PROCESS_DEADLINE)

@@ -160,11 +160,12 @@ The model computes identity through Keep's public `BlobId` API, while the
 checked-in vectors were generated independently with `b3sum`. Agreement is
 therefore not a self-authored golden. The repository checker streams each
 canonical preimage through the same deadline-bounded external-digest adapter
-used by protocol conformance. The deadline covers process spawn and stdin
-transfer as well as output collection; stdout and stderr have independent byte
-limits; and timeout or collection failure kills and reaps the complete child
-process group. Digest-specific preimage construction remains owned by this
-checker rather than the process adapter.
+used by protocol conformance. The deadline clock starts before synchronous
+spawn. After spawn returns, its remaining time bounds stdin transfer and output
+collection; stdout and stderr have independent byte limits; and timeout or
+collection failure kills and reaps the complete child process group.
+Digest-specific preimage construction remains owned by this checker rather than
+the process adapter.
 
 ## Exact M1 acceptance boundary
 
