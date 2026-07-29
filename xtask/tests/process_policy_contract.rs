@@ -40,10 +40,11 @@ fn external_digest_has_one_process_authority() {
     assert!(EXTERNAL_DIGEST.contains("capture_with_input_limits("));
     assert!(EXTERNAL_DIGEST.contains("pub(crate) const DIGEST_BYTES"));
     assert!(!CONFORMANCE_B3SUM.contains("const DIGEST_BYTES"));
-    assert!(!CONFORMANCE_B3SUM.contains("Command::new("));
-    assert!(!GOLDEN_B3SUM.contains("Command::new("));
-    assert!(!GOLDEN_B3SUM.contains(".wait()"));
-    assert!(!GOLDEN_B3SUM.contains(".write_all("));
+    for caller in [CONFORMANCE_B3SUM, GOLDEN_B3SUM] {
+        assert!(!caller.contains("Command::new("));
+        assert!(!caller.contains(".wait()"));
+        assert!(!caller.contains(".write_all("));
+    }
 }
 
 #[test]
