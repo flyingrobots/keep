@@ -8,12 +8,11 @@ use std::path::PathBuf;
 use std::string::FromUtf8Error;
 
 use crate::diagnostic::{escaped_controls, escaped_path};
-use crate::external_digest::ExternalDigestError;
 use xtask::protocol_admission::RelativePathError;
 
-pub(crate) enum GoldenError {
+pub(crate) enum GoldenError<ExternalDigestSource> {
     ExternalDigest {
-        source: ExternalDigestError,
+        source: ExternalDigestSource,
     },
     Integer {
         field: String,
@@ -35,8 +34,8 @@ pub(crate) enum GoldenError {
     Violation(String),
 }
 
-impl GoldenError {
-    pub(super) const fn external_digest(source: ExternalDigestError) -> Self {
+impl<ExternalDigestSource> GoldenError<ExternalDigestSource> {
+    pub(super) const fn external_digest(source: ExternalDigestSource) -> Self {
         Self::ExternalDigest { source }
     }
 
@@ -53,13 +52,13 @@ impl GoldenError {
     }
 }
 
-impl fmt::Debug for GoldenError {
+impl<ExternalDigestSource: fmt::Display> fmt::Debug for GoldenError<ExternalDigestSource> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, formatter)
     }
 }
 
-impl fmt::Display for GoldenError {
+impl<ExternalDigestSource: fmt::Display> fmt::Display for GoldenError<ExternalDigestSource> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("golden corpus check failed: ")?;
         match self {
@@ -87,7 +86,7 @@ impl fmt::Display for GoldenError {
     }
 }
 
-impl Error for GoldenError {
+impl<ExternalDigestSource: Error + 'static> Error for GoldenError<ExternalDigestSource> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::ExternalDigest { source } => Some(source),
@@ -97,23 +96,5 @@ impl Error for GoldenError {
             Self::Path { source, .. } => Some(source),
             Self::Violation(_) => None,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::GoldenError;
-    use crate::external_digest::ExternalDigestError;
-
-    #[test]
-    fn external_digest_refusal_retains_its_typed_variant() {
-        let error = GoldenError::external_digest(ExternalDigestError::Width { observed: 31 });
-
-        assert!(matches!(
-            error,
-            GoldenError::ExternalDigest {
-                source: ExternalDigestError::Width { observed: 31 },
-            }
-        ));
     }
 }

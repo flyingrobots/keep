@@ -33,7 +33,21 @@ impl IdentityDigestOracle for B3sumOracle {
 #[cfg(test)]
 mod tests {
     use super::{B3sumOracle, IdentityDigestOracle};
+    use crate::external_digest::ExternalDigestError;
+    use crate::golden_file_worldline::GoldenError;
     use crate::golden_file_worldline::identity_oracle::digest;
+
+    #[test]
+    fn external_digest_refusal_retains_its_typed_variant() {
+        let error = GoldenError::external_digest(ExternalDigestError::Width { observed: 31 });
+
+        assert!(matches!(
+            error,
+            GoldenError::ExternalDigest {
+                source: ExternalDigestError::Width { observed: 31 },
+            }
+        ));
+    }
 
     #[test]
     fn external_oracle_agrees_on_the_identity_preimage() {
