@@ -11,6 +11,7 @@ const BOUNDED_PROCESS_GROUP_TESTS: &str =
     include_str!("../src/bounded_process/process_group/tests.rs");
 const BOUNDED_PROCESS_READER: &str = include_str!("../src/bounded_process/reader.rs");
 const BOUNDED_PROCESS_TESTS: &str = include_str!("../src/bounded_process/tests.rs");
+const BLAKE3_ADMISSION: &str = include_str!("../../docs/dependencies/blake3-1.8.5.md");
 const CONFORMANCE_B3SUM: &str = include_str!("../src/protocol_conformance/external_digest.rs");
 const EXTERNAL_DIGEST: &str = include_str!("../src/external_digest.rs");
 const EXTERNAL_DIGEST_TESTS: &str = include_str!("../src/external_digest/tests.rs");
@@ -102,6 +103,20 @@ fn blocking_digest_fixture_has_no_wall_clock_escape() {
     assert!(!EXTERNAL_DIGEST_TESTS.contains("recv_timeout("));
     assert!(!EXTERNAL_DIGEST_TESTS.contains("Duration::from_secs(1)"));
     assert!(EXTERNAL_DIGEST_TESTS.contains("std::thread::park()"));
+}
+
+#[test]
+fn digest_admission_defers_process_mechanics_to_the_process_contract() {
+    assert!(BLAKE3_ADMISSION.contains(
+        "[Golden File Worldline reference model](../conformance/golden-file-worldline.md#reference-model)"
+    ));
+    for duplicated_mechanic in [
+        "slices without a combined allocation",
+        "bounds stdout and stderr independently",
+        "kills and reaps the child process group",
+    ] {
+        assert!(!BLAKE3_ADMISSION.contains(duplicated_mechanic));
+    }
 }
 
 #[test]
