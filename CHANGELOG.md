@@ -101,7 +101,8 @@ after its public API and format compatibility policies are established.
   spawn and stdin transfer, stdin is streamed without a combined preimage
   allocation, stdout and stderr have independent limits, and every timeout or
   collection failure kills and reaps the process group while retaining typed
-  failure context.
+  failure context. Child reaping and stalled-reader retirement use a separate
+  fixed cleanup deadline instead of blocking without limit.
 - Fuzz policy admission, target reconciliation, bounded campaign execution,
   minimization deadlines, retained-corpus admission, and workflow contract
   tests now run through the repository's Rust `xtask`; the superseded Python

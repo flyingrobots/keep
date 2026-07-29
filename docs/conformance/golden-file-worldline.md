@@ -163,9 +163,10 @@ canonical preimage through the same deadline-bounded external-digest adapter
 used by protocol conformance. The deadline clock starts before synchronous
 spawn. After spawn returns, its remaining time bounds stdin transfer and output
 collection; stdout and stderr have independent byte limits; and timeout or
-collection failure kills and reaps the complete child process group.
-Digest-specific preimage construction remains owned by this checker rather than
-the process adapter.
+collection failure kills the complete child process group. Child reaping and
+reader retirement use a separate fixed cleanup deadline and remain typed if
+teardown cannot be proved. Digest-specific preimage construction remains owned
+by this checker rather than the process adapter.
 
 ## Exact M1 acceptance boundary
 

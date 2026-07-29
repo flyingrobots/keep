@@ -59,12 +59,7 @@ fn captured_process_keeps_the_group_leader_until_reader_collection_finishes()
         .find("wait_for_child")
         .ok_or("captured process must reap its child")?;
 
-    for operation in [
-        "self.stdout.receive",
-        "self.stderr.receive",
-        "self.stdout.join",
-        "self.stderr.join",
-    ] {
+    for operation in ["self.stdout.receive", "self.stderr.receive"] {
         let position = body
             .find(operation)
             .ok_or("captured process must collect and join both output streams")?;
@@ -76,6 +71,10 @@ fn captured_process_keeps_the_group_leader_until_reader_collection_finishes()
             .unwrap_or_default()
             .contains("cleanup_process"),
         "cleanup may group-kill after the child ownership lifetime ends"
+    );
+    assert!(
+        !body.contains(".join()"),
+        "reader collection may wait forever"
     );
     Ok(())
 }
@@ -187,7 +186,7 @@ fn bounded_process_support_documents_every_exported_contract() -> Result<(), Str
             "pub(super) struct ReaderWorker",
             "    pub(super) fn start(",
             "    pub(super) fn receive(",
-            "    pub(super) fn join(",
+            "    pub(super) fn retire(",
         ],
     )
 }

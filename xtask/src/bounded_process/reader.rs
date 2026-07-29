@@ -3,6 +3,7 @@
 use std::io;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError};
 use std::thread::{self, JoinHandle};
+use std::time::Duration;
 
 use crate::process_output::{BoundedBytes, bounded_bytes};
 
@@ -12,6 +13,7 @@ const INTERRUPT_POLL_INTERVAL: std::time::Duration = std::time::Duration::from_m
 
 /// Owns one bounded stream reader and its single-result channel.
 pub(super) struct ReaderWorker {
+    completed: bool,
     handle: JoinHandle<()>,
     program: &'static str,
     receiver: Receiver<Result<BoundedBytes, io::Error>>,
@@ -41,6 +43,7 @@ impl ReaderWorker {
                 source,
             })?;
         Ok(Self {
+            completed: false,
             handle,
             program,
             receiver,
@@ -53,7 +56,7 @@ impl ReaderWorker {
     /// This call blocks only for the smaller of the remaining deadline and the
     /// fixed interrupt interval, so timeout and interruption remain observable.
     pub(super) fn receive(
-        &self,
+        &mut self,
         deadline: &ProcessDeadline,
         interrupts: &InterruptGuard,
     ) -> Result<BoundedBytes, ProcessError> {
@@ -64,6 +67,7 @@ impl ReaderWorker {
             let (wait, duration) = receive_wait(deadline, self.program)?;
             match self.receiver.recv_timeout(wait) {
                 Ok(result) => {
+                    self.completed = true;
                     return result.map_err(|source| ProcessError::Io {
                         program: self.program,
                         action: "read child output",
@@ -75,17 +79,42 @@ impl ReaderWorker {
                     deadline.remaining(self.program)?;
                 }
                 Err(RecvTimeoutError::Disconnected) => {
+                    self.completed = true;
                     return Err(reader_panic(self.program, self.stream));
                 }
             }
         }
     }
 
-    /// Joins the completed reader and maps a worker panic to a typed failure.
-    pub(super) fn join(self) -> Result<(), ProcessError> {
-        self.handle
-            .join()
-            .map_err(|_panic| reader_panic(self.program, self.stream))
+    /// Retires one reader without an unbounded thread join.
+    ///
+    /// A result already received proves the worker crossed its only fallible
+    /// read boundary. Otherwise retirement waits only for `deadline`; a stalled
+    /// reader becomes a typed timeout and its thread handle is detached.
+    pub(super) fn retire(self, deadline: Duration) -> Result<(), ProcessError> {
+        let result = if self.completed {
+            Ok(())
+        } else {
+            match self.receiver.recv_timeout(deadline) {
+                Ok(Ok(_output)) => Ok(()),
+                Ok(Err(source)) => Err(ProcessError::Io {
+                    program: self.program,
+                    action: "read child output",
+                    source,
+                }),
+                Err(RecvTimeoutError::Disconnected) => Err(reader_panic(self.program, self.stream)),
+                Err(RecvTimeoutError::Timeout) => Err(ProcessError::Io {
+                    program: self.program,
+                    action: "retire output reader",
+                    source: io::Error::new(
+                        io::ErrorKind::TimedOut,
+                        format!("{} reader did not retire", self.stream),
+                    ),
+                }),
+            }
+        };
+        drop(self.handle);
+        result
     }
 }
 
@@ -101,4 +130,45 @@ fn receive_wait(
 
 const fn reader_panic(program: &'static str, stream: &'static str) -> ProcessError {
     ProcessError::ReaderPanic { program, stream }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::mpsc;
+    use std::time::Duration;
+
+    use super::*;
+
+    struct BlockingReader(mpsc::Receiver<()>);
+
+    impl io::Read for BlockingReader {
+        fn read(&mut self, _buffer: &mut [u8]) -> Result<usize, io::Error> {
+            self.0
+                .recv()
+                .map_err(|source| io::Error::new(io::ErrorKind::BrokenPipe, source))?;
+            Ok(0)
+        }
+    }
+
+    #[test]
+    fn stalled_reader_retirement_obeys_the_cleanup_deadline()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (release, blocked) = mpsc::channel();
+        let worker = ReaderWorker::start("reader-test", "stdout", BlockingReader(blocked), 1)?;
+        let error = worker
+            .retire(Duration::ZERO)
+            .err()
+            .ok_or_else(|| io::Error::other("a stalled reader retired successfully"))?;
+
+        assert!(matches!(
+            error,
+            ProcessError::Io {
+                program: "reader-test",
+                action: "retire output reader",
+                ref source,
+            } if source.kind() == io::ErrorKind::TimedOut
+        ));
+        release.send(())?;
+        Ok(())
+    }
 }
