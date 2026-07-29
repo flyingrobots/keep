@@ -9,6 +9,7 @@ publish = false
 [features]
 default = ["repository-tasks"]
 golden-protocol-fuzz = []
+repository-json-fuzz = ["dep:serde", "dep:serde_json"]
 repository-tasks = [
     "dep:blake3",
     "dep:cap-fs-ext",
@@ -16,8 +17,7 @@ repository-tasks = [
     "dep:md-5",
     "dep:repository-process-spawn",
     "dep:rustix",
-    "dep:serde",
-    "dep:serde_json",
+    "repository-json-fuzz",
     "dep:signal-hook",
     "dep:yaml-rust2",
 ]

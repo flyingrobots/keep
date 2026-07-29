@@ -88,6 +88,9 @@ after its public API and format compatibility policies are established.
 - Golden protocol framing, field, hexadecimal, path, mutation-operation, and
   fixed-width value decoders now share a bounded fuzz surface backed by
   precise table-driven malformed-corpus refusals.
+- Duplicate-refusing repository JSON admission now has a one-mebibyte fuzz
+  boundary with deterministic evidence for valid nested input, malformed JSON,
+  excessive nesting, and duplicate members at nested object depth.
 - Deterministic fuzz seed materialization now uses a capability-bound Rust
   `xtask`, syncs and atomically publishes derived seed files without mutating
   hard-link targets, recovers interrupted fixed-name staging files, cleans
