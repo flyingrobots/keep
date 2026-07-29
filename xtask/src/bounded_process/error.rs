@@ -112,8 +112,7 @@ impl fmt::Display for ProcessError {
             }
             Self::Timeout { program, duration } => write!(
                 formatter,
-                "{program} process exceeded its {}-second deadline",
-                duration.as_secs()
+                "{program} process exceeded its {duration:?} deadline"
             ),
         }
     }
@@ -161,8 +160,21 @@ mod tests {
         ));
         assert_eq!(
             error.to_string(),
-            "source-test process exceeded its 1-second deadline; additionally failed to \
+            "source-test process exceeded its 1s deadline; additionally failed to \
              reap child process: cleanup refused"
+        );
+    }
+
+    #[test]
+    fn timeout_diagnostic_preserves_subsecond_duration() {
+        let error = ProcessError::Timeout {
+            program: "duration-test",
+            duration: Duration::from_millis(50),
+        };
+
+        assert_eq!(
+            error.to_string(),
+            "duration-test process exceeded its 50ms deadline"
         );
     }
 }
