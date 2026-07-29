@@ -41,7 +41,10 @@ fn a_commented_command_is_not_ci_execution() {
 
 #[test]
 fn ci_executes_the_complete_crash_matrix_in_debug_and_optimized_profiles() {
-    assert_eq!(exact_run_step_count(CI_WORKFLOW, CRASH_MATRIX_DEBUG_STEP), 1);
+    assert_eq!(
+        exact_run_step_count(CI_WORKFLOW, CRASH_MATRIX_DEBUG_STEP),
+        1
+    );
     assert_eq!(
         exact_run_step_count(CI_WORKFLOW, CRASH_MATRIX_RELEASE_STEP),
         1
