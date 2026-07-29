@@ -7,6 +7,8 @@ use std::path::Path;
 use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt, OpenOptionsSyncExt};
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, Metadata, OpenOptions};
+use rustix::fs::{FlockOperation, flock};
+use rustix::io::Errno;
 
 use super::{WriterLockAcquireError, WriterLockAcquirePhase};
 
@@ -123,8 +125,22 @@ fn acquire_root(directory: &Dir) -> Result<File, WriterLockAcquireError> {
         .try_clone()
         .map_err(|source| WriterLockAcquireError::io(WriterLockAcquirePhase::AcquireRoot, source))?
         .into_std_file();
-    acquire_lock(&file, WriterLockAcquirePhase::AcquireRoot)?;
+    acquire_root_lock(&file)?;
     Ok(file)
+}
+
+fn acquire_root_lock(file: &File) -> Result<(), WriterLockAcquireError> {
+    // The pinned directory handle is read-only. Linux POSIX record locks reject
+    // an exclusive lock on that handle, while `flock` locks the directory inode
+    // without requiring write access to the directory file description.
+    match flock(file, FlockOperation::NonBlockingLockExclusive) {
+        Ok(()) => Ok(()),
+        Err(source) if source == Errno::WOULDBLOCK => Err(WriterLockAcquireError::Busy),
+        Err(source) => Err(WriterLockAcquireError::io(
+            WriterLockAcquirePhase::AcquireRoot,
+            source.into(),
+        )),
+    }
 }
 
 fn acquire_lock(file: &File, phase: WriterLockAcquirePhase) -> Result<(), WriterLockAcquireError> {
