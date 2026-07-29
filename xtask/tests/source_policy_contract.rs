@@ -11,12 +11,12 @@ const BOUNDED_PROCESS_GROUP_TESTS: &str =
     include_str!("../src/bounded_process/process_group/tests.rs");
 const BOUNDED_PROCESS_READER: &str = include_str!("../src/bounded_process/reader.rs");
 const BOUNDED_PROCESS_TESTS: &str = include_str!("../src/bounded_process/tests.rs");
-const DOCUMENTATION_TEST_REPOSITORY: &str =
-    include_str!("../src/documentation_integrity/corpus/test_repository.rs");
+const REPOSITORY_FIXTURE: &str = include_str!("../src/repository_fixture.rs");
 const GIT_INVENTORY_ERROR: &str = include_str!("../src/git_inventory/error.rs");
 const GIT_PATH_STREAM: &str = include_str!("../src/git_inventory/path_stream.rs");
 const GIT_PROCESS: &str = include_str!("../src/git_inventory/process.rs");
 const REPOSITORY_FILE: &str = include_str!("../src/repository_file.rs");
+const SOURCE_PURE_RUST_TESTS: &str = include_str!("../src/source_structure/pure_rust_tests.rs");
 const SOURCE_STRUCTURE: &str = include_str!("../src/source_structure.rs");
 const SOURCE_INVENTORY: &str = include_str!("../src/source_structure/source_inventory.rs");
 
@@ -67,6 +67,13 @@ fn regular_source_admission_has_one_refusal_boundary() {
 }
 
 #[test]
+fn sanitized_git_fixture_has_one_process_authority() {
+    let definitions = REPOSITORY_FIXTURE.matches("fn run_git(").count()
+        + SOURCE_PURE_RUST_TESTS.matches("fn run_git(").count();
+    assert_eq!(definitions, 1);
+}
+
+#[test]
 fn git_inventory_uses_the_deadline_bounded_process_layer() {
     assert!(GIT_PROCESS.contains("const GIT_DEADLINE: Duration"));
     assert!(GIT_PROCESS.contains("bounded_process::capture_with_limits("));
@@ -114,18 +121,18 @@ fn descendant_cleanup_uses_disconnect_evidence_instead_of_elapsed_time() {
 }
 
 #[test]
-fn documentation_git_fixtures_use_the_bounded_process_layer() {
-    assert!(DOCUMENTATION_TEST_REPOSITORY.contains("bounded_process::status("));
-    assert!(DOCUMENTATION_TEST_REPOSITORY.contains("GIT_FIXTURE_DEADLINE"));
-    assert!(!DOCUMENTATION_TEST_REPOSITORY.contains(".output()"));
+fn repository_git_fixtures_use_the_bounded_process_layer() {
+    assert!(REPOSITORY_FIXTURE.contains("bounded_process::status("));
+    assert!(REPOSITORY_FIXTURE.contains("GIT_FIXTURE_DEADLINE"));
+    assert!(!REPOSITORY_FIXTURE.contains(".output()"));
 }
 
 #[test]
-fn documentation_git_fixtures_clear_the_ambient_environment() {
-    assert!(DOCUMENTATION_TEST_REPOSITORY.contains(".env_clear()"));
-    assert!(DOCUMENTATION_TEST_REPOSITORY.contains("env::var_os(\"PATH\")"));
-    assert!(DOCUMENTATION_TEST_REPOSITORY.contains(".env(\"PATH\""));
-    assert!(DOCUMENTATION_TEST_REPOSITORY.contains(".env(\"LC_ALL\", \"C\")"));
+fn repository_git_fixtures_clear_the_ambient_environment() {
+    assert!(REPOSITORY_FIXTURE.contains(".env_clear()"));
+    assert!(REPOSITORY_FIXTURE.contains("env::var_os(\"PATH\")"));
+    assert!(REPOSITORY_FIXTURE.contains(".env(\"PATH\""));
+    assert!(REPOSITORY_FIXTURE.contains(".env(\"LC_ALL\", \"C\")"));
 }
 
 #[test]
@@ -210,10 +217,7 @@ fn repository_process_boundaries_document_every_exported_contract() -> Result<()
             "    pub(super) fn join(",
         ],
     )?;
-    require_docs(
-        DOCUMENTATION_TEST_REPOSITORY,
-        &["pub(in crate::documentation_integrity) fn run_git("],
-    )?;
+    require_docs(REPOSITORY_FIXTURE, &["pub(crate) fn run_git("])?;
     require_docs(
         GIT_INVENTORY_ERROR,
         &[

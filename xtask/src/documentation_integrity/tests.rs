@@ -5,7 +5,7 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
-use crate::documentation_integrity::corpus::test_repository::run_git;
+use crate::repository_fixture::run_git;
 use crate::test_directory::TestDirectory;
 
 use super::{DocumentationError, check_with};

@@ -5,10 +5,11 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-use super::{CorpusKind, SourceCorpus, admit_path, test_repository::run_git};
+use super::{CorpusKind, SourceCorpus, admit_path};
 use crate::documentation_integrity::error::DocumentationError;
 use crate::git_inventory::GitPath;
 use crate::repository_file::{OpenRepositoryFileError, RepositoryRoot};
+use crate::repository_fixture::run_git;
 use crate::test_directory::TestDirectory;
 
 #[test]

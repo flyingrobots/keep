@@ -5,8 +5,9 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 use crate::bounded_process::ProcessOutput;
-use crate::documentation_integrity::corpus::{SourceCorpus, test_repository::run_git};
+use crate::documentation_integrity::corpus::SourceCorpus;
 use crate::repository_file::RepositoryRoot;
+use crate::repository_fixture::run_git;
 use crate::test_directory::TestDirectory;
 
 use super::corpus_guard::CorpusGuardedRunner;

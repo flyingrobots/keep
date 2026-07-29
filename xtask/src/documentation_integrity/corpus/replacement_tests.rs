@@ -2,9 +2,10 @@
 
 use std::fs;
 
-use super::{SourceCorpus, test_repository::run_git};
+use super::SourceCorpus;
 use crate::documentation_integrity::error::DocumentationError;
 use crate::repository_file::RepositoryRoot;
+use crate::repository_fixture::run_git;
 use crate::test_directory::TestDirectory;
 
 #[test]

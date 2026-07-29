@@ -4,12 +4,10 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
-use std::time::Duration;
 
-use crate::bounded_process;
 use crate::git_inventory::GitPath;
 use crate::repository_file::RepositoryRoot;
+use crate::repository_fixture::run_git;
 use crate::test_directory::TestDirectory;
 
 #[test]
@@ -187,34 +185,5 @@ impl SourceFixture {
     fn close(self) -> Result<(), Box<dyn std::error::Error>> {
         self.directory.close()?;
         Ok(())
-    }
-}
-
-fn run_git(
-    repository: &std::path::Path,
-    arguments: &[&str],
-) -> Result<(), Box<dyn std::error::Error>> {
-    let path = std::env::var_os("PATH").ok_or("test PATH is unavailable")?;
-    let mut command = Command::new("git");
-    command
-        .args(arguments)
-        .current_dir(repository)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .env_clear()
-        .env("PATH", path)
-        .env("LC_ALL", "C")
-        .env("GIT_CONFIG_NOSYSTEM", "1")
-        .env("GIT_CONFIG_GLOBAL", "/dev/null");
-    let output = bounded_process::status(
-        "git test fixture",
-        &mut command,
-        Some(Duration::from_secs(10)),
-    )?;
-    if output.succeeded {
-        Ok(())
-    } else {
-        Err(format!("git test fixture failed with status {:?}", output.code).into())
     }
 }

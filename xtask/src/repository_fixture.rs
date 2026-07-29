@@ -1,4 +1,4 @@
-//! This module owns hermetic Git commands for corpus regression repositories.
+//! This module owns hermetic Git commands for repository regression fixtures.
 
 use std::env;
 use std::error::Error;
@@ -19,10 +19,7 @@ const GIT_FIXTURE_DEADLINE: Duration = Duration::from_mins(2);
 /// path, deterministic locale, and null system and global Git configuration.
 /// Process failures retain their typed source; a nonzero Git status reports the
 /// attempted arguments without admitting tool output.
-pub(in crate::documentation_integrity) fn run_git(
-    root: &Path,
-    arguments: &[&str],
-) -> Result<(), Box<dyn Error>> {
+pub(crate) fn run_git(root: &Path, arguments: &[&str]) -> Result<(), Box<dyn Error>> {
     let path = env::var_os("PATH")
         .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "PATH is unavailable"))?;
     let mut command = Command::new("git");
@@ -35,10 +32,11 @@ pub(in crate::documentation_integrity) fn run_git(
         .env("GIT_CONFIG_GLOBAL", "/dev/null")
         .env("GIT_CONFIG_COUNT", "0")
         .env("LC_ALL", "C")
+        .stdin(Stdio::null())
         .stdout(Stdio::null())
         .stderr(Stdio::null());
     let output = bounded_process::status(
-        "documentation Git fixture",
+        "repository Git fixture",
         &mut command,
         Some(GIT_FIXTURE_DEADLINE),
     )?;

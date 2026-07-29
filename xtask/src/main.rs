@@ -54,6 +54,12 @@ mod protocol_conformance;
     reason = "repository file admission is shared by sibling repository tasks"
 )]
 mod repository_file;
+#[cfg(test)]
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "repository fixture execution is shared by sibling test modules"
+)]
+mod repository_fixture;
 #[allow(
     clippy::redundant_pub_crate,
     reason = "the parent command dispatcher is the only consumer"

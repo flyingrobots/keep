@@ -3,8 +3,6 @@
 mod byte_budget;
 mod selection;
 mod source_witness;
-#[cfg(test)]
-pub(super) mod test_repository;
 
 use std::cmp::Ordering;
 use std::io;
