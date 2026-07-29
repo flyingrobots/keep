@@ -8,7 +8,7 @@ use keep::{RecoveryEntryName, RecoveryInventoryStorage, RecoveryNamespace};
 /// One observed inventory-port call.
 pub enum InventoryCall {
     /// Count the selected namespace.
-    Count(RecoveryNamespace),
+    Count(RecoveryNamespace, u64),
     /// Read the selected namespace with the admitted expected count.
     Read(RecoveryNamespace, u64),
 }
@@ -35,8 +35,8 @@ impl InventoryDouble {
 }
 
 impl RecoveryInventoryStorage for InventoryDouble {
-    fn count_entries(&mut self, namespace: RecoveryNamespace) -> io::Result<u64> {
-        self.calls.push(InventoryCall::Count(namespace));
+    fn count_entries(&mut self, namespace: RecoveryNamespace, remaining: u64) -> io::Result<u64> {
+        self.calls.push(InventoryCall::Count(namespace, remaining));
         let [root, staging, segments, catalogs] = self.counts;
         Ok(match namespace {
             RecoveryNamespace::Root => root,

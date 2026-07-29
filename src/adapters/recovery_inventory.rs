@@ -72,13 +72,15 @@ fn count_namespaces(
     let mut counts = [0_u64; 4];
     let mut total = 0_u64;
     for (count_slot, namespace) in counts.iter_mut().zip(NAMESPACES) {
-        let count = storage.count_entries(namespace).map_err(|source| {
-            RecoveryInventoryError::io(namespace, RecoveryInventoryOperation::Count, source)
-        })?;
         let remaining = limit
             .get()
             .checked_sub(total)
             .ok_or(RecoveryInventoryError::AddressSpace { observed: total })?;
+        let count = storage
+            .count_entries(namespace, remaining)
+            .map_err(|source| {
+                RecoveryInventoryError::io(namespace, RecoveryInventoryOperation::Count, source)
+            })?;
         if count > remaining {
             let observed_at_least =
                 limit

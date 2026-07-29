@@ -30,8 +30,8 @@ fn configured_limit_refuses_before_any_name_is_retained() -> Result<(), Box<dyn 
     assert_eq!(
         storage.calls(),
         &[
-            InventoryCall::Count(RecoveryNamespace::Root),
-            InventoryCall::Count(RecoveryNamespace::Staging),
+            InventoryCall::Count(RecoveryNamespace::Root, 3),
+            InventoryCall::Count(RecoveryNamespace::Staging, 1),
         ]
     );
     Ok(())
@@ -130,7 +130,7 @@ fn empty_names() -> [Vec<keep::RecoveryEntryName>; 4] {
 struct CountFailure;
 
 impl RecoveryInventoryStorage for CountFailure {
-    fn count_entries(&mut self, _namespace: RecoveryNamespace) -> io::Result<u64> {
+    fn count_entries(&mut self, _namespace: RecoveryNamespace, _remaining: u64) -> io::Result<u64> {
         Err(io::Error::new(
             io::ErrorKind::PermissionDenied,
             "injected count refusal",

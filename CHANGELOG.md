@@ -20,7 +20,8 @@ after its public API and format compatibility policies are established.
   inode, so replacing `writer.lock` cannot split live cooperative authority.
 - Recovery inventory now counts the root and three protocol directories before
   retaining names, enforces the configurable protocol-bounded entry ceiling,
-  refuses count drift and duplicates exactly, and returns deterministic
+  stops namespace counting at the first globally excessive entry, refuses
+  count drift and duplicates exactly, and returns deterministic
   namespace-and-raw-byte ordering through a read-only storage port.
 - Store initialization now exposes one storage-port state machine that admits
   the platform before mutation, opens and locks `writer.lock`, admits the three
