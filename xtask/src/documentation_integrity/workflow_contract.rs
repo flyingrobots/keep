@@ -58,7 +58,22 @@ fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError>
     let [document] = documents.as_slice() else {
         return Err(contract("workflow contains exactly one YAML document"));
     };
+    if !triggers_are_reviewed(document) {
+        return Err(contract(
+            "workflow runs on reviewed push and pull request triggers",
+        ));
+    }
     reviewed_runs(documentation_steps(document)?)
+}
+
+fn triggers_are_reviewed(document: &Yaml) -> bool {
+    let triggers = &document["on"];
+    let push = &triggers["push"];
+    let branches = &push["branches"];
+    mapping_has_exact_fields(triggers, &["push", "pull_request"])
+        && mapping_has_exact_fields(push, &["branches"])
+        && matches!(branches.as_vec().map(Vec::as_slice), Some([branch]) if branch.as_str() == Some("main"))
+        && triggers["pull_request"].is_null()
 }
 
 fn documentation_steps(document: &Yaml) -> Result<&Vec<Yaml>, DocumentationError> {

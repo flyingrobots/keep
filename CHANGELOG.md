@@ -27,7 +27,8 @@ after its public API and format compatibility policies are established.
   unreviewed workflow/job run defaults and step execution fields, pins the
   documentation runner and job deadline, rejects guarded or failure-tolerant
   documentation jobs and required steps, requires each Dependabot update block
-  to choose exactly one directory field form,
+  to choose exactly one directory field form, and requires the documentation
+  workflow to run for pushes to `main` and every pull request,
   and applies one deadline across captured and inherited child execution and
   output collection.
   Git-backed process fixtures ignore system and global Git configuration and

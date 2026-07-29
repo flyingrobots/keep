@@ -7,6 +7,10 @@ mod execution_context;
 mod node_setup;
 
 const WORKFLOW: &str = r#"name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
 jobs:
   documentation:
     name: Documentation and workflow integrity
@@ -48,6 +52,30 @@ fn documentation_job_delegates_once_to_the_rust_boundary() {
 }
 
 #[test]
+fn documentation_job_requires_reviewed_workflow_triggers() {
+    for workflow in [
+        WORKFLOW.replace("  pull_request:\n", ""),
+        WORKFLOW.replacen(
+            "on:\n  push:\n    branches: [main]\n  pull_request:\n",
+            "on:\n  workflow_dispatch:\n",
+            1,
+        ),
+        WORKFLOW.replace(
+            "  pull_request:\n",
+            "  pull_request:\n    paths:\n      - README.md\n",
+        ),
+    ] {
+        assert!(matches!(
+            super::admit(&workflow),
+            Err(super::DocumentationError::RepositoryContract {
+                path: super::CI_PATH,
+                requirement: "workflow runs on reviewed push and pull request triggers",
+            })
+        ));
+    }
+}
+
+#[test]
 fn documentation_job_requires_the_malformed_input_regressions() {
     let runs = super::REVIEWED_RUNS
         .iter()
@@ -80,6 +108,10 @@ fn documentation_job_refuses_python_execution() {
 #[test]
 fn inert_yaml_cannot_impersonate_documentation_commands() {
     let workflow = r#"name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
 jobs:
   documentation:
     name: Documentation and workflow integrity
