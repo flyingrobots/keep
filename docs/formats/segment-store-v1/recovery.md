@@ -51,10 +51,13 @@ the pinned root or staging capability, opens without following links, admits
 only regular files, and refuses entry replacement or length drift after
 reading. `classify_recovery_segment_stage` classifies complete caller-supplied
 stage bytes as a validated reusable prefix, a complete admitted segment, or an
-exact truncation and preserves complete-looking corruption as a typed refusal.
-Catalog- and next-head-stage classifiers likewise distinguish exact truncation
-from complete canonical bytes. Transitive publication-view admission and
-filesystem-streaming semantic classification remain unimplemented.
+exact truncation only when every available segment- or record-header framing
+byte remains canonical. It preserves proven partial-framing and
+complete-looking corruption as typed refusals. Catalog- and
+next-head-stage classifiers apply the same available-fixed-framing rule before
+distinguishing exact truncation from complete canonical bytes. Transitive
+publication-view admission and filesystem-streaming semantic classification
+remain unimplemented.
 `admit_recovery_stage_bytes` first requires the canonical-name stage, exact
 length, and recomputed stage fingerprint to match prior observation evidence;
 only `assess_recovery_stage` may dispatch those admitted bytes to a semantic

@@ -77,8 +77,10 @@ admitted Linux ext4 profile. Its bounded stage-fingerprint operation opens
 fixed stages relative to those capabilities, refuses links and nonregular
 files, and verifies entry identity and length after reading. Complete
 caller-supplied segment-stage bytes can be classified as a reusable prefix,
-complete admitted segment, or exact truncation. Catalog and next-head stages
-likewise distinguish exact truncation from complete canonical bytes.
+complete admitted segment, or exact truncation only while every available
+fixed-framing byte remains canonical. Catalog and next-head stages apply the
+same prefix rule before distinguishing truncation from complete canonical
+bytes.
 Materialized bytes enter read-only semantic assessment only after their stage,
 length, and recomputed fingerprint match prior observation evidence.
 An exact reusable segment assessment can authorize storage-independent

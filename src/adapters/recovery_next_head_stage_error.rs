@@ -5,7 +5,7 @@ use std::fmt;
 
 use super::{PublicationHeadDecodeError, RecoveryStageMetadataError};
 
-/// Why complete supplied `head.next` bytes could not be classified lawfully.
+/// Why supplied `head.next` bytes could not be classified lawfully.
 #[derive(Debug)]
 pub enum RecoveryNextHeadStageError {
     /// The caller-supplied slice length cannot fit the protocol coordinate.
@@ -18,7 +18,7 @@ pub enum RecoveryNextHeadStageError {
         /// Exact metadata-admission refusal.
         source: RecoveryStageMetadataError,
     },
-    /// Complete-looking candidate-head bytes were refused.
+    /// Available fixed framing or complete candidate-head bytes were refused.
     Complete {
         /// Exact canonical publication-head refusal.
         source: PublicationHeadDecodeError,
@@ -36,7 +36,7 @@ impl fmt::Display for RecoveryNextHeadStageError {
                 write!(formatter, "next-head metadata was refused: {source}")
             }
             Self::Complete { source } => {
-                write!(formatter, "complete next-head stage was refused: {source}")
+                write!(formatter, "next-head stage was refused: {source}")
             }
         }
     }

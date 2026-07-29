@@ -41,6 +41,38 @@ fn partial_next_head_is_exactly_truncated() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
+fn every_corrupt_available_next_head_framing_byte_is_refused() -> Result<(), Box<dyn Error>> {
+    let complete = fixture(HEAD_HEX)?;
+    for offset in (0_usize..24).chain(72..96) {
+        let end = offset.checked_add(1).ok_or("next-head end overflow")?;
+        let mut encoded = complete
+            .get(..end)
+            .ok_or("missing next-head prefix")?
+            .to_vec();
+        let byte = encoded.get_mut(offset).ok_or("missing next-head byte")?;
+        *byte ^= 1;
+
+        let error = classify_recovery_next_head_stage(&encoded)
+            .err()
+            .ok_or("corrupt partial next head was classified as truncation")?;
+
+        assert!(matches!(
+            error,
+            RecoveryNextHeadStageError::Complete {
+                source: PublicationHeadDecodeError::InvalidMagic { .. }
+                    | PublicationHeadDecodeError::UnsupportedVersion { .. }
+                    | PublicationHeadDecodeError::Flags { .. }
+                    | PublicationHeadDecodeError::HeadLength { .. }
+                    | PublicationHeadDecodeError::ChecksumAlgorithm { .. }
+                    | PublicationHeadDecodeError::DigestAlgorithm { .. }
+                    | PublicationHeadDecodeError::Reserved { .. },
+            }
+        ));
+    }
+    Ok(())
+}
+
+#[test]
 fn oversized_next_head_is_refused_before_decoding() -> Result<(), Box<dyn Error>> {
     let mut encoded = fixture(HEAD_HEX)?;
     encoded.push(0);

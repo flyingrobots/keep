@@ -45,6 +45,41 @@ fn partial_catalog_header_is_exactly_truncated() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
+fn every_corrupt_available_catalog_framing_byte_is_refused() -> Result<(), Box<dyn Error>> {
+    let complete = fixture(CATALOG_HEX)?;
+    for offset in (0_usize..24).chain(80..128) {
+        let end = offset.checked_add(1).ok_or("catalog-header end overflow")?;
+        let mut encoded = complete
+            .get(..end)
+            .ok_or("missing catalog-header prefix")?
+            .to_vec();
+        let byte = encoded
+            .get_mut(offset)
+            .ok_or("missing catalog-header byte")?;
+        *byte ^= 1;
+
+        let error = classify_recovery_catalog_stage(&encoded)
+            .err()
+            .ok_or("corrupt partial catalog header was classified as truncation")?;
+
+        assert!(matches!(
+            error,
+            RecoveryCatalogStageError::Header {
+                source: CatalogDecodeError::InvalidMagic { .. }
+                    | CatalogDecodeError::UnsupportedVersion { .. }
+                    | CatalogDecodeError::Flags { .. }
+                    | CatalogDecodeError::HeaderLength { .. }
+                    | CatalogDecodeError::EntryLength { .. }
+                    | CatalogDecodeError::ChecksumAlgorithm { .. }
+                    | CatalogDecodeError::DigestAlgorithm { .. }
+                    | CatalogDecodeError::Reserved { .. },
+            }
+        ));
+    }
+    Ok(())
+}
+
+#[test]
 fn partial_declared_catalog_body_is_exactly_truncated() -> Result<(), Box<dyn Error>> {
     let complete = fixture(CATALOG_HEX)?;
     let observed = complete.len().checked_sub(1).ok_or("catalog underflow")?;

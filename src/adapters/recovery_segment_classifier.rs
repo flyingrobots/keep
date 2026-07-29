@@ -3,8 +3,8 @@
 use super::{
     AdmittedSegment, RecoverySegmentStage, RecoverySegmentStageError, RecoverySegmentTruncation,
     RecoveryStage, RecoveryStageMetadata, ReusableRecoverySegment, SegmentHeader, SegmentReadError,
-    SegmentReadPolicy, SegmentSeal, segment_identity_index, segment_record_cursor_decode,
-    segment_record_header, segment_seal,
+    SegmentReadPolicy, SegmentSeal, recovery_segment_fixed_framing, segment_identity_index,
+    segment_record_cursor_decode, segment_record_header, segment_seal,
 };
 
 /// Classifies one complete caller-supplied segment-stage byte sequence.
@@ -19,7 +19,8 @@ use super::{
 /// Returns [`RecoverySegmentStageError`] for oversized input, complete-looking
 /// corruption, duplicate identities, resource refusal, arithmetic failure, or
 /// an unsupported format coordinate. Known incomplete boundaries are returned
-/// as [`RecoverySegmentStage::Truncated`].
+/// as [`RecoverySegmentStage::Truncated`] only while every available
+/// fixed-framing byte remains canonical.
 pub fn classify_recovery_segment_stage(
     encoded: &[u8],
     policy: SegmentReadPolicy,
@@ -31,6 +32,8 @@ pub fn classify_recovery_segment_stage(
     let metadata = RecoveryStageMetadata::new(RecoveryStage::Segment, observed)
         .map_err(|source| RecoverySegmentStageError::Metadata { source })?;
     let Some(header_bytes) = encoded.get(..SegmentHeader::ENCODED_LENGTH) else {
+        recovery_segment_fixed_framing::segment_header(encoded)
+            .map_err(|source| RecoverySegmentStageError::Header { source })?;
         return Ok(RecoverySegmentStage::Truncated(
             RecoverySegmentTruncation::Header {
                 required: SegmentHeader::ENCODED_LENGTH,
@@ -76,6 +79,17 @@ fn classify_tail(
             return AdmittedSegment::decode(encoded, policy)
                 .map(RecoverySegmentStage::Complete)
                 .map_err(|source| RecoverySegmentStageError::Complete { source });
+        }
+        if cursor.remaining.len() < segment_record_header::ENCODED_LENGTH {
+            recovery_segment_fixed_framing::segment_tail(cursor.remaining).map_err(|source| {
+                RecoverySegmentStageError::Record {
+                    source: SegmentReadError::RecordHeader {
+                        record_index: cursor.record_index,
+                        offset: cursor.offset,
+                        source,
+                    },
+                }
+            })?;
         }
         match cursor.advance(policy) {
             Ok(()) => {}
