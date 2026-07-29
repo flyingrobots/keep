@@ -1,9 +1,11 @@
 //! This module owns deterministic `env` shebang utility selection.
 
+mod short_options;
 mod word_split;
 
 use std::collections::VecDeque;
 
+use short_options::{ShortOptionAction, action as short_option_action};
 use word_split::split_words;
 
 /// The selected `env` utility when repository bytes determine it safely.
@@ -13,6 +15,12 @@ pub(super) enum UtilitySelection {
     Known(Vec<u8>),
     /// Runtime environment substitution can change the selected utility.
     Ambiguous,
+}
+
+enum OptionAction {
+    Consumed,
+    End,
+    Utility,
 }
 
 /// Selects the utility executed by an `env` shebang.
@@ -25,28 +33,13 @@ pub(super) fn selected_utility(arguments: &[u8]) -> Option<UtilitySelection> {
     let mut split_budget = arguments.len().checked_add(1)?;
     while let Some(word) = words.pop_front() {
         if options {
-            if word == b"--" {
-                options = false;
-                continue;
-            }
-            if word == b"-" || is_flag(&word) {
-                continue;
-            }
-            if option_takes_value(&word) {
-                words.pop_front()?;
-                continue;
-            }
-            if option_has_value(&word) {
-                continue;
-            }
-            if let Some(split) = split_value(&word) {
-                split_budget = split_budget.checked_sub(1)?;
-                words = expanded_words(split, words)?;
-                options = true;
-                continue;
-            }
-            if word.starts_with(b"-") {
-                return None;
+            match option_action(&word, &mut words, &mut split_budget)? {
+                OptionAction::Consumed => continue,
+                OptionAction::End => {
+                    options = false;
+                    continue;
+                }
+                OptionAction::Utility => {}
             }
         }
         if word.contains(&b'=') {
@@ -59,6 +52,50 @@ pub(super) fn selected_utility(arguments: &[u8]) -> Option<UtilitySelection> {
         return Some(UtilitySelection::Known(word));
     }
     None
+}
+
+fn option_action(
+    word: &[u8],
+    words: &mut VecDeque<Vec<u8>>,
+    split_budget: &mut usize,
+) -> Option<OptionAction> {
+    if word == b"--" {
+        return Some(OptionAction::End);
+    }
+    if word == b"-" || is_flag(word) {
+        return Some(OptionAction::Consumed);
+    }
+    if option_takes_value(word) {
+        words.pop_front()?;
+        return Some(OptionAction::Consumed);
+    }
+    if option_has_value(word) {
+        return Some(OptionAction::Consumed);
+    }
+    if let Some(split) = split_value(word) {
+        return expand_split(split, words, split_budget);
+    }
+    match short_option_action(word) {
+        Some(ShortOptionAction::Consumed) => Some(OptionAction::Consumed),
+        Some(ShortOptionAction::TakesNext) => {
+            words.pop_front()?;
+            Some(OptionAction::Consumed)
+        }
+        Some(ShortOptionAction::Split(split)) => expand_split(split, words, split_budget),
+        Some(ShortOptionAction::Invalid) => None,
+        None if word.starts_with(b"-") => None,
+        None => Some(OptionAction::Utility),
+    }
+}
+
+fn expand_split(
+    split: &[u8],
+    words: &mut VecDeque<Vec<u8>>,
+    split_budget: &mut usize,
+) -> Option<OptionAction> {
+    *split_budget = split_budget.checked_sub(1)?;
+    *words = expanded_words(split, std::mem::take(words))?;
+    Some(OptionAction::Consumed)
 }
 
 fn expanded_words(first: &[u8], remaining: VecDeque<Vec<u8>>) -> Option<VecDeque<Vec<u8>>> {
@@ -83,17 +120,11 @@ fn split_value(word: &[u8]) -> Option<&[u8]> {
 }
 
 fn option_takes_value(word: &[u8]) -> bool {
-    matches!(
-        word,
-        b"-u" | b"--unset" | b"-C" | b"--chdir" | b"-a" | b"--argv0"
-    )
+    matches!(word, b"--unset" | b"--chdir" | b"--argv0")
 }
 
 fn option_has_value(word: &[u8]) -> bool {
-    [b"-u".as_slice(), b"-C", b"-a"].iter().any(|prefix| {
-        word.strip_prefix(*prefix)
-            .is_some_and(|value| !value.is_empty())
-    }) || [
+    [
         b"--unset=".as_slice(),
         b"--chdir=".as_slice(),
         b"--argv0=".as_slice(),
@@ -111,66 +142,19 @@ fn is_flag(word: &[u8]) -> bool {
             | b"--help"
             | b"--version"
             | b"--list-signal-handling"
-    ) || is_short_flag_set(word)
-        || [
-            b"--block-signal".as_slice(),
-            b"--default-signal",
-            b"--ignore-signal",
-        ]
-        .iter()
-        .any(|prefix| {
-            word == *prefix
-                || word
-                    .strip_prefix(*prefix)
-                    .is_some_and(|value| value.starts_with(b"="))
-        })
-}
-
-fn is_short_flag_set(word: &[u8]) -> bool {
-    word.strip_prefix(b"-").is_some_and(|flags| {
-        !flags.is_empty() && flags.iter().all(|flag| matches!(flag, b'i' | b'v' | b'0'))
+    ) || [
+        b"--block-signal".as_slice(),
+        b"--default-signal",
+        b"--ignore-signal",
+    ]
+    .iter()
+    .any(|prefix| {
+        word == *prefix
+            || word
+                .strip_prefix(*prefix)
+                .is_some_and(|value| value.starts_with(b"="))
     })
 }
 
 #[cfg(test)]
-mod tests {
-    #[test]
-    fn options_assignments_and_split_strings_precede_the_utility() {
-        for arguments in [
-            b"-i python3 -I".as_slice(),
-            b"-iv python3",
-            b"-u PYTHONHOME python3",
-            b"NAME=value python3",
-            b"-S -i python3 -I",
-            b"-S \"python3 -I\"",
-            b"--split-string='python3 -I'",
-        ] {
-            assert_eq!(
-                super::selected_utility(arguments),
-                Some(super::UtilitySelection::Known(b"python3".to_vec()))
-            );
-        }
-    }
-
-    #[test]
-    fn arguments_after_the_utility_cannot_replace_it() {
-        for arguments in [
-            b"sh -c python3".as_slice(),
-            b"-S sh -c 'echo python3'",
-            b"-S \"sh -c 'echo python3'\"",
-        ] {
-            assert_eq!(
-                super::selected_utility(arguments),
-                Some(super::UtilitySelection::Known(b"sh".to_vec()))
-            );
-        }
-    }
-
-    #[test]
-    fn unresolved_selected_utility_is_ambiguous() {
-        assert_eq!(
-            super::selected_utility(b"-S '${UNSET_INTERPRETER}sh'"),
-            Some(super::UtilitySelection::Ambiguous)
-        );
-    }
-}
+mod tests;

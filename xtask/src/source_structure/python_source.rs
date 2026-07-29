@@ -135,4 +135,9 @@ mod tests {
             b"#!/usr/bin/env -S '${UNSET_INTERPRETER}sh'\n"
         ));
     }
+
+    #[test]
+    fn combined_environment_options_cannot_hide_python() {
+        assert!(is_python_shebang(b"#!/usr/bin/env -S-iuFOO python3\n"));
+    }
 }
