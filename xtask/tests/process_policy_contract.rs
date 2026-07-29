@@ -19,6 +19,8 @@ const GIT_INVENTORY_ERROR: &str = include_str!("../src/git_inventory/error.rs");
 const GIT_PATH_STREAM: &str = include_str!("../src/git_inventory/path_stream.rs");
 const GIT_PROCESS: &str = include_str!("../src/git_inventory/process.rs");
 const SOURCE_PURE_RUST_TESTS: &str = include_str!("../src/source_structure/pure_rust_tests.rs");
+const READER_RETIREMENT_ADR: &str =
+    include_str!("../../docs/adr/0008-deadline-bounded-reader-retirement.md");
 
 #[test]
 fn sanitized_git_fixture_has_one_process_authority() {
@@ -77,6 +79,21 @@ fn captured_process_keeps_the_group_leader_until_reader_collection_finishes()
         "reader collection may wait forever"
     );
     Ok(())
+}
+
+#[test]
+fn reader_detachment_has_a_concurrency_decision_record() {
+    for decision in [
+        "bounded retirement",
+        "detached",
+        "primary failure",
+        "unbounded join",
+    ] {
+        assert!(
+            READER_RETIREMENT_ADR.contains(decision),
+            "reader-retirement ADR omits `{decision}`"
+        );
+    }
 }
 
 #[test]

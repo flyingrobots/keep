@@ -59,3 +59,4 @@ encryption, concurrency, or public-API surface it governs.
 - [ADR-0005: Durable segment store protocol](0005-durable-segment-store-protocol.md)
 - [ADR-0006: Descriptor-bound child working directory](0006-descriptor-bound-child-working-directory.md)
 - [ADR-0007: Terminal signal process-group guard](0007-terminal-signal-process-group-guard.md)
+- [ADR-0008: Deadline-bounded reader retirement](0008-deadline-bounded-reader-retirement.md)
