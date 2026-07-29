@@ -63,7 +63,7 @@ fn inventory_violations(
     inventory: SourceInventory,
 ) -> Result<Vec<String>, SourceStructureError> {
     for relative in inventory.executable_candidates {
-        let _execution = refuse_executable_python(source_root, &relative)?;
+        let _execution = refuse_executable_python(source_root, relative.as_path())?;
     }
     source_violations(source_root, inventory.modules)
 }

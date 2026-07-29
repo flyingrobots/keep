@@ -67,9 +67,25 @@ fn non_utf8_executable_candidate_preserves_path_bytes() -> Result<(), Box<dyn st
         inventory
             .executable_candidates
             .first()
-            .map(|path| path.as_os_str().as_bytes()),
+            .map(|path| path.as_path().as_os_str().as_bytes()),
         Some(path_bytes.as_slice())
     );
+    Ok(())
+}
+
+#[test]
+fn every_present_path_is_partitioned_once() -> Result<(), Box<dyn std::error::Error>> {
+    let present = BTreeSet::from([
+        GitPath::new(b"module.rs".to_vec()),
+        GitPath::new(b"script.txt".to_vec()),
+        GitPath::new(b"removed.sh".to_vec()),
+    ]);
+    let deleted = BTreeSet::from([GitPath::new(b"removed.sh".to_vec())]);
+
+    let inventory = super::select_source_inventory(&present, &deleted)?;
+
+    assert_eq!(inventory.modules.len(), 1);
+    assert_eq!(inventory.executable_candidates.len(), 1);
     Ok(())
 }
 

@@ -21,7 +21,17 @@ pub(super) const PRESENT_PATH_ARGUMENTS: [&str; 5] = [
 
 pub(super) struct SourceInventory {
     pub(super) modules: Vec<RepositoryPath>,
-    pub(super) executable_candidates: Vec<PathBuf>,
+    pub(super) executable_candidates: Vec<InspectionPath>,
+}
+
+/// A repository-relative path admitted for executable inspection.
+pub(super) struct InspectionPath(PathBuf);
+
+impl InspectionPath {
+    /// Returns the validated platform path.
+    pub(super) fn as_path(&self) -> &Path {
+        &self.0
+    }
 }
 
 pub(super) fn collect(repository_root: &Path) -> Result<SourceInventory, SourceStructureError> {
@@ -42,27 +52,27 @@ pub(super) fn select(
     present: &BTreeSet<GitPath>,
     deleted: &BTreeSet<GitPath>,
 ) -> Result<SourceInventory, SourceStructureError> {
-    let modules = select_source_paths(present, deleted)?;
-    let executable_candidates = present
-        .difference(deleted)
-        .filter(|path| !is_source_candidate(path.as_bytes()))
-        .map(admit_inspection_path)
-        .collect::<Result<Vec<_>, _>>()?;
+    let mut modules = Vec::new();
+    let mut executable_candidates = Vec::new();
+    for path in present.difference(deleted) {
+        if is_source_candidate(path.as_bytes()) {
+            modules.push(admit_source_path(path)?);
+        } else {
+            executable_candidates.push(admit_inspection_path(path)?);
+        }
+    }
     Ok(SourceInventory {
         modules,
         executable_candidates,
     })
 }
 
+#[cfg(test)]
 pub(super) fn select_source_paths(
     present: &BTreeSet<GitPath>,
     deleted: &BTreeSet<GitPath>,
 ) -> Result<Vec<RepositoryPath>, SourceStructureError> {
-    present
-        .difference(deleted)
-        .filter(|path| is_source_candidate(path.as_bytes()))
-        .map(admit_source_path)
-        .collect()
+    select(present, deleted).map(|inventory| inventory.modules)
 }
 
 fn admit_source_path(path: &GitPath) -> Result<RepositoryPath, SourceStructureError> {
@@ -78,13 +88,13 @@ fn admit_source_path(path: &GitPath) -> Result<RepositoryPath, SourceStructureEr
     }
 }
 
-fn admit_inspection_path(path: &GitPath) -> Result<PathBuf, SourceStructureError> {
+fn admit_inspection_path(path: &GitPath) -> Result<InspectionPath, SourceStructureError> {
     let relative = PathBuf::from(OsString::from_vec(path.as_bytes().to_vec()));
     if relative
         .components()
         .all(|component| matches!(component, Component::Normal(_)))
     {
-        Ok(relative)
+        Ok(InspectionPath(relative))
     } else {
         Err(SourceStructureError::InvalidPath(path_text(
             path,
