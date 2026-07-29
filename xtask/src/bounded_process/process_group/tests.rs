@@ -157,7 +157,12 @@ fn cleanup_terminates_the_entire_child_process_group() -> Result<(), Box<dyn std
 }
 
 fn require_descendant_disconnect(mut descendant: UnixStream) -> Result<(), io::Error> {
-    descendant.set_read_timeout(Some(Duration::from_millis(250)))?;
+    match descendant.set_read_timeout(Some(Duration::from_millis(250))) {
+        Err(source) if source.kind() == io::ErrorKind::InvalidInput => {
+            descendant.set_nonblocking(true)?;
+        }
+        result => result?,
+    }
     let mut byte = [0_u8; 1];
     match io::Read::read_exact(&mut descendant, &mut byte) {
         Err(source)
@@ -190,6 +195,14 @@ fn descendant_disconnect_witness_has_a_finite_read_deadline() -> Result<(), io::
         io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock
     ));
     Ok(())
+}
+
+#[test]
+fn descendant_disconnect_witness_accepts_an_already_closed_peer() -> Result<(), io::Error> {
+    let (descendant, peer) = UnixStream::pair()?;
+    drop(peer);
+
+    require_descendant_disconnect(descendant)
 }
 
 fn wait_for_exit(child: &mut std::process::Child) -> Result<std::process::ExitStatus, io::Error> {
