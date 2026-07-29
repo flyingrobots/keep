@@ -1,17 +1,55 @@
 //! This module owns Git process deadline and diagnostic regression evidence.
 
+use std::collections::BTreeMap;
 use std::env;
+use std::ffi::OsString;
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use std::os::unix::process::CommandExt;
 
-use super::{GIT_DIAGNOSTIC_LIMIT_BYTES, git_failure, paths_with_deadline, process_failure};
+use super::{
+    GIT_DIAGNOSTIC_LIMIT_BYTES, git_command, git_failure, paths_with_deadline, process_failure,
+};
 use crate::bounded_process::ProcessError;
 use crate::git_inventory::GitInventoryError;
 
 const PARKED_CHILD: &str = "KEEP_XTASK_PARKED_GIT_CHILD";
 const PARKED_CHILD_TEST: &str = "git_inventory::process::tests::process_child_parks_indefinitely";
+
+#[test]
+fn git_inventory_receives_only_reviewed_environment() {
+    let command = git_command(&["status"], OsString::from("/reviewed/tools").as_os_str());
+    let observed = command
+        .get_envs()
+        .map(|(name, value)| (name.to_owned(), value.map(OsString::from)))
+        .collect::<BTreeMap<_, _>>();
+    let expected = BTreeMap::from([
+        (
+            OsString::from("GIT_CONFIG_COUNT"),
+            Some(OsString::from("0")),
+        ),
+        (
+            OsString::from("GIT_CONFIG_GLOBAL"),
+            Some(OsString::from("/dev/null")),
+        ),
+        (
+            OsString::from("GIT_CONFIG_NOSYSTEM"),
+            Some(OsString::from("1")),
+        ),
+        (
+            OsString::from("GIT_OPTIONAL_LOCKS"),
+            Some(OsString::from("0")),
+        ),
+        (OsString::from("LC_ALL"), Some(OsString::from("C"))),
+        (
+            OsString::from("PATH"),
+            Some(OsString::from("/reviewed/tools")),
+        ),
+    ]);
+
+    assert_eq!(observed, expected);
+}
 
 #[test]
 fn git_diagnostic_encoding_failure_retains_exit_status() {

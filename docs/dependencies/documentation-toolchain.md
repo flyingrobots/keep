@@ -57,6 +57,13 @@ at most the 16 MiB path-stream bound, and diagnostics retain at most 64 KiB. A
 timeout, terminal signal, reader failure, or exceeded bound terminates the
 whole group and reaps the child before the task refuses.
 
+Inventory commands also clear the inherited environment. They admit only the
+executable search path, the `C` locale, null system and global Git
+configuration, and disabled optional locking. Repository directory, worktree,
+index, object, and configuration overrides therefore cannot redirect the
+selected path set, and read-only inventory cannot opportunistically refresh
+the index.
+
 Documentation corpus tests construct their Git fixtures through the same
 bounded process authority. Each fixture command runs in a dedicated process
 group with a two-minute deadline and null output streams, so a stalled command

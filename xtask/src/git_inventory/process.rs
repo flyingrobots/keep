@@ -1,6 +1,8 @@
 //! This module owns deadline-bounded Git path process execution.
 
 use std::collections::BTreeSet;
+use std::env;
+use std::ffi::OsStr;
 use std::io;
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
@@ -48,8 +50,12 @@ fn paths_with_deadline(
     deadline: Duration,
     spawn: impl FnOnce(&mut Command) -> Result<Child, io::Error>,
 ) -> Result<BTreeSet<GitPath>, GitInventoryError> {
-    let mut command = Command::new("git");
-    command.args(arguments).stdin(Stdio::null());
+    let path = env::var_os("PATH").ok_or_else(|| GitInventoryError::Run {
+        operation,
+        action: "read PATH for",
+        source: io::Error::new(io::ErrorKind::NotFound, "PATH is unavailable"),
+    })?;
+    let mut command = git_command(arguments, &path);
     let output = bounded_process::capture_with_limits(
         "git",
         &mut command,
@@ -64,6 +70,21 @@ fn paths_with_deadline(
     } else {
         Err(git_failure(operation, output.code, output.stderr))
     }
+}
+
+fn git_command(arguments: &[&str], path: &OsStr) -> Command {
+    let mut command = Command::new("git");
+    command
+        .args(arguments)
+        .stdin(Stdio::null())
+        .env_clear()
+        .env("PATH", path)
+        .env("LC_ALL", "C")
+        .env("GIT_CONFIG_NOSYSTEM", "1")
+        .env("GIT_CONFIG_GLOBAL", "/dev/null")
+        .env("GIT_CONFIG_COUNT", "0")
+        .env("GIT_OPTIONAL_LOCKS", "0");
+    command
 }
 
 fn process_failure(operation: &'static str, source: ProcessError) -> GitInventoryError {

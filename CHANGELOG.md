@@ -42,6 +42,9 @@ after its public API and format compatibility policies are established.
   execution, and output collection. Validation tools clear the inherited
   environment and admit only the executable search path and `C` locale, so
   preload hooks and host-specific configuration cannot alter evidence.
+  Git inventory uses a separate explicit profile that also nulls system and
+  global configuration and disables optional locking, so repository overrides
+  cannot redirect selection or cause incidental index writes.
   Git-backed process fixtures clear the inherited environment, explicitly
   admit the executable search path and `C` locale, ignore system and global Git
   configuration, and preserve non-UTF-8 template paths without lossy
