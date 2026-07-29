@@ -14,7 +14,8 @@ use crate::diagnostic::escaped_controls;
 
 const B3SUM: &str = "b3sum";
 const DIAGNOSTIC_LIMIT_BYTES: usize = 65_536;
-const DIGEST_BYTES: usize = 32;
+/// Width of an admitted raw BLAKE3 digest.
+pub(crate) const DIGEST_BYTES: usize = 32;
 const PROCESS_DEADLINE: Duration = Duration::from_secs(10);
 const PROCESS_LIMITS: CaptureLimits = CaptureLimits::new(DIGEST_BYTES, DIAGNOSTIC_LIMIT_BYTES);
 

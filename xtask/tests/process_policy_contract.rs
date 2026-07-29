@@ -38,6 +38,8 @@ fn external_digest_has_one_process_authority() {
         + GOLDEN_B3SUM.matches("Command::new(").count();
     assert_eq!(process_authorities, 1);
     assert!(EXTERNAL_DIGEST.contains("capture_with_input_limits("));
+    assert!(EXTERNAL_DIGEST.contains("pub(crate) const DIGEST_BYTES"));
+    assert!(!CONFORMANCE_B3SUM.contains("const DIGEST_BYTES"));
     assert!(!CONFORMANCE_B3SUM.contains("Command::new("));
     assert!(!GOLDEN_B3SUM.contains("Command::new("));
     assert!(!GOLDEN_B3SUM.contains(".wait()"));
