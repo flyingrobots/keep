@@ -26,12 +26,20 @@ mod repository_json;
 
 pub mod protocol_admission;
 
+#[cfg(feature = "repository-tasks")]
+mod durability_crash_point;
+#[cfg(feature = "repository-tasks")]
+mod durability_crash_point_identity;
+
 #[cfg(test)]
 #[allow(
     clippy::redundant_pub_crate,
     reason = "scoped test directories are shared by parser test modules"
 )]
 mod test_directory;
+
+#[cfg(feature = "repository-tasks")]
+pub use durability_crash_point::{DurabilityCrashPoint, DurabilityCrashSequence};
 
 /// Whether one bounded Golden File Worldline production parser admitted input.
 #[cfg(feature = "golden-protocol-fuzz")]

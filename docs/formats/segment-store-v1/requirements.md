@@ -82,6 +82,21 @@ recovery.
 
 <!-- markdownlint-enable MD013 -->
 
+## Recovery implementation evidence
+
+Issue #17 implements crash injection and explicit recovery in independently
+reviewable slices. The first slice freezes executable crash-point identity and
+sequence ownership. It does not claim process-death injection, initialization,
+recovery classification, or recovery execution.
+
+<!-- markdownlint-disable MD013 -->
+
+| ID | Implemented requirement | Oracle | Executable evidence | Status |
+| --- | --- | --- | --- | --- |
+| `KEEP-RECOVERY-001` | Crash identifiers `KEEP-CRASH-001` through `KEEP-CRASH-035` form one contiguous typed vocabulary, map to the exact owning protocol sequence, and admit an occurrence counter only for record append | Ordered identifier-and-sequence ledger | `xtask/tests/durability_crash_point_contract.rs` | Implemented in #17 |
+
+<!-- markdownlint-enable MD013 -->
+
 ## Compatibility and migration
 
 The byte grammars, magic values, field widths and order, endianness, kinds,

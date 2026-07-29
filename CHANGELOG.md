@@ -10,6 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Repository crash-matrix tooling now exposes one typed, ordered vocabulary for
+  `KEEP-CRASH-001` through `KEEP-CRASH-035`. Each identifier is bound to its
+  segment, catalog, head, recovery-discard, or initialization sequence, and
+  only record append admits an occurrence counter.
 - Catalog decoding now verifies the catalog checksum and physical digest before
   interpreting entry semantics. Corrupt identity-bearing bytes therefore fail
   at the integrity boundary instead of producing a semantic entry error.
