@@ -10,6 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Production filesystem initialization now admits only the documented writable,
+  non-casefolded Linux ext4 profile, refuses ambiguous root namespaces before
+  mutation, completes the canonical directory shape idempotently, retains
+  writer authority, and returns only after synchronizing the root.
 - Store initialization now exposes one storage-port state machine that admits
   the platform before mutation, opens and locks `writer.lock`, admits the three
   protocol directories in order, synchronizes the root, and preserves the
@@ -21,10 +25,9 @@ after its public API and format compatibility policies are established.
 - Catalog decoding now verifies the catalog checksum and physical digest before
   interpreting entry semantics. Corrupt identity-bearing bytes therefore fail
   at the integrity boundary instead of producing a semantic entry error.
-- Filesystem catalog publisher construction now consumes an unforgeable
-  `FilesystemPlatformAdmission`. No public producer exists until crash-tested
-  initialization can establish the platform contract in issue #17; acquiring
-  `FilesystemWriterLock` alone no longer authorizes production construction.
+- Filesystem catalog publisher construction consumes an unforgeable
+  `FilesystemPlatformAdmission`; acquiring `FilesystemWriterLock` alone does
+  not authorize production construction.
 - Filesystem segment selection now consumes sealed stages through the publisher
   that created them. Process-local publisher authority prevents an unrelated
   metadata-equivalent `ClosedSegment` from authorizing retained

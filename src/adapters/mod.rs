@@ -74,11 +74,17 @@ mod filesystem_catalog_publisher_tests;
 mod filesystem_catalog_segment;
 mod filesystem_catalog_snapshot;
 mod filesystem_catalog_storage;
+mod filesystem_initialization_namespace;
+mod filesystem_initialization_storage;
 mod filesystem_platform_admission;
+mod filesystem_platform_profile;
 mod filesystem_publisher_authority;
 mod filesystem_segment_stage;
 #[cfg(test)]
 mod filesystem_segment_stage_tests;
+mod filesystem_store_initializer;
+#[cfg(test)]
+mod filesystem_store_initializer_tests;
 #[cfg(test)]
 #[path = "../../tests/segment_filesystem_stage/sandbox.rs"]
 mod filesystem_test_sandbox;

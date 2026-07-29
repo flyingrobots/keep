@@ -5,14 +5,17 @@ use super::FilesystemWriterLock;
 /// Exclusive writer authority over a platform-admitted filesystem root.
 ///
 /// Fields are private so only Keep's initialization and platform-admission
-/// boundary can create production values. That boundary remains intentionally
-/// absent until issue #17 supplies its crash-tested implementation.
+/// boundary can create production values.
 #[must_use]
 pub struct FilesystemPlatformAdmission {
     lock: FilesystemWriterLock,
 }
 
 impl FilesystemPlatformAdmission {
+    pub(super) const fn initialized(lock: FilesystemWriterLock) -> Self {
+        Self { lock }
+    }
+
     #[cfg(test)]
     pub(super) const fn unchecked_for_tests(lock: FilesystemWriterLock) -> Self {
         Self { lock }

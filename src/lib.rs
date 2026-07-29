@@ -13,10 +13,10 @@
 //! and codecs, a capacity-bounded non-durable reference CAS, and explicit
 //! immutable-segment writing and verified reading, canonical catalog
 //! generations, platform-gated filesystem publication mechanics, bounded
-//! immutable restart snapshots, and typed store-initialization orchestration.
-//! Production filesystem platform admission, recovery, retention, and garbage
-//! collection APIs remain intentionally absent until their contracts have
-//! executable specifications.
+//! immutable restart snapshots, typed store-initialization orchestration, and
+//! production initialization for the admitted Linux ext4 profile. Recovery,
+//! retention, and garbage collection APIs remain intentionally absent until
+//! their contracts have executable specifications.
 
 #[cfg(test)]
 extern crate self as keep;

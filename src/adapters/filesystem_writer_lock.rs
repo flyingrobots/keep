@@ -1,6 +1,7 @@
 //! Persistent, capability-relative filesystem writer exclusion.
 
 use std::fs::{File, TryLockError};
+use std::io;
 use std::path::Path;
 
 use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
@@ -19,7 +20,7 @@ const LOCK_FILE_NAME: &str = "writer.lock";
 #[must_use]
 pub struct FilesystemWriterLock {
     directory: Dir,
-    _lock_file: File,
+    lock_file: File,
 }
 
 impl FilesystemWriterLock {
@@ -39,17 +40,23 @@ impl FilesystemWriterLock {
             Dir::open_ambient_dir(store_root, ambient_authority()).map_err(|source| {
                 WriterLockAcquireError::io(WriterLockAcquirePhase::OpenRoot, source)
             })?;
-        let mut options = OpenOptions::new();
-        options
-            .read(true)
-            .write(true)
-            .follow(FollowSymlinks::No)
-            .nonblock(true);
-        let lock_file = directory
-            .open_with(LOCK_FILE_NAME, &options)
-            .map_err(|source| {
-                WriterLockAcquireError::io(WriterLockAcquirePhase::OpenFile, source)
-            })?;
+        let lock_file = open_existing(&directory)?;
+        Self::acquire(directory, lock_file)
+    }
+
+    pub(super) fn initialize_in(directory: Dir) -> Result<Self, WriterLockAcquireError> {
+        let lock_file = open_or_create(&directory)?;
+        let guard = Self::acquire(directory, lock_file)?;
+        guard.lock_file.sync_all().map_err(|source| {
+            WriterLockAcquireError::io(WriterLockAcquirePhase::SynchronizeFile, source)
+        })?;
+        Ok(guard)
+    }
+
+    fn acquire(
+        directory: Dir,
+        lock_file: cap_std::fs::File,
+    ) -> Result<Self, WriterLockAcquireError> {
         let metadata = lock_file.metadata().map_err(|source| {
             WriterLockAcquireError::io(WriterLockAcquirePhase::InspectFile, source)
         })?;
@@ -60,7 +67,7 @@ impl FilesystemWriterLock {
         match lock_file.try_lock() {
             Ok(()) => Ok(Self {
                 directory,
-                _lock_file: lock_file,
+                lock_file,
             }),
             Err(TryLockError::WouldBlock) => Err(WriterLockAcquireError::Busy),
             Err(TryLockError::Error(source)) => Err(WriterLockAcquireError::io(
@@ -73,4 +80,33 @@ impl FilesystemWriterLock {
     pub(super) fn clone_directory(&self) -> std::io::Result<Dir> {
         self.directory.try_clone()
     }
+}
+
+fn open_or_create(directory: &Dir) -> Result<cap_std::fs::File, WriterLockAcquireError> {
+    let mut options = lock_options();
+    options.create_new(true);
+    match directory.open_with(LOCK_FILE_NAME, &options) {
+        Ok(file) => Ok(file),
+        Err(source) if source.kind() == io::ErrorKind::AlreadyExists => open_existing(directory),
+        Err(source) => Err(WriterLockAcquireError::io(
+            WriterLockAcquirePhase::OpenFile,
+            source,
+        )),
+    }
+}
+
+fn open_existing(directory: &Dir) -> Result<cap_std::fs::File, WriterLockAcquireError> {
+    directory
+        .open_with(LOCK_FILE_NAME, &lock_options())
+        .map_err(|source| WriterLockAcquireError::io(WriterLockAcquirePhase::OpenFile, source))
+}
+
+fn lock_options() -> OpenOptions {
+    let mut options = OpenOptions::new();
+    options
+        .read(true)
+        .write(true)
+        .follow(FollowSymlinks::No)
+        .nonblock(true);
+    options
 }

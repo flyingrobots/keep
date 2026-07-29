@@ -10,8 +10,9 @@
 
 Keep admits the exactly pinned `cap-std` 4.0.2 and `cap-fs-ext` 4.0.2 packages
 for the library's segment-store filesystem adapter and behind the `xtask`
-crate's `repository-tasks` feature. Rustix 1.1.4 remains admitted only behind
-that `xtask` feature.
+crate's `repository-tasks` feature. The library also admits Rustix 1.1.4 for
+safe Linux filesystem-profile inspection and no-symlink root opening; `xtask`
+uses the same exact version behind `repository-tasks`.
 
 `cap-std::fs::Dir` pins the admitted repository or corpus directory and opens
 entries relative to that capability. `cap-fs-ext` supplies no-follow and
@@ -26,7 +27,10 @@ The capability packages are present in Keep's published library graph and
 production filesystem behavior. No dependency-owned type crosses Keep's public
 API or enters content identities or durable formats. The segment-store writer
 lock retains capability and file handles behind `FilesystemWriterLock`; its
-public acquisition boundary accepts only `std::path::Path`.
+public acquisition boundary accepts only `std::path::Path`. The production
+initializer uses Rustix's safe `openat2`, `fstatfs`, `fstatvfs`, and ext4 inode
+flag APIs to admit only the documented writable, non-casefolded Linux ext4
+profile.
 
 The bounded subprocess adapter uses Rustix's safe filesystem API to mark child
 stdin nonblocking before deadline-bounded input transfer. It uses Rustix's safe
@@ -66,11 +70,12 @@ work, and require unsafe code that Keep otherwise forbids.
 ## Features and resolved graph
 
 All three direct dependencies disable default features. Keep enables only
-`cap-fs-ext`'s `std` feature and Rustix's `fs`, `process`, and `std` features;
-`cap-std` has no enabled feature. The library's capability dependencies are
-unconditional because the production segment-store adapter requires them.
-The `xtask` declarations remain optional and are activated solely by
-`repository-tasks`; Rustix is not a direct library dependency.
+`cap-fs-ext`'s `std` feature and Rustix's `fs` and `std` features in the
+library; `cap-std` has no enabled feature. The library's filesystem
+dependencies are unconditional because the production segment-store adapter
+requires them. The `xtask` declarations remain optional and are activated
+solely by `repository-tasks`; that feature additionally enables Rustix's
+`process` feature.
 
 The locked non-Windows graph introduced for this boundary is:
 
@@ -117,9 +122,9 @@ dependencies.
 
 ## Failure and recovery boundaries
 
-An open, metadata, read, writer-lock acquisition, descriptor-duplication,
-descriptor-flag, child-directory setup, child-spawn, stdin-write,
-output-collection, deadline, or cleanup failure is a typed refusal.
+An open, metadata, platform-profile, read, writer-lock acquisition,
+descriptor-duplication, descriptor-flag, child-directory setup, child-spawn,
+stdin-write, output-collection, deadline, or cleanup failure is a typed refusal.
 Repository tasks never repair, rewrite, or substitute repository data.
 Repository-task handles exist only for one verification process and carry no
 durability or recovery semantics. `FilesystemWriterLock` retains the pinned

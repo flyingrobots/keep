@@ -13,6 +13,8 @@ pub enum WriterLockAcquirePhase {
     InspectFile,
     /// Acquire the nonblocking exclusive kernel lock.
     Acquire,
+    /// Synchronize an initialization-created writer file before admission.
+    SynchronizeFile,
 }
 
 impl fmt::Display for WriterLockAcquirePhase {
@@ -22,6 +24,7 @@ impl fmt::Display for WriterLockAcquirePhase {
             Self::OpenFile => "file open",
             Self::InspectFile => "file inspection",
             Self::Acquire => "kernel acquisition",
+            Self::SynchronizeFile => "file synchronization",
         })
     }
 }

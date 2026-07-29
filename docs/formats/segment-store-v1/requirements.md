@@ -60,9 +60,9 @@ retention, or garbage collection.
 
 Issue #16 implements catalog-generation admission, writer-locked filesystem
 publication mechanics, and immutable reader snapshots. Production publisher
-construction requires `FilesystemPlatformAdmission`, whose initialization and
-platform-checked producer remains owned by issue #17 together with explicit
-recovery.
+construction requires `FilesystemPlatformAdmission`, whose platform-checked
+producer is implemented as the initialization slice of issue #17. Explicit
+recovery remains separate work.
 
 <!-- markdownlint-disable MD013 -->
 
@@ -87,16 +87,18 @@ recovery.
 Issue #17 implements crash injection and explicit recovery in independently
 reviewable slices. The first slice freezes executable crash-point identity and
 sequence ownership. The second slice establishes the ordered initialization
-state machine and exact failure phases. It does not claim process-death
-injection, production platform admission, recovery classification, or recovery
-execution.
+state machine and exact failure phases. The third slice binds that state
+machine to a fail-closed Linux ext4 adapter and canonical namespace. These
+slices do not yet claim process-death injection, recovery classification, or
+recovery execution.
 
 <!-- markdownlint-disable MD013 -->
 
 | ID | Implemented requirement | Oracle | Executable evidence | Status |
 | --- | --- | --- | --- | --- |
 | `KEEP-RECOVERY-001` | Crash identifiers `KEEP-CRASH-001` through `KEEP-CRASH-035` form one contiguous typed vocabulary, map to the exact owning protocol sequence, and admit an occurrence counter only for record append | Ordered identifier-and-sequence ledger | `xtask/tests/durability_crash_point_contract.rs` | Implemented in #17 |
-| `KEEP-RECOVERY-002` | Initialization admits the platform before mutation, opens and locks the writer file, admits `staging`, `segments`, and `catalogs` in order, and returns a receipt only after root synchronization; every failed operation retains its exact phase and prevents later transitions | Fault-recording initialization port | `src/adapters/store_initialization_tests.rs` | Implemented in #17 |
+| `KEEP-RECOVERY-002` | Initialization admits the platform before mutation, opens and locks the writer file, admits `staging`, `segments`, and `catalogs` in order, and returns a receipt only after root synchronization; every failed operation retains its exact phase and prevents later transitions | Fault-recording initialization port | `tests/store_initialization.rs` | Implemented in #17 |
+| `KEEP-RECOVERY-003` | Production initialization admits only a writable, non-casefolded Linux ext4 root, refuses any noncanonical root entry before mutation, completes an empty or partial canonical namespace without replacing evidence, excludes a second initializer, and retains writer authority through the synchronized receipt | Capability-relative filesystem fixture and exact platform-profile classifier | `src/adapters/filesystem_store_initializer_tests.rs`, `src/adapters/filesystem_platform_profile.rs`, `tests/store_initialization.rs` | Implemented in #17 |
 
 <!-- markdownlint-enable MD013 -->
 

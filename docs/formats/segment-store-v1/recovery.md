@@ -161,23 +161,25 @@ from an untrusted count before bounds and exact total length agree.
 
 ## Platform contract
 
-The initial adapter is supported only when it can prove:
+The initial production adapter is supported only on Linux when it proves:
 
 - capability-relative no-follow access to regular files and directories;
-- case-sensitive, byte-preserving directory names without path aliases;
+- an ext4 store root whose inode does not enable ext4 casefolding;
+- a writable mount and successful file and directory synchronization calls;
 - atomic same-filesystem no-clobber hard-link creation;
 - atomic same-filesystem replacement of one regular file by another;
-- file synchronization that covers required data and metadata;
 - directory synchronization that makes create, link, unlink, rename, and
   replacement durable;
 - process-scoped exclusive advisory locking; and
-- one host with one writer.
+- one retained writer-lock handle for the writer-authority lifetime.
 
-The adapter refuses network filesystems, shared multi-host mounts, filesystem
-types with unknown rename or synchronization semantics, symlinked protocol
-paths, and platforms whose directory durability cannot be established.
-Windows support is deferred until an adapter and crash harness prove
-equivalent semantics.
+The adapter refuses every non-ext4 filesystem, read-only mount, casefolded store
+root, symlinked selected path, or platform other than Linux. A single local
+host is an explicit deployment precondition: filesystem metadata cannot prove
+that an administrator has not exposed one block device to another host. Shared
+or multiply mounted ext4 is therefore unsupported even though the adapter
+cannot distinguish it from a valid local mount. Windows support is deferred
+until an adapter and crash harness prove equivalent semantics.
 
 The protocol cannot compensate for hardware or an operating system that
 acknowledges synchronization without honoring it. Documentation and receipts

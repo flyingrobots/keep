@@ -18,6 +18,12 @@ pub enum StoreInitializationError {
     },
 }
 
+impl StoreInitializationError {
+    pub(super) const fn io(phase: StoreInitializationPhase, source: io::Error) -> Self {
+        Self::Io { phase, source }
+    }
+}
+
 impl fmt::Display for StoreInitializationError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

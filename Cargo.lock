@@ -328,6 +328,7 @@ dependencies = [
  "cap-fs-ext",
  "cap-std",
  "divan",
+ "rustix",
 ]
 
 [[package]]

@@ -3,10 +3,16 @@
 use std::error::Error;
 use std::io;
 
+#[cfg(not(target_os = "linux"))]
+use keep::FilesystemPlatformAdmission;
 use keep::{
     StoreInitializationError, StoreInitializationPhase, StoreInitializationStorage,
     initialize_store,
 };
+
+#[cfg(not(target_os = "linux"))]
+#[path = "segment_filesystem_stage/sandbox.rs"]
+pub mod sandbox;
 
 const PHASES: [StoreInitializationPhase; 6] = [
     StoreInitializationPhase::AdmitPlatform,
@@ -49,6 +55,28 @@ fn initialization_stops_at_and_preserves_every_exact_failure_phase() -> Result<(
         }
         assert_eq!(storage.attempted, expected_prefix);
     }
+    Ok(())
+}
+
+#[cfg(not(target_os = "linux"))]
+#[test]
+fn unsupported_production_platform_refuses_before_namespace_mutation() -> Result<(), Box<dyn Error>>
+{
+    let sandbox = sandbox::TestDirectory::create("store-initialization-unsupported")?;
+
+    let Err(error) = FilesystemPlatformAdmission::initialize(sandbox.path()) else {
+        return Err("unsupported platform produced filesystem authority".into());
+    };
+
+    assert!(matches!(
+        error,
+        StoreInitializationError::Io {
+            phase: StoreInitializationPhase::AdmitPlatform,
+            ref source,
+        } if source.kind() == io::ErrorKind::Unsupported
+    ));
+    assert!(std::fs::read_dir(sandbox.path())?.next().is_none());
+    sandbox.remove()?;
     Ok(())
 }
 
