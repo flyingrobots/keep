@@ -10,6 +10,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- The fuzz-workspace dependency gate now loads the reviewed repository
+  `deny.toml` explicitly and admits non-Apache licenses only through exact
+  package/version exceptions.
 - Documentation corpus selection, pinned tool admission, Markdown and fragment
   checks, workflow linting, Dependabot coverage, and Node lock-graph policy now
   run through bounded Rust `xtask` code; CI and `cargo xtask verify` use that
