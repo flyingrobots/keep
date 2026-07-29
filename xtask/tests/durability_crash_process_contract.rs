@@ -1,5 +1,7 @@
 //! Deterministic subprocess process-death laws.
 
+#![cfg(feature = "repository-tasks")]
+
 use std::error::Error;
 use std::process::Command;
 

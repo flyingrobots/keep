@@ -1,5 +1,7 @@
 //! Canonical deterministic crash-matrix coordinate laws.
 
+#![cfg(feature = "repository-tasks")]
+
 use std::error::Error;
 
 use xtask::{

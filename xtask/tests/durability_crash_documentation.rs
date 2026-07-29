@@ -1,5 +1,7 @@
 //! Documentation truth laws for the process-death crash matrix.
 
+#![cfg(feature = "repository-tasks")]
+
 const ROOT_README: &str = include_str!("../../README.md");
 const RECOVERY: &str = include_str!("../../docs/formats/segment-store-v1/recovery.md");
 const REQUIREMENTS: &str = include_str!("../../docs/formats/segment-store-v1/requirements.md");
