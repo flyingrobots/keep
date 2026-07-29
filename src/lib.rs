@@ -21,10 +21,11 @@ mod reference;
 
 pub use adapters::{
     AdmittedSegment, AdmittedSegmentRecord, BlobIdBinaryParseError, BlobIdTextParseError,
-    CanonicalLayoutRecord, ChecksummedSegmentRecord, FilesystemSegmentStage, LayoutDecodeError,
-    LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
-    SealedSegment, SegmentDigest, SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError,
-    SegmentReadError, SegmentReadPolicy, SegmentRecordAdmissionError, SegmentRecordChecksum,
+    CanonicalLayoutRecord, ChecksummedPublicationHead, ChecksummedSegmentRecord,
+    FilesystemSegmentStage, LayoutDecodeError, LayoutDecodePolicy, LayoutEncodeError,
+    LayoutIdBinaryParseError, LayoutIdTextParseError, PublicationHeadDecodeError, SealedSegment,
+    SegmentDigest, SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError, SegmentReadError,
+    SegmentReadPolicy, SegmentRecordAdmissionError, SegmentRecordChecksum,
     SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity,
     SegmentRecordLength, SegmentRecordLimit, SegmentRecordLimitError, SegmentRecordPayloadLength,
     SegmentRecords, SegmentSeal, SegmentSealError, SegmentStage, SegmentStageCreateError,
@@ -34,7 +35,9 @@ pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
     ByteRange, ByteRangeError,
 };
-pub use catalog::{CatalogGeneration, CatalogGenerationError};
+pub use catalog::{
+    CatalogDigest, CatalogGeneration, CatalogGenerationError, CatalogLength, CatalogLengthError,
+};
 pub use chunk::{
     ChunkHashError, ChunkId, ChunkLength, ChunkOffset, ChunkSpan, ChunkingError, FastCdc,
 };
