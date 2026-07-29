@@ -1,11 +1,14 @@
 //! This module owns the CI documentation-job execution contract.
 
+mod reviewed_step;
+
 use yaml_rust2::{Yaml, YamlLoader};
 
 use crate::repository_file::RepositoryRoot;
 
 use super::error::DocumentationError;
 use super::repository_text;
+use reviewed_step::{DocumentationStep, REVIEWED_STEPS, steps_have_reviewed_membership};
 
 const CI_PATH: &str = ".github/workflows/ci.yml";
 const CHECKOUT_ACTION: &str = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1";
@@ -14,23 +17,9 @@ const DOCUMENTATION_JOB_FIELDS: &[&str] = &["name", "runs-on", "timeout-minutes"
 const DOCUMENTATION_JOB_NAME: &str = "Documentation and workflow integrity";
 const DOCUMENTATION_RUNNER: &str = "ubuntu-latest";
 const DOCUMENTATION_TIMEOUT_MINUTES: i64 = 10;
-const MALFORMED_INPUT_COMMAND: &str = r"cargo test --locked --package xtask \
-  documentation_integrity::execution::external_tests -- --ignored";
 const SETUP_NODE_ACTION: &str = "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
 const SETUP_NODE_ACTION_PREFIX: &str = "actions/setup-node@";
 const NODE_VERSION: &str = "24.18.0";
-const XTASK_COMMAND: &str = "cargo xtask documentation-integrity-check";
-const REVIEWED_RUNS: &[&str] = &[
-    "rustup show",
-    r#"documentation_tools="$RUNNER_TEMP/documentation-tools"
-scripts/install_documentation_tools.sh "$documentation_tools"
-printf '%s\n' \
-  "$documentation_tools/bin" \
-  "$documentation_tools/npm/node_modules/.bin" >> "$GITHUB_PATH""#,
-    MALFORMED_INPUT_COMMAND,
-    XTASK_COMMAND,
-    r#"git diff --check "$(git hash-object -t tree /dev/null)" HEAD"#,
-];
 
 pub(super) fn check(repository_root: &RepositoryRoot) -> Result<(), DocumentationError> {
     let workflow = repository_text::read(repository_root, CI_PATH)?;
@@ -38,17 +27,23 @@ pub(super) fn check(repository_root: &RepositoryRoot) -> Result<(), Documentatio
 }
 
 fn admit(workflow: &str) -> Result<(), DocumentationError> {
-    let runs = documentation_runs(workflow)?;
-    if !runs_are_reviewed(&runs) {
-        return Err(contract(concat!(
+    let steps = admitted_steps(workflow)?;
+    if steps.as_slice() == REVIEWED_STEPS {
+        return Ok(());
+    }
+    if steps_have_reviewed_membership(&steps) {
+        Err(contract(
+            "documentation job steps execute in reviewed order",
+        ))
+    } else {
+        Err(contract(concat!(
             "documentation job run commands are reviewed and required ",
             "commands execute once"
-        )));
+        )))
     }
-    Ok(())
 }
 
-fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError> {
+fn admitted_steps(workflow: &str) -> Result<Vec<DocumentationStep>, DocumentationError> {
     let documents = YamlLoader::load_from_str(workflow).map_err(|source| {
         DocumentationError::RepositoryYaml {
             path: CI_PATH,
@@ -63,7 +58,7 @@ fn documentation_runs(workflow: &str) -> Result<Vec<String>, DocumentationError>
             "workflow runs on reviewed push and pull request triggers",
         ));
     }
-    reviewed_runs(documentation_steps(document)?)
+    reviewed_steps(documentation_steps(document)?)
 }
 
 fn triggers_are_reviewed(document: &Yaml) -> bool {
@@ -107,12 +102,19 @@ fn documentation_steps(document: &Yaml) -> Result<&Vec<Yaml>, DocumentationError
     Ok(steps)
 }
 
-fn reviewed_runs(steps: &[Yaml]) -> Result<Vec<String>, DocumentationError> {
-    let mut runs = Vec::new();
+fn reviewed_steps(steps: &[Yaml]) -> Result<Vec<DocumentationStep>, DocumentationError> {
+    let mut admitted = Vec::new();
     let mut actions = Vec::new();
     for step in steps {
-        actions.extend(admit_action(step)?);
-        runs.extend(admit_run(step)?);
+        if let Some(action) = admit_action(step)? {
+            actions.push(action);
+            admitted.push(match action {
+                DocumentationAction::Checkout => DocumentationStep::Checkout,
+                DocumentationAction::Node => DocumentationStep::Node,
+            });
+        } else if let Some(run) = admit_run(step)? {
+            admitted.push(run);
+        }
     }
     if actions
         .iter()
@@ -129,7 +131,7 @@ fn reviewed_runs(steps: &[Yaml]) -> Result<Vec<String>, DocumentationError> {
             "documentation job actions execute in reviewed order",
         ));
     }
-    Ok(runs)
+    Ok(admitted)
 }
 
 fn admit_action(step: &Yaml) -> Result<Option<DocumentationAction>, DocumentationError> {
@@ -207,7 +209,7 @@ fn admit_action_execution(
     Ok(())
 }
 
-fn admit_run(step: &Yaml) -> Result<Option<String>, DocumentationError> {
+fn admit_run(step: &Yaml) -> Result<Option<DocumentationStep>, DocumentationError> {
     let run = &step["run"];
     if run.is_badvalue() {
         return Ok(None);
@@ -226,14 +228,13 @@ fn admit_run(step: &Yaml) -> Result<Option<String>, DocumentationError> {
     let Some(run) = run.as_str() else {
         return Err(contract("documentation job run values are strings"));
     };
-    Ok(Some(run.trim_end_matches('\n').to_owned()))
-}
-
-fn runs_are_reviewed(runs: &[String]) -> bool {
-    runs.len() == REVIEWED_RUNS.len()
-        && REVIEWED_RUNS
-            .iter()
-            .all(|required| runs.iter().filter(|run| run.as_str() == *required).count() == 1)
+    let Some(admitted) = DocumentationStep::from_run(run.trim_end_matches('\n')) else {
+        return Err(contract(concat!(
+            "documentation job run commands are reviewed and required ",
+            "commands execute once"
+        )));
+    };
+    Ok(Some(admitted))
 }
 
 fn mapping_has_exact_fields(mapping: &Yaml, fields: &[&str]) -> bool {

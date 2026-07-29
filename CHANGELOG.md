@@ -21,8 +21,9 @@ after its public API and format compatibility policies are established.
   declarations after Dependabot directory lists, compares Dependabot
   maintenance fields as typed YAML values, requires every reviewed
   documentation CI command and the pinned Node setup action exactly once,
-  admits only the exact pinned checkout and Node setup actions in their reviewed
-  order, rejects checkout overrides and unreviewed action steps, refuses
+  admits only the exact pinned checkout and Node setup actions, requires actions
+  and commands to execute in one reviewed order, rejects checkout overrides and
+  unreviewed action steps, refuses
   alternate setup-node actions, requires the reviewed Node version, rejects
   unreviewed workflow/job run defaults and step execution fields, pins the
   documentation runner and job deadline, rejects guarded or failure-tolerant

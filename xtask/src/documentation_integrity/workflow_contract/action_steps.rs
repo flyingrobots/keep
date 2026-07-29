@@ -15,6 +15,15 @@ const NODE_STEP: &str = concat!(
     "        with:\n",
     "          node-version: 24.18.0\n"
 );
+const INSTALL_STEP: &str = concat!(
+    "      - name: Install documentation tools\n",
+    "        run: |\n",
+    "          documentation_tools=\"$RUNNER_TEMP/documentation-tools\"\n",
+    "          scripts/install_documentation_tools.sh \"$documentation_tools\"\n",
+    "          printf '%s\\n' \\\n",
+    "            \"$documentation_tools/bin\" \\\n",
+    "            \"$documentation_tools/npm/node_modules/.bin\" >> \"$GITHUB_PATH\"\n"
+);
 
 #[test]
 fn checkout_of_an_unreviewed_revision_does_not_satisfy_the_contract() {
@@ -76,6 +85,22 @@ fn documentation_actions_execute_in_reviewed_order() {
         Err(DocumentationError::RepositoryContract {
             path: CI_PATH,
             requirement: "documentation job actions execute in reviewed order",
+        })
+    ));
+}
+
+#[test]
+fn actions_and_commands_execute_in_one_reviewed_order() {
+    let moved = format!("{INSTALL_STEP}{NODE_STEP}");
+    let workflow = WORKFLOW
+        .replace(NODE_STEP, "")
+        .replace(INSTALL_STEP, &moved);
+
+    assert!(matches!(
+        admit(&workflow),
+        Err(DocumentationError::RepositoryContract {
+            path: CI_PATH,
+            requirement: "documentation job steps execute in reviewed order",
         })
     ));
 }

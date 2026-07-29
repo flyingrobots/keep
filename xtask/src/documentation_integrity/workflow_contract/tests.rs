@@ -77,14 +77,13 @@ fn documentation_job_requires_reviewed_workflow_triggers() {
 
 #[test]
 fn documentation_job_requires_the_malformed_input_regressions() {
-    let runs = super::REVIEWED_RUNS
+    let steps = super::REVIEWED_STEPS
         .iter()
         .copied()
-        .filter(|run| *run != super::MALFORMED_INPUT_COMMAND)
-        .map(String::from)
+        .filter(|step| *step != super::DocumentationStep::MalformedInputs)
         .collect::<Vec<_>>();
 
-    assert!(!super::runs_are_reviewed(&runs));
+    assert!(!super::steps_have_reviewed_membership(&steps));
 }
 
 #[test]
