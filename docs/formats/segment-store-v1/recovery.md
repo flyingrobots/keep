@@ -22,6 +22,12 @@ verifies complete content before classification. Unknown names, symlinks,
 conflicting canonical coordinates, multiple fixed-name stages, or a head that
 cannot be proven atomic are unrecoverable ambiguity.
 
+The current public `read_recovery_inventory` slice implements this fixed-order
+count-before-retain orchestration through a read-only storage port. It enforces
+the configured and protocol ceilings, count stability, duplicate refusal, and
+namespace-plus-raw-byte ordering. The concrete filesystem inventory adapter and
+artifact classification remain unimplemented.
+
 The sole admissible duplicate digest is one fixed staging name and its exact
 digest-derived pool name after a link transition. Recovery admits that pair
 only after complete byte-for-byte verification proves the stage, pool entry,

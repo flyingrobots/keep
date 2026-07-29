@@ -64,7 +64,11 @@ documented Linux ext4 contract. Acquiring `FilesystemWriterLock` alone cannot
 construct a filesystem publisher. Leftover `head.next`, staged recovery
 evidence, and ambiguous crash states remain explicit recovery work. An absent
 `HEAD` is admitted for first publication only when both immutable pools are
-empty. Crash-injection execution, explicit recovery, retention, complete
+empty. The public storage-independent recovery inventory counts all four
+protocol namespaces before retaining names, applies a configurable ceiling no
+greater than 2,097,152 entries, and returns duplicate-free deterministic raw
+name order; its concrete filesystem reader and artifact classification remain
+planned. Crash-injection execution, explicit recovery, retention, complete
 namespace verification after initialization, compaction, and garbage
 collection remain planned. Presence in the reference CAS does not claim
 retention, crash recovery, or durability.
