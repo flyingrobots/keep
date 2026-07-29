@@ -7,7 +7,7 @@ use std::path::Path;
 use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt, OpenOptionsSyncExt};
 use cap_std::ambient_authority;
 use cap_std::fs::{Dir, Metadata, OpenOptions};
-use rustix::fs::{FlockOperation, flock};
+use rustix::fs::{FlockOperation, Mode, OFlags, flock, openat};
 use rustix::io::Errno;
 
 use super::{WriterLockAcquireError, WriterLockAcquirePhase};
@@ -121,18 +121,24 @@ impl FilesystemWriterLock {
 }
 
 fn acquire_root(directory: &Dir) -> Result<File, WriterLockAcquireError> {
-    let file = directory
-        .try_clone()
-        .map_err(|source| WriterLockAcquireError::io(WriterLockAcquirePhase::AcquireRoot, source))?
-        .into_std_file();
+    let descriptor = openat(
+        directory,
+        ".",
+        OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC | OFlags::NOFOLLOW,
+        Mode::empty(),
+    )
+    .map_err(|source| {
+        WriterLockAcquireError::io(WriterLockAcquirePhase::AcquireRoot, source.into())
+    })?;
+    let file = File::from(descriptor);
     acquire_root_lock(&file)?;
     Ok(file)
 }
 
 fn acquire_root_lock(file: &File) -> Result<(), WriterLockAcquireError> {
-    // The pinned directory handle is read-only. Linux POSIX record locks reject
-    // an exclusive lock on that handle, while `flock` locks the directory inode
-    // without requiring write access to the directory file description.
+    // Linux capability directories use `O_PATH`, which cannot be locked. Open a
+    // read-only descriptor to the same pinned inode before reaching this step;
+    // `flock` locks that directory descriptor without requiring write access.
     match flock(file, FlockOperation::NonBlockingLockExclusive) {
         Ok(()) => Ok(()),
         Err(source) if source == Errno::WOULDBLOCK => Err(WriterLockAcquireError::Busy),
