@@ -5,6 +5,7 @@ mod capture_limit;
 mod cleanup;
 mod deadline;
 mod error;
+mod input;
 mod interrupt;
 mod process_group;
 mod reader;
@@ -14,7 +15,7 @@ use std::process::Command;
 use std::time::Duration;
 
 use capture::wait_for_child;
-pub(crate) use capture::{capture, capture_with, capture_with_limits};
+pub(crate) use capture::{capture, capture_with, capture_with_input_limits, capture_with_limits};
 pub(crate) use capture_limit::CaptureLimits;
 use deadline::ProcessDeadline;
 pub(crate) use error::ProcessError;

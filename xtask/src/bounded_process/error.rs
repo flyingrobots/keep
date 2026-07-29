@@ -5,14 +5,14 @@ use std::fmt;
 use std::io;
 use std::time::Duration;
 
-/// A typed failure from synchronous, bounded child-process execution.
+/// A typed failure from deadline-accounted child-process execution.
 pub(crate) enum ProcessError {
     /// Reader or cleanup collection found another failure after the primary one.
     Additional {
         primary: Box<Self>,
         additional: Box<Self>,
     },
-    /// Process-group termination or child reaping failed after a primary error.
+    /// Process-group termination, child killing, or bounded reaping failed.
     Cleanup {
         primary: Box<Self>,
         action: &'static str,
@@ -45,7 +45,7 @@ pub(crate) enum ProcessError {
         program: &'static str,
         stream: &'static str,
     },
-    /// The complete child operation exceeded its admitted duration.
+    /// The admitted child-operation deadline elapsed.
     Timeout {
         program: &'static str,
         duration: Duration,
@@ -83,8 +83,13 @@ impl fmt::Display for ProcessError {
                 additional,
             } => write!(formatter, "{primary}; additionally {additional}"),
             Self::Cleanup {
-                primary, action, ..
-            } => write!(formatter, "{primary}; additionally failed to {action}"),
+                primary,
+                action,
+                source,
+            } => write!(
+                formatter,
+                "{primary}; additionally failed to {action}: {source}"
+            ),
             Self::Io {
                 program, action, ..
             } => write!(formatter, "cannot {action} {program} process"),
@@ -107,8 +112,7 @@ impl fmt::Display for ProcessError {
             }
             Self::Timeout { program, duration } => write!(
                 formatter,
-                "{program} process exceeded its {}-second deadline",
-                duration.as_secs()
+                "{program} process exceeded its {duration:?} deadline"
             ),
         }
     }
@@ -117,13 +121,60 @@ impl fmt::Display for ProcessError {
 impl Error for ProcessError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::Additional { primary, .. } => Some(primary),
-            Self::Cleanup { source, .. } | Self::Io { source, .. } => Some(source),
+            Self::Additional { primary, .. } | Self::Cleanup { primary, .. } => {
+                Some(primary.as_ref())
+            }
+            Self::Io { source, .. } => Some(source),
             Self::Interrupted { .. }
             | Self::MissingStream { .. }
             | Self::OutputLimit { .. }
             | Self::ReaderPanic { .. }
             | Self::Timeout { .. } => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cleanup_failure_retains_the_primary_source_and_reports_cleanup_context() {
+        let error = ProcessError::Cleanup {
+            primary: Box::new(ProcessError::Timeout {
+                program: "source-test",
+                duration: Duration::from_secs(1),
+            }),
+            action: "reap child process",
+            source: io::Error::other("cleanup refused"),
+        };
+
+        assert!(matches!(
+            error
+                .source()
+                .and_then(|source| source.downcast_ref::<ProcessError>()),
+            Some(ProcessError::Timeout {
+                program: "source-test",
+                duration,
+            }) if *duration == Duration::from_secs(1)
+        ));
+        assert_eq!(
+            error.to_string(),
+            "source-test process exceeded its 1s deadline; additionally failed to \
+             reap child process: cleanup refused"
+        );
+    }
+
+    #[test]
+    fn timeout_diagnostic_preserves_subsecond_duration() {
+        let error = ProcessError::Timeout {
+            program: "duration-test",
+            duration: Duration::from_millis(50),
+        };
+
+        assert_eq!(
+            error.to_string(),
+            "duration-test process exceeded its 50ms deadline"
+        );
     }
 }

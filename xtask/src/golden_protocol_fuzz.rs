@@ -25,7 +25,7 @@ mod mutation_value;
 
 #[cfg(feature = "repository-tasks")]
 use corpus_protocol::Corpus;
-pub(super) use error::GoldenError;
+pub(super) type GoldenError = error::GoldenError<std::convert::Infallible>;
 
 pub(super) fn admit(selector: u8, input: &[u8]) -> Result<(), GoldenError> {
     fuzz_admission::admit(selector, input)

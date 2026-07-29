@@ -96,6 +96,13 @@ after its public API and format compatibility policies are established.
   witness, reproducible Gear-table recipe, scalar and streaming FastCDC laws,
   source mutations, and exact boundary corpus; the three superseded Python
   programs have been removed.
+- Golden File Worldline and protocol-conformance `b3sum` witnesses now share
+  one external-digest process boundary. Its deadline begins before process
+  spawn and stdin transfer, stdin is streamed without a combined preimage
+  allocation, stdout and stderr have independent limits, and every timeout or
+  collection failure kills and reaps the process group while retaining typed
+  failure context. Child reaping and stalled-reader retirement use fixed
+  per-step cleanup grace periods instead of blocking without limit.
 - Fuzz policy admission, target reconciliation, bounded campaign execution,
   minimization deadlines, retained-corpus admission, and workflow contract
   tests now run through the repository's Rust `xtask`; the superseded Python

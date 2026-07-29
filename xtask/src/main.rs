@@ -21,6 +21,11 @@ mod diagnostic;
 mod documentation_integrity;
 #[allow(
     clippy::redundant_pub_crate,
+    reason = "the external digest witness is shared by sibling repository tasks"
+)]
+mod external_digest;
+#[allow(
+    clippy::redundant_pub_crate,
     reason = "the command and task-error boundaries are sibling consumers"
 )]
 mod fuzz_campaign;

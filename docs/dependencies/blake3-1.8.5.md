@@ -22,10 +22,13 @@ types or hashing wrappers. This separation independently checks preimage
 framing, length encoding, canonical text and binary encodings, mutation
 semantics, and committed witness bytes. For every identity and content mutation,
 the repository checker also streams the canonical preimage through external
-`b3sum`; a mismatch with the in-process result is a refusal. The checked-in
-vectors and runtime cross-check therefore cover the algorithm boundary without
-claiming that the Rust path independently implements the BLAKE3 compression
-function.
+`b3sum`; a mismatch with the in-process result is a refusal. Golden File
+Worldline and protocol conformance share one deadline-bounded process adapter,
+but retain separate preimage construction. The
+[Golden File Worldline reference model](../conformance/golden-file-worldline.md#reference-model)
+records the process-adapter contract. The checked-in vectors and runtime
+cross-check therefore cover the algorithm boundary without claiming that the
+Rust path independently implements the BLAKE3 compression function.
 
 The manifest disables default features and enables exactly:
 

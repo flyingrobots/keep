@@ -25,10 +25,12 @@ These packages are absent from Keep's published library graph, public API,
 content identities, durable formats, and production behavior. No
 dependency-owned type crosses out of the private repository-task adapter.
 
-The bounded subprocess adapter uses Rustix's safe process API to send
-`SIGKILL` to a dedicated child process group after a subprocess deadline or
-collection failure. This prevents descendants that inherited an output pipe
-from surviving the failed repository task.
+The bounded subprocess adapter uses Rustix's safe filesystem API to mark child
+stdin nonblocking before deadline-bounded input transfer. It uses Rustix's safe
+process API to send `SIGKILL` to a dedicated child process group after a
+subprocess deadline or collection failure. This prevents a non-reading child
+from blocking its parent indefinitely and prevents descendants that inherited
+an output pipe from surviving the failed repository task.
 The
 [signal-hook dependency admission](signal-hook-0.4.4.md)
 records the terminal-signal guard that routes interruption through the same
@@ -61,7 +63,7 @@ work, and require unsafe code that Keep otherwise forbids.
 ## Features and resolved graph
 
 All three direct dependencies disable default features. Keep enables only
-`cap-fs-ext`'s `std` feature and Rustix's `process` and `std` features;
+`cap-fs-ext`'s `std` feature and Rustix's `fs`, `process`, and `std` features;
 `cap-std` has no enabled feature. All declarations are optional and are
 activated solely by `repository-tasks`.
 
@@ -104,8 +106,9 @@ dependencies.
 
 ## Failure and recovery boundaries
 
-An open, metadata, read, descriptor-duplication, child-directory setup, or
-child-spawn failure is a typed refusal. The task never repairs, rewrites, or
+An open, metadata, read, descriptor-duplication, descriptor-flag,
+child-directory setup, child-spawn, stdin-write, output-collection, deadline,
+or cleanup failure is a typed refusal. The task never repairs, rewrites, or
 substitutes repository data. Retained handles exist only for one verification
 process and carry no durability or recovery semantics.
 

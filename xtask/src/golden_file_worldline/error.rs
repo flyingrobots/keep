@@ -10,7 +10,10 @@ use std::string::FromUtf8Error;
 use crate::diagnostic::{escaped_controls, escaped_path};
 use xtask::protocol_admission::RelativePathError;
 
-pub(crate) enum GoldenError {
+pub(crate) enum GoldenError<ExternalDigestSource> {
+    ExternalDigest {
+        source: ExternalDigestSource,
+    },
     Integer {
         field: String,
         source: ParseIntError,
@@ -24,21 +27,6 @@ pub(crate) enum GoldenError {
         path: PathBuf,
         source: FromUtf8Error,
     },
-    ProcessDiagnosticEncoding {
-        program: &'static str,
-        code: Option<i32>,
-        source: FromUtf8Error,
-    },
-    ProcessFailed {
-        program: &'static str,
-        code: Option<i32>,
-        stderr: String,
-    },
-    ProcessOutputBound {
-        program: &'static str,
-        stream: &'static str,
-        maximum: usize,
-    },
     Path {
         parameter: String,
         source: RelativePathError,
@@ -46,7 +34,11 @@ pub(crate) enum GoldenError {
     Violation(String),
 }
 
-impl GoldenError {
+impl<ExternalDigestSource> GoldenError<ExternalDigestSource> {
+    pub(super) const fn external_digest(source: ExternalDigestSource) -> Self {
+        Self::ExternalDigest { source }
+    }
+
     pub(super) fn io(action: &'static str, path: impl Into<PathBuf>, source: io::Error) -> Self {
         Self::Io {
             action,
@@ -60,16 +52,17 @@ impl GoldenError {
     }
 }
 
-impl fmt::Debug for GoldenError {
+impl<ExternalDigestSource: fmt::Display> fmt::Debug for GoldenError<ExternalDigestSource> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(self, formatter)
     }
 }
 
-impl fmt::Display for GoldenError {
+impl<ExternalDigestSource: fmt::Display> fmt::Display for GoldenError<ExternalDigestSource> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("golden corpus check failed: ")?;
         match self {
+            Self::ExternalDigest { source } => fmt::Display::fmt(source, formatter),
             Self::Integer { field, .. } => {
                 formatter.write_str("cannot parse canonical ")?;
                 escaped_controls(formatter, field)
@@ -83,28 +76,6 @@ impl fmt::Display for GoldenError {
                 escaped_path(formatter, path)?;
                 formatter.write_str(": protocol is not UTF-8")
             }
-            Self::ProcessDiagnosticEncoding { program, code, .. } => {
-                write!(
-                    formatter,
-                    "{program} failed with status {code:?} and non-UTF-8 diagnostics"
-                )
-            }
-            Self::ProcessFailed {
-                program,
-                code,
-                stderr,
-            } => {
-                write!(formatter, "{program} failed with status {code:?}: ")?;
-                escaped_controls(formatter, stderr)
-            }
-            Self::ProcessOutputBound {
-                program,
-                stream,
-                maximum,
-            } => write!(
-                formatter,
-                "{program} {stream} exceeded the {maximum}-byte bound"
-            ),
             Self::Path { parameter, source } => {
                 formatter.write_str("unsafe source path: ")?;
                 escaped_controls(formatter, parameter)?;
@@ -115,18 +86,15 @@ impl fmt::Display for GoldenError {
     }
 }
 
-impl Error for GoldenError {
+impl<ExternalDigestSource: Error + 'static> Error for GoldenError<ExternalDigestSource> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::ExternalDigest { source } => Some(source),
             Self::Integer { source, .. } => Some(source),
             Self::Io { source, .. } => Some(source),
-            Self::Utf8 { source, .. } | Self::ProcessDiagnosticEncoding { source, .. } => {
-                Some(source)
-            }
+            Self::Utf8 { source, .. } => Some(source),
             Self::Path { source, .. } => Some(source),
-            Self::ProcessFailed { .. } | Self::ProcessOutputBound { .. } | Self::Violation(_) => {
-                None
-            }
+            Self::Violation(_) => None,
         }
     }
 }

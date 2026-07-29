@@ -5,7 +5,8 @@ use std::process::{Child, Command, ExitStatus, Stdio};
 use std::thread;
 use std::time::Duration;
 
-use super::cleanup::{cleanup_process, join_after_cleanup, join_readers};
+use super::cleanup::{cleanup_process, retire_after_cleanup, retire_readers};
+use super::input::write_input;
 use super::{
     CaptureLimits, InterruptGuard, ProcessDeadline, ProcessError, ProcessOutput, ReaderWorker,
 };
@@ -18,8 +19,9 @@ const PROCESS_POLL_INTERVAL: Duration = Duration::from_millis(10);
 ///
 /// Each stream is drained concurrently and retains at most one mebibyte. The
 /// optional deadline covers child execution and reader collection. Failures
-/// terminate the child's dedicated process group, join both readers, and retain
-/// the primary and cleanup errors in [`ProcessError`].
+/// terminate the child's dedicated process group, retire both readers within a
+/// fixed per-step cleanup grace, and retain primary and cleanup errors in
+/// [`ProcessError`].
 pub(crate) fn capture(
     program: &'static str,
     command: &mut Command,
@@ -44,7 +46,7 @@ pub(crate) fn capture_with(
 /// Runs one captured child with exact independent stream limits.
 ///
 /// The deadline covers child execution and both reader workers. Every failure
-/// terminates the dedicated process group and joins the workers before return.
+/// terminates the dedicated process group and bounds worker retirement.
 pub(crate) fn capture_with_limits(
     program: &'static str,
     command: &mut Command,
@@ -55,6 +57,27 @@ pub(crate) fn capture_with_limits(
     let deadline = ProcessDeadline::new(program, deadline)?;
     let interrupts = InterruptGuard::begin(program)?;
     CapturedProcess::start(program, command, spawn, interrupts, limits)?.finish(program, &deadline)
+}
+
+/// Runs one captured child with bounded streaming input and exact stream limits.
+///
+/// The deadline clock starts before synchronous spawn. After spawn returns, its
+/// remaining time bounds every nonblocking stdin write, both output readers,
+/// and child execution. Failed-operation teardown uses a fixed per-step cleanup
+/// grace for child reaping and reader retirement. Input slices are streamed
+/// directly without constructing a combined preimage allocation.
+pub(crate) fn capture_with_input_limits(
+    program: &'static str,
+    command: &mut Command,
+    input: &[&[u8]],
+    deadline: Option<Duration>,
+    limits: CaptureLimits,
+) -> Result<ProcessOutput, ProcessError> {
+    let deadline = ProcessDeadline::new(program, deadline)?;
+    let interrupts = InterruptGuard::begin(program)?;
+    command.stdin(Stdio::piped());
+    CapturedProcess::start(program, command, Command::spawn, interrupts, limits)?
+        .finish_with_input(program, input, &deadline)
 }
 
 struct CapturedProcess {
@@ -104,7 +127,7 @@ impl CapturedProcess {
             Ok(reader) => reader,
             Err(error) => {
                 let error = cleanup_process(&mut child, error);
-                return Err(join_after_cleanup(stdout, error));
+                return Err(retire_after_cleanup(stdout, error));
             }
         };
         Ok(Self {
@@ -129,13 +152,8 @@ impl CapturedProcess {
             Ok(output) => output,
             Err(error) => return Err(self.cleanup_readers(error)),
         };
-        if let Err(error) = self.stdout.join() {
-            let error = cleanup_process(&mut self.child, error);
-            return Err(join_after_cleanup(self.stderr, error));
-        }
-        if let Err(error) = self.stderr.join() {
-            return Err(cleanup_process(&mut self.child, error));
-        }
+        drop(self.stdout);
+        drop(self.stderr);
         let status = wait_for_child(program, &mut self.child, deadline, &self.interrupts)?;
         refuse_exceeded(program, "stdout", self.limits.stdout_bytes(), &stdout).and_then(|()| {
             refuse_exceeded(program, "stderr", self.limits.stderr_bytes(), &stderr)
@@ -151,10 +169,30 @@ impl CapturedProcess {
         })
     }
 
+    fn finish_with_input(
+        mut self,
+        program: &'static str,
+        input: &[&[u8]],
+        deadline: &ProcessDeadline,
+    ) -> Result<ProcessOutput, ProcessError> {
+        let Some(mut stdin) = self.child.stdin.take() else {
+            let error = ProcessError::MissingStream {
+                program,
+                stream: "stdin",
+            };
+            return Err(self.cleanup_readers(error));
+        };
+        if let Err(error) = write_input(program, &mut stdin, input, deadline, &self.interrupts) {
+            return Err(self.cleanup_readers(error));
+        }
+        drop(stdin);
+        self.finish(program, deadline)
+    }
+
     fn cleanup_readers(self, error: ProcessError) -> ProcessError {
         let mut child = self.child;
         let error = cleanup_process(&mut child, error);
-        join_readers(self.stdout, self.stderr, error)
+        retire_readers(self.stdout, self.stderr, error)
     }
 }
 

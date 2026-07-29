@@ -17,7 +17,7 @@ use std::path::Path;
 use b3sum_oracle::B3sumOracle;
 use corpus_protocol::Corpus;
 
-pub(crate) use error::GoldenError;
+pub(crate) type GoldenError = error::GoldenError<crate::external_digest::ExternalDigestError>;
 
 pub(super) fn check(repository_root: &Path) -> Result<(), GoldenError> {
     let corpus = Corpus::open(repository_root.join("conformance/golden-file-worldline/v1"))?;
