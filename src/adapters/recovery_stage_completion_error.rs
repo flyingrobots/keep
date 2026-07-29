@@ -5,8 +5,8 @@ use std::fmt;
 use std::io;
 
 use super::{
-    RecoveryStage, RecoveryStageCompletionPool, RecoveryStageCompletionTarget,
-    RecoveryStageDiscardStorageError,
+    RecoveryStage, RecoveryStageCompletionPool, RecoveryStageCompletionStorageError,
+    RecoveryStageCompletionTarget, RecoveryStageDiscardStorageError,
 };
 
 /// Exact failed phase of complete-stage recovery execution.
@@ -17,21 +17,21 @@ pub enum RecoveryStageCompletionError {
         /// Fixed stage that could not be made durable.
         stage: RecoveryStage,
         /// Exact underlying verification or synchronization failure.
-        source: io::Error,
+        source: RecoveryStageCompletionStorageError,
     },
     /// The exact stage could not be linked or an existing coordinate admitted.
     LinkOrAdmit {
         /// Validated immutable-pool target.
         target: RecoveryStageCompletionTarget,
         /// Exact underlying storage failure.
-        source: io::Error,
+        source: RecoveryStageCompletionStorageError,
     },
     /// The immutable-pool entry did not verify exactly.
     VerifyPool {
         /// Validated immutable-pool target.
         target: RecoveryStageCompletionTarget,
         /// Exact underlying verification failure.
-        source: io::Error,
+        source: RecoveryStageCompletionStorageError,
     },
     /// The immutable-pool directory could not be synchronized.
     SynchronizePool {
@@ -92,9 +92,10 @@ impl Error for RecoveryStageCompletionError {
         match self {
             Self::SynchronizeStage { source, .. }
             | Self::LinkOrAdmit { source, .. }
-            | Self::VerifyPool { source, .. }
-            | Self::SynchronizePool { source, .. }
-            | Self::SynchronizeStaging { source, .. } => Some(source),
+            | Self::VerifyPool { source, .. } => Some(source),
+            Self::SynchronizePool { source, .. } | Self::SynchronizeStaging { source, .. } => {
+                Some(source)
+            }
             Self::RemoveStage { source } => Some(source),
         }
     }

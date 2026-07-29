@@ -5,10 +5,11 @@ use std::io;
 use cap_std::fs::Dir;
 
 use super::{
-    FilesystemRecoveryStageDiscarder, FilesystemRecoveryStageError, RecoveryStage,
-    RecoveryStageDiscardOutcome, RecoveryStageDiscardStorage, RecoveryStageDiscardStorageError,
-    RecoveryStageEvidence, RecoveryStageNamespacePhase, RecoveryStageParent,
-    filesystem_catalog_artifact, filesystem_recovery_stage,
+    FilesystemRecoveryInventoryReader, FilesystemRecoveryStageDiscarder,
+    FilesystemRecoveryStageError, RecoveryStage, RecoveryStageDiscardOutcome,
+    RecoveryStageDiscardStorage, RecoveryStageDiscardStorageError, RecoveryStageEvidence,
+    RecoveryStageNamespacePhase, RecoveryStageParent, filesystem_catalog_artifact,
+    filesystem_recovery_stage,
 };
 
 impl RecoveryStageDiscardStorage for FilesystemRecoveryStageDiscarder {
@@ -16,7 +17,11 @@ impl RecoveryStageDiscardStorage for FilesystemRecoveryStageDiscarder {
         &mut self,
         expected: RecoveryStageEvidence,
     ) -> Result<RecoveryStageDiscardOutcome, RecoveryStageDiscardStorageError> {
-        remove_with(self, expected, filesystem_recovery_stage::fingerprint)
+        remove_with(
+            &self.inventory,
+            expected,
+            filesystem_recovery_stage::fingerprint,
+        )
     }
 
     fn synchronize_parent(&mut self, parent: RecoveryStageParent) -> io::Result<()> {
@@ -34,14 +39,21 @@ impl FilesystemRecoveryStageDiscarder {
     where
         F: FnOnce(),
     {
-        remove_with(self, expected, |directory, stage| {
+        remove_with(&self.inventory, expected, |directory, stage| {
             filesystem_recovery_stage::fingerprint_with(directory, stage, after_open)
         })
     }
 }
 
+pub(super) fn remove_if_matching(
+    inventory: &FilesystemRecoveryInventoryReader,
+    expected: RecoveryStageEvidence,
+) -> Result<RecoveryStageDiscardOutcome, RecoveryStageDiscardStorageError> {
+    remove_with(inventory, expected, filesystem_recovery_stage::fingerprint)
+}
+
 fn remove_with<F>(
-    discarder: &FilesystemRecoveryStageDiscarder,
+    inventory: &FilesystemRecoveryInventoryReader,
     expected: RecoveryStageEvidence,
     observe: F,
 ) -> Result<RecoveryStageDiscardOutcome, RecoveryStageDiscardStorageError>
@@ -49,14 +61,12 @@ where
     F: FnOnce(&Dir, RecoveryStage) -> Result<RecoveryStageEvidence, FilesystemRecoveryStageError>,
 {
     let stage = expected.stage();
-    discarder
-        .inventory
+    inventory
         .verify_stage_namespaces(stage, RecoveryStageNamespacePhase::BeforeObservation)
         .map_err(stage_error)?;
-    let directory = discarder.inventory.stage_directory(stage);
+    let directory = inventory.stage_directory(stage);
     if stage_is_absent(directory, stage)? {
-        discarder
-            .inventory
+        inventory
             .verify_stage_namespaces(stage, RecoveryStageNamespacePhase::AfterObservation)
             .map_err(stage_error)?;
         return Ok(RecoveryStageDiscardOutcome::AlreadyAbsent);
@@ -65,8 +75,7 @@ where
     if observed != expected {
         return Err(RecoveryStageDiscardStorageError::EvidenceMismatch { expected, observed });
     }
-    discarder
-        .inventory
+    inventory
         .verify_stage_namespaces(stage, RecoveryStageNamespacePhase::AfterObservation)
         .map_err(stage_error)?;
     directory

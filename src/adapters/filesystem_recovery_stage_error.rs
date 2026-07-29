@@ -54,6 +54,13 @@ pub enum FilesystemRecoveryStageError {
         /// Exact streaming refusal.
         source: RecoveryStageFingerprintError,
     },
+    /// The exact complete stage could not be synchronized.
+    Synchronize {
+        /// Fixed stage being synchronized.
+        stage: RecoveryStage,
+        /// Exact staged-file synchronization failure.
+        source: io::Error,
+    },
     /// The fixed stage entry could not be reopened for identity verification.
     VerifyEntry {
         /// Fixed stage being observed.
@@ -117,6 +124,12 @@ impl fmt::Display for FilesystemRecoveryStageError {
                 formatter,
                 "recovery stage {stage} fingerprint failed: {source}"
             ),
+            Self::Synchronize { stage, source } => {
+                write!(
+                    formatter,
+                    "failed to synchronize recovery stage {stage}: {source}"
+                )
+            }
             Self::VerifyEntry { stage, source } => write!(
                 formatter,
                 "failed to verify recovery stage entry {stage}: {source}"
@@ -152,6 +165,7 @@ impl Error for FilesystemRecoveryStageError {
             Self::Namespace { source, .. } => Some(source),
             Self::Open { source, .. }
             | Self::Inspect { source, .. }
+            | Self::Synchronize { source, .. }
             | Self::VerifyEntry { source, .. } => Some(source),
             Self::MetadataAdmission { source, .. } => Some(source),
             Self::Fingerprint { source, .. } => Some(source),

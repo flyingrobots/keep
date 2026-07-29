@@ -59,6 +59,11 @@ after its public API and format compatibility policies are established.
   existing pool entries, synchronizes the selected pool before exact stage
   removal, and returns a valid-orphan receipt only after staging
   synchronization. It never creates or finalizes a publication head.
+- Filesystem complete-stage recovery now retains pinned root and writer
+  authority, revalidates exact stage evidence at synchronization and link
+  boundaries, uses no-clobber immutable-pool links, never follows stage or pool
+  links, preserves conflicting or replaced entries, verifies exact pool bytes,
+  and accepts stage/pool, reappeared-stage, and completed pool-only retries.
 - Store initialization now exposes one storage-port state machine that admits
   the platform before mutation, opens and locks `writer.lock`, admits the three
   protocol directories in order, synchronizes the root, and preserves the

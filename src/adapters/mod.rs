@@ -86,12 +86,19 @@ mod filesystem_recovery_inventory_scan;
 mod filesystem_recovery_inventory_tests;
 mod filesystem_recovery_namespace;
 mod filesystem_recovery_stage;
+mod filesystem_recovery_stage_completer;
+mod filesystem_recovery_stage_completion_open_error;
+mod filesystem_recovery_stage_completion_pool;
+mod filesystem_recovery_stage_completion_storage;
+#[cfg(all(test, unix))]
+mod filesystem_recovery_stage_completion_tests;
 mod filesystem_recovery_stage_discard_open_error;
 mod filesystem_recovery_stage_discard_storage;
 #[cfg(all(test, unix))]
 mod filesystem_recovery_stage_discard_tests;
 mod filesystem_recovery_stage_discarder;
 mod filesystem_recovery_stage_error;
+mod filesystem_recovery_stage_sync;
 #[cfg(all(test, unix))]
 mod filesystem_recovery_stage_tests;
 mod filesystem_segment_stage;
@@ -163,6 +170,7 @@ mod recovery_stage_completion_pool;
 mod recovery_stage_completion_receipt;
 mod recovery_stage_completion_request;
 mod recovery_stage_completion_storage;
+mod recovery_stage_completion_storage_error;
 mod recovery_stage_completion_target;
 mod recovery_stage_discard_error;
 mod recovery_stage_discard_executor;
@@ -295,6 +303,8 @@ pub use filesystem_catalog_publisher::FilesystemCatalogPublisher;
 pub use filesystem_catalog_snapshot::FilesystemCatalogSnapshot;
 pub use filesystem_platform_admission::FilesystemPlatformAdmission;
 pub use filesystem_recovery_inventory_reader::FilesystemRecoveryInventoryReader;
+pub use filesystem_recovery_stage_completer::FilesystemRecoveryStageCompleter;
+pub use filesystem_recovery_stage_completion_open_error::FilesystemRecoveryStageCompletionOpenError;
 pub use filesystem_recovery_stage_discard_open_error::FilesystemRecoveryStageDiscardOpenError;
 pub use filesystem_recovery_stage_discarder::FilesystemRecoveryStageDiscarder;
 pub use filesystem_recovery_stage_error::{
@@ -347,6 +357,7 @@ pub use recovery_stage_completion_pool::RecoveryStageCompletionPool;
 pub use recovery_stage_completion_receipt::RecoveryStageCompletionReceipt;
 pub use recovery_stage_completion_request::RecoveryStageCompletionRequest;
 pub use recovery_stage_completion_storage::RecoveryStageCompletionStorage;
+pub use recovery_stage_completion_storage_error::RecoveryStageCompletionStorageError;
 pub use recovery_stage_completion_target::RecoveryStageCompletionTarget;
 pub use recovery_stage_discard_error::RecoveryStageDiscardError;
 pub use recovery_stage_discard_executor::execute_recovery_stage_discard;

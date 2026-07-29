@@ -4,8 +4,9 @@ use std::io;
 
 use keep::{
     RecoveryStageCompletionPool, RecoveryStageCompletionRequest, RecoveryStageCompletionStorage,
-    RecoveryStageDiscardOutcome, RecoveryStageDiscardStorageError, RecoveryStageEvidence,
-    RecoveryStagePoolOutcome, RecoveryStageSynchronizationOutcome,
+    RecoveryStageCompletionStorageError, RecoveryStageDiscardOutcome,
+    RecoveryStageDiscardStorageError, RecoveryStageEvidence, RecoveryStagePoolOutcome,
+    RecoveryStageSynchronizationOutcome,
 };
 
 /// One semantic operation observed by the deterministic storage double.
@@ -92,17 +93,21 @@ impl RecoveryStageCompletionStorage for StageCompletionDouble {
     fn synchronize_stage_if_present(
         &mut self,
         request: RecoveryStageCompletionRequest,
-    ) -> io::Result<RecoveryStageSynchronizationOutcome> {
+    ) -> Result<RecoveryStageSynchronizationOutcome, RecoveryStageCompletionStorageError> {
         self.operations.push(Operation::SynchronizeStage(request));
         match self.stage {
             Some(observed) if observed == request.evidence() => {
                 fail_once(
                     &mut self.fail_stage_synchronizations,
                     "injected stage synchronization failure",
-                )?;
+                )
+                .map_err(|source| RecoveryStageCompletionStorageError::Storage { source })?;
                 Ok(RecoveryStageSynchronizationOutcome::Synchronized)
             }
-            Some(_) => Err(io::Error::other("stage evidence changed")),
+            Some(observed) => Err(RecoveryStageCompletionStorageError::EvidenceMismatch {
+                expected: request.evidence(),
+                observed,
+            }),
             None => Ok(RecoveryStageSynchronizationOutcome::AlreadyAbsent),
         }
     }
@@ -110,7 +115,7 @@ impl RecoveryStageCompletionStorage for StageCompletionDouble {
     fn link_stage_or_admit_pool(
         &mut self,
         request: RecoveryStageCompletionRequest,
-    ) -> io::Result<RecoveryStagePoolOutcome> {
+    ) -> Result<RecoveryStagePoolOutcome, RecoveryStageCompletionStorageError> {
         self.operations.push(Operation::LinkOrAdmit(request));
         if self.pool.is_some() {
             return Ok(RecoveryStagePoolOutcome::AlreadyPresent);
@@ -120,20 +125,30 @@ impl RecoveryStageCompletionStorage for StageCompletionDouble {
                 self.pool = Some(request);
                 Ok(RecoveryStagePoolOutcome::Linked)
             }
-            Some(_) => Err(io::Error::other("stage evidence changed")),
-            None => Err(io::Error::new(
-                io::ErrorKind::NotFound,
-                "stage and pool are absent",
-            )),
+            Some(observed) => Err(RecoveryStageCompletionStorageError::EvidenceMismatch {
+                expected: request.evidence(),
+                observed,
+            }),
+            None => Err(RecoveryStageCompletionStorageError::Missing { request }),
         }
     }
 
-    fn verify_pool(&mut self, request: RecoveryStageCompletionRequest) -> io::Result<()> {
+    fn verify_pool(
+        &mut self,
+        request: RecoveryStageCompletionRequest,
+    ) -> Result<(), RecoveryStageCompletionStorageError> {
         self.operations.push(Operation::VerifyPool(request));
         if self.pool == Some(request) {
             Ok(())
         } else {
-            Err(io::Error::other("pool bytes conflict with request"))
+            let observed = self
+                .pool
+                .map(RecoveryStageCompletionRequest::evidence)
+                .unwrap_or_else(|| request.evidence());
+            Err(RecoveryStageCompletionStorageError::EvidenceMismatch {
+                expected: request.evidence(),
+                observed,
+            })
         }
     }
 

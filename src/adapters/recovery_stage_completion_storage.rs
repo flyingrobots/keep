@@ -3,7 +3,8 @@
 use std::io;
 
 use super::{
-    RecoveryStageCompletionPool, RecoveryStageCompletionRequest, RecoveryStageDiscardOutcome,
+    RecoveryStageCompletionPool, RecoveryStageCompletionRequest,
+    RecoveryStageCompletionStorageError, RecoveryStageDiscardOutcome,
     RecoveryStageDiscardStorageError, RecoveryStageEvidence, RecoveryStagePoolOutcome,
     RecoveryStageSynchronizationOutcome,
 };
@@ -29,7 +30,7 @@ pub trait RecoveryStageCompletionStorage {
     fn synchronize_stage_if_present(
         &mut self,
         request: RecoveryStageCompletionRequest,
-    ) -> io::Result<RecoveryStageSynchronizationOutcome>;
+    ) -> Result<RecoveryStageSynchronizationOutcome, RecoveryStageCompletionStorageError>;
 
     /// Links an exact stage or admits an already-present pool coordinate.
     ///
@@ -40,14 +41,17 @@ pub trait RecoveryStageCompletionStorage {
     fn link_stage_or_admit_pool(
         &mut self,
         request: RecoveryStageCompletionRequest,
-    ) -> io::Result<RecoveryStagePoolOutcome>;
+    ) -> Result<RecoveryStagePoolOutcome, RecoveryStageCompletionStorageError>;
 
     /// Verifies that the selected pool entry exactly satisfies the request.
     ///
     /// # Errors
     ///
     /// Returns a source-preserving verification or storage error.
-    fn verify_pool(&mut self, request: RecoveryStageCompletionRequest) -> io::Result<()>;
+    fn verify_pool(
+        &mut self,
+        request: RecoveryStageCompletionRequest,
+    ) -> Result<(), RecoveryStageCompletionStorageError>;
 
     /// Synchronizes the selected immutable-pool directory.
     ///

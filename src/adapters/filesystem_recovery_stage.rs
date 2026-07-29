@@ -28,11 +28,44 @@ struct AdmittedStage {
     metadata: RecoveryStageMetadata,
 }
 
+pub(super) struct ObservedRecoveryStage {
+    file: File,
+    admitted: AdmittedStage,
+    evidence: RecoveryStageEvidence,
+}
+
+impl ObservedRecoveryStage {
+    pub(super) const fn evidence(&self) -> RecoveryStageEvidence {
+        self.evidence
+    }
+
+    pub(super) fn synchronize(
+        &self,
+        directory: &Dir,
+        name: &str,
+        stage: RecoveryStage,
+    ) -> Result<(), FilesystemRecoveryStageError> {
+        self.file
+            .sync_all()
+            .map_err(|source| FilesystemRecoveryStageError::Synchronize { stage, source })?;
+        verify_opened_handle(&self.file, stage, &self.admitted)?;
+        verify_current_entry(directory, name, stage, &self.admitted)
+    }
+}
+
 pub(super) fn fingerprint(
     directory: &Dir,
     stage: RecoveryStage,
 ) -> Result<RecoveryStageEvidence, FilesystemRecoveryStageError> {
-    observe(directory, stage, || {})
+    fingerprint_named(directory, stage.file_name(), stage)
+}
+
+pub(super) fn fingerprint_named(
+    directory: &Dir,
+    name: &str,
+    stage: RecoveryStage,
+) -> Result<RecoveryStageEvidence, FilesystemRecoveryStageError> {
+    Ok(observe_named(directory, name, stage)?.evidence())
 }
 
 #[cfg(test)]
@@ -44,31 +77,48 @@ pub(super) fn fingerprint_with<F>(
 where
     F: FnOnce(),
 {
-    observe(directory, stage, after_open)
+    Ok(observe_named_with(directory, stage.file_name(), stage, after_open)?.evidence())
 }
 
-fn observe<F>(
+pub(super) fn observe_named(
     directory: &Dir,
+    name: &str,
+    stage: RecoveryStage,
+) -> Result<ObservedRecoveryStage, FilesystemRecoveryStageError> {
+    observe_named_with(directory, name, stage, || {})
+}
+
+pub(super) fn observe_named_with<F>(
+    directory: &Dir,
+    name: &str,
     stage: RecoveryStage,
     after_open: F,
-) -> Result<RecoveryStageEvidence, FilesystemRecoveryStageError>
+) -> Result<ObservedRecoveryStage, FilesystemRecoveryStageError>
 where
     F: FnOnce(),
 {
-    let mut file = open_stage(directory, stage)?;
+    let mut file = open_stage(directory, name, stage)?;
     let admitted = admit_stage(&file, stage)?;
     after_open();
     let evidence = fingerprint_recovery_stage(admitted.metadata, &mut file)
         .map_err(|source| FilesystemRecoveryStageError::Fingerprint { stage, source })?;
     verify_length(stage, admitted.metadata.length(), evidence.length().get())?;
     verify_opened_handle(&file, stage, &admitted)?;
-    verify_current_entry(directory, stage, &admitted)?;
-    Ok(evidence)
+    verify_current_entry(directory, name, stage, &admitted)?;
+    Ok(ObservedRecoveryStage {
+        file,
+        admitted,
+        evidence,
+    })
 }
 
-fn open_stage(directory: &Dir, stage: RecoveryStage) -> Result<File, FilesystemRecoveryStageError> {
+fn open_stage(
+    directory: &Dir,
+    name: &str,
+    stage: RecoveryStage,
+) -> Result<File, FilesystemRecoveryStageError> {
     directory
-        .open_with(stage.file_name(), &read_options())
+        .open_with(name, &read_options())
         .map_err(|source| FilesystemRecoveryStageError::Open { stage, source })
 }
 
@@ -104,11 +154,12 @@ fn verify_opened_handle(
 
 fn verify_current_entry(
     directory: &Dir,
+    name: &str,
     stage: RecoveryStage,
     admitted: &AdmittedStage,
 ) -> Result<(), FilesystemRecoveryStageError> {
     let file = directory
-        .open_with(stage.file_name(), &read_options())
+        .open_with(name, &read_options())
         .map_err(|source| FilesystemRecoveryStageError::VerifyEntry { stage, source })?;
     let metadata = file
         .metadata()

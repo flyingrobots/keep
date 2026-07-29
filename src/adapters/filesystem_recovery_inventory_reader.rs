@@ -10,10 +10,10 @@ use cap_std::fs::Dir;
 use super::{
     FilesystemRecoveryStageError, RecoveryEntryName, RecoveryInventory, RecoveryInventoryError,
     RecoveryInventoryLimit, RecoveryInventoryOperation, RecoveryInventoryStorage,
-    RecoveryNamespace, RecoveryStage, RecoveryStageEvidence, RecoveryStageNamespacePhase,
-    RecoveryStageParent, filesystem_platform_profile, filesystem_recovery_inventory_scan,
-    filesystem_recovery_namespace::PinnedRecoveryDirectory, filesystem_recovery_stage,
-    read_recovery_inventory,
+    RecoveryNamespace, RecoveryStage, RecoveryStageCompletionPool, RecoveryStageEvidence,
+    RecoveryStageNamespacePhase, RecoveryStageParent, filesystem_platform_profile,
+    filesystem_recovery_inventory_scan, filesystem_recovery_namespace::PinnedRecoveryDirectory,
+    filesystem_recovery_stage, read_recovery_inventory,
 };
 
 const STAGING_NAME: &str = "staging";
@@ -184,6 +184,16 @@ impl FilesystemRecoveryInventoryReader {
 
     pub(super) const fn stage_directory(&self, stage: RecoveryStage) -> &Dir {
         self.parent_directory(stage.parent())
+    }
+
+    pub(super) const fn completion_pool_directory(
+        &self,
+        pool: RecoveryStageCompletionPool,
+    ) -> &Dir {
+        match pool {
+            RecoveryStageCompletionPool::Segments => self.directory(RecoveryNamespace::Segments),
+            RecoveryStageCompletionPool::Catalogs => self.directory(RecoveryNamespace::Catalogs),
+        }
     }
 }
 

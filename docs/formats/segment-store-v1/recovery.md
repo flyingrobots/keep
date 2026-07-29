@@ -114,6 +114,15 @@ ordered transition and returns `RecoveryStageCompletionReceipt` only after
 pool and staging durability. The receipt proves a valid orphan; it does not
 prove reachability or retention.
 
+`FilesystemRecoveryStageCompleter` binds that port to the admitted filesystem
+profile. It retains the pinned root and `writer.lock` authority, pins all
+protocol directories, reopens stages and pool entries without following
+links, bounds every complete read by the stage grammar, rechecks stage evidence
+at the link boundary, and refuses entry replacement or fingerprint drift
+without removing the fixed stage. An absent fixed stage can continue only when
+the canonical pool coordinate exists and verifies to the exact request
+evidence.
+
 Segment completion reuses `KEEP-CRASH-008`–`012`; catalog completion reuses
 `KEEP-CRASH-016`–`020`. The executor performs the same staged-file
 synchronization, no-clobber link, post-link pool verification, pool-directory

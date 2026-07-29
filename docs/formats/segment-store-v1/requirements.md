@@ -96,9 +96,10 @@ classifiers. An exact truncation assessment may now authorize one
 evidence-bound, retry-safe discard through a semantic storage port. These
 slices now bind that discard to pinned writer-authorized filesystem storage.
 A complete segment or catalog assessment may now authorize an owned,
-evidence-bound valid-orphan transition through a semantic storage port. They
-do not yet bind complete-stage recovery to the filesystem or claim transitive
-publication-view admission or process-death injection.
+evidence-bound valid-orphan transition through a semantic storage port, and
+the filesystem completer now binds that transition to pinned writer-authorized
+storage. They do not yet claim next-head finalization, transitive
+publication-view admission, or process-death injection.
 
 <!-- markdownlint-disable MD013 -->
 
@@ -119,6 +120,7 @@ publication-view admission or process-death injection.
 | `KEEP-RECOVERY-013` | Explicit discard plans only from an exact truncation assessment, retains the observation evidence and typed truncation reason, refuses changed evidence without mutation, synchronizes the name-selected parent after exact removal or admitted absence, and returns a receipt only after synchronization | Truncation-planning, evidence-drift, operation-order, and retry matrix | `tests/recovery_stage_discard.rs`, `tests/recovery_stage_discard/*.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-014` | Filesystem discard retains root and `writer.lock` authority, pins every protocol directory, never follows a fixed-stage link, revalidates bounded fingerprint and entry identity before unlink, refuses drift without mutation, and synchronizes the typed parent after removal or admitted absence | Exact removal, absent retry, mismatch, symlink, replacement, and writer-exclusion matrix | `src/adapters/filesystem_recovery_stage_discard_tests.rs`, `src/adapters/filesystem_recovery_stage_discard_tests/fixture.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-015` | Immutable-pool completion plans only from exact complete segment or catalog assessments, owns bounded evidence and validated coordinates, re-synchronizes an exact present stage before linking, verifies an existing pool entry before admission, synchronizes the pool before exact stage removal, synchronizes staging before receipt, accepts completed retries, and never finalizes a head | Complete-only planning, operation-order, staged-file-sync, pool-conflict, and retry matrix | `tests/recovery_stage_completion.rs`, `tests/recovery_stage_completion/*.rs` | Implemented in #17 |
+| `KEEP-RECOVERY-016` | Filesystem completion retains root and `writer.lock` authority, pins every protocol directory, re-synchronizes and re-fingerprints exact stage evidence before no-clobber link, never follows stage or pool links, verifies exact pool evidence before removal, preserves conflicting and replaced entries, accepts exact stage/pool, reappeared-stage, and pool-only retries, and returns only after pool and staging synchronization | Segment/catalog completion, three retry states, conflict, link, replacement, stale-evidence, missing-artifact, and writer-exclusion matrix | `src/adapters/filesystem_recovery_stage_completion_tests.rs`, `src/adapters/filesystem_recovery_stage_completion_tests/*.rs` | Implemented in #17 |
 
 <!-- markdownlint-enable MD013 -->
 
