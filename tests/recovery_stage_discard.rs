@@ -31,6 +31,18 @@ fn fixture(hex: &str) -> Result<Vec<u8>, Box<dyn Error>> {
     .map_err(Into::into)
 }
 
+fn truncated_fixture(stage: RecoveryStage) -> Result<Vec<u8>, Box<dyn Error>> {
+    let complete = fixture(match stage {
+        RecoveryStage::Segment => SEGMENT_HEX,
+        RecoveryStage::Catalog => CATALOG_HEX,
+        RecoveryStage::NextHead => HEAD_HEX,
+    })?;
+    complete
+        .get(..1)
+        .map(<[u8]>::to_vec)
+        .ok_or_else(|| "canonical recovery fixture is unexpectedly empty".into())
+}
+
 fn evidence(stage: RecoveryStage, encoded: &[u8]) -> Result<RecoveryStageEvidence, Box<dyn Error>> {
     let length = u64::try_from(encoded.len())?;
     Ok(fingerprint_recovery_stage(

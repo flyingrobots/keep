@@ -9,13 +9,14 @@ use keep::{
 
 use super::{
     CATALOG_HEX, HEAD_HEX, SEGMENT_HEX, SEGMENT_SEAL_LENGTH, assessment, evidence, fixture,
+    truncated_fixture,
 };
 
 #[test]
 fn every_exact_truncation_retains_its_reason_and_evidence() -> Result<(), Box<dyn Error>> {
-    let segment = [0_u8];
-    let catalog = [0_u8];
-    let head = [0_u8];
+    let segment = truncated_fixture(RecoveryStage::Segment)?;
+    let catalog = truncated_fixture(RecoveryStage::Catalog)?;
+    let head = truncated_fixture(RecoveryStage::NextHead)?;
     let segment_evidence = evidence(RecoveryStage::Segment, &segment)?;
     let catalog_evidence = evidence(RecoveryStage::Catalog, &catalog)?;
     let head_evidence = evidence(RecoveryStage::NextHead, &head)?;

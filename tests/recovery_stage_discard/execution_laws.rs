@@ -9,11 +9,11 @@ use keep::{
 };
 
 use super::storage_double::{Operation, StageDiscardDouble};
-use super::{discard_request, evidence};
+use super::{discard_request, evidence, truncated_fixture};
 
 #[test]
 fn exact_evidence_is_removed_before_its_parent_is_synchronized() -> Result<(), Box<dyn Error>> {
-    let bytes = [0_u8];
+    let bytes = truncated_fixture(RecoveryStage::Segment)?;
     let request = discard_request(RecoveryStage::Segment, &bytes)?;
     let mut storage = StageDiscardDouble::new(Some(request.evidence()));
 
@@ -40,7 +40,7 @@ fn absent_exact_retry_still_synchronizes_the_selected_parent() -> Result<(), Box
         RecoveryStage::Catalog,
         RecoveryStage::NextHead,
     ] {
-        let bytes = [0_u8];
+        let bytes = truncated_fixture(stage)?;
         let request = discard_request(stage, &bytes)?;
         let mut storage = StageDiscardDouble::new(None);
 
@@ -63,7 +63,7 @@ fn absent_exact_retry_still_synchronizes_the_selected_parent() -> Result<(), Box
 
 #[test]
 fn changed_evidence_refuses_without_removal_or_parent_sync() -> Result<(), Box<dyn Error>> {
-    let bytes = [0_u8];
+    let bytes = truncated_fixture(RecoveryStage::Segment)?;
     let changed = [1_u8];
     let request = discard_request(RecoveryStage::Segment, &bytes)?;
     let observed = evidence(RecoveryStage::Segment, &changed)?;
@@ -92,7 +92,7 @@ fn changed_evidence_refuses_without_removal_or_parent_sync() -> Result<(), Box<d
 
 #[test]
 fn retry_after_remove_before_parent_sync_is_idempotent() -> Result<(), Box<dyn Error>> {
-    let bytes = [0_u8];
+    let bytes = truncated_fixture(RecoveryStage::NextHead)?;
     let request = discard_request(RecoveryStage::NextHead, &bytes)?;
     let mut storage = StageDiscardDouble::new(Some(request.evidence())).fail_next_synchronization();
 
