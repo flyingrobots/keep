@@ -36,7 +36,7 @@ pub(super) fn check(repository_path: &Path) -> Result<(), DocumentationError> {
     workflow_contract::check(&repository_root)?;
     let markdown = corpus::SourceCorpus::markdown(&repository_root, &process_directory)?;
     let workflows = corpus::SourceCorpus::workflow(&repository_root, &process_directory)?;
-    execution::run(&process_directory, markdown.paths(), workflows.paths())?;
+    execution::run(&process_directory, &repository_root, &markdown, &workflows)?;
     verify_root(&repository_root, repository_path)
 }
 

@@ -14,6 +14,10 @@ its ambient pathname to a child creates another replacement window. An
 attacker could move the admitted directory, substitute another repository
 while the tools run, and restore the original before the final identity check.
 
+Retaining the directory alone does not bind a selected corpus path to the file
+admitted at that path. A source can be renamed, replaced while a tool reads it,
+and restored without changing the retained repository directory identity.
+
 The standard library accepts only a pathname for
 `std::process::Command::current_dir`. On macOS, an open directory exposed
 through `/dev/fd` cannot be used as that pathname. Changing the parent process
@@ -32,6 +36,10 @@ crate. The crate admits one operation:
 1. Own a close-on-exec duplicate of the admitted repository directory.
 2. Register a child setup hook that calls only Rustix `fchdir`.
 3. Spawn through the existing bounded process adapters.
+4. Retain every selected source's device, inode, size, modification time, and
+   change time.
+5. Reopen every selected path through the repository capability and compare
+   the admitted identity with the current path before and after every tool.
 
 POSIX specifies `fchdir` as async-signal-safe. The hook performs no allocation,
 locking, buffered I/O, ambient path lookup, or user callback. The descriptor
@@ -45,6 +53,8 @@ network, or application policy.
 
 - Rechecking the repository pathname before and after tool execution does not
   detect a transient substitution.
+- Reopening selected source paths without retaining and comparing the admitted
+  identity cannot distinguish the selected file from a later replacement.
 - `/dev/fd/<n>` and `/proc/self/fd/<n>` are not a portable child working
   directory. The former is not traversable as a directory on macOS, and the
   latter is not available there.
@@ -60,6 +70,11 @@ network, or application policy.
 Git inventory and documentation tools start in the exact opened repository
 even if its pathname is replaced. Parent process state remains unchanged, so
 parallel tests and readers are deterministic.
+
+External tool output is admitted only while every selected path still has the
+admitted device, inode, size, modification time, and change time
+unchanged. Persistent replacement, in-place mutation, and
+substitute-then-restore changes produce a typed corpus refusal.
 
 The boundary is Unix-specific and deliberately narrow. Any additional unsafe
 operation, child hook, captured state, or consumer requires a new decision and

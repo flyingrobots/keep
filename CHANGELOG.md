@@ -31,7 +31,9 @@ after its public API and format compatibility policies are established.
   to choose exactly one directory field form, and requires the documentation
   workflow to run for pushes to `main` and every pull request,
   bounds each admitted documentation source to 4 MiB and each selected corpus
-  to 64 MiB before external tools start,
+  to 64 MiB before external tools start, retains every selected source
+  identity, refuses device, inode, size, modification-time, or change-time
+  drift before and after each external tool,
   and applies one deadline across captured and inherited child execution and
   output collection.
   Git-backed process fixtures ignore system and global Git configuration and

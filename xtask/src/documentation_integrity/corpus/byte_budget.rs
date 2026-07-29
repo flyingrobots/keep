@@ -1,6 +1,6 @@
 //! This module owns documentation corpus byte-budget admission.
 
-use super::{AdmittedSource, CorpusKind};
+use super::CorpusKind;
 use crate::documentation_integrity::error::DocumentationError;
 
 /// Maximum admitted bytes for one documentation source.
@@ -19,19 +19,20 @@ impl CorpusByteBudget {
     pub(super) fn admit(
         &mut self,
         kind: CorpusKind,
-        source: &AdmittedSource,
+        path: &str,
+        bytes: u64,
     ) -> Result<(), DocumentationError> {
-        if source.bytes > CORPUS_FILE_MAX_BYTES {
+        if bytes > CORPUS_FILE_MAX_BYTES {
             return Err(DocumentationError::CorpusFileTooLarge {
                 corpus: kind.label(),
-                path: source.path.clone(),
+                path: path.to_owned(),
                 maximum: CORPUS_FILE_MAX_BYTES,
-                observed: source.bytes,
+                observed: bytes,
             });
         }
         let observed = self
             .observed
-            .checked_add(source.bytes)
+            .checked_add(bytes)
             .ok_or_else(|| DocumentationError::CorpusSizeOverflow(kind.label()))?;
         if observed > CORPUS_MAX_BYTES {
             return Err(DocumentationError::CorpusTooLarge {

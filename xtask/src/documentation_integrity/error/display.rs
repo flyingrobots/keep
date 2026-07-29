@@ -8,6 +8,7 @@ use super::DocumentationError;
 
 #[derive(Clone, Copy)]
 enum SourcePathDiagnostic {
+    Changed,
     Inspect,
     Invalid,
     NonRegular,
@@ -25,27 +26,11 @@ impl fmt::Display for DocumentationError {
             Self::CheckFailures { first, second } => {
                 write!(formatter, "{first}; additionally: {second}")
             }
-            Self::CorpusFileTooLarge {
-                corpus,
-                path,
-                maximum,
-                observed,
-            } => write!(
-                formatter,
-                "{corpus} source `{path}` is {observed} bytes; maximum is {maximum}"
-            ),
-            Self::CorpusSizeOverflow(corpus) => {
-                write!(formatter, "{corpus} corpus byte count overflowed")
-            }
-            Self::CorpusTooLarge {
-                corpus,
-                maximum,
-                observed,
-            } => write!(
-                formatter,
-                "{corpus} corpus is {observed} bytes; maximum is {maximum}"
-            ),
-            Self::EmptyCorpus(label) => write!(formatter, "the {label} corpus is empty"),
+            error @ (Self::CorpusFileTooLarge { .. }
+            | Self::CorpusSizeOverflow(_)
+            | Self::CorpusTooLarge { .. }
+            | Self::CorpusChanged { .. }
+            | Self::EmptyCorpus(_)) => corpus(formatter, error),
             Self::GitInventory(error) => write!(formatter, "{error}"),
             Self::Inspect { corpus, path, .. } => {
                 source_path(formatter, SourcePathDiagnostic::Inspect, corpus, path)
@@ -80,6 +65,38 @@ impl fmt::Display for DocumentationError {
             | Self::ToolOutputEncoding { .. }
             | Self::ToolUnavailable { .. }) => tool(formatter, error),
         }
+    }
+}
+
+fn corpus(formatter: &mut fmt::Formatter<'_>, error: &DocumentationError) -> fmt::Result {
+    match error {
+        DocumentationError::CorpusFileTooLarge {
+            corpus,
+            path,
+            maximum,
+            observed,
+        } => write!(
+            formatter,
+            "{corpus} source `{path}` is {observed} bytes; maximum is {maximum}"
+        ),
+        DocumentationError::CorpusSizeOverflow(corpus) => {
+            write!(formatter, "{corpus} corpus byte count overflowed")
+        }
+        DocumentationError::CorpusTooLarge {
+            corpus,
+            maximum,
+            observed,
+        } => write!(
+            formatter,
+            "{corpus} corpus is {observed} bytes; maximum is {maximum}"
+        ),
+        DocumentationError::CorpusChanged { corpus, path } => {
+            source_path(formatter, SourcePathDiagnostic::Changed, corpus, path)
+        }
+        DocumentationError::EmptyCorpus(label) => {
+            write!(formatter, "the {label} corpus is empty")
+        }
+        _ => Err(fmt::Error),
     }
 }
 
@@ -165,6 +182,9 @@ fn source_path(
     path: &str,
 ) -> fmt::Result {
     match diagnostic {
+        SourcePathDiagnostic::Changed => {
+            write!(formatter, "{corpus} source changed during validation: `")?;
+        }
         SourcePathDiagnostic::Inspect => write!(formatter, "cannot inspect {corpus} source `")?,
         SourcePathDiagnostic::Invalid => {
             write!(formatter, "{corpus} corpus contains an unsafe path `")?;

@@ -1,13 +1,17 @@
 //! This module owns bounded execution of admitted documentation tools.
 
+mod corpus_guard;
+
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use crate::bounded_process::{self, ProcessOutput};
-use crate::repository_file::RepositoryProcessDirectory;
+use crate::repository_file::{RepositoryProcessDirectory, RepositoryRoot};
 
+use super::corpus::SourceCorpus;
 use super::error::DocumentationError;
 use super::tool::DocumentationTool;
+use corpus_guard::CorpusGuardedRunner;
 
 const TOOL_DEADLINE: Duration = Duration::from_mins(2);
 
@@ -25,14 +29,14 @@ struct ExternalToolRunner<'a> {
 
 pub(super) fn run(
     process_directory: &RepositoryProcessDirectory,
-    markdown: &[String],
-    workflows: &[String],
+    repository_root: &RepositoryRoot,
+    markdown: &SourceCorpus,
+    workflows: &SourceCorpus,
 ) -> Result<(), DocumentationError> {
-    run_with(
-        &mut ExternalToolRunner { process_directory },
-        markdown,
-        workflows,
-    )
+    let corpora = [markdown, workflows];
+    let external = ExternalToolRunner { process_directory };
+    let mut runner = CorpusGuardedRunner::new(external, repository_root, &corpora);
+    run_with(&mut runner, markdown.paths(), workflows.paths())
 }
 
 fn run_with(

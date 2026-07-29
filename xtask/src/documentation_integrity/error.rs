@@ -28,6 +28,10 @@ pub(crate) enum DocumentationError {
         maximum: u64,
         observed: u64,
     },
+    CorpusChanged {
+        corpus: &'static str,
+        path: String,
+    },
     EmptyCorpus(&'static str),
     GitInventory(GitInventoryError),
     Inspect {
@@ -138,6 +142,7 @@ impl Error for DocumentationError {
             Self::CorpusFileTooLarge { .. }
             | Self::CorpusSizeOverflow(_)
             | Self::CorpusTooLarge { .. }
+            | Self::CorpusChanged { .. }
             | Self::EmptyCorpus(_)
             | Self::InvalidPath { .. }
             | Self::NonRegular { .. }

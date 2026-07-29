@@ -58,6 +58,13 @@ the configured repository path, running checks against a substitute, and
 restoring the original path cannot redirect either corpus selection or
 validation.
 
+Each selected source also retains its device, inode, size, modification time,
+and change time. The Rust boundary reopens every path through the retained
+repository capability and compares that identity before and after each
+external tool. A source replacement, in-place mutation, or
+substitute-then-restore sequence refuses the corpus instead of admitting tool
+output from ambiguous bytes.
+
 The workflow checker disables `actionlint`'s optional `shellcheck` and
 `pyflakes` integrations. Neither auxiliary executable is admitted or pinned by
 this toolchain, so ambient PATH contents cannot expand the validation boundary.

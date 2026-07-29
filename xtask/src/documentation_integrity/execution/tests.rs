@@ -1,12 +1,23 @@
 use std::collections::VecDeque;
+use std::fs;
+use std::path::PathBuf;
 
 use crate::bounded_process::ProcessOutput;
+use crate::documentation_integrity::corpus::{SourceCorpus, test_repository::run_git};
+use crate::repository_file::RepositoryRoot;
+use crate::test_directory::TestDirectory;
 
+use super::corpus_guard::CorpusGuardedRunner;
 use super::{DocumentationError, DocumentationTool, ToolRunner};
 
 struct RecordingRunner {
     calls: Vec<(DocumentationTool, Vec<String>)>,
     outputs: VecDeque<ProcessOutput>,
+}
+
+struct ReplacingRunner {
+    selected: PathBuf,
+    retained: PathBuf,
 }
 
 #[test]
@@ -117,6 +128,38 @@ fn unreviewed_version_stops_before_tool_execution() {
     assert_eq!(runner.calls.len(), 1);
 }
 
+#[test]
+fn corpus_guard_refuses_a_source_restored_after_transient_replacement()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::create("documentation-transient-source")?;
+    let root = directory.path();
+    run_git(root, &["init", "--quiet", "--template="])?;
+    fs::write(root.join("selected.md"), "# Original\n")?;
+    let repository_root = RepositoryRoot::open(root)?;
+    let process_directory = repository_root.process_directory()?;
+    let corpus = SourceCorpus::markdown(&repository_root, &process_directory)?;
+    let corpora = [&corpus];
+    let replacing = ReplacingRunner {
+        selected: root.join("selected.md"),
+        retained: root.join("retained.md"),
+    };
+    let mut runner = CorpusGuardedRunner::new(replacing, &repository_root, &corpora);
+
+    let result = runner.capture(DocumentationTool::Markdownlint, &[]);
+
+    assert!(matches!(
+        result,
+        Err(DocumentationError::CorpusChanged {
+            corpus: "Markdown",
+            ref path,
+        }) if path == "selected.md"
+    ));
+    drop(runner);
+    drop(corpus);
+    directory.close()?;
+    Ok(())
+}
+
 impl RecordingRunner {
     fn new(outputs: impl IntoIterator<Item = ProcessOutput>) -> Self {
         Self {
@@ -139,6 +182,32 @@ impl ToolRunner for RecordingRunner {
                 path: "test runner",
                 requirement: "one output exists for every expected call",
             })
+    }
+}
+
+impl ToolRunner for ReplacingRunner {
+    fn capture(
+        &mut self,
+        _tool: DocumentationTool,
+        _arguments: &[String],
+    ) -> Result<ProcessOutput, DocumentationError> {
+        fs::rename(&self.selected, &self.retained)
+            .map_err(|source| fixture_io("retain selected source", source))?;
+        fs::write(&self.selected, "# Substitute\n")
+            .map_err(|source| fixture_io("write substitute source", source))?;
+        fs::remove_file(&self.selected)
+            .map_err(|source| fixture_io("remove substitute source", source))?;
+        fs::rename(&self.retained, &self.selected)
+            .map_err(|source| fixture_io("restore selected source", source))?;
+        Ok(success())
+    }
+}
+
+fn fixture_io(requirement: &'static str, source: std::io::Error) -> DocumentationError {
+    DocumentationError::Inspect {
+        corpus: "test",
+        path: requirement.to_owned(),
+        source,
     }
 }
 

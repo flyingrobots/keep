@@ -1,6 +1,10 @@
 //! This module owns deterministic documentation source selection.
 
 mod byte_budget;
+mod selection;
+mod source_witness;
+#[cfg(test)]
+pub(super) mod test_repository;
 
 use std::io;
 
@@ -12,48 +16,13 @@ use crate::repository_file::{OpenRepositoryFileError, RepositoryProcessDirectory
 use byte_budget::CorpusByteBudget;
 #[cfg(test)]
 use byte_budget::{CORPUS_FILE_MAX_BYTES, CORPUS_MAX_BYTES};
-
-const MARKDOWN_PRESENT: [&str; 7] = [
-    "ls-files",
-    "-z",
-    "--cached",
-    "--others",
-    "--exclude-per-directory=.gitignore",
-    "--",
-    "*.md",
-];
-const MARKDOWN_DELETED: [&str; 5] = ["ls-files", "-z", "--deleted", "--", "*.md"];
-const WORKFLOW_PRESENT: [&str; 8] = [
-    "ls-files",
-    "-z",
-    "--cached",
-    "--others",
-    "--exclude-per-directory=.gitignore",
-    "--",
-    ".github/workflows/*.yml",
-    ".github/workflows/*.yaml",
-];
-const WORKFLOW_DELETED: [&str; 6] = [
-    "ls-files",
-    "-z",
-    "--deleted",
-    "--",
-    ".github/workflows/*.yml",
-    ".github/workflows/*.yaml",
-];
+use selection::CorpusKind;
+use source_witness::AdmittedSource;
 
 pub(super) struct SourceCorpus {
+    kind: CorpusKind,
     paths: Vec<String>,
-}
-
-struct AdmittedSource {
-    bytes: u64,
-    path: String,
-}
-#[derive(Clone, Copy)]
-enum CorpusKind {
-    Markdown,
-    Workflow,
+    sources: Vec<AdmittedSource>,
 }
 
 impl SourceCorpus {
@@ -75,6 +44,16 @@ impl SourceCorpus {
         &self.paths
     }
 
+    pub(super) fn verify_unchanged(
+        &self,
+        repository_root: &RepositoryRoot,
+    ) -> Result<(), DocumentationError> {
+        for source in &self.sources {
+            source.verify(repository_root, self.kind)?;
+        }
+        Ok(())
+    }
+
     fn read(
         repository_root: &RepositoryRoot,
         process_directory: &RepositoryProcessDirectory,
@@ -91,48 +70,19 @@ impl SourceCorpus {
             |command| process_directory.spawn(command),
         )?;
         let selected = present.difference(&deleted);
-        let paths = admit_paths(repository_root, selected, kind)?;
-        if paths.is_empty() {
+        let sources = admit_paths(repository_root, selected, kind)?;
+        if sources.is_empty() {
             Err(DocumentationError::EmptyCorpus(kind.label()))
         } else {
-            Ok(Self { paths })
-        }
-    }
-}
-
-impl CorpusKind {
-    const fn label(self) -> &'static str {
-        match self {
-            Self::Markdown => "Markdown",
-            Self::Workflow => "GitHub Actions workflow",
-        }
-    }
-
-    const fn present_arguments(self) -> &'static [&'static str] {
-        match self {
-            Self::Markdown => &MARKDOWN_PRESENT,
-            Self::Workflow => &WORKFLOW_PRESENT,
-        }
-    }
-
-    const fn deleted_arguments(self) -> &'static [&'static str] {
-        match self {
-            Self::Markdown => &MARKDOWN_DELETED,
-            Self::Workflow => &WORKFLOW_DELETED,
-        }
-    }
-
-    const fn present_operation(self) -> &'static str {
-        match self {
-            Self::Markdown => "git Markdown present paths",
-            Self::Workflow => "git workflow present paths",
-        }
-    }
-
-    const fn deleted_operation(self) -> &'static str {
-        match self {
-            Self::Markdown => "git Markdown deleted paths",
-            Self::Workflow => "git workflow deleted paths",
+            let paths = sources
+                .iter()
+                .map(|source| source.path().to_owned())
+                .collect();
+            Ok(Self {
+                kind,
+                paths,
+                sources,
+            })
         }
     }
 }
@@ -141,13 +91,13 @@ fn admit_paths<'a>(
     repository_root: &RepositoryRoot,
     paths: impl Iterator<Item = &'a GitPath>,
     kind: CorpusKind,
-) -> Result<Vec<String>, DocumentationError> {
+) -> Result<Vec<AdmittedSource>, DocumentationError> {
     let mut admitted = Vec::new();
     let mut budget = CorpusByteBudget::default();
     for path in paths {
         if let Some(source) = admit_path(repository_root, path, kind)? {
-            budget.admit(kind, &source)?;
-            admitted.push(source.path);
+            budget.admit(kind, source.path(), source.bytes())?;
+            admitted.push(source);
         }
     }
     Ok(admitted)
@@ -169,17 +119,7 @@ fn admit_path(
         path: text.clone(),
     })?;
     match repository_root.open_file(&relative) {
-        Ok(file) => {
-            let bytes = file
-                .metadata()
-                .map_err(|source| DocumentationError::Inspect {
-                    corpus: kind.label(),
-                    path: text.clone(),
-                    source,
-                })?
-                .len();
-            Ok(Some(AdmittedSource { bytes, path: text }))
-        }
+        Ok(file) => Ok(Some(AdmittedSource::admit(&file, text, relative, kind)?)),
         Err(OpenRepositoryFileError::Io(source)) if source.kind() == io::ErrorKind::NotFound => {
             Ok(None)
         }
@@ -195,6 +135,9 @@ fn admit_path(
     }
 }
 
+#[cfg(test)]
+#[path = "corpus/replacement_tests.rs"]
+mod replacement_tests;
 #[cfg(test)]
 #[path = "corpus/tests.rs"]
 mod tests;

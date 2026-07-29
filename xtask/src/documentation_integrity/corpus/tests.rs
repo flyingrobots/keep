@@ -5,7 +5,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-use super::{CorpusKind, SourceCorpus, admit_path};
+use super::{CorpusKind, SourceCorpus, admit_path, test_repository::run_git};
 use crate::documentation_integrity::error::DocumentationError;
 use crate::git_inventory::GitPath;
 use crate::repository_file::{OpenRepositoryFileError, RepositoryRoot};
@@ -16,7 +16,7 @@ fn markdown_corpus_is_the_sorted_present_repository_set() -> Result<(), Box<dyn 
 {
     let directory = TestDirectory::create("documentation-markdown-corpus")?;
     let root = directory.path();
-    run_git(root, &["init", "--quiet"])?;
+    run_git(root, &["init", "--quiet", "--template="])?;
     write(root, ".gitignore", "/target/\n")?;
     write(root, "zulu.md", "# Zulu\n")?;
     write(root, "alpha.md", "# Alpha\n")?;
@@ -39,7 +39,7 @@ fn workflow_corpus_is_the_sorted_present_repository_set() -> Result<(), Box<dyn 
 {
     let directory = TestDirectory::create("documentation-workflow-corpus")?;
     let root = directory.path();
-    run_git(root, &["init", "--quiet"])?;
+    run_git(root, &["init", "--quiet", "--template="])?;
     write(root, ".gitignore", "/.github/workflows/generated.yml\n")?;
     write(root, ".github/workflows/zulu.yml", "name: Zulu\n")?;
     write(root, ".github/workflows/alpha.yaml", "name: Alpha\n")?;
@@ -73,7 +73,7 @@ fn repository_configured_global_ignores_cannot_change_the_corpus()
 -> Result<(), Box<dyn std::error::Error>> {
     let directory = TestDirectory::create("documentation-global-ignore")?;
     let root = directory.path();
-    run_git(root, &["init", "--quiet"])?;
+    run_git(root, &["init", "--quiet", "--template="])?;
     write(root, "tracked.md", "# Tracked\n")?;
     write(root, "new.md", "# New\n")?;
     write(root, "global-ignore", "*.md\n")?;
@@ -100,7 +100,7 @@ fn transient_repository_replacement_cannot_redirect_the_corpus()
     let root = directory.path().join("repository");
     let retained = directory.path().join("retained");
     fs::create_dir(&root)?;
-    run_git(&root, &["init", "--quiet"])?;
+    run_git(&root, &["init", "--quiet", "--template="])?;
     write(&root, "original.md", "# Original\n")?;
     let repository_root = RepositoryRoot::open(&root)?;
     let process_directory = repository_root.process_directory()?;
@@ -108,7 +108,7 @@ fn transient_repository_replacement_cannot_redirect_the_corpus()
 
     fs::rename(&root, &retained)?;
     fs::create_dir(&root)?;
-    run_git(&root, &["init", "--quiet"])?;
+    run_git(&root, &["init", "--quiet", "--template="])?;
     write(&root, "substitute.md", "# Substitute\n")?;
 
     let corpus = SourceCorpus::markdown(&repository_root, &process_directory);
@@ -130,7 +130,7 @@ fn symlinked_markdown_is_refused() -> Result<(), Box<dyn std::error::Error>> {
 
     let directory = TestDirectory::create("documentation-markdown-symlink")?;
     let root = directory.path();
-    run_git(root, &["init", "--quiet"])?;
+    run_git(root, &["init", "--quiet", "--template="])?;
     write(root, "target.txt", "target\n")?;
     symlink("target.txt", root.join("linked.md"))?;
 
@@ -186,19 +186,23 @@ fn oversized_markdown_is_refused_before_external_validation()
 fn aggregate_documentation_bytes_are_bounded_with_checked_accounting()
 -> Result<(), Box<dyn std::error::Error>> {
     let mut budget = super::CorpusByteBudget::default();
-    let source = super::AdmittedSource {
-        bytes: super::CORPUS_FILE_MAX_BYTES,
-        path: String::from("bounded.md"),
-    };
     for _ in 0..16 {
-        budget.admit(CorpusKind::Markdown, &source)?;
+        budget.admit(
+            CorpusKind::Markdown,
+            "bounded.md",
+            super::CORPUS_FILE_MAX_BYTES,
+        )?;
     }
     let observed = super::CORPUS_MAX_BYTES
         .checked_add(super::CORPUS_FILE_MAX_BYTES)
         .ok_or("aggregate corpus bound overflow")?;
 
     assert!(matches!(
-        budget.admit(CorpusKind::Markdown, &source),
+        budget.admit(
+            CorpusKind::Markdown,
+            "bounded.md",
+            super::CORPUS_FILE_MAX_BYTES,
+        ),
         Err(DocumentationError::CorpusTooLarge {
             corpus: "Markdown",
             maximum: super::CORPUS_MAX_BYTES,
@@ -213,7 +217,7 @@ fn aggregate_documentation_bytes_are_bounded_with_checked_accounting()
 fn fifo_workflow_is_refused() -> Result<(), Box<dyn std::error::Error>> {
     let directory = TestDirectory::create("documentation-workflow-fifo")?;
     let root = directory.path();
-    run_git(root, &["init", "--quiet"])?;
+    run_git(root, &["init", "--quiet", "--template="])?;
     write(root, ".github/workflows/blocking.yml", "name: Blocking\n")?;
     run_git(root, &["add", ".github/workflows/blocking.yml"])?;
     let fifo = root.join(".github/workflows/blocking.yml");
@@ -256,18 +260,6 @@ fn non_utf8_markdown_path_is_refused() -> Result<(), Box<dyn std::error::Error>>
     ));
     directory.close()?;
     Ok(())
-}
-
-fn run_git(root: &Path, arguments: &[&str]) -> Result<(), Box<dyn std::error::Error>> {
-    let output = Command::new("git")
-        .args(arguments)
-        .current_dir(root)
-        .output()?;
-    if output.status.success() {
-        Ok(())
-    } else {
-        Err(format!("git fixture command failed: {arguments:?}").into())
-    }
 }
 
 fn write(root: &Path, relative: &str, contents: &str) -> Result<(), Box<dyn std::error::Error>> {
