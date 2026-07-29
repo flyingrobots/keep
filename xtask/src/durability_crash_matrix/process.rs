@@ -13,6 +13,7 @@ use crate::test_directory::TestDirectory;
 
 use super::DurabilityCrashMatrixError;
 use super::child::marker;
+use super::restart;
 use xtask::DurabilityCrashCase;
 
 const DEADLINE: Duration = Duration::from_secs(10);
@@ -35,6 +36,7 @@ pub(super) fn run(
     let _readiness_stream = readiness_stream?;
     termination?;
     verify_marker(directory.path(), case)?;
+    restart::verify(&directory.path().join("store"), case)?;
     drop(listener);
     fs::remove_file(&socket_path)
         .map_err(|source| DurabilityCrashMatrixError::io("remove readiness socket", source))?;

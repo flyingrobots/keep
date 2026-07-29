@@ -3,6 +3,8 @@
 mod child;
 mod error;
 mod process;
+mod restart;
+mod state;
 
 use std::ffi::{OsStr, OsString};
 use std::path::Path;
@@ -20,7 +22,7 @@ pub(crate) fn run(
 ) -> Result<(), DurabilityCrashMatrixError> {
     let Some(flag) = arguments.next() else {
         for case in DurabilityCrashCase::all() {
-            process::run(repository_root, case)?;
+            run_case(repository_root, case)?;
         }
         return Ok(());
     };
@@ -29,7 +31,7 @@ pub(crate) fn run(
     }
     let case = parse_case(&mut arguments)?;
     refuse_extra(&mut arguments)?;
-    process::run(repository_root, case)
+    run_case(repository_root, case)
 }
 
 pub(crate) fn run_child(
@@ -72,4 +74,11 @@ fn refuse_extra(
     } else {
         Ok(())
     }
+}
+
+fn run_case(
+    repository_root: &Path,
+    case: DurabilityCrashCase,
+) -> Result<(), DurabilityCrashMatrixError> {
+    process::run(repository_root, case).map_err(|source| source.at_case(case))
 }
