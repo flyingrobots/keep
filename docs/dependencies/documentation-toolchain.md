@@ -60,7 +60,11 @@ whole group and reaps the child before the task refuses.
 Documentation corpus tests construct their Git fixtures through the same
 bounded process authority. Each fixture command runs in a dedicated process
 group with a two-minute deadline and null output streams, so a stalled command
-or descendant cannot outlive the test boundary.
+or descendant cannot outlive the test boundary. The helper clears the inherited
+environment, then admits only the ambient executable search path, the `C`
+locale, and explicit null system and global Git configuration. Ambient Git
+directory, worktree, index, object, and configuration variables cannot redirect
+a fixture.
 
 Git inventory and each validation tool start through one retained repository
 directory handle. Child-only setup changes directory through that handle after

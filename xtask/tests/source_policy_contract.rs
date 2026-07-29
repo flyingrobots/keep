@@ -101,6 +101,14 @@ fn documentation_git_fixtures_use_the_bounded_process_layer() {
 }
 
 #[test]
+fn documentation_git_fixtures_clear_the_ambient_environment() {
+    assert!(DOCUMENTATION_TEST_REPOSITORY.contains(".env_clear()"));
+    assert!(DOCUMENTATION_TEST_REPOSITORY.contains("env::var_os(\"PATH\")"));
+    assert!(DOCUMENTATION_TEST_REPOSITORY.contains(".env(\"PATH\""));
+    assert!(DOCUMENTATION_TEST_REPOSITORY.contains(".env(\"LC_ALL\", \"C\")"));
+}
+
+#[test]
 fn process_fixtures_do_not_write_to_rust_stdout() {
     assert!(!BOUNDED_PROCESS_TESTS.contains("io::stdout()"));
 }

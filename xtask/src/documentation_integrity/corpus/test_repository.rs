@@ -1,6 +1,8 @@
 //! This module owns hermetic Git commands for corpus regression repositories.
 
+use std::env;
 use std::error::Error;
+use std::io;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::Duration;
@@ -13,13 +15,18 @@ pub(in crate::documentation_integrity) fn run_git(
     root: &Path,
     arguments: &[&str],
 ) -> Result<(), Box<dyn Error>> {
+    let path = env::var_os("PATH")
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "PATH is unavailable"))?;
     let mut command = Command::new("git");
     command
         .args(arguments)
         .current_dir(root)
+        .env_clear()
+        .env("PATH", path)
         .env("GIT_CONFIG_NOSYSTEM", "1")
         .env("GIT_CONFIG_GLOBAL", "/dev/null")
         .env("GIT_CONFIG_COUNT", "0")
+        .env("LC_ALL", "C")
         .stdout(Stdio::null())
         .stderr(Stdio::null());
     let output = bounded_process::status(

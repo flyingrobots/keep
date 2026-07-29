@@ -36,12 +36,14 @@ after its public API and format compatibility policies are established.
   drift before and after each external tool,
   and applies a two-minute deadline across Git inventory, validation-tool
   execution, and output collection.
-  Git-backed process fixtures ignore system and global Git configuration and
-  preserve non-UTF-8 template paths without lossy conversion. Documentation
-  corpus fixture commands also use the bounded process authority with dedicated
-  groups, null output, and a two-minute deadline. Documentation Git inventory
-  and tools start from one retained repository directory handle, so transient
-  replacement of the ambient repository path cannot redirect validation.
+  Git-backed process fixtures clear the inherited environment, explicitly
+  admit the executable search path and `C` locale, ignore system and global Git
+  configuration, and preserve non-UTF-8 template paths without lossy
+  conversion. Documentation corpus fixture commands also use the bounded
+  process authority with dedicated groups, null output, and a two-minute
+  deadline. Documentation Git inventory and tools start from one retained
+  repository directory handle, so transient replacement of the ambient
+  repository path cannot redirect validation.
   Terminal signals now become typed refusals while an external repository task
   is active, so captured and inherited child groups are killed and reaped
   before `xtask` returns. Captured-output readers finish while the process-group
