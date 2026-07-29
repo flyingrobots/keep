@@ -130,6 +130,14 @@ impl DurabilityCrashPoint {
         Self::SynchronizeRootAfterInitialization,
     ];
 
+    /// Parses one exact stable crash identifier.
+    #[must_use]
+    pub fn from_identifier(identifier: &str) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|point| point.identifier() == identifier)
+    }
+
     /// Returns the durable protocol sequence containing this boundary.
     #[must_use]
     pub const fn sequence(self) -> DurabilityCrashSequence {
