@@ -11,6 +11,8 @@ on:
   push:
     branches: [main]
   pull_request:
+permissions:
+  contents: read
 jobs:
   documentation:
     name: Documentation and workflow integrity
@@ -111,6 +113,8 @@ on:
   push:
     branches: [main]
   pull_request:
+permissions:
+  contents: read
 jobs:
   documentation:
     name: Documentation and workflow integrity

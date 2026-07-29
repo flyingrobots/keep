@@ -109,6 +109,9 @@ The documentation job has read-only repository permissions and disables
 checkout credential persistence. It writes tools only beneath
 `RUNNER_TEMP`. A failed or interrupted installation leaves no authoritative
 state and requires no recovery; a subsequent job starts from a fresh runner.
+The Rust workflow contract requires the exact top-level `contents: read`
+permission mapping and refuses `write-all`, write authority, additional scopes,
+or omitted permissions before admitting any documentation step.
 
 ## Review triggers
 

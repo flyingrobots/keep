@@ -58,6 +58,9 @@ fn admitted_steps(workflow: &str) -> Result<Vec<DocumentationStep>, Documentatio
             "workflow runs on reviewed push and pull request triggers",
         ));
     }
+    if !permissions_are_read_only(document) {
+        return Err(contract("workflow permissions are read-only"));
+    }
     reviewed_steps(documentation_steps(document)?)
 }
 
@@ -69,6 +72,12 @@ fn triggers_are_reviewed(document: &Yaml) -> bool {
         && mapping_has_exact_fields(push, &["branches"])
         && matches!(branches.as_vec().map(Vec::as_slice), Some([branch]) if branch.as_str() == Some("main"))
         && triggers["pull_request"].is_null()
+}
+
+fn permissions_are_read_only(document: &Yaml) -> bool {
+    let permissions = &document["permissions"];
+    mapping_has_exact_fields(permissions, &["contents"])
+        && permissions["contents"].as_str() == Some("read")
 }
 
 fn documentation_steps(document: &Yaml) -> Result<&Vec<Yaml>, DocumentationError> {

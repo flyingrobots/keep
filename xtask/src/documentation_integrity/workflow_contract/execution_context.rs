@@ -27,6 +27,20 @@ fn workflow_run_defaults_cannot_replace_required_commands() {
 }
 
 #[test]
+fn workflow_cannot_grant_write_all_permissions() {
+    let workflow = WORKFLOW.replace("permissions:\n  contents: read", "permissions: write-all");
+
+    assert_contract(&workflow, "workflow permissions are read-only");
+}
+
+#[test]
+fn workflow_content_permission_cannot_grant_write_authority() {
+    let workflow = WORKFLOW.replace("  contents: read", "  contents: write");
+
+    assert_contract(&workflow, "workflow permissions are read-only");
+}
+
+#[test]
 fn job_run_defaults_cannot_replace_required_commands() {
     let workflow = WORKFLOW.replace(
         "    steps:\n",

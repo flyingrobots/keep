@@ -26,7 +26,8 @@ after its public API and format compatibility policies are established.
   unreviewed action steps, refuses
   alternate setup-node actions, requires the reviewed Node version, rejects
   unreviewed workflow/job run defaults and step execution fields, pins the
-  documentation runner and job deadline, rejects guarded or failure-tolerant
+  documentation runner and job deadline, requires the exact top-level
+  `contents: read` permission mapping, rejects guarded or failure-tolerant
   documentation jobs and required steps, requires each Dependabot update block
   to choose exactly one directory field form, and requires the documentation
   workflow to run for pushes to `main` and every pull request,
