@@ -73,6 +73,7 @@ fn repository_process_boundaries_document_every_exported_contract() -> Result<()
             "    Additional {",
             "    Cleanup {",
             "    Io {",
+            "    Interrupted {",
             "    MissingStream {",
             "    OutputLimit {",
             "    ReaderPanic {",
