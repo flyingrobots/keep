@@ -13,9 +13,9 @@ use std::path::{Path, PathBuf};
 use keep::{
     AdmittedSegment, AdmittedSegmentRecord, CanonicalCatalog, CatalogGeneration,
     CatalogPublicationExpectation, CatalogRestartByteLimit, CatalogRestartPolicy, ClosedSegment,
-    FilesystemCatalogPublisher, FilesystemCatalogSnapshot, FilesystemSegmentStage,
-    FilesystemWriterLock, LayoutEntryLimit, SegmentPublication, SegmentReadPolicy,
-    SegmentRecordLimit, StagedSegment, publish_catalog_generation,
+    FilesystemCatalogPublisher, FilesystemCatalogSnapshot, FilesystemWriterLock, LayoutEntryLimit,
+    SegmentPublication, SegmentReadPolicy, SegmentRecordLimit, StagedSegment,
+    publish_catalog_generation,
 };
 use sandbox::TestDirectory;
 use support::decode_hex;
@@ -33,13 +33,13 @@ type StagedFixture = (ClosedSegment, Vec<u8>);
 #[test]
 fn successful_publication_materializes_only_the_exact_durable_view() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-success")?;
-    let (closed, segment_bytes) = stage_one_zero(&store)?;
+    let lock = FilesystemWriterLock::try_acquire(store.path())?;
+    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let (closed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     assert_eq!(segment_bytes, fixture(SEGMENT_HEX)?);
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
-    let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
     let selection = SegmentPublication::one(closed, &segments[0])?;
 
     let receipt = publish_catalog_generation(
@@ -114,8 +114,11 @@ fn restart_policy() -> Result<CatalogRestartPolicy, Box<dyn Error>> {
     ))
 }
 
-fn stage_one_zero(store: &StoreFixture) -> Result<StagedFixture, Box<dyn Error>> {
-    let stage = FilesystemSegmentStage::create(&store.staging())?;
+fn stage_one_zero(
+    publisher: &FilesystemCatalogPublisher,
+    store: &StoreFixture,
+) -> Result<StagedFixture, Box<dyn Error>> {
+    let stage = publisher.create_segment_stage()?;
     let record = AdmittedSegmentRecord::for_chunk(&[0])?;
     let closed = StagedSegment::begin(stage, SegmentRecordLimit::MAXIMUM)?
         .append(record)?

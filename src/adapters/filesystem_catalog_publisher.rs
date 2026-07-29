@@ -5,7 +5,9 @@ use std::io;
 use cap_fs_ext::DirExt;
 use cap_std::fs::{Dir, File};
 
-use super::{CatalogRestartPolicy, FilesystemWriterLock};
+use super::{
+    CatalogRestartPolicy, FilesystemSegmentStage, FilesystemWriterLock, SegmentStageCreateError,
+};
 
 pub(super) const CURRENT_SEGMENT: &str = "current.seg";
 pub(super) const CURRENT_CATALOG: &str = "current.cat";
@@ -52,5 +54,21 @@ impl FilesystemCatalogPublisher {
             catalog_stage: None,
             head_stage: None,
         })
+    }
+
+    /// Exclusively creates `staging/current.seg` under this writer authority.
+    ///
+    /// The returned stage borrows this publisher until the stage is dropped or
+    /// consumed by [`crate::StagedSegment`] and explicitly closed after
+    /// sealing. Creation performs blocking, capability-relative filesystem I/O.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SegmentStageCreateError`] without opening or truncating an
+    /// existing filesystem entry.
+    pub fn create_segment_stage(
+        &self,
+    ) -> Result<FilesystemSegmentStage<'_>, SegmentStageCreateError> {
+        FilesystemSegmentStage::create(self)
     }
 }

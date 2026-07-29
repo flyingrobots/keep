@@ -33,8 +33,10 @@ seal, catalog, and publication-head codecs plus explicit immutable-segment and
 catalog-generation transitions. `StagedSegment` writes only content-admitted
 chunk or layout records, while `AdmittedSegment` exposes payloads only after
 complete framing, checksum, logical-identity, duplicate, and physical-digest
-verification. `FilesystemSegmentStage` exclusively creates the fixed
-`current.seg` stage without truncating existing evidence.
+verification. A locked `FilesystemCatalogPublisher` exclusively creates the
+fixed `current.seg` stage without truncating existing evidence, and the
+`FilesystemSegmentStage` lifetime keeps that writer authority borrowed until
+the writable stage closes.
 
 `FilesystemCatalogPublisher` retains one kernel-managed writer lock and pinned
 root, staging, segment-pool, and catalog-pool capabilities for the complete

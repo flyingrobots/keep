@@ -139,6 +139,9 @@ Publishing a new segment additionally requires a checked
 returning a handle-free `ClosedSegment` receipt. Selection binds that receipt's
 record count, byte length, and digest to the exact `AdmittedSegment` bytes.
 Catalog publication cannot select an unrelated or still-open sealed stage.
+`FilesystemCatalogPublisher::create_segment_stage` is the only public
+filesystem-stage constructor. Its returned lifetime keeps the acquired writer
+authority borrowed while `current.seg` remains writable.
 
 `FilesystemCatalogSnapshot::load` is the observational reader boundary. Its
 `CatalogRestartPolicy` combines segment parser limits with a positive maximum
@@ -174,8 +177,8 @@ preceding namespace mutation became durable merely because it was issued.
 
 ### Seal each new segment
 
-1. Create `staging/current.seg` exclusively
-   (`KEEP-CRASH-001`).
+1. Under the acquired writer authority, create `staging/current.seg`
+   exclusively (`KEEP-CRASH-001`).
 2. Write the complete 64-byte header (`KEEP-CRASH-002`).
 3. Append each complete record and checksum (`KEEP-CRASH-003`, with an
    occurrence counter for tests).

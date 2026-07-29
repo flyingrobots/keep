@@ -19,13 +19,13 @@ use crate::support::require_error;
 #[test]
 fn conflicting_immutable_pool_bytes_refuse_before_visibility() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-conflict")?;
-    let (closed, segment_bytes) = stage_one_zero(&store)?;
+    let lock = FilesystemWriterLock::try_acquire(store.path())?;
+    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let (closed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     fs::write(store.segment_path(), fixture(EMPTY_SEGMENT_HEX)?)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
-    let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
     let selection = SegmentPublication::one(closed, &segments[0])?;
 
     let error = require_error(
@@ -55,12 +55,12 @@ fn conflicting_immutable_pool_bytes_refuse_before_visibility() -> Result<(), Box
 #[test]
 fn stale_current_head_refuses_before_creating_catalog_state() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-stale")?;
-    let (closed, segment_bytes) = stage_one_zero(&store)?;
+    let lock = FilesystemWriterLock::try_acquire(store.path())?;
+    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let (closed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
-    let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
     let selection = SegmentPublication::one(closed, &segments[0])?;
     let _receipt = publish_catalog_generation(
         &mut publisher,
@@ -107,12 +107,12 @@ fn stale_current_head_refuses_before_creating_catalog_state() -> Result<(), Box<
 fn leftover_next_head_requires_recovery_before_any_mutation() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-next-head")?;
     fs::write(store.path().join("head.next"), [])?;
-    let (closed, segment_bytes) = stage_one_zero(&store)?;
+    let lock = FilesystemWriterLock::try_acquire(store.path())?;
+    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let (closed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
-    let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
     let selection = SegmentPublication::one(closed, &segments[0])?;
 
     let error = require_error(
