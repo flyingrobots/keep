@@ -153,8 +153,10 @@ after all canonical bytes and physical coordinates verify.
 
 Issue #16 does not implement store-root initialization or explicit recovery. A
 caller must supply the exact canonical directories and persistent lock file
-before opening a publisher. Any retained `head.next` causes publication to
-refuse before mutation and requires issue #17 recovery.
+before opening a publisher. Any retained `head.next` or `current.cat`, and any
+`current.seg` not owned by the selected staged segment, causes publication to
+refuse before mutation and requires issue #17 recovery. An already-current
+retry refuses every fixed-name stage.
 
 ## Forward publication protocol
 
@@ -233,8 +235,9 @@ Only completion of step 6 returns a
 already-current retry returns `CatalogPublicationOutcome::AlreadyPublished`
 only after complete candidate revalidation and a fresh root synchronization.
 
-An existing `head.next` always routes through recovery before step 1. The
-writer never truncates, replaces, or silently removes it to make the exclusive
+An existing `head.next` or `current.cat`, or an unselected `current.seg`,
+always routes through recovery before step 1. The writer never truncates,
+replaces, or silently removes retained stage evidence to make an exclusive
 create succeed.
 
 The normative pre-state, interrupted-state class, post-state, and recovery

@@ -142,3 +142,128 @@ fn leftover_next_head_requires_recovery_before_any_mutation() -> Result<(), Box<
     assert!(!store.path().join("HEAD").exists());
     store.remove()
 }
+
+#[test]
+fn leftover_catalog_stage_refuses_before_segment_pool_mutation() -> Result<(), Box<dyn Error>> {
+    let store = StoreFixture::create("catalog-filesystem-catalog-recovery")?;
+    let lock = FilesystemWriterLock::try_acquire(store.path())?;
+    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let (closed, segment_bytes) = stage_one_zero(&publisher, &store)?;
+    fs::write(store.staging().join("current.cat"), b"recovery evidence")?;
+    let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
+    let segments = [segment];
+    let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
+    let error = require_error(
+        publish_catalog_generation(
+            &mut publisher,
+            CatalogPublicationExpectation::uninitialized(),
+            SegmentPublication::one(closed, &segments[0])?,
+            &catalog,
+            &segments,
+        ),
+        "leftover catalog stage was discovered after segment publication",
+    )?;
+
+    let CatalogPublicationError::Storage { phase, source } = error else {
+        return Err("catalog-stage recovery returned the wrong error".into());
+    };
+    assert_eq!(phase, CatalogPublicationPhase::VerifyCurrent);
+    assert!(matches!(
+        source
+            .get_ref()
+            .and_then(|error| error.downcast_ref::<FilesystemCatalogPublicationError>()),
+        Some(FilesystemCatalogPublicationError::CatalogRecoveryRequired)
+    ));
+    assert!(!store.segment_path().exists());
+    assert!(store.staging().join("current.seg").exists());
+    assert_eq!(
+        fs::read(store.staging().join("current.cat"))?,
+        b"recovery evidence"
+    );
+    drop(publisher);
+    store.remove()
+}
+
+#[test]
+fn catalog_only_publication_refuses_a_leftover_segment_stage() -> Result<(), Box<dyn Error>> {
+    let store = StoreFixture::create("catalog-filesystem-segment-recovery")?;
+    let stage = store.staging().join("current.seg");
+    fs::write(&stage, b"recovery evidence")?;
+    let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &[])?;
+    let lock = FilesystemWriterLock::try_acquire(store.path())?;
+    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let error = require_error(
+        publish_catalog_generation(
+            &mut publisher,
+            CatalogPublicationExpectation::uninitialized(),
+            SegmentPublication::none(),
+            &catalog,
+            &[],
+        ),
+        "catalog-only publication ignored a leftover segment stage",
+    )?;
+
+    let CatalogPublicationError::Storage { phase, source } = error else {
+        return Err("segment-stage recovery returned the wrong error".into());
+    };
+    assert_eq!(phase, CatalogPublicationPhase::VerifyCurrent);
+    assert!(matches!(
+        source
+            .get_ref()
+            .and_then(|error| error.downcast_ref::<FilesystemCatalogPublicationError>()),
+        Some(FilesystemCatalogPublicationError::SegmentRecoveryRequired)
+    ));
+    assert_eq!(fs::read(stage)?, b"recovery evidence");
+    assert!(!store.path().join("HEAD").exists());
+    drop(publisher);
+    store.remove()
+}
+
+#[test]
+fn already_published_retry_refuses_a_recreated_segment_stage() -> Result<(), Box<dyn Error>> {
+    let store = StoreFixture::create("catalog-filesystem-retry-stage")?;
+    let lock = FilesystemWriterLock::try_acquire(store.path())?;
+    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let (closed, segment_bytes) = stage_one_zero(&publisher, &store)?;
+    let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
+    let segments = [segment];
+    let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
+    let _receipt = publish_catalog_generation(
+        &mut publisher,
+        CatalogPublicationExpectation::uninitialized(),
+        SegmentPublication::one(closed, &segments[0])?,
+        &catalog,
+        &segments,
+    )?;
+    drop(publisher);
+
+    let lock = FilesystemWriterLock::try_acquire(store.path())?;
+    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let (closed, retry_bytes) = stage_one_zero(&publisher, &store)?;
+    let retry_segment = AdmittedSegment::decode(&retry_bytes, maximum_segment_policy())?;
+    let retry_segments = [retry_segment];
+    let error = require_error(
+        publish_catalog_generation(
+            &mut publisher,
+            CatalogPublicationExpectation::uninitialized(),
+            SegmentPublication::one(closed, &retry_segments[0])?,
+            &catalog,
+            &retry_segments,
+        ),
+        "already-published retry ignored a recreated segment stage",
+    )?;
+
+    let CatalogPublicationError::Storage { phase, source } = error else {
+        return Err("already-published stage returned the wrong error".into());
+    };
+    assert_eq!(phase, CatalogPublicationPhase::VerifyCurrent);
+    assert!(matches!(
+        source
+            .get_ref()
+            .and_then(|error| error.downcast_ref::<FilesystemCatalogPublicationError>()),
+        Some(FilesystemCatalogPublicationError::SegmentRecoveryRequired)
+    ));
+    assert!(store.staging().join("current.seg").exists());
+    drop(publisher);
+    store.remove()
+}

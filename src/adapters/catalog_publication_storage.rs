@@ -4,7 +4,7 @@ use std::io;
 
 use super::{
     AdmittedSegment, CanonicalCatalog, CanonicalPublicationHead, CatalogPublicationExpectation,
-    CatalogPublicationReadiness, CatalogSnapshot, ChecksummedCatalog,
+    CatalogPublicationReadiness, CatalogSnapshot, ChecksummedCatalog, SegmentPublication,
 };
 
 /// Blocking filesystem capabilities for the catalog publication protocol.
@@ -18,7 +18,9 @@ pub trait CatalogPublicationStorage {
     ///
     /// Returns [`CatalogPublicationReadiness::Ready`] only when `expected` is
     /// current. Returns [`CatalogPublicationReadiness::AlreadyPublished`] only
-    /// when the exact generation and digest in `candidate` are current.
+    /// when the exact generation and digest in `candidate` are current. The
+    /// `segment` selection identifies whether a `current.seg` stage belongs to
+    /// this call; every other fixed-name stage is recovery state.
     ///
     /// # Errors
     ///
@@ -27,6 +29,7 @@ pub trait CatalogPublicationStorage {
         &mut self,
         expected: CatalogPublicationExpectation,
         candidate: &CatalogSnapshot<'_, '_, '_>,
+        segment: &SegmentPublication<'_, '_>,
     ) -> io::Result<CatalogPublicationReadiness>;
 
     /// Links the exact sealed stage without replacing an immutable pool entry.

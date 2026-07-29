@@ -32,6 +32,10 @@ pub enum FilesystemCatalogPublicationError {
     },
     /// A leftover `head.next` requires explicit recovery.
     HeadRecoveryRequired,
+    /// A leftover `staging/current.cat` requires explicit recovery.
+    CatalogRecoveryRequired,
+    /// A leftover `staging/current.seg` requires explicit recovery.
+    SegmentRecoveryRequired,
 }
 
 impl fmt::Display for FilesystemCatalogPublicationError {
@@ -46,6 +50,12 @@ impl fmt::Display for FilesystemCatalogPublicationError {
             Self::ByteConflict { .. } => formatter.write_str("publication artifact bytes conflict"),
             Self::HeadRecoveryRequired => {
                 formatter.write_str("head.next requires explicit recovery")
+            }
+            Self::CatalogRecoveryRequired => {
+                formatter.write_str("current.cat requires explicit recovery")
+            }
+            Self::SegmentRecoveryRequired => {
+                formatter.write_str("current.seg requires explicit recovery")
             }
         }
     }

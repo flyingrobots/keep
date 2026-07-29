@@ -43,7 +43,7 @@ pub fn publish_catalog_generation(
         .admit(admitted)
         .map_err(|source| CatalogPublicationError::SnapshotAdmission { source })?;
     let readiness =
-        catalog_publication_execution::execute_current(storage, expectation, &snapshot)?;
+        catalog_publication_execution::execute_current(storage, expectation, &snapshot, &segment)?;
     if readiness == CatalogPublicationReadiness::AlreadyPublished {
         return Ok(CatalogPublicationReceipt::already_published(
             snapshot.generation(),

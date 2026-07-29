@@ -5,7 +5,7 @@ use std::io;
 use keep::{
     AdmittedSegment, CanonicalCatalog, CanonicalPublicationHead, CatalogPublicationExpectation,
     CatalogPublicationPhase, CatalogPublicationReadiness, CatalogPublicationStorage,
-    CatalogSnapshot, ChecksummedCatalog,
+    CatalogSnapshot, ChecksummedCatalog, SegmentPublication,
 };
 
 /// Exact complete publication order when one segment stage is present.
@@ -89,6 +89,7 @@ impl CatalogPublicationStorage for RecordingStorage {
         &mut self,
         _expected: CatalogPublicationExpectation,
         _candidate: &CatalogSnapshot<'_, '_, '_>,
+        _segment: &SegmentPublication<'_, '_>,
     ) -> io::Result<CatalogPublicationReadiness> {
         self.record(CatalogPublicationPhase::VerifyCurrent)?;
         Ok(self.readiness)

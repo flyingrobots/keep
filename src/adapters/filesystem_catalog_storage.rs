@@ -5,8 +5,8 @@ use std::io;
 use super::{
     AdmittedSegment, CanonicalCatalog, CanonicalPublicationHead, CatalogPublicationExpectation,
     CatalogPublicationReadiness, CatalogPublicationStorage, CatalogSnapshot, ChecksummedCatalog,
-    FilesystemCatalogPublisher, filesystem_catalog_catalog, filesystem_catalog_current,
-    filesystem_catalog_head, filesystem_catalog_segment,
+    FilesystemCatalogPublisher, SegmentPublication, filesystem_catalog_catalog,
+    filesystem_catalog_current, filesystem_catalog_head, filesystem_catalog_segment,
 };
 
 impl CatalogPublicationStorage for FilesystemCatalogPublisher {
@@ -14,8 +14,9 @@ impl CatalogPublicationStorage for FilesystemCatalogPublisher {
         &mut self,
         expected: CatalogPublicationExpectation,
         candidate: &CatalogSnapshot<'_, '_, '_>,
+        segment: &SegmentPublication<'_, '_>,
     ) -> io::Result<CatalogPublicationReadiness> {
-        filesystem_catalog_current::verify(self, expected, candidate)
+        filesystem_catalog_current::verify(self, expected, candidate, segment)
     }
 
     fn link_segment(&mut self, segment: &AdmittedSegment<'_>) -> io::Result<()> {

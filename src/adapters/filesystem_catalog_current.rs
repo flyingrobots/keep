@@ -5,18 +5,24 @@ use std::io;
 use super::{
     CatalogPublicationExpectation, CatalogPublicationReadiness, CatalogRestartError,
     CatalogRestartPhase, CatalogSnapshot, FilesystemCatalogPublicationError,
-    FilesystemCatalogPublisher, catalog_restart_loader, filesystem_catalog_artifact,
+    FilesystemCatalogPublisher, SegmentPublication, catalog_restart_loader,
+    filesystem_catalog_artifact, filesystem_catalog_publisher,
 };
 
 pub(super) fn verify(
     publisher: &FilesystemCatalogPublisher,
     expected: CatalogPublicationExpectation,
     candidate: &CatalogSnapshot<'_, '_, '_>,
+    segment: &SegmentPublication<'_, '_>,
 ) -> io::Result<CatalogPublicationReadiness> {
     require_no_next_head(publisher)?;
-    match catalog_restart_loader::load_from_directory(
+    require_no_catalog_stage(publisher)?;
+    if segment.admitted().is_none() {
+        require_no_segment_stage(publisher)?;
+    }
+    let readiness = match catalog_restart_loader::load_from_directory(
         &publisher.root,
-        super::filesystem_catalog_publisher::HEAD,
+        filesystem_catalog_publisher::HEAD,
         publisher.policy,
     ) {
         Ok(observed) => {
@@ -45,19 +51,51 @@ pub(super) fn verify(
             Ok(CatalogPublicationReadiness::Ready)
         }
         Err(source) => Err(filesystem_catalog_artifact::invalid_data(source)),
+    }?;
+    if readiness == CatalogPublicationReadiness::AlreadyPublished {
+        require_no_segment_stage(publisher)?;
     }
+    Ok(readiness)
 }
 
 fn require_no_next_head(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
     match publisher
         .root
-        .symlink_metadata(super::filesystem_catalog_publisher::NEXT_HEAD)
+        .symlink_metadata(filesystem_catalog_publisher::NEXT_HEAD)
     {
         Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(()),
         Err(source) => Err(source),
         Ok(_metadata) => Err(filesystem_catalog_artifact::invalid_data(
             FilesystemCatalogPublicationError::HeadRecoveryRequired,
         )),
+    }
+}
+
+fn require_no_catalog_stage(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
+    require_absent(
+        &publisher.staging,
+        filesystem_catalog_publisher::CURRENT_CATALOG,
+        FilesystemCatalogPublicationError::CatalogRecoveryRequired,
+    )
+}
+
+fn require_no_segment_stage(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
+    require_absent(
+        &publisher.staging,
+        filesystem_catalog_publisher::CURRENT_SEGMENT,
+        FilesystemCatalogPublicationError::SegmentRecoveryRequired,
+    )
+}
+
+fn require_absent(
+    directory: &cap_std::fs::Dir,
+    name: &str,
+    error: FilesystemCatalogPublicationError,
+) -> io::Result<()> {
+    match directory.symlink_metadata(name) {
+        Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(source) => Err(source),
+        Ok(_metadata) => Err(filesystem_catalog_artifact::invalid_data(error)),
     }
 }
 

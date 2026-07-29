@@ -5,17 +5,18 @@ use std::io;
 use super::{
     CanonicalCatalog, CanonicalPublicationHead, CatalogPublicationError,
     CatalogPublicationExpectation, CatalogPublicationPhase, CatalogPublicationReadiness,
-    CatalogPublicationStorage, CatalogSnapshot, ChecksummedCatalog,
+    CatalogPublicationStorage, CatalogSnapshot, ChecksummedCatalog, SegmentPublication,
 };
 
 pub(super) fn execute_current(
     storage: &mut impl CatalogPublicationStorage,
     expectation: CatalogPublicationExpectation,
     candidate: &CatalogSnapshot<'_, '_, '_>,
+    segment: &SegmentPublication<'_, '_>,
 ) -> Result<CatalogPublicationReadiness, CatalogPublicationError> {
     let readiness = phase(
         CatalogPublicationPhase::VerifyCurrent,
-        storage.verify_current(expectation, candidate),
+        storage.verify_current(expectation, candidate, segment),
     )?;
     if readiness == CatalogPublicationReadiness::AlreadyPublished {
         phase(

@@ -200,7 +200,10 @@ after its public API and format compatibility policies are established.
   closes every retained writable handle before releasing writer authority.
   Retry of an already-current complete candidate re-synchronizes the root and
   returns an explicit `CatalogPublicationOutcome::AlreadyPublished` receipt
-  without repeating publication mutations.
+  without repeating publication mutations. Retained `head.next` or
+  `current.cat`, an unselected `current.seg`, and every fixed-name stage on an
+  already-current retry now refuse at current-state verification before any
+  publication mutation.
 - Bounded `FilesystemCatalogSnapshot` restart loading that follows only exact
   checksummed head, catalog, and segment coordinates; refuses symbolic links,
   nonregular files, malformed or conflicting bytes, dangling entries, and
