@@ -6,6 +6,7 @@
 //! policy, physical location, namespace publication, recovery, or retention.
 
 mod admitted_catalog;
+mod admitted_recovery_stage_bytes;
 mod admitted_segment;
 mod admitted_segment_record;
 mod blob_id_binary;
@@ -144,6 +145,11 @@ mod recovery_segment_stage;
 mod recovery_segment_stage_error;
 mod recovery_segment_truncation;
 mod recovery_stage;
+mod recovery_stage_assessment;
+mod recovery_stage_assessment_error;
+mod recovery_stage_assessor;
+mod recovery_stage_byte_admission;
+mod recovery_stage_byte_admission_error;
 mod recovery_stage_evidence;
 mod recovery_stage_fingerprint;
 mod recovery_stage_fingerprint_algorithm;
@@ -224,6 +230,7 @@ mod writer_lock_acquire_error;
 mod writer_lock_acquire_phase;
 
 pub use admitted_catalog::AdmittedCatalog;
+pub use admitted_recovery_stage_bytes::AdmittedRecoveryStageBytes;
 pub use admitted_segment::AdmittedSegment;
 pub use admitted_segment_record::AdmittedSegmentRecord;
 pub use blob_id_binary_error::BlobIdBinaryParseError;
@@ -298,6 +305,11 @@ pub use recovery_segment_stage::{RecoverySegmentStage, ReusableRecoverySegment};
 pub use recovery_segment_stage_error::RecoverySegmentStageError;
 pub use recovery_segment_truncation::RecoverySegmentTruncation;
 pub use recovery_stage::RecoveryStage;
+pub use recovery_stage_assessment::RecoveryStageAssessment;
+pub use recovery_stage_assessment_error::RecoveryStageAssessmentError;
+pub use recovery_stage_assessor::assess_recovery_stage;
+pub use recovery_stage_byte_admission::admit_recovery_stage_bytes;
+pub use recovery_stage_byte_admission_error::RecoveryStageByteAdmissionError;
 pub use recovery_stage_evidence::RecoveryStageEvidence;
 pub use recovery_stage_fingerprint::RecoveryStageFingerprint;
 pub use recovery_stage_fingerprint_algorithm::RecoveryStageFingerprintAlgorithm;

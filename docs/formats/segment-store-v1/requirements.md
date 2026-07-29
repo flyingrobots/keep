@@ -90,9 +90,10 @@ sequence ownership. The second slice establishes the ordered initialization
 state machine and exact failure phases. The third slice binds that state
 machine to a fail-closed Linux ext4 adapter and canonical namespace. These
 slices now also classify canonical recovery names before opening artifact
-bytes and classify complete caller-supplied fixed-stage bytes. They do not yet
-claim transitive publication-view admission, process-death injection, or
-recovery execution.
+bytes, bind materialized bytes back to prior stage evidence, and dispatch
+complete caller-supplied fixed-stage bytes through their name-selected
+classifiers. They do not yet claim transitive publication-view admission,
+process-death injection, or recovery execution.
 
 <!-- markdownlint-disable MD013 -->
 
@@ -109,6 +110,7 @@ recovery execution.
 | `KEEP-RECOVERY-009` | Filesystem stage observation uses the pinned inventory capability, never follows a fixed-stage link, admits only regular files, and refuses entry replacement or length drift after bounded fingerprinting | Capability-relative replacement fixtures | `src/adapters/filesystem_recovery_stage_tests.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-010` | Whole-byte segment-stage classification distinguishes a validated reusable prefix, a complete admitted immutable segment, and exact header, record, or seal truncation; complete-looking corruption, duplicates, and resource-limit excess remain typed refusals | Canonical prefix and corruption matrix | `tests/recovery_segment_classification.rs`, `tests/recovery_segment_classification/*.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-011` | Whole-byte catalog and next-head stage classification distinguishes exact fixed-header, declared-body, and fixed-width truncation from complete canonical bytes; complete-looking corruption and oversize remain typed format or metadata refusals | Canonical publication-artifact truncation and corruption matrix | `tests/recovery_publication_stage_classification.rs`, `tests/recovery_publication_stage_classification/*.rs` | Implemented in #17 |
+| `KEEP-RECOVERY-012` | Read-only semantic assessment admits materialized stage bytes only when the canonical-name stage, exact observed length, and `KEEP:RECOVERY:STAGE\0` fingerprint equal prior evidence, then dispatches through the name-selected segment, catalog, or next-head classifier | Evidence-binding mutation matrix and canonical stage assessments | `tests/recovery_stage_assessment.rs`, `tests/recovery_stage_assessment/*.rs` | Implemented in #17 |
 
 <!-- markdownlint-enable MD013 -->
 

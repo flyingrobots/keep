@@ -39,6 +39,10 @@ after its public API and format compatibility policies are established.
   exact fixed-header, declared-body, or fixed-width truncation from canonical
   bytes. Complete-looking corruption and oversized stages remain typed
   refusals without claiming transitive catalog reachability.
+- Read-only recovery assessment now admits materialized stage bytes only when
+  their canonical-name stage, exact length, and recomputed versioned
+  fingerprint equal prior observation evidence, then dispatches through the
+  stage-selected semantic classifier.
 - Store initialization now exposes one storage-port state machine that admits
   the platform before mutation, opens and locks `writer.lock`, admits the three
   protocol directories in order, synchronizes the root, and preserves the

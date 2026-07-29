@@ -45,6 +45,11 @@ exact truncation and preserves complete-looking corruption as a typed refusal.
 Catalog- and next-head-stage classifiers likewise distinguish exact truncation
 from complete canonical bytes. Transitive publication-view admission and
 filesystem-streaming semantic classification remain unimplemented.
+`admit_recovery_stage_bytes` first requires the canonical-name stage, exact
+length, and recomputed stage fingerprint to match prior observation evidence;
+only `assess_recovery_stage` may dispatch those admitted bytes to a semantic
+classifier. Matching evidence does not convert corrupt bytes into lawful
+content.
 
 The sole admissible duplicate digest is one fixed staging name and its exact
 digest-derived pool name after a link transition. Recovery admits that pair
