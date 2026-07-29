@@ -1,0 +1,65 @@
+//! This module owns writer-locked current-head verification.
+
+use std::io;
+
+use super::{
+    CatalogPublicationExpectation, CatalogRestartError, CatalogRestartPhase,
+    FilesystemCatalogPublicationError, FilesystemCatalogPublisher, catalog_restart_loader,
+    filesystem_catalog_artifact,
+};
+
+pub(super) fn verify(
+    publisher: &FilesystemCatalogPublisher,
+    expected: CatalogPublicationExpectation,
+) -> io::Result<()> {
+    require_no_next_head(publisher)?;
+    match catalog_restart_loader::load_from_directory(
+        &publisher.root,
+        super::filesystem_catalog_publisher::HEAD,
+        publisher.policy,
+    ) {
+        Ok(observed) => {
+            let observed_generation = Some(observed.generation());
+            let observed_digest = Some(observed.catalog_digest());
+            if expected.current_generation() == observed_generation
+                && expected.current_catalog_digest() == observed_digest
+            {
+                Ok(())
+            } else {
+                Err(filesystem_catalog_artifact::invalid_data(
+                    FilesystemCatalogPublicationError::CurrentState {
+                        expected_generation: expected.current_generation(),
+                        expected_digest: expected.current_catalog_digest(),
+                        observed_generation,
+                        observed_digest,
+                    },
+                ))
+            }
+        }
+        Err(source) if head_is_absent(&source) && expected.current_generation().is_none() => Ok(()),
+        Err(source) => Err(filesystem_catalog_artifact::invalid_data(source)),
+    }
+}
+
+fn require_no_next_head(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
+    match publisher
+        .root
+        .symlink_metadata(super::filesystem_catalog_publisher::NEXT_HEAD)
+    {
+        Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(()),
+        Err(source) => Err(source),
+        Ok(_metadata) => Err(filesystem_catalog_artifact::invalid_data(
+            FilesystemCatalogPublicationError::HeadRecoveryRequired,
+        )),
+    }
+}
+
+fn head_is_absent(error: &CatalogRestartError) -> bool {
+    matches!(
+        error,
+        CatalogRestartError::Io {
+            phase: CatalogRestartPhase::OpenHead,
+            source,
+        } if source.kind() == io::ErrorKind::NotFound
+    )
+}

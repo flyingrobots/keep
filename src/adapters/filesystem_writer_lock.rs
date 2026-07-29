@@ -18,7 +18,7 @@ const LOCK_FILE_NAME: &str = "writer.lock";
 /// it never deletes, renames, truncates, or replaces `writer.lock`.
 #[must_use]
 pub struct FilesystemWriterLock {
-    _directory: Dir,
+    directory: Dir,
     _lock_file: File,
 }
 
@@ -59,7 +59,7 @@ impl FilesystemWriterLock {
         let lock_file = lock_file.into_std();
         match lock_file.try_lock() {
             Ok(()) => Ok(Self {
-                _directory: directory,
+                directory,
                 _lock_file: lock_file,
             }),
             Err(TryLockError::WouldBlock) => Err(WriterLockAcquireError::Busy),
@@ -68,5 +68,9 @@ impl FilesystemWriterLock {
                 source,
             )),
         }
+    }
+
+    pub(super) fn clone_directory(&self) -> std::io::Result<Dir> {
+        self.directory.try_clone()
     }
 }

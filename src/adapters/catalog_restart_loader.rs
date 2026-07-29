@@ -22,9 +22,17 @@ pub(super) fn load(
     policy: CatalogRestartPolicy,
 ) -> Result<FilesystemCatalogSnapshot, CatalogRestartError> {
     let directory = catalog_restart_io::open_root(root)?;
+    load_from_directory(&directory, HEAD_NAME, policy)
+}
+
+pub(super) fn load_from_directory(
+    directory: &cap_std::fs::Dir,
+    head_name: &str,
+    policy: CatalogRestartPolicy,
+) -> Result<FilesystemCatalogSnapshot, CatalogRestartError> {
     let (head_file, observed_head_length) = catalog_restart_io::open_regular(
-        &directory,
-        HEAD_NAME,
+        directory,
+        head_name,
         CatalogRestartArtifact::Head,
         CatalogRestartPhase::OpenHead,
     )?;

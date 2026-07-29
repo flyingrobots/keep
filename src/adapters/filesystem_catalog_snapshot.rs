@@ -119,4 +119,8 @@ impl FilesystemCatalogSnapshot {
         }
         Ok(snapshot)
     }
+
+    pub(super) fn head_bytes(&self) -> &[u8] {
+        &self.head_bytes
+    }
 }
