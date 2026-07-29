@@ -39,7 +39,9 @@ after its public API and format compatibility policies are established.
   identity, refuses device, inode, size, modification-time, or change-time
   drift before and after each external tool,
   and applies a two-minute deadline across Git inventory, validation-tool
-  execution, and output collection.
+  execution, and output collection. Validation tools clear the inherited
+  environment and admit only the executable search path and `C` locale, so
+  preload hooks and host-specific configuration cannot alter evidence.
   Git-backed process fixtures clear the inherited environment, explicitly
   admit the executable search path and `C` locale, ignore system and global Git
   configuration, and preserve non-UTF-8 template paths without lossy

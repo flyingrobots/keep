@@ -33,6 +33,7 @@ pub(crate) enum DocumentationError {
         path: String,
     },
     EmptyCorpus(&'static str),
+    EnvironmentUnavailable(&'static str),
     GitInventory(GitInventoryError),
     Inspect {
         corpus: &'static str,
@@ -158,6 +159,7 @@ impl Error for DocumentationError {
             | Self::CorpusTooLarge { .. }
             | Self::CorpusChanged { .. }
             | Self::EmptyCorpus(_)
+            | Self::EnvironmentUnavailable(_)
             | Self::InvalidPath { .. }
             | Self::NonRegular { .. }
             | Self::RefusalMismatch { observed: None, .. }

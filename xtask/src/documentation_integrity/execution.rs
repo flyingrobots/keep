@@ -3,6 +3,8 @@
 mod corpus_guard;
 mod refusal_check;
 
+use std::env;
+use std::ffi::OsStr;
 use std::process::{Command, Stdio};
 use std::time::Duration;
 
@@ -152,8 +154,8 @@ impl ToolRunner for ExternalToolRunner<'_> {
         tool: DocumentationTool,
         arguments: &[String],
     ) -> Result<ProcessOutput, DocumentationError> {
-        let mut command = Command::new(tool.program());
-        command.args(arguments).stdin(Stdio::null());
+        let path = env::var_os("PATH").ok_or(DocumentationError::EnvironmentUnavailable("PATH"))?;
+        let mut command = documentation_command(tool, arguments, &path);
         bounded_process::capture_with(
             tool.program(),
             &mut command,
@@ -172,6 +174,17 @@ impl ToolRunner for ExternalToolRunner<'_> {
             }
         })
     }
+}
+
+fn documentation_command(tool: DocumentationTool, arguments: &[String], path: &OsStr) -> Command {
+    let mut command = Command::new(tool.program());
+    command
+        .args(arguments)
+        .stdin(Stdio::null())
+        .env_clear()
+        .env("PATH", path)
+        .env("LC_ALL", "C");
+    command
 }
 
 #[cfg(test)]

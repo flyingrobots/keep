@@ -73,6 +73,12 @@ the configured repository path, running checks against a substitute, and
 restoring the original path cannot redirect either corpus selection or
 validation.
 
+Each validation tool also starts from an empty process environment. The runner
+admits only the ambient executable search path needed to locate the pinned
+tools and the `C` locale needed for deterministic diagnostics. Variables such
+as `NODE_OPTIONS`, Git repository overrides, runtime preload hooks, and
+host-specific configuration cannot enter validation-tool execution.
+
 Each selected source also retains its device, inode, size, modification time,
 and change time. The Rust boundary reopens every path through the retained
 repository capability and compares that identity before and after each

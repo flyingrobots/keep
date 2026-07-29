@@ -31,6 +31,12 @@ impl fmt::Display for DocumentationError {
             | Self::CorpusTooLarge { .. }
             | Self::CorpusChanged { .. }
             | Self::EmptyCorpus(_)) => corpus(formatter, error),
+            Self::EnvironmentUnavailable(variable) => {
+                write!(
+                    formatter,
+                    "documentation tool environment variable `{variable}` is unavailable"
+                )
+            }
             Self::GitInventory(error) => write!(formatter, "{error}"),
             Self::Inspect { corpus, path, .. } => {
                 source_path(formatter, SourcePathDiagnostic::Inspect, corpus, path)

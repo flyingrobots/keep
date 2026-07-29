@@ -1,4 +1,5 @@
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
+use std::ffi::OsString;
 use std::fs;
 use std::path::PathBuf;
 
@@ -8,7 +9,7 @@ use crate::repository_file::RepositoryRoot;
 use crate::test_directory::TestDirectory;
 
 use super::corpus_guard::CorpusGuardedRunner;
-use super::{DocumentationError, DocumentationTool, ToolRunner};
+use super::{DocumentationError, DocumentationTool, ToolRunner, documentation_command};
 
 struct RecordingRunner {
     calls: Vec<(DocumentationTool, Vec<String>)>,
@@ -18,6 +19,26 @@ struct RecordingRunner {
 struct ReplacingRunner {
     selected: PathBuf,
     retained: PathBuf,
+}
+
+#[test]
+fn documentation_tools_receive_only_reviewed_environment() {
+    let path = OsString::from("/reviewed/tools");
+    let command = documentation_command(DocumentationTool::Markdownlint, &[], &path);
+    let observed = command
+        .get_envs()
+        .map(|(name, value)| (name.to_owned(), value.map(OsString::from)))
+        .collect::<BTreeMap<_, _>>();
+    let expected = BTreeMap::from([
+        (OsString::from("LC_ALL"), Some(OsString::from("C"))),
+        (OsString::from("PATH"), Some(path)),
+    ]);
+
+    assert_eq!(observed, expected);
+    assert_eq!(
+        DocumentationError::EnvironmentUnavailable("PATH").to_string(),
+        "documentation tool environment variable `PATH` is unavailable"
+    );
 }
 
 #[test]
