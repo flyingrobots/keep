@@ -62,7 +62,11 @@ fn reusable_and_truncated_pool_stages_are_not_completion_requests() -> Result<()
         .get(..reusable_length)
         .ok_or("reusable segment prefix is outside the fixture")?;
     let reusable = assessment(RecoveryStage::Segment, reusable_bytes)?;
-    let truncated_catalog = assessment(RecoveryStage::Catalog, &[0_u8])?;
+    let catalog = fixture(CATALOG_HEX)?;
+    let truncated_catalog_bytes = catalog
+        .get(..1)
+        .ok_or("canonical catalog fixture is unexpectedly empty")?;
+    let truncated_catalog = assessment(RecoveryStage::Catalog, truncated_catalog_bytes)?;
 
     for assessed in [&reusable, &truncated_catalog] {
         let error = plan_recovery_stage_completion(assessed)
