@@ -8,9 +8,9 @@ use crate::LayoutEntryLimit;
 use super::super::{
     FilesystemRecoveryStageDiscardOpenError, FilesystemRecoveryStageDiscarder, RecoveryStage,
     RecoveryStageDiscardRequest, RecoveryStageEvidence, RecoveryStageMetadata, SegmentReadPolicy,
-    SegmentRecordLimit, admit_recovery_stage_bytes, assess_recovery_stage,
+    SegmentRecordLimit, admit_recovery_stage_bytes, assess_recovery_stage, catalog_decoder,
     filesystem_test_sandbox::TestDirectory, fingerprint_recovery_stage,
-    plan_recovery_stage_discard,
+    plan_recovery_stage_discard, publication_head_decoder, segment_header,
 };
 
 pub(super) fn request(
@@ -32,6 +32,21 @@ pub(super) fn evidence(
         RecoveryStageMetadata::new(stage, length)?,
         bytes,
     )?)
+}
+
+pub(super) fn truncated_bytes(
+    stage: RecoveryStage,
+    length: usize,
+) -> Result<Vec<u8>, Box<dyn Error>> {
+    let framing: &[u8] = match stage {
+        RecoveryStage::Segment => &segment_header::MAGIC,
+        RecoveryStage::Catalog => &catalog_decoder::MAGIC,
+        RecoveryStage::NextHead => &publication_head_decoder::MAGIC,
+    };
+    Ok(framing
+        .get(..length)
+        .ok_or("truncated fixture length exceeds fixed framing")?
+        .to_vec())
 }
 
 const fn maximum_policy() -> SegmentReadPolicy {
