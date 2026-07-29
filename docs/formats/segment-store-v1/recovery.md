@@ -18,9 +18,10 @@ count of `2,097,153`, not a host-order-dependent exact total. A configured
 limit may be lower but never higher.
 
 After the count is admitted, recovery sorts names by raw canonical bytes and
-verifies complete content before classification. Unknown names, symlinks,
-conflicting canonical coordinates, multiple fixed-name stages, or a head that
-cannot be proven atomic are unrecoverable ambiguity.
+classifies the namespace grammar before opening artifact bytes. Unknown names,
+symlinks, noncanonical pool coordinates, or multiple fixed-name stages are
+unrecoverable ambiguity. Content verification then classifies each artifact;
+a head that cannot be proven atomic is also unrecoverable ambiguity.
 
 The current public `read_recovery_inventory` slice implements this fixed-order
 count-before-retain orchestration through a read-only storage port. It enforces
@@ -28,8 +29,10 @@ the configured and protocol ceilings, count stability, duplicate refusal, and
 namespace-plus-raw-byte ordering. `FilesystemRecoveryInventoryReader` pins the
 root and three no-follow child directories, bounds each scan by the remaining
 global budget, preserves raw Linux name bytes, and verifies child-directory
-identity before and after inventory. Artifact classification remains
-unimplemented.
+identity before and after inventory. `classify_recovery_names` requires the
+four initialized root entries, types each fixed name and immutable-pool
+coordinate, and refuses an unknown or conflicting name without artifact I/O.
+Content classification remains unimplemented.
 
 The sole admissible duplicate digest is one fixed staging name and its exact
 digest-derived pool name after a link transition. Recovery admits that pair

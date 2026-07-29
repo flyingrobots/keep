@@ -89,8 +89,9 @@ reviewable slices. The first slice freezes executable crash-point identity and
 sequence ownership. The second slice establishes the ordered initialization
 state machine and exact failure phases. The third slice binds that state
 machine to a fail-closed Linux ext4 adapter and canonical namespace. These
-slices do not yet claim process-death injection, recovery classification, or
-recovery execution.
+slices now also classify canonical recovery names before opening artifact
+bytes. They do not yet claim content classification, process-death injection,
+or recovery execution.
 
 <!-- markdownlint-disable MD013 -->
 
@@ -102,6 +103,7 @@ recovery execution.
 | `KEEP-RECOVERY-004` | Writer authority is returned only when the locked handle still has the exact device and inode resolved by the canonical `writer.lock` entry after kernel acquisition | Deterministic lock-entry replacement fixture | `src/adapters/filesystem_writer_lock_tests.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-005` | Recovery counts the root and three protocol directories in fixed order before retaining names, refuses at the configured or protocol entry ceiling with the exact observed-at-least count, then returns one duplicate-free inventory sorted by namespace and raw name bytes | Fault-recording inventory port | `tests/recovery_inventory.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-006` | Filesystem inventory pins the admitted root and protocol directories without following links, verifies child-directory identity before and after scanning, stops each count at the remaining global budget plus one, preserves raw Linux entry-name bytes, and performs no protocol mutation | Capability-relative filesystem fixture | `src/adapters/filesystem_recovery_inventory_tests.rs`, `tests/recovery_inventory.rs` | Implemented in #17 |
+| `KEEP-RECOVERY-007` | Name classification requires the four initialized root entries, admits only fixed protocol names and canonical pool coordinates in their owning namespaces, refuses simultaneous fixed recovery stages before artifact reads, and moves a refused raw name without duplicating its allocation | Canonical-name matrix and allocation counter | `tests/recovery_name_classification.rs`, `tests/recovery_name_classification_memory.rs` | Implemented in #17 |
 
 <!-- markdownlint-enable MD013 -->
 

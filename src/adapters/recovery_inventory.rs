@@ -31,6 +31,10 @@ impl RecoveryInventoryEntry {
     pub const fn name(&self) -> &RecoveryEntryName {
         &self.name
     }
+
+    pub(super) fn into_parts(self) -> (RecoveryNamespace, RecoveryEntryName) {
+        (self.namespace, self.name)
+    }
 }
 
 /// One duplicate-free, deterministically ordered recovery inventory.
@@ -44,6 +48,10 @@ impl RecoveryInventory {
     #[must_use]
     pub fn entries(&self) -> &[RecoveryInventoryEntry] {
         &self.entries
+    }
+
+    pub(super) fn into_entries(self) -> Vec<RecoveryInventoryEntry> {
+        self.entries
     }
 }
 
