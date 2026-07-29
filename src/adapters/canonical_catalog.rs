@@ -7,9 +7,10 @@ use crate::{CatalogDigest, CatalogGeneration};
 /// Owned canonical version-1 catalog bytes.
 ///
 /// Construction derives physical record coordinates from fully admitted
-/// segments, sorts entries by logical identity, and refuses duplicates. The
-/// complete catalog is materialized in memory with the version-1 entry-count
-/// and byte-length bounds enforced before allocation.
+/// segments, sorts entries by logical identity, and refuses duplicate records
+/// or an unreferenced segment. The complete catalog is materialized in memory
+/// with the version-1 entry-count and byte-length bounds enforced before
+/// allocation.
 #[must_use]
 #[derive(Debug, Eq, PartialEq)]
 pub struct CanonicalCatalog {
@@ -24,8 +25,8 @@ impl CanonicalCatalog {
     /// # Errors
     ///
     /// Returns [`CatalogEncodeError`] for an invalid predecessor law, checked
-    /// count or length refusal, allocation failure, failed immutable segment
-    /// revalidation, or duplicate logical identity.
+    /// count or length refusal, unreferenced segment, allocation failure,
+    /// failed immutable segment revalidation, or duplicate logical identity.
     pub fn from_segments(
         generation: CatalogGeneration,
         previous_catalog_digest: Option<CatalogDigest>,

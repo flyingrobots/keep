@@ -67,15 +67,17 @@ impl<'a> ChecksummedCatalog<'a> {
     /// Binds every logical entry to one exact top-level admitted segment record.
     ///
     /// This operation performs no I/O. It temporarily allocates one sorted
-    /// borrowed segment index and retains one logical record binding per entry.
-    /// Both allocations are bounded by caller input or the verified catalog
-    /// entry count.
+    /// borrowed segment index and one physical entry plan, then retains one
+    /// logical record binding per entry. All three allocations are bounded by
+    /// caller input or the verified catalog entry count. Each referenced
+    /// segment is scanned once.
     ///
     /// # Errors
     ///
-    /// Returns [`CatalogAdmissionError`] for allocation refusal, duplicate or
-    /// missing segments, failed immutable revalidation, interior locations, or
-    /// disagreement between catalog fields and the selected record.
+    /// Returns [`CatalogAdmissionError`] for allocation refusal, duplicate,
+    /// missing, or unreferenced segments, failed immutable revalidation,
+    /// interior locations, or disagreement between catalog fields and the
+    /// selected record.
     pub fn admit<'records>(
         self,
         segments: &[AdmittedSegment<'records>],

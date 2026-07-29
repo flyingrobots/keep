@@ -123,6 +123,19 @@ fn catalog_encoding_refuses_an_unreferenced_empty_segment() -> Result<(), Box<dy
     Ok(())
 }
 
+#[test]
+fn public_catalog_docs_name_exact_segment_set_refusals() -> Result<(), Box<dyn Error>> {
+    let canonical = include_str!("../src/adapters/canonical_catalog.rs");
+    let checksummed = include_str!("../src/adapters/checksummed_catalog.rs");
+    if !canonical.contains("unreferenced segment") {
+        return Err("canonical catalog rustdoc omits its exact-input refusal".into());
+    }
+    if !checksummed.contains("entry plan") || !checksummed.contains("unreferenced segments") {
+        return Err("catalog admission rustdoc omits its current resource contract".into());
+    }
+    Ok(())
+}
+
 fn assert_head(catalog_hex: &str, head_hex: &str) -> Result<(), Box<dyn Error>> {
     let catalog_bytes = fixture(catalog_hex)?;
     let catalog = ChecksummedCatalog::decode(&catalog_bytes)?;
