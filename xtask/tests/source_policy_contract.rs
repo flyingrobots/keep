@@ -11,6 +11,8 @@ const BOUNDED_PROCESS_GROUP_TESTS: &str =
     include_str!("../src/bounded_process/process_group/tests.rs");
 const BOUNDED_PROCESS_READER: &str = include_str!("../src/bounded_process/reader.rs");
 const BOUNDED_PROCESS_TESTS: &str = include_str!("../src/bounded_process/tests.rs");
+const DOCUMENTATION_TEST_REPOSITORY: &str =
+    include_str!("../src/documentation_integrity/corpus/test_repository.rs");
 const GIT_INVENTORY_ERROR: &str = include_str!("../src/git_inventory/error.rs");
 const GIT_PATH_STREAM: &str = include_str!("../src/git_inventory/path_stream.rs");
 const GIT_PROCESS: &str = include_str!("../src/git_inventory/process.rs");
@@ -89,6 +91,13 @@ fn descendant_cleanup_uses_disconnect_evidence_instead_of_elapsed_time() {
     assert!(!BOUNDED_PROCESS_GROUP_TESTS.contains("descendant_survived_cleanup"));
     assert!(!BOUNDED_PROCESS_GROUP_TESTS.contains("Duration::from_millis(500)"));
     assert!(BOUNDED_PROCESS_GROUP_TESTS.contains("require_descendant_disconnect"));
+}
+
+#[test]
+fn documentation_git_fixtures_use_the_bounded_process_layer() {
+    assert!(DOCUMENTATION_TEST_REPOSITORY.contains("bounded_process::status("));
+    assert!(DOCUMENTATION_TEST_REPOSITORY.contains("GIT_FIXTURE_DEADLINE"));
+    assert!(!DOCUMENTATION_TEST_REPOSITORY.contains(".output()"));
 }
 
 #[test]

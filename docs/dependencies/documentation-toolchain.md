@@ -57,6 +57,11 @@ at most the 16 MiB path-stream bound, and diagnostics retain at most 64 KiB. A
 timeout, terminal signal, reader failure, or exceeded bound terminates the
 whole group and reaps the child before the task refuses.
 
+Documentation corpus tests construct their Git fixtures through the same
+bounded process authority. Each fixture command runs in a dedicated process
+group with a two-minute deadline and null output streams, so a stalled command
+or descendant cannot outlive the test boundary.
+
 Git inventory and each validation tool start through one retained repository
 directory handle. Child-only setup changes directory through that handle after
 fork and before exec; the parent working directory does not change. Replacing

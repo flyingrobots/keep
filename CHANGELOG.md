@@ -38,15 +38,17 @@ after its public API and format compatibility policies are established.
   execution, and output collection.
   Git-backed process fixtures ignore system and global Git configuration and
   preserve non-UTF-8 template paths without lossy conversion. Documentation
-  Git inventory and tools start from one retained repository directory handle,
-  so transient replacement of the ambient repository path cannot redirect
-  validation. Terminal signals now become typed refusals while an external
-  repository task is active, so captured and inherited child groups are killed
-  and reaped before `xtask` returns. Captured-output readers finish while the
-  process-group leader remains waitable, and no cleanup path can address its
-  numeric group identity after the child has been reaped. Descendant cleanup
-  evidence now uses a pre-established socket disconnect instead of elapsed-time
-  reachability polling.
+  corpus fixture commands also use the bounded process authority with dedicated
+  groups, null output, and a two-minute deadline. Documentation Git inventory
+  and tools start from one retained repository directory handle, so transient
+  replacement of the ambient repository path cannot redirect validation.
+  Terminal signals now become typed refusals while an external repository task
+  is active, so captured and inherited child groups are killed and reaped
+  before `xtask` returns. Captured-output readers finish while the process-group
+  leader remains waitable, and no cleanup path can address its numeric group
+  identity after the child has been reaped. Descendant cleanup evidence now
+  uses a pre-established socket disconnect instead of elapsed-time reachability
+  polling.
 - Fuzz build and run plans now carry external process deadlines from the
   reviewed campaign policy. Run deadlines use checked addition of the
   exploration budget and process-grace interval before process-group execution.
