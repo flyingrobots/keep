@@ -25,9 +25,10 @@ mod reference;
 
 pub use adapters::{
     AdmittedCatalog, AdmittedSegment, AdmittedSegmentRecord, BlobIdBinaryParseError,
-    BlobIdTextParseError, CanonicalLayoutRecord, CatalogAdmissionError, CatalogAllocationPhase,
-    CatalogDecodeError, CatalogEntryDecodeError, CatalogSnapshot, CatalogSnapshotError,
-    CatalogSuccessor, CatalogTransitionError, ChecksummedCatalog, ChecksummedPublicationHead,
+    BlobIdTextParseError, CanonicalCatalog, CanonicalLayoutRecord, CanonicalPublicationHead,
+    CatalogAdmissionError, CatalogAllocationPhase, CatalogDecodeError, CatalogEncodeError,
+    CatalogEntryDecodeError, CatalogSnapshot, CatalogSnapshotError, CatalogSuccessor,
+    CatalogTransitionError, ChecksummedCatalog, ChecksummedPublicationHead,
     ChecksummedSegmentRecord, FilesystemSegmentStage, FilesystemWriterLock, LayoutDecodeError,
     LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
     PublicationHeadDecodeError, SealedSegment, SegmentDigest, SegmentDurabilityPhase,

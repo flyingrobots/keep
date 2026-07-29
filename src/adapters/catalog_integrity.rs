@@ -18,8 +18,7 @@ pub(super) fn validate(encoded: &[u8]) -> Result<[u8; 32], CatalogDecodeError> {
         .get(..checksum_offset)
         .ok_or_else(|| minimum_length(encoded))?;
     let observed_checksum = read_array(encoded, checksum_offset)?;
-    let expected_checksum =
-        framed_blake3::hash(CHECKSUM_DOMAIN, &[covered], admitted_length(covered)?);
+    let expected_checksum = checksum(covered, admitted_length(covered)?);
     if observed_checksum != expected_checksum {
         return Err(CatalogDecodeError::ChecksumMismatch {
             expected: expected_checksum,
@@ -30,11 +29,7 @@ pub(super) fn validate(encoded: &[u8]) -> Result<[u8; 32], CatalogDecodeError> {
     let digest_input = encoded
         .get(..digest_offset)
         .ok_or_else(|| minimum_length(encoded))?;
-    let expected_digest = framed_blake3::hash(
-        DIGEST_DOMAIN,
-        &[digest_input],
-        admitted_length(digest_input)?,
-    );
+    let expected_digest = digest(digest_input, admitted_length(digest_input)?);
     if observed_digest != expected_digest {
         return Err(CatalogDecodeError::DigestMismatch {
             expected: expected_digest,
@@ -42,6 +37,14 @@ pub(super) fn validate(encoded: &[u8]) -> Result<[u8; 32], CatalogDecodeError> {
         });
     }
     Ok(observed_digest)
+}
+
+pub(super) fn checksum(covered: &[u8], covered_length: u64) -> [u8; 32] {
+    framed_blake3::hash(CHECKSUM_DOMAIN, &[covered], covered_length)
+}
+
+pub(super) fn digest(covered: &[u8], covered_length: u64) -> [u8; 32] {
+    framed_blake3::hash(DIGEST_DOMAIN, &[covered], covered_length)
 }
 
 fn admitted_length(bytes: &[u8]) -> Result<u64, CatalogDecodeError> {

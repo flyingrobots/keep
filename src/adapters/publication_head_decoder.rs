@@ -3,13 +3,14 @@
 use super::{ChecksummedPublicationHead, PublicationHeadDecodeError, framed_blake3};
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
-const ENCODED_LENGTH: usize = 128;
-const MAGIC: [u8; 16] = *b"KEEP:CATHEAD:V1\0";
-const VERSION: u16 = 1;
-const FLAGS: u16 = 0;
-const HEAD_LENGTH: u16 = 128;
-const ALGORITHM: u8 = 1;
-const CHECKSUM_INPUT_LENGTH: usize = 96;
+pub(super) const ENCODED_LENGTH: usize = 128;
+pub(super) const MAGIC: [u8; 16] = *b"KEEP:CATHEAD:V1\0";
+pub(super) const VERSION: u16 = 1;
+pub(super) const FLAGS: u16 = 0;
+pub(super) const HEAD_LENGTH: u16 = 128;
+pub(super) const ALGORITHM: u8 = 1;
+pub(super) const CHECKSUM_INPUT_LENGTH: usize = 96;
+const CHECKSUM_INPUT_LENGTH_U64: u64 = 96;
 const CHECKSUM_DOMAIN: &[u8] = b"KEEP:CATHEAD:SUM\0";
 
 pub(super) fn decode(
@@ -87,19 +88,14 @@ fn validate_checksum(encoded: &[u8], observed: [u8; 32]) -> Result<(), Publicati
                 expected: ENCODED_LENGTH,
                 observed: encoded.len(),
             })?;
-    let expected = framed_blake3::hash(
-        CHECKSUM_DOMAIN,
-        &[covered],
-        u64::try_from(CHECKSUM_INPUT_LENGTH).map_err(|_source| {
-            PublicationHeadDecodeError::WrongLength {
-                expected: ENCODED_LENGTH,
-                observed: encoded.len(),
-            }
-        })?,
-    );
+    let expected = checksum(covered);
     require_eq(observed, expected, |observed| {
         PublicationHeadDecodeError::ChecksumMismatch { expected, observed }
     })
+}
+
+pub(super) fn checksum(covered: &[u8]) -> [u8; 32] {
+    framed_blake3::hash(CHECKSUM_DOMAIN, &[covered], CHECKSUM_INPUT_LENGTH_U64)
 }
 
 fn decode_fields(encoded: &[u8]) -> Result<DecodedFields, PublicationHeadDecodeError> {

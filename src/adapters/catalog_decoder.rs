@@ -6,11 +6,11 @@ use super::{
 };
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
-const MAGIC: [u8; 16] = *b"KEEP:CATALOG:V1\0";
-const VERSION: u16 = 1;
-const FLAGS: u16 = 0;
-const MAXIMUM_ENTRY_COUNT: u64 = 1_048_576;
-const ALGORITHM: u8 = 1;
+pub(super) const MAGIC: [u8; 16] = *b"KEEP:CATALOG:V1\0";
+pub(super) const VERSION: u16 = 1;
+pub(super) const FLAGS: u16 = 0;
+pub(super) const MAXIMUM_ENTRY_COUNT: u64 = 1_048_576;
+pub(super) const ALGORITHM: u8 = 1;
 
 pub(super) fn decode(encoded: &[u8]) -> Result<ChecksummedCatalog<'_>, CatalogDecodeError> {
     let fields = catalog_header_decoder::decode(encoded)?;

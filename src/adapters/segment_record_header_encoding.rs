@@ -1,10 +1,10 @@
 //! Canonical segment-record-header emitter.
 
-use super::SegmentRecordIdentity;
 use super::segment_record_header::{
     CHECKSUM_ALGORITHM, ENCODED_LENGTH, FLAGS, HEADER_LENGTH, IDENTITY_ALGORITHM, IDENTITY_VERSION,
     MAGIC, RECORD_VERSION, SegmentRecordHeader,
 };
+use super::segment_record_identity_encoding;
 use super::segment_record_kind::SegmentRecordKind;
 
 pub(super) const fn encode(header: SegmentRecordHeader) -> [u8; ENCODED_LENGTH] {
@@ -35,18 +35,6 @@ pub(super) const fn encode(header: SegmentRecordHeader) -> [u8; ENCODED_LENGTH] 
     identity_algorithm.copy_from_slice(&[IDENTITY_ALGORITHM]);
     let (_reserved_prefix, remaining) = remaining.split_at_mut(4);
     let (identity_slot, _reserved_suffix) = remaining.split_at_mut(60);
-    encode_identity(identity, identity_slot);
+    identity_slot.copy_from_slice(&segment_record_identity_encoding::encode(identity));
     encoded
-}
-
-const fn encode_identity(identity: SegmentRecordIdentity, slot: &mut [u8]) {
-    match identity {
-        SegmentRecordIdentity::Chunk(id) => {
-            let (length, remaining) = slot.split_at_mut(4);
-            length.copy_from_slice(&id.length().get().to_be_bytes());
-            let (digest, _unused) = remaining.split_at_mut(32);
-            digest.copy_from_slice(id.digest());
-        }
-        SegmentRecordIdentity::Layout(id) => slot.copy_from_slice(&id.encode_binary()),
-    }
 }
