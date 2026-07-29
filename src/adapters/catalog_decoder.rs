@@ -25,7 +25,7 @@ pub(super) fn decode(encoded: &[u8]) -> Result<ChecksummedCatalog<'_>, CatalogDe
     ))
 }
 
-fn validate_header(
+pub(super) fn validate_header(
     fields: &catalog_header_decoder::DecodedCatalogHeader,
 ) -> Result<CatalogMetadata, CatalogDecodeError> {
     validate_fixed_fields(fields)?;

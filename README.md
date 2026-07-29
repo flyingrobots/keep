@@ -73,8 +73,10 @@ the admitted Linux ext4 profile. Its bounded stage-fingerprint operation opens
 fixed stages relative to those capabilities, refuses links and nonregular
 files, and verifies entry identity and length after reading. Complete
 caller-supplied segment-stage bytes can be classified as a reusable prefix,
-complete admitted segment, or exact truncation. Catalog, head, and
-filesystem-streaming semantic classification remain planned.
+complete admitted segment, or exact truncation. Catalog and next-head stages
+likewise distinguish exact truncation from complete canonical bytes.
+Transitive publication-view admission and filesystem-streaming semantic
+classification remain planned.
 Crash-injection execution, explicit recovery, retention, compaction, and
 garbage collection remain planned. Presence in the reference CAS does not
 claim retention, crash recovery, or durability.

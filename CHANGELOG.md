@@ -35,6 +35,10 @@ after its public API and format compatibility policies are established.
   reusable prefix, a complete admitted immutable segment, or an exact
   truncation. Complete-looking corruption, duplicate identities, and
   caller-policy excess remain typed refusals.
+- Complete caller-supplied catalog and candidate-head stages now distinguish
+  exact fixed-header, declared-body, or fixed-width truncation from canonical
+  bytes. Complete-looking corruption and oversized stages remain typed
+  refusals without claiming transitive catalog reachability.
 - Store initialization now exposes one storage-port state machine that admits
   the platform before mutation, opens and locks `writer.lock`, admits the three
   protocol directories in order, synchronizes the root, and preserves the
