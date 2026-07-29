@@ -21,15 +21,16 @@ mod reference;
 
 pub use adapters::{
     AdmittedSegment, AdmittedSegmentRecord, BlobIdBinaryParseError, BlobIdTextParseError,
-    CanonicalLayoutRecord, ChecksummedPublicationHead, ChecksummedSegmentRecord,
-    FilesystemSegmentStage, LayoutDecodeError, LayoutDecodePolicy, LayoutEncodeError,
-    LayoutIdBinaryParseError, LayoutIdTextParseError, PublicationHeadDecodeError, SealedSegment,
-    SegmentDigest, SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError, SegmentReadError,
-    SegmentReadPolicy, SegmentRecordAdmissionError, SegmentRecordChecksum,
-    SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity,
-    SegmentRecordLength, SegmentRecordLimit, SegmentRecordLimitError, SegmentRecordPayloadLength,
-    SegmentRecords, SegmentSeal, SegmentSealError, SegmentStage, SegmentStageCreateError,
-    SegmentWriteError, SegmentWritePhase, StagedSegment, StorageProfileIdParseError,
+    CanonicalLayoutRecord, CatalogDecodeError, CatalogEntryDecodeError, ChecksummedCatalog,
+    ChecksummedPublicationHead, ChecksummedSegmentRecord, FilesystemSegmentStage,
+    LayoutDecodeError, LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError,
+    LayoutIdTextParseError, PublicationHeadDecodeError, SealedSegment, SegmentDigest,
+    SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError, SegmentReadError, SegmentReadPolicy,
+    SegmentRecordAdmissionError, SegmentRecordChecksum, SegmentRecordDecodeError,
+    SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity, SegmentRecordLength,
+    SegmentRecordLimit, SegmentRecordLimitError, SegmentRecordPayloadLength, SegmentRecords,
+    SegmentSeal, SegmentSealError, SegmentStage, SegmentStageCreateError, SegmentWriteError,
+    SegmentWritePhase, StagedSegment, StorageProfileIdParseError,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

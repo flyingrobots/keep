@@ -1,12 +1,8 @@
 //! Typed segment-record checksum and canonical calculation.
 
-use blake3::Hasher;
-
-use super::SegmentRecordHeader;
+use super::{SegmentRecordHeader, framed_blake3};
 
 const DOMAIN: &[u8] = b"KEEP:SEG:RECORD:SUM\0";
-const FRAMING_VERSION: u16 = 1;
-const ALGORITHM: u8 = 1;
 
 /// BLAKE3-256 checksum binding one complete segment-record header and payload.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -24,14 +20,11 @@ impl SegmentRecordChecksum {
         payload: &[u8],
         covered_length: u64,
     ) -> Self {
-        let mut hasher = Hasher::new();
-        hasher.update(DOMAIN);
-        hasher.update(&FRAMING_VERSION.to_be_bytes());
-        hasher.update(&[ALGORITHM]);
-        hasher.update(&header.encode());
-        hasher.update(payload);
-        hasher.update(&covered_length.to_be_bytes());
-        Self(*hasher.finalize().as_bytes())
+        Self(framed_blake3::hash(
+            DOMAIN,
+            &[&header.encode(), payload],
+            covered_length,
+        ))
     }
 
     pub(super) const fn from_validated(bytes: [u8; 32]) -> Self {
