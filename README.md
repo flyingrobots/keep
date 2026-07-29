@@ -80,11 +80,13 @@ length, and recomputed fingerprint match prior observation evidence.
 Only an exact truncation assessment may form an explicit discard request; the
 semantic executor refuses evidence drift and returns a receipt only after
 exact removal or admitted prior absence is followed by parent synchronization.
-The pinned-filesystem discard adapter, transitive publication-view admission,
-and filesystem-streaming classification remain planned.
-Crash-injection execution, remaining recovery actions, retention, compaction,
-and garbage collection remain planned. Presence in the reference CAS does not
-claim retention, crash recovery, or durability.
+The pinned-filesystem adapter retains writer authority, revalidates stage
+evidence without following links, removes only an exact match, and
+synchronizes the protocol-selected parent. Transitive publication-view
+admission and filesystem-streaming classification remain planned.
+Crash-injection execution, stage completion and next-head finalization,
+retention, compaction, and garbage collection remain planned. Presence in the
+reference CAS does not claim retention, crash recovery, or durability.
 
 ```rust
 use keep::BlobId;

@@ -48,6 +48,11 @@ after its public API and format compatibility policies are established.
   mutation, and returns a discard receipt only after the name-selected parent
   directory is synchronized. An already absent stage remains an idempotent
   input and still requires synchronization.
+- Filesystem truncated-stage discard now admits the platform, retains the root
+  and `writer.lock` locks, pins every protocol namespace, reopens stage bytes
+  without following links, refuses replacement or fingerprint drift before
+  unlink, and synchronizes the typed `staging` or root parent before returning
+  a receipt.
 - Store initialization now exposes one storage-port state machine that admits
   the platform before mutation, opens and locks `writer.lock`, admits the three
   protocol directories in order, synchronizes the root, and preserves the

@@ -11,7 +11,7 @@ use super::{
     FilesystemRecoveryStageError, RecoveryEntryName, RecoveryInventory, RecoveryInventoryError,
     RecoveryInventoryLimit, RecoveryInventoryOperation, RecoveryInventoryStorage,
     RecoveryNamespace, RecoveryStage, RecoveryStageEvidence, RecoveryStageNamespacePhase,
-    filesystem_platform_profile, filesystem_recovery_inventory_scan,
+    RecoveryStageParent, filesystem_platform_profile, filesystem_recovery_inventory_scan,
     filesystem_recovery_namespace::PinnedRecoveryDirectory, filesystem_recovery_stage,
     read_recovery_inventory,
 };
@@ -69,7 +69,7 @@ impl FilesystemRecoveryInventoryReader {
         Self::from_root(root)
     }
 
-    fn from_root(root: Dir) -> Result<Self, RecoveryInventoryError> {
+    pub(super) fn from_root(root: Dir) -> Result<Self, RecoveryInventoryError> {
         let staging =
             PinnedRecoveryDirectory::open(&root, RecoveryNamespace::Staging, STAGING_NAME)?;
         let segments =
@@ -153,7 +153,7 @@ impl FilesystemRecoveryInventoryReader {
         self.catalogs.verify(&self.root)
     }
 
-    fn verify_stage_namespaces(
+    pub(super) fn verify_stage_namespaces(
         &self,
         stage: RecoveryStage,
         phase: RecoveryStageNamespacePhase,
@@ -175,13 +175,15 @@ impl FilesystemRecoveryInventoryReader {
         }
     }
 
-    const fn stage_directory(&self, stage: RecoveryStage) -> &Dir {
-        match stage {
-            RecoveryStage::Segment | RecoveryStage::Catalog => {
-                self.directory(RecoveryNamespace::Staging)
-            }
-            RecoveryStage::NextHead => self.directory(RecoveryNamespace::Root),
+    pub(super) const fn parent_directory(&self, parent: RecoveryStageParent) -> &Dir {
+        match parent {
+            RecoveryStageParent::Staging => self.directory(RecoveryNamespace::Staging),
+            RecoveryStageParent::Root => self.directory(RecoveryNamespace::Root),
         }
+    }
+
+    pub(super) const fn stage_directory(&self, stage: RecoveryStage) -> &Dir {
+        self.parent_directory(stage.parent())
     }
 }
 

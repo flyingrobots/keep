@@ -72,6 +72,10 @@ impl FilesystemWriterLock {
             Dir::open_ambient_dir(store_root, ambient_authority()).map_err(|source| {
                 WriterLockAcquireError::io(WriterLockAcquirePhase::OpenRoot, source)
             })?;
+        Self::try_acquire_in(directory)
+    }
+
+    pub(super) fn try_acquire_in(directory: Dir) -> Result<Self, WriterLockAcquireError> {
         let root_lock_file = acquire_root(&directory)?;
         let lock_file = open_existing(&directory)?;
         Self::acquire(directory, root_lock_file, lock_file)

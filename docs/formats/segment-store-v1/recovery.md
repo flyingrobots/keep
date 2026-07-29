@@ -55,8 +55,11 @@ retains both its evidence and typed truncation reason. The semantic
 `execute_recovery_stage_discard` port refuses evidence drift before mutation,
 treats an absent canonical name as an idempotent input, synchronizes the
 name-selected parent in either success case, and returns a receipt only after
-that synchronization. The pinned-filesystem implementation remains
-unimplemented.
+that synchronization. `FilesystemRecoveryStageDiscarder` admits the supported
+platform, retains the root and `writer.lock` locks, pins all protocol
+directories, reopens the stage without following links, bounds and verifies
+the complete fingerprint, refuses namespace or entry replacement, unlinks only
+an exact evidence match, and synchronizes the typed `staging` or root parent.
 
 The sole admissible duplicate digest is one fixed staging name and its exact
 digest-derived pool name after a link transition. Recovery admits that pair

@@ -94,8 +94,9 @@ bytes, bind materialized bytes back to prior stage evidence, and dispatch
 complete caller-supplied fixed-stage bytes through their name-selected
 classifiers. An exact truncation assessment may now authorize one
 evidence-bound, retry-safe discard through a semantic storage port. These
-slices do not yet claim a pinned-filesystem discard implementation, transitive
-publication-view admission, or process-death injection.
+slices now bind that discard to pinned writer-authorized filesystem storage.
+They do not yet claim transitive publication-view admission or process-death
+injection.
 
 <!-- markdownlint-disable MD013 -->
 
@@ -114,6 +115,7 @@ publication-view admission, or process-death injection.
 | `KEEP-RECOVERY-011` | Whole-byte catalog and next-head stage classification distinguishes exact fixed-header, declared-body, and fixed-width truncation from complete canonical bytes; complete-looking corruption and oversize remain typed format or metadata refusals | Canonical publication-artifact truncation and corruption matrix | `tests/recovery_publication_stage_classification.rs`, `tests/recovery_publication_stage_classification/*.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-012` | Read-only semantic assessment admits materialized stage bytes only when the canonical-name stage, exact observed length, and `KEEP:RECOVERY:STAGE\0` fingerprint equal prior evidence, then dispatches through the name-selected segment, catalog, or next-head classifier | Evidence-binding mutation matrix and canonical stage assessments | `tests/recovery_stage_assessment.rs`, `tests/recovery_stage_assessment/*.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-013` | Explicit discard plans only from an exact truncation assessment, retains the observation evidence and typed truncation reason, refuses changed evidence without mutation, synchronizes the name-selected parent after exact removal or admitted absence, and returns a receipt only after synchronization | Truncation-planning, evidence-drift, operation-order, and retry matrix | `tests/recovery_stage_discard.rs`, `tests/recovery_stage_discard/*.rs` | Implemented in #17 |
+| `KEEP-RECOVERY-014` | Filesystem discard retains root and `writer.lock` authority, pins every protocol directory, never follows a fixed-stage link, revalidates bounded fingerprint and entry identity before unlink, refuses drift without mutation, and synchronizes the typed parent after removal or admitted absence | Exact removal, absent retry, mismatch, symlink, replacement, and writer-exclusion matrix | `src/adapters/filesystem_recovery_stage_discard_tests.rs`, `src/adapters/filesystem_recovery_stage_discard_tests/fixture.rs` | Implemented in #17 |
 
 <!-- markdownlint-enable MD013 -->
 

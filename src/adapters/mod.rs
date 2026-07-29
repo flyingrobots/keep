@@ -86,6 +86,11 @@ mod filesystem_recovery_inventory_scan;
 mod filesystem_recovery_inventory_tests;
 mod filesystem_recovery_namespace;
 mod filesystem_recovery_stage;
+mod filesystem_recovery_stage_discard_open_error;
+mod filesystem_recovery_stage_discard_storage;
+#[cfg(all(test, unix))]
+mod filesystem_recovery_stage_discard_tests;
+mod filesystem_recovery_stage_discarder;
 mod filesystem_recovery_stage_error;
 #[cfg(all(test, unix))]
 mod filesystem_recovery_stage_tests;
@@ -279,6 +284,8 @@ pub use filesystem_catalog_publisher::FilesystemCatalogPublisher;
 pub use filesystem_catalog_snapshot::FilesystemCatalogSnapshot;
 pub use filesystem_platform_admission::FilesystemPlatformAdmission;
 pub use filesystem_recovery_inventory_reader::FilesystemRecoveryInventoryReader;
+pub use filesystem_recovery_stage_discard_open_error::FilesystemRecoveryStageDiscardOpenError;
+pub use filesystem_recovery_stage_discarder::FilesystemRecoveryStageDiscarder;
 pub use filesystem_recovery_stage_error::{
     FilesystemRecoveryStageError, RecoveryStageNamespacePhase,
 };
