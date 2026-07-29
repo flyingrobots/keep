@@ -35,6 +35,11 @@ after its public API and format compatibility policies are established.
   reusable prefix, a complete admitted immutable segment, or an exact
   truncation. Complete-looking corruption, duplicate identities, and
   caller-policy excess remain typed refusals.
+- Storage-independent reusable-segment recovery now plans only from an exact
+  reusable assessment within the selected resource policy, consumes reopening
+  authority, re-admits the materialized prefix against saved evidence, rebuilds
+  digest and duplicate-identity state, and returns the ordinary append-only
+  stage without rewriting admitted bytes.
 - Complete caller-supplied catalog and candidate-head stages now distinguish
   exact fixed-header, declared-body, or fixed-width truncation from canonical
   bytes. Complete-looking corruption and oversized stages remain typed

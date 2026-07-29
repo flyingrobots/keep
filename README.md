@@ -77,6 +77,10 @@ complete admitted segment, or exact truncation. Catalog and next-head stages
 likewise distinguish exact truncation from complete canonical bytes.
 Materialized bytes enter read-only semantic assessment only after their stage,
 length, and recomputed fingerprint match prior observation evidence.
+An exact reusable segment assessment can authorize storage-independent
+continuation: the executor consumes writer authority, re-admits the complete
+bounded prefix, rebuilds digest and duplicate-identity state, and returns the
+ordinary append-only stage without rewriting admitted bytes.
 
 Exact truncation assessments can authorize durable, evidence-bound discard.
 Complete segment and catalog assessments can authorize verified immutable-pool
@@ -91,9 +95,10 @@ authority, reconstructs the complete current and candidate views without
 following links, verifies namespace and stage identity, synchronizes and
 reverifies the exact candidate, atomically replaces `HEAD`, and synchronizes
 the root. An already-finalized retry requires `head.next` to be absent.
-Process-death injection, reusable-stage continuation, retention, compaction,
-and garbage collection remain planned. Presence in the reference CAS does not
-claim retention, crash recovery, or durability.
+Process-death injection, the filesystem binding for reusable-stage
+continuation, retention, compaction, and garbage collection remain planned.
+Presence in the reference CAS does not claim retention, crash recovery, or
+durability.
 
 ```rust
 use keep::BlobId;

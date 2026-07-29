@@ -19,8 +19,9 @@
 //! truncated-stage discard, and complete-stage valid-orphan recovery are
 //! explicit. Exact next-head finalization now has a storage-independent
 //! contract and a pinned writer-authorized filesystem adapter. Reusable-stage
-//! continuation, retention, and garbage collection APIs remain intentionally
-//! absent until their contracts have executable specifications.
+//! continuation has a storage-independent planning and execution boundary.
+//! Its filesystem binding, retention, and garbage collection remain
+//! intentionally absent until their contracts have executable specifications.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -51,17 +52,19 @@ pub use adapters::{
     FilesystemRecoveryStageDiscardOpenError, FilesystemRecoveryStageDiscarder,
     FilesystemRecoveryStageError, FilesystemSegmentStage, FilesystemWriterLock, LayoutDecodeError,
     LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
-    PublicationHeadDecodeError, RecoveryCatalogStage, RecoveryCatalogStageError, RecoveryEntryName,
-    RecoveryEntryNameError, RecoveryEntryRole, RecoveryInventory, RecoveryInventoryEntry,
-    RecoveryInventoryError, RecoveryInventoryLimit, RecoveryInventoryLimitError,
-    RecoveryInventoryOperation, RecoveryInventoryStorage, RecoveryNameClassificationError,
-    RecoveryNameManifest, RecoveryNamedEntry, RecoveryNamespace, RecoveryNextHeadFinalizationError,
-    RecoveryNextHeadFinalizationOutcome, RecoveryNextHeadFinalizationPlanError,
-    RecoveryNextHeadFinalizationReadiness, RecoveryNextHeadFinalizationReceipt,
-    RecoveryNextHeadFinalizationRequest, RecoveryNextHeadFinalizationStorage,
-    RecoveryNextHeadFinalizationStorageError, RecoveryNextHeadFinalizationTarget,
-    RecoveryNextHeadStage, RecoveryNextHeadStageError, RecoveryPoolNameError,
-    RecoveryRequiredEntry, RecoverySegmentStage, RecoverySegmentStageError,
+    OpenedReusableSegment, PublicationHeadDecodeError, RecoveryCatalogStage,
+    RecoveryCatalogStageError, RecoveryEntryName, RecoveryEntryNameError, RecoveryEntryRole,
+    RecoveryInventory, RecoveryInventoryEntry, RecoveryInventoryError, RecoveryInventoryLimit,
+    RecoveryInventoryLimitError, RecoveryInventoryOperation, RecoveryInventoryStorage,
+    RecoveryNameClassificationError, RecoveryNameManifest, RecoveryNamedEntry, RecoveryNamespace,
+    RecoveryNextHeadFinalizationError, RecoveryNextHeadFinalizationOutcome,
+    RecoveryNextHeadFinalizationPlanError, RecoveryNextHeadFinalizationReadiness,
+    RecoveryNextHeadFinalizationReceipt, RecoveryNextHeadFinalizationRequest,
+    RecoveryNextHeadFinalizationStorage, RecoveryNextHeadFinalizationStorageError,
+    RecoveryNextHeadFinalizationTarget, RecoveryNextHeadStage, RecoveryNextHeadStageError,
+    RecoveryPoolNameError, RecoveryRequiredEntry, RecoverySegmentResumeError,
+    RecoverySegmentResumePlanError, RecoverySegmentResumeRequest, RecoverySegmentResumeStorage,
+    RecoverySegmentResumeStorageError, RecoverySegmentStage, RecoverySegmentStageError,
     RecoverySegmentTruncation, RecoveryStage, RecoveryStageAssessment,
     RecoveryStageAssessmentError, RecoveryStageByteAdmissionError, RecoveryStageCompletionError,
     RecoveryStageCompletionPlanError, RecoveryStageCompletionPool, RecoveryStageCompletionReceipt,
@@ -84,10 +87,11 @@ pub use adapters::{
     StoreInitializationStorage, WriterLockAcquireError, WriterLockAcquirePhase,
     admit_recovery_stage_bytes, assess_recovery_stage, classify_recovery_catalog_stage,
     classify_recovery_names, classify_recovery_next_head_stage, classify_recovery_segment_stage,
-    execute_recovery_next_head_finalization, execute_recovery_stage_completion,
-    execute_recovery_stage_discard, fingerprint_recovery_stage, initialize_store,
-    plan_recovery_next_head_finalization, plan_recovery_stage_completion,
-    plan_recovery_stage_discard, publish_catalog_generation, read_recovery_inventory,
+    execute_recovery_next_head_finalization, execute_recovery_segment_resume,
+    execute_recovery_stage_completion, execute_recovery_stage_discard, fingerprint_recovery_stage,
+    initialize_store, plan_recovery_next_head_finalization, plan_recovery_segment_resume,
+    plan_recovery_stage_completion, plan_recovery_stage_discard, publish_catalog_generation,
+    read_recovery_inventory,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

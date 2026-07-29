@@ -96,6 +96,31 @@ same crash points and must be idempotent. It may not silently promote the
 newest artifact, truncate to the last plausible boundary, rewrite a checksum,
 delete a valid orphan, or select by timestamp.
 
+## Resume a reusable segment
+
+The public semantic boundary admits only
+`RecoverySegmentStage::Reusable`. `plan_recovery_segment_resume` binds the
+exact prior stage evidence, complete-record count, append boundary, and caller
+resource policy into an owned request. Complete, truncated, catalog, and
+candidate-head states remain ineligible. A selected policy below the already
+admitted record count is refused before storage access.
+
+`execute_recovery_segment_resume` consumes a
+`RecoverySegmentResumeStorage` capability so exclusive writer authority can
+remain owned by the returned stage. The storage port returns one
+protocol-bounded materialization and a writable stage positioned immediately
+after those exact bytes. Before returning that stage, the executor recomputes
+the saved fingerprint, repeats semantic classification under the selected
+policy, and rebuilds the incremental segment digest and duplicate-identity
+index from the complete prefix.
+
+Continuation returns the ordinary `StagedSegment` state machine. Subsequent
+append and seal operations therefore retain the forward protocol's checked
+record count, length bounds, duplicate refusal, flushes, synchronization, and
+canonical seal. The admitted prefix is never rewritten. A storage adapter that
+cannot prove the writable object, canonical entry, exact materialized bytes,
+and end position agree must refuse before returning the stage.
+
 ## Complete a durable stage
 
 The recovery plan may bind one fully verified `current.seg` or `current.cat`
