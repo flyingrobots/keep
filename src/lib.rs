@@ -13,6 +13,7 @@
 
 mod adapters;
 mod blob;
+mod catalog;
 mod chunk;
 mod layout;
 mod profile;
@@ -33,6 +34,7 @@ pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
     ByteRange, ByteRangeError,
 };
+pub use catalog::{CatalogGeneration, CatalogGenerationError};
 pub use chunk::{
     ChunkHashError, ChunkId, ChunkLength, ChunkOffset, ChunkSpan, ChunkingError, FastCdc,
 };
