@@ -135,13 +135,17 @@ only after the root-directory sync following head replacement.
 
 ## Persistent advisory lock
 
-The writer lock file persists and its contents carry no authority. Successful
-exclusive kernel lock acquisition is the only ownership evidence. Process
-death releases the lock without requiring presence-based stale-file cleanup.
+The writer lock file persists and its contents carry no authority. Writer
+ownership requires successful exclusive kernel locks on both the pinned store
+root inode and the exact `writer.lock` inode. The root lock prevents a second
+cooperative Keep process from acquiring a replacement lock-file inode while
+the first writer remains live. Process death releases both locks without
+requiring presence-based stale-file cleanup.
 
-This deliberately excludes multi-host and filesystems whose advisory locks do
-not provide the required exclusion. Weakening the lock would violate
-one-writer publication rather than improve availability.
+This deliberately excludes uncooperative processes, multi-host operation, and
+filesystems whose advisory locks do not provide the required exclusion.
+Weakening either lock would violate one-writer publication rather than improve
+availability.
 
 ## Platform admission before publication
 

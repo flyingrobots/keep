@@ -16,6 +16,8 @@ after its public API and format compatibility policies are established.
   writer authority, and returns only after synchronizing the root.
 - Writer-lock acquisition now reopens `writer.lock` after kernel locking and
   refuses when the resolved entry no longer has the locked device and inode.
+- Writer authority now also retains an advisory lock on the pinned store-root
+  inode, so replacing `writer.lock` cannot split live cooperative authority.
 - Store initialization now exposes one storage-port state machine that admits
   the platform before mutation, opens and locks `writer.lock`, admits the three
   protocol directories in order, synchronizes the root, and preserves the

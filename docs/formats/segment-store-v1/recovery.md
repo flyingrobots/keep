@@ -170,7 +170,8 @@ The initial production adapter is supported only on Linux when it proves:
 - atomic same-filesystem replacement of one regular file by another;
 - directory synchronization that makes create, link, unlink, rename, and
   replacement durable;
-- process-scoped exclusive advisory locking; and
+- process-scoped exclusive advisory locking on the pinned root and writer file;
+  and
 - post-acquisition device-and-inode verification of the retained writer-lock
   handle.
 

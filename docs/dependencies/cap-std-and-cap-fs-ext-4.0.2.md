@@ -26,11 +26,11 @@ other ambiguous filesystem state before reading source or protocol bytes.
 The capability packages are present in Keep's published library graph and
 production filesystem behavior. No dependency-owned type crosses Keep's public
 API or enters content identities or durable formats. The segment-store writer
-lock retains capability and file handles behind `FilesystemWriterLock`; its
-public acquisition boundary accepts only `std::path::Path`. The production
-initializer uses Rustix's safe `openat2`, `fstatfs`, `fstatvfs`, and ext4 inode
-flag APIs to admit only the documented writable, non-casefolded Linux ext4
-profile.
+lock retains the root capability plus root-lock and writer-lock file handles
+behind `FilesystemWriterLock`; its public acquisition boundary accepts only
+`std::path::Path`. The production initializer uses Rustix's safe `openat2`,
+`fstatfs`, `fstatvfs`, and ext4 inode flag APIs to admit only the documented
+writable, non-casefolded Linux ext4 profile.
 
 The bounded subprocess adapter uses Rustix's safe filesystem API to mark child
 stdin nonblocking before deadline-bounded input transfer. It uses Rustix's safe

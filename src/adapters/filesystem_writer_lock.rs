@@ -43,41 +43,44 @@ impl From<&Metadata> for FileIdentity {
 
 /// Exclusive kernel-managed writer authority over one pinned store root.
 ///
-/// The guard retains both the opened root capability and lock-file handle.
-/// Dropping it closes the handle and releases the process-scoped kernel lock;
-/// it never deletes, renames, truncates, or replaces `writer.lock`.
+/// The guard retains the opened root capability plus exclusive advisory locks
+/// on the root inode and `writer.lock`. Dropping it closes both lock handles;
+/// it never deletes, renames, truncates, or replaces protocol state.
 #[must_use]
 pub struct FilesystemWriterLock {
     directory: Dir,
+    _root_lock_file: File,
     lock_file: File,
 }
 
 impl FilesystemWriterLock {
     /// Tries to acquire exclusive writer authority without blocking.
     ///
-    /// The store root is pinned before `writer.lock` is opened relative to it.
-    /// The lock entry must already exist as a regular file and is opened
-    /// without following symbolic links. After nonblocking kernel acquisition,
-    /// the adapter reopens the directory entry and proves that it still names
-    /// the locked device and inode before returning authority.
+    /// The store root is pinned and nonblocking-locked before `writer.lock` is
+    /// opened relative to it. The lock entry must already exist as a regular
+    /// file and is opened without following symbolic links. After nonblocking
+    /// file locking, the adapter reopens the directory entry and proves that it
+    /// still names the locked device and inode before returning authority.
     ///
     /// # Errors
     ///
     /// Returns [`WriterLockAcquireError::Busy`] when another handle or process
-    /// owns the lock. Other failures preserve their exact acquisition phase and
-    /// I/O source. A missing lock file is never created by this operation.
+    /// owns either lock. Other failures preserve their exact acquisition phase
+    /// and I/O source. A missing lock file is never created by this operation.
     pub fn try_acquire(store_root: &Path) -> Result<Self, WriterLockAcquireError> {
         let directory =
             Dir::open_ambient_dir(store_root, ambient_authority()).map_err(|source| {
                 WriterLockAcquireError::io(WriterLockAcquirePhase::OpenRoot, source)
             })?;
+        let root_lock_file = acquire_root(&directory)?;
         let lock_file = open_existing(&directory)?;
-        Self::acquire(directory, lock_file)
+        Self::acquire(directory, root_lock_file, lock_file)
     }
 
     pub(super) fn initialize_in(directory: Dir) -> Result<Self, WriterLockAcquireError> {
+        let root_lock_file = acquire_root(&directory)?;
         let lock_file = open_or_create(&directory)?;
-        let guard = Self::acquire(directory, lock_file)?;
+        let guard = Self::acquire(directory, root_lock_file, lock_file)?;
         guard.lock_file.sync_all().map_err(|source| {
             WriterLockAcquireError::io(WriterLockAcquirePhase::SynchronizeFile, source)
         })?;
@@ -86,6 +89,7 @@ impl FilesystemWriterLock {
 
     fn acquire(
         directory: Dir,
+        root_lock_file: File,
         lock_file: cap_std::fs::File,
     ) -> Result<Self, WriterLockAcquireError> {
         let metadata = lock_file.metadata().map_err(|source| {
@@ -96,24 +100,34 @@ impl FilesystemWriterLock {
         }
         let expected_identity = FileIdentity::from(&metadata);
         let lock_file = lock_file.into_std();
-        match lock_file.try_lock() {
-            Ok(()) => {
-                verify_current_identity(&directory, expected_identity)?;
-                Ok(Self {
-                    directory,
-                    lock_file,
-                })
-            }
-            Err(TryLockError::WouldBlock) => Err(WriterLockAcquireError::Busy),
-            Err(TryLockError::Error(source)) => Err(WriterLockAcquireError::io(
-                WriterLockAcquirePhase::Acquire,
-                source,
-            )),
-        }
+        acquire_lock(&lock_file, WriterLockAcquirePhase::Acquire)?;
+        verify_current_identity(&directory, expected_identity)?;
+        Ok(Self {
+            directory,
+            _root_lock_file: root_lock_file,
+            lock_file,
+        })
     }
 
     pub(super) fn clone_directory(&self) -> std::io::Result<Dir> {
         self.directory.try_clone()
+    }
+}
+
+fn acquire_root(directory: &Dir) -> Result<File, WriterLockAcquireError> {
+    let file = directory
+        .try_clone()
+        .map_err(|source| WriterLockAcquireError::io(WriterLockAcquirePhase::AcquireRoot, source))?
+        .into_std_file();
+    acquire_lock(&file, WriterLockAcquirePhase::AcquireRoot)?;
+    Ok(file)
+}
+
+fn acquire_lock(file: &File, phase: WriterLockAcquirePhase) -> Result<(), WriterLockAcquireError> {
+    match file.try_lock() {
+        Ok(()) => Ok(()),
+        Err(TryLockError::WouldBlock) => Err(WriterLockAcquireError::Busy),
+        Err(TryLockError::Error(source)) => Err(WriterLockAcquireError::io(phase, source)),
     }
 }
 
