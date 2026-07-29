@@ -10,6 +10,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Filesystem catalog publishers now retain no-follow, read-capable directory
+  handles so required durability synchronization works on Linux instead of
+  failing on `O_PATH` descriptors.
 - The fuzz-workspace dependency gate now loads the reviewed repository
   `deny.toml` explicitly and admits non-Apache licenses only through exact
   package/version exceptions.

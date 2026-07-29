@@ -155,6 +155,7 @@ mod segment_write_phase;
 mod staged_segment;
 mod storage_profile_id_text;
 mod storage_profile_id_text_error;
+mod sync_capable_directory;
 mod writer_lock_acquire_error;
 mod writer_lock_acquire_phase;
 

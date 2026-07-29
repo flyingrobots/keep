@@ -2,11 +2,11 @@
 
 use std::io;
 
-use cap_fs_ext::DirExt;
 use cap_std::fs::{Dir, File};
 
 use super::{
     CatalogRestartPolicy, FilesystemSegmentStage, FilesystemWriterLock, SegmentStageCreateError,
+    sync_capable_directory,
 };
 
 pub(super) const CURRENT_SEGMENT: &str = "current.seg";
@@ -39,13 +39,16 @@ impl FilesystemCatalogPublisher {
     ///
     /// # Errors
     ///
-    /// Returns the exact root-clone or no-follow directory-open failure. A
-    /// failure drops `lock` and therefore releases writer authority.
+    /// Returns the exact root-clone, no-follow directory-open, or
+    /// directory-inspection failure. A namespace entry that is not a directory
+    /// returns [`io::ErrorKind::NotADirectory`]. A failure drops `lock` and
+    /// therefore releases writer authority.
     pub fn open(lock: FilesystemWriterLock, policy: CatalogRestartPolicy) -> io::Result<Self> {
-        let root = lock.clone_directory()?;
-        let staging = root.open_dir_nofollow("staging")?;
-        let segments = root.open_dir_nofollow("segments")?;
-        let catalogs = root.open_dir_nofollow("catalogs")?;
+        let pinned_root = lock.clone_directory()?;
+        let root = sync_capable_directory::open(&pinned_root, ".")?;
+        let staging = sync_capable_directory::open(&root, "staging")?;
+        let segments = sync_capable_directory::open(&root, "segments")?;
+        let catalogs = sync_capable_directory::open(&root, "catalogs")?;
         Ok(Self {
             root,
             staging,
