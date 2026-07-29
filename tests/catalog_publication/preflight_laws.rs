@@ -4,8 +4,9 @@ use std::error::Error;
 
 use keep::{
     AdmittedSegment, CanonicalCatalog, CanonicalPublicationHead, CatalogGeneration,
-    CatalogPublicationError, CatalogPublicationExpectation, CatalogTransitionError,
-    ChecksummedPublicationHead, SegmentPublication, publish_catalog_generation,
+    CatalogPublicationError, CatalogPublicationExpectation, CatalogPublicationOutcome,
+    CatalogPublicationPhase, CatalogTransitionError, ChecksummedPublicationHead,
+    SegmentPublication, publish_catalog_generation,
 };
 
 use super::recording_storage::RecordingStorage;
@@ -63,6 +64,33 @@ fn catalog_location_refusal_precedes_every_storage_call() -> Result<(), Box<dyn 
         CatalogPublicationError::CatalogAdmission { .. }
     ));
     assert!(storage.observed().is_empty());
+    Ok(())
+}
+
+#[test]
+fn already_published_retry_only_reverifies_and_synchronizes_root() -> Result<(), Box<dyn Error>> {
+    let bytes = fixture(SEGMENT_HEX)?;
+    let publication = publication_fixture(&bytes)?;
+    let mut storage = RecordingStorage::already_published();
+    let receipt = publish_catalog_generation(
+        &mut storage,
+        CatalogPublicationExpectation::uninitialized(),
+        SegmentPublication::none(),
+        &publication.catalog,
+        &publication.segments,
+    )?;
+
+    assert_eq!(
+        receipt.outcome(),
+        CatalogPublicationOutcome::AlreadyPublished
+    );
+    assert_eq!(
+        storage.observed(),
+        &[
+            CatalogPublicationPhase::VerifyCurrent,
+            CatalogPublicationPhase::SynchronizeRoot,
+        ]
+    );
     Ok(())
 }
 

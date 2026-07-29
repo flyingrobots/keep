@@ -3,15 +3,16 @@
 use std::io;
 
 use super::{
-    CatalogPublicationExpectation, CatalogRestartError, CatalogRestartPhase,
-    FilesystemCatalogPublicationError, FilesystemCatalogPublisher, catalog_restart_loader,
-    filesystem_catalog_artifact,
+    CatalogPublicationExpectation, CatalogPublicationReadiness, CatalogRestartError,
+    CatalogRestartPhase, CatalogSnapshot, FilesystemCatalogPublicationError,
+    FilesystemCatalogPublisher, catalog_restart_loader, filesystem_catalog_artifact,
 };
 
 pub(super) fn verify(
     publisher: &FilesystemCatalogPublisher,
     expected: CatalogPublicationExpectation,
-) -> io::Result<()> {
+    candidate: &CatalogSnapshot<'_, '_, '_>,
+) -> io::Result<CatalogPublicationReadiness> {
     require_no_next_head(publisher)?;
     match catalog_restart_loader::load_from_directory(
         &publisher.root,
@@ -24,7 +25,11 @@ pub(super) fn verify(
             if expected.current_generation() == observed_generation
                 && expected.current_catalog_digest() == observed_digest
             {
-                Ok(())
+                Ok(CatalogPublicationReadiness::Ready)
+            } else if observed.generation() == candidate.generation()
+                && observed.catalog_digest() == candidate.catalog_digest()
+            {
+                Ok(CatalogPublicationReadiness::AlreadyPublished)
             } else {
                 Err(filesystem_catalog_artifact::invalid_data(
                     FilesystemCatalogPublicationError::CurrentState {
@@ -36,7 +41,9 @@ pub(super) fn verify(
                 ))
             }
         }
-        Err(source) if head_is_absent(&source) && expected.current_generation().is_none() => Ok(()),
+        Err(source) if head_is_absent(&source) && expected.current_generation().is_none() => {
+            Ok(CatalogPublicationReadiness::Ready)
+        }
         Err(source) => Err(filesystem_catalog_artifact::invalid_data(source)),
     }
 }

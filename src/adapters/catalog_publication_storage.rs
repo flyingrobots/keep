@@ -4,7 +4,7 @@ use std::io;
 
 use super::{
     AdmittedSegment, CanonicalCatalog, CanonicalPublicationHead, CatalogPublicationExpectation,
-    CatalogSnapshot, ChecksummedCatalog,
+    CatalogPublicationReadiness, CatalogSnapshot, ChecksummedCatalog,
 };
 
 /// Blocking filesystem capabilities for the catalog publication protocol.
@@ -14,12 +14,20 @@ use super::{
 /// transitions and must not combine later transitions or report success before
 /// the named durability or verification obligation is satisfied.
 pub trait CatalogPublicationStorage {
-    /// Reopens and verifies the exact expected current publication state.
+    /// Reopens and verifies the expected predecessor or complete candidate.
+    ///
+    /// Returns [`CatalogPublicationReadiness::Ready`] only when `expected` is
+    /// current. Returns [`CatalogPublicationReadiness::AlreadyPublished`] only
+    /// when the exact generation and digest in `candidate` are current.
     ///
     /// # Errors
     ///
     /// Returns the exact current-state verification failure.
-    fn verify_current(&mut self, expected: CatalogPublicationExpectation) -> io::Result<()>;
+    fn verify_current(
+        &mut self,
+        expected: CatalogPublicationExpectation,
+        candidate: &CatalogSnapshot<'_, '_, '_>,
+    ) -> io::Result<CatalogPublicationReadiness>;
 
     /// Links the exact sealed stage without replacing an immutable pool entry.
     ///

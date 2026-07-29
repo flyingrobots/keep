@@ -73,7 +73,7 @@ recovery remain owned by issue #17.
 | `KEEP-CATALOG-005` | Publication admits only the exact expected successor and reports expected and observed generation and digest on staleness | Generation transition model | `tests/catalog_transition.rs` | Implemented in #16 |
 | `KEEP-CATALOG-006` | A reader retains one complete catalog generation and never combines it with a concurrent head | Immutable snapshot model | `tests/catalog_snapshot.rs` | Implemented in #16 |
 | `KEEP-CATALOG-007` | One persistent kernel-managed writer lock excludes a second writer without deleting or replacing the lock file | Two-handle lock model | `tests/catalog_writer_lock.rs` | Implemented in #16 |
-| `KEEP-CATALOG-008` | Segment, catalog, and head publication follows the documented file and directory synchronization order | Fault-recording port and filesystem fixtures | `tests/catalog_publication.rs`, `tests/catalog_filesystem_publication.rs` | Implemented in #16 |
+| `KEEP-CATALOG-008` | Segment, catalog, and head publication follows the documented synchronization order; retry of an already-current candidate performs no publication mutation and re-synchronizes the root | Fault-recording port and filesystem fixtures | `tests/catalog_publication.rs`, `tests/catalog_filesystem_publication.rs` | Implemented in #16 |
 | `KEEP-CATALOG-009` | Restart loading refuses corrupt, unsupported, noncanonical, dangling, and conflicting catalog state | Corruption matrix | `tests/catalog_restart.rs` | Implemented in #16 |
 | `KEEP-CATALOG-010` | Model-based transitions and lookups agree with a deterministic `BTreeMap` catalog | Boring reference catalog | `tests/catalog_model.rs` | Implemented in #16 |
 

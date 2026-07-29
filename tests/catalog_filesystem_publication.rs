@@ -12,10 +12,10 @@ use std::path::{Path, PathBuf};
 
 use keep::{
     AdmittedSegment, AdmittedSegmentRecord, CanonicalCatalog, CatalogGeneration,
-    CatalogPublicationExpectation, CatalogRestartByteLimit, CatalogRestartPolicy, ClosedSegment,
-    FilesystemCatalogPublisher, FilesystemCatalogSnapshot, FilesystemWriterLock, LayoutEntryLimit,
-    SegmentPublication, SegmentReadPolicy, SegmentRecordLimit, StagedSegment,
-    publish_catalog_generation,
+    CatalogPublicationExpectation, CatalogPublicationOutcome, CatalogRestartByteLimit,
+    CatalogRestartPolicy, ClosedSegment, FilesystemCatalogPublisher, FilesystemCatalogSnapshot,
+    FilesystemWriterLock, LayoutEntryLimit, SegmentPublication, SegmentReadPolicy,
+    SegmentRecordLimit, StagedSegment, publish_catalog_generation,
 };
 use sandbox::TestDirectory;
 use support::decode_hex;
@@ -51,6 +51,7 @@ fn successful_publication_materializes_only_the_exact_durable_view() -> Result<(
     )?;
     drop(publisher);
 
+    assert_eq!(receipt.outcome(), CatalogPublicationOutcome::Published);
     assert_eq!(receipt.generation().get(), 1);
     assert_eq!(fs::read(store.path().join("HEAD"))?, fixture(HEAD_HEX)?);
     assert_eq!(fs::read(store.catalog_path())?, fixture(CATALOG_HEX)?);
@@ -60,6 +61,41 @@ fn successful_publication_materializes_only_the_exact_durable_view() -> Result<(
     assert!(!store.path().join("head.next").exists());
     let loaded = FilesystemCatalogSnapshot::load(store.path(), restart_policy()?)?;
     assert_eq!(loaded.catalog_digest(), receipt.catalog_digest());
+    store.remove()
+}
+
+#[test]
+fn durable_publication_retry_returns_the_same_synchronized_receipt() -> Result<(), Box<dyn Error>> {
+    let store = StoreFixture::create("catalog-filesystem-retry")?;
+    let lock = FilesystemWriterLock::try_acquire(store.path())?;
+    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let (closed, segment_bytes) = stage_one_zero(&publisher, &store)?;
+    let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
+    let segments = [segment];
+    let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
+    let first = publish_catalog_generation(
+        &mut publisher,
+        CatalogPublicationExpectation::uninitialized(),
+        SegmentPublication::one(closed, &segments[0])?,
+        &catalog,
+        &segments,
+    )?;
+    drop(publisher);
+
+    let lock = FilesystemWriterLock::try_acquire(store.path())?;
+    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let retry = publish_catalog_generation(
+        &mut publisher,
+        CatalogPublicationExpectation::uninitialized(),
+        SegmentPublication::none(),
+        &catalog,
+        &segments,
+    )?;
+
+    assert_eq!(retry.generation(), first.generation());
+    assert_eq!(retry.catalog_digest(), first.catalog_digest());
+    assert_eq!(retry.outcome(), CatalogPublicationOutcome::AlreadyPublished);
+    drop(publisher);
     store.remove()
 }
 

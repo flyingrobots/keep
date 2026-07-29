@@ -4,18 +4,26 @@ use std::io;
 
 use super::{
     CanonicalCatalog, CanonicalPublicationHead, CatalogPublicationError,
-    CatalogPublicationExpectation, CatalogPublicationPhase, CatalogPublicationStorage,
-    CatalogSnapshot, ChecksummedCatalog,
+    CatalogPublicationExpectation, CatalogPublicationPhase, CatalogPublicationReadiness,
+    CatalogPublicationStorage, CatalogSnapshot, ChecksummedCatalog,
 };
 
 pub(super) fn execute_current(
     storage: &mut impl CatalogPublicationStorage,
     expectation: CatalogPublicationExpectation,
-) -> Result<(), CatalogPublicationError> {
-    phase(
+    candidate: &CatalogSnapshot<'_, '_, '_>,
+) -> Result<CatalogPublicationReadiness, CatalogPublicationError> {
+    let readiness = phase(
         CatalogPublicationPhase::VerifyCurrent,
-        storage.verify_current(expectation),
-    )
+        storage.verify_current(expectation, candidate),
+    )?;
+    if readiness == CatalogPublicationReadiness::AlreadyPublished {
+        phase(
+            CatalogPublicationPhase::SynchronizeRoot,
+            storage.synchronize_root(),
+        )?;
+    }
+    Ok(readiness)
 }
 
 pub(super) fn execute_segment(
@@ -113,9 +121,9 @@ pub(super) fn execute_head(
     )
 }
 
-fn phase(
+fn phase<T>(
     phase: CatalogPublicationPhase,
-    result: io::Result<()>,
-) -> Result<(), CatalogPublicationError> {
+    result: io::Result<T>,
+) -> Result<T, CatalogPublicationError> {
     result.map_err(|source| CatalogPublicationError::storage(phase, source))
 }

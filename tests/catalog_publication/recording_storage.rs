@@ -4,7 +4,8 @@ use std::io;
 
 use keep::{
     AdmittedSegment, CanonicalCatalog, CanonicalPublicationHead, CatalogPublicationExpectation,
-    CatalogPublicationPhase, CatalogPublicationStorage, CatalogSnapshot, ChecksummedCatalog,
+    CatalogPublicationPhase, CatalogPublicationReadiness, CatalogPublicationStorage,
+    CatalogSnapshot, ChecksummedCatalog,
 };
 
 /// Exact complete publication order when one segment stage is present.
@@ -37,6 +38,7 @@ pub const EXPECTED_WITH_SEGMENT: &[CatalogPublicationPhase] = &[
 pub struct RecordingStorage {
     observed: Vec<CatalogPublicationPhase>,
     failing_phase: Option<CatalogPublicationPhase>,
+    readiness: CatalogPublicationReadiness,
 }
 
 impl RecordingStorage {
@@ -45,6 +47,16 @@ impl RecordingStorage {
         Self {
             observed: Vec::new(),
             failing_phase: None,
+            readiness: CatalogPublicationReadiness::Ready,
+        }
+    }
+
+    /// Creates a recorder that reports the complete candidate as current.
+    pub const fn already_published() -> Self {
+        Self {
+            observed: Vec::new(),
+            failing_phase: None,
+            readiness: CatalogPublicationReadiness::AlreadyPublished,
         }
     }
 
@@ -53,6 +65,7 @@ impl RecordingStorage {
         Self {
             observed: Vec::new(),
             failing_phase: Some(phase),
+            readiness: CatalogPublicationReadiness::Ready,
         }
     }
 
@@ -72,8 +85,13 @@ impl RecordingStorage {
 }
 
 impl CatalogPublicationStorage for RecordingStorage {
-    fn verify_current(&mut self, _expected: CatalogPublicationExpectation) -> io::Result<()> {
-        self.record(CatalogPublicationPhase::VerifyCurrent)
+    fn verify_current(
+        &mut self,
+        _expected: CatalogPublicationExpectation,
+        _candidate: &CatalogSnapshot<'_, '_, '_>,
+    ) -> io::Result<CatalogPublicationReadiness> {
+        self.record(CatalogPublicationPhase::VerifyCurrent)?;
+        Ok(self.readiness)
     }
 
     fn link_segment(&mut self, _segment: &AdmittedSegment<'_>) -> io::Result<()> {

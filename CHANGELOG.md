@@ -198,6 +198,9 @@ after its public API and format compatibility policies are established.
   refusal before mutation. New segment publication consumes a handle-free
   `ClosedSegment` proof before any immutable-pool link, and publisher teardown
   closes every retained writable handle before releasing writer authority.
+  Retry of an already-current complete candidate re-synchronizes the root and
+  returns an explicit `CatalogPublicationOutcome::AlreadyPublished` receipt
+  without repeating publication mutations.
 - Bounded `FilesystemCatalogSnapshot` restart loading that follows only exact
   checksummed head, catalog, and segment coordinates; refuses symbolic links,
   nonregular files, malformed or conflicting bytes, dangling entries, and

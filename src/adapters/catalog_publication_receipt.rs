@@ -1,13 +1,15 @@
-//! Consequential receipt for one fully synchronized catalog generation.
+//! Consequential receipt for one synchronized catalog publication attempt.
 
+use super::CatalogPublicationOutcome;
 use crate::{CatalogDigest, CatalogGeneration};
 
-/// Proof that publication reached root-directory synchronization.
+/// Proof that a candidate became or remained current through root synchronization.
 #[must_use]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct CatalogPublicationReceipt {
     generation: CatalogGeneration,
     catalog_digest: CatalogDigest,
+    outcome: CatalogPublicationOutcome,
 }
 
 impl CatalogPublicationReceipt {
@@ -21,13 +23,30 @@ impl CatalogPublicationReceipt {
         self.catalog_digest
     }
 
-    pub(super) const fn synchronized(
+    /// Returns whether this call published or reverified the generation.
+    pub const fn outcome(self) -> CatalogPublicationOutcome {
+        self.outcome
+    }
+
+    pub(super) const fn published(
         generation: CatalogGeneration,
         catalog_digest: CatalogDigest,
     ) -> Self {
         Self {
             generation,
             catalog_digest,
+            outcome: CatalogPublicationOutcome::Published,
+        }
+    }
+
+    pub(super) const fn already_published(
+        generation: CatalogGeneration,
+        catalog_digest: CatalogDigest,
+    ) -> Self {
+        Self {
+            generation,
+            catalog_digest,
+            outcome: CatalogPublicationOutcome::AlreadyPublished,
         }
     }
 }

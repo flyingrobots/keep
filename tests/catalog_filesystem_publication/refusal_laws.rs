@@ -71,6 +71,7 @@ fn stale_current_head_refuses_before_creating_catalog_state() -> Result<(), Box<
     )?;
     drop(publisher);
 
+    let stale_candidate = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &[])?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
     let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
     let error = require_error(
@@ -78,8 +79,8 @@ fn stale_current_head_refuses_before_creating_catalog_state() -> Result<(), Box<
             &mut publisher,
             CatalogPublicationExpectation::uninitialized(),
             SegmentPublication::none(),
-            &catalog,
-            &segments,
+            &stale_candidate,
+            &[],
         ),
         "stale uninitialized expectation was accepted",
     )?;

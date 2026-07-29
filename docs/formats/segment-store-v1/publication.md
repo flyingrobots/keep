@@ -162,9 +162,10 @@ The writer starts with an expected current generation and catalog digest. It
 acquires the lock, validates the current head and catalog again, and refuses
 stale expectations before creating a stage. If the current verified head
 already equals the complete proposed generation, catalog length, and catalog
-digest, retry returns an explicit already-published receipt after
-synchronizing the root directory. A different observed generation or digest
-is a stale-generation refusal.
+digest, retry returns
+`CatalogPublicationOutcome::AlreadyPublished` after synchronizing the root
+directory. A different observed generation or digest is a stale-generation
+refusal.
 
 Every write handles short writes and interruption. Every flush, file sync,
 hard link, unlink, head replacement, and directory sync is explicit and
@@ -227,7 +228,10 @@ until the publication head names it.
    atomically replace `HEAD` with `head.next` (`KEEP-CRASH-025`).
 6. Synchronize the store root (`KEEP-CRASH-026`).
 
-Only completion of step 6 returns a `#[must_use]` publication receipt.
+Only completion of step 6 returns a
+`CatalogPublicationOutcome::Published` receipt for a new publication. An
+already-current retry returns `CatalogPublicationOutcome::AlreadyPublished`
+only after complete candidate revalidation and a fresh root synchronization.
 
 An existing `head.next` always routes through recovery before step 1. The
 writer never truncates, replaces, or silently removes it to make the exclusive

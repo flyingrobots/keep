@@ -3,16 +3,18 @@
 use super::catalog_publication_expectation::ExpectedCurrentCatalog;
 use super::{
     AdmittedCatalog, AdmittedSegment, CanonicalCatalog, CanonicalPublicationHead,
-    CatalogPublicationError, CatalogPublicationExpectation, CatalogPublicationReceipt,
-    CatalogPublicationStorage, CatalogTransitionError, ChecksummedPublicationHead,
-    SegmentPublication, catalog_publication_execution,
+    CatalogPublicationError, CatalogPublicationExpectation, CatalogPublicationReadiness,
+    CatalogPublicationReceipt, CatalogPublicationStorage, CatalogTransitionError,
+    ChecksummedPublicationHead, SegmentPublication, catalog_publication_execution,
 };
 
 /// Publishes one fully admitted canonical catalog generation.
 ///
 /// All catalog, segment, and head relationships are verified before the first
-/// storage transition. A successful receipt is returned only after atomic head
-/// replacement and root-directory synchronization.
+/// storage transition. A new publication returns only after atomic head
+/// replacement and root-directory synchronization. If the complete candidate
+/// is already current, the retry performs no publication mutation,
+/// re-synchronizes the root, and returns an explicit already-published outcome.
 ///
 /// # Errors
 ///
@@ -40,13 +42,20 @@ pub fn publish_catalog_generation(
     let snapshot = checked_head
         .admit(admitted)
         .map_err(|source| CatalogPublicationError::SnapshotAdmission { source })?;
-    catalog_publication_execution::execute_current(storage, expectation)?;
+    let readiness =
+        catalog_publication_execution::execute_current(storage, expectation, &snapshot)?;
+    if readiness == CatalogPublicationReadiness::AlreadyPublished {
+        return Ok(CatalogPublicationReceipt::already_published(
+            snapshot.generation(),
+            snapshot.catalog_digest(),
+        ));
+    }
     if let Some(segment) = segment.into_admitted() {
         catalog_publication_execution::execute_segment(storage, segment)?;
     }
     catalog_publication_execution::execute_catalog(storage, catalog, checksummed)?;
     catalog_publication_execution::execute_head(storage, &head, &snapshot)?;
-    Ok(CatalogPublicationReceipt::synchronized(
+    Ok(CatalogPublicationReceipt::published(
         snapshot.generation(),
         snapshot.catalog_digest(),
     ))
