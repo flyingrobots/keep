@@ -20,6 +20,11 @@ pub enum CatalogEncodeError {
         /// Later generation being encoded.
         generation: CatalogGeneration,
     },
+    /// A supplied segment has no record that the catalog can reference.
+    UnreferencedSegment {
+        /// Exact unreferenced physical segment.
+        segment_digest: SegmentDigest,
+    },
     /// Summing admitted segment record counts overflowed.
     EntryCountArithmetic,
     /// The aggregate record count exceeded the format bound.
@@ -76,6 +81,9 @@ impl fmt::Display for CatalogEncodeError {
                 "catalog generation {} requires a predecessor",
                 generation.get()
             ),
+            Self::UnreferencedSegment { .. } => {
+                formatter.write_str("catalog input contains an unreferenced segment")
+            }
             Self::EntryCountArithmetic => formatter.write_str("catalog entry count overflowed"),
             Self::EntryCountOutOfBounds { maximum, observed } => write!(
                 formatter,
@@ -114,6 +122,7 @@ impl Error for CatalogEncodeError {
             Self::Segment { source, .. } => Some(source),
             Self::UnexpectedPredecessor { .. }
             | Self::MissingPredecessor { .. }
+            | Self::UnreferencedSegment { .. }
             | Self::EntryCountArithmetic
             | Self::EntryCountOutOfBounds { .. }
             | Self::HostLength { .. }

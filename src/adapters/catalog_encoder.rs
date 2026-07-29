@@ -50,6 +50,11 @@ fn validate_predecessor(
 fn entry_count(segments: &[AdmittedSegment<'_>]) -> Result<u64, CatalogEncodeError> {
     let mut count = 0_u64;
     for segment in segments {
+        if segment.record_count() == 0 {
+            return Err(CatalogEncodeError::UnreferencedSegment {
+                segment_digest: segment.digest(),
+            });
+        }
         count = count
             .checked_add(u64::from(segment.record_count()))
             .ok_or(CatalogEncodeError::EntryCountArithmetic)?;

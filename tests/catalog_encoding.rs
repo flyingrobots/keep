@@ -13,6 +13,7 @@ use support::{decode_hex, require_error};
 
 const ONE_ZERO_SEGMENT_HEX: &str =
     include_str!("../conformance/segment-store/v1/one-zero-segment.hex");
+const EMPTY_SEGMENT_HEX: &str = include_str!("../conformance/segment-store/v1/empty-segment.hex");
 const BUNDLE_SEGMENT_HEX: &str =
     include_str!("../conformance/segment-store/v1/one-zero-bundle-segment.hex");
 const ONE_ZERO_CATALOG_HEX: &str =
@@ -101,6 +102,23 @@ fn duplicate_logical_records_are_refused_before_emission() -> Result<(), Box<dyn
     assert!(matches!(
         error,
         CatalogEncodeError::DuplicateIdentity { identity } if identity == expected
+    ));
+    Ok(())
+}
+
+#[test]
+fn catalog_encoding_refuses_an_unreferenced_empty_segment() -> Result<(), Box<dyn Error>> {
+    let empty_bytes = fixture(EMPTY_SEGMENT_HEX)?;
+    let segments = [admitted_segment(&empty_bytes)?];
+    let expected = segments[0].digest();
+    let error = require_error(
+        CanonicalCatalog::from_segments(generation(1)?, None, &segments),
+        "empty physical segment was silently omitted from the catalog",
+    )?;
+    assert!(matches!(
+        error,
+        CatalogEncodeError::UnreferencedSegment { segment_digest }
+            if segment_digest == expected
     ));
     Ok(())
 }
