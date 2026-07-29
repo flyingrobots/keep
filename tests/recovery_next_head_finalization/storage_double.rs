@@ -12,6 +12,8 @@ use keep::{
 pub enum Operation {
     /// Current-state and candidate-view verification.
     Verify(RecoveryNextHeadFinalizationRequest),
+    /// Exact candidate-file synchronization.
+    SynchronizeCandidate(RecoveryNextHeadFinalizationRequest),
     /// Atomic candidate-head replacement.
     Replace(RecoveryNextHeadFinalizationRequest),
     /// Root-directory synchronization.
@@ -23,6 +25,7 @@ pub struct NextHeadDouble {
     readiness: RecoveryNextHeadFinalizationReadiness,
     operations: Vec<Operation>,
     fail_verifications: usize,
+    fail_candidate_synchronizations: usize,
     fail_replacements: usize,
     fail_synchronizations: usize,
 }
@@ -34,9 +37,17 @@ impl NextHeadDouble {
             readiness,
             operations: Vec::new(),
             fail_verifications: 0,
+            fail_candidate_synchronizations: 0,
             fail_replacements: 0,
             fail_synchronizations: 0,
         }
+    }
+
+    /// Configures the next candidate synchronization to fail once.
+    #[must_use]
+    pub const fn fail_next_candidate_synchronization(mut self) -> Self {
+        self.fail_candidate_synchronizations = 1;
+        self
     }
 
     /// Configures the next verification to fail once.
@@ -78,6 +89,18 @@ impl RecoveryNextHeadFinalizationStorage for NextHeadDouble {
             "injected current-state verification failure",
         )?;
         Ok(self.readiness)
+    }
+
+    fn synchronize_candidate(
+        &mut self,
+        request: RecoveryNextHeadFinalizationRequest,
+    ) -> Result<(), RecoveryNextHeadFinalizationStorageError> {
+        self.operations
+            .push(Operation::SynchronizeCandidate(request));
+        fail_once(
+            &mut self.fail_candidate_synchronizations,
+            "injected candidate synchronization failure",
+        )
     }
 
     fn replace_head(

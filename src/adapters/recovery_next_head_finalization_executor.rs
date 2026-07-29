@@ -11,7 +11,8 @@ use super::{
 /// A receipt is returned only after durable `HEAD` names the exact candidate
 /// and the root directory has been synchronized. Retrying after replacement
 /// but before directory synchronization re-admits the candidate and repeats the
-/// root synchronization without replacing the head again.
+/// root synchronization without replacing the head again. A ready candidate is
+/// synchronized and reverified before atomic replacement.
 /// Typed storage failures are boxed on the error path to keep the phase error
 /// bounded without discarding expected or observed state.
 ///
@@ -32,6 +33,12 @@ pub fn execute_recovery_next_head_finalization(
     })?;
     let outcome = match readiness {
         RecoveryNextHeadFinalizationReadiness::Ready => {
+            storage.synchronize_candidate(request).map_err(|source| {
+                RecoveryNextHeadFinalizationError::SynchronizeCandidate {
+                    evidence: request.evidence(),
+                    source: Box::new(source),
+                }
+            })?;
             storage.replace_head(request).map_err(|source| {
                 RecoveryNextHeadFinalizationError::Replace {
                     evidence: request.evidence(),

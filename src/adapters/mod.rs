@@ -85,6 +85,12 @@ mod filesystem_recovery_inventory_scan;
 #[cfg(all(test, unix))]
 mod filesystem_recovery_inventory_tests;
 mod filesystem_recovery_namespace;
+mod filesystem_recovery_next_head_candidate;
+mod filesystem_recovery_next_head_finalization_open_error;
+mod filesystem_recovery_next_head_finalization_storage;
+#[cfg(all(test, unix))]
+mod filesystem_recovery_next_head_finalization_tests;
+mod filesystem_recovery_next_head_finalizer;
 mod filesystem_recovery_stage;
 mod filesystem_recovery_stage_completer;
 mod filesystem_recovery_stage_completion_open_error;
@@ -314,6 +320,8 @@ pub use filesystem_catalog_publisher::FilesystemCatalogPublisher;
 pub use filesystem_catalog_snapshot::FilesystemCatalogSnapshot;
 pub use filesystem_platform_admission::FilesystemPlatformAdmission;
 pub use filesystem_recovery_inventory_reader::FilesystemRecoveryInventoryReader;
+pub use filesystem_recovery_next_head_finalization_open_error::FilesystemRecoveryNextHeadFinalizationOpenError;
+pub use filesystem_recovery_next_head_finalizer::FilesystemRecoveryNextHeadFinalizer;
 pub use filesystem_recovery_stage_completer::FilesystemRecoveryStageCompleter;
 pub use filesystem_recovery_stage_completion_open_error::FilesystemRecoveryStageCompletionOpenError;
 pub use filesystem_recovery_stage_discard_open_error::FilesystemRecoveryStageDiscardOpenError;

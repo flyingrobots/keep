@@ -26,6 +26,20 @@ pub trait RecoveryNextHeadFinalizationStorage {
         request: RecoveryNextHeadFinalizationRequest,
     ) -> Result<RecoveryNextHeadFinalizationReadiness, RecoveryNextHeadFinalizationStorageError>;
 
+    /// Synchronizes the exact complete candidate before head replacement.
+    ///
+    /// Implementations must bind the synchronized file to the request evidence
+    /// and revalidate its complete transitive view after synchronization.
+    ///
+    /// # Errors
+    ///
+    /// Returns a source-preserving evidence, synchronization, verification, or
+    /// storage failure.
+    fn synchronize_candidate(
+        &mut self,
+        request: RecoveryNextHeadFinalizationRequest,
+    ) -> Result<(), RecoveryNextHeadFinalizationStorageError>;
+
     /// Atomically replaces durable `HEAD` with the exact candidate.
     ///
     /// # Errors

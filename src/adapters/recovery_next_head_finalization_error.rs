@@ -19,6 +19,13 @@ pub enum RecoveryNextHeadFinalizationError {
         /// Exact underlying verification failure.
         source: Box<RecoveryNextHeadFinalizationStorageError>,
     },
+    /// The exact candidate could not be made durable before replacement.
+    SynchronizeCandidate {
+        /// Exact `head.next` evidence that was not made durable.
+        evidence: RecoveryStageEvidence,
+        /// Exact underlying synchronization or verification failure.
+        source: Box<RecoveryNextHeadFinalizationStorageError>,
+    },
     /// The exact candidate could not atomically replace durable `HEAD`.
     Replace {
         /// Exact `head.next` evidence that could not be finalized.
@@ -43,6 +50,11 @@ impl fmt::Display for RecoveryNextHeadFinalizationError {
                 "failed to verify recovery head generation {}: {source}",
                 target.generation().get()
             ),
+            Self::SynchronizeCandidate { evidence, source } => write!(
+                formatter,
+                "failed to synchronize {} evidence before finalization: {source}",
+                evidence.stage()
+            ),
             Self::Replace { evidence, source } => write!(
                 formatter,
                 "failed to finalize {} evidence: {source}",
@@ -60,7 +72,9 @@ impl fmt::Display for RecoveryNextHeadFinalizationError {
 impl Error for RecoveryNextHeadFinalizationError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::Verify { source, .. } | Self::Replace { source, .. } => Some(source.as_ref()),
+            Self::Verify { source, .. }
+            | Self::SynchronizeCandidate { source, .. }
+            | Self::Replace { source, .. } => Some(source.as_ref()),
             Self::SynchronizeRoot { source, .. } => Some(source),
         }
     }

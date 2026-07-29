@@ -30,6 +30,7 @@ fn ready_candidate_replaces_head_before_root_synchronization() -> Result<(), Box
         storage.operations(),
         &[
             Operation::Verify(request),
+            Operation::SynchronizeCandidate(request),
             Operation::Replace(request),
             Operation::SynchronizeRoot,
         ]
@@ -87,7 +88,38 @@ fn verification_and_replacement_failures_stop_later_mutation() -> Result<(), Box
     assert_eq!(verify_failure.operations(), &[Operation::Verify(request)]);
     assert_eq!(
         replace_failure.operations(),
-        &[Operation::Verify(request), Operation::Replace(request)]
+        &[
+            Operation::Verify(request),
+            Operation::SynchronizeCandidate(request),
+            Operation::Replace(request),
+        ]
+    );
+    Ok(())
+}
+
+#[test]
+fn candidate_sync_failure_stops_before_head_replacement() -> Result<(), Box<dyn Error>> {
+    let segment = fixture(SEGMENT_HEX)?;
+    let catalog = fixture(CATALOG_ONE_HEX)?;
+    let head = fixture(HEAD_ONE_HEX)?;
+    let request = initial_request(&head, &catalog, &segment)?;
+    let mut storage = NextHeadDouble::new(RecoveryNextHeadFinalizationReadiness::Ready)
+        .fail_next_candidate_synchronization();
+
+    let error = execute_recovery_next_head_finalization(&mut storage, request)
+        .err()
+        .ok_or("candidate synchronization failure was ignored")?;
+
+    assert!(matches!(
+        error,
+        RecoveryNextHeadFinalizationError::SynchronizeCandidate { .. }
+    ));
+    assert_eq!(
+        storage.operations(),
+        &[
+            Operation::Verify(request),
+            Operation::SynchronizeCandidate(request),
+        ]
     );
     Ok(())
 }
@@ -120,6 +152,7 @@ fn retry_after_replace_before_root_sync_is_already_finalized() -> Result<(), Box
         storage.operations(),
         &[
             Operation::Verify(request),
+            Operation::SynchronizeCandidate(request),
             Operation::Replace(request),
             Operation::SynchronizeRoot,
             Operation::Verify(request),

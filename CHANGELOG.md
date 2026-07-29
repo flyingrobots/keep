@@ -67,8 +67,14 @@ after its public API and format compatibility policies are established.
 - Storage-independent next-head recovery now binds a complete `head.next`
   assessment to its exact transitive catalog snapshot, admits only generation
   one over an uninitialized root or the exact successor of an expected current
-  snapshot, distinguishes ready from already-finalized retries, and returns a
-  receipt only after root synchronization.
+  snapshot, synchronizes a ready candidate before replacement, distinguishes
+  ready from already-finalized retries, and returns a receipt only after root
+  synchronization.
+- Filesystem next-head recovery now retains pinned root and writer authority,
+  reconstructs complete current and candidate views under exact namespace and
+  stage evidence, synchronizes and reverifies the candidate before atomic
+  replacement, refuses reappeared candidates on retry, and returns only after
+  root synchronization.
 - Store initialization now exposes one storage-port state machine that admits
   the platform before mutation, opens and locks `writer.lock`, admits the three
   protocol directories in order, synchronizes the root, and preserves the

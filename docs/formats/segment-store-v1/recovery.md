@@ -184,7 +184,7 @@ its exact 128-byte grammar, checksum, generation, catalog length and digest,
 and complete transitive catalog view. Recovery finalizes it only when it
 exactly extends the verified current head. A lawful generation-1 candidate may
 instead extend a verified uninitialized root. Finalization reuses
-`KEEP-CRASH-025` and `KEEP-CRASH-026` without rewriting the candidate.
+`KEEP-CRASH-024`–`KEEP-CRASH-026` without rewriting the candidate.
 
 The public semantic boundary requires both a complete
 `RecoveryNextHeadStage` assessment and the exact complete `CatalogSnapshot`
@@ -195,11 +195,19 @@ request retains the prior stage evidence, current-state expectation, and
 candidate generation, length, and digest.
 
 `execute_recovery_next_head_finalization` revalidates durable current state and
-the complete candidate view through its storage port. A ready candidate
-atomically replaces `HEAD`; an already-finalized retry skips replacement. Both
-paths synchronize the root before returning
-`RecoveryNextHeadFinalizationReceipt`. Filesystem binding of this semantic
-port remains planned.
+the complete candidate view through its storage port. A ready candidate is
+synchronized and reverified before it atomically replaces `HEAD`; an
+already-finalized retry requires `head.next` to be absent and skips replacement.
+Both paths synchronize the root before returning
+`RecoveryNextHeadFinalizationReceipt`.
+
+`FilesystemRecoveryNextHeadFinalizer` binds this port to pinned root, writer,
+staging, segment-pool, and catalog-pool capabilities. It revalidates namespace
+identity around bounded no-follow loads, binds `head.next` to the request
+fingerprint before and after candidate synchronization, reconstructs the
+complete transitive current and candidate views, refuses a reappeared candidate
+after finalization, and revalidates the complete transition at the replacement
+boundary.
 
 A truncated, corrupt, stale, or otherwise unpublishable candidate remains
 invisible and blocks new publication.

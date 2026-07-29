@@ -64,7 +64,9 @@ fn next_head_finalization_requires_one_exact_transition_and_durable_receipt() {
         "generation one over an uninitialized root",
         "expected exact successor",
         "`execute_recovery_next_head_finalization` revalidates durable current state",
-        "an already-finalized retry skips replacement",
+        "synchronized and reverified before it atomically replaces `HEAD`",
+        "requires `head.next` to be absent and skips replacement",
+        "`FilesystemRecoveryNextHeadFinalizer` binds this port",
         "`RecoveryNextHeadFinalizationReceipt`",
     ] {
         assert!(

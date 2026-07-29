@@ -18,9 +18,9 @@
 //! inventory, name classification, bounded stage fingerprinting, exact
 //! truncated-stage discard, and complete-stage valid-orphan recovery are
 //! explicit. Exact next-head finalization now has a storage-independent
-//! contract; filesystem finalization, retention, and garbage collection APIs
-//! remain intentionally absent until their contracts have executable
-//! specifications.
+//! contract and a pinned writer-authorized filesystem adapter. Reusable-stage
+//! continuation, retention, and garbage collection APIs remain intentionally
+//! absent until their contracts have executable specifications.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -46,6 +46,7 @@ pub use adapters::{
     ChecksummedPublicationHead, ChecksummedSegmentRecord, ClosedSegment,
     FilesystemCatalogPublicationError, FilesystemCatalogPublisher, FilesystemCatalogSnapshot,
     FilesystemPlatformAdmission, FilesystemRecoveryInventoryReader,
+    FilesystemRecoveryNextHeadFinalizationOpenError, FilesystemRecoveryNextHeadFinalizer,
     FilesystemRecoveryStageCompleter, FilesystemRecoveryStageCompletionOpenError,
     FilesystemRecoveryStageDiscardOpenError, FilesystemRecoveryStageDiscarder,
     FilesystemRecoveryStageError, FilesystemSegmentStage, FilesystemWriterLock, LayoutDecodeError,

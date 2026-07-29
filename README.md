@@ -86,8 +86,12 @@ valid orphan, not reachability. A complete `head.next` and its transitive
 candidate is generation one over an uninitialized root or the exact successor
 of the expected current snapshot. The executor distinguishes first
 finalization from an already-finalized retry and returns only after root
-synchronization. The filesystem adapter for that semantic finalization,
-process-death injection, reusable-stage continuation, retention, compaction,
+synchronization. `FilesystemRecoveryNextHeadFinalizer` retains pinned writer
+authority, reconstructs the complete current and candidate views without
+following links, verifies namespace and stage identity, synchronizes and
+reverifies the exact candidate, atomically replaces `HEAD`, and synchronizes
+the root. An already-finalized retry requires `head.next` to be absent.
+Process-death injection, reusable-stage continuation, retention, compaction,
 and garbage collection remain planned. Presence in the reference CAS does not
 claim retention, crash recovery, or durability.
 
