@@ -157,6 +157,7 @@ fn cleanup_terminates_the_entire_child_process_group() -> Result<(), Box<dyn std
 }
 
 fn require_descendant_disconnect(mut descendant: UnixStream) -> Result<(), io::Error> {
+    descendant.set_read_timeout(Some(Duration::from_millis(250)))?;
     let mut byte = [0_u8; 1];
     match io::Read::read_exact(&mut descendant, &mut byte) {
         Err(source)
@@ -172,6 +173,23 @@ fn require_descendant_disconnect(mut descendant: UnixStream) -> Result<(), io::E
             "terminated descendant unexpectedly wrote to its witness socket",
         )),
     }
+}
+
+#[test]
+fn descendant_disconnect_witness_has_a_finite_read_deadline() -> Result<(), io::Error> {
+    let (descendant, _retained_writer) = UnixStream::pair()?;
+
+    let Err(error) = require_descendant_disconnect(descendant) else {
+        return Err(io::Error::other(
+            "an open idle witness did not reach its read deadline",
+        ));
+    };
+
+    assert!(matches!(
+        error.kind(),
+        io::ErrorKind::TimedOut | io::ErrorKind::WouldBlock
+    ));
+    Ok(())
 }
 
 fn wait_for_exit(child: &mut std::process::Child) -> Result<std::process::ExitStatus, io::Error> {
