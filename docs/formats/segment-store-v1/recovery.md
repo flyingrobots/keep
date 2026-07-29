@@ -104,11 +104,22 @@ digest-derived pool coordinate. Under the writer lock, the executor reopens
 without following links, reverifies and resynchronizes the complete staged
 artifact, and refuses any drift.
 
-Segment completion reuses `KEEP-CRASH-009`–`012`; catalog completion reuses
-`KEEP-CRASH-017`–`020`. The executor performs the same no-clobber link,
-post-link pool verification, pool-directory synchronization, exact stage
-unlink, and staging-directory synchronization as forward publication. An
-existing exact pool entry is an idempotent input, not proof by name.
+The public semantic boundary admits only
+`RecoverySegmentStage::Complete` and `RecoveryCatalogStage::Complete`.
+`plan_recovery_stage_completion` converts either borrowed assessment into a
+bounded owned request containing exact stage evidence and the validated pool
+coordinate. Reusable, truncated, and `head.next` states remain ineligible.
+`execute_recovery_stage_completion` requires a storage port to perform the
+ordered transition and returns `RecoveryStageCompletionReceipt` only after
+pool and staging durability. The receipt proves a valid orphan; it does not
+prove reachability or retention.
+
+Segment completion reuses `KEEP-CRASH-008`–`012`; catalog completion reuses
+`KEEP-CRASH-016`–`020`. The executor performs the same staged-file
+synchronization, no-clobber link, post-link pool verification, pool-directory
+synchronization, exact stage unlink, and staging-directory synchronization as
+forward publication. An existing exact pool entry is an idempotent input, not
+proof by name.
 
 After a crash, retry accepts only the exact verified stage/pool pair, the
 reappeared exact stage, or the already completed pool entry with an absent

@@ -15,10 +15,10 @@
 //! generations, platform-gated filesystem publication mechanics, bounded
 //! immutable restart snapshots, typed store-initialization orchestration, and
 //! production initialization for the admitted Linux ext4 profile. Recovery
-//! inventory, name classification, and bounded stage fingerprinting are
-//! read-only; semantic recovery planning, execution, retention, and garbage
-//! collection APIs remain intentionally absent until their contracts have
-//! executable specifications.
+//! inventory, name classification, bounded stage fingerprinting, exact
+//! truncated-stage discard, and complete-stage valid-orphan recovery are
+//! explicit. Head finalization, retention, and garbage collection APIs remain
+//! intentionally absent until their contracts have executable specifications.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -54,13 +54,16 @@ pub use adapters::{
     RecoveryNameManifest, RecoveryNamedEntry, RecoveryNamespace, RecoveryNextHeadStage,
     RecoveryNextHeadStageError, RecoveryPoolNameError, RecoveryRequiredEntry, RecoverySegmentStage,
     RecoverySegmentStageError, RecoverySegmentTruncation, RecoveryStage, RecoveryStageAssessment,
-    RecoveryStageAssessmentError, RecoveryStageByteAdmissionError, RecoveryStageDiscardError,
-    RecoveryStageDiscardOutcome, RecoveryStageDiscardPlanError, RecoveryStageDiscardReason,
-    RecoveryStageDiscardReceipt, RecoveryStageDiscardRequest, RecoveryStageDiscardStorage,
-    RecoveryStageDiscardStorageError, RecoveryStageEvidence, RecoveryStageFingerprint,
-    RecoveryStageFingerprintAlgorithm, RecoveryStageFingerprintError, RecoveryStageLength,
-    RecoveryStageMetadata, RecoveryStageMetadataError, RecoveryStageNamespacePhase,
-    RecoveryStageParent, ReusableRecoverySegment, SealedSegment, SegmentDigest,
+    RecoveryStageAssessmentError, RecoveryStageByteAdmissionError, RecoveryStageCompletionError,
+    RecoveryStageCompletionPlanError, RecoveryStageCompletionPool, RecoveryStageCompletionReceipt,
+    RecoveryStageCompletionRequest, RecoveryStageCompletionStorage, RecoveryStageCompletionTarget,
+    RecoveryStageDiscardError, RecoveryStageDiscardOutcome, RecoveryStageDiscardPlanError,
+    RecoveryStageDiscardReason, RecoveryStageDiscardReceipt, RecoveryStageDiscardRequest,
+    RecoveryStageDiscardStorage, RecoveryStageDiscardStorageError, RecoveryStageEvidence,
+    RecoveryStageFingerprint, RecoveryStageFingerprintAlgorithm, RecoveryStageFingerprintError,
+    RecoveryStageLength, RecoveryStageMetadata, RecoveryStageMetadataError,
+    RecoveryStageNamespacePhase, RecoveryStageParent, RecoveryStagePoolOutcome,
+    RecoveryStageSynchronizationOutcome, ReusableRecoverySegment, SealedSegment, SegmentDigest,
     SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError, SegmentPublication,
     SegmentPublicationError, SegmentReadError, SegmentReadPolicy, SegmentRecordAdmissionError,
     SegmentRecordChecksum, SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError,
@@ -71,8 +74,9 @@ pub use adapters::{
     StoreInitializationReceipt, StoreInitializationStorage, WriterLockAcquireError,
     WriterLockAcquirePhase, admit_recovery_stage_bytes, assess_recovery_stage,
     classify_recovery_catalog_stage, classify_recovery_names, classify_recovery_next_head_stage,
-    classify_recovery_segment_stage, execute_recovery_stage_discard, fingerprint_recovery_stage,
-    initialize_store, plan_recovery_stage_discard, publish_catalog_generation,
+    classify_recovery_segment_stage, execute_recovery_stage_completion,
+    execute_recovery_stage_discard, fingerprint_recovery_stage, initialize_store,
+    plan_recovery_stage_completion, plan_recovery_stage_discard, publish_catalog_generation,
     read_recovery_inventory,
 };
 pub use blob::{

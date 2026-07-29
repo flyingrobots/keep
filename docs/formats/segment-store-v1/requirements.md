@@ -95,8 +95,10 @@ complete caller-supplied fixed-stage bytes through their name-selected
 classifiers. An exact truncation assessment may now authorize one
 evidence-bound, retry-safe discard through a semantic storage port. These
 slices now bind that discard to pinned writer-authorized filesystem storage.
-They do not yet claim transitive publication-view admission or process-death
-injection.
+A complete segment or catalog assessment may now authorize an owned,
+evidence-bound valid-orphan transition through a semantic storage port. They
+do not yet bind complete-stage recovery to the filesystem or claim transitive
+publication-view admission or process-death injection.
 
 <!-- markdownlint-disable MD013 -->
 
@@ -116,6 +118,7 @@ injection.
 | `KEEP-RECOVERY-012` | Read-only semantic assessment admits materialized stage bytes only when the canonical-name stage, exact observed length, and `KEEP:RECOVERY:STAGE\0` fingerprint equal prior evidence, then dispatches through the name-selected segment, catalog, or next-head classifier | Evidence-binding mutation matrix and canonical stage assessments | `tests/recovery_stage_assessment.rs`, `tests/recovery_stage_assessment/*.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-013` | Explicit discard plans only from an exact truncation assessment, retains the observation evidence and typed truncation reason, refuses changed evidence without mutation, synchronizes the name-selected parent after exact removal or admitted absence, and returns a receipt only after synchronization | Truncation-planning, evidence-drift, operation-order, and retry matrix | `tests/recovery_stage_discard.rs`, `tests/recovery_stage_discard/*.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-014` | Filesystem discard retains root and `writer.lock` authority, pins every protocol directory, never follows a fixed-stage link, revalidates bounded fingerprint and entry identity before unlink, refuses drift without mutation, and synchronizes the typed parent after removal or admitted absence | Exact removal, absent retry, mismatch, symlink, replacement, and writer-exclusion matrix | `src/adapters/filesystem_recovery_stage_discard_tests.rs`, `src/adapters/filesystem_recovery_stage_discard_tests/fixture.rs` | Implemented in #17 |
+| `KEEP-RECOVERY-015` | Immutable-pool completion plans only from exact complete segment or catalog assessments, owns bounded evidence and validated coordinates, re-synchronizes an exact present stage before linking, verifies an existing pool entry before admission, synchronizes the pool before exact stage removal, synchronizes staging before receipt, accepts completed retries, and never finalizes a head | Complete-only planning, operation-order, staged-file-sync, pool-conflict, and retry matrix | `tests/recovery_stage_completion.rs`, `tests/recovery_stage_completion/*.rs` | Implemented in #17 |
 
 <!-- markdownlint-enable MD013 -->
 

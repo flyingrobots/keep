@@ -53,6 +53,12 @@ after its public API and format compatibility policies are established.
   without following links, refuses replacement or fingerprint drift before
   unlink, and synchronizes the typed `staging` or root parent before returning
   a receipt.
+- Explicit complete-stage recovery now plans only from exact complete segment
+  or catalog assessments, owns bounded stage evidence and immutable-pool
+  coordinates, re-synchronizes an exact present stage before linking, verifies
+  existing pool entries, synchronizes the selected pool before exact stage
+  removal, and returns a valid-orphan receipt only after staging
+  synchronization. It never creates or finalizes a publication head.
 - Store initialization now exposes one storage-port state machine that admits
   the platform before mutation, opens and locks `writer.lock`, admits the three
   protocol directories in order, synchronizes the root, and preserves the
