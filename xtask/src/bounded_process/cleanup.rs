@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 use super::process_group::ProcessGroup;
 use super::{ProcessError, ReaderWorker};
 
-const CLEANUP_DEADLINE: Duration = Duration::from_secs(2);
+const CLEANUP_STEP_GRACE: Duration = Duration::from_secs(2);
 const CLEANUP_POLL_INTERVAL: Duration = Duration::from_millis(10);
 
 pub(super) fn cleanup_process(child: &mut Child, primary: ProcessError) -> ProcessError {
@@ -34,7 +34,7 @@ pub(super) fn retire_readers(
 }
 
 pub(super) fn retire_after_cleanup(reader: ReaderWorker, primary: ProcessError) -> ProcessError {
-    match reader.retire(CLEANUP_DEADLINE) {
+    match reader.retire(CLEANUP_STEP_GRACE) {
         Ok(()) => primary,
         Err(additional) => ProcessError::Additional {
             primary: Box::new(primary),
@@ -44,27 +44,27 @@ pub(super) fn retire_after_cleanup(reader: ReaderWorker, primary: ProcessError) 
 }
 
 fn reap_child(child: &mut Child) -> Result<(), io::Error> {
-    wait_until_reaped(CLEANUP_DEADLINE, || {
+    wait_until_reaped(CLEANUP_STEP_GRACE, || {
         child.try_wait().map(|status| status.is_some())
     })
 }
 
 fn wait_until_reaped(
-    deadline: Duration,
+    grace: Duration,
     mut poll: impl FnMut() -> Result<bool, io::Error>,
 ) -> Result<(), io::Error> {
     let expires = Instant::now()
-        .checked_add(deadline)
-        .ok_or_else(|| cleanup_timeout(deadline))?;
+        .checked_add(grace)
+        .ok_or_else(|| cleanup_timeout(grace))?;
     loop {
         if poll()? {
             return Ok(());
         }
         let remaining = expires
             .checked_duration_since(Instant::now())
-            .ok_or_else(|| cleanup_timeout(deadline))?;
+            .ok_or_else(|| cleanup_timeout(grace))?;
         if remaining.is_zero() {
-            return Err(cleanup_timeout(deadline));
+            return Err(cleanup_timeout(grace));
         }
         thread::sleep(CLEANUP_POLL_INTERVAL.min(remaining));
     }
@@ -85,10 +85,10 @@ fn with_cleanup(
     }
 }
 
-fn cleanup_timeout(deadline: Duration) -> io::Error {
+fn cleanup_timeout(grace: Duration) -> io::Error {
     io::Error::new(
         io::ErrorKind::TimedOut,
-        format!("child was not reaped within {deadline:?}"),
+        format!("child was not reaped within the {grace:?} cleanup grace"),
     )
 }
 

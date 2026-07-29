@@ -5,14 +5,14 @@ use std::fmt;
 use std::io;
 use std::time::Duration;
 
-/// A typed failure from synchronous, bounded child-process execution.
+/// A typed failure from deadline-accounted child-process execution.
 pub(crate) enum ProcessError {
     /// Reader or cleanup collection found another failure after the primary one.
     Additional {
         primary: Box<Self>,
         additional: Box<Self>,
     },
-    /// Process-group termination or child reaping failed after a primary error.
+    /// Process-group termination, child killing, or bounded reaping failed.
     Cleanup {
         primary: Box<Self>,
         action: &'static str,
@@ -45,7 +45,7 @@ pub(crate) enum ProcessError {
         program: &'static str,
         stream: &'static str,
     },
-    /// The complete child operation exceeded its admitted duration.
+    /// The admitted child-operation deadline elapsed.
     Timeout {
         program: &'static str,
         duration: Duration,

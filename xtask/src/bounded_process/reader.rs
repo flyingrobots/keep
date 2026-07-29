@@ -89,13 +89,13 @@ impl ReaderWorker {
     /// Retires one reader without an unbounded thread join.
     ///
     /// A result already received proves the worker crossed its only fallible
-    /// read boundary. Otherwise retirement waits only for `deadline`; a stalled
+    /// read boundary. Otherwise retirement waits only for `grace`; a stalled
     /// reader becomes a typed timeout and its thread handle is detached.
-    pub(super) fn retire(self, deadline: Duration) -> Result<(), ProcessError> {
+    pub(super) fn retire(self, grace: Duration) -> Result<(), ProcessError> {
         let result = if self.completed {
             Ok(())
         } else {
-            match self.receiver.recv_timeout(deadline) {
+            match self.receiver.recv_timeout(grace) {
                 Ok(Ok(_output)) => Ok(()),
                 Ok(Err(source)) => Err(ProcessError::Io {
                     program: self.program,

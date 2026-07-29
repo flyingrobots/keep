@@ -20,7 +20,7 @@ const PROCESS_POLL_INTERVAL: Duration = Duration::from_millis(10);
 /// Each stream is drained concurrently and retains at most one mebibyte. The
 /// optional deadline covers child execution and reader collection. Failures
 /// terminate the child's dedicated process group, retire both readers within a
-/// fixed cleanup deadline, and retain primary and cleanup errors in
+/// fixed per-step cleanup grace, and retain primary and cleanup errors in
 /// [`ProcessError`].
 pub(crate) fn capture(
     program: &'static str,
@@ -63,8 +63,8 @@ pub(crate) fn capture_with_limits(
 ///
 /// The deadline clock starts before synchronous spawn. After spawn returns, its
 /// remaining time bounds every nonblocking stdin write, both output readers,
-/// and child execution. Failed-operation teardown uses a separate fixed
-/// deadline for child reaping and reader retirement. Input slices are streamed
+/// and child execution. Failed-operation teardown uses a fixed per-step cleanup
+/// grace for child reaping and reader retirement. Input slices are streamed
 /// directly without constructing a combined preimage allocation.
 pub(crate) fn capture_with_input_limits(
     program: &'static str,

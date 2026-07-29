@@ -164,7 +164,7 @@ used by protocol conformance. The deadline clock starts before synchronous
 spawn. After spawn returns, its remaining time bounds stdin transfer and output
 collection; stdout and stderr have independent byte limits; and timeout or
 collection failure kills the complete child process group. Child reaping and
-reader retirement use a separate fixed cleanup deadline and remain typed if
+reader retirement use fixed per-step cleanup grace periods and remain typed if
 teardown cannot be proved. Digest-specific preimage construction remains owned
 by this checker rather than the process adapter.
 
