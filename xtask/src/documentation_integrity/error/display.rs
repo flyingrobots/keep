@@ -6,6 +6,10 @@ use crate::diagnostic::{escaped_controls, escaped_path};
 
 use super::DocumentationError;
 
+mod refusal;
+
+use refusal::{refusal_fixture, refusal_mismatch};
+
 #[derive(Clone, Copy)]
 enum SourcePathDiagnostic {
     Changed,
@@ -51,21 +55,9 @@ impl fmt::Display for DocumentationError {
                 write!(formatter, "{corpus} corpus contains a non-UTF-8 path")
             }
             Self::Process(error) => write!(formatter, "{error}"),
-            Self::RefusalFixture { action, .. } => {
-                write!(
-                    formatter,
-                    "cannot {action} for documentation refusal evidence"
-                )
-            }
+            Self::RefusalFixture { action, .. } => refusal_fixture(formatter, action),
             Self::RefusalMismatch { scenario, observed } => {
-                write!(
-                    formatter,
-                    "documentation refusal scenario `{scenario}` did not produce its reviewed error"
-                )?;
-                if let Some(error) = observed {
-                    write!(formatter, ": {error}")?;
-                }
-                Ok(())
+                refusal_mismatch(formatter, scenario, observed.as_deref())
             }
             error @ (Self::RepositoryFileEncoding { .. }
             | Self::RepositoryFileInspect { .. }
