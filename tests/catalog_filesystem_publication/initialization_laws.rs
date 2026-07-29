@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fs;
 use std::io;
 
-use keep::{
+use crate::{
     CanonicalCatalog, CatalogGeneration, CatalogPublicationError, CatalogPublicationExpectation,
     CatalogPublicationPhase, FilesystemCatalogPublicationError, FilesystemCatalogPublisher,
     FilesystemWriterLock, SegmentPublication, publish_catalog_generation,
@@ -28,7 +28,8 @@ fn require_empty_durable_pools(pool: DurablePool) -> Result<(), Box<dyn Error>> 
     let segments = [];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let mut publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
 
     let Err(error) = publish_catalog_generation(
         &mut publisher,

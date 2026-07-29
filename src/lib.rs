@@ -12,10 +12,13 @@
 //! deterministic streaming chunk detection, canonical flat-layout identity
 //! and codecs, a capacity-bounded non-durable reference CAS, and explicit
 //! immutable-segment writing and verified reading, canonical catalog
-//! generations, writer-locked filesystem publication, and bounded immutable
-//! restart snapshots. Store initialization, recovery, retention, and garbage
-//! collection APIs remain intentionally absent until their contracts have
-//! executable specifications.
+//! generations, platform-gated filesystem publication mechanics, and bounded
+//! immutable restart snapshots. Production platform admission, store
+//! initialization, recovery, retention, and garbage collection APIs remain
+//! intentionally absent until their contracts have executable specifications.
+
+#[cfg(test)]
+extern crate self as keep;
 
 mod adapters;
 mod blob;
@@ -36,17 +39,17 @@ pub use adapters::{
     CatalogRestartPhase, CatalogRestartPolicy, CatalogSnapshot, CatalogSnapshotError,
     CatalogSuccessor, CatalogTransitionError, ChecksummedCatalog, ChecksummedPublicationHead,
     ChecksummedSegmentRecord, ClosedSegment, FilesystemCatalogPublicationError,
-    FilesystemCatalogPublisher, FilesystemCatalogSnapshot, FilesystemSegmentStage,
-    FilesystemWriterLock, LayoutDecodeError, LayoutDecodePolicy, LayoutEncodeError,
-    LayoutIdBinaryParseError, LayoutIdTextParseError, PublicationHeadDecodeError, SealedSegment,
-    SegmentDigest, SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError, SegmentPublication,
-    SegmentPublicationError, SegmentReadError, SegmentReadPolicy, SegmentRecordAdmissionError,
-    SegmentRecordChecksum, SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError,
-    SegmentRecordIdentity, SegmentRecordLength, SegmentRecordLimit, SegmentRecordLimitError,
-    SegmentRecordPayloadLength, SegmentRecords, SegmentSeal, SegmentSealError, SegmentStage,
-    SegmentStageCreateError, SegmentWriteError, SegmentWritePhase, StagedSegment,
-    StorageProfileIdParseError, WriterLockAcquireError, WriterLockAcquirePhase,
-    publish_catalog_generation,
+    FilesystemCatalogPublisher, FilesystemCatalogSnapshot, FilesystemPlatformAdmission,
+    FilesystemSegmentStage, FilesystemWriterLock, LayoutDecodeError, LayoutDecodePolicy,
+    LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
+    PublicationHeadDecodeError, SealedSegment, SegmentDigest, SegmentDurabilityPhase,
+    SegmentHeader, SegmentHeaderError, SegmentPublication, SegmentPublicationError,
+    SegmentReadError, SegmentReadPolicy, SegmentRecordAdmissionError, SegmentRecordChecksum,
+    SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity,
+    SegmentRecordLength, SegmentRecordLimit, SegmentRecordLimitError, SegmentRecordPayloadLength,
+    SegmentRecords, SegmentSeal, SegmentSealError, SegmentStage, SegmentStageCreateError,
+    SegmentWriteError, SegmentWritePhase, StagedSegment, StorageProfileIdParseError,
+    WriterLockAcquireError, WriterLockAcquirePhase, publish_catalog_generation,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

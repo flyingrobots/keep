@@ -6,9 +6,9 @@ use cap_std::fs::{Dir, File};
 
 use super::filesystem_publisher_authority::FilesystemPublisherAuthority;
 use super::{
-    AdmittedSegment, CatalogRestartPolicy, ClosedSegment, FilesystemSegmentStage,
-    FilesystemWriterLock, SealedSegment, SegmentPublication, SegmentPublicationError,
-    SegmentStageCreateError, sync_capable_directory,
+    AdmittedSegment, CatalogRestartPolicy, ClosedSegment, FilesystemPlatformAdmission,
+    FilesystemSegmentStage, FilesystemWriterLock, SealedSegment, SegmentPublication,
+    SegmentPublicationError, SegmentStageCreateError, sync_capable_directory,
 };
 
 pub(super) const CURRENT_SEGMENT: &str = "current.seg";
@@ -22,6 +22,10 @@ pub(super) const NEXT_HEAD: &str = "head.next";
 /// and catalog-pool directory capabilities until it is dropped. Dropping it
 /// closes open stages and directory capabilities before releasing the writer
 /// lock, but never publishes, removes, truncates, or repairs protocol state.
+///
+/// Construction consumes a [`FilesystemPlatformAdmission`] proof. Keep exposes
+/// no public producer for that proof until issue #17 supplies crash-tested
+/// initialization and platform admission.
 #[must_use]
 pub struct FilesystemCatalogPublisher {
     pub(super) root: Dir,
@@ -38,7 +42,7 @@ pub struct FilesystemCatalogPublisher {
 }
 
 impl FilesystemCatalogPublisher {
-    /// Pins the canonical publication directories under an acquired writer lock.
+    /// Pins canonical publication directories under admitted writer authority.
     ///
     /// # Errors
     ///
@@ -47,7 +51,11 @@ impl FilesystemCatalogPublisher {
     /// returns [`io::ErrorKind::NotADirectory`]. A failure drops `lock` and
     /// therefore releases writer authority. Success allocates one ephemeral
     /// authority token that binds later stage selection to this publisher.
-    pub fn open(lock: FilesystemWriterLock, policy: CatalogRestartPolicy) -> io::Result<Self> {
+    pub fn open(
+        admission: FilesystemPlatformAdmission,
+        policy: CatalogRestartPolicy,
+    ) -> io::Result<Self> {
+        let lock = admission.into_lock();
         let pinned_root = lock.clone_directory()?;
         let root = sync_capable_directory::open(&pinned_root, ".")?;
         let staging = sync_capable_directory::open(&root, "staging")?;
@@ -64,6 +72,17 @@ impl FilesystemCatalogPublisher {
             head_stage: None,
             _lock: lock,
         })
+    }
+
+    #[cfg(test)]
+    pub(super) fn open_unchecked_for_tests(
+        lock: FilesystemWriterLock,
+        policy: CatalogRestartPolicy,
+    ) -> io::Result<Self> {
+        Self::open(
+            FilesystemPlatformAdmission::unchecked_for_tests(lock),
+            policy,
+        )
     }
 
     /// Exclusively creates `staging/current.seg` under this writer authority.

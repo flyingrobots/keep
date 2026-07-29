@@ -120,10 +120,17 @@ process-scoped exclusion are unsupported.
 
 `FilesystemWriterLock::try_acquire` opens the existing regular `writer.lock`
 without following symbolic links and acquires its exclusive advisory lock
-without blocking. `FilesystemCatalogPublisher::open` consumes that authority
-and pins the existing store root plus `staging`, `segments`, and `catalogs`.
-Both operations perform blocking filesystem I/O. Neither operation initializes,
-repairs, enumerates, or removes protocol state.
+without blocking. That lock alone cannot construct a publisher.
+`FilesystemCatalogPublisher::open` consumes `FilesystemPlatformAdmission`,
+which owns the lock after initialization and platform checks, then pins the
+existing store root plus `staging`, `segments`, and `catalogs`. Both operations
+perform blocking filesystem I/O. Neither operation repairs, enumerates, or
+removes protocol state.
+
+Issue #16 defines the proof type but deliberately exposes no public producer.
+The filesystem transition suite uses a crate-private, test-only unchecked proof
+to exercise publication mechanics. Issue #17 must implement initialization and
+the platform contract before production callers can obtain admission.
 
 `publish_catalog_generation` performs complete semantic preflight before the
 first storage transition. With `FilesystemCatalogPublisher`, it then executes
@@ -154,14 +161,15 @@ head-selected coordinates, refuses symbolic links and nonregular artifacts,
 checks every length before allocation, and reconstructs logical bindings only
 after all canonical bytes and physical coordinates verify.
 
-Issue #16 does not implement store-root initialization or explicit recovery. A
-caller must supply the exact canonical directories and persistent lock file
-before opening a publisher. Any retained `head.next` or `current.cat`, and any
-`current.seg` not owned by the selected staged segment, causes publication to
-refuse before mutation and requires issue #17 recovery. When `HEAD` is absent,
-the publisher probes both immutable pools and admits first publication only
-when both are empty; any entry is preserved as recovery evidence and refuses
-the operation. An already-current retry refuses every fixed-name stage.
+Issue #16 does not implement store-root initialization, platform admission, or
+explicit recovery. A future admission producer must prove the exact canonical
+directories and persistent lock file before opening a publisher. Any retained
+`head.next` or `current.cat`, and any `current.seg` not owned by the selected
+staged segment, causes publication to refuse before mutation and requires issue
+recovery under #17. When `HEAD` is absent, the publisher probes both immutable pools
+and admits first publication only when both are empty; any entry is preserved
+as recovery evidence and refuses the operation. An already-current retry
+refuses every fixed-name stage.
 
 ## Forward publication protocol
 

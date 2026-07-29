@@ -3,24 +3,25 @@
 use std::error::Error;
 use std::fs;
 
-use keep::{
+use crate::{
     AdmittedSegment, CanonicalCatalog, CatalogGeneration, CatalogPublicationError,
     CatalogPublicationExpectation, CatalogPublicationPhase, CatalogRestartError,
     FilesystemCatalogPublicationError, FilesystemCatalogPublisher, FilesystemCatalogSnapshot,
     FilesystemWriterLock, SegmentPublication, publish_catalog_generation,
 };
 
+use super::super::test_support::require_error;
 use super::{
     EMPTY_SEGMENT_HEX, StoreFixture, fixture, maximum_segment_policy, restart_policy,
     stage_one_zero,
 };
-use crate::support::require_error;
 
 #[test]
 fn conflicting_immutable_pool_bytes_refuse_before_visibility() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-conflict")?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let mut publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
     let initial_segments = [];
     let initial_catalog =
         CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &initial_segments)?;
@@ -76,7 +77,8 @@ fn conflicting_immutable_pool_bytes_refuse_before_visibility() -> Result<(), Box
 fn stale_current_head_refuses_before_creating_catalog_state() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-stale")?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let mut publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
     let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
@@ -93,7 +95,8 @@ fn stale_current_head_refuses_before_creating_catalog_state() -> Result<(), Box<
 
     let stale_candidate = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &[])?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let mut publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
     let error = require_error(
         publish_catalog_generation(
             &mut publisher,
@@ -129,7 +132,8 @@ fn leftover_next_head_requires_recovery_before_any_mutation() -> Result<(), Box<
     let store = StoreFixture::create("catalog-filesystem-next-head")?;
     fs::write(store.path().join("head.next"), [])?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let mut publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
     let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
@@ -167,7 +171,8 @@ fn leftover_next_head_requires_recovery_before_any_mutation() -> Result<(), Box<
 fn leftover_catalog_stage_refuses_before_segment_pool_mutation() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-catalog-recovery")?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let mut publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
     let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     fs::write(store.staging().join("current.cat"), b"recovery evidence")?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
@@ -212,7 +217,8 @@ fn catalog_only_publication_refuses_a_leftover_segment_stage() -> Result<(), Box
     fs::write(&stage, b"recovery evidence")?;
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &[])?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let mut publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
     let error = require_error(
         publish_catalog_generation(
             &mut publisher,
@@ -244,7 +250,8 @@ fn catalog_only_publication_refuses_a_leftover_segment_stage() -> Result<(), Box
 fn already_published_retry_refuses_a_recreated_segment_stage() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-retry-stage")?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let mut publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
     let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
@@ -260,7 +267,8 @@ fn already_published_retry_refuses_a_recreated_segment_stage() -> Result<(), Box
     drop(publisher);
 
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let mut publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
     let (sealed, retry_bytes) = stage_one_zero(&publisher, &store)?;
     let retry_segment = AdmittedSegment::decode(&retry_bytes, maximum_segment_policy())?;
     let retry_segments = [retry_segment];

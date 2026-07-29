@@ -1,24 +1,21 @@
 //! Exclusive filesystem segment-stage creation laws.
 
-#[path = "segment_filesystem_stage/sandbox.rs"]
-pub mod sandbox;
-mod support;
-
 use std::error::Error;
 use std::fs;
 use std::io::ErrorKind;
 
-use keep::{
+use super::filesystem_test_sandbox::TestDirectory;
+use super::test_support::decode_hex;
+use crate::{
     AdmittedSegmentRecord, CatalogRestartByteLimit, CatalogRestartPolicy,
     FilesystemCatalogPublisher, FilesystemWriterLock, LayoutEntryLimit, SegmentHeader,
     SegmentReadPolicy, SegmentRecordLimit, SegmentStageCreateError, StagedSegment,
 };
-use sandbox::TestDirectory;
-use support::decode_hex;
 
 const ONE_ZERO_SEGMENT_HEX: &str =
-    include_str!("../conformance/segment-store/v1/one-zero-segment.hex");
-const EMPTY_SEGMENT_HEX: &str = include_str!("../conformance/segment-store/v1/empty-segment.hex");
+    include_str!("../../conformance/segment-store/v1/one-zero-segment.hex");
+const EMPTY_SEGMENT_HEX: &str =
+    include_str!("../../conformance/segment-store/v1/empty-segment.hex");
 
 #[test]
 fn exclusive_creation_never_truncates_existing_stage() -> Result<(), Box<dyn Error>> {
@@ -121,5 +118,7 @@ fn open_publisher(sandbox: &TestDirectory) -> Result<FilesystemCatalogPublisher,
         SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
         CatalogRestartByteLimit::new(1_048_576)?,
     );
-    Ok(FilesystemCatalogPublisher::open(lock, policy)?)
+    Ok(FilesystemCatalogPublisher::open_unchecked_for_tests(
+        lock, policy,
+    )?)
 }

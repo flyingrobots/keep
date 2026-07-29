@@ -69,11 +69,19 @@ mod filesystem_catalog_current;
 mod filesystem_catalog_head;
 mod filesystem_catalog_publication_error;
 mod filesystem_catalog_publisher;
+#[cfg(test)]
+mod filesystem_catalog_publisher_tests;
 mod filesystem_catalog_segment;
 mod filesystem_catalog_snapshot;
 mod filesystem_catalog_storage;
+mod filesystem_platform_admission;
 mod filesystem_publisher_authority;
 mod filesystem_segment_stage;
+#[cfg(test)]
+mod filesystem_segment_stage_tests;
+#[cfg(test)]
+#[path = "../../tests/segment_filesystem_stage/sandbox.rs"]
+mod filesystem_test_sandbox;
 mod filesystem_writer_lock;
 mod framed_blake3;
 mod layout_decode_error;
@@ -157,6 +165,9 @@ mod staged_segment;
 mod storage_profile_id_text;
 mod storage_profile_id_text_error;
 mod sync_capable_directory;
+#[cfg(test)]
+#[path = "../../tests/support/mod.rs"]
+mod test_support;
 mod writer_lock_acquire_error;
 mod writer_lock_acquire_phase;
 
@@ -196,6 +207,7 @@ pub use closed_segment::ClosedSegment;
 pub use filesystem_catalog_publication_error::FilesystemCatalogPublicationError;
 pub use filesystem_catalog_publisher::FilesystemCatalogPublisher;
 pub use filesystem_catalog_snapshot::FilesystemCatalogSnapshot;
+pub use filesystem_platform_admission::FilesystemPlatformAdmission;
 pub use filesystem_segment_stage::FilesystemSegmentStage;
 pub use filesystem_writer_lock::FilesystemWriterLock;
 pub use layout_decode_error::LayoutDecodeError;

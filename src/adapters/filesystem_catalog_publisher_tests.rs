@@ -1,22 +1,21 @@
 //! Filesystem-backed catalog publication laws.
 
-#[path = "catalog_filesystem_publication/authority_laws.rs"]
+#[path = "../../tests/catalog_filesystem_publication/authority_laws.rs"]
 mod authority_laws;
-#[path = "catalog_filesystem_publication/directory_laws.rs"]
+#[path = "../../tests/catalog_filesystem_publication/directory_laws.rs"]
 mod directory_laws;
-#[path = "catalog_filesystem_publication/initialization_laws.rs"]
+#[path = "../../tests/catalog_filesystem_publication/initialization_laws.rs"]
 mod initialization_laws;
-#[path = "catalog_filesystem_publication/refusal_laws.rs"]
+#[path = "../../tests/catalog_filesystem_publication/refusal_laws.rs"]
 mod refusal_laws;
-#[path = "segment_filesystem_stage/sandbox.rs"]
-pub mod sandbox;
-mod support;
 
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use keep::{
+use super::filesystem_test_sandbox::TestDirectory;
+use super::test_support::decode_hex;
+use crate::{
     AdmittedSegment, AdmittedSegmentRecord, CanonicalCatalog, CatalogGeneration,
     CatalogPublicationExpectation, CatalogPublicationOutcome, CatalogRestartByteLimit,
     CatalogRestartPolicy, FilesystemCatalogPublisher, FilesystemCatalogSnapshot,
@@ -24,24 +23,23 @@ use keep::{
     SegmentPublication, SegmentReadPolicy, SegmentRecordLimit, StagedSegment,
     publish_catalog_generation,
 };
-use sandbox::TestDirectory;
-use support::decode_hex;
 
-const SEGMENT_HEX: &str = include_str!("../conformance/segment-store/v1/one-zero-segment.hex");
-const EMPTY_SEGMENT_HEX: &str = include_str!("../conformance/segment-store/v1/empty-segment.hex");
-const CATALOG_HEX: &str = include_str!("../conformance/segment-store/v1/one-zero-catalog.hex");
-const HEAD_HEX: &str = include_str!("../conformance/segment-store/v1/one-zero-head.hex");
+const SEGMENT_HEX: &str = include_str!("../../conformance/segment-store/v1/one-zero-segment.hex");
+const EMPTY_SEGMENT_HEX: &str =
+    include_str!("../../conformance/segment-store/v1/empty-segment.hex");
+const CATALOG_HEX: &str = include_str!("../../conformance/segment-store/v1/one-zero-catalog.hex");
+const HEAD_HEX: &str = include_str!("../../conformance/segment-store/v1/one-zero-head.hex");
 const CATALOG_DIGEST: &str = "04b82519b0399baefd0b9c0f32a871052e4c47e3a00226ab03b21661470f7320";
 const SEGMENT_DIGEST: &str = "b7542dced2ab770894a14d1d04b066e3a899942602c5986d35ba6df6c1a35cfc";
 const RETAINED_SEGMENT_LIMIT: u64 = 1_048_576;
-
 type StagedFixture<'publisher> = (SealedSegment<FilesystemSegmentStage<'publisher>>, Vec<u8>);
 
 #[test]
 fn successful_publication_materializes_only_the_exact_durable_view() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-success")?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let mut publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
     let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     assert_eq!(segment_bytes, fixture(SEGMENT_HEX)?);
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
@@ -75,7 +73,8 @@ fn successful_publication_materializes_only_the_exact_durable_view() -> Result<(
 fn durable_publication_retry_returns_the_same_synchronized_receipt() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-retry")?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let mut publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
     let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
@@ -91,7 +90,8 @@ fn durable_publication_retry_returns_the_same_synchronized_receipt() -> Result<(
     drop(publisher);
 
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let mut publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
     let retry = publish_catalog_generation(
         &mut publisher,
         CatalogPublicationExpectation::uninitialized(),
@@ -182,7 +182,7 @@ fn fixture(hex: &str) -> Result<Vec<u8>, Box<dyn Error>> {
 #[test]
 fn publisher_drop_closes_writable_stages_before_releasing_writer_authority()
 -> Result<(), Box<dyn Error>> {
-    let source = include_str!("../src/adapters/filesystem_catalog_publisher.rs");
+    let source = include_str!("filesystem_catalog_publisher.rs");
     let catalog_stage = source
         .find("pub(super) catalog_stage:")
         .ok_or("publisher must retain the catalog stage")?;

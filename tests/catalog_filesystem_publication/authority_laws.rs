@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fs;
 use std::io::{self, Write};
 
-use keep::{
+use crate::{
     AdmittedSegment, CanonicalCatalog, CatalogGeneration, CatalogPublicationError,
     CatalogPublicationExpectation, CatalogPublicationPhase, FilesystemCatalogPublicationError,
     FilesystemCatalogPublisher, FilesystemWriterLock, SegmentPublication, SegmentRecordLimit,
@@ -27,7 +27,8 @@ fn metadata_equivalent_external_stage_cannot_authorize_publication() -> Result<(
     let selection = SegmentPublication::one(staged.seal()?.close(), &segments[0])?;
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
+    let mut publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
 
     let Err(error) = publish_catalog_generation(
         &mut publisher,
@@ -59,9 +60,11 @@ fn one_publisher_cannot_select_another_publishers_stage() -> Result<(), Box<dyn 
     let first_store = StoreFixture::create("catalog-filesystem-stage-owner")?;
     let second_store = StoreFixture::create("catalog-filesystem-stage-substitute")?;
     let first_lock = FilesystemWriterLock::try_acquire(first_store.path())?;
-    let first_publisher = FilesystemCatalogPublisher::open(first_lock, restart_policy()?)?;
+    let first_publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(first_lock, restart_policy()?)?;
     let second_lock = FilesystemWriterLock::try_acquire(second_store.path())?;
-    let second_publisher = FilesystemCatalogPublisher::open(second_lock, restart_policy()?)?;
+    let second_publisher =
+        FilesystemCatalogPublisher::open_unchecked_for_tests(second_lock, restart_policy()?)?;
     let (sealed, segment_bytes) = stage_one_zero(&first_publisher, &first_store)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
 
@@ -71,7 +74,7 @@ fn one_publisher_cannot_select_another_publishers_stage() -> Result<(), Box<dyn 
 
     assert!(matches!(
         error,
-        keep::SegmentPublicationError::PublisherAuthority
+        crate::SegmentPublicationError::PublisherAuthority
     ));
     drop(first_publisher);
     drop(second_publisher);

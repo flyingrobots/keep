@@ -10,6 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Filesystem catalog publisher construction now consumes an unforgeable
+  `FilesystemPlatformAdmission`. No public producer exists until crash-tested
+  initialization can establish the platform contract in issue #17; acquiring
+  `FilesystemWriterLock` alone no longer authorizes production construction.
 - Filesystem segment selection now consumes sealed stages through the publisher
   that created them. Process-local publisher authority prevents an unrelated
   metadata-equivalent `ClosedSegment` from authorizing retained
@@ -204,7 +208,8 @@ after its public API and format compatibility policies are established.
   successor proofs; immutable reader snapshots; seeded parser fuzzing; and
   `BTreeMap` transition-model evidence for `keep.segment-store/v1`.
 - Blocking `FilesystemCatalogPublisher` publication under a persistent
-  kernel-managed writer lock, with pinned directory capabilities,
+  kernel-managed writer lock and required `FilesystemPlatformAdmission`, with
+  pinned directory capabilities,
   no-replacement immutable-pool links, complete post-link verification,
   explicit file and directory synchronization, transitive `head.next`
   verification, atomic `HEAD` replacement, and stale or recovery-required
