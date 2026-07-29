@@ -2,7 +2,6 @@
 
 use std::env;
 use std::process::Command;
-use std::sync::mpsc::{self, RecvTimeoutError};
 use std::time::Duration;
 
 use crate::bounded_process::{ProcessError, ProcessOutput};
@@ -42,12 +41,9 @@ fn digest_child_does_not_read_stdin() {
     if env::var_os(BLOCKING_CHILD).is_none() {
         return;
     }
-    let (sender, receiver) = mpsc::channel::<()>();
-    assert!(matches!(
-        receiver.recv_timeout(Duration::from_secs(1)),
-        Err(RecvTimeoutError::Timeout)
-    ));
-    drop(sender);
+    loop {
+        std::thread::park();
+    }
 }
 
 #[test]

@@ -13,6 +13,7 @@ const BOUNDED_PROCESS_READER: &str = include_str!("../src/bounded_process/reader
 const BOUNDED_PROCESS_TESTS: &str = include_str!("../src/bounded_process/tests.rs");
 const CONFORMANCE_B3SUM: &str = include_str!("../src/protocol_conformance/external_digest.rs");
 const EXTERNAL_DIGEST: &str = include_str!("../src/external_digest.rs");
+const EXTERNAL_DIGEST_TESTS: &str = include_str!("../src/external_digest/tests.rs");
 const GOLDEN_B3SUM: &str = include_str!("../src/golden_file_worldline/b3sum_oracle.rs");
 const REPOSITORY_FIXTURE: &str = include_str!("../src/repository_fixture.rs");
 const GIT_INVENTORY_ERROR: &str = include_str!("../src/git_inventory/error.rs");
@@ -94,6 +95,13 @@ fn reader_detachment_has_a_concurrency_decision_record() {
             "reader-retirement ADR omits `{decision}`"
         );
     }
+}
+
+#[test]
+fn blocking_digest_fixture_has_no_wall_clock_escape() {
+    assert!(!EXTERNAL_DIGEST_TESTS.contains("recv_timeout("));
+    assert!(!EXTERNAL_DIGEST_TESTS.contains("Duration::from_secs(1)"));
+    assert!(EXTERNAL_DIGEST_TESTS.contains("std::thread::park()"));
 }
 
 #[test]
