@@ -16,6 +16,10 @@ exceptions = [
   { allow = ["BSD-2-Clause"], crate = "arrayref@0.3.9" },
   # `libfuzzer-sys` is confined to this non-published fuzz workspace.
   { allow = ["MIT", "NCSA"], crate = "libfuzzer-sys@0.4.13" },
+  # `memchr` is a reviewed transitive dependency of locked serde_json 1.0.151.
+  { allow = ["MIT"], crate = "memchr@2.8.3" },
+  # `zmij` is a reviewed transitive dependency of locked serde_json 1.0.151.
+  { allow = ["MIT"], crate = "zmij@1.0.23" },
 ]
 
 [sources]

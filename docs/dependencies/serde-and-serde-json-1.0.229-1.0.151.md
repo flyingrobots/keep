@@ -53,6 +53,12 @@ workspace lockfile.
 Their manifests declare minimum supported Rust versions below Keep's pinned
 toolchain.
 
+The fuzz-workspace license policy retains Apache-2.0 as its default allowlist
+and grants exact-version MIT exceptions to `memchr` 2.8.3 and `zmij` 1.0.23.
+Those exceptions admit only the reviewed transitive graph named above; a
+resolved version change remains a policy failure until this record and the
+exception are reviewed together.
+
 Keep-owned code invokes only safe APIs. The parser and its transitive
 dependencies may contain implementation details outside Keep's `unsafe_code`
 lint boundary, so `cargo deny` and RustSec checks remain mandatory
