@@ -17,8 +17,11 @@ pub(super) enum FileExecution {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+/// Canonical Git index mode admitted for one tracked source path.
 pub(super) enum TrackedFileMode {
+    /// The index records a symlink or gitlink rather than a regular source.
     NonRegular,
+    /// The index records a regular file with the contained executable state.
     Regular(FileExecution),
 }
 

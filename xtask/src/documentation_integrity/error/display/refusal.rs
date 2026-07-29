@@ -4,6 +4,11 @@ use std::fmt;
 
 use super::super::DocumentationError;
 
+/// Formats one failed filesystem action at the refusal-fixture boundary.
+///
+/// `action` names the attempted operation without terminal punctuation. The
+/// formatter receives no underlying I/O details; those remain available through
+/// the error source chain.
 pub(super) fn refusal_fixture(formatter: &mut fmt::Formatter<'_>, action: &str) -> fmt::Result {
     write!(
         formatter,
@@ -11,6 +16,11 @@ pub(super) fn refusal_fixture(formatter: &mut fmt::Formatter<'_>, action: &str) 
     )
 }
 
+/// Formats a refusal scenario that did not return its exact reviewed error.
+///
+/// The stable prefix identifies `scenario`. When `observed` contains a different
+/// typed failure, its escaped display diagnostic is appended as secondary
+/// evidence; normal absence records that the malformed input was accepted.
 pub(super) fn refusal_mismatch(
     formatter: &mut fmt::Formatter<'_>,
     scenario: &str,

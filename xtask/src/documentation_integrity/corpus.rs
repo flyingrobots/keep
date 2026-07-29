@@ -46,6 +46,12 @@ impl SourceCorpus {
         &self.paths
     }
 
+    /// Copies every admitted source into its repository-relative snapshot path.
+    ///
+    /// Each copy streams from the retained source descriptor, remains within
+    /// the corpus byte bounds admitted during construction, and revalidates the
+    /// source identity around the copy. Filesystem or identity failures are
+    /// returned through [`DocumentationError`].
     pub(super) fn materialize(&self, snapshot_root: &Path) -> Result<(), DocumentationError> {
         for source in &self.sources {
             source.materialize(snapshot_root, self.kind)?;

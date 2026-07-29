@@ -16,22 +16,36 @@ pub(crate) enum DocumentationError {
         first: Box<Self>,
         second: Box<Self>,
     },
+    /// One selected source's metadata length exceeds the per-file byte bound.
     CorpusFileTooLarge {
+        /// Human-readable corpus kind whose source was refused.
         corpus: &'static str,
+        /// Repository-relative source path reported by Git.
         path: String,
+        /// Largest admitted metadata length in bytes.
         maximum: u64,
+        /// Observed metadata length in bytes.
         observed: u64,
     },
+    /// Checked aggregate byte accounting overflowed for the named corpus kind.
     CorpusSizeOverflow(&'static str),
+    /// The selected corpus's checked aggregate length exceeds its byte bound.
     CorpusTooLarge {
+        /// Human-readable corpus kind whose aggregate was refused.
         corpus: &'static str,
+        /// Largest admitted aggregate length in bytes.
         maximum: u64,
+        /// Observed checked aggregate length in bytes.
         observed: u64,
     },
+    /// A retained source identity or the exact selected path set changed.
     CorpusChanged {
+        /// Human-readable corpus kind whose invariant changed.
         corpus: &'static str,
+        /// Repository-relative source path identifying the first difference.
         path: String,
     },
+    /// Git selected no present sources for the named required corpus kind.
     EmptyCorpus(&'static str),
     EnvironmentUnavailable(&'static str),
     GitInventory(GitInventoryError),
@@ -108,7 +122,9 @@ pub(crate) enum DocumentationError {
     },
     /// A filesystem operation could not construct or remove a tool-input snapshot.
     Snapshot {
+        /// Snapshot operation that could not complete.
         action: &'static str,
+        /// Underlying filesystem failure.
         source: io::Error,
     },
     VersionMismatch {

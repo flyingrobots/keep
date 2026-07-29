@@ -42,6 +42,12 @@ impl AdmittedSource {
         &self.path
     }
 
+    /// Streams the exact admitted bytes into a new read-only snapshot file.
+    ///
+    /// The retained descriptor identity is checked before and after copying.
+    /// The copy uses a fixed 16 KiB buffer and checked offset arithmetic; it
+    /// performs no durability synchronization because the snapshot is consumed
+    /// only by the current validation process.
     pub(super) fn materialize(
         &self,
         snapshot_root: &Path,

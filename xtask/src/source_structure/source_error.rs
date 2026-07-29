@@ -10,12 +10,17 @@ use crate::diagnostic::{escaped_controls, escaped_path};
 use crate::git_inventory::GitInventoryError;
 
 pub(crate) enum SourceStructureError {
+    /// Git's tracked file mode disagrees with the opened worktree object.
     ExecutionModeChanged {
+        /// Ambient display path for the disagreed repository entry.
         path: PathBuf,
+        /// Canonical tracked mode label admitted from the index.
         tracked: &'static str,
+        /// Canonical mode label observed from the opened worktree object.
         worktree: &'static str,
     },
     GitInventory(GitInventoryError),
+    /// `git ls-files --stage` returned a malformed, unmerged, or duplicate record.
     GitIndexRecord,
     GitPathEncoding {
         operation: &'static str,

@@ -9,6 +9,17 @@ use crate::repository_file::RepositoryRoot;
 use super::snapshot::DocumentationSnapshot;
 use super::{DirectoryToolRunner, DocumentationTool, ToolRunner};
 
+/// Executes documentation tools against one admitted immutable source snapshot.
+///
+/// Construction copies bounded source bytes from retained descriptors and
+/// materializes the reviewed repository namespace in a private temporary
+/// directory. Every capture revalidates current source identities and exact Git
+/// corpus membership before and after the inner runner executes from that
+/// snapshot. Post-execution corpus drift takes precedence over a tool result.
+///
+/// Construction and capture perform bounded Git child-process and repository
+/// I/O. The snapshot is verification evidence only and has no durability role;
+/// callers must invoke [`Self::close`] to remove it explicitly.
 pub(super) struct CorpusGuardedRunner<'a, Runner> {
     corpora: &'a [&'a SourceCorpus],
     inner: Runner,
@@ -18,6 +29,12 @@ pub(super) struct CorpusGuardedRunner<'a, Runner> {
 }
 
 impl<'a, Runner> CorpusGuardedRunner<'a, Runner> {
+    /// Builds the source snapshot and binds `inner` to its execution authority.
+    ///
+    /// The call allocates bounded path and source inventories, copies admitted
+    /// bytes, verifies fixed configuration and corpus identities, and returns
+    /// the exact [`DocumentationError`] from any Git, filesystem, admission, or
+    /// snapshot failure.
     pub(super) fn new(
         inner: Runner,
         process_directory: &'a RepositoryProcessDirectory,
@@ -34,6 +51,10 @@ impl<'a, Runner> CorpusGuardedRunner<'a, Runner> {
         })
     }
 
+    /// Releases snapshot descriptors and removes the exact temporary tree.
+    ///
+    /// Removal failure is returned as [`DocumentationError::Snapshot`]. This
+    /// cleanup boundary does not mutate the source repository.
     pub(super) fn close(self) -> Result<(), DocumentationError> {
         self.snapshot.close()
     }

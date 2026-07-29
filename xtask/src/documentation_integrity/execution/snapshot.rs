@@ -27,6 +27,12 @@ const NAMESPACE_PRESENT: [&str; 5] = [
 const NAMESPACE_DELETED: [&str; 3] = ["ls-files", "-z", "--deleted"];
 static NEXT_SNAPSHOT: AtomicU64 = AtomicU64::new(0);
 
+/// Private repository-shaped inputs and process authority for documentation tools.
+///
+/// Selected sources and the Markdown configuration contain the exact admitted
+/// bytes. Other present repository paths are read-only placeholders so offline
+/// link validation observes the reviewed namespace without reopening source
+/// paths. The owned directory has no durability role and is removed explicitly.
 pub(super) struct DocumentationSnapshot {
     directory: SnapshotDirectory,
     process_directory: RepositoryProcessDirectory,
@@ -34,6 +40,11 @@ pub(super) struct DocumentationSnapshot {
 }
 
 impl DocumentationSnapshot {
+    /// Materializes and revalidates one snapshot from the retained repository.
+    ///
+    /// The operation allocates bounded deterministic inventories, performs
+    /// filesystem writes, and starts bounded Git inventory children. It returns
+    /// typed corpus, policy-file, Git, or snapshot I/O failures.
     pub(super) fn create(
         source_root: &RepositoryRoot,
         source_process_directory: &RepositoryProcessDirectory,
@@ -55,14 +66,20 @@ impl DocumentationSnapshot {
         })
     }
 
+    /// Returns the descriptor-backed child working directory for the snapshot.
     pub(super) const fn process_directory(&self) -> &RepositoryProcessDirectory {
         &self.process_directory
     }
 
+    /// Returns the capability-relative root used by in-process snapshot readers.
     pub(super) const fn repository_root(&self) -> &RepositoryRoot {
         &self.repository_root
     }
 
+    /// Closes owned directory descriptors and removes the exact snapshot tree.
+    ///
+    /// Cleanup does not mutate the source repository and reports removal failure
+    /// through [`DocumentationError::Snapshot`].
     pub(super) fn close(self) -> Result<(), DocumentationError> {
         let Self {
             directory,
