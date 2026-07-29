@@ -53,8 +53,14 @@ pub(super) fn run(
         CorpusGuardedRunner::new(external, process_directory, repository_root, &corpora)?;
     let result = run_with(&mut runner, markdown.paths(), workflows.paths());
     let cleanup = runner.close();
-    result?;
-    cleanup
+    finish_run(result, cleanup)
+}
+
+fn finish_run(
+    result: Result<(), DocumentationError>,
+    cleanup: Result<(), DocumentationError>,
+) -> Result<(), DocumentationError> {
+    combine_checks(result, cleanup)
 }
 
 /// Executes both named malformed-input scenarios through the production runner.
@@ -225,3 +231,7 @@ fn documentation_command(tool: DocumentationTool, arguments: &[String], path: &O
 #[cfg(test)]
 #[path = "execution/tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "execution/finish_tests.rs"]
+mod finish_tests;

@@ -16,8 +16,9 @@ after its public API and format compatibility policies are established.
   boundary, and the seven superseded Python checkers have been removed. The
   boundary rejects duplicate repository JSON fields and unlocked installer
   substitutions, admits only the exact reviewed Node lock artifact, retains
-  simultaneous Markdown and link failures, parses documentation workflow
-  commands as YAML, rejects guarded or non-string `run` values, preserves
+  simultaneous Markdown and link failures, retains both the primary tool
+  failure and a simultaneous snapshot-cleanup failure, parses documentation
+  workflow commands as YAML, rejects guarded or non-string `run` values, preserves
   declarations after Dependabot directory lists, compares Dependabot
   maintenance fields as typed YAML values, requires every reviewed
   documentation CI command and the pinned Node setup action exactly once,
