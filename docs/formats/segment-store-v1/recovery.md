@@ -186,8 +186,11 @@ filesystem profile. It pins the root and all protocol directories, acquires
 regular read-write file opened without following links or truncation. Its
 complete protocol-bounded bytes are fingerprinted, materialized, and
 re-admitted; the handle and canonical entry retain one file identity and exact
-length, the pinned namespaces are reverified, and the handle is positioned at
-the admitted append boundary before handoff.
+length, the pinned namespaces are reverified, and the bytes are fingerprinted
+again through the retained writable handle immediately before handoff. The
+second fingerprint must equal the requested evidence, entry identity is
+reverified after reading, and the handle remains positioned at the admitted
+append boundary.
 
 The returned `FilesystemRecoverySegmentStage` owns the pinned authority and
 writer lock. Zero-record and nonempty prefixes both enter the same append and

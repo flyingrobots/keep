@@ -1,5 +1,7 @@
 //! This module owns pinned filesystem recovery-stage observation.
 
+use std::io::{Seek, SeekFrom};
+
 use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt, OpenOptionsSyncExt};
 use cap_std::fs::{Dir, File, Metadata, OpenOptions};
 
@@ -68,6 +70,21 @@ impl ObservedRecoveryStage {
     ) -> Result<(), FilesystemRecoveryStageError> {
         verify_opened_handle(&self.file, stage, &self.admitted)?;
         verify_current_entry(directory, name, stage, &self.admitted)
+    }
+
+    pub(super) fn refingerprint_and_position(
+        &mut self,
+        stage: RecoveryStage,
+    ) -> Result<RecoveryStageEvidence, FilesystemRecoveryStageError> {
+        let length = self.admitted.metadata.length();
+        self.file
+            .seek(SeekFrom::Start(0))
+            .map_err(|source| FilesystemRecoveryStageError::Position { stage, source })?;
+        let evidence = fingerprint_recovery_stage(self.admitted.metadata, &mut self.file)
+            .map_err(|source| FilesystemRecoveryStageError::Fingerprint { stage, source })?;
+        verify_length(stage, length, evidence.length().get())?;
+        filesystem_recovery_stage_materialization::verify_position(&mut self.file, stage, length)?;
+        Ok(evidence)
     }
 
     pub(super) fn into_file(self) -> File {

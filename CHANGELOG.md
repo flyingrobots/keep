@@ -56,9 +56,9 @@ after its public API and format compatibility policies are established.
 - Filesystem reusable-segment recovery now retains pinned root, namespace, and
   writer-lock authority in the returned stage; reopens `current.seg` read-write
   without following links or truncation; bounds, materializes, and re-admits
-  its exact prefix; verifies the final entry and append position; and refuses
-  missing, changed, linked, replaced, or namespace-drifted evidence before
-  writing.
+  its exact prefix; recomputes exact stage evidence immediately before handoff;
+  revalidates the final entry and append position; and refuses missing,
+  changed, linked, replaced, or namespace-drifted evidence before writing.
 - Complete caller-supplied catalog and candidate-head stages now distinguish
   exact fixed-header, declared-body, or fixed-width truncation from canonical
   bytes. Complete-looking corruption and oversized stages remain typed

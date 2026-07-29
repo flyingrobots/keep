@@ -113,6 +113,37 @@ fn replacement_at_the_writable_handoff_is_preserved_and_refused() -> Result<(), 
 }
 
 #[test]
+fn byte_replacement_at_the_writable_handoff_is_preserved_and_refused() -> Result<(), Box<dyn Error>>
+{
+    let fixture = ResumeFixture::new("filesystem-segment-resume-byte-replaced")?;
+    let prefix = reusable_prefix()?;
+    fs::write(fixture.stage_path(), &prefix)?;
+    let stage_path = fixture.stage_path();
+    let mut replacement = prefix.clone();
+    let tail = replacement.last_mut().ok_or("missing segment tail")?;
+    *tail ^= 1;
+    let replacement_for_hook = replacement.clone();
+    let stage_for_hook = stage_path.clone();
+    let resumer = fixture.resumer_before_handoff(move || {
+        let _written = fs::write(&stage_for_hook, replacement_for_hook);
+    })?;
+
+    let error = execute_recovery_segment_resume(resumer, resume_request(&prefix)?)
+        .err()
+        .ok_or("byte-replaced stage unexpectedly resumed")?;
+
+    assert!(matches!(
+        error,
+        RecoverySegmentResumeError::Open {
+            source: RecoverySegmentResumeStorageError::EvidenceMismatch { .. }
+        }
+    ));
+    assert_eq!(fs::read(stage_path)?, replacement);
+    fixture.remove()?;
+    Ok(())
+}
+
+#[test]
 fn replaced_staging_namespace_is_refused_before_stage_open() -> Result<(), Box<dyn Error>> {
     let fixture = ResumeFixture::new("filesystem-segment-resume-namespace")?;
     let prefix = reusable_prefix()?;

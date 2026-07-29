@@ -80,6 +80,22 @@ where
             RecoveryStage::Segment,
         )
         .map_err(stage_error)?;
+    let final_evidence = observed
+        .refingerprint_and_position(RecoveryStage::Segment)
+        .map_err(stage_error)?;
+    if final_evidence != request.evidence() {
+        return Err(RecoverySegmentResumeStorageError::EvidenceMismatch {
+            expected: request.evidence(),
+            observed: final_evidence,
+        });
+    }
+    observed
+        .verify(
+            directory,
+            RecoveryStage::Segment.file_name(),
+            RecoveryStage::Segment,
+        )
+        .map_err(stage_error)?;
     let file = observed.into_file();
     let stage = FilesystemRecoverySegmentStage::new(file, resumer.discarder);
     Ok(OpenedReusableSegment::new(stage, encoded))

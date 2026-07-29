@@ -87,8 +87,8 @@ bounded prefix, rebuilds digest and duplicate-identity state, and returns the
 ordinary append-only stage without rewriting admitted bytes.
 `FilesystemRecoverySegmentResumer` implements that contract with pinned
 namespaces and writer authority, no-follow read-write reopening, exact bounded
-materialization, final entry and namespace revalidation, and an append
-position equal to the admitted prefix length.
+materialization, final streamed fingerprint plus entry and namespace
+revalidation, and an append position equal to the admitted prefix length.
 
 Exact truncation assessments can authorize durable, evidence-bound discard.
 Complete segment and catalog assessments can authorize verified immutable-pool

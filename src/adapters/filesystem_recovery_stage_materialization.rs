@@ -46,7 +46,7 @@ fn allocate(
     Ok(encoded)
 }
 
-fn verify_position(
+pub(super) fn verify_position(
     file: &mut File,
     stage: RecoveryStage,
     expected: RecoveryStageLength,
