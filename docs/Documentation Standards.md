@@ -544,7 +544,9 @@ deliberate rule choices. The Rust checker selects tracked Markdown plus
 nonignored new Markdown, disables configuration globs for that invocation,
 and refuses a different tool version. It also runs `lychee` 0.21.0 offline
 with fragment checking, so external-site availability cannot affect the
-result. Run it from the repository root. The two Git commands inspect
+result. Before external tools start, corpus admission refuses any source over
+4 MiB and any selected corpus over 64 MiB. Run it from the repository root.
+The two Git commands inspect
 unstaged and staged whitespace errors separately.
 
 The same Rust command checks workflows with `actionlint` 1.7.12 and refuses

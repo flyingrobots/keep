@@ -25,6 +25,26 @@ impl fmt::Display for DocumentationError {
             Self::CheckFailures { first, second } => {
                 write!(formatter, "{first}; additionally: {second}")
             }
+            Self::CorpusFileTooLarge {
+                corpus,
+                path,
+                maximum,
+                observed,
+            } => write!(
+                formatter,
+                "{corpus} source `{path}` is {observed} bytes; maximum is {maximum}"
+            ),
+            Self::CorpusSizeOverflow(corpus) => {
+                write!(formatter, "{corpus} corpus byte count overflowed")
+            }
+            Self::CorpusTooLarge {
+                corpus,
+                maximum,
+                observed,
+            } => write!(
+                formatter,
+                "{corpus} corpus is {observed} bytes; maximum is {maximum}"
+            ),
             Self::EmptyCorpus(label) => write!(formatter, "the {label} corpus is empty"),
             Self::GitInventory(error) => write!(formatter, "{error}"),
             Self::Inspect { corpus, path, .. } => {

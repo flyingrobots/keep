@@ -30,6 +30,8 @@ after its public API and format compatibility policies are established.
   documentation jobs and required steps, requires each Dependabot update block
   to choose exactly one directory field form, and requires the documentation
   workflow to run for pushes to `main` and every pull request,
+  bounds each admitted documentation source to 4 MiB and each selected corpus
+  to 64 MiB before external tools start,
   and applies one deadline across captured and inherited child execution and
   output collection.
   Git-backed process fixtures ignore system and global Git configuration and

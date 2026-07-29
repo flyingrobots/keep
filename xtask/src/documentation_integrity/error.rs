@@ -16,6 +16,18 @@ pub(crate) enum DocumentationError {
         first: Box<Self>,
         second: Box<Self>,
     },
+    CorpusFileTooLarge {
+        corpus: &'static str,
+        path: String,
+        maximum: u64,
+        observed: u64,
+    },
+    CorpusSizeOverflow(&'static str),
+    CorpusTooLarge {
+        corpus: &'static str,
+        maximum: u64,
+        observed: u64,
+    },
     EmptyCorpus(&'static str),
     GitInventory(GitInventoryError),
     Inspect {
@@ -123,7 +135,10 @@ impl Error for DocumentationError {
             Self::RepositoryRootInspect { source, .. } => Some(source),
             Self::ToolOutputEncoding { source, .. } => Some(source),
             Self::ToolUnavailable { source, .. } => Some(source),
-            Self::EmptyCorpus(_)
+            Self::CorpusFileTooLarge { .. }
+            | Self::CorpusSizeOverflow(_)
+            | Self::CorpusTooLarge { .. }
+            | Self::EmptyCorpus(_)
             | Self::InvalidPath { .. }
             | Self::NonRegular { .. }
             | Self::RepositoryFileNonRegular(_)

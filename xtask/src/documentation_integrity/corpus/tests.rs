@@ -1,5 +1,6 @@
 //! This module owns documentation source-corpus regression evidence.
 
+use std::collections::BTreeSet;
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -149,6 +150,61 @@ fn symlinked_markdown_is_refused() -> Result<(), Box<dyn std::error::Error>> {
         }) if path == "linked.md"
     ));
     directory.close()?;
+    Ok(())
+}
+
+#[test]
+fn oversized_markdown_is_refused_before_external_validation()
+-> Result<(), Box<dyn std::error::Error>> {
+    let directory = TestDirectory::create("documentation-markdown-size")?;
+    let root = directory.path();
+    let path = root.join("oversized.md");
+    let observed = 4_194_304_u64
+        .checked_add(1)
+        .ok_or("corpus file bound overflow")?;
+    fs::File::create(&path)?.set_len(observed)?;
+    let repository_root = RepositoryRoot::open(root)?;
+    let git_path = GitPath::new(b"oversized.md".to_vec());
+
+    let paths = BTreeSet::from([git_path]);
+    let result = super::admit_paths(&repository_root, paths.iter(), CorpusKind::Markdown);
+
+    assert!(matches!(
+        result,
+        Err(DocumentationError::CorpusFileTooLarge {
+            corpus: "Markdown",
+            ref path,
+            maximum: super::CORPUS_FILE_MAX_BYTES,
+            observed: actual,
+        }) if path == "oversized.md" && actual == observed
+    ));
+    directory.close()?;
+    Ok(())
+}
+
+#[test]
+fn aggregate_documentation_bytes_are_bounded_with_checked_accounting()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut budget = super::CorpusByteBudget::default();
+    let source = super::AdmittedSource {
+        bytes: super::CORPUS_FILE_MAX_BYTES,
+        path: String::from("bounded.md"),
+    };
+    for _ in 0..16 {
+        budget.admit(CorpusKind::Markdown, &source)?;
+    }
+    let observed = super::CORPUS_MAX_BYTES
+        .checked_add(super::CORPUS_FILE_MAX_BYTES)
+        .ok_or("aggregate corpus bound overflow")?;
+
+    assert!(matches!(
+        budget.admit(CorpusKind::Markdown, &source),
+        Err(DocumentationError::CorpusTooLarge {
+            corpus: "Markdown",
+            maximum: super::CORPUS_MAX_BYTES,
+            observed: actual,
+        }) if actual == observed
+    ));
     Ok(())
 }
 

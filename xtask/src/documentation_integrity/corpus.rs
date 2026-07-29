@@ -1,5 +1,7 @@
 //! This module owns deterministic documentation source selection.
 
+mod byte_budget;
+
 use std::io;
 
 use xtask::protocol_admission::posix_relative_path;
@@ -7,6 +9,9 @@ use xtask::protocol_admission::posix_relative_path;
 use super::error::DocumentationError;
 use crate::git_inventory::{GitPath, paths_with};
 use crate::repository_file::{OpenRepositoryFileError, RepositoryProcessDirectory, RepositoryRoot};
+use byte_budget::CorpusByteBudget;
+#[cfg(test)]
+use byte_budget::{CORPUS_FILE_MAX_BYTES, CORPUS_MAX_BYTES};
 
 const MARKDOWN_PRESENT: [&str; 7] = [
     "ls-files",
@@ -41,6 +46,10 @@ pub(super) struct SourceCorpus {
     paths: Vec<String>,
 }
 
+struct AdmittedSource {
+    bytes: u64,
+    path: String,
+}
 #[derive(Clone, Copy)]
 enum CorpusKind {
     Markdown,
@@ -133,20 +142,22 @@ fn admit_paths<'a>(
     paths: impl Iterator<Item = &'a GitPath>,
     kind: CorpusKind,
 ) -> Result<Vec<String>, DocumentationError> {
-    paths
-        .filter_map(|path| match admit_path(repository_root, path, kind) {
-            Ok(Some(path)) => Some(Ok(path)),
-            Ok(None) => None,
-            Err(error) => Some(Err(error)),
-        })
-        .collect()
+    let mut admitted = Vec::new();
+    let mut budget = CorpusByteBudget::default();
+    for path in paths {
+        if let Some(source) = admit_path(repository_root, path, kind)? {
+            budget.admit(kind, &source)?;
+            admitted.push(source.path);
+        }
+    }
+    Ok(admitted)
 }
 
 fn admit_path(
     repository_root: &RepositoryRoot,
     path: &GitPath,
     kind: CorpusKind,
-) -> Result<Option<String>, DocumentationError> {
+) -> Result<Option<AdmittedSource>, DocumentationError> {
     let text = String::from_utf8(path.as_bytes().to_vec()).map_err(|source| {
         DocumentationError::PathEncoding {
             corpus: kind.label(),
@@ -158,7 +169,17 @@ fn admit_path(
         path: text.clone(),
     })?;
     match repository_root.open_file(&relative) {
-        Ok(_file) => Ok(Some(text)),
+        Ok(file) => {
+            let bytes = file
+                .metadata()
+                .map_err(|source| DocumentationError::Inspect {
+                    corpus: kind.label(),
+                    path: text.clone(),
+                    source,
+                })?
+                .len();
+            Ok(Some(AdmittedSource { bytes, path: text }))
+        }
         Err(OpenRepositoryFileError::Io(source)) if source.kind() == io::ErrorKind::NotFound => {
             Ok(None)
         }
