@@ -9,6 +9,8 @@ use crate::{CatalogDigest, CatalogGeneration};
 /// Filesystem state disagreed with a preflighted publication invariant.
 #[derive(Debug)]
 pub enum FilesystemCatalogPublicationError {
+    /// The selected segment has no authority from this publisher.
+    SegmentAuthorityRequired,
     /// The current publication coordinate was stale or unexpectedly present.
     CurrentState {
         /// Generation required by the caller, absent for initialization.
@@ -41,6 +43,9 @@ pub enum FilesystemCatalogPublicationError {
 impl fmt::Display for FilesystemCatalogPublicationError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::SegmentAuthorityRequired => {
+                formatter.write_str("selected segment lacks publisher stage authority")
+            }
             Self::CurrentState { .. } => {
                 formatter.write_str("current catalog publication state is stale")
             }

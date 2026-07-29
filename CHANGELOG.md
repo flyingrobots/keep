@@ -10,6 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Filesystem segment selection now consumes sealed stages through the publisher
+  that created them. Process-local publisher authority prevents an unrelated
+  metadata-equivalent `ClosedSegment` from authorizing retained
+  `staging/current.seg` bytes.
 - Filesystem catalog publishers now retain no-follow, read-capable directory
   handles so required durability synchronization works on Linux instead of
   failing on `O_PATH` descriptors.
@@ -201,9 +205,11 @@ after its public API and format compatibility policies are established.
   no-replacement immutable-pool links, complete post-link verification,
   explicit file and directory synchronization, transitive `head.next`
   verification, atomic `HEAD` replacement, and stale or recovery-required
-  refusal before mutation. New segment publication consumes a handle-free
-  `ClosedSegment` proof before any immutable-pool link, and publisher teardown
-  closes every retained writable handle before releasing writer authority.
+  refusal before mutation. New filesystem segment publication consumes the
+  sealed stage through its creating publisher, checks process-local publisher
+  authority, and closes the writable handle before any immutable-pool link;
+  publisher teardown closes every retained writable handle before releasing
+  writer authority.
   Retry of an already-current complete candidate re-synchronizes the root and
   returns an explicit `CatalogPublicationOutcome::AlreadyPublished` receipt
   without repeating publication mutations. Retained `head.next` or

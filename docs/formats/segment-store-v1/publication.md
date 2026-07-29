@@ -134,12 +134,15 @@ reopened and compared against the preflighted canonical artifact before the
 protocol advances. Publisher teardown closes retained writable handles and
 pinned directory capabilities before releasing the writer lock.
 
-Publishing a new segment additionally requires a checked
-`SegmentPublication::one` selection. The caller must first consume
-`SealedSegment::close`, which drops Keep's owned writable stage before
-returning a handle-free `ClosedSegment` receipt. Selection binds that receipt's
-record count, byte length, and digest to the exact `AdmittedSegment` bytes.
-Catalog publication cannot select an unrelated or still-open sealed stage.
+Publishing a new filesystem segment additionally requires
+`FilesystemCatalogPublisher::select_segment`. The method consumes the
+`SealedSegment`, drops Keep's owned writable stage, proves that this publisher
+created the stage, and binds its record count, byte length, and digest to the
+exact `AdmittedSegment` bytes. A storage-agnostic
+`SegmentPublication::one` selection remains available to non-filesystem
+adapters, but its handle-free `ClosedSegment` receipt cannot authorize
+`staging/current.seg`. Catalog publication cannot select an unrelated or
+still-open sealed stage.
 `FilesystemCatalogPublisher::create_segment_stage` is the only public
 filesystem-stage constructor. Its returned lifetime keeps the acquired writer
 authority borrowed while `current.seg` remains writable.

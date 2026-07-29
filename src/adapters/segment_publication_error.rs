@@ -8,6 +8,8 @@ use super::SegmentDigest;
 /// A closed stage receipt disagreed with the admitted segment selected for publication.
 #[derive(Debug)]
 pub enum SegmentPublicationError {
+    /// The closed filesystem stage belongs to another publisher.
+    PublisherAuthority,
     /// The admitted segment byte length cannot be represented by the protocol.
     HostLength {
         /// Host byte length that could not be represented.
@@ -39,6 +41,9 @@ pub enum SegmentPublicationError {
 impl fmt::Display for SegmentPublicationError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::PublisherAuthority => {
+                formatter.write_str("sealed segment belongs to another publisher")
+            }
             Self::HostLength { .. } => {
                 formatter.write_str("admitted segment length is not representable")
             }

@@ -72,6 +72,7 @@ mod filesystem_catalog_publisher;
 mod filesystem_catalog_segment;
 mod filesystem_catalog_snapshot;
 mod filesystem_catalog_storage;
+mod filesystem_publisher_authority;
 mod filesystem_segment_stage;
 mod filesystem_writer_lock;
 mod framed_blake3;

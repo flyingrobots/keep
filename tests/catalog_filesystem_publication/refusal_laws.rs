@@ -21,12 +21,12 @@ fn conflicting_immutable_pool_bytes_refuse_before_visibility() -> Result<(), Box
     let store = StoreFixture::create("catalog-filesystem-conflict")?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
     let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
-    let (closed, segment_bytes) = stage_one_zero(&publisher, &store)?;
+    let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     fs::write(store.segment_path(), fixture(EMPTY_SEGMENT_HEX)?)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
-    let selection = SegmentPublication::one(closed, &segments[0])?;
+    let selection = publisher.select_segment(sealed, &segments[0])?;
 
     let error = require_error(
         publish_catalog_generation(
@@ -57,11 +57,11 @@ fn stale_current_head_refuses_before_creating_catalog_state() -> Result<(), Box<
     let store = StoreFixture::create("catalog-filesystem-stale")?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
     let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
-    let (closed, segment_bytes) = stage_one_zero(&publisher, &store)?;
+    let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
-    let selection = SegmentPublication::one(closed, &segments[0])?;
+    let selection = publisher.select_segment(sealed, &segments[0])?;
     let _receipt = publish_catalog_generation(
         &mut publisher,
         CatalogPublicationExpectation::uninitialized(),
@@ -110,11 +110,11 @@ fn leftover_next_head_requires_recovery_before_any_mutation() -> Result<(), Box<
     fs::write(store.path().join("head.next"), [])?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
     let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
-    let (closed, segment_bytes) = stage_one_zero(&publisher, &store)?;
+    let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
-    let selection = SegmentPublication::one(closed, &segments[0])?;
+    let selection = publisher.select_segment(sealed, &segments[0])?;
 
     let error = require_error(
         publish_catalog_generation(
@@ -148,16 +148,17 @@ fn leftover_catalog_stage_refuses_before_segment_pool_mutation() -> Result<(), B
     let store = StoreFixture::create("catalog-filesystem-catalog-recovery")?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
     let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
-    let (closed, segment_bytes) = stage_one_zero(&publisher, &store)?;
+    let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     fs::write(store.staging().join("current.cat"), b"recovery evidence")?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
+    let selection = publisher.select_segment(sealed, &segments[0])?;
     let error = require_error(
         publish_catalog_generation(
             &mut publisher,
             CatalogPublicationExpectation::uninitialized(),
-            SegmentPublication::one(closed, &segments[0])?,
+            selection,
             &catalog,
             &segments,
         ),
@@ -224,14 +225,15 @@ fn already_published_retry_refuses_a_recreated_segment_stage() -> Result<(), Box
     let store = StoreFixture::create("catalog-filesystem-retry-stage")?;
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
     let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
-    let (closed, segment_bytes) = stage_one_zero(&publisher, &store)?;
+    let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
+    let selection = publisher.select_segment(sealed, &segments[0])?;
     let _receipt = publish_catalog_generation(
         &mut publisher,
         CatalogPublicationExpectation::uninitialized(),
-        SegmentPublication::one(closed, &segments[0])?,
+        selection,
         &catalog,
         &segments,
     )?;
@@ -239,14 +241,15 @@ fn already_published_retry_refuses_a_recreated_segment_stage() -> Result<(), Box
 
     let lock = FilesystemWriterLock::try_acquire(store.path())?;
     let mut publisher = FilesystemCatalogPublisher::open(lock, restart_policy()?)?;
-    let (closed, retry_bytes) = stage_one_zero(&publisher, &store)?;
+    let (sealed, retry_bytes) = stage_one_zero(&publisher, &store)?;
     let retry_segment = AdmittedSegment::decode(&retry_bytes, maximum_segment_policy())?;
     let retry_segments = [retry_segment];
+    let selection = publisher.select_segment(sealed, &retry_segments[0])?;
     let error = require_error(
         publish_catalog_generation(
             &mut publisher,
             CatalogPublicationExpectation::uninitialized(),
-            SegmentPublication::one(closed, &retry_segments[0])?,
+            selection,
             &catalog,
             &retry_segments,
         ),

@@ -15,6 +15,7 @@ pub(super) fn verify(
     candidate: &CatalogSnapshot<'_, '_, '_>,
     segment: &SegmentPublication<'_, '_>,
 ) -> io::Result<CatalogPublicationReadiness> {
+    require_segment_authority(publisher, segment)?;
     require_no_next_head(publisher)?;
     require_no_catalog_stage(publisher)?;
     if segment.admitted().is_none() {
@@ -56,6 +57,19 @@ pub(super) fn verify(
         require_no_segment_stage(publisher)?;
     }
     Ok(readiness)
+}
+
+fn require_segment_authority(
+    publisher: &FilesystemCatalogPublisher,
+    segment: &SegmentPublication<'_, '_>,
+) -> io::Result<()> {
+    if segment.is_bound_to(&publisher.authority) {
+        Ok(())
+    } else {
+        Err(filesystem_catalog_artifact::invalid_data(
+            FilesystemCatalogPublicationError::SegmentAuthorityRequired,
+        ))
+    }
 }
 
 fn require_no_next_head(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {

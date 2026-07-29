@@ -1,11 +1,14 @@
 //! This module owns optional closed-segment publication selection.
 
+use super::filesystem_publisher_authority::FilesystemPublisherAuthority;
 use super::{AdmittedSegment, ClosedSegment, SegmentPublicationError};
 
 /// Segment-pool work required before publishing one catalog generation.
 ///
 /// The selected form can be created only by consuming a handle-free
 /// [`ClosedSegment`] receipt and binding it to the exact admitted stage bytes.
+/// Storage adapters may require additional private provenance before they
+/// accept that selection.
 #[must_use]
 pub struct SegmentPublication<'selection, 'records> {
     selected: Option<SelectedSegment<'selection, 'records>>,
@@ -14,6 +17,7 @@ pub struct SegmentPublication<'selection, 'records> {
 struct SelectedSegment<'selection, 'records> {
     _closed: ClosedSegment,
     admitted: &'selection AdmittedSegment<'records>,
+    authority: Option<FilesystemPublisherAuthority>,
 }
 
 impl<'selection, 'records> SegmentPublication<'selection, 'records> {
@@ -22,7 +26,11 @@ impl<'selection, 'records> SegmentPublication<'selection, 'records> {
         Self { selected: None }
     }
 
-    /// Binds one closed synchronized stage to its exact admitted bytes.
+    /// Binds one storage-agnostic closed stage to its exact admitted bytes.
+    ///
+    /// This selection carries no filesystem-publisher authority. Use
+    /// [`crate::FilesystemCatalogPublisher::select_segment`] for filesystem
+    /// publication.
     ///
     /// # Errors
     ///
@@ -31,6 +39,22 @@ impl<'selection, 'records> SegmentPublication<'selection, 'records> {
     pub fn one(
         closed: ClosedSegment,
         admitted: &'selection AdmittedSegment<'records>,
+    ) -> Result<Self, SegmentPublicationError> {
+        Self::bind(closed, admitted, None)
+    }
+
+    pub(super) fn one_bound(
+        closed: ClosedSegment,
+        admitted: &'selection AdmittedSegment<'records>,
+        authority: FilesystemPublisherAuthority,
+    ) -> Result<Self, SegmentPublicationError> {
+        Self::bind(closed, admitted, Some(authority))
+    }
+
+    fn bind(
+        closed: ClosedSegment,
+        admitted: &'selection AdmittedSegment<'records>,
+        authority: Option<FilesystemPublisherAuthority>,
     ) -> Result<Self, SegmentPublicationError> {
         let observed_length = u64::try_from(admitted.encoded().len()).map_err(|_source| {
             SegmentPublicationError::HostLength {
@@ -59,6 +83,7 @@ impl<'selection, 'records> SegmentPublication<'selection, 'records> {
             selected: Some(SelectedSegment {
                 _closed: closed,
                 admitted,
+                authority,
             }),
         })
     }
@@ -72,5 +97,14 @@ impl<'selection, 'records> SegmentPublication<'selection, 'records> {
 
     pub(super) fn into_admitted(self) -> Option<&'selection AdmittedSegment<'records>> {
         self.selected.map(|selected| selected.admitted)
+    }
+
+    pub(super) fn is_bound_to(&self, authority: &FilesystemPublisherAuthority) -> bool {
+        self.selected.as_ref().is_none_or(|selected| {
+            selected
+                .authority
+                .as_ref()
+                .is_some_and(|selected| selected.matches(authority))
+        })
     }
 }

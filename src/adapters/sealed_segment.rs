@@ -22,18 +22,15 @@ impl<S> SealedSegment<S>
 where
     S: SegmentStage,
 {
-    /// Closes the owned writable stage and returns publication-safe metadata.
+    /// Closes the owned writable stage and returns storage-agnostic metadata.
     ///
     /// The stage has already completed both required flush-and-sync
     /// transitions. This consuming operation drops the only stage value Keep
-    /// owns before returning a handle-free [`ClosedSegment`] receipt.
+    /// owns before returning a handle-free [`ClosedSegment`] receipt. A
+    /// filesystem publisher requires its own authority-bound selection method;
+    /// this generic receipt cannot authorize a retained filesystem stage.
     pub fn close(self) -> ClosedSegment {
-        let Self {
-            _stage: stage,
-            record_count,
-            segment_length,
-            digest,
-        } = self;
+        let (stage, record_count, segment_length, digest) = self.into_parts();
         drop(stage);
         ClosedSegment::admitted(record_count, segment_length, digest)
     }
@@ -54,6 +51,16 @@ where
     #[must_use]
     pub const fn digest(&self) -> SegmentDigest {
         self.digest
+    }
+
+    pub(super) fn into_parts(self) -> (S, u32, u64, SegmentDigest) {
+        let Self {
+            _stage: stage,
+            record_count,
+            segment_length,
+            digest,
+        } = self;
+        (stage, record_count, segment_length, digest)
     }
 
     pub(super) const fn admitted(
