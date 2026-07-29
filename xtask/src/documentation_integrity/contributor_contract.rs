@@ -3,7 +3,7 @@
 use crate::repository_file::RepositoryRoot;
 
 use super::error::DocumentationError;
-use super::repository_text;
+use super::repository_text::{self, RepositoryText};
 
 const CONTRIBUTING_PATH: &str = "CONTRIBUTING.md";
 const STANDARDS_PATH: &str = "docs/Documentation Standards.md";
@@ -11,13 +11,23 @@ const UNSTAGED_CHECK: &str = "git diff --check";
 const STAGED_CHECK: &str = "git diff --cached --check";
 const WHOLE_TREE_CHECK: &str = r#"git diff --check "$(git hash-object -t tree /dev/null)" HEAD"#;
 
-pub(super) fn check(repository_root: &RepositoryRoot) -> Result<(), DocumentationError> {
-    for path in [CONTRIBUTING_PATH, STANDARDS_PATH] {
-        let raw = repository_text::read(repository_root, path)?;
-        admit(path, raw.as_str())?;
-        raw.verify(repository_root)?;
-    }
-    Ok(())
+pub(super) fn check(
+    repository_root: &RepositoryRoot,
+) -> Result<[RepositoryText; 2], DocumentationError> {
+    Ok([
+        checked_source(repository_root, CONTRIBUTING_PATH)?,
+        checked_source(repository_root, STANDARDS_PATH)?,
+    ])
+}
+
+fn checked_source(
+    repository_root: &RepositoryRoot,
+    path: &'static str,
+) -> Result<RepositoryText, DocumentationError> {
+    let raw = repository_text::read(repository_root, path)?;
+    admit(path, raw.as_str())?;
+    raw.verify(repository_root)?;
+    Ok(raw)
 }
 
 fn admit(path: &'static str, raw: &str) -> Result<(), DocumentationError> {

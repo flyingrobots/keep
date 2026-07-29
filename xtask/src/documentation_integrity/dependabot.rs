@@ -9,7 +9,7 @@ use yaml_rust2::{Yaml, YamlLoader};
 use crate::repository_file::{RepositoryProcessDirectory, RepositoryRoot};
 
 use super::error::DocumentationError;
-use super::repository_text;
+use super::repository_text::{self, RepositoryText};
 use manifest::tracked_scopes;
 
 const DEPENDABOT_PATH: &str = ".github/dependabot.yml";
@@ -23,11 +23,12 @@ struct DependencyScope {
 pub(super) fn check(
     repository_root: &RepositoryRoot,
     process_directory: &RepositoryProcessDirectory,
-) -> Result<(), DocumentationError> {
+) -> Result<RepositoryText, DocumentationError> {
     let raw = repository_text::read(repository_root, DEPENDABOT_PATH)?;
     let required = tracked_scopes(process_directory)?;
     admit(raw.as_str(), &required)?;
-    raw.verify(repository_root)
+    raw.verify(repository_root)?;
+    Ok(raw)
 }
 
 fn admit(raw: &str, required: &BTreeSet<DependencyScope>) -> Result<(), DocumentationError> {

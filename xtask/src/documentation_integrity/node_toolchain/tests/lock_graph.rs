@@ -49,7 +49,7 @@ fn check_with_lock(
     let repository = TestDirectory::create("node-lock-graph")?;
     write_repository(&repository, lock)?;
     let root = RepositoryRoot::open(repository.path())?;
-    let result = super::super::check(&root);
+    let result = super::super::check(&root).map(drop);
     repository.close()?;
     Ok(result)
 }

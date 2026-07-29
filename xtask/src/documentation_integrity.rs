@@ -6,13 +6,14 @@ mod dependabot;
 mod error;
 mod execution;
 mod node_toolchain;
+mod policy_corpus;
 mod repository_text;
 mod tool;
 mod workflow_contract;
 
 use std::path::{Path, PathBuf};
 
-use crate::repository_file::RepositoryRoot;
+use crate::repository_file::{RepositoryProcessDirectory, RepositoryRoot};
 
 pub(super) use error::DocumentationError;
 
@@ -22,6 +23,18 @@ pub(super) fn check_refusals() -> Result<(), DocumentationError> {
 }
 
 pub(super) fn check(repository_path: &Path) -> Result<(), DocumentationError> {
+    check_with(repository_path, execution::run)
+}
+
+fn check_with(
+    repository_path: &Path,
+    run_tools: impl FnOnce(
+        &RepositoryProcessDirectory,
+        &RepositoryRoot,
+        &corpus::SourceCorpus,
+        &corpus::SourceCorpus,
+    ) -> Result<(), DocumentationError>,
+) -> Result<(), DocumentationError> {
     let repository_root = RepositoryRoot::open(repository_path).map_err(|source| {
         DocumentationError::RepositoryRootInspect {
             path: repository_path.to_owned(),
@@ -35,13 +48,11 @@ pub(super) fn check(repository_path: &Path) -> Result<(), DocumentationError> {
         }
     })?;
     verify_root(&repository_root, repository_path)?;
-    contributor_contract::check(&repository_root)?;
-    node_toolchain::check(&repository_root)?;
-    dependabot::check(&repository_root, &process_directory)?;
-    workflow_contract::check(&repository_root)?;
+    let policies = policy_corpus::FixedPolicyCorpus::admit(&repository_root, &process_directory)?;
     let markdown = corpus::SourceCorpus::markdown(&repository_root, &process_directory)?;
     let workflows = corpus::SourceCorpus::workflow(&repository_root, &process_directory)?;
-    execution::run(&process_directory, &repository_root, &markdown, &workflows)?;
+    run_tools(&process_directory, &repository_root, &markdown, &workflows)?;
+    policies.verify(&repository_root)?;
     verify_root(&repository_root, repository_path)
 }
 
@@ -60,3 +71,7 @@ fn verify_root(
         }),
     }
 }
+
+#[cfg(test)]
+#[path = "documentation_integrity/tests.rs"]
+mod tests;

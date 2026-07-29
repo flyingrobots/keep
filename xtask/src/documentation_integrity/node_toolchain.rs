@@ -7,7 +7,7 @@ use serde_json::{Map, Value};
 use crate::repository_file::RepositoryRoot;
 
 use super::error::DocumentationError;
-use super::repository_text;
+use super::repository_text::{self, RepositoryText};
 
 const INSTALLER_PATH: &str = "scripts/install_documentation_tools.sh";
 const INSTALLER_DIGEST: [u8; 32] = [
@@ -21,7 +21,9 @@ const LOCK_DIGEST: [u8; 32] = [
 const LOCK_PATH: &str = "scripts/documentation-tools/package-lock.json";
 const MANIFEST_PATH: &str = "scripts/documentation-tools/package.json";
 
-pub(super) fn check(repository_root: &RepositoryRoot) -> Result<(), DocumentationError> {
+pub(super) fn check(
+    repository_root: &RepositoryRoot,
+) -> Result<[RepositoryText; 3], DocumentationError> {
     let manifest = repository_text::read(repository_root, MANIFEST_PATH)?;
     let lock = repository_text::read(repository_root, LOCK_PATH)?;
     let installer = repository_text::read(repository_root, INSTALLER_PATH)?;
@@ -29,7 +31,8 @@ pub(super) fn check(repository_root: &RepositoryRoot) -> Result<(), Documentatio
     admit_lock_bytes(lock.as_str())?;
     manifest.verify(repository_root)?;
     lock.verify(repository_root)?;
-    installer.verify(repository_root)
+    installer.verify(repository_root)?;
+    Ok([manifest, lock, installer])
 }
 
 fn admit(manifest: &str, lock: &str, installer: &str) -> Result<(), DocumentationError> {

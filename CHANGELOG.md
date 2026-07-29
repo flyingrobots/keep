@@ -42,8 +42,8 @@ after its public API and format compatibility policies are established.
   membership so newly added sources cannot bypass those tools, executes the
   tools against a private snapshot copied from the admitted source descriptors
   so transient path substitution cannot redirect their reads, retains each
-  fixed policy file identity through semantic admission so a replaced path
-  cannot validate bytes from a superseded file,
+  fixed policy file identity through semantic admission and external tool
+  execution so a replaced path cannot validate bytes from a superseded file,
   and applies a two-minute deadline across Git inventory, validation-tool
   execution, and output collection. Validation tools clear the inherited
   environment and admit only the executable search path and `C` locale, so

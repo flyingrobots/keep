@@ -7,7 +7,7 @@ use yaml_rust2::{Yaml, YamlLoader};
 use crate::repository_file::RepositoryRoot;
 
 use super::error::DocumentationError;
-use super::repository_text;
+use super::repository_text::{self, RepositoryText};
 use reviewed_step::{DocumentationStep, REVIEWED_STEPS, steps_have_reviewed_membership};
 
 const CI_PATH: &str = ".github/workflows/ci.yml";
@@ -21,10 +21,13 @@ const SETUP_NODE_ACTION: &str = "actions/setup-node@820762786026740c76f36085b0ef
 const SETUP_NODE_ACTION_PREFIX: &str = "actions/setup-node@";
 const NODE_VERSION: &str = "24.18.0";
 
-pub(super) fn check(repository_root: &RepositoryRoot) -> Result<(), DocumentationError> {
+pub(super) fn check(
+    repository_root: &RepositoryRoot,
+) -> Result<RepositoryText, DocumentationError> {
     let workflow = repository_text::read(repository_root, CI_PATH)?;
     admit(workflow.as_str())?;
-    workflow.verify(repository_root)
+    workflow.verify(repository_root)?;
+    Ok(workflow)
 }
 
 fn admit(workflow: &str) -> Result<(), DocumentationError> {
