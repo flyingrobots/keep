@@ -41,3 +41,17 @@ fn unresolved_selected_utility_is_ambiguous() {
         Some(super::UtilitySelection::Ambiguous)
     );
 }
+
+#[test]
+fn unambiguous_long_option_abbreviations_preserve_the_utility() {
+    for arguments in [
+        b"--spl=python3 -I".as_slice(),
+        b"--ignore-e python3",
+        b"--uns PYTHONHOME python3",
+    ] {
+        assert_eq!(
+            super::selected_utility(arguments),
+            Some(super::UtilitySelection::Known(b"python3".to_vec()))
+        );
+    }
+}

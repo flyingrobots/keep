@@ -1,10 +1,12 @@
 //! This module owns deterministic `env` shebang utility selection.
 
+mod long_options;
 mod short_options;
 mod word_split;
 
 use std::collections::VecDeque;
 
+use long_options::{LongOptionAction, action as long_option_action};
 use short_options::{ShortOptionAction, action as short_option_action};
 use word_split::split_words;
 
@@ -62,17 +64,21 @@ fn option_action(
     if word == b"--" {
         return Some(OptionAction::End);
     }
-    if word == b"-" || is_flag(word) {
+    if word == b"-" {
         return Some(OptionAction::Consumed);
     }
-    if option_takes_value(word) {
-        words.pop_front()?;
-        return Some(OptionAction::Consumed);
+    if let Some(action) = long_option_action(word) {
+        return match action {
+            LongOptionAction::Consumed => Some(OptionAction::Consumed),
+            LongOptionAction::TakesNext => {
+                words.pop_front()?;
+                Some(OptionAction::Consumed)
+            }
+            LongOptionAction::Split(split) => expand_split(split, words, split_budget),
+            LongOptionAction::Invalid => None,
+        };
     }
-    if option_has_value(word) {
-        return Some(OptionAction::Consumed);
-    }
-    if let Some(split) = split_value(word) {
+    if let Some(split) = short_split_value(word) {
         return expand_split(split, words, split_budget);
     }
     match short_option_action(word) {
@@ -109,51 +115,12 @@ fn expanded_words(first: &[u8], remaining: VecDeque<Vec<u8>>) -> Option<VecDeque
     Some(VecDeque::from(split_words(&input)?))
 }
 
-fn split_value(word: &[u8]) -> Option<&[u8]> {
-    if word == b"-S" || word == b"--split-string" {
+fn short_split_value(word: &[u8]) -> Option<&[u8]> {
+    if word == b"-S" {
         Some(b"")
     } else {
-        word.strip_prefix(b"-S")
-            .filter(|value| !value.is_empty())
-            .or_else(|| word.strip_prefix(b"--split-string="))
+        word.strip_prefix(b"-S").filter(|value| !value.is_empty())
     }
-}
-
-fn option_takes_value(word: &[u8]) -> bool {
-    matches!(word, b"--unset" | b"--chdir" | b"--argv0")
-}
-
-fn option_has_value(word: &[u8]) -> bool {
-    [
-        b"--unset=".as_slice(),
-        b"--chdir=".as_slice(),
-        b"--argv0=".as_slice(),
-    ]
-    .iter()
-    .any(|prefix| word.starts_with(prefix))
-}
-
-fn is_flag(word: &[u8]) -> bool {
-    matches!(
-        word,
-        b"--ignore-environment"
-            | b"--debug"
-            | b"--null"
-            | b"--help"
-            | b"--version"
-            | b"--list-signal-handling"
-    ) || [
-        b"--block-signal".as_slice(),
-        b"--default-signal",
-        b"--ignore-signal",
-    ]
-    .iter()
-    .any(|prefix| {
-        word == *prefix
-            || word
-                .strip_prefix(*prefix)
-                .is_some_and(|value| value.starts_with(b"="))
-    })
 }
 
 #[cfg(test)]

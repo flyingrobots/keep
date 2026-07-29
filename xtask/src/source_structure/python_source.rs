@@ -108,6 +108,8 @@ mod tests {
             b"#!/usr/bin/env -Spython3 -I\n",
             b"#!/usr/bin/env -S/opt/PyPy3 -I\n",
             b"#!/usr/bin/env --split-string=python3\n",
+            b"#!/usr/bin/env --spl=python3 -I\n",
+            b"#!/usr/bin/env --ignore-e python3\n",
             b"#!/opt/PyPy3\n",
         ] {
             assert!(is_python_shebang(shebang));
