@@ -17,8 +17,10 @@
 //! production initialization for the admitted Linux ext4 profile. Recovery
 //! inventory, name classification, bounded stage fingerprinting, exact
 //! truncated-stage discard, and complete-stage valid-orphan recovery are
-//! explicit. Head finalization, retention, and garbage collection APIs remain
-//! intentionally absent until their contracts have executable specifications.
+//! explicit. Exact next-head finalization now has a storage-independent
+//! contract; filesystem finalization, retention, and garbage collection APIs
+//! remain intentionally absent until their contracts have executable
+//! specifications.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -52,9 +54,14 @@ pub use adapters::{
     RecoveryEntryNameError, RecoveryEntryRole, RecoveryInventory, RecoveryInventoryEntry,
     RecoveryInventoryError, RecoveryInventoryLimit, RecoveryInventoryLimitError,
     RecoveryInventoryOperation, RecoveryInventoryStorage, RecoveryNameClassificationError,
-    RecoveryNameManifest, RecoveryNamedEntry, RecoveryNamespace, RecoveryNextHeadStage,
-    RecoveryNextHeadStageError, RecoveryPoolNameError, RecoveryRequiredEntry, RecoverySegmentStage,
-    RecoverySegmentStageError, RecoverySegmentTruncation, RecoveryStage, RecoveryStageAssessment,
+    RecoveryNameManifest, RecoveryNamedEntry, RecoveryNamespace, RecoveryNextHeadFinalizationError,
+    RecoveryNextHeadFinalizationOutcome, RecoveryNextHeadFinalizationPlanError,
+    RecoveryNextHeadFinalizationReadiness, RecoveryNextHeadFinalizationReceipt,
+    RecoveryNextHeadFinalizationRequest, RecoveryNextHeadFinalizationStorage,
+    RecoveryNextHeadFinalizationStorageError, RecoveryNextHeadFinalizationTarget,
+    RecoveryNextHeadStage, RecoveryNextHeadStageError, RecoveryPoolNameError,
+    RecoveryRequiredEntry, RecoverySegmentStage, RecoverySegmentStageError,
+    RecoverySegmentTruncation, RecoveryStage, RecoveryStageAssessment,
     RecoveryStageAssessmentError, RecoveryStageByteAdmissionError, RecoveryStageCompletionError,
     RecoveryStageCompletionPlanError, RecoveryStageCompletionPool, RecoveryStageCompletionReceipt,
     RecoveryStageCompletionRequest, RecoveryStageCompletionStorage,
@@ -76,9 +83,10 @@ pub use adapters::{
     StoreInitializationStorage, WriterLockAcquireError, WriterLockAcquirePhase,
     admit_recovery_stage_bytes, assess_recovery_stage, classify_recovery_catalog_stage,
     classify_recovery_names, classify_recovery_next_head_stage, classify_recovery_segment_stage,
-    execute_recovery_stage_completion, execute_recovery_stage_discard, fingerprint_recovery_stage,
-    initialize_store, plan_recovery_stage_completion, plan_recovery_stage_discard,
-    publish_catalog_generation, read_recovery_inventory,
+    execute_recovery_next_head_finalization, execute_recovery_stage_completion,
+    execute_recovery_stage_discard, fingerprint_recovery_stage, initialize_store,
+    plan_recovery_next_head_finalization, plan_recovery_stage_completion,
+    plan_recovery_stage_discard, publish_catalog_generation, read_recovery_inventory,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

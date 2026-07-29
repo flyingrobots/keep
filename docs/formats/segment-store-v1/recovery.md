@@ -186,6 +186,21 @@ exactly extends the verified current head. A lawful generation-1 candidate may
 instead extend a verified uninitialized root. Finalization reuses
 `KEEP-CRASH-025` and `KEEP-CRASH-026` without rewriting the candidate.
 
+The public semantic boundary requires both a complete
+`RecoveryNextHeadStage` assessment and the exact complete `CatalogSnapshot`
+named by that head. `plan_recovery_next_head_finalization` refuses a mismatched
+snapshot, a noninitial generation over an uninitialized root, and any
+generation or predecessor other than the expected exact successor. Its owned
+request retains the prior stage evidence, current-state expectation, and
+candidate generation, length, and digest.
+
+`execute_recovery_next_head_finalization` revalidates durable current state and
+the complete candidate view through its storage port. A ready candidate
+atomically replaces `HEAD`; an already-finalized retry skips replacement. Both
+paths synchronize the root before returning
+`RecoveryNextHeadFinalizationReceipt`. Filesystem binding of this semantic
+port remains planned.
+
 A truncated, corrupt, stale, or otherwise unpublishable candidate remains
 invisible and blocks new publication.
 Recovery never rewrites a retained `head.next`.

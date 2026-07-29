@@ -64,6 +64,11 @@ after its public API and format compatibility policies are established.
   boundaries, uses no-clobber immutable-pool links, never follows stage or pool
   links, preserves conflicting or replaced entries, verifies exact pool bytes,
   and accepts stage/pool, reappeared-stage, and completed pool-only retries.
+- Storage-independent next-head recovery now binds a complete `head.next`
+  assessment to its exact transitive catalog snapshot, admits only generation
+  one over an uninitialized root or the exact successor of an expected current
+  snapshot, distinguishes ready from already-finalized retries, and returns a
+  receipt only after root synchronization.
 - Store initialization now exposes one storage-port state machine that admits
   the platform before mutation, opens and locks `writer.lock`, admits the three
   protocol directories in order, synchronizes the root, and preserves the

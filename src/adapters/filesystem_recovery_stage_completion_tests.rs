@@ -28,18 +28,21 @@ fn exact_segment_and_catalog_complete_to_durable_orphans() -> Result<(), Box<dyn
         let request = request(stage, &bytes)?;
         fs::write(fixture.stage_path(stage), &bytes)?;
 
-        let completed = execute_recovery_stage_completion(&mut completer, request)?;
+        let first_receipt = execute_recovery_stage_completion(&mut completer, request)?;
         let retried = execute_recovery_stage_completion(&mut completer, request)?;
         fs::write(fixture.stage_path(stage), &bytes)?;
         let reappeared = execute_recovery_stage_completion(&mut completer, request)?;
 
         assert_eq!(
-            completed.synchronization_outcome(),
+            first_receipt.synchronization_outcome(),
             RecoveryStageSynchronizationOutcome::Synchronized
         );
-        assert_eq!(completed.pool_outcome(), RecoveryStagePoolOutcome::Linked);
         assert_eq!(
-            completed.stage_outcome(),
+            first_receipt.pool_outcome(),
+            RecoveryStagePoolOutcome::Linked
+        );
+        assert_eq!(
+            first_receipt.stage_outcome(),
             RecoveryStageDiscardOutcome::Removed
         );
         assert_eq!(

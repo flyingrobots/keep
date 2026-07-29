@@ -61,15 +61,15 @@ The reference CAS is executable evidence for M2 storage laws, not a durable
 backend. Its committed state is process memory; process death loses it all.
 The durable boundary can initialize and platform-admit a store only under the
 documented Linux ext4 contract. Acquiring `FilesystemWriterLock` alone cannot
-construct a filesystem publisher. Leftover `head.next`, staged recovery
-evidence, and ambiguous crash states remain explicit recovery work. An absent
-`HEAD` is admitted for first publication only when both immutable pools are
-empty. The public storage-independent recovery inventory counts all four
-protocol namespaces before retaining names, applies a configurable ceiling no
-greater than 2,097,152 entries, and returns duplicate-free deterministic raw
-name order. `FilesystemRecoveryInventoryReader` implements that contract with
-pinned, no-follow namespace capabilities and pre/post identity verification on
-the admitted Linux ext4 profile. Its bounded stage-fingerprint operation opens
+construct a filesystem publisher. Ambiguous crash states remain explicit
+recovery work. An absent `HEAD` is admitted for first publication only when
+both immutable pools are empty. The public storage-independent recovery
+inventory counts all four protocol namespaces before retaining names, applies
+a configurable ceiling no greater than 2,097,152 entries, and returns
+duplicate-free deterministic raw name order.
+`FilesystemRecoveryInventoryReader` implements that contract with pinned,
+no-follow namespace capabilities and pre/post identity verification on the
+admitted Linux ext4 profile. Its bounded stage-fingerprint operation opens
 fixed stages relative to those capabilities, refuses links and nonregular
 files, and verifies entry identity and length after reading. Complete
 caller-supplied segment-stage bytes can be classified as a reusable prefix,
@@ -77,16 +77,19 @@ complete admitted segment, or exact truncation. Catalog and next-head stages
 likewise distinguish exact truncation from complete canonical bytes.
 Materialized bytes enter read-only semantic assessment only after their stage,
 length, and recomputed fingerprint match prior observation evidence.
-Only an exact truncation assessment may form an explicit discard request; the
-semantic executor refuses evidence drift and returns a receipt only after
-exact removal or admitted prior absence is followed by parent synchronization.
-The pinned-filesystem adapter retains writer authority, revalidates stage
-evidence without following links, removes only an exact match, and
-synchronizes the protocol-selected parent. Transitive publication-view
-admission and filesystem-streaming classification remain planned.
-Crash-injection execution, stage completion and next-head finalization,
-retention, compaction, and garbage collection remain planned. Presence in the
-reference CAS does not claim retention, crash recovery, or durability.
+
+Exact truncation assessments can authorize durable, evidence-bound discard.
+Complete segment and catalog assessments can authorize verified immutable-pool
+completion through `FilesystemRecoveryStageCompleter`; its receipt proves a
+valid orphan, not reachability. A complete `head.next` and its transitive
+`CatalogSnapshot` can authorize storage-independent finalization only when the
+candidate is generation one over an uninitialized root or the exact successor
+of the expected current snapshot. The executor distinguishes first
+finalization from an already-finalized retry and returns only after root
+synchronization. The filesystem adapter for that semantic finalization,
+process-death injection, reusable-stage continuation, retention, compaction,
+and garbage collection remain planned. Presence in the reference CAS does not
+claim retention, crash recovery, or durability.
 
 ```rust
 use keep::BlobId;

@@ -10,6 +10,8 @@ use super::{
 /// The operation never creates, replaces, or finalizes a catalog head. A
 /// receipt is returned only after the immutable pool is synchronized, the exact
 /// fixed stage is absent, and staging is synchronized.
+/// Typed storage failures are boxed on the error path to keep the phase error
+/// bounded without discarding expected or observed state.
 ///
 /// # Errors
 ///
@@ -22,15 +24,25 @@ pub fn execute_recovery_stage_completion(
     let target = request.target();
     let pool = request.pool();
     let stage = request.evidence().stage();
-    let synchronization_outcome = storage
-        .synchronize_stage_if_present(request)
-        .map_err(|source| RecoveryStageCompletionError::SynchronizeStage { stage, source })?;
+    let synchronization_outcome =
+        storage
+            .synchronize_stage_if_present(request)
+            .map_err(|source| RecoveryStageCompletionError::SynchronizeStage {
+                stage,
+                source: Box::new(source),
+            })?;
     let pool_outcome = storage
         .link_stage_or_admit_pool(request)
-        .map_err(|source| RecoveryStageCompletionError::LinkOrAdmit { target, source })?;
+        .map_err(|source| RecoveryStageCompletionError::LinkOrAdmit {
+            target,
+            source: Box::new(source),
+        })?;
     storage
         .verify_pool(request)
-        .map_err(|source| RecoveryStageCompletionError::VerifyPool { target, source })?;
+        .map_err(|source| RecoveryStageCompletionError::VerifyPool {
+            target,
+            source: Box::new(source),
+        })?;
     storage
         .synchronize_pool(pool)
         .map_err(|source| RecoveryStageCompletionError::SynchronizePool { pool, source })?;

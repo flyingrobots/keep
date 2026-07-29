@@ -17,21 +17,21 @@ pub enum RecoveryStageCompletionError {
         /// Fixed stage that could not be made durable.
         stage: RecoveryStage,
         /// Exact underlying verification or synchronization failure.
-        source: RecoveryStageCompletionStorageError,
+        source: Box<RecoveryStageCompletionStorageError>,
     },
     /// The exact stage could not be linked or an existing coordinate admitted.
     LinkOrAdmit {
         /// Validated immutable-pool target.
         target: RecoveryStageCompletionTarget,
         /// Exact underlying storage failure.
-        source: RecoveryStageCompletionStorageError,
+        source: Box<RecoveryStageCompletionStorageError>,
     },
     /// The immutable-pool entry did not verify exactly.
     VerifyPool {
         /// Validated immutable-pool target.
         target: RecoveryStageCompletionTarget,
         /// Exact underlying verification failure.
-        source: RecoveryStageCompletionStorageError,
+        source: Box<RecoveryStageCompletionStorageError>,
     },
     /// The immutable-pool directory could not be synchronized.
     SynchronizePool {
@@ -92,7 +92,7 @@ impl Error for RecoveryStageCompletionError {
         match self {
             Self::SynchronizeStage { source, .. }
             | Self::LinkOrAdmit { source, .. }
-            | Self::VerifyPool { source, .. } => Some(source),
+            | Self::VerifyPool { source, .. } => Some(source.as_ref()),
             Self::SynchronizePool { source, .. } | Self::SynchronizeStaging { source, .. } => {
                 Some(source)
             }

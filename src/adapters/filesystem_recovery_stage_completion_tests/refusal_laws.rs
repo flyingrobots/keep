@@ -109,14 +109,14 @@ fn absent_stage_and_pool_refuse_without_creating_state() -> Result<(), Box<dyn E
         .err()
         .ok_or("absent stage and pool produced a receipt")?;
 
+    let RecoveryStageCompletionError::LinkOrAdmit { source, .. } = error else {
+        return Err("missing artifacts lost the link-or-admit phase".into());
+    };
     assert!(matches!(
-        error,
-        RecoveryStageCompletionError::LinkOrAdmit {
-            source: RecoveryStageCompletionStorageError::Missing {
-                request: missing,
-            },
-            ..
-        } if missing == request
+        source.as_ref(),
+        RecoveryStageCompletionStorageError::Missing {
+            request: missing,
+        } if *missing == request
     ));
     assert!(!fixture.stage_path(RecoveryStage::Segment).exists());
     assert!(!fixture.pool_path(request).exists());
@@ -158,12 +158,12 @@ fn changed_stage_is_refused_before_a_pool_link_is_created() -> Result<(), Box<dy
 fn filesystem_stage_source(
     error: &RecoveryStageCompletionError,
 ) -> Result<&FilesystemRecoveryStageError, &'static str> {
-    let completion_source = match error {
-        RecoveryStageCompletionError::SynchronizeStage { source, .. }
-        | RecoveryStageCompletionError::VerifyPool { source, .. } => source,
-        _ => return Err("filesystem stage refusal lost its completion phase"),
+    let (RecoveryStageCompletionError::SynchronizeStage { source, .. }
+    | RecoveryStageCompletionError::VerifyPool { source, .. }) = error
+    else {
+        return Err("filesystem stage refusal lost its completion phase");
     };
-    filesystem_storage_source(completion_source)
+    filesystem_storage_source(source.as_ref())
 }
 
 pub(super) fn filesystem_storage_source(

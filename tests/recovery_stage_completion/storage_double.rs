@@ -141,10 +141,10 @@ impl RecoveryStageCompletionStorage for StageCompletionDouble {
         if self.pool == Some(request) {
             Ok(())
         } else {
-            let observed = self
-                .pool
-                .map(RecoveryStageCompletionRequest::evidence)
-                .unwrap_or_else(|| request.evidence());
+            let observed = self.pool.map_or_else(
+                || request.evidence(),
+                RecoveryStageCompletionRequest::evidence,
+            );
             Err(RecoveryStageCompletionStorageError::EvidenceMismatch {
                 expected: request.evidence(),
                 observed,

@@ -1,11 +1,12 @@
 //! Preflighted catalog-generation publication orchestration.
 
 use super::catalog_publication_expectation::ExpectedCurrentCatalog;
+use super::catalog_transition;
 use super::{
     AdmittedCatalog, AdmittedSegment, CanonicalCatalog, CanonicalPublicationHead,
     CatalogPublicationError, CatalogPublicationExpectation, CatalogPublicationReadiness,
-    CatalogPublicationReceipt, CatalogPublicationStorage, CatalogTransitionError,
-    ChecksummedPublicationHead, SegmentPublication, catalog_publication_execution,
+    CatalogPublicationReceipt, CatalogPublicationStorage, ChecksummedPublicationHead,
+    SegmentPublication, catalog_publication_execution,
 };
 
 /// Publishes one fully admitted canonical catalog generation.
@@ -68,29 +69,13 @@ fn validate_transition(
     match expectation.current() {
         ExpectedCurrentCatalog::Uninitialized => validate_initial(candidate),
         ExpectedCurrentCatalog::Published { generation, digest } => {
-            let expected =
-                generation
-                    .successor()
-                    .map_err(|source| CatalogPublicationError::Transition {
-                        source: CatalogTransitionError::GenerationExhausted { source },
-                    })?;
-            if candidate.generation() != expected {
-                return Err(CatalogPublicationError::Transition {
-                    source: CatalogTransitionError::Generation {
-                        expected,
-                        observed: candidate.generation(),
-                    },
-                });
-            }
-            if candidate.previous_catalog_digest() != Some(digest) {
-                return Err(CatalogPublicationError::Transition {
-                    source: CatalogTransitionError::Predecessor {
-                        expected: digest,
-                        observed: candidate.previous_catalog_digest(),
-                    },
-                });
-            }
-            Ok(())
+            catalog_transition::validate_coordinates(
+                generation,
+                digest,
+                candidate.generation(),
+                candidate.previous_catalog_digest(),
+            )
+            .map_err(|source| CatalogPublicationError::Transition { source })
         }
     }
 }
