@@ -28,9 +28,10 @@ after its public API and format compatibility policies are established.
   unreviewed workflow/job run defaults and step execution fields, pins the
   documentation runner and job deadline, requires the exact top-level
   `contents: read` permission mapping, rejects guarded or failure-tolerant
-  documentation jobs and required steps, requires each Dependabot update block
-  to choose exactly one directory field form, and requires the documentation
-  workflow to run for pushes to `main` and every pull request,
+  documentation jobs and required steps, refuses step mappings that define
+  neither a reviewed action nor a run command, requires each Dependabot update
+  block to choose exactly one directory field form, and requires the
+  documentation workflow to run for pushes to `main` and every pull request,
   executes malformed Markdown and workflow evidence through the named
   `cargo xtask documentation-refusal-check` boundary instead of a
   zero-match-successful libtest substring filter,

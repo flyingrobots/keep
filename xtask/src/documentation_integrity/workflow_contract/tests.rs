@@ -87,6 +87,22 @@ fn documentation_job_requires_the_malformed_input_regressions() {
 }
 
 #[test]
+fn documentation_job_refuses_unclassified_step_mappings() {
+    let workflow = WORKFLOW.replace(
+        "      - name: Verify malformed inputs\n",
+        "      - name: Unreviewed placeholder\n      - name: Verify malformed inputs\n",
+    );
+
+    assert!(matches!(
+        super::admit(&workflow),
+        Err(super::DocumentationError::RepositoryContract {
+            path: super::CI_PATH,
+            requirement: "documentation job steps are reviewed",
+        })
+    ));
+}
+
+#[test]
 fn documentation_job_refuses_python_execution() {
     let workflow = WORKFLOW.replace(
         "  next-job:",
@@ -134,10 +150,7 @@ jobs:
         super::admit(workflow),
         Err(super::DocumentationError::RepositoryContract {
             path: super::CI_PATH,
-            requirement: concat!(
-                "documentation job run commands are reviewed and required ",
-                "commands execute once"
-            ),
+            requirement: "documentation job steps are reviewed",
         })
     ));
 }

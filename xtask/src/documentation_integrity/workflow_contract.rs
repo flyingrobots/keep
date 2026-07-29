@@ -123,6 +123,8 @@ fn reviewed_steps(steps: &[Yaml]) -> Result<Vec<DocumentationStep>, Documentatio
             });
         } else if let Some(run) = admit_run(step)? {
             admitted.push(run);
+        } else {
+            return Err(contract("documentation job steps are reviewed"));
         }
     }
     if actions
