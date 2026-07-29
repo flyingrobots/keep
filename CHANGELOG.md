@@ -47,7 +47,9 @@ after its public API and format compatibility policies are established.
   process authority with dedicated groups, null output, and a two-minute
   deadline. Documentation Git inventory and tools start from one retained
   repository directory handle, so transient replacement of the ambient
-  repository path cannot redirect validation.
+  repository path cannot redirect validation. Retained and per-spawn directory
+  descriptors are allocated at descriptor 3 or above, so child standard-stream
+  setup cannot overwrite the working-directory authority.
   Terminal signals now become typed refusals while an external repository task
   is active, so captured and inherited child groups are killed and reaped
   before `xtask` returns. Captured-output readers finish while the process-group

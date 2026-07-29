@@ -7,7 +7,7 @@
 
 use std::fs::File;
 use std::io;
-use std::os::fd::OwnedFd;
+use std::os::fd::{OwnedFd, RawFd};
 use std::os::unix::fs::MetadataExt as UnixMetadataExt;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
@@ -37,6 +37,9 @@ pub(crate) const REPOSITORY_READ_POLICY: RepositoryReadPolicy = RepositoryReadPo
     read_access: ReadAccessPolicy::Enabled,
     blocking_io: BlockingIoPolicy::Refuse,
 };
+
+/// First descriptor outside the standard stdin, stdout, and stderr range.
+const CHILD_DESCRIPTOR_MINIMUM: RawFd = 3;
 
 pub(crate) struct RepositoryRoot {
     directory: Dir,
@@ -107,7 +110,7 @@ impl RepositoryRoot {
 
     /// Returns an exact child-process handle for this opened directory.
     pub(crate) fn process_directory(&self) -> Result<RepositoryProcessDirectory, io::Error> {
-        let directory = rustix::io::fcntl_dupfd_cloexec(&self.directory, 0)?;
+        let directory = rustix::io::fcntl_dupfd_cloexec(&self.directory, CHILD_DESCRIPTOR_MINIMUM)?;
         Ok(RepositoryProcessDirectory { directory })
     }
 
@@ -143,7 +146,7 @@ impl RepositoryProcessDirectory {
     /// The child changes directory through its retained descriptor after fork
     /// and before exec. Parent process state is never changed.
     pub(crate) fn spawn(&self, command: &mut Command) -> Result<Child, io::Error> {
-        let directory = rustix::io::fcntl_dupfd_cloexec(&self.directory, 0)?;
+        let directory = rustix::io::fcntl_dupfd_cloexec(&self.directory, CHILD_DESCRIPTOR_MINIMUM)?;
         set_working_directory(command, directory);
         command.spawn()
     }
@@ -199,3 +202,6 @@ impl From<&std::fs::Metadata> for RepositoryFileIdentity {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;

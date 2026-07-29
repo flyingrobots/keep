@@ -33,7 +33,9 @@ between fork and exec must obey strict rules.
 Keep isolates the hook in the private `repository-process-spawn` workspace
 crate. The crate admits one operation:
 
-1. Own a close-on-exec duplicate of the admitted repository directory.
+1. Own a close-on-exec duplicate of the admitted repository directory,
+   allocated at descriptor 3 or above so child standard-stream setup cannot
+   overwrite it.
 2. Register a child setup hook that calls only Rustix `fchdir`.
 3. Spawn through the existing bounded process adapters.
 4. Retain every selected source's device, inode, size, modification time, and
@@ -44,6 +46,8 @@ crate. The crate admits one operation:
 POSIX specifies `fchdir` as async-signal-safe. The hook performs no allocation,
 locking, buffered I/O, ambient path lookup, or user callback. The descriptor
 closes on successful exec. A setup failure is returned by `Command::spawn`.
+Both the retained process-directory handle and the per-spawn duplicate use the
+same non-standard-descriptor minimum.
 
 The workspace denies unsafe code by default. Only the dedicated crate carries
 an explained `unsafe_code` allowance. It contains no storage, identity, format,
