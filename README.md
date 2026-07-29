@@ -38,13 +38,14 @@ creates the fixed `current.seg` stage without truncating existing evidence,
 and the `FilesystemSegmentStage` lifetime keeps that writer authority borrowed
 until the writable stage closes. Publisher construction consumes an
 unforgeable `FilesystemPlatformAdmission`. On Linux, its public initializer
-admits only a writable, non-casefolded ext4 root, refuses unknown or aliased
-namespace entries before mutation, creates or verifies the canonical
-`writer.lock`, `staging`, `segments`, and `catalogs` shape, and returns only
-after root synchronization with the writer lock retained. After publication,
-`FilesystemPlatformAdmission::reopen` reacquires the existing writer lock
-without mutation and requires that exact initialized shape plus a regular
-`HEAD` before returning new publisher authority.
+admits only one writable, non-casefolded ext4 store profile, requires every
+existing protocol directory to share the root's filesystem and mount identity,
+refuses unknown, aliased, or foreign namespace entries before mutation, creates
+or verifies the canonical `writer.lock`, `staging`, `segments`, and `catalogs`
+shape, and returns only after root synchronization with the writer lock
+retained. After publication, `FilesystemPlatformAdmission::reopen` reacquires
+the existing writer lock without mutation and requires that exact initialized
+shape plus a regular `HEAD` before returning new publisher authority.
 
 `FilesystemCatalogPublisher` retains one kernel-managed writer lock and pinned
 root, staging, segment-pool, and catalog-pool capabilities for the complete

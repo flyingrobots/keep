@@ -348,6 +348,8 @@ The initial production adapter is supported only on Linux when it proves:
 
 - capability-relative no-follow access to regular files and directories;
 - an ext4 store root whose inode does not enable ext4 casefolding;
+- `staging`, `segments`, and `catalogs` are independently writable,
+  non-casefolded ext4 directories on the root's device and mount;
 - a writable mount and successful file and directory synchronization calls;
 - atomic same-filesystem no-clobber hard-link creation;
 - atomic same-filesystem replacement of one regular file by another;
@@ -358,11 +360,12 @@ The initial production adapter is supported only on Linux when it proves:
 - post-acquisition device-and-inode verification of the retained writer-lock
   handle.
 
-The adapter refuses every non-ext4 filesystem, read-only mount, casefolded store
-root, symlinked selected path, or platform other than Linux. A single local
-host is an explicit deployment precondition: filesystem metadata cannot prove
-that an administrator has not exposed one block device to another host. Shared
-or multiply mounted ext4 is therefore unsupported even though the adapter
+The adapter refuses every non-ext4 filesystem, read-only mount, casefolded
+store or protocol directory, protocol-directory mount point, foreign
+protocol-directory device, symlinked selected path, or platform other than
+Linux. A single local host is an explicit deployment precondition: filesystem
+metadata cannot prove that an administrator has not exposed one block device
+to another host. Shared ext4 is therefore unsupported even though the adapter
 cannot distinguish it from a valid local mount. Windows support is deferred
 until an adapter and crash harness prove equivalent semantics.
 

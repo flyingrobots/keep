@@ -18,10 +18,12 @@ after its public API and format compatibility policies are established.
   File Worldline namespaces, bytes, hard links, released locks, recovery
   classifications, immutable artifacts, and published visible state after
   restart. CI runs the complete matrix in debug and optimized profiles.
-- Production filesystem initialization now admits only the documented writable,
-  non-casefolded Linux ext4 profile, refuses ambiguous root namespaces before
-  mutation, completes the canonical directory shape idempotently, retains
-  writer authority, and returns only after synchronizing the root.
+- Production filesystem initialization now admits only one documented
+  writable, non-casefolded Linux ext4 profile, independently applies it to
+  every existing protocol directory, requires each child to share the root's
+  device and mount identity, refuses ambiguous or foreign root namespaces
+  before mutation, completes the canonical directory shape idempotently,
+  retains writer authority, and returns only after synchronizing the root.
 - Published filesystem stores can now reacquire writer authority without
   mutation through a typed platform-admission boundary that requires the exact
   initialized root shape plus a regular `HEAD`.
