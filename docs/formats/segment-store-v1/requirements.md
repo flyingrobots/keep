@@ -76,6 +76,7 @@ recovery remain owned by issue #17.
 | `KEEP-CATALOG-008` | Segment, catalog, and head publication follows the documented synchronization order; retained fixed-name recovery state refuses before mutation; retry of an already-current candidate performs no publication mutation and re-synchronizes the root | Fault-recording port and filesystem fixtures | `tests/catalog_publication.rs`, `tests/catalog_filesystem_publication.rs` | Implemented in #16 |
 | `KEEP-CATALOG-009` | Restart loading refuses corrupt, unsupported, noncanonical, dangling, and conflicting catalog state | Corruption matrix | `tests/catalog_restart.rs` | Implemented in #16 |
 | `KEEP-CATALOG-010` | Model-based transitions and lookups agree with a deterministic `BTreeMap` catalog | Boring reference catalog | `tests/catalog_model.rs` | Implemented in #16 |
+| `KEEP-CATALOG-011` | Every public catalog and publication-head parser boundary is fuzzed from canonical deterministic seeds | Canonical generation-1, generation-2, and bundle artifacts | `fuzz/fuzz_targets/catalog_format.rs`, `xtask/src/fuzz_seed_corpus/catalog_seeds.rs` | Implemented in #16 |
 
 <!-- markdownlint-enable MD013 -->
 
@@ -130,8 +131,9 @@ tables and formulas. The issue #15 segment implementation matches the frozen
 segment corpus and adds parser fuzzing and corruption evidence. Issue #16
 matches the catalog and publication-head corpus, executes the documented
 publication order through a real filesystem adapter, reconstructs exact
-immutable restart snapshots, and adds deterministic transition-model
-evidence. Crash-injection and explicit recovery remain owned by issue #17.
+immutable restart snapshots, and adds deterministic transition-model and
+seeded parser-fuzz evidence. Crash-injection and explicit recovery remain
+owned by issue #17.
 
 The format-local tradeoffs are recorded in the
 [colocated rationale](rationale.md).

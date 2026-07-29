@@ -191,8 +191,8 @@ after its public API and format compatibility policies are established.
   exact logical-record-to-segment admission with one bounded physical lookup
   plan, one scan per referenced segment, and refusal of every unreferenced
   caller-supplied segment during construction or admission; deterministic
-  successor proofs; immutable reader snapshots; and `BTreeMap` transition-model evidence for
-  `keep.segment-store/v1`.
+  successor proofs; immutable reader snapshots; seeded parser fuzzing; and
+  `BTreeMap` transition-model evidence for `keep.segment-store/v1`.
 - Blocking `FilesystemCatalogPublisher` publication under a persistent
   kernel-managed writer lock, with pinned directory capabilities,
   no-replacement immutable-pool links, complete post-link verification,

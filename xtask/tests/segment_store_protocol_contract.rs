@@ -8,6 +8,8 @@ use std::path::Path;
 mod documentation_laws;
 #[path = "segment_store_protocol_contract/fixture_oracle.rs"]
 mod fixture_oracle;
+#[path = "segment_store_protocol_contract/parser_fuzz_laws.rs"]
+mod parser_fuzz_laws;
 #[path = "segment_store_protocol_contract/publication_laws.rs"]
 mod publication_laws;
 #[path = "segment_store_protocol_contract/recovery_laws.rs"]
