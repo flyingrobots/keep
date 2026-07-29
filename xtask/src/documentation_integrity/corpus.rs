@@ -53,6 +53,19 @@ impl SourceCorpus {
         Ok(())
     }
 
+    /// Revalidates every admitted source identity and the exact corpus membership.
+    ///
+    /// Each retained source must still match the device, inode, byte length,
+    /// modification time, and change time admitted for this corpus kind. The
+    /// method then reruns the bounded Git present/deleted inventories for the
+    /// same kind and requires the sorted selected path set to remain identical.
+    ///
+    /// This operation performs repository metadata I/O and starts bounded Git
+    /// child processes. It reports path replacement, in-place mutation, added
+    /// or removed membership, unsafe or non-UTF-8 paths, nonregular sources, and
+    /// Git or filesystem failures through [`DocumentationError`]. Successful
+    /// completion confirms that every source and the corpus set remain
+    /// unchanged; it does not reread source contents.
     pub(super) fn verify_unchanged(
         &self,
         repository_root: &RepositoryRoot,
