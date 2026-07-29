@@ -44,7 +44,9 @@ after its public API and format compatibility policies are established.
   repository task is active, so captured and inherited child groups are killed
   and reaped before `xtask` returns. Captured-output readers finish while the
   process-group leader remains waitable, and no cleanup path can address its
-  numeric group identity after the child has been reaped.
+  numeric group identity after the child has been reaped. Descendant cleanup
+  evidence now uses a pre-established socket disconnect instead of elapsed-time
+  reachability polling.
 - Fuzz build and run plans now carry external process deadlines from the
   reviewed campaign policy. Run deadlines use checked addition of the
   exploration budget and process-grace interval before process-group execution.

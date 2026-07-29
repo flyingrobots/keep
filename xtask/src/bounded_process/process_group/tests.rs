@@ -1,7 +1,7 @@
 //! This module owns child process-group cleanup regression evidence.
 
 use std::env;
-use std::io::{self, Write};
+use std::io;
 use std::os::unix::net::UnixStream;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
@@ -75,20 +75,17 @@ fn terminal_interrupt_terminates_the_isolated_descendant_group()
         .stderr(Stdio::null())
         .spawn()?;
     wait_for_ready(&listener, &mut supervisor)?;
+    let descendant = UnixStream::connect(&socket)?;
     let supervisor_pid =
         Pid::from_raw(i32::try_from(supervisor.id())?).ok_or("supervisor process ID is zero")?;
     kill_process(supervisor_pid, Signal::INT)?;
 
     let status = wait_for_exit(&mut supervisor)?;
-    let descendant_survived = descendant_survived_cleanup(&socket)?;
+    require_descendant_disconnect(descendant)?;
     directory.close()?;
     assert!(
         status.success(),
         "interrupted supervisor did not exit cleanly: {status:?}"
-    );
-    assert!(
-        !descendant_survived,
-        "terminal interrupt left the isolated descendant reachable"
     );
     Ok(())
 }
@@ -143,6 +140,7 @@ fn cleanup_terminates_the_entire_child_process_group() -> Result<(), Box<dyn std
         .process_group(0);
     let mut child = command.spawn()?;
     wait_for_ready(&listener, &mut child)?;
+    let descendant = UnixStream::connect(&socket)?;
 
     let error = cleanup_process(
         &mut child,
@@ -153,47 +151,26 @@ fn cleanup_terminates_the_entire_child_process_group() -> Result<(), Box<dyn std
     );
 
     assert!(matches!(error, ProcessError::Timeout { .. }));
-    let descendant_survived = descendant_survived_cleanup(&socket)?;
+    require_descendant_disconnect(descendant)?;
     directory.close()?;
-    assert!(
-        !descendant_survived,
-        "cleanup returned while a descendant remained reachable"
-    );
     Ok(())
 }
 
-fn descendant_survived_cleanup(socket: &Path) -> Result<bool, io::Error> {
-    let expires = Instant::now()
-        .checked_add(Duration::from_millis(500))
-        .ok_or_else(|| io::Error::other("descendant cleanup deadline overflow"))?;
-    loop {
-        match UnixStream::connect(socket) {
-            Ok(mut stream) if Instant::now() >= expires => {
-                stream.write_all(b"x")?;
-                return Ok(true);
-            }
-            Ok(mut stream) => match stream.write_all(b"p") {
-                Ok(()) => thread::yield_now(),
-                Err(source)
-                    if matches!(
-                        source.kind(),
-                        io::ErrorKind::BrokenPipe | io::ErrorKind::ConnectionReset
-                    ) =>
-                {
-                    return Ok(false);
-                }
-                Err(source) => return Err(source),
-            },
-            Err(source)
-                if matches!(
-                    source.kind(),
-                    io::ErrorKind::ConnectionRefused | io::ErrorKind::NotFound
-                ) =>
-            {
-                return Ok(false);
-            }
-            Err(source) => return Err(source),
+fn require_descendant_disconnect(mut descendant: UnixStream) -> Result<(), io::Error> {
+    let mut byte = [0_u8; 1];
+    match io::Read::read_exact(&mut descendant, &mut byte) {
+        Err(source)
+            if matches!(
+                source.kind(),
+                io::ErrorKind::UnexpectedEof | io::ErrorKind::ConnectionReset
+            ) =>
+        {
+            Ok(())
         }
+        Err(source) => Err(source),
+        Ok(()) => Err(io::Error::other(
+            "terminated descendant unexpectedly wrote to its witness socket",
+        )),
     }
 }
 

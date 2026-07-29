@@ -7,6 +7,8 @@ const BOUNDED_PROCESS_CAPTURE_LIMIT: &str = include_str!("../src/bounded_process
 const BOUNDED_PROCESS_ERROR: &str = include_str!("../src/bounded_process/error.rs");
 const BOUNDED_PROCESS_INTERRUPT: &str = include_str!("../src/bounded_process/interrupt.rs");
 const BOUNDED_PROCESS_GROUP: &str = include_str!("../src/bounded_process/process_group.rs");
+const BOUNDED_PROCESS_GROUP_TESTS: &str =
+    include_str!("../src/bounded_process/process_group/tests.rs");
 const BOUNDED_PROCESS_READER: &str = include_str!("../src/bounded_process/reader.rs");
 const BOUNDED_PROCESS_TESTS: &str = include_str!("../src/bounded_process/tests.rs");
 const GIT_INVENTORY_ERROR: &str = include_str!("../src/git_inventory/error.rs");
@@ -80,6 +82,13 @@ fn captured_process_keeps_the_group_leader_until_reader_collection_finishes()
         "cleanup may group-kill after the child ownership lifetime ends"
     );
     Ok(())
+}
+
+#[test]
+fn descendant_cleanup_uses_disconnect_evidence_instead_of_elapsed_time() {
+    assert!(!BOUNDED_PROCESS_GROUP_TESTS.contains("descendant_survived_cleanup"));
+    assert!(!BOUNDED_PROCESS_GROUP_TESTS.contains("Duration::from_millis(500)"));
+    assert!(BOUNDED_PROCESS_GROUP_TESTS.contains("require_descendant_disconnect"));
 }
 
 #[test]

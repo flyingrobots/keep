@@ -84,4 +84,6 @@ spawned, polled, killed, reaped, or read.
 The guard is private to `xtask`. It changes no Keep library API, content
 identity, durable format, or recovery protocol. Regression evidence sends
 `SIGINT` to a supervisor with an isolated descendant, requires the exact typed
-refusal, and proves the descendant is no longer reachable.
+refusal, and proves the descendant is no longer reachable. The test establishes
+a witness socket before cleanup and waits for the kernel-reported disconnect;
+elapsed time and scheduler latency do not classify descendant termination.
