@@ -75,10 +75,15 @@ fn fuzz_workflows_delegate_campaign_policy_and_execution_to_xtask() -> Result<()
         assert!(!workflow.contains("python"));
         assert!(!workflow.contains(".py"));
         assert!(workflow.contains("cargo xtask fuzz github-env"));
-        assert!(workflow.contains("cargo xtask fuzz run"));
+        let build = workflow
+            .find("cargo xtask fuzz build")
+            .ok_or("fuzz workflow does not build targets")?;
+        let run = workflow
+            .find("cargo xtask fuzz run")
+            .ok_or("fuzz workflow does not run targets")?;
+        assert!(build < run);
     }
     assert!(SCHEDULED.contains("cargo xtask fuzz check-corpus"));
-    assert!(SCHEDULED.contains("cargo xtask fuzz build"));
     assert!(SCHEDULED.contains("cargo xtask fuzz minimize"));
     Ok(())
 }

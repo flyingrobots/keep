@@ -74,8 +74,10 @@ after its public API and format compatibility policies are established.
   uses a pre-established socket disconnect instead of elapsed-time reachability
   polling.
 - Fuzz build and run plans now carry external process deadlines from the
-  reviewed campaign policy. Run deadlines use checked addition of the
-  exploration budget and process-grace interval before process-group execution.
+  reviewed campaign policy. Both smoke and scheduled CI campaigns build every
+  target under the separate build deadline before applying per-target run
+  deadlines. Run deadlines use checked addition of the exploration budget and
+  process-grace interval before process-group execution.
 - The fuzz dependency-policy gate now grants exact MIT license exceptions to
   the reviewed `memchr` 2.8.3 and `zmij` 1.0.23 transitive dependencies while
   retaining Apache-2.0 as the default license allowlist.

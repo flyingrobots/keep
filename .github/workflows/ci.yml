@@ -134,6 +134,9 @@ jobs:
       - name: Prepare deterministic fuzz seeds
         run: cargo xtask prepare-fuzz-corpus
 
+      - name: Build every fuzz target
+        run: cargo xtask fuzz build --profile smoke
+
       - name: Exercise every fuzz target
         run: cargo xtask fuzz run --profile smoke
 
