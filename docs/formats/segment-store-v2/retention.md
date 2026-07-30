@@ -246,6 +246,10 @@ authenticated reconstruction, and canonical digest defined by
 transition. Keep never omits one failed member and continues with a smaller
 live set.
 
+`preflight_retention_transition` now combines steps 3 and 4 below without I/O.
+It returns a consequential publish or already-committed proof only after exact
+generation planning and complete closure verification succeed in that order.
+
 Version-2 catalog publication holds the same writer authority and proves every
 current retained closure against its candidate catalog before replacing the
 catalog `HEAD`.

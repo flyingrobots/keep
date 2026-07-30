@@ -39,6 +39,8 @@ mod root_integrity;
 mod root_semantic_header;
 mod transition_error;
 mod transition_planner;
+mod transition_preflight;
+mod transition_preflight_error;
 mod transition_readiness;
 mod verified_closure;
 
@@ -57,5 +59,7 @@ pub use root_decode_error::RetentionRootDecodeError;
 pub use root_encode_error::RetentionRootEncodeError;
 pub use transition_error::RetentionTransitionError;
 pub use transition_planner::plan_retention_transition;
+pub use transition_preflight::{RetentionTransitionPreflight, preflight_retention_transition};
+pub use transition_preflight_error::RetentionTransitionPreflightError;
 pub use transition_readiness::RetentionTransitionReadiness;
 pub use verified_closure::VerifiedRetentionClosure;

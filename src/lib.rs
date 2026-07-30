@@ -23,10 +23,10 @@
 //! a pinned writer-authorized filesystem adapter. Core retention namespaces,
 //! generations, realization policy, reconstruction anchors, and semantic roots
 //! are validated; canonical in-memory root, manifest, and head encoding and
-//! decoding, storage-independent expected-state transition planning, and
-//! deterministic bounded closure verification against a pinned catalog are
-//! available. Retention publication, recovery, and garbage collection remain
-//! intentionally absent.
+//! decoding, storage-independent expected-state transition planning,
+//! deterministic bounded closure verification against a pinned catalog, and a
+//! combined transition preflight proof are available. Retention publication,
+//! recovery, and garbage collection remain intentionally absent.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -109,8 +109,9 @@ pub use adapters::{
     CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
     RetentionClosureVerificationError, RetentionHeadDecodeError, RetentionManifestDecodeError,
     RetentionManifestEncodeError, RetentionRootDecodeError, RetentionRootEncodeError,
-    RetentionTransitionError, RetentionTransitionReadiness, VerifiedRetentionClosure,
-    plan_retention_transition, verify_retention_closure,
+    RetentionTransitionError, RetentionTransitionPreflight, RetentionTransitionPreflightError,
+    RetentionTransitionReadiness, VerifiedRetentionClosure, plan_retention_transition,
+    preflight_retention_transition, verify_retention_closure,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

@@ -10,6 +10,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Retention transition preflight now combines exact expected-generation
+  planning with deterministic closure verification against one pinned catalog
+  before any future publication storage call.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production
