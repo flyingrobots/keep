@@ -169,6 +169,23 @@ The digest binds the exact profile, catalog, observed resource use, logical
 member set, and record checksums. The transition receipt binds it beside the
 root's separate anchor-set digest; neither digest substitutes for the other.
 
+## Executable evidence
+
+- The [one-anchor closure law](../../../tests/retention_closure.rs) freezes the
+  exact counters, canonical member transcript, closure digest, and authenticated
+  reconstruction result.
+- The
+  [repeated-chunk law](../../../tests/retention_closure/repeated_chunk_law.rs)
+  proves that logical reconstruction work and unique-node evidence remain
+  separate.
+- The
+  [adversarial-catalog laws](../../../tests/retention_closure/adversarial_catalog_laws.rs)
+  prove exact missing-member refusal and target-mismatch precedence.
+- The
+  [limit-precedence laws](../../../tests/retention_closure/limit_precedence_laws.rs)
+  prove the documented depth, node, physical-byte, and encoded-byte refusal
+  order.
+
 ## Evidence and nonclaims
 
 Successful evidence records the closure digest, all four observed counters,

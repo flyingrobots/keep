@@ -1,5 +1,13 @@
 //! Deterministic retention-closure verification laws.
 
+#[path = "retention_closure/adversarial_catalog_laws.rs"]
+mod adversarial_catalog_laws;
+#[path = "retention_closure/limit_precedence_laws.rs"]
+mod limit_precedence_laws;
+#[path = "retention_closure/memory_stage.rs"]
+mod memory_stage;
+#[path = "retention_closure/one_zero_bundle.rs"]
+mod one_zero_bundle;
 #[path = "retention_closure/repeated_chunk_law.rs"]
 mod repeated_chunk_law;
 mod support;

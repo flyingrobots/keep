@@ -1,17 +1,16 @@
 //! Repeated logical chunk accounting law.
 
-use std::cell::RefCell;
 use std::error::Error;
-use std::io::{self, Write};
-use std::rc::Rc;
 
 use keep::{
     AdmittedLayout, AdmittedSegment, AdmittedSegmentRecord, BlobId, CanonicalCatalog,
     CanonicalPublicationHead, CatalogGeneration, ChecksummedPublicationHead, FastCdc,
     LayoutEntryLimit, RegisteredRetentionProfile, RegisteredStorageProfile, RetentionAnchor,
     RetentionClosureLimits, RetentionNamespace, RetentionPolicy, RetentionRoot, RootGeneration,
-    SegmentReadPolicy, SegmentRecordLimit, SegmentStage, StagedSegment, verify_retention_closure,
+    SegmentReadPolicy, SegmentRecordLimit, verify_retention_closure,
 };
+
+use super::memory_stage::segment_bytes;
 
 const REPETITIONS: usize = 3;
 const RECORD_OVERHEAD: u64 = 144;
@@ -37,12 +36,11 @@ fn repeated_chunk_occurrences_consume_physical_bytes_not_unique_nodes() -> Resul
     let chunk = source
         .get(..chunk_length)
         .ok_or("repeated source omits its first chunk")?;
-    let (stage, probe) = MemoryStage::new();
-    let staged = StagedSegment::begin(stage, SegmentRecordLimit::MAXIMUM)?;
-    let staged = staged.append(AdmittedSegmentRecord::for_chunk(chunk)?)?;
-    let staged = staged.append(AdmittedSegmentRecord::for_layout(&canonical_layout)?)?;
-    let _sealed = staged.seal()?;
-    let segment_bytes = probe.bytes();
+    let records = [
+        AdmittedSegmentRecord::for_chunk(chunk)?,
+        AdmittedSegmentRecord::for_layout(&canonical_layout)?,
+    ];
+    let segment_bytes = segment_bytes(&records)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_policy())?;
     let segments = [segment];
     let canonical_catalog =
@@ -130,49 +128,6 @@ fn detect(bytes: &[u8]) -> Result<Vec<keep::ChunkSpan>, Box<dyn Error>> {
         spans.push(span);
     }
     Ok(spans)
-}
-
-struct MemoryStage {
-    bytes: Rc<RefCell<Vec<u8>>>,
-}
-
-struct MemoryProbe {
-    bytes: Rc<RefCell<Vec<u8>>>,
-}
-
-impl MemoryStage {
-    fn new() -> (Self, MemoryProbe) {
-        let bytes = Rc::new(RefCell::new(Vec::new()));
-        (
-            Self {
-                bytes: Rc::clone(&bytes),
-            },
-            MemoryProbe { bytes },
-        )
-    }
-}
-
-impl Write for MemoryStage {
-    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-        self.bytes.borrow_mut().extend_from_slice(bytes);
-        Ok(bytes.len())
-    }
-
-    fn flush(&mut self) -> io::Result<()> {
-        Ok(())
-    }
-}
-
-impl SegmentStage for MemoryStage {
-    fn synchronize(&mut self) -> io::Result<()> {
-        Ok(())
-    }
-}
-
-impl MemoryProbe {
-    fn bytes(&self) -> Vec<u8> {
-        self.bytes.borrow().clone()
-    }
 }
 
 const fn maximum_policy() -> SegmentReadPolicy {
