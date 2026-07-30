@@ -34,7 +34,7 @@ case is not evidence.
 | `KEEP-MIGRATION-004` | Every partial migration prefix continues idempotently under writer authority | state-machine and recovery tests | Planned in #19 |
 | `KEEP-MIGRATION-005` | Unknown, out-of-order, substituted, corrupt, conflicting, or changed evidence is unrecoverable ambiguity | corruption and mutation matrix | Planned in #19 |
 | `KEEP-MIGRATION-006` | Migration never rewrites or deletes admitted version-1 immutable bytes | byte-for-byte before/after witness | Planned in #19 |
-| `KEEP-MIGRATION-007` | Process death around every intent stage, canonical link, namespace prefix, marker stage, receipt stage, cleanup, and synchronization boundary reaches a documented lawful state | `KEEP-CRASH-053..=073` crash-injection matrix | Planned in #19 |
+| `KEEP-MIGRATION-007` | Process death around every intent stage, canonical link, namespace prefix, marker stage, receipt stage, cleanup, and synchronization boundary reaches a documented lawful state | ordered `StoreMigrationPhase` vocabulary in `tests/store_migration_phase.rs`; `KEEP-CRASH-053..=073` process-death matrix remains | In progress in #19 |
 | `KEEP-MIGRATION-008` | Version-1 admission refuses every version-2 or partial-migration artifact after migration begins | compatibility and fuzz tests | Planned in #19 |
 
 <!-- markdownlint-enable MD013 -->

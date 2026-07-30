@@ -102,3 +102,6 @@ Every identifier requires before, during, and after process-death evidence.
 prefix length. Restart must classify exact stages, canonical targets, namespace
 prefix, marker, receipt, and cleanup state without depending on a clock,
 filesystem iteration order, or file existence alone.
+
+`StoreMigrationPhase::ALL` freezes the 21 boundaries above in exact order.
+Storage execution and process-death evidence remain unimplemented.
