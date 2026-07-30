@@ -28,10 +28,10 @@ read paths, enumerate a filesystem, consult a clock, invoke a caller callback,
 or replace a missing witness. Version 2 selects the single record bound to each
 logical identity by the pinned catalog.
 
-The catalog has already admitted each bound segment record's framing, checksum,
-logical identity, and payload. Closure verification consumes those proofs,
-decodes layouts again under the closure budget, and authenticates each complete
-logical blob.
+The [corruption boundary](closure-corruption.md) defines how each bound record
+earns framing, checksum, logical-identity, and payload proofs before it enters a
+`CatalogSnapshot`. Closure verification consumes those proofs, decodes layouts
+under the closure budget, and authenticates each complete logical blob.
 
 ## Deterministic traversal
 

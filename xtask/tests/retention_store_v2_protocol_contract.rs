@@ -2,6 +2,11 @@
 
 #![cfg(feature = "repository-tasks")]
 
+#[path = "retention_store_v2_protocol_contract/closure_contract_laws.rs"]
+mod closure_contract_laws;
+#[path = "retention_store_v2_protocol_contract/migration_contract_laws.rs"]
+mod migration_contract_laws;
+
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -43,6 +48,7 @@ fn version_two_is_one_routed_protocol() -> Result<(), Box<dyn std::error::Error>
         "successor to `keep.segment-store/v1`",
         "[Retention records and publication](retention.md)",
         "[Closure verification](closure.md)",
+        "[Closure corruption boundary](closure-corruption.md)",
         "[GC and disposition records](gc.md)",
         "[Migration and recovery](recovery.md)",
         "[Migration crash points](migration-crash.md)",
@@ -89,110 +95,6 @@ fn retention_records_have_exact_canonical_grammars() -> Result<(), Box<dyn std::
         assert!(
             retention.contains(required),
             "segment-store v2 retention grammar omits `{required}`"
-        );
-    }
-    Ok(())
-}
-
-#[test]
-fn closure_accounting_has_exact_units_and_canonical_evidence()
--> Result<(), Box<dyn std::error::Error>> {
-    let closure = normalized(&read(&format!("{FORMAT_ROOT}/closure.md"))?);
-
-    for required in [
-        "one pinned, completely verified catalog generation",
-        "first scheduled",
-        "anchor is not a closure node",
-        "unique `SegmentRecordIdentity`",
-        "depth `1`",
-        "depth `2`",
-        "canonical layout payload length",
-        "complete segment-record length",
-        "checked addition before",
-        "repeated logical occurrence",
-        "replay the exact registered storage profile",
-        "authenticate the complete `BlobId`",
-        "keep.retention-closure/v2\\0",
-        "96-byte closure-member entries",
-        "canonical typed-identity order",
-        "Missing members still consume",
-    ] {
-        assert!(
-            closure.contains(required),
-            "segment-store v2 closure contract omits `{required}`"
-        );
-    }
-    Ok(())
-}
-
-#[test]
-fn migration_and_recovery_define_every_authority_boundary() -> Result<(), Box<dyn std::error::Error>>
-{
-    let recovery = normalized(&read(&format!("{FORMAT_ROOT}/recovery.md"))?);
-
-    for required in [
-        "one-way explicit migration",
-        "`migration.intent`",
-        "`migration.intent.next`",
-        "`migration.receipt`",
-        "`migration.receipt.next`",
-        "`FORMAT.next`",
-        "`migration.intent` is exactly 256 bytes",
-        "`migration.receipt` is exactly 256 bytes",
-        "catalog generation, length, and digest",
-        "`definition.tsv`",
-        "migration inventory entry is exactly 56 bytes",
-        "2,097,152",
-        "keep.store-migration-intent/v2\\0",
-        "keep.store-format-marker/v2\\0",
-        "deterministically derived store identifier",
-        "absence of `retention/HEAD` is the canonical empty retention state",
-        "pre-effect incomplete stage",
-        "keep.initial-retention-state/v2\\0",
-        "keep.initial-gc-state/v2\\0",
-        "keep.empty-disposition-set/v2\\0",
-        "root.next` is durable before a new namespace directory",
-        "`KEEP-CRASH-036`",
-        "`KEEP-CRASH-073`",
-        "partial migration",
-        "Version-1 admission refuses",
-        "`reader.lock`",
-        "`GcRetirementIntent`",
-        "`GcRetirementReceipt`",
-        "`RecoveryDispositionReceipt`",
-        "unknown entry",
-        "unrecoverable ambiguity",
-        "idempotent",
-        "process death",
-    ] {
-        assert!(
-            recovery.contains(required),
-            "segment-store v2 recovery contract omits `{required}`"
-        );
-    }
-    Ok(())
-}
-
-#[test]
-fn migration_never_writes_canonical_fixed_names_in_place() -> Result<(), Box<dyn std::error::Error>>
-{
-    let migration = normalized(&read(&format!("{FORMAT_ROOT}/migration-crash.md"))?);
-
-    for required in [
-        "never writes canonical fixed names in place",
-        "`migration.intent.next`",
-        "`FORMAT.next`",
-        "`migration.receipt.next`",
-        "linked without replacement",
-        "pre-effect incomplete stage",
-        "`KEEP-CRASH-053`",
-        "`KEEP-CRASH-073`",
-        "`0x00000000000003ff`",
-        "before, during, and after process-death evidence",
-    ] {
-        assert!(
-            migration.contains(required),
-            "segment-store v2 migration crash protocol omits `{required}`"
         );
     }
     Ok(())
@@ -253,6 +155,7 @@ fn requirement_ledger_names_planned_and_executable_evidence()
 fn version_two_pages_stay_within_the_review_threshold() -> Result<(), Box<dyn std::error::Error>> {
     for name in [
         "README.md",
+        "closure-corruption.md",
         "closure.md",
         "gc.md",
         "migration-crash.md",

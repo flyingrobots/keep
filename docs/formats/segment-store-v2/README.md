@@ -42,6 +42,8 @@ The following pages form one protocol:
   root-generation, manifest, retention-head, and transition rules.
 - [Closure verification](closure.md) owns deterministic traversal, exact
   resource accounting, authenticated reconstruction, and closure evidence.
+- [Closure corruption boundary](closure-corruption.md) owns the admitted-record
+  ingress proof and its exact refusal evidence.
 - [GC and disposition records](gc.md) owns the canonical planned intent,
   completion, and recovery-disposition byte grammars.
 - [Migration and recovery](recovery.md) owns the exact root namespace,
