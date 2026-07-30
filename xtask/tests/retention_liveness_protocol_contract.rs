@@ -61,6 +61,9 @@ fn generation_transitions_and_gc_snapshots_fail_closed() {
 
     for required in [
         "expected and observed generations",
+        "initial `RootGeneration` is one",
+        "`LivenessGeneration`",
+        "empty anchor set remains",
         "sorted, duplicate-free",
         "bounded, cycle-safe",
         "fail-closed",

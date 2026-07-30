@@ -96,8 +96,15 @@ Every namespace has an immutable `RootGeneration`. A transition supplies:
 The executor reads one verified retention head, compares the namespace state,
 computes and verifies the candidate closure against one pinned catalog
 generation, and only then stages publication. A stale update fails with the
-expected and observed generations. Generation arithmetic is checked, and the
-successor is exactly one greater than the observed generation.
+expected and observed generations. The initial `RootGeneration` is one. Every
+later generation uses checked arithmetic and is exactly one greater than its
+observed predecessor.
+
+Publishing an empty anchor set remains a namespace transition: the global
+manifest retains the namespace and names its new empty `RootGeneration`.
+Version 1 does not delete or reuse namespace identity. This preserves
+generation continuity and prevents an old absent-state request from becoming
+valid again after release.
 
 Retention publication follows the durable store law: immutable generation
 bytes are written, verified, synchronized, linked without replacement, and
@@ -105,10 +112,12 @@ made durable before a head can name them. Publication returns an explicit
 fallible receipt and never relies on `Drop`.
 
 One immutable global retention manifest names the complete sorted map from
-every live `RetentionNamespace` to its exact `RootGeneration`. A namespace
-transition publishes a new namespace generation and a new global manifest,
-then atomically replaces the retention head under writer authority. This
-top-level generation prevents a GC scan from missing a namespace created
+every admitted `RetentionNamespace` to its exact `RootGeneration`. Each
+manifest carries a `LivenessGeneration`. The first manifest generation is one,
+and every successor is exactly one greater under checked arithmetic. A
+namespace transition publishes a new namespace generation and a new global
+manifest, then atomically replaces the retention head under writer authority.
+This top-level generation prevents a GC scan from missing a namespace created
 concurrently with enumeration.
 
 Retrying an already committed byte-identical transition may return a typed
