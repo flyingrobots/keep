@@ -15,11 +15,11 @@ generation at a time and refuses to treat file existence as visibility,
 durability, or recovery evidence. Those decisions do not yet say which
 published material external policy requires Keep to preserve.
 
-Keep cannot infer that policy. Echo, Git, Graft, paths, timestamps, caller
-identity, catalog membership, and recent access may be meaningful to an
-application, but none establishes storage liveness. Conversely, removing one
-application reference does not prove that no other policy still requires the
-same bytes.
+File existence, catalog membership, and recent access do not establish
+retention. Keep never infers semantic liveness from Echo, Git, Graft, paths,
+timestamps, or caller identity. Those signals may matter to an application,
+but removing one reference does not prove that no other policy still requires
+the same bytes.
 
 Garbage collection needs a complete, stable answer to a narrower question:
 which verified physical records must remain reachable for the exact retention
@@ -97,10 +97,6 @@ the maximum and attempted counts. Transitions of already admitted namespaces
 remain available at capacity; increasing the ceiling or reclaiming tombstones
 requires a successor protocol with an ABA-safe migration.
 
-File existence, catalog membership, and recent access are not retention
-evidence. Keep does not infer semantic liveness from Echo, Git, Graft, paths,
-timestamps, or caller identity.
-
 ### Roots and canonical closure
 
 One retained root is a reconstruction anchor containing an exact `BlobId` and
@@ -140,31 +136,27 @@ profile refuses before traversal or materialization. A registry entry with the
 same human-readable name but different version, digest, or definition cannot
 substitute for the retained profile.
 
-Every candidate considered by the profile is admitted before selection. An
-unsupported profile, missing witness, conflicting catalog claim, corrupt
-candidate, or unresolved ordering tie refuses the snapshot. A valid candidate
-cannot hide corrupt or ambiguous evidence beside it. The selected physical
-realization is recorded in transition or snapshot evidence; it does not become
-part of the root, `BlobId`, `LayoutId`, or other content identity. Compaction
-may therefore change the selected realization only through a newly verified
-catalog and liveness snapshot.
+Every profile candidate is admitted before selection. An unsupported profile,
+missing witness, conflicting claim, corrupt candidate, or unresolved tie
+refuses the snapshot; valid evidence cannot hide invalid evidence beside it.
+The selected realization is recorded in transition or snapshot evidence, not
+in the root or content identity. Compaction may change it only through a newly
+verified catalog and liveness snapshot.
 
-Closure traversal is deterministic, explicitly bounded, cycle-safe, and
-fail-closed. Each supported protocol version defines implementation-enforced
-hard ceilings for roots, nodes, depth, encoded bytes, and physical bytes
-inspected. These ceilings are reviewed constants, not ambient configuration,
-serializer defaults, or caller policy.
+Closure traversal is deterministic, bounded, cycle-safe, and fail-closed. Each
+version defines implementation-enforced hard ceilings for roots, nodes, depth,
+encoded bytes, and physical bytes inspected. They are reviewed constants, not
+ambient configuration, serializer defaults, or caller policy.
 
-The caller supplies typed limits no greater than those ceilings and may choose
-lower bounds. Keep validates every limit and their cross-field relationships
-before traversal or materialization begins. A request above a ceiling is a
-typed refusal that preserves the field, maximum, and observed value.
+Callers supply typed limits no greater than those ceilings. Keep validates each
+limit and their cross-field relationships before traversal or materialization
+begins; excess preserves the field, maximum, and observed value in a typed
+refusal.
 
-A visited set prevents repeated traversal and cycles; checked counters enforce
-the admitted limits throughout the operation. Exceeding a bound, observing an
-unknown mandatory edge, or finding a missing or corrupt closure member refuses
-the complete transition or GC plan. Keep never drops the unproved member and
-continues with a smaller live set.
+A visited set prevents cycles while checked counters enforce limits. Exceeding
+a bound, observing an unknown mandatory edge, or finding a missing or corrupt
+closure member refuses the complete transition or GC plan. Keep never drops an
+unproved member and continues with a smaller live set.
 
 ### Generation-checked transitions
 

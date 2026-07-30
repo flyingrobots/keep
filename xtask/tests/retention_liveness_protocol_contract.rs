@@ -35,6 +35,17 @@ fn retention_liveness_is_one_indexed_cross_cutting_decision() {
 }
 
 #[test]
+fn retention_liveness_decision_stays_within_the_file_size_limit() {
+    const MAXIMUM_LINES: usize = 500;
+    let observed = ADR.lines().count();
+
+    assert!(
+        observed <= MAXIMUM_LINES,
+        "retention-liveness ADR has {observed} lines; maximum is {MAXIMUM_LINES}"
+    );
+}
+
+#[test]
 fn retention_roots_name_verified_reconstruction_anchors() {
     let adr = normalized(ADR);
 
