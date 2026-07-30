@@ -249,7 +249,7 @@ transition. Keep never omits one failed member and continues with a smaller
 live set.
 
 `preflight_retention_transition` combines steps 3 and 4 without I/O, returning
-publish or already-committed only after generation and closure verification.
+an unforgeable typed disposition only after generation and closure verification.
 `prepare_retention_publication` binds that proof to the current manifest,
 preserves expected and observed generations, refuses incoherent coordinates,
 and derives exact canonical successors; exact retry creates no global artifacts.

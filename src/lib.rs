@@ -114,10 +114,10 @@ pub use adapters::{
     RetentionManifestDecodeError, RetentionManifestEncodeError, RetentionNamespaceAdmission,
     RetentionPublicationPhase, RetentionPublicationPreparation,
     RetentionPublicationPreparationError, RetentionPublicationStorage, RetentionRootDecodeError,
-    RetentionRootEncodeError, RetentionTransitionError, RetentionTransitionPreflight,
-    RetentionTransitionPreflightError, RetentionTransitionReadiness, VerifiedRetentionClosure,
-    plan_retention_transition, preflight_retention_transition, prepare_retention_publication,
-    verify_retention_closure,
+    RetentionRootEncodeError, RetentionTransitionDisposition, RetentionTransitionError,
+    RetentionTransitionPreflight, RetentionTransitionPreflightError, RetentionTransitionReadiness,
+    VerifiedRetentionClosure, plan_retention_transition, preflight_retention_transition,
+    prepare_retention_publication, verify_retention_closure,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

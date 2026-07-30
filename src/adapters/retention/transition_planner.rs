@@ -20,15 +20,20 @@ pub fn plan_retention_transition<'encoded>(
     current: Option<&AdmittedRetentionRoot<'_>>,
     candidate: AdmittedRetentionRoot<'encoded>,
 ) -> Result<RetentionTransitionReadiness<'encoded>, RetentionTransitionError> {
+    let observed = current.map(|root| root.root().generation());
     if is_exact_replay(expected, current, &candidate)? {
-        return Ok(RetentionTransitionReadiness::AlreadyCommitted { candidate });
+        return Ok(RetentionTransitionReadiness::already_committed(
+            expected, observed, candidate,
+        ));
     }
     require_expected_state(expected, current)?;
     match current {
         Some(current) => validate_successor(current, &candidate)?,
         None => validate_initial(&candidate)?,
     }
-    Ok(RetentionTransitionReadiness::Publish { candidate })
+    Ok(RetentionTransitionReadiness::publish(
+        expected, observed, candidate,
+    ))
 }
 
 fn is_exact_replay(

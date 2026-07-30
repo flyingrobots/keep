@@ -14,8 +14,8 @@ after its public API and format compatibility policies are established.
   planning with deterministic closure verification against one pinned catalog
   before any future publication storage call. A typed 17-phase vocabulary
   and blocking storage port freeze the durability and crash-boundary contract;
-  preparation preserves expected and observed namespace generations while
-  binding preflight to exact canonical manifest and head successors.
+  unforgeable proof values preserve typed disposition plus expected and
+  observed generations through exact manifest and head preparation.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

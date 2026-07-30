@@ -2,7 +2,7 @@
 
 use super::{
     AdmittedRetentionRoot, CanonicalRetentionHead, CanonicalRetentionManifest,
-    VerifiedRetentionClosure,
+    RetentionTransitionDisposition, VerifiedRetentionClosure,
 };
 use crate::{LivenessGeneration, RetentionGenerationExpectation, RootGeneration};
 
@@ -48,6 +48,7 @@ impl PreparedRetentionPublication {
 #[must_use = "retention publication preparation must be handled explicitly"]
 #[derive(Debug)]
 pub struct RetentionPublicationPreparation<'encoded> {
+    disposition: RetentionTransitionDisposition,
     expected: RetentionGenerationExpectation,
     observed: Option<RootGeneration>,
     candidate: AdmittedRetentionRoot<'encoded>,
@@ -56,6 +57,11 @@ pub struct RetentionPublicationPreparation<'encoded> {
 }
 
 impl<'encoded> RetentionPublicationPreparation<'encoded> {
+    /// Returns whether the candidate requires publication or is current.
+    pub const fn disposition(&self) -> RetentionTransitionDisposition {
+        self.disposition
+    }
+
     /// Returns the caller-supplied expected namespace generation.
     pub const fn expected(&self) -> RetentionGenerationExpectation {
         self.expected
@@ -89,6 +95,7 @@ impl<'encoded> RetentionPublicationPreparation<'encoded> {
         publication: PreparedRetentionPublication,
     ) -> Self {
         Self {
+            disposition: RetentionTransitionDisposition::Publish,
             expected,
             observed,
             candidate,
@@ -104,6 +111,7 @@ impl<'encoded> RetentionPublicationPreparation<'encoded> {
         closure: VerifiedRetentionClosure,
     ) -> Self {
         Self {
+            disposition: RetentionTransitionDisposition::AlreadyCommitted,
             expected,
             observed,
             candidate,

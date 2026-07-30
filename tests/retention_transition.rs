@@ -8,7 +8,7 @@ use std::io;
 
 use keep::{
     AdmittedRetentionRoot, CanonicalRetentionRoot, RetentionGenerationExpectation,
-    RetentionNamespace, RetentionRoot, RetentionRootDigest, RetentionTransitionReadiness,
+    RetentionNamespace, RetentionRoot, RetentionRootDigest, RetentionTransitionDisposition,
     RootGeneration, plan_retention_transition,
 };
 
@@ -20,11 +20,13 @@ fn absent_namespace_admits_only_the_initial_candidate() -> Result<(), Box<dyn st
     let candidate = AdmittedRetentionRoot::decode(&bytes)?;
     let readiness =
         plan_retention_transition(RetentionGenerationExpectation::Absent, None, candidate)?;
-    assert!(matches!(
-        readiness,
-        RetentionTransitionReadiness::Publish { candidate }
-            if candidate.root().generation().get() == 1
-    ));
+    assert_eq!(
+        readiness.disposition(),
+        RetentionTransitionDisposition::Publish
+    );
+    assert_eq!(readiness.expected(), RetentionGenerationExpectation::Absent);
+    assert_eq!(readiness.observed(), None);
+    assert_eq!(readiness.candidate().root().generation().get(), 1);
     Ok(())
 }
 
@@ -40,11 +42,16 @@ fn exact_successor_and_byte_identical_replay_have_distinct_readiness()
         Some(&current),
         candidate,
     )?;
-    assert!(matches!(
-        readiness,
-        RetentionTransitionReadiness::Publish { candidate }
-            if candidate.root().generation().get() == 2
-    ));
+    assert_eq!(
+        readiness.disposition(),
+        RetentionTransitionDisposition::Publish
+    );
+    assert_eq!(
+        readiness.expected(),
+        RetentionGenerationExpectation::Current(current.root().generation())
+    );
+    assert_eq!(readiness.observed(), Some(current.root().generation()));
+    assert_eq!(readiness.candidate().root().generation().get(), 2);
 
     let published = AdmittedRetentionRoot::decode(successor.encoded())?;
     let replay = AdmittedRetentionRoot::decode(successor.encoded())?;
@@ -53,11 +60,16 @@ fn exact_successor_and_byte_identical_replay_have_distinct_readiness()
         Some(&published),
         replay,
     )?;
-    assert!(matches!(
-        readiness,
-        RetentionTransitionReadiness::AlreadyCommitted { candidate }
-            if candidate.encoded() == successor.encoded()
-    ));
+    assert_eq!(
+        readiness.disposition(),
+        RetentionTransitionDisposition::AlreadyCommitted
+    );
+    assert_eq!(
+        readiness.expected(),
+        RetentionGenerationExpectation::Current(current.root().generation())
+    );
+    assert_eq!(readiness.observed(), Some(published.root().generation()));
+    assert_eq!(readiness.candidate().encoded(), successor.encoded());
     Ok(())
 }
 

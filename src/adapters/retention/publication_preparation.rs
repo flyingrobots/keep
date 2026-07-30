@@ -3,7 +3,8 @@
 use super::{
     AdmittedRetentionManifest, CanonicalRetentionHead, CanonicalRetentionManifest,
     PreparedRetentionPublication, RetentionPublicationPreparation,
-    RetentionPublicationPreparationError, RetentionTransitionPreflight, successor_manifest,
+    RetentionPublicationPreparationError, RetentionTransitionDisposition,
+    RetentionTransitionPreflight, successor_manifest,
 };
 use crate::{RetentionHead, RetentionManifestLength};
 
@@ -22,24 +23,15 @@ pub fn prepare_retention_publication<'encoded>(
     preflight: RetentionTransitionPreflight<'encoded>,
     current_manifest: Option<&AdmittedRetentionManifest<'_>>,
 ) -> Result<RetentionPublicationPreparation<'encoded>, RetentionPublicationPreparationError> {
-    match preflight {
-        RetentionTransitionPreflight::AlreadyCommitted {
-            expected,
-            observed,
-            candidate,
-            closure,
-        } => {
+    let (disposition, expected, observed, candidate, closure) = preflight.into_parts();
+    match disposition {
+        RetentionTransitionDisposition::AlreadyCommitted => {
             successor_manifest::require_current_selection(&candidate, current_manifest)?;
             Ok(RetentionPublicationPreparation::already_committed(
                 expected, observed, candidate, closure,
             ))
         }
-        RetentionTransitionPreflight::Publish {
-            expected,
-            observed,
-            candidate,
-            closure,
-        } => {
+        RetentionTransitionDisposition::Publish => {
             let semantic_manifest = successor_manifest::build(&candidate, current_manifest)?;
             let liveness_generation = semantic_manifest.generation();
             let predecessor = semantic_manifest.predecessor();

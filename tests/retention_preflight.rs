@@ -7,7 +7,7 @@ use std::error::Error;
 use keep::{
     AdmittedCatalog, AdmittedRetentionRoot, AdmittedSegment, CatalogSnapshot, ChecksummedCatalog,
     ChecksummedPublicationHead, LayoutEntryLimit, RetentionClosureVerificationError,
-    RetentionGenerationExpectation, RetentionTransitionError, RetentionTransitionPreflight,
+    RetentionGenerationExpectation, RetentionTransitionDisposition, RetentionTransitionError,
     RetentionTransitionPreflightError, RootGeneration, SegmentReadPolicy, SegmentRecordIdentity,
     SegmentRecordLimit, preflight_retention_transition,
 };
@@ -46,15 +46,15 @@ fn publish_preflight_binds_generation_and_closure_proofs() -> Result<(), Box<dyn
 
     assert_eq!(preflight.expected(), RetentionGenerationExpectation::Absent);
     assert_eq!(preflight.observed(), None);
-    assert!(matches!(
-        preflight,
-        RetentionTransitionPreflight::Publish {
-            candidate,
-            closure,
-            ..
-        } if candidate.root().generation() == RootGeneration::INITIAL
-            && closure.usage().node_count() == 2
-    ));
+    assert_eq!(
+        preflight.disposition(),
+        RetentionTransitionDisposition::Publish
+    );
+    assert_eq!(
+        preflight.candidate().root().generation(),
+        RootGeneration::INITIAL
+    );
+    assert_eq!(preflight.closure().usage().node_count(), 2);
     Ok(())
 }
 
@@ -141,11 +141,11 @@ fn exact_retry_still_returns_current_closure_evidence() -> Result<(), Box<dyn Er
 
     assert_eq!(preflight.expected(), RetentionGenerationExpectation::Absent);
     assert_eq!(preflight.observed(), Some(RootGeneration::INITIAL));
-    assert!(matches!(
-        preflight,
-        RetentionTransitionPreflight::AlreadyCommitted { closure, .. }
-            if closure.usage().physical_bytes() == 509
-    ));
+    assert_eq!(
+        preflight.disposition(),
+        RetentionTransitionDisposition::AlreadyCommitted
+    );
+    assert_eq!(preflight.closure().usage().physical_bytes(), 509);
     Ok(())
 }
 

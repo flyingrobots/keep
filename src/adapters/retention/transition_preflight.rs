@@ -1,67 +1,64 @@
 //! This boundary module owns complete retention transition preflight.
 
 use super::{
-    AdmittedRetentionRoot, RetentionTransitionPreflightError, RetentionTransitionReadiness,
+    AdmittedRetentionRoot, RetentionTransitionDisposition, RetentionTransitionPreflightError,
     VerifiedRetentionClosure, plan_retention_transition, verify_retention_closure,
 };
-use crate::retention::RetentionGenerationExpectation;
-use crate::{CatalogSnapshot, RootGeneration};
+use crate::{CatalogSnapshot, RetentionGenerationExpectation, RootGeneration};
 
-/// Complete storage-independent proof required before retention publication.
+/// Unforgeable storage-independent proof required before publication.
 #[must_use = "retention preflight must be consumed by publication or handled explicitly"]
 #[derive(Debug)]
-pub enum RetentionTransitionPreflight<'encoded> {
-    /// The candidate is an exact successor whose verified closure must publish.
-    Publish {
-        /// Caller-supplied expected namespace generation.
-        expected: RetentionGenerationExpectation,
-        /// Namespace generation observed during transition planning.
-        observed: Option<RootGeneration>,
-        /// Fully admitted canonical candidate root.
-        candidate: AdmittedRetentionRoot<'encoded>,
-        /// Closure proof against the exact pinned catalog.
-        closure: VerifiedRetentionClosure,
-    },
-    /// The exact candidate is current and its closure still verifies.
-    AlreadyCommitted {
-        /// Caller-supplied expected namespace generation.
-        expected: RetentionGenerationExpectation,
-        /// Namespace generation observed during transition planning.
-        observed: Option<RootGeneration>,
-        /// Fully admitted byte-identical current root.
-        candidate: AdmittedRetentionRoot<'encoded>,
-        /// Current closure proof against the exact pinned catalog.
-        closure: VerifiedRetentionClosure,
-    },
+pub struct RetentionTransitionPreflight<'encoded> {
+    disposition: RetentionTransitionDisposition,
+    expected: RetentionGenerationExpectation,
+    observed: Option<RootGeneration>,
+    candidate: AdmittedRetentionRoot<'encoded>,
+    closure: VerifiedRetentionClosure,
 }
 
 impl<'encoded> RetentionTransitionPreflight<'encoded> {
+    /// Returns whether the candidate requires publication or is current.
+    pub const fn disposition(&self) -> RetentionTransitionDisposition {
+        self.disposition
+    }
+
     /// Returns the caller-supplied expected namespace generation.
     pub const fn expected(&self) -> RetentionGenerationExpectation {
-        match self {
-            Self::Publish { expected, .. } | Self::AlreadyCommitted { expected, .. } => *expected,
-        }
+        self.expected
     }
 
     /// Returns the namespace generation observed during transition planning.
     pub const fn observed(&self) -> Option<RootGeneration> {
-        match self {
-            Self::Publish { observed, .. } | Self::AlreadyCommitted { observed, .. } => *observed,
-        }
+        self.observed
     }
 
     /// Borrows the fully admitted candidate root.
     pub const fn candidate(&self) -> &AdmittedRetentionRoot<'encoded> {
-        match self {
-            Self::Publish { candidate, .. } | Self::AlreadyCommitted { candidate, .. } => candidate,
-        }
+        &self.candidate
     }
 
     /// Returns the complete verified closure evidence.
     pub const fn closure(&self) -> VerifiedRetentionClosure {
-        match self {
-            Self::Publish { closure, .. } | Self::AlreadyCommitted { closure, .. } => *closure,
-        }
+        self.closure
+    }
+
+    pub(super) fn into_parts(
+        self,
+    ) -> (
+        RetentionTransitionDisposition,
+        RetentionGenerationExpectation,
+        Option<RootGeneration>,
+        AdmittedRetentionRoot<'encoded>,
+        VerifiedRetentionClosure,
+    ) {
+        (
+            self.disposition,
+            self.expected,
+            self.observed,
+            self.candidate,
+            self.closure,
+        )
     }
 }
 
@@ -83,7 +80,6 @@ pub fn preflight_retention_transition<'encoded>(
     candidate: AdmittedRetentionRoot<'encoded>,
     catalog: &CatalogSnapshot<'_, '_, '_>,
 ) -> Result<RetentionTransitionPreflight<'encoded>, RetentionTransitionPreflightError> {
-    let observed = current.map(|root| root.root().generation());
     let readiness = plan_retention_transition(expected, current, candidate)
         .map_err(|source| RetentionTransitionPreflightError::Transition { source })?;
     let closure =
@@ -92,22 +88,12 @@ pub fn preflight_retention_transition<'encoded>(
                 source: Box::new(source),
             }
         })?;
-    Ok(match readiness {
-        RetentionTransitionReadiness::Publish { candidate } => {
-            RetentionTransitionPreflight::Publish {
-                expected,
-                observed,
-                candidate,
-                closure,
-            }
-        }
-        RetentionTransitionReadiness::AlreadyCommitted { candidate } => {
-            RetentionTransitionPreflight::AlreadyCommitted {
-                expected,
-                observed,
-                candidate,
-                closure,
-            }
-        }
+    let (disposition, expected, observed, candidate) = readiness.into_parts();
+    Ok(RetentionTransitionPreflight {
+        disposition,
+        expected,
+        observed,
+        candidate,
+        closure,
     })
 }

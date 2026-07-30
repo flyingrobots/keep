@@ -4,8 +4,8 @@ use std::error::Error;
 
 use keep::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, ChecksummedRetentionHead,
-    RetentionGenerationExpectation, RootGeneration, preflight_retention_transition,
-    prepare_retention_publication,
+    RetentionGenerationExpectation, RetentionTransitionDisposition, RootGeneration,
+    preflight_retention_transition, prepare_retention_publication,
 };
 
 use super::fixture::{initial_root, manifest_bytes, root_bytes, successor_root, with_snapshot};
@@ -34,6 +34,10 @@ fn successor_replaces_only_the_selected_manifest_entry() -> Result<(), Box<dyn E
         RetentionGenerationExpectation::Current(RootGeneration::INITIAL)
     );
     assert_eq!(preparation.observed(), Some(RootGeneration::INITIAL));
+    assert_eq!(
+        preparation.disposition(),
+        RetentionTransitionDisposition::Publish
+    );
     let publication = preparation
         .publication()
         .ok_or("successor transition did not prepare publication")?;
@@ -85,6 +89,10 @@ fn new_namespace_is_inserted_without_changing_existing_entry() -> Result<(), Box
         RetentionGenerationExpectation::Absent
     );
     assert_eq!(preparation.observed(), None);
+    assert_eq!(
+        preparation.disposition(),
+        RetentionTransitionDisposition::Publish
+    );
     let publication = preparation
         .publication()
         .ok_or("new namespace did not prepare publication")?;
@@ -125,6 +133,10 @@ fn exact_retry_prepares_no_new_global_artifacts() -> Result<(), Box<dyn Error>> 
         RetentionGenerationExpectation::Absent
     );
     assert_eq!(preparation.observed(), Some(RootGeneration::INITIAL));
+    assert_eq!(
+        preparation.disposition(),
+        RetentionTransitionDisposition::AlreadyCommitted
+    );
     assert!(preparation.publication().is_none());
     assert_eq!(preparation.candidate().digest(), current.digest());
     assert_eq!(preparation.closure().usage().node_count(), 2);
