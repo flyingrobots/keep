@@ -77,9 +77,10 @@ reconstruction anchors, and semantic roots. Canonical root, manifest, and head
 codecs match their independent golden records. Storage-independent transition
 planning, deterministic bounded closure verification against one pinned
 catalog, their combined preflight proof, and the exact 17-phase publication
-vocabulary are available. Production filesystem retention publication,
-recovery, migration, and garbage collection do not exist yet. Requirements
-that remain planned or in progress in issue #19 or issue #21 are not complete
-implementation evidence. A store must refuse unsupported version-2 state until
-the relevant corruption, model-based, crash-injection, recovery, and fuzz
-evidence is implemented.
+vocabulary with a blocking storage capability port are available. Publication
+orchestration and production filesystem retention publication, recovery,
+migration, and garbage collection do not exist yet. Requirements that remain
+planned or in progress in issue #19 or issue #21 are not complete implementation
+evidence. A store must refuse unsupported version-2 state until the relevant
+corruption, model-based, crash-injection, recovery, and fuzz evidence is
+implemented.

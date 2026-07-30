@@ -119,7 +119,8 @@ power loss. Version-2 retention values; canonical in-memory root, global
 manifest, and retention-head codecs; storage-independent expected-state
 transition planning; deterministic bounded closure verification against a
 pinned catalog; a combined transition preflight proof; and the exact 17-phase
-publication vocabulary are implemented. Publication execution, recovery,
+publication vocabulary with a blocking storage capability port are
+implemented. Publication orchestration, filesystem execution, recovery,
 compaction, and garbage collection remain planned. Presence in the reference
 CAS does not claim retention, crash recovery, or durability.
 

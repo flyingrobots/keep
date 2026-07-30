@@ -26,7 +26,8 @@
 //! decoding, storage-independent expected-state transition planning,
 //! deterministic bounded closure verification against a pinned catalog, and a
 //! combined transition preflight proof and exact publication phase vocabulary
-//! are available. Retention publication execution, recovery, and garbage
+//! with a blocking storage capability port are available. Retention
+//! publication orchestration, filesystem execution, recovery, and garbage
 //! collection remain intentionally absent.
 
 #[cfg(test)]
@@ -109,10 +110,11 @@ pub use adapters::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
     CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
     RetentionClosureVerificationError, RetentionHeadDecodeError, RetentionManifestDecodeError,
-    RetentionManifestEncodeError, RetentionPublicationPhase, RetentionRootDecodeError,
-    RetentionRootEncodeError, RetentionTransitionError, RetentionTransitionPreflight,
-    RetentionTransitionPreflightError, RetentionTransitionReadiness, VerifiedRetentionClosure,
-    plan_retention_transition, preflight_retention_transition, verify_retention_closure,
+    RetentionManifestEncodeError, RetentionNamespaceAdmission, RetentionPublicationPhase,
+    RetentionPublicationStorage, RetentionRootDecodeError, RetentionRootEncodeError,
+    RetentionTransitionError, RetentionTransitionPreflight, RetentionTransitionPreflightError,
+    RetentionTransitionReadiness, VerifiedRetentionClosure, plan_retention_transition,
+    preflight_retention_transition, verify_retention_closure,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
