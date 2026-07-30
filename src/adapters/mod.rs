@@ -450,8 +450,9 @@ pub use recovery_stage_synchronization_outcome::RecoveryStageSynchronizationOutc
 #[cfg(feature = "repository-tasks")]
 pub use repository_initialization_storage::RepositoryInitializationStorage;
 pub use retention::{
-    AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionManifest,
-    CanonicalRetentionRoot, RetentionManifestDecodeError, RetentionManifestEncodeError,
+    AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
+    CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
+    RetentionHeadDecodeError, RetentionManifestDecodeError, RetentionManifestEncodeError,
     RetentionRootDecodeError, RetentionRootEncodeError,
 };
 pub use sealed_segment::SealedSegment;

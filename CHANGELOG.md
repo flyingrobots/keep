@@ -315,9 +315,11 @@ after its public API and format compatibility policies are established.
   admission. Validated global manifest values and their canonical encoder and
   decoder now reproduce the independent manifest fixture and enforce liveness
   history, namespace uniqueness, bounds, ordering, and all three integrity
-  layers. Version-1 immutable bytes remain authoritative; production version-2
-  writing remains unavailable until issue #19's executable evidence is
-  complete.
+  layers. Typed manifest lengths and semantic global heads now reproduce and
+  admit the exact 144-byte head fixture with fixed framing, checksum-first
+  semantic admission, and explicit generation-history laws. Version-1
+  immutable bytes remain authoritative; production version-2 writing remains
+  unavailable until issue #19's executable evidence is complete.
 - Accepted ADR-0009 defines caller-supplied retention namespaces,
   `BlobId`/`LayoutId` reconstruction anchors, fail-closed canonical closure,
   generation-checked retention publication, immutable liveness snapshots,

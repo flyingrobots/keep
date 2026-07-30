@@ -2,8 +2,14 @@
 
 mod admitted_manifest;
 mod admitted_root;
+mod canonical_head;
 mod canonical_manifest;
 mod canonical_root;
+mod checksummed_head;
+mod head_decode_error;
+mod head_decode_error_display;
+mod head_decoder;
+mod head_encoder;
 mod manifest_decode_error;
 mod manifest_decode_error_display;
 mod manifest_decoder;
@@ -27,8 +33,11 @@ mod root_semantic_header;
 
 pub use admitted_manifest::AdmittedRetentionManifest;
 pub use admitted_root::AdmittedRetentionRoot;
+pub use canonical_head::CanonicalRetentionHead;
 pub use canonical_manifest::CanonicalRetentionManifest;
 pub use canonical_root::CanonicalRetentionRoot;
+pub use checksummed_head::ChecksummedRetentionHead;
+pub use head_decode_error::RetentionHeadDecodeError;
 pub use manifest_decode_error::RetentionManifestDecodeError;
 pub use manifest_encode_error::RetentionManifestEncodeError;
 pub use root_decode_error::RetentionRootDecodeError;

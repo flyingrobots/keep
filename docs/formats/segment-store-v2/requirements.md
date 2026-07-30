@@ -10,7 +10,7 @@ case is not evidence.
 | ID | Requirement | Evidence | Status |
 | --- | --- | --- | --- |
 | `KEEP-RETENTION-001` | `RetentionNamespace`, `RootGeneration`, `LivenessGeneration`, profile coordinates, limits, anchors, and digests are validated typed values | `tests/retention_values.rs` and `tests/retention_root_encoding.rs` | Implemented |
-| `KEEP-RETENTION-002` | Root, manifest, and head codecs implement the exact canonical grammars and fixed bounds | independent golden corpus plus root and manifest evidence in `tests/retention_root_encoding.rs`, `tests/retention_root_decoding.rs`, and `tests/retention_manifest_codec.rs`; head codec remains | In progress in #19 |
+| `KEEP-RETENTION-002` | Root, manifest, and head codecs implement the exact canonical grammars and fixed bounds | independent golden corpus plus `tests/retention_root_encoding.rs`, `tests/retention_root_decoding.rs`, `tests/retention_manifest_codec.rs`, and `tests/retention_head_codec.rs` | Implemented |
 | `KEEP-RETENTION-003` | Every structural field, truncation boundary, ordering law, duplicate, overflow, flag, reserved byte, digest, checksum, and trailing byte has a precise refusal | corruption matrix and fuzz | Planned in #19 |
 | `KEEP-RETENTION-004` | Retain and release compare expected and observed generations and publish exact successors only | unit and model-based transition tests | Planned in #19 |
 | `KEEP-RETENTION-005` | Closure derivation is deterministic, bounded, cycle-safe, fail-closed, and verifies complete blob reconstruction | property, corruption, and adversarial catalog tests | Planned in #19 |
