@@ -48,8 +48,9 @@ migration artifact.
 Issue #19 must first specify `keep.segment-store/v2` as a successor durable
 format. Version 2 preserves the admitted version-1 segment, catalog, and head
 bytes, but defines a new exact root shape, version marker, retention
-generations and head, GC intent and receipt state, recovery-disposition
-evidence, bounds, checksums, golden fixtures, and recovery table. No
+generations and head, persistent reader-fence lock, GC intent and receipt
+state, recovery-disposition evidence, bounds, checksums, golden fixtures, and
+recovery table. No
 implementation may write those artifacts before that specification and its
 parser, corruption, fuzz, and crash evidence exist.
 
@@ -60,8 +61,8 @@ lock:
    orphan ambiguity, corrupt artifact, and noncanonical root entry.
 2. Durably publish a canonical migration intent that binds the exact version-1
    head, catalog, pool, root identity, and target version.
-3. Create and synchronize only the canonical version-2 namespaces and initial
-   empty retention and idle GC state.
+3. Create and synchronize only the canonical version-2 namespaces, persistent
+   reader lock, and initial empty retention and idle GC state.
 4. Reopen and verify the complete version-2 view, synchronize the root, and
    durably publish the migration receipt.
 
@@ -329,20 +330,27 @@ segment absent from it. A catalog-generation check alone is insufficient.
 successor publication leaves every old segment reachable, and process death
 after publication leaves the old segments as intact retired candidates.
 
-Planning is observational and carries no mutation authority. Execution must
-acquire the same exclusive writer authority used by catalog publication and
-recovery, then retain it from revalidation through physical mutation,
-durability synchronization, and receipt construction. No application callback
-or external policy evaluation occurs while that authority is held.
+Planning is observational and carries no mutation authority. A version-2 reader
+takes a kernel-managed shared lock on persistent `reader.lock` before opening
+`HEAD`. Its admitted snapshot owns a `ReaderFence` that retains that lock for
+the entire snapshot lifetime. Close, drop, or process death releases only the
+kernel lock; none deletes the persistent entry or claims durable work.
 
-After acquiring writer authority, execution revalidates the retention head,
-complete root and catalog generation-and-digest coordinates, candidate
-identity, exact realization-profile coordinate, and all safety fences.
-It compares these complete coordinates before mutation; byte-valid material at
-the same generation but with a different canonical digest is a refusal. Any
-changed coordinate, unavailable or mismatched profile, missing evidence,
-corrupt member, ambiguous alias, or active protection invalidates the plan. A
-plan never carries authority across a changed liveness or catalog view.
+GC acquires the same exclusive writer authority as catalog publication and
+recovery, then exclusive `reader.lock`, in fixed order; new readers wait and
+existing readers drain. It retains both from
+revalidation through physical mutation, durability synchronization, and
+receipt construction. No application callback or external policy evaluation
+occurs while either authority is held.
+
+Execution revalidates the retention head, complete root and catalog
+generation-and-digest coordinates, candidate identity, exact
+realization-profile coordinate, and all safety fences. It compares these
+complete coordinates before mutation; byte-valid material at the same
+generation but with a different canonical digest is a refusal. Any changed
+coordinate, unavailable or mismatched profile, missing evidence, corrupt
+member, ambiguous alias, or active protection invalidates the plan. A plan
+never carries authority across a changed liveness or catalog view.
 
 ### GC execution and crash recovery
 
