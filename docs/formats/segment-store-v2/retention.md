@@ -248,11 +248,11 @@ authenticated reconstruction, and canonical digest defined by
 transition. Keep never omits one failed member and continues with a smaller
 live set.
 
-`preflight_retention_transition` combines steps 3 and 4 without I/O, returning
-an unforgeable typed disposition only after generation and closure verification.
-`prepare_retention_publication` binds that proof to the current manifest,
-preserves expected and observed generations, refuses incoherent coordinates,
-and derives exact canonical successors; exact retry creates no global artifacts.
+Preflight verifies steps 3 and 4 without I/O; preparation binds that proof to
+the current manifest and derives exact canonical successors.
+`execute_retention_publication` revalidates current authority, executes all 17
+ordered durability phases, and returns the complete receipt only after cleanup;
+exact already-committed retry revalidates authority and performs no mutation.
 
 Version-2 catalog publication holds the same writer authority and proves every
 current retained closure against its candidate catalog before replacing the

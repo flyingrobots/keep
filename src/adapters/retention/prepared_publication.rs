@@ -1,9 +1,10 @@
 //! This boundary module owns storage-ready retention publication artifacts.
 
 use super::{
-    AdmittedRetentionRoot, CanonicalRetentionHead, CanonicalRetentionManifest,
-    RetentionTransitionDisposition, VerifiedRetentionClosure,
+    AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
+    CanonicalRetentionManifest, RetentionTransitionDisposition, VerifiedRetentionClosure,
 };
+use crate::RetentionManifestDigest;
 use crate::{LivenessGeneration, RetentionGenerationExpectation, RootGeneration};
 
 /// Canonical global artifacts ready for ordered storage execution.
@@ -53,6 +54,8 @@ pub struct RetentionPublicationPreparation<'encoded> {
     observed: Option<RootGeneration>,
     candidate: AdmittedRetentionRoot<'encoded>,
     closure: VerifiedRetentionClosure,
+    liveness_generation: LivenessGeneration,
+    manifest_digest: RetentionManifestDigest,
     publication: Option<PreparedRetentionPublication>,
 }
 
@@ -82,6 +85,16 @@ impl<'encoded> RetentionPublicationPreparation<'encoded> {
         self.closure
     }
 
+    /// Returns the exact selected global liveness generation.
+    pub const fn liveness_generation(&self) -> LivenessGeneration {
+        self.liveness_generation
+    }
+
+    /// Returns the exact selected global manifest digest.
+    pub const fn manifest_digest(&self) -> RetentionManifestDigest {
+        self.manifest_digest
+    }
+
     /// Returns new global artifacts, or normal absence for an exact retry.
     pub const fn publication(&self) -> Option<&PreparedRetentionPublication> {
         self.publication.as_ref()
@@ -94,12 +107,16 @@ impl<'encoded> RetentionPublicationPreparation<'encoded> {
         closure: VerifiedRetentionClosure,
         publication: PreparedRetentionPublication,
     ) -> Self {
+        let liveness_generation = publication.liveness_generation();
+        let manifest_digest = publication.manifest().digest();
         Self {
             disposition: RetentionTransitionDisposition::Publish,
             expected,
             observed,
             candidate,
             closure,
+            liveness_generation,
+            manifest_digest,
             publication: Some(publication),
         }
     }
@@ -109,6 +126,7 @@ impl<'encoded> RetentionPublicationPreparation<'encoded> {
         observed: Option<RootGeneration>,
         candidate: AdmittedRetentionRoot<'encoded>,
         closure: VerifiedRetentionClosure,
+        current_manifest: &AdmittedRetentionManifest<'_>,
     ) -> Self {
         Self {
             disposition: RetentionTransitionDisposition::AlreadyCommitted,
@@ -116,6 +134,8 @@ impl<'encoded> RetentionPublicationPreparation<'encoded> {
             observed,
             candidate,
             closure,
+            liveness_generation: current_manifest.manifest().generation(),
+            manifest_digest: current_manifest.digest(),
             publication: None,
         }
     }

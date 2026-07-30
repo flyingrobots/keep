@@ -28,8 +28,9 @@
 //! combined transition preflight proof and exact publication phase vocabulary
 //! with a blocking storage capability port are available. Storage-independent
 //! preparation binds preflight to exact canonical manifest and head successors.
-//! Retention publication orchestration, filesystem execution, recovery, and
-//! garbage collection remain intentionally absent.
+//! Ordered publication revalidates authority, executes all durability phases,
+//! and returns a complete receipt. Filesystem execution, recovery, and garbage
+//! collection remain intentionally absent.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -112,12 +113,13 @@ pub use adapters::{
     CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
     PreparedRetentionPublication, RetentionClosureVerificationError, RetentionHeadDecodeError,
     RetentionManifestDecodeError, RetentionManifestEncodeError, RetentionNamespaceAdmission,
-    RetentionPublicationPhase, RetentionPublicationPreparation,
-    RetentionPublicationPreparationError, RetentionPublicationStorage, RetentionRootDecodeError,
+    RetentionPublicationError, RetentionPublicationOutcome, RetentionPublicationPhase,
+    RetentionPublicationPreparation, RetentionPublicationPreparationError,
+    RetentionPublicationReceipt, RetentionPublicationStorage, RetentionRootDecodeError,
     RetentionRootEncodeError, RetentionTransitionDisposition, RetentionTransitionError,
     RetentionTransitionPreflight, RetentionTransitionPreflightError, RetentionTransitionReadiness,
-    VerifiedRetentionClosure, plan_retention_transition, preflight_retention_transition,
-    prepare_retention_publication, verify_retention_closure,
+    VerifiedRetentionClosure, execute_retention_publication, plan_retention_transition,
+    preflight_retention_transition, prepare_retention_publication, verify_retention_closure,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

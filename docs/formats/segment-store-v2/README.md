@@ -79,9 +79,10 @@ planning, deterministic bounded closure verification against one pinned
 catalog, their combined preflight proof, and the exact 17-phase publication
 vocabulary with a blocking storage capability port are available.
 Storage-independent preparation derives exact canonical manifest and head
-successors from coherent preflight and current-manifest evidence. Publication
-orchestration and production filesystem retention publication, recovery,
-migration, and garbage collection do not exist yet. Requirements that remain
-planned or in progress in issue #19 or issue #21 are not complete implementation
-evidence. A store must refuse unsupported version-2 state until the relevant
+successors from coherent preflight and current-manifest evidence. Ordered
+storage-port orchestration revalidates authority and returns a complete receipt.
+Production filesystem retention publication, recovery, migration, and garbage
+collection do not exist yet. Requirements still in progress in issue #19 or
+issue #21 are not complete evidence. A store must refuse version-2 state until
+the relevant
 corruption, model-based, crash-injection, recovery, and fuzz evidence exists.

@@ -46,10 +46,10 @@ pub(super) fn build(
         .map_err(|source| RetentionPublicationPreparationError::Manifest { source })
 }
 
-pub(super) fn require_current_selection(
+pub(super) fn require_current_selection<'borrow, 'encoded>(
     candidate: &AdmittedRetentionRoot<'_>,
-    current: Option<&AdmittedRetentionManifest<'_>>,
-) -> Result<(), RetentionPublicationPreparationError> {
+    current: Option<&'borrow AdmittedRetentionManifest<'encoded>>,
+) -> Result<&'borrow AdmittedRetentionManifest<'encoded>, RetentionPublicationPreparationError> {
     let namespace = candidate.root().namespace().digest();
     let current = current
         .ok_or(RetentionPublicationPreparationError::CurrentManifestRequired { namespace })?;
@@ -70,7 +70,7 @@ pub(super) fn require_current_selection(
     if entry.root_generation() == candidate.root().generation()
         && entry.root_digest() == candidate.digest()
     {
-        Ok(())
+        Ok(current)
     } else {
         Err(current_mismatch(entry, candidate))
     }

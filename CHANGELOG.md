@@ -14,8 +14,8 @@ after its public API and format compatibility policies are established.
   planning with deterministic closure verification against one pinned catalog
   before any future publication storage call. A typed 17-phase vocabulary
   and blocking storage port freeze the durability and crash-boundary contract;
-  unforgeable proofs preserve disposition, expected and observed generations,
-  and the verified anchor-set digest through manifest and head preparation.
+  authority-revalidated orchestration executes every phase and returns an
+  unforgeable complete-coordinate receipt after durable cleanup.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

@@ -4,17 +4,32 @@ use std::io;
 
 use super::{
     AdmittedRetentionRoot, CanonicalRetentionHead, CanonicalRetentionManifest,
-    RetentionNamespaceAdmission,
+    RetentionNamespaceAdmission, RetentionPublicationPreparation, RetentionTransitionDisposition,
 };
 
 /// Blocking storage capabilities for one writer-locked retention publication.
 ///
 /// An implementation must retain exclusive writer authority and one pinned
-/// store root for the complete operation. Each method corresponds to one
-/// [`RetentionPublicationPhase`](super::RetentionPublicationPhase) and must not
-/// report success before the named durability and verification obligations are
-/// complete.
+/// store root for the complete operation. After `verify_current`, each method
+/// corresponds to one [`RetentionPublicationPhase`](super::RetentionPublicationPhase)
+/// and must not report success before the named durability and verification
+/// obligations are complete.
 pub trait RetentionPublicationStorage {
+    /// Reopens and verifies current authority against the complete preparation.
+    ///
+    /// `Publish` requires the expected predecessor and global manifest
+    /// coordinates to remain current. `AlreadyCommitted` requires the exact
+    /// candidate root and selected global manifest coordinates to be current.
+    /// Fixed-stage recovery state must refuse before either disposition.
+    ///
+    /// # Errors
+    ///
+    /// Returns the exact current-state or recovery-required refusal.
+    fn verify_current(
+        &mut self,
+        preparation: &RetentionPublicationPreparation<'_>,
+    ) -> io::Result<RetentionTransitionDisposition>;
+
     /// Exclusively creates and completely writes the canonical root stage.
     ///
     /// # Errors

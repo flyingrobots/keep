@@ -26,9 +26,10 @@ pub fn prepare_retention_publication<'encoded>(
     let (disposition, expected, observed, candidate, closure) = preflight.into_parts();
     match disposition {
         RetentionTransitionDisposition::AlreadyCommitted => {
-            successor_manifest::require_current_selection(&candidate, current_manifest)?;
+            let current =
+                successor_manifest::require_current_selection(&candidate, current_manifest)?;
             Ok(RetentionPublicationPreparation::already_committed(
-                expected, observed, candidate, closure,
+                expected, observed, candidate, closure, current,
             ))
         }
         RetentionTransitionDisposition::Publish => {
