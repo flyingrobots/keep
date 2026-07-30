@@ -159,7 +159,10 @@ retention/roots/<namespace-digest>/
   <root-generation-16-lower-hex>-<root-digest-64-lower-hex>.root
 ```
 
-Names with alternate width, case, suffix, generation, or digest refuse.
+Names with alternate width, case, suffix, generation, or digest refuse. Keep
+implements validated in-memory root encoding and decoding with complete
+integrity verification before semantic admission. Filesystem publication,
+manifest/head codecs, transitions, recovery, and garbage collection remain absent.
 
 ## Global retention manifest
 

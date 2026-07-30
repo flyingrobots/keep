@@ -309,9 +309,12 @@ after its public API and format compatibility policies are established.
   `RetentionNamespace`, namespace-digest, `RootGeneration`,
   `LivenessGeneration`, `RetentionAnchor`, realization profile, closure limits,
   and semantic root values now establish the core boundary. The canonical root
-  encoder reproduces the independent version-2 golden bytes. Version-1
-  immutable bytes remain authoritative; production version-2 writing remains
-  unavailable until issue #19's executable evidence is complete.
+  encoder reproduces the independent version-2 golden bytes, and the decoder
+  verifies framing, checksum, root digest, anchor-set digest, nested identities,
+  resource bounds, canonical anchor order, and semantic invariants before
+  admission. Version-1 immutable bytes remain authoritative; production
+  version-2 writing remains unavailable until issue #19's executable evidence
+  is complete.
 - Accepted ADR-0009 defines caller-supplied retention namespaces,
   `BlobId`/`LayoutId` reconstruction anchors, fail-closed canonical closure,
   generation-checked retention publication, immutable liveness snapshots,

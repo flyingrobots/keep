@@ -449,7 +449,10 @@ pub use recovery_stage_pool_outcome::RecoveryStagePoolOutcome;
 pub use recovery_stage_synchronization_outcome::RecoveryStageSynchronizationOutcome;
 #[cfg(feature = "repository-tasks")]
 pub use repository_initialization_storage::RepositoryInitializationStorage;
-pub use retention::{CanonicalRetentionRoot, RetentionRootEncodeError};
+pub use retention::{
+    AdmittedRetentionRoot, CanonicalRetentionRoot, RetentionRootDecodeError,
+    RetentionRootEncodeError,
+};
 pub use sealed_segment::SealedSegment;
 pub use segment_digest::SegmentDigest;
 pub use segment_header::SegmentHeader;

@@ -22,8 +22,9 @@
 //! continuation has a storage-independent planning and execution boundary plus
 //! a pinned writer-authorized filesystem adapter. Core retention namespaces,
 //! generations, realization policy, reconstruction anchors, and semantic roots
-//! are validated; canonical root encoding is available. Retention decoding,
-//! publication, recovery, and garbage collection remain intentionally absent.
+//! are validated; canonical in-memory root encoding and decoding are available.
+//! Retention publication, recovery, and garbage collection remain intentionally
+//! absent.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -41,9 +42,9 @@ mod retention;
 #[doc(hidden)]
 pub use adapters::RepositoryInitializationStorage;
 pub use adapters::{
-    AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedSegment, AdmittedSegmentRecord,
-    BlobIdBinaryParseError, BlobIdTextParseError, CanonicalCatalog, CanonicalLayoutRecord,
-    CanonicalPublicationHead, CanonicalRetentionRoot, CatalogAdmissionError,
+    AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedRetentionRoot, AdmittedSegment,
+    AdmittedSegmentRecord, BlobIdBinaryParseError, BlobIdTextParseError, CanonicalCatalog,
+    CanonicalLayoutRecord, CanonicalPublicationHead, CanonicalRetentionRoot, CatalogAdmissionError,
     CatalogAllocationPhase, CatalogDecodeError, CatalogEncodeError, CatalogEntryDecodeError,
     CatalogPublicationError, CatalogPublicationExpectation, CatalogPublicationOutcome,
     CatalogPublicationPhase, CatalogPublicationReadiness, CatalogPublicationReceipt,
@@ -84,8 +85,8 @@ pub use adapters::{
     RecoveryStageFingerprintAlgorithm, RecoveryStageFingerprintError, RecoveryStageLength,
     RecoveryStageMetadata, RecoveryStageMetadataError, RecoveryStageNamespacePhase,
     RecoveryStageParent, RecoveryStagePoolOutcome, RecoveryStageSynchronizationOutcome,
-    RetentionRootEncodeError, ReusableRecoverySegment, SealedSegment, SegmentDigest,
-    SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError, SegmentPublication,
+    RetentionRootDecodeError, RetentionRootEncodeError, ReusableRecoverySegment, SealedSegment,
+    SegmentDigest, SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError, SegmentPublication,
     SegmentPublicationError, SegmentReadError, SegmentReadPolicy, SegmentRecordAdmissionError,
     SegmentRecordChecksum, SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError,
     SegmentRecordIdentity, SegmentRecordLength, SegmentRecordLimit, SegmentRecordLimitError,
