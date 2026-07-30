@@ -65,9 +65,10 @@ A root does not name a physical path, segment coordinate, catalog entry, or
 all possible representations of a blob. Retention does not alter the logical
 identity of a blob, layout, chunk, representation, or catalog record.
 
-Each namespace generation contains one complete, sorted, duplicate-free set
-of reconstruction anchors. The transition boundary rejects noncanonical
-ordering and duplicates instead of silently normalizing caller input.
+Each namespace generation contains one exact realization-profile coordinate
+and one complete, sorted, duplicate-free set of reconstruction anchors. The
+transition boundary rejects noncanonical ordering and duplicates instead of
+silently normalizing caller input.
 
 Keep derives a canonical closure for every anchor against one pinned,
 completely verified catalog generation. The closure contains the anchor, its
@@ -83,6 +84,14 @@ versioned `RetentionRealizationProfile`. The profile defines a canonical total
 order and an exact nonzero witness count that must remain available for every
 logical closure member. It is explicit input to closure admission, never a
 serializer default, filesystem order, or caller callback.
+
+An admitted `RetentionRealizationProfileId` binds the exact profile identity,
+version, and digest of its canonical definition bytes. Namespace generations,
+liveness snapshots, and receipts store that complete coordinate. Admission and
+revalidation resolve only the exact coordinate; an unavailable or mismatched
+profile refuses before traversal or materialization. A registry entry with the
+same human-readable name but different version, digest, or definition cannot
+substitute for the retained profile.
 
 Every candidate considered by the profile is admitted before selection. An
 unsupported profile, missing witness, conflicting catalog claim, corrupt
@@ -108,7 +117,8 @@ Every namespace has an immutable `RootGeneration`. A transition supplies:
 1. the exact `RetentionNamespace`;
 2. an expected state of either absent or one exact `RootGeneration`;
 3. the complete candidate anchor set; and
-4. explicit closure-admission limits.
+4. one exact `RetentionRealizationProfileId`; and
+5. explicit closure-admission limits.
 
 Retention publication holds the same exclusive store writer authority used by
 catalog publication and recovery. It acquires that authority before pinning
@@ -195,6 +205,7 @@ A GC planner first admits one immutable liveness snapshot. The snapshot binds:
 - the exact global retention-manifest generation and digest;
 - the complete sorted namespace-to-root-generation map;
 - every verified reconstruction anchor and canonical closure;
+- every exact realization profile identity, version, and digest;
 - the exact catalog generation used to resolve physical records; and
 - the explicit traversal and materialization limits used to establish it.
 
@@ -210,8 +221,9 @@ durability synchronization, and receipt construction. No application callback
 or external policy evaluation occurs while that authority is held.
 
 After acquiring writer authority, execution revalidates the retention head,
-catalog generation, candidate identity, and all safety fences before physical
-mutation. Any changed generation, missing evidence, corrupt member, ambiguous
+catalog generation, candidate identity, exact realization-profile coordinate,
+and all safety fences before physical mutation. Any changed generation,
+unavailable or mismatched profile, missing evidence, corrupt member, ambiguous
 alias, or active protection invalidates the plan. A plan never carries
 authority across a changed liveness or catalog view.
 
@@ -222,6 +234,7 @@ receipt containing at least:
 
 - the namespace and expected and observed generations;
 - the committed root generation and global manifest generation;
+- the exact realization profile identity, version, and digest;
 - canonical anchor-set and closure digests;
 - the catalog generation used for closure verification; and
 - the durable publication outcome.

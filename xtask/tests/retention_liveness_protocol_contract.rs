@@ -45,6 +45,8 @@ fn retention_roots_name_verified_reconstruction_anchors() {
         "reconstruction anchor",
         "canonical closure",
         "`RetentionRealizationProfile`",
+        "profile identity, version, and digest",
+        "unavailable or mismatched profile",
         "multiple admissible physical representations",
         "nonzero witness count",
         "does not participate in content identity",
