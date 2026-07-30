@@ -193,7 +193,7 @@ observed predecessor.
 
 Publishing an empty anchor set remains a namespace transition: the global
 manifest retains the namespace and names its new empty `RootGeneration`.
-Version 1 does not delete or reuse namespace identity. This preserves
+Version 2 does not delete or reuse namespace identity. This preserves
 generation continuity and prevents an old absent-state request from becoming
 valid again after release.
 
