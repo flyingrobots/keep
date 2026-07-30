@@ -110,6 +110,15 @@ Every namespace has an immutable `RootGeneration`. A transition supplies:
 3. the complete candidate anchor set; and
 4. explicit closure-admission limits.
 
+Retention publication holds the same exclusive store writer authority used by
+catalog publication and recovery. It acquires that authority before pinning
+the catalog and retains it through closure verification, immutable generation
+publication, retention-head replacement, durability synchronization, and
+receipt construction. The bounded closure work is deliberately inside this
+critical section so catalog evidence cannot change between proof and commit;
+no application callback or external policy evaluation occurs while the
+authority is held.
+
 The executor reads one verified retention head, compares the namespace state,
 computes and verifies the candidate closure against one pinned catalog
 generation, and only then stages publication. A stale update fails with the

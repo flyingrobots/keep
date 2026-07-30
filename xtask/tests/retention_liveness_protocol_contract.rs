@@ -64,6 +64,7 @@ fn generation_transitions_and_gc_snapshots_fail_closed() {
 
     for required in [
         "expected and observed generations",
+        "Retention publication holds the same exclusive store writer authority",
         "initial `RootGeneration` is one",
         "`LivenessGeneration`",
         "empty anchor set remains",
