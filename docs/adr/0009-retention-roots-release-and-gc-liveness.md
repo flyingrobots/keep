@@ -473,10 +473,10 @@ from the live set.
 
 ### Retain every representation of a blob
 
-Rejected. It would make physical optimization and compaction impossible
-without changing retention policy. The root retains one verified
-reconstruction closure; separately retained representations require explicit
-anchors or a future typed policy extension.
+Rejected: retain-all blocks physical optimization. An ordinary reconstruction
+anchor cannot retain a particular representation; that requires a future
+representation-aware policy extension. Only a distinct `LayoutId` may use its
+own anchor.
 
 ## Consequences
 
