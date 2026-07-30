@@ -10,12 +10,12 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
-- Version-2 marker, migration-intent, and completion-receipt admission now bind
-  exact catalog, predecessor, root, definition, store, empty-state, checksum,
-  digest, and synchronization-mask coordinates. Retention preflight combines
+- Version-2 marker, migration-intent, and completion-receipt admission now binds
+  exact catalog, predecessor, root, definition, store, empty-state, and checksum,
+  digest, and synchronization-mask coordinates; a seeded migration fuzz
+  surface drives all three exact decoders. Retention preflight combines
   expected-generation planning with deterministic closure verification;
-  authority-revalidated 17-phase orchestration returns an unforgeable
-  complete-coordinate receipt after durable cleanup.
+  authority-revalidated 17-phase orchestration returns its receipt after durable cleanup.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

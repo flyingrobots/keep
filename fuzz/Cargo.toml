@@ -118,6 +118,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "migration_format"
+path = "fuzz_targets/migration_format.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "repository_json"
 path = "fuzz_targets/repository_json.rs"
 test = false

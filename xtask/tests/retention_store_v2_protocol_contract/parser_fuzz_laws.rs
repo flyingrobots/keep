@@ -29,3 +29,26 @@ fn retention_decoders_have_registered_seeded_fuzz_evidence() -> Result<(), Box<d
     assert!(REQUIREMENTS.contains("`retention_format`"));
     Ok(())
 }
+
+#[test]
+fn migration_decoders_have_registered_seeded_fuzz_evidence() -> Result<(), Box<dyn Error>> {
+    let repository_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .ok_or("xtask manifest must have a repository parent")?;
+
+    assert!(
+        repository_root
+            .join("fuzz/fuzz_targets/migration_format.rs")
+            .is_file()
+    );
+    assert!(
+        repository_root
+            .join("xtask/src/fuzz_seed_corpus/migration_seeds.rs")
+            .is_file()
+    );
+    assert!(FUZZ_MANIFEST.contains("name = \"migration_format\""));
+    assert!(FUZZ_MANIFEST.contains("path = \"fuzz_targets/migration_format.rs\""));
+    assert!(FUZZ_GUIDE.contains("The `migration_format` seeds"));
+    assert!(REQUIREMENTS.contains("`migration_format`"));
+    Ok(())
+}
