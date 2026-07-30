@@ -13,7 +13,8 @@ after its public API and format compatibility policies are established.
 - Version-2 marker, migration-intent, and completion-receipt admission now binds
   exact catalog, predecessor, root, definition, store, empty-state, and checksum,
   digest, and synchronization-mask coordinates; migration fuzzing drives all
-  three decoders, and `StoreMigrationPhase` freezes 21 transitions. Retention preflight combines
+  three decoders, streamed inventory is bounded, and `StoreMigrationPhase`
+  freezes 21 transitions. Retention preflight combines
   expected-generation planning with deterministic closure verification;
   authority-revalidated 17-phase orchestration returns its receipt after durable cleanup.
 - Repository crash-matrix execution now terminates isolated writer process

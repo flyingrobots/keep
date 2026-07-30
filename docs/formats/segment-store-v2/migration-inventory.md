@@ -47,3 +47,9 @@ do not enter the digest.
 The exact one-segment, one-catalog input and its canonical entries are frozen in
 the version-2 corpus
 [`inventory.tsv`](../../../conformance/segment-store/v2/inventory.tsv).
+
+`StoreMigrationInventoryEntry` derives canonical bytes only from admitted
+artifacts. `StoreMigrationInventoryHasher` requires the bounded entry count
+before streaming, retains only the preceding entry, refuses duplicate or
+out-of-order evidence, and reproduces the frozen digest. Capability-relative
+filesystem inventory and mutation revalidation remain unimplemented.
