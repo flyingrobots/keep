@@ -62,8 +62,8 @@ corpus `definition.tsv` bytes. The format-marker digest is BLAKE3-256 of
 
 `CanonicalStoreFormatMarker` produces the registered marker; `AdmittedStoreFormatMarker` admits its framing, checksum, definition, and namespace bound.
 `CanonicalStoreMigrationIntent` retains typed intent coordinates; `CanonicalStoreMigrationReceipt` binds completion; admitted record types verify both.
-`StoreMigrationStorage` names current-state verification and all 21 blocking durability capabilities but does not prove the live inventory, physical root,
-store version, execution, or recovery of filesystem migration.
+`StoreMigrationStorage` names all 21 durability capabilities; `execute_store_migration` verifies current authority first and returns only after final synchronization.
+These boundaries do not prove a filesystem implementation or partial-prefix recovery.
 
 ## Reader fence
 

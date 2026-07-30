@@ -12,9 +12,27 @@ use keep::{
 pub struct RecordingStorage {
     observed: Vec<StoreMigrationPhase>,
     verification_count: usize,
+    fail_at: Option<StoreMigrationPhase>,
+    verification_failure: Option<io::ErrorKind>,
 }
 
 impl RecordingStorage {
+    /// Creates storage that refuses at one exact migration phase.
+    pub fn failing_at(phase: StoreMigrationPhase) -> Self {
+        Self {
+            fail_at: Some(phase),
+            ..Self::default()
+        }
+    }
+
+    /// Creates storage that refuses current-state verification.
+    pub fn verification_failure() -> Self {
+        Self {
+            verification_failure: Some(io::ErrorKind::PermissionDenied),
+            ..Self::default()
+        }
+    }
+
     /// Returns attempted migration phases in call order.
     pub fn observed(&self) -> &[StoreMigrationPhase] {
         &self.observed
@@ -25,8 +43,13 @@ impl RecordingStorage {
         self.verification_count
     }
 
-    fn record(&mut self, phase: StoreMigrationPhase) {
+    fn record(&mut self, phase: StoreMigrationPhase) -> io::Result<()> {
         self.observed.push(phase);
+        if self.fail_at == Some(phase) {
+            Err(io::Error::other("injected store-migration failure"))
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -36,111 +59,91 @@ impl StoreMigrationStorage for RecordingStorage {
             .verification_count
             .checked_add(1)
             .ok_or_else(|| io::Error::other("verification count overflow"))?;
-        Ok(())
+        self.verification_failure
+            .map_or(Ok(()), |kind| Err(kind.into()))
     }
 
     fn write_intent_stage(&mut self, _intent: &CanonicalStoreMigrationIntent) -> io::Result<()> {
-        self.record(StoreMigrationPhase::WriteIntentStage);
-        Ok(())
+        self.record(StoreMigrationPhase::WriteIntentStage)
     }
 
     fn synchronize_intent_stage(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::SynchronizeIntentStage);
-        Ok(())
+        self.record(StoreMigrationPhase::SynchronizeIntentStage)
     }
 
     fn link_intent(&mut self, _intent: &CanonicalStoreMigrationIntent) -> io::Result<()> {
-        self.record(StoreMigrationPhase::LinkIntent);
-        Ok(())
+        self.record(StoreMigrationPhase::LinkIntent)
     }
 
     fn synchronize_root_after_intent(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::SynchronizeRootAfterIntent);
-        Ok(())
+        self.record(StoreMigrationPhase::SynchronizeRootAfterIntent)
     }
 
     fn remove_intent_stage(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::RemoveIntentStage);
-        Ok(())
+        self.record(StoreMigrationPhase::RemoveIntentStage)
     }
 
     fn synchronize_root_after_intent_cleanup(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::SynchronizeRootAfterIntentCleanup);
-        Ok(())
+        self.record(StoreMigrationPhase::SynchronizeRootAfterIntentCleanup)
     }
 
     fn admit_reader_fence(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::AdmitReaderFence);
-        Ok(())
+        self.record(StoreMigrationPhase::AdmitReaderFence)
     }
 
     fn admit_namespace_prefix(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::AdmitNamespacePrefix);
-        Ok(())
+        self.record(StoreMigrationPhase::AdmitNamespacePrefix)
     }
 
     fn synchronize_root_after_namespace(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::SynchronizeRootAfterNamespace);
-        Ok(())
+        self.record(StoreMigrationPhase::SynchronizeRootAfterNamespace)
     }
 
     fn write_marker_stage(&mut self, _marker: &CanonicalStoreFormatMarker) -> io::Result<()> {
-        self.record(StoreMigrationPhase::WriteMarkerStage);
-        Ok(())
+        self.record(StoreMigrationPhase::WriteMarkerStage)
     }
 
     fn synchronize_marker_stage(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::SynchronizeMarkerStage);
-        Ok(())
+        self.record(StoreMigrationPhase::SynchronizeMarkerStage)
     }
 
     fn link_marker(&mut self, _marker: &CanonicalStoreFormatMarker) -> io::Result<()> {
-        self.record(StoreMigrationPhase::LinkMarker);
-        Ok(())
+        self.record(StoreMigrationPhase::LinkMarker)
     }
 
     fn synchronize_root_after_marker(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::SynchronizeRootAfterMarker);
-        Ok(())
+        self.record(StoreMigrationPhase::SynchronizeRootAfterMarker)
     }
 
     fn remove_marker_stage(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::RemoveMarkerStage);
-        Ok(())
+        self.record(StoreMigrationPhase::RemoveMarkerStage)
     }
 
     fn synchronize_root_after_marker_cleanup(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::SynchronizeRootAfterMarkerCleanup);
-        Ok(())
+        self.record(StoreMigrationPhase::SynchronizeRootAfterMarkerCleanup)
     }
 
     fn write_receipt_stage(&mut self, _receipt: &CanonicalStoreMigrationReceipt) -> io::Result<()> {
-        self.record(StoreMigrationPhase::WriteReceiptStage);
-        Ok(())
+        self.record(StoreMigrationPhase::WriteReceiptStage)
     }
 
     fn synchronize_receipt_stage(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::SynchronizeReceiptStage);
-        Ok(())
+        self.record(StoreMigrationPhase::SynchronizeReceiptStage)
     }
 
     fn link_receipt(&mut self, _receipt: &CanonicalStoreMigrationReceipt) -> io::Result<()> {
-        self.record(StoreMigrationPhase::LinkReceipt);
-        Ok(())
+        self.record(StoreMigrationPhase::LinkReceipt)
     }
 
     fn synchronize_root_after_receipt(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::SynchronizeRootAfterReceipt);
-        Ok(())
+        self.record(StoreMigrationPhase::SynchronizeRootAfterReceipt)
     }
 
     fn remove_receipt_stage(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::RemoveReceiptStage);
-        Ok(())
+        self.record(StoreMigrationPhase::RemoveReceiptStage)
     }
 
     fn synchronize_root_after_receipt_cleanup(&mut self) -> io::Result<()> {
-        self.record(StoreMigrationPhase::SynchronizeRootAfterReceiptCleanup);
-        Ok(())
+        self.record(StoreMigrationPhase::SynchronizeRootAfterReceiptCleanup)
     }
 }
