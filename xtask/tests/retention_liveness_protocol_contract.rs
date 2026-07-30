@@ -129,6 +129,7 @@ fn alternatives_and_evidence_boundaries_are_explicit() {
         "Reference counts",
         "Tracing from explicit roots",
         "physical claim",
+        "The receipt binds complete generation-and-digest coordinates for the committed root, global manifest, and closure-verification catalog",
         "does not prove application-level meaning",
     ] {
         assert!(

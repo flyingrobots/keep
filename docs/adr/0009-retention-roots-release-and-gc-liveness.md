@@ -404,15 +404,19 @@ A successful retention transition returns a consequential, `#[must_use]`
 receipt containing at least:
 
 - the namespace and expected and observed generations;
-- the committed root generation and global manifest generation;
+- the committed root generation and canonical digest;
+- the global manifest generation and canonical digest;
 - the exact realization profile identity, version, and digest;
 - canonical anchor-set and closure digests;
-- the catalog generation used for closure verification; and
+- the closure-verification catalog generation and canonical digest; and
 - the durable publication outcome.
 
+The receipt binds complete generation-and-digest coordinates for the committed
+root, global manifest, and closure-verification catalog.
+
 Its physical claim is narrow: at commit time, the named retained anchors had
-complete verified closures reachable through the named catalog generation,
-and the named retention generation was durably published.
+complete verified closures reachable through the named catalog coordinate,
+and the named retention coordinate was durably published.
 
 The receipt does not prove application-level meaning, causal ownership,
 exclusive ownership, future retention after another generation commits,
