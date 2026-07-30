@@ -51,5 +51,11 @@ the version-2 corpus
 `StoreMigrationInventoryEntry` derives canonical bytes only from admitted
 artifacts. `StoreMigrationInventoryHasher` requires the bounded entry count
 before streaming, retains only the preceding entry, refuses duplicate or
-out-of-order evidence, and reproduces the frozen digest. Capability-relative
-filesystem inventory and mutation revalidation remain unimplemented.
+out-of-order evidence, and reproduces the frozen digest.
+
+`FilesystemStoreMigrationInventoryReader` retains exclusive writer authority
+and pinned capabilities for both immutable pools. It inventories every regular
+entry, including artifacts not reachable from the current publication head,
+and reproduces the frozen digest without retaining every artifact body at
+once. Migration-session integration that revalidates this inventory
+immediately before the first namespace mutation remains in progress.

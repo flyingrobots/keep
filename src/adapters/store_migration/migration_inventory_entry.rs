@@ -2,6 +2,8 @@
 
 use crate::{AdmittedCatalog, AdmittedSegment};
 
+use super::migration_catalog_admission::AdmittedMigrationCatalog;
+
 const SEGMENT_KIND: u8 = 1;
 const CATALOG_KIND: u8 = 2;
 const ENCODED_LENGTH: usize = 56;
@@ -24,6 +26,15 @@ impl StoreMigrationInventoryEntry {
 
     /// Constructs the canonical entry for one completely admitted catalog.
     pub const fn from_catalog(catalog: &AdmittedCatalog<'_, '_>) -> Self {
+        Self(encode(
+            CATALOG_KIND,
+            catalog.generation().get(),
+            catalog.length().get(),
+            catalog.digest().as_bytes(),
+        ))
+    }
+
+    pub(super) const fn from_migration_catalog(catalog: &AdmittedMigrationCatalog<'_>) -> Self {
         Self(encode(
             CATALOG_KIND,
             catalog.generation().get(),

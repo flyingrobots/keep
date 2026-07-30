@@ -7,6 +7,33 @@ mod canonical_format_marker;
 mod canonical_migration_intent;
 mod canonical_migration_receipt;
 mod empty_disposition_set_digest;
+mod filesystem_inventory_catalog_errors;
+mod filesystem_inventory_catalogs;
+#[cfg(test)]
+mod filesystem_inventory_catalogs_refusal_tests;
+#[cfg(test)]
+mod filesystem_inventory_catalogs_test_fixture;
+#[cfg(test)]
+mod filesystem_inventory_catalogs_tests;
+mod filesystem_inventory_directory;
+mod filesystem_inventory_error;
+mod filesystem_inventory_error_display;
+mod filesystem_inventory_file;
+#[cfg(test)]
+mod filesystem_inventory_file_tests;
+mod filesystem_inventory_names;
+#[cfg(test)]
+mod filesystem_inventory_names_tests;
+mod filesystem_inventory_reader;
+#[cfg(test)]
+mod filesystem_inventory_reader_tests;
+mod filesystem_inventory_segments;
+#[cfg(test)]
+mod filesystem_inventory_segments_refusal_tests;
+#[cfg(test)]
+mod filesystem_inventory_segments_test_fixture;
+#[cfg(test)]
+mod filesystem_inventory_segments_tests;
 mod format_definition_digest;
 mod format_marker_decode_error;
 mod format_marker_decode_error_display;
@@ -16,6 +43,9 @@ mod format_marker_encoder;
 mod immutable_pool_inventory_digest;
 mod initial_gc_state_digest;
 mod initial_retention_state_digest;
+mod migration_catalog_admission;
+mod migration_catalog_plan;
+mod migration_catalog_records;
 mod migration_error;
 mod migration_execution;
 mod migration_intent_decode_error;
@@ -49,6 +79,11 @@ pub use canonical_format_marker::CanonicalStoreFormatMarker;
 pub use canonical_migration_intent::CanonicalStoreMigrationIntent;
 pub use canonical_migration_receipt::CanonicalStoreMigrationReceipt;
 pub use empty_disposition_set_digest::EmptyDispositionSetDigest;
+pub use filesystem_inventory_error::{
+    FilesystemMigrationInventoryError, FilesystemMigrationInventoryOperation,
+    MigrationInventoryNamespace, MigrationInventoryPool,
+};
+pub use filesystem_inventory_reader::FilesystemStoreMigrationInventoryReader;
 pub use format_definition_digest::StoreFormatDefinitionDigest;
 pub use format_marker_decode_error::StoreFormatMarkerDecodeError;
 pub use format_marker_digest::StoreFormatMarkerDigest;
