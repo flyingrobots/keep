@@ -160,9 +160,9 @@ retention/roots/<namespace-digest>/
 ```
 
 Names with alternate width, case, suffix, generation, or digest refuse. Keep
-implements validated in-memory root encoding and decoding with complete
-integrity verification before semantic admission. Filesystem publication,
-manifest/head codecs, transitions, recovery, and garbage collection remain absent.
+implements validated in-memory root and manifest codecs with integrity before
+semantic admission. Filesystem publication, the head codec, transitions,
+recovery, and garbage collection remain absent.
 
 ## Global retention manifest
 

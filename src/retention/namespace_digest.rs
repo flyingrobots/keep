@@ -9,7 +9,7 @@
 pub struct RetentionNamespaceDigest([u8; 32]);
 
 impl RetentionNamespaceDigest {
-    pub(super) const fn from_hash(bytes: [u8; 32]) -> Self {
+    pub(crate) const fn from_hash(bytes: [u8; 32]) -> Self {
         Self(bytes)
     }
 

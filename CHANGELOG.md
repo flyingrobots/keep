@@ -312,9 +312,12 @@ after its public API and format compatibility policies are established.
   encoder reproduces the independent version-2 golden bytes, and the decoder
   verifies framing, checksum, root digest, anchor-set digest, nested identities,
   resource bounds, canonical anchor order, and semantic invariants before
-  admission. Version-1 immutable bytes remain authoritative; production
-  version-2 writing remains unavailable until issue #19's executable evidence
-  is complete.
+  admission. Validated global manifest values and their canonical encoder and
+  decoder now reproduce the independent manifest fixture and enforce liveness
+  history, namespace uniqueness, bounds, ordering, and all three integrity
+  layers. Version-1 immutable bytes remain authoritative; production version-2
+  writing remains unavailable until issue #19's executable evidence is
+  complete.
 - Accepted ADR-0009 defines caller-supplied retention namespaces,
   `BlobId`/`LayoutId` reconstruction anchors, fail-closed canonical closure,
   generation-checked retention publication, immutable liveness snapshots,

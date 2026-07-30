@@ -116,9 +116,10 @@ recovery classifiers and immutable-artifact admission, and reconstructs the
 exact published generation and visible one-zero chunk when `HEAD` exists. This
 matrix proves application process-death behavior; it does not simulate host
 power loss. Version-2 retention values and canonical in-memory root encoding
-and decoding are implemented. Retention publication, recovery, compaction, and
-garbage collection remain planned. Presence in the reference CAS does not
-claim retention, crash recovery, or durability.
+and decoding are implemented, as are the global manifest values and codec.
+Retention-head codecs, publication, recovery, compaction, and garbage
+collection remain planned. Presence in the reference CAS does not claim
+retention, crash recovery, or durability.
 
 Run the complete debug-profile matrix:
 

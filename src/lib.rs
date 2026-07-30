@@ -22,9 +22,9 @@
 //! continuation has a storage-independent planning and execution boundary plus
 //! a pinned writer-authorized filesystem adapter. Core retention namespaces,
 //! generations, realization policy, reconstruction anchors, and semantic roots
-//! are validated; canonical in-memory root encoding and decoding are available.
-//! Retention publication, recovery, and garbage collection remain intentionally
-//! absent.
+//! are validated; canonical in-memory root and manifest encoding and decoding
+//! are available. Retention-head codecs, publication, recovery, and garbage
+//! collection remain intentionally absent.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -42,16 +42,17 @@ mod retention;
 #[doc(hidden)]
 pub use adapters::RepositoryInitializationStorage;
 pub use adapters::{
-    AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedRetentionRoot, AdmittedSegment,
-    AdmittedSegmentRecord, BlobIdBinaryParseError, BlobIdTextParseError, CanonicalCatalog,
-    CanonicalLayoutRecord, CanonicalPublicationHead, CanonicalRetentionRoot, CatalogAdmissionError,
-    CatalogAllocationPhase, CatalogDecodeError, CatalogEncodeError, CatalogEntryDecodeError,
-    CatalogPublicationError, CatalogPublicationExpectation, CatalogPublicationOutcome,
-    CatalogPublicationPhase, CatalogPublicationReadiness, CatalogPublicationReceipt,
-    CatalogPublicationStorage, CatalogRestartArtifact, CatalogRestartByteLimit,
-    CatalogRestartByteLimitError, CatalogRestartError, CatalogRestartPhase, CatalogRestartPolicy,
-    CatalogSnapshot, CatalogSnapshotError, CatalogSuccessor, CatalogTransitionError,
-    ChecksummedCatalog, ChecksummedPublicationHead, ChecksummedSegmentRecord, ClosedSegment,
+    AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedRetentionManifest, AdmittedRetentionRoot,
+    AdmittedSegment, AdmittedSegmentRecord, BlobIdBinaryParseError, BlobIdTextParseError,
+    CanonicalCatalog, CanonicalLayoutRecord, CanonicalPublicationHead, CanonicalRetentionManifest,
+    CanonicalRetentionRoot, CatalogAdmissionError, CatalogAllocationPhase, CatalogDecodeError,
+    CatalogEncodeError, CatalogEntryDecodeError, CatalogPublicationError,
+    CatalogPublicationExpectation, CatalogPublicationOutcome, CatalogPublicationPhase,
+    CatalogPublicationReadiness, CatalogPublicationReceipt, CatalogPublicationStorage,
+    CatalogRestartArtifact, CatalogRestartByteLimit, CatalogRestartByteLimitError,
+    CatalogRestartError, CatalogRestartPhase, CatalogRestartPolicy, CatalogSnapshot,
+    CatalogSnapshotError, CatalogSuccessor, CatalogTransitionError, ChecksummedCatalog,
+    ChecksummedPublicationHead, ChecksummedSegmentRecord, ClosedSegment,
     FilesystemCatalogPublicationError, FilesystemCatalogPublisher, FilesystemCatalogSnapshot,
     FilesystemPlatformAdmission, FilesystemPlatformAdmissionError,
     FilesystemRecoveryInventoryReader, FilesystemRecoveryNextHeadFinalizationOpenError,
@@ -85,8 +86,9 @@ pub use adapters::{
     RecoveryStageFingerprintAlgorithm, RecoveryStageFingerprintError, RecoveryStageLength,
     RecoveryStageMetadata, RecoveryStageMetadataError, RecoveryStageNamespacePhase,
     RecoveryStageParent, RecoveryStagePoolOutcome, RecoveryStageSynchronizationOutcome,
-    RetentionRootDecodeError, RetentionRootEncodeError, ReusableRecoverySegment, SealedSegment,
-    SegmentDigest, SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError, SegmentPublication,
+    RetentionManifestDecodeError, RetentionManifestEncodeError, RetentionRootDecodeError,
+    RetentionRootEncodeError, ReusableRecoverySegment, SealedSegment, SegmentDigest,
+    SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError, SegmentPublication,
     SegmentPublicationError, SegmentReadError, SegmentReadPolicy, SegmentRecordAdmissionError,
     SegmentRecordChecksum, SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError,
     SegmentRecordIdentity, SegmentRecordLength, SegmentRecordLimit, SegmentRecordLimitError,
@@ -125,7 +127,8 @@ pub use reference::{
 };
 pub use retention::{
     LivenessGeneration, LivenessGenerationError, RegisteredRetentionProfile, RetentionAnchor,
-    RetentionClosureLimit, RetentionClosureLimitError, RetentionClosureLimits, RetentionNamespace,
+    RetentionClosureLimit, RetentionClosureLimitError, RetentionClosureLimits, RetentionManifest,
+    RetentionManifestDigest, RetentionManifestEntry, RetentionManifestError, RetentionNamespace,
     RetentionNamespaceDigest, RetentionNamespaceError, RetentionPolicy,
     RetentionProfileAdmissionError, RetentionRoot, RetentionRootDigest, RetentionRootError,
     RootGeneration, RootGenerationError,
