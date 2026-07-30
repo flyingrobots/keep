@@ -63,6 +63,16 @@ Pretending to support multiple representation policies would add an unproved
 abstraction. The registered single-witness profile states the current law
 exactly; another profile requires a successor specification and evidence.
 
+## Charge closure evidence and reconstruction work separately
+
+Counting unique closure members alone would let a layout repeat one small
+chunk into an effectively unbounded reconstruction. Counting every repeated
+identity as another node would misstate the canonical physical evidence.
+Version 2 therefore deduplicates node, encoded-metadata, and member-digest
+accounting by logical identity, while charging physical record length for
+every chunk occurrence consumed during reconstruction. This keeps both the
+evidence set and the work bound truthful.
+
 ## Use a kernel reader fence
 
 A durable reader registry, lease, clock, and process liveness inference were

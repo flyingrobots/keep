@@ -42,6 +42,7 @@ fn version_two_is_one_routed_protocol() -> Result<(), Box<dyn std::error::Error>
         "`keep.segment-store/v2`",
         "successor to `keep.segment-store/v1`",
         "[Retention records and publication](retention.md)",
+        "[Closure verification](closure.md)",
         "[GC and disposition records](gc.md)",
         "[Migration and recovery](recovery.md)",
         "[Migration crash points](migration-crash.md)",
@@ -88,6 +89,37 @@ fn retention_records_have_exact_canonical_grammars() -> Result<(), Box<dyn std::
         assert!(
             retention.contains(required),
             "segment-store v2 retention grammar omits `{required}`"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn closure_accounting_has_exact_units_and_canonical_evidence()
+-> Result<(), Box<dyn std::error::Error>> {
+    let closure = normalized(&read(&format!("{FORMAT_ROOT}/closure.md"))?);
+
+    for required in [
+        "one pinned, completely verified catalog generation",
+        "first scheduled",
+        "anchor is not a closure node",
+        "unique `SegmentRecordIdentity`",
+        "depth `1`",
+        "depth `2`",
+        "canonical layout payload length",
+        "complete segment-record length",
+        "checked addition before",
+        "repeated logical occurrence",
+        "replay the exact registered storage profile",
+        "authenticate the complete `BlobId`",
+        "keep.retention-closure/v2\\0",
+        "96-byte closure-member entries",
+        "canonical typed-identity order",
+        "Missing members still consume",
+    ] {
+        assert!(
+            closure.contains(required),
+            "segment-store v2 closure contract omits `{required}`"
         );
     }
     Ok(())
@@ -221,6 +253,7 @@ fn requirement_ledger_names_planned_and_executable_evidence()
 fn version_two_pages_stay_within_the_review_threshold() -> Result<(), Box<dyn std::error::Error>> {
     for name in [
         "README.md",
+        "closure.md",
         "gc.md",
         "migration-crash.md",
         "migration-inventory.md",

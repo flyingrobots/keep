@@ -39,7 +39,9 @@ Version 2 retains every version-1 physical law and adds these:
 The following pages form one protocol:
 
 - [Retention records and publication](retention.md) owns canonical namespace,
-  root-generation, manifest, retention-head, closure, and transition rules.
+  root-generation, manifest, retention-head, and transition rules.
+- [Closure verification](closure.md) owns deterministic traversal, exact
+  resource accounting, authenticated reconstruction, and closure evidence.
 - [GC and disposition records](gc.md) owns the canonical planned intent,
   completion, and recovery-disposition byte grammars.
 - [Migration and recovery](recovery.md) owns the exact root namespace,

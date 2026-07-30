@@ -240,20 +240,11 @@ The checksum domain is `keep.retention-head-checksum/v2\0`.
 ## Closure admission
 
 Before publication, Keep pins one completely verified catalog generation and
-derives the complete closure for every anchor:
-
-1. Resolve and admit the exact layout record named by `LayoutId`.
-2. Require its embedded `BlobId` to equal the anchor `BlobId`.
-3. Resolve and admit every ordered chunk identity required by that layout.
-4. Verify each physical record, identity, checksum, digest, and catalog
-   coordinate under the stored realization profile.
-5. Enforce the stored limits with checked counters and a visited set.
-6. Reconstruct and authenticate the complete blob identity.
-
-A missing or corrupt closure member, ambiguous catalog claim, unsupported
-profile, limit breach, cycle, unknown mandatory edge, identity mismatch, or
-ordering error refuses the entire transition. Keep never omits one failed
-member and continues with a smaller live set.
+applies the exact deterministic traversal, counter units, failure order,
+authenticated reconstruction, and canonical digest defined by
+[Closure verification](closure.md). Any closure failure refuses the entire
+transition. Keep never omits one failed member and continues with a smaller
+live set.
 
 Version-2 catalog publication holds the same writer authority and proves every
 current retained closure against its candidate catalog before replacing the
