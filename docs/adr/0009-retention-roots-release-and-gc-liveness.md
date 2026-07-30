@@ -177,6 +177,13 @@ critical section so catalog evidence cannot change between proof and commit;
 no application callback or external policy evaluation occurs while the
 authority is held.
 
+Before replacing `HEAD`, version-2 catalog publication holds that authority,
+admits the current global retention manifest, and verifies every current
+retained closure against the candidate catalog with its exact profile and
+limits. Candidate publication refuses before mutation when closure evidence is
+missing, corrupt, ambiguous, or under-witnessed. Its receipt binds the
+preserved retention-manifest generation and digest.
+
 The executor reads one verified retention head, compares the namespace state,
 computes and verifies the candidate closure against one pinned catalog
 generation, and only then stages publication. A stale update fails with the
