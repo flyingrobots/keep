@@ -227,6 +227,19 @@ bounded physical inventory. It classifies material as live, unreachable,
 corrupt, ambiguous, recovery-protected, reader-protected, or already retired.
 Only unreachable material may become a collectible candidate.
 
+The physical retirement unit is one whole immutable segment, never an
+individual record span. A segment is live whenever any contained record is
+live, reader-protected, recovery-protected, corrupt, or ambiguous. An
+unreachable record inside that segment cannot authorize partial deletion or
+make the container collectible.
+
+Reclaiming unreachable records from a mixed segment requires compaction to
+copy and verify every live record into new immutable segments, publish and
+synchronize a catalog successor that names those replacements, and revalidate
+the resulting view. Only after that durably published compaction successor and
+the required reader and recovery fences may the complete old segment enter a
+retirement plan.
+
 Planning is observational and carries no mutation authority. Execution must
 acquire the same exclusive writer authority used by catalog publication and
 recovery, then retain it from revalidation through physical mutation,

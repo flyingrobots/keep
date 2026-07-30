@@ -84,6 +84,9 @@ fn generation_transitions_and_gc_snapshots_fail_closed() {
         "Logical retention states apply",
         "Physical GC states apply only to physical material",
         "cannot be inferred from existence, age, recent access",
+        "whole immutable segment",
+        "any contained record is live",
+        "durably published compaction successor",
         "does not promise immediate physical erasure",
     ] {
         assert!(
