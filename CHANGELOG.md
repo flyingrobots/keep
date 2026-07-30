@@ -303,6 +303,12 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Accepted ADR-0009 defines caller-supplied retention namespaces,
+  `BlobId`/`LayoutId` reconstruction anchors, fail-closed canonical closure,
+  generation-checked retention publication, immutable liveness snapshots,
+  release nonclaims, and GC evidence boundaries. This records the M4 design
+  contract; it does not claim that retention transitions or GC are
+  implemented.
 - Checked catalog generations; canonical catalog and publication-head codecs;
   exact logical-record-to-segment admission with one bounded physical lookup
   plan, one scan per referenced segment, and refusal of every unreferenced
