@@ -81,6 +81,9 @@ fn generation_transitions_and_gc_snapshots_fail_closed() {
         "catalog generation",
         "same exclusive writer authority",
         "from revalidation through physical mutation",
+        "Logical retention states apply",
+        "Physical GC states apply only to physical material",
+        "cannot be inferred from existence, age, recent access",
         "does not promise immediate physical erasure",
     ] {
         assert!(

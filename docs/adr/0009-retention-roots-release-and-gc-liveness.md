@@ -172,27 +172,31 @@ implicitly.
 
 ### State meanings
 
-The retention protocol uses these states:
+The protocol has two disjoint state families. Logical retention states apply
+to candidate bytes, namespace generations, and reconstruction anchors:
 
-- **Staged:** candidate immutable bytes exist but no retention head names
-  them. They are not retention authority.
-- **Retained:** the current global manifest names the namespace generation,
-  and that generation contains the reconstruction anchor with a completely
-  verified closure.
-- **Released:** a successfully published successor generation omits an anchor
-  that its predecessor contained. Release is a logical transition, not a
-  physical deletion claim.
-- **Orphaned:** physical material is unreachable from the selected immutable
+- **Staged candidate:** immutable candidate generation bytes exist, but no
+  retention head names them. They are not retention authority.
+- **Retained generation or anchor:** the current global manifest names the
+  namespace generation, and that generation contains the reconstruction
+  anchor with a completely verified closure.
+- **Released anchor:** a successfully published successor generation omits an
+  anchor that its predecessor contained. Release is a logical transition, not
+  a physical deletion claim.
+
+Physical GC states apply only to physical material:
+
+- **Orphaned material:** the material is unreachable from the selected immutable
   liveness snapshot. It may still be protected by another current snapshot,
   an active reader, recovery evidence, or a later publication.
-- **Collectible:** a deterministic GC plan proves the material unreachable
-  from its immutable liveness snapshot and catalog snapshot, and execution has
-  revalidated every required generation and reader, recovery, and publication
-  safety fence.
+- **Collectible material:** a deterministic GC plan proves the material
+  unreachable from its immutable liveness snapshot and catalog snapshot, and
+  execution has revalidated every required generation and reader, recovery,
+  and publication safety fence.
 
-These states are explicit evidence postures. A path cannot move between them
-merely because it exists, is old, was recently accessed, or appears absent
-from one catalog.
+These states are explicit evidence postures, not path properties. Every state
+transition requires the evidence defined above and cannot be inferred from
+existence, age, recent access, or absence from one catalog.
 
 ### Release and grace
 
