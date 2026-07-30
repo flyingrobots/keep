@@ -35,6 +35,7 @@ mod migration_receipt_encoder;
 mod migration_receipt_format;
 mod migration_receipt_initial_state;
 mod migration_record_bytes;
+mod migration_storage;
 mod migration_synchronization_mask;
 mod store_identifier;
 mod store_root_identity;
@@ -61,6 +62,7 @@ pub use migration_inventory_error::StoreMigrationInventoryError;
 pub use migration_inventory_hasher::StoreMigrationInventoryHasher;
 pub use migration_phase::StoreMigrationPhase;
 pub use migration_receipt_decode_error::StoreMigrationReceiptDecodeError;
+pub use migration_storage::StoreMigrationStorage;
 pub use migration_synchronization_mask::MigrationSynchronizationMask;
 pub use store_identifier::StoreIdentifier;
 pub use store_root_identity::{
