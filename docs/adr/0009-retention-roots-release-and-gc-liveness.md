@@ -87,6 +87,15 @@ Namespaces do not inherit, alias, or shadow one another. A namespace is a
 partition for compare-and-swap updates; it does not participate in content
 identity.
 
+The version-2 format defines one fixed maximum admitted namespace count. The
+count includes empty generations because namespace identity is never deleted
+or reused. Admission of a previously absent namespace computes the attempted
+count with checked arithmetic and refuses above the maximum before any
+namespace-generation or manifest bytes are staged. The typed refusal preserves
+the maximum and attempted counts. Transitions of already admitted namespaces
+remain available at capacity; increasing the ceiling or reclaiming tombstones
+requires a successor protocol with an ABA-safe migration.
+
 File existence, catalog membership, and recent access are not retention
 evidence. Keep does not infer semantic liveness from Echo, Git, Graft, paths,
 timestamps, or caller identity.

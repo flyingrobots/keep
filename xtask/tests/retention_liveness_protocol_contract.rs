@@ -71,6 +71,8 @@ fn generation_transitions_and_gc_snapshots_fail_closed() {
         "one-way explicit migration",
         "partial migration",
         "Version-1 admission continues to refuse",
+        "maximum admitted namespace count",
+        "before any namespace-generation or manifest bytes",
         "initial `RootGeneration` is one",
         "`LivenessGeneration`",
         "empty anchor set remains",
