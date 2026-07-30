@@ -13,10 +13,11 @@ const EMPTY_DISPOSITION_DOMAIN: &[u8] = b"keep.empty-disposition-set/v2\0";
 pub(super) fn read_initial_retention_digest(
     encoded: &[u8],
 ) -> Result<InitialRetentionStateDigest, StoreMigrationReceiptDecodeError> {
-    let expected = digest(INITIAL_RETENTION_DOMAIN);
+    let admitted = initial_retention_digest();
+    let expected = *admitted.as_bytes();
     let observed = read_array(encoded, 120)?;
     if observed == expected {
-        Ok(InitialRetentionStateDigest::from_hash(expected))
+        Ok(admitted)
     } else {
         Err(
             StoreMigrationReceiptDecodeError::InitialRetentionStateDigestMismatch {
@@ -30,10 +31,11 @@ pub(super) fn read_initial_retention_digest(
 pub(super) fn read_initial_gc_digest(
     encoded: &[u8],
 ) -> Result<InitialGcStateDigest, StoreMigrationReceiptDecodeError> {
-    let expected = digest(INITIAL_GC_DOMAIN);
+    let admitted = initial_gc_digest();
+    let expected = *admitted.as_bytes();
     let observed = read_array(encoded, 152)?;
     if observed == expected {
-        Ok(InitialGcStateDigest::from_hash(expected))
+        Ok(admitted)
     } else {
         Err(StoreMigrationReceiptDecodeError::InitialGcStateDigestMismatch { expected, observed })
     }
@@ -42,10 +44,11 @@ pub(super) fn read_initial_gc_digest(
 pub(super) fn read_empty_disposition_digest(
     encoded: &[u8],
 ) -> Result<EmptyDispositionSetDigest, StoreMigrationReceiptDecodeError> {
-    let expected = digest(EMPTY_DISPOSITION_DOMAIN);
+    let admitted = empty_disposition_digest();
+    let expected = *admitted.as_bytes();
     let observed = read_array(encoded, 184)?;
     if observed == expected {
-        Ok(EmptyDispositionSetDigest::from_hash(expected))
+        Ok(admitted)
     } else {
         Err(
             StoreMigrationReceiptDecodeError::EmptyDispositionSetDigestMismatch {
@@ -54,6 +57,18 @@ pub(super) fn read_empty_disposition_digest(
             },
         )
     }
+}
+
+pub(super) fn initial_retention_digest() -> InitialRetentionStateDigest {
+    InitialRetentionStateDigest::from_hash(digest(INITIAL_RETENTION_DOMAIN))
+}
+
+pub(super) fn initial_gc_digest() -> InitialGcStateDigest {
+    InitialGcStateDigest::from_hash(digest(INITIAL_GC_DOMAIN))
+}
+
+pub(super) fn empty_disposition_digest() -> EmptyDispositionSetDigest {
+    EmptyDispositionSetDigest::from_hash(digest(EMPTY_DISPOSITION_DOMAIN))
 }
 
 fn digest(domain: &[u8]) -> [u8; 32] {

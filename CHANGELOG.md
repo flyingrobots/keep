@@ -10,7 +10,7 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
-- Version-2 marker, canonical migration-intent construction, and record admission bind
+- Version-2 marker, canonical intent/receipt construction, and record admission bind
   exact catalog, predecessor, root, definition, store, empty-state, and checksum,
   digest, and synchronization-mask coordinates; migration fuzzing drives all
   three decoders, streamed inventory is bounded, and `StoreMigrationPhase`

@@ -10,13 +10,8 @@ use super::migration_record_bytes::{
 use super::{
     AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, AdmittedStoreMigrationReceipt,
     MigrationSynchronizationMask, StoreMigrationReceiptDecodeError,
+    migration_receipt_format as format,
 };
-
-const CHECKSUM_OFFSET: usize = 224;
-const MAGIC: [u8; 16] = *b"KEEP:MIG:REC2\0\0\0";
-const VERSION: u16 = 2;
-const RECORD_LENGTH: u16 = 256;
-const CHECKSUM_DOMAIN: &[u8] = b"keep.store-migration-receipt-checksum/v2\0";
 
 pub(super) fn decode<'encoded>(
     encoded: &'encoded [u8],
@@ -49,20 +44,20 @@ pub(super) fn decode<'encoded>(
 
 fn validate_fixed_fields(encoded: &[u8]) -> Result<(), StoreMigrationReceiptDecodeError> {
     let magic = read_array(encoded, 0)?;
-    if magic != MAGIC {
+    if magic != format::MAGIC {
         return Err(StoreMigrationReceiptDecodeError::InvalidMagic { observed: magic });
     }
     let version = read_u16(encoded, 16)?;
-    if version != VERSION {
+    if version != format::VERSION {
         return Err(StoreMigrationReceiptDecodeError::UnsupportedVersion {
-            expected: VERSION,
+            expected: format::VERSION,
             observed: version,
         });
     }
     let record_length = read_u16(encoded, 18)?;
-    if record_length != RECORD_LENGTH {
+    if record_length != format::RECORD_LENGTH {
         return Err(StoreMigrationReceiptDecodeError::InvalidRecordLength {
-            expected: RECORD_LENGTH,
+            expected: format::RECORD_LENGTH,
             observed: record_length,
         });
     }
@@ -75,10 +70,10 @@ fn validate_fixed_fields(encoded: &[u8]) -> Result<(), StoreMigrationReceiptDeco
 
 fn verify_checksum(encoded: &[u8]) -> Result<(), StoreMigrationReceiptDecodeError> {
     let preimage = encoded
-        .get(..CHECKSUM_OFFSET)
+        .get(..format::CHECKSUM_OFFSET)
         .ok_or_else(|| wrong_length(encoded))?;
-    let observed = read_array(encoded, CHECKSUM_OFFSET)?;
-    let expected = hash(CHECKSUM_DOMAIN, preimage);
+    let observed = read_array(encoded, format::CHECKSUM_OFFSET)?;
+    let expected = format::checksum(preimage);
     if observed == expected {
         Ok(())
     } else {
@@ -147,11 +142,4 @@ fn read_synchronization_mask(
         );
     }
     Ok(MigrationSynchronizationMask::complete())
-}
-
-fn hash(domain: &[u8], bytes: &[u8]) -> [u8; 32] {
-    let mut hasher = blake3::Hasher::new();
-    hasher.update(domain);
-    hasher.update(bytes);
-    *hasher.finalize().as_bytes()
 }

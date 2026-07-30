@@ -21,6 +21,17 @@ pub struct CanonicalStoreMigrationIntent {
 }
 
 impl CanonicalStoreMigrationIntent {
+    /// Owns the exact bytes and identities of an admitted intent.
+    pub const fn from_admitted(intent: &super::AdmittedStoreMigrationIntent<'_>) -> Self {
+        let mut encoded = [0_u8; migration_intent_format::ENCODED_LENGTH];
+        encoded.copy_from_slice(intent.encoded());
+        Self {
+            encoded,
+            digest: intent.digest(),
+            store_identifier: intent.store_identifier(),
+        }
+    }
+
     /// Constructs one canonical intent from typed migration coordinates.
     pub fn from_snapshot(
         snapshot: &CatalogSnapshot<'_, '_, '_>,
