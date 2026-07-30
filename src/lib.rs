@@ -25,8 +25,9 @@
 //! are validated; canonical in-memory root, manifest, and head encoding and
 //! decoding, storage-independent expected-state transition planning,
 //! deterministic bounded closure verification against a pinned catalog, and a
-//! combined transition preflight proof are available. Retention publication,
-//! recovery, and garbage collection remain intentionally absent.
+//! combined transition preflight proof and exact publication phase vocabulary
+//! are available. Retention publication execution, recovery, and garbage
+//! collection remain intentionally absent.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -108,10 +109,10 @@ pub use adapters::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
     CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
     RetentionClosureVerificationError, RetentionHeadDecodeError, RetentionManifestDecodeError,
-    RetentionManifestEncodeError, RetentionRootDecodeError, RetentionRootEncodeError,
-    RetentionTransitionError, RetentionTransitionPreflight, RetentionTransitionPreflightError,
-    RetentionTransitionReadiness, VerifiedRetentionClosure, plan_retention_transition,
-    preflight_retention_transition, verify_retention_closure,
+    RetentionManifestEncodeError, RetentionPublicationPhase, RetentionRootDecodeError,
+    RetentionRootEncodeError, RetentionTransitionError, RetentionTransitionPreflight,
+    RetentionTransitionPreflightError, RetentionTransitionReadiness, VerifiedRetentionClosure,
+    plan_retention_transition, preflight_retention_transition, verify_retention_closure,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

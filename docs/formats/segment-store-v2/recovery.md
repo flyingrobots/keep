@@ -277,6 +277,9 @@ The retention crash points are:
 | `KEEP-CRASH-051` | retained manifest-stage removal |
 | `KEEP-CRASH-052` | retention cleanup synchronization |
 
+`RetentionPublicationPhase::ALL` freezes this exact order as a typed public
+vocabulary. Storage execution and process-death evidence remain unimplemented.
+
 Each point requires before, during, and after process-death evidence. Restart
 must establish exact catalog visibility, retention head, namespace generation,
 orphan classification, stage disposition, and recovery report.

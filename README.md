@@ -118,10 +118,10 @@ matrix proves application process-death behavior; it does not simulate host
 power loss. Version-2 retention values; canonical in-memory root, global
 manifest, and retention-head codecs; storage-independent expected-state
 transition planning; deterministic bounded closure verification against a
-pinned catalog; and a combined transition preflight proof are implemented.
-Publication, recovery, compaction, and garbage collection remain planned.
-Presence in the reference CAS does not claim retention, crash recovery, or
-durability.
+pinned catalog; a combined transition preflight proof; and the exact 17-phase
+publication vocabulary are implemented. Publication execution, recovery,
+compaction, and garbage collection remain planned. Presence in the reference
+CAS does not claim retention, crash recovery, or durability.
 
 Run the complete debug-profile matrix:
 
