@@ -1,6 +1,8 @@
 //! This boundary module owns canonical owned migration-intent bytes.
 
 use super::admitted_migration_intent::StoreMigrationIntentFields;
+use super::migration_catalog_coordinates::MigrationCatalogCoordinates;
+use super::store_root_identity::StoreRootIdentities;
 use super::{
     ImmutablePoolInventoryDigest, StoreFormatDefinitionDigest, StoreIdentifier,
     StoreMigrationIntentDigest, StoreRootDeviceIdentity, StoreRootFileIdentity,
@@ -53,12 +55,22 @@ impl CanonicalStoreMigrationIntent {
         root_file_identity: StoreRootFileIdentity,
     ) -> Self {
         migration_intent_encoder::encode(
-            snapshot,
+            MigrationCatalogCoordinates::from_snapshot(snapshot),
             inventory_digest,
-            root_device_identity,
-            root_mount_identity,
-            root_file_identity,
+            StoreRootIdentities::new(
+                root_device_identity,
+                root_mount_identity,
+                root_file_identity,
+            ),
         )
+    }
+
+    pub(super) fn from_coordinates(
+        catalog: MigrationCatalogCoordinates,
+        inventory_digest: ImmutablePoolInventoryDigest,
+        roots: StoreRootIdentities,
+    ) -> Self {
+        migration_intent_encoder::encode(catalog, inventory_digest, roots)
     }
 
     /// Returns the exact canonical intent bytes.

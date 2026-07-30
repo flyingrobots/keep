@@ -34,6 +34,12 @@ mod filesystem_inventory_segments_refusal_tests;
 mod filesystem_inventory_segments_test_fixture;
 #[cfg(test)]
 mod filesystem_inventory_segments_tests;
+mod filesystem_migration_authority;
+mod filesystem_migration_authority_error;
+mod filesystem_migration_authority_error_display;
+#[cfg(test)]
+mod filesystem_migration_authority_tests;
+mod filesystem_migration_authority_validation;
 mod format_definition_digest;
 mod format_marker_decode_error;
 mod format_marker_decode_error_display;
@@ -44,6 +50,7 @@ mod immutable_pool_inventory_digest;
 mod initial_gc_state_digest;
 mod initial_retention_state_digest;
 mod migration_catalog_admission;
+mod migration_catalog_coordinates;
 mod migration_catalog_plan;
 mod migration_catalog_records;
 mod migration_error;
@@ -84,6 +91,11 @@ pub use filesystem_inventory_error::{
     MigrationInventoryNamespace, MigrationInventoryPool,
 };
 pub use filesystem_inventory_reader::FilesystemStoreMigrationInventoryReader;
+pub use filesystem_migration_authority::FilesystemStoreMigrationAuthority;
+pub use filesystem_migration_authority_error::{
+    FilesystemMigrationAuthorityArtifact, FilesystemMigrationAuthorityError,
+    StoreRootIdentityCoordinate,
+};
 pub use format_definition_digest::StoreFormatDefinitionDigest;
 pub use format_marker_decode_error::StoreFormatMarkerDecodeError;
 pub use format_marker_digest::StoreFormatMarkerDigest;

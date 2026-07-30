@@ -117,6 +117,7 @@ mod filesystem_recovery_stage_materialization;
 mod filesystem_recovery_stage_sync;
 #[cfg(all(test, unix))]
 mod filesystem_recovery_stage_tests;
+mod filesystem_root_identity;
 mod filesystem_segment_stage;
 #[cfg(test)]
 mod filesystem_segment_stage_tests;

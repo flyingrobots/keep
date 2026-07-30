@@ -14,6 +14,7 @@ use super::filesystem_inventory_segments::FilesystemMigrationSegmentInventory;
 use super::{
     ImmutablePoolInventoryDigest, StoreMigrationInventoryEntryCount, StoreMigrationInventoryHasher,
 };
+use crate::adapters::filesystem_root_identity::FilesystemRootIdentity;
 use crate::adapters::{FilesystemPlatformAdmission, FilesystemWriterLock, SegmentReadPolicy};
 
 const SEGMENTS_NAME: &str = "segments";
@@ -29,6 +30,7 @@ pub struct FilesystemStoreMigrationInventoryReader {
     segments: PinnedMigrationPoolDirectory,
     catalogs: PinnedMigrationPoolDirectory,
     policy: SegmentReadPolicy,
+    root_identity: FilesystemRootIdentity,
     _lock: FilesystemWriterLock,
 }
 
@@ -47,7 +49,7 @@ impl FilesystemStoreMigrationInventoryReader {
         admission: FilesystemPlatformAdmission,
         policy: SegmentReadPolicy,
     ) -> Result<Self, FilesystemMigrationInventoryError> {
-        let lock = admission.into_lock();
+        let (lock, root_identity) = admission.into_parts();
         let root =
             lock.clone_directory()
                 .map_err(|source| FilesystemMigrationInventoryError::Io {
@@ -70,6 +72,7 @@ impl FilesystemStoreMigrationInventoryReader {
             segments,
             catalogs,
             policy,
+            root_identity,
             _lock: lock,
         })
     }
@@ -130,6 +133,18 @@ impl FilesystemStoreMigrationInventoryReader {
     fn verify_directories(&self) -> Result<(), FilesystemMigrationInventoryError> {
         self.segments.verify(&self.root)?;
         self.catalogs.verify(&self.root)
+    }
+
+    pub(super) const fn root(&self) -> &Dir {
+        &self.root
+    }
+
+    pub(super) const fn catalogs(&self) -> &Dir {
+        self.catalogs.directory()
+    }
+
+    pub(super) const fn root_identity(&self) -> FilesystemRootIdentity {
+        self.root_identity
     }
 }
 

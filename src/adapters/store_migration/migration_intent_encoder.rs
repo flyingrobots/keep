@@ -1,40 +1,26 @@
 //! This boundary module owns canonical migration-intent encoding.
 
 use super::admitted_migration_intent::StoreMigrationIntentFields;
+use super::migration_catalog_coordinates::MigrationCatalogCoordinates;
 use super::migration_intent_format::StoreIdentifierFields;
+use super::store_root_identity::StoreRootIdentities;
 use super::{
     CanonicalStoreMigrationIntent, ImmutablePoolInventoryDigest, StoreFormatDefinitionDigest,
-    StoreIdentifier, StoreRootDeviceIdentity, StoreRootFileIdentity, StoreRootMountIdentity,
-    migration_intent_format as format,
+    StoreIdentifier, migration_intent_format as format,
 };
-use crate::CatalogSnapshot;
-
-#[derive(Clone, Copy)]
-struct RootIdentities {
-    device: StoreRootDeviceIdentity,
-    mount: StoreRootMountIdentity,
-    file: StoreRootFileIdentity,
-}
 
 pub(super) fn encode(
-    snapshot: &CatalogSnapshot<'_, '_, '_>,
+    catalog: MigrationCatalogCoordinates,
     inventory_digest: ImmutablePoolInventoryDigest,
-    root_device_identity: StoreRootDeviceIdentity,
-    root_mount_identity: StoreRootMountIdentity,
-    root_file_identity: StoreRootFileIdentity,
+    roots: StoreRootIdentities,
 ) -> CanonicalStoreMigrationIntent {
     let fields = StoreIdentifierFields {
-        catalog_generation: snapshot.generation(),
-        catalog_length: snapshot.catalog_length(),
-        catalog_digest: snapshot.catalog_digest(),
-        predecessor_catalog_digest: snapshot.previous_catalog_digest(),
+        catalog_generation: catalog.generation(),
+        catalog_length: catalog.length(),
+        catalog_digest: catalog.digest(),
+        predecessor_catalog_digest: catalog.predecessor(),
         inventory_digest,
         target_definition_digest: StoreFormatDefinitionDigest::VERSION_TWO,
-    };
-    let roots = RootIdentities {
-        device: root_device_identity,
-        mount: root_mount_identity,
-        file: root_file_identity,
     };
     let store_identifier = format::store_identifier(&fields);
     let mut encoded = [0_u8; format::ENCODED_LENGTH];
@@ -50,9 +36,9 @@ pub(super) fn encode(
             catalog_digest: fields.catalog_digest,
             predecessor_catalog_digest: fields.predecessor_catalog_digest,
             inventory_digest: fields.inventory_digest,
-            root_device_identity: roots.device,
-            root_mount_identity: roots.mount,
-            root_file_identity: roots.file,
+            root_device_identity: roots.device(),
+            root_mount_identity: roots.mount(),
+            root_file_identity: roots.file(),
             target_definition_digest: fields.target_definition_digest,
             store_identifier,
         },
@@ -63,7 +49,7 @@ pub(super) fn encode(
 fn write_preimage(
     output: &mut [u8],
     fields: &StoreIdentifierFields,
-    roots: RootIdentities,
+    roots: StoreRootIdentities,
     store_identifier: StoreIdentifier,
 ) {
     let (magic, output) = output.split_at_mut(16);
@@ -89,11 +75,11 @@ fn write_preimage(
     let (inventory_digest, output) = output.split_at_mut(32);
     inventory_digest.copy_from_slice(fields.inventory_digest.as_bytes());
     let (device_identity, output) = output.split_at_mut(8);
-    device_identity.copy_from_slice(&roots.device.get().to_be_bytes());
+    device_identity.copy_from_slice(&roots.device().get().to_be_bytes());
     let (mount_identity, output) = output.split_at_mut(8);
-    mount_identity.copy_from_slice(&roots.mount.get().to_be_bytes());
+    mount_identity.copy_from_slice(&roots.mount().get().to_be_bytes());
     let (file_identity, output) = output.split_at_mut(8);
-    file_identity.copy_from_slice(&roots.file.get().to_be_bytes());
+    file_identity.copy_from_slice(&roots.file().get().to_be_bytes());
     let (definition_digest, store_identifier_slot) = output.split_at_mut(32);
     definition_digest.copy_from_slice(fields.target_definition_digest.as_bytes());
     store_identifier_slot.copy_from_slice(store_identifier.as_bytes());

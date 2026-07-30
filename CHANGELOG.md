@@ -14,7 +14,9 @@ after its public API and format compatibility policies are established.
   exact catalog, predecessor, root, definition, store, empty-state, and checksum,
   digest, and synchronization-mask coordinates; migration fuzzing drives all
   three decoders, streamed inventory is bounded, writer-locked filesystem
-  inventory completely admits every immutable-pool artifact, and
+  inventory completely admits every immutable-pool artifact, filesystem
+  migration authority derives and revalidates one canonical intent from exact
+  Linux root, namespace, head, catalog, and inventory coordinates, and
   `StoreMigrationPhase` freezes 21 transitions with explicit storage and
   verification-first execution.
   Retention preflight combines expected-generation planning with deterministic

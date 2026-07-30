@@ -90,7 +90,7 @@ impl FilesystemCatalogPublisher {
         policy: CatalogRestartPolicy,
     ) -> io::Result<Self> {
         Self::open(
-            FilesystemPlatformAdmission::unchecked_for_repository_tasks(lock),
+            FilesystemPlatformAdmission::unchecked_for_repository_tasks(lock)?,
             policy,
         )
     }
@@ -101,7 +101,7 @@ impl FilesystemCatalogPublisher {
         policy: CatalogRestartPolicy,
     ) -> io::Result<Self> {
         Self::open(
-            FilesystemPlatformAdmission::unchecked_for_tests(lock),
+            FilesystemPlatformAdmission::unchecked_for_tests(lock)?,
             policy,
         )
     }

@@ -83,7 +83,17 @@ fn initialize_storage(
     let lock = storage.into_lock().map_err(|source| {
         StoreInitializationError::io(StoreInitializationPhase::OpenAndLockWriterFile, source)
     })?;
-    Ok(FilesystemPlatformAdmission::initialized(lock))
+    let directory = lock.clone_directory().map_err(|source| {
+        StoreInitializationError::io(StoreInitializationPhase::AdmitPlatform, source)
+    })?;
+    let root_identity =
+        filesystem_platform_profile::root_identity(&directory).map_err(|source| {
+            StoreInitializationError::io(StoreInitializationPhase::AdmitPlatform, source)
+        })?;
+    Ok(FilesystemPlatformAdmission::initialized(
+        lock,
+        root_identity,
+    ))
 }
 
 fn reopen_root(
@@ -96,5 +106,10 @@ fn reopen_root(
         .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
     filesystem_initialization_namespace::admit_published(&directory)
         .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
-    Ok(FilesystemPlatformAdmission::initialized(lock))
+    let root_identity = filesystem_platform_profile::root_identity(&directory)
+        .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
+    Ok(FilesystemPlatformAdmission::initialized(
+        lock,
+        root_identity,
+    ))
 }

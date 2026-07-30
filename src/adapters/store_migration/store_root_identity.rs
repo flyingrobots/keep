@@ -1,5 +1,7 @@
 //! This module owns physical store-root recovery coordinates.
 
+use crate::adapters::filesystem_root_identity::FilesystemRootIdentity;
+
 macro_rules! root_identity {
     ($name:ident, $documentation:literal) => {
         #[doc = $documentation]
@@ -36,3 +38,44 @@ root_identity!(
     StoreRootFileIdentity,
     "Platform file identity bound into a migration intent."
 );
+
+#[derive(Clone, Copy)]
+pub(super) struct StoreRootIdentities {
+    device: StoreRootDeviceIdentity,
+    mount: StoreRootMountIdentity,
+    file: StoreRootFileIdentity,
+}
+
+impl StoreRootIdentities {
+    pub(super) const fn new(
+        device: StoreRootDeviceIdentity,
+        mount: StoreRootMountIdentity,
+        file: StoreRootFileIdentity,
+    ) -> Self {
+        Self {
+            device,
+            mount,
+            file,
+        }
+    }
+
+    pub(super) const fn from_filesystem(identity: FilesystemRootIdentity) -> Self {
+        Self::new(
+            StoreRootDeviceIdentity::from_admitted(identity.device()),
+            StoreRootMountIdentity::from_admitted(identity.mount()),
+            StoreRootFileIdentity::from_admitted(identity.file()),
+        )
+    }
+
+    pub(super) const fn device(self) -> StoreRootDeviceIdentity {
+        self.device
+    }
+
+    pub(super) const fn mount(self) -> StoreRootMountIdentity {
+        self.mount
+    }
+
+    pub(super) const fn file(self) -> StoreRootFileIdentity {
+        self.file
+    }
+}

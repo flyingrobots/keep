@@ -1,13 +1,10 @@
 # Migration and Recovery
 
-This page owns the version-2 filesystem namespace, format marker, reader fence,
-one-way migration, fixed-stage recovery, GC reservation, and
-recovery-disposition reservation.
+This page owns version-2 filesystem migration and recovery.
 
 ## Exact filesystem namespace
 
-Version 2 preserves the version-1 files and directories and admits these new
-coordinates:
+Version 2 preserves version-1 files and directories; it adds:
 
 ```text
 reader.lock
@@ -50,8 +47,7 @@ Operations are capability-relative and never follow links.
 | 60 | 4 | reserved | zero |
 | 64 | 32 | checksum | BLAKE3-256 over bytes `0..64` |
 
-The definition and checksum domains are
-`keep.segment-store-definition/v2\0` and
+The definition and checksum domains are `keep.segment-store-definition/v2\0` and
 `keep.segment-store-marker-checksum/v2\0`. A missing marker is version 1 only
 when the exact version-1 namespace admits. An unsupported, corrupt,
 substituted, or same-name/different-digest marker refuses.
@@ -84,7 +80,6 @@ published segment.
 ## Migration records
 
 Migration is a one-way explicit migration under exclusive writer authority.
-Version 1 is never extended in place without durable migration evidence.
 
 `migration.intent` is exactly 256 bytes:
 
@@ -101,9 +96,9 @@ Version 1 is never extended in place without durable migration evidence.
 | 40 | 32 | catalog digest named by version-1 `HEAD` | exact admitted digest |
 | 72 | 32 | predecessor catalog digest | zero for generation 1 |
 | 104 | 32 | immutable-pool inventory digest | canonical complete inventory |
-| 136 | 8 | root device identity | admitted platform value |
-| 144 | 8 | root mount identity | admitted platform value |
-| 152 | 8 | root file identity | admitted platform value |
+| 136 | 8 | root device identity | admitted Linux `dev_t` |
+| 144 | 8 | root mount identity | admitted Linux `statx.stx_mnt_id` |
+| 152 | 8 | root file identity | admitted Linux `statx.stx_ino` |
 | 160 | 32 | target format-definition digest | exact registered v2 digest |
 | 192 | 32 | new store identifier | deterministic derivation below |
 | 224 | 32 | checksum | BLAKE3-256 over bytes `0..224` |
@@ -118,6 +113,10 @@ The [migration inventory](migration-inventory.md) defines its domain and law:
 each migration inventory entry is exactly 56 bytes, and the fixed maximum is
 2,097,152 entries. The intent therefore binds the exact catalog generation,
 length, and digest named by the admitted version-1 `HEAD`.
+
+On Linux, the root device coordinate is `dev_t`, reconstructed from
+`statx.stx_dev_major` and `statx.stx_dev_minor`; mount and file use
+`statx.stx_mnt_id` and `statx.stx_ino`. Each is big-endian `u64`.
 
 The deterministically derived store identifier is:
 
@@ -191,15 +190,18 @@ Migration performs these ordered steps:
 9. Publish `migration.receipt` from `migration.receipt.next` through the
    fixed-stage protocol.
 
-The [migration crash-point specification](migration-crash.md) owns that
-protocol and spans `KEEP-CRASH-053` through `KEEP-CRASH-073`.
-
+The [migration crash-point specification](migration-crash.md) owns
+`KEEP-CRASH-053` through `KEEP-CRASH-073`.
 Migration never rewrites or deletes admitted version-1 immutable bytes and
 provides no automatic downgrade.
 
-Version-1 admission refuses once any migration stage, `migration.intent`,
-`reader.lock`, `FORMAT`, or version-2 directory is present. Once the canonical
-intent is durable, only version-2 migration recovery may continue.
+`FilesystemStoreMigrationAuthority` retains the writer lock and pinned root
+and pools. It admits the version-1 namespace, Linux root identity, `HEAD`,
+complete immutable-pool inventory, and selected catalog. Before mutation, it
+requires the same canonical intent.
+Version-1 admission refuses after a migration stage, `migration.intent`,
+`reader.lock`, `FORMAT`, or version-2 directory exists. After durable intent,
+only version-2 migration recovery may continue.
 
 ## Partial migration recovery
 
@@ -219,15 +221,13 @@ The migration recovery boundary admits only these ordered prefixes:
 
 <!-- markdownlint-enable MD013 -->
 
-A partial migration retry revalidates the intent and every existing byte,
-continues idempotently at the first absent canonical step, and never replaces
-an existing entry. A missing predecessor, changed version-1 coordinate,
-out-of-order name, wrong file kind, substituted byte, conflicting receipt,
-unknown entry, or changed root identity is unrecoverable ambiguity.
+A partial migration retry revalidates intent and existing bytes, resumes at the
+first absent canonical step, and never replaces an entry. A missing predecessor,
+changed version-1 coordinate, out-of-order name, wrong kind or bytes, conflicting
+receipt, unknown entry, or changed root identity is unrecoverable ambiguity.
 
-Process death before durable canonical intent leaves version 1 plus at most its
-non-authoritative stage. Process death after durable intent leaves
-recovery-required version-2 migration state.
+Death before durable intent leaves v1 plus at most its non-authoritative stage.
+Death after durable intent leaves recovery-required v2 migration state.
 
 ## Retention publication recovery
 
