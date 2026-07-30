@@ -10,12 +10,12 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
-- Retention transition preflight now combines exact expected-generation
-  planning with deterministic closure verification against one pinned catalog
-  before any future publication storage call. A typed 17-phase vocabulary
-  and blocking storage port freeze the durability and crash-boundary contract;
-  authority-revalidated orchestration executes every phase and returns an
-  unforgeable complete-coordinate receipt after durable cleanup.
+- The version-2 store-format marker now has exact canonical encoding,
+  registered-definition admission, checksum verification, and domain-separated
+  identity. Retention transition preflight combines expected-generation
+  planning with deterministic closure verification against one pinned catalog;
+  authority-revalidated 17-phase orchestration returns an unforgeable
+  complete-coordinate receipt after durable cleanup.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

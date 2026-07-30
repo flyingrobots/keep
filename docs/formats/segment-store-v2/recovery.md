@@ -60,6 +60,11 @@ The format-definition digest is BLAKE3-256 of its domain followed by the exact
 corpus `definition.tsv` bytes. The format-marker digest is BLAKE3-256 of
 `keep.store-format-marker/v2\0` followed by all 96 marker bytes.
 
+`CanonicalStoreFormatMarker` produces the one registered marker, and
+`AdmittedStoreFormatMarker` admits exact canonical bytes only after framing,
+checksum, definition, and namespace-bound validation. Store detection and
+filesystem migration remain absent.
+
 ## Reader fence
 
 `reader.lock` is a persistent regular zero-length file. Its contents and

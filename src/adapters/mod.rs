@@ -299,6 +299,7 @@ mod store_initialization_error;
 mod store_initialization_phase;
 mod store_initialization_receipt;
 mod store_initialization_storage;
+mod store_migration;
 mod sync_capable_directory;
 #[cfg(test)]
 #[path = "../../tests/support/mod.rs"]
@@ -481,6 +482,7 @@ pub use store_initialization_error::StoreInitializationError;
 pub use store_initialization_phase::StoreInitializationPhase;
 pub use store_initialization_receipt::StoreInitializationReceipt;
 pub use store_initialization_storage::StoreInitializationStorage;
+pub use store_migration::*;
 pub use writer_lock_acquire_error::WriterLockAcquireError;
 pub use writer_lock_acquire_phase::WriterLockAcquirePhase;
 
