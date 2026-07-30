@@ -37,6 +37,43 @@ External policy supplies explicit retention namespaces and reconstruction
 anchors. Keep validates, versions, and durably publishes that physical
 retention state. Keep never assigns application-level meaning to it.
 
+### Durable namespace compatibility
+
+Retention and GC state do not extend `keep.segment-store/v1`. Its exact root
+shape admits only the existing writer lock, staging, immutable pools, and
+`HEAD`; adding another entry would correctly make a version-1 store ambiguous.
+Version-1 admission continues to refuse every unknown retention, GC, or
+migration artifact.
+
+Issue #19 must first specify `keep.segment-store/v2` as a successor durable
+format. Version 2 preserves the admitted version-1 segment, catalog, and head
+bytes, but defines a new exact root shape, version marker, retention
+generations and head, GC intent and receipt state, recovery-disposition
+evidence, bounds, checksums, golden fixtures, and recovery table. No
+implementation may write those artifacts before that specification and its
+parser, corruption, fuzz, and crash evidence exist.
+
+Migration is a one-way explicit migration under the existing exclusive writer
+lock:
+
+1. Open and completely recover the version-1 store; refuse every fixed stage,
+   orphan ambiguity, corrupt artifact, and noncanonical root entry.
+2. Durably publish a canonical migration intent that binds the exact version-1
+   head, catalog, pool, root identity, and target version.
+3. Create and synchronize only the canonical version-2 namespaces and initial
+   empty retention and idle GC state.
+4. Reopen and verify the complete version-2 view, synchronize the root, and
+   durably publish the migration receipt.
+
+Process death before the intent leaves a version-1 store. Once any migration
+artifact is durable, version-1 admission refuses and only the version-2
+migration recovery boundary may proceed. It admits each documented partial
+migration prefix, revalidates the intent and existing bytes, and idempotently
+continues; unknown entries, substitution, conflicting receipts, or a changed
+version-1 coordinate are unrecoverable ambiguity. Migration never deletes or
+rewrites admitted version-1 immutable bytes and provides no automatic
+downgrade.
+
 ### Namespace authority
 
 `RetentionNamespace` is an opaque, validated, canonical logical identifier
