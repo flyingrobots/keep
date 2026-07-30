@@ -25,16 +25,6 @@ pub(super) fn display(
             formatter,
             "{counter} limit {maximum} was exceeded by observed value {observed}"
         ),
-        RetentionClosureVerificationError::LayoutEntryLimitHostWidth { observed } => write!(
-            formatter,
-            "closure node limit {observed} does not fit the layout entry-limit width"
-        ),
-        RetentionClosureVerificationError::LayoutEntryLimit { source } => {
-            write!(
-                formatter,
-                "closure-derived layout entry limit is invalid: {source}"
-            )
-        }
         RetentionClosureVerificationError::MissingMember { identity } => match identity {
             crate::SegmentRecordIdentity::Chunk(chunk) => write!(
                 formatter,

@@ -1,5 +1,7 @@
 //! Deterministic retention-closure verification laws.
 
+#[path = "retention_closure/repeated_chunk_law.rs"]
+mod repeated_chunk_law;
 mod support;
 
 use std::error::Error;

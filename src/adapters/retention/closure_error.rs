@@ -4,8 +4,8 @@ use std::error::Error;
 use std::fmt;
 
 use crate::{
-    BlobHashError, BlobId, ChunkingError, LayoutDecodeError, LayoutEntryLimitError, LayoutId,
-    ProfileBoundary, RetentionClosureCounter, SegmentRecordIdentity, StorageProfileId,
+    BlobHashError, BlobId, ChunkingError, LayoutDecodeError, LayoutId, ProfileBoundary,
+    RetentionClosureCounter, SegmentRecordIdentity, StorageProfileId,
 };
 
 /// Failure to derive and authenticate one complete retained root closure.
@@ -28,16 +28,6 @@ pub enum RetentionClosureVerificationError {
         maximum: u64,
         /// Candidate observed value.
         observed: u64,
-    },
-    /// The admitted node limit could not become a host-independent entry cap.
-    LayoutEntryLimitHostWidth {
-        /// Admitted node limit that did not fit the layout cap width.
-        observed: u64,
-    },
-    /// The derived layout entry cap violated the layout protocol bound.
-    LayoutEntryLimit {
-        /// Exact layout-bound refusal.
-        source: LayoutEntryLimitError,
     },
     /// The pinned catalog omits a first-scheduled closure member.
     MissingMember {
@@ -106,13 +96,11 @@ pub enum RetentionClosureVerificationError {
 impl Error for RetentionClosureVerificationError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::LayoutEntryLimit { source } => Some(source),
             Self::LayoutDecode { source, .. } => Some(source),
             Self::ProfileChunking { source, .. } => Some(source),
             Self::BlobHash { source, .. } => Some(source),
             Self::CounterOverflow { .. }
             | Self::LimitExceeded { .. }
-            | Self::LayoutEntryLimitHostWidth { .. }
             | Self::MissingMember { .. }
             | Self::AnchorTargetMismatch { .. }
             | Self::ProfileVerifierUnavailable { .. }

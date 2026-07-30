@@ -31,8 +31,7 @@ pub fn verify_retention_closure(
     root: &RetentionRoot,
     catalog: &CatalogSnapshot<'_, '_, '_>,
 ) -> Result<VerifiedRetentionClosure, RetentionClosureVerificationError> {
-    let entry_limit = layout_entry_limit(root)?;
-    let mut verifier = ClosureVerifier::new(root, catalog, entry_limit);
+    let mut verifier = ClosureVerifier::new(root, catalog);
     for anchor in root.anchors().iter().copied() {
         verifier.verify_anchor(anchor)?;
     }
@@ -42,7 +41,6 @@ pub fn verify_retention_closure(
 struct ClosureVerifier<'snapshot, 'head, 'catalog, 'records> {
     root: &'snapshot RetentionRoot,
     catalog: &'snapshot CatalogSnapshot<'head, 'catalog, 'records>,
-    entry_limit: LayoutEntryLimit,
     accounting: ClosureAccounting,
     records: BTreeMap<SegmentRecordIdentity, AdmittedSegmentRecord<'records>>,
 }
@@ -51,12 +49,10 @@ impl<'snapshot, 'head, 'catalog, 'records> ClosureVerifier<'snapshot, 'head, 'ca
     const fn new(
         root: &'snapshot RetentionRoot,
         catalog: &'snapshot CatalogSnapshot<'head, 'catalog, 'records>,
-        entry_limit: LayoutEntryLimit,
     ) -> Self {
         Self {
             root,
             catalog,
-            entry_limit,
             accounting: ClosureAccounting::new(root.limits()),
             records: BTreeMap::new(),
         }
@@ -75,7 +71,7 @@ impl<'snapshot, 'head, 'catalog, 'records> ClosureVerifier<'snapshot, 'head, 'ca
             self.accounting
                 .add_encoded(record.header().payload_length().get())?;
         }
-        let policy = LayoutDecodePolicy::new(self.entry_limit).with_expected_id(layout_id);
+        let policy = LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM).with_expected_id(layout_id);
         let layout = AdmittedLayout::decode_record(record.payload(), policy).map_err(|source| {
             RetentionClosureVerificationError::LayoutDecode {
                 layout: layout_id,
@@ -152,17 +148,6 @@ impl<'snapshot, 'head, 'catalog, 'records> ClosureVerifier<'snapshot, 'head, 'ca
             closure_digest::calculate(profile, generation, catalog_digest, usage, &self.records);
         VerifiedRetentionClosure::new(profile, generation, catalog_digest, usage, digest)
     }
-}
-
-fn layout_entry_limit(
-    root: &RetentionRoot,
-) -> Result<LayoutEntryLimit, RetentionClosureVerificationError> {
-    let observed = root.limits().nodes();
-    let value = u32::try_from(observed).map_err(|_source| {
-        RetentionClosureVerificationError::LayoutEntryLimitHostWidth { observed }
-    })?;
-    LayoutEntryLimit::new(value)
-        .map_err(|source| RetentionClosureVerificationError::LayoutEntryLimit { source })
 }
 
 fn require_anchor_target(
