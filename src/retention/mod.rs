@@ -6,9 +6,12 @@
 //! collection.
 
 mod anchor;
+mod closure_counter;
+mod closure_digest;
 mod closure_limit;
 mod closure_limit_error;
 mod closure_limits;
+mod closure_usage;
 mod generation_expectation;
 mod head;
 mod head_error;
@@ -33,9 +36,12 @@ mod root_generation;
 mod root_generation_error;
 
 pub use anchor::RetentionAnchor;
+pub use closure_counter::RetentionClosureCounter;
+pub use closure_digest::RetentionClosureDigest;
 pub use closure_limit::RetentionClosureLimit;
 pub use closure_limit_error::RetentionClosureLimitError;
 pub use closure_limits::RetentionClosureLimits;
+pub use closure_usage::RetentionClosureUsage;
 pub use generation_expectation::RetentionGenerationExpectation;
 pub use head::RetentionHead;
 pub use head_error::RetentionHeadError;

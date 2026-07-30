@@ -1,4 +1,4 @@
-//! Compact semantic coordinate for profile-replay diagnostics.
+//! This module owns one semantic storage-profile boundary coordinate.
 
 use std::fmt;
 

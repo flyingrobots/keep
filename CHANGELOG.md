@@ -321,9 +321,13 @@ after its public API and format compatibility policies are established.
   transition planning now compares absent or exact-generation expectations,
   admits only same-namespace exact successors, preserves expected and observed
   stale coordinates, and distinguishes byte-identical already-committed
-  replay. Version-1 immutable bytes remain authoritative; production version-2
-  writing remains unavailable until issue #19's executable evidence is
-  complete.
+  replay. Deterministic storage-independent closure verification now derives
+  unique catalog members, enforces exact node, depth, encoded-byte, and
+  physical-byte accounting, replays the registered storage profile,
+  authenticates each complete retained blob, and emits a catalog-bound
+  canonical closure digest. Version-1 immutable bytes remain authoritative;
+  production version-2 writing remains unavailable until issue #19's
+  executable evidence is complete.
 - Accepted ADR-0009 defines caller-supplied retention namespaces,
   `BlobId`/`LayoutId` reconstruction anchors, fail-closed canonical closure,
   generation-checked retention publication, immutable liveness snapshots,

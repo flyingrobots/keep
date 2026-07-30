@@ -23,9 +23,10 @@
 //! a pinned writer-authorized filesystem adapter. Core retention namespaces,
 //! generations, realization policy, reconstruction anchors, and semantic roots
 //! are validated; canonical in-memory root, manifest, and head encoding and
-//! decoding plus storage-independent expected-state transition planning are
-//! available. Closure verification, retention publication, recovery, and
-//! garbage collection remain intentionally absent.
+//! decoding, storage-independent expected-state transition planning, and
+//! deterministic bounded closure verification against a pinned catalog are
+//! available. Retention publication, recovery, and garbage collection remain
+//! intentionally absent.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -106,9 +107,10 @@ pub use adapters::{
 pub use adapters::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
     CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
-    RetentionHeadDecodeError, RetentionManifestDecodeError, RetentionManifestEncodeError,
-    RetentionRootDecodeError, RetentionRootEncodeError, RetentionTransitionError,
-    RetentionTransitionReadiness, plan_retention_transition,
+    RetentionClosureVerificationError, RetentionHeadDecodeError, RetentionManifestDecodeError,
+    RetentionManifestEncodeError, RetentionRootDecodeError, RetentionRootEncodeError,
+    RetentionTransitionError, RetentionTransitionReadiness, VerifiedRetentionClosure,
+    plan_retention_transition, verify_retention_closure,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
@@ -132,7 +134,8 @@ pub use reference::{
 };
 pub use retention::{
     LivenessGeneration, LivenessGenerationError, RegisteredRetentionProfile, RetentionAnchor,
-    RetentionClosureLimit, RetentionClosureLimitError, RetentionClosureLimits,
+    RetentionClosureCounter, RetentionClosureDigest, RetentionClosureLimit,
+    RetentionClosureLimitError, RetentionClosureLimits, RetentionClosureUsage,
     RetentionGenerationExpectation, RetentionHead, RetentionHeadError, RetentionManifest,
     RetentionManifestDigest, RetentionManifestEntry, RetentionManifestError,
     RetentionManifestLength, RetentionManifestLengthError, RetentionNamespace,

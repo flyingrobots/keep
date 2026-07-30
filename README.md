@@ -116,10 +116,11 @@ recovery classifiers and immutable-artifact admission, and reconstructs the
 exact published generation and visible one-zero chunk when `HEAD` exists. This
 matrix proves application process-death behavior; it does not simulate host
 power loss. Version-2 retention values; canonical in-memory root, global
-manifest, and retention-head codecs; and storage-independent expected-state
-transition planning are implemented. Closure verification, publication,
-recovery, compaction, and garbage collection remain planned. Presence in the
-reference CAS does not claim retention, crash recovery, or durability.
+manifest, and retention-head codecs; storage-independent expected-state
+transition planning; and deterministic bounded closure verification against a
+pinned catalog are implemented. Publication, recovery, compaction, and garbage
+collection remain planned. Presence in the reference CAS does not claim
+retention, crash recovery, or durability.
 
 Run the complete debug-profile matrix:
 
