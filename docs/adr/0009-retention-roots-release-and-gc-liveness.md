@@ -292,6 +292,60 @@ unavailable or mismatched profile, missing evidence, corrupt member, ambiguous
 alias, or active protection invalidates the plan. A plan never carries
 authority across a changed liveness or catalog view.
 
+### GC execution and crash recovery
+
+Before the first physical retirement, the executor durably publishes one
+canonical, bounded `GcRetirementIntent`. The intent binds:
+
+- a checked GC generation and the complete plan digest;
+- every retention, root, realization-profile, catalog, reader-safety, and
+  recovery-disposition coordinate used for planning;
+- the current catalog successor that names none of the candidates;
+- the admitted segment-pool identity; and
+- the exact candidate segment digests, lengths, and verification evidence in
+  canonical segment-digest order.
+
+The executor writes, flushes, and synchronizes the intent, then synchronizes
+its parent before any unlink. An intent is immutable. A second plan cannot
+replace, merge with, or execute beside it.
+
+While retaining writer authority, execution visits candidates in the intent's
+canonical segment-digest order. It reopens each present candidate without
+following links, verifies its exact identity and digest, unlinks only that
+entry, and synchronizes the segment-pool directory after every unlink before
+advancing. Unlinks are never batched behind one final synchronization.
+
+After every candidate is verified absent and the segment pool is synchronized,
+the executor durably publishes a canonical `GcRetirementReceipt`, advances the
+GC state from the exact intent to that receipt, synchronizes the GC namespace
+and store root, and only then returns success. The receipt binds the intent
+digest, retired segment set, observed post-retirement pool state, and every
+completed synchronization.
+
+Store admission treats a retained intent as recovery-required and excludes
+catalog publication, retention transitions, and another GC execution until it
+is resolved. Restart admits only these crash states:
+
+- no durable intent and every candidate still present: no retirement
+  authority exists;
+- a durable intent with every candidate present: execution may begin;
+- a durable intent with one exact candidate prefix absent: authorized partial
+  retirement, including an unlink whose directory synchronization was
+  interrupted;
+- a durable intent with every candidate absent but no receipt: completion may
+  be published; or
+- the exact durable receipt: execution is complete.
+
+An absent out-of-order candidate, substituted candidate, changed pool,
+unadmitted intent, conflicting receipt, or changed bound coordinate is
+unrecoverable ambiguity. Recovery does not guess which deletion occurred.
+
+Idempotent recovery reacquires writer authority, re-admits the exact intent,
+revalidates every bound coordinate, accepts only the absent canonical prefix,
+continues at the first present candidate, repeats required directory
+synchronization, and publishes or returns the exact completion receipt. It
+never treats unexplained absence as successful retirement.
+
 ### Evidence and nonclaims
 
 A successful retention transition returns a consequential, `#[must_use]`

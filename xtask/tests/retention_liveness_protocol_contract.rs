@@ -93,6 +93,11 @@ fn generation_transitions_and_gc_snapshots_fail_closed() {
         "finalize-or-retire",
         "`RecoveryDispositionReceipt`",
         "GC cannot infer recovery release",
+        "`GcRetirementIntent`",
+        "canonical segment-digest order",
+        "synchronizes the segment-pool directory after every unlink",
+        "authorized partial retirement",
+        "Idempotent recovery",
         "does not promise immediate physical erasure",
     ] {
         assert!(
