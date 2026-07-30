@@ -44,6 +44,8 @@ fn retention_roots_name_verified_reconstruction_anchors() {
         "`LayoutId`",
         "reconstruction anchor",
         "canonical closure",
+        "`RetentionRealizationProfile`",
+        "multiple admissible physical representations",
         "does not participate in content identity",
         "File existence, catalog membership, and recent access",
         "Echo, Git, Graft, paths, timestamps, or caller identity",

@@ -76,6 +76,23 @@ supporting representation and verification metadata required to reconstruct
 and authenticate the blob. Shared members occur once in canonical typed-ID
 order.
 
+The anchor defines a logical closure, not one permanent physical realization.
+When a pinned catalog offers multiple admissible physical representations or
+locations for a closure member, Keep resolves them through one registered,
+versioned `RetentionRealizationProfile`. The profile defines a canonical total
+order and the exact witness count that must remain available. It is explicit
+input to closure admission, never a serializer default, filesystem order, or
+caller callback.
+
+Every candidate considered by the profile is admitted before selection. An
+unsupported profile, missing witness, conflicting catalog claim, corrupt
+candidate, or unresolved ordering tie refuses the snapshot. A valid candidate
+cannot hide corrupt or ambiguous evidence beside it. The selected physical
+realization is recorded in transition or snapshot evidence; it does not become
+part of the root, `BlobId`, `LayoutId`, or other content identity. Compaction
+may therefore change the selected realization only through a newly verified
+catalog and liveness snapshot.
+
 Closure traversal is deterministic, explicitly bounded, cycle-safe, and
 fail-closed. The caller supplies admission limits before traversal. A visited
 set prevents repeated traversal and cycles; checked counters bound roots,
