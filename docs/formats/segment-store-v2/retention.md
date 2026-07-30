@@ -162,9 +162,9 @@ retention/roots/<namespace-digest>/
 Names with alternate width, case, suffix, generation, or digest refuse. Keep
 implements root, manifest, and head codecs with a typed verified anchor-set
 digest, expected-state transition planning, deterministic closure verification,
-and a blocking publication storage capability port. Publication
-orchestration, filesystem execution, recovery, and garbage collection remain
-absent.
+a blocking publication storage capability port, and ordered storage-port
+orchestration. Production filesystem execution, recovery, and garbage
+collection remain absent.
 
 ## Global retention manifest
 
