@@ -80,9 +80,9 @@ The anchor defines a logical closure, not one permanent physical realization.
 When a pinned catalog offers multiple admissible physical representations or
 locations for a closure member, Keep resolves them through one registered,
 versioned `RetentionRealizationProfile`. The profile defines a canonical total
-order and the exact witness count that must remain available. It is explicit
-input to closure admission, never a serializer default, filesystem order, or
-caller callback.
+order and an exact nonzero witness count that must remain available for every
+logical closure member. It is explicit input to closure admission, never a
+serializer default, filesystem order, or caller callback.
 
 Every candidate considered by the profile is admitted before selection. An
 unsupported profile, missing witness, conflicting catalog claim, corrupt
