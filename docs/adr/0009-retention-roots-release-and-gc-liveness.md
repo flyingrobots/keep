@@ -103,12 +103,21 @@ may therefore change the selected realization only through a newly verified
 catalog and liveness snapshot.
 
 Closure traversal is deterministic, explicitly bounded, cycle-safe, and
-fail-closed. The caller supplies admission limits before traversal. A visited
-set prevents repeated traversal and cycles; checked counters bound roots,
-nodes, depth, encoded bytes, and physical bytes inspected. Exceeding a bound,
-observing an unknown mandatory edge, or finding a missing or corrupt closure
-member refuses the complete transition or GC plan. Keep never drops the
-unproved member and continues with a smaller live set.
+fail-closed. Each supported protocol version defines implementation-enforced
+hard ceilings for roots, nodes, depth, encoded bytes, and physical bytes
+inspected. These ceilings are reviewed constants, not ambient configuration,
+serializer defaults, or caller policy.
+
+The caller supplies typed limits no greater than those ceilings and may choose
+lower bounds. Keep validates every limit and their cross-field relationships
+before traversal or materialization begins. A request above a ceiling is a
+typed refusal that preserves the field, maximum, and observed value.
+
+A visited set prevents repeated traversal and cycles; checked counters enforce
+the admitted limits throughout the operation. Exceeding a bound, observing an
+unknown mandatory edge, or finding a missing or corrupt closure member refuses
+the complete transition or GC plan. Keep never drops the unproved member and
+continues with a smaller live set.
 
 ### Generation-checked transitions
 
