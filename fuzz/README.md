@@ -65,6 +65,11 @@ decoders. Canonical generation-1, generation-2, and two-record bundle
 artifacts keep mutations inside framing, ordering, coordinate, checksum, and
 digest validation; every admitted value must retain its exact input bytes.
 
+The `retention_format` seeds select the public retention-root,
+retention-manifest, and retention-head decoders. The canonical one-root
+generation keeps mutations inside framing, semantic, ordering, checksum, and
+digest validation; every admitted value must retain its exact input bytes.
+
 The `segment_format` seeds select the public segment-header, record-header,
 complete-record, seal, and complete-segment boundaries. Canonical empty,
 one-record, and bundled segments keep mutations inside the nested parsers;

@@ -31,6 +31,7 @@ fn checked_in_harness_set_is_exact_and_sorted() -> Result<(), Box<dyn Error>> {
             "golden_protocol",
             "layout_record",
             "repository_json",
+            "retention_format",
             "segment_format",
         ]
     );

@@ -3,7 +3,9 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use super::super::{FuzzSeedError, catalog_seeds, layout_seeds, prepare, segment_seeds};
+use super::super::{
+    FuzzSeedError, catalog_seeds, layout_seeds, prepare, retention_seeds, segment_seeds,
+};
 use crate::test_directory::TestDirectory;
 
 const TABLES: [&str; 5] = [
@@ -39,14 +41,16 @@ fn seed_preparation_materializes_the_complete_deterministic_set()
     copy_layout_fixtures(source_root, root)?;
     copy_segment_fixtures(source_root, root)?;
     copy_catalog_fixtures(source_root, root)?;
+    copy_retention_fixtures(source_root, root)?;
 
     prepare(root)?;
     let corpus = root.join("fuzz/corpus");
     let first = seed_contents(&corpus)?;
-    assert_eq!(first.len(), 40);
+    assert_eq!(first.len(), 43);
     assert_eq!(target_seed_count(&first, "catalog_format/"), 6);
     assert_eq!(target_seed_count(&first, "golden_protocol/"), 9);
     assert_eq!(target_seed_count(&first, "layout_record/"), 4);
+    assert_eq!(target_seed_count(&first, "retention_format/"), 3);
     assert_eq!(target_seed_count(&first, "segment_format/"), 8);
     prepare(root)?;
     assert_eq!(seed_contents(&corpus)?, first);
@@ -108,6 +112,28 @@ fn copy_catalog_fixtures(source_root: &Path, root: &Path) -> Result<(), FuzzSeed
         let destination = catalog_directory.join(fixture);
         fs::copy(&source_path, &destination)
             .map_err(|source| FuzzSeedError::io("copy test catalog", &destination, source))?;
+    }
+    Ok(())
+}
+
+fn copy_retention_fixtures(source_root: &Path, root: &Path) -> Result<(), FuzzSeedError> {
+    use std::fs;
+
+    let retention_directory = root.join("conformance/segment-store/v2");
+    fs::create_dir_all(&retention_directory).map_err(|source| {
+        FuzzSeedError::io(
+            "create test retention conformance root",
+            &retention_directory,
+            source,
+        )
+    })?;
+    for (_selector, fixture) in retention_seeds::FIXTURES {
+        let source_path = source_root
+            .join("conformance/segment-store/v2")
+            .join(fixture);
+        let destination = retention_directory.join(fixture);
+        fs::copy(&source_path, &destination)
+            .map_err(|source| FuzzSeedError::io("copy test retention", &destination, source))?;
     }
     Ok(())
 }

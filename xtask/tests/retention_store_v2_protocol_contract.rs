@@ -6,6 +6,8 @@
 mod closure_contract_laws;
 #[path = "retention_store_v2_protocol_contract/migration_contract_laws.rs"]
 mod migration_contract_laws;
+#[path = "retention_store_v2_protocol_contract/parser_fuzz_laws.rs"]
+mod parser_fuzz_laws;
 
 use std::fs;
 use std::io;

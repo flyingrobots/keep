@@ -125,6 +125,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "retention_format"
+path = "fuzz_targets/retention_format.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "segment_format"
 path = "fuzz_targets/segment_format.rs"
 test = false
