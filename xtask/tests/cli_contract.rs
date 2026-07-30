@@ -90,7 +90,7 @@ fn missing_command_returns_the_versioned_usage_contract() -> Result<(), io::Erro
           <benchmark-baseline|cdc-profile-conformance-check|\
           chunk-id-conformance-check|conformance-check|\
           documentation-integrity-check|documentation-refusal-check|\
-          golden-file-worldline-check|\
+          durability-crash-matrix|golden-file-worldline-check|\
           prepare-fuzz-corpus|fuzz|\
           source-structure-check|verify>\n"
     );

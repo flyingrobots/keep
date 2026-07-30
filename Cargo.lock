@@ -328,6 +328,7 @@ dependencies = [
  "cap-fs-ext",
  "cap-std",
  "divan",
+ "rustix",
 ]
 
 [[package]]
@@ -736,6 +737,7 @@ dependencies = [
  "blake3",
  "cap-fs-ext",
  "cap-std",
+ "keep",
  "md-5",
  "repository-process-spawn",
  "rustix",

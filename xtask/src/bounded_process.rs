@@ -20,6 +20,7 @@ pub(crate) use capture_limit::CaptureLimits;
 use deadline::ProcessDeadline;
 pub(crate) use error::ProcessError;
 use interrupt::InterruptGuard;
+pub(crate) use process_group::ProcessGroup;
 use reader::ReaderWorker;
 
 /// The completed child status and any output retained by the selected mode.
@@ -64,6 +65,14 @@ pub(crate) fn status(
         stdout: Vec::new(),
         stderr: Vec::new(),
     })
+}
+
+/// Spawns a child in a dedicated process group.
+pub(crate) fn spawn_in_process_group(
+    command: &mut Command,
+) -> Result<std::process::Child, std::io::Error> {
+    command.process_group(0);
+    command.spawn()
 }
 
 #[cfg(test)]

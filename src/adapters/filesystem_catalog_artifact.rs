@@ -10,6 +10,7 @@ use super::segment_header::MAXIMUM_SEGMENT_LENGTH;
 use super::{
     AdmittedSegment, CatalogRestartArtifact, CatalogRestartError, CatalogRestartPhase,
     ChecksummedCatalog, FilesystemCatalogPublicationError, SegmentReadPolicy, catalog_restart_io,
+    sync_capable_directory,
 };
 use crate::CatalogLength;
 
@@ -24,7 +25,9 @@ pub(super) fn create_exclusive(directory: &Dir, name: &str) -> io::Result<File> 
 }
 
 pub(super) fn synchronize_directory(directory: &Dir) -> io::Result<()> {
-    directory.try_clone()?.into_std_file().sync_all()
+    sync_capable_directory::open(directory, ".")?
+        .into_std_file()
+        .sync_all()
 }
 
 pub(super) fn link_without_replacement(
@@ -148,5 +151,26 @@ fn require_exact_bytes(
         Err(invalid_data(
             FilesystemCatalogPublicationError::ByteConflict { artifact },
         ))
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use std::error::Error;
+
+    use cap_std::{ambient_authority, fs::Dir};
+
+    use super::super::filesystem_test_sandbox::TestDirectory;
+
+    #[test]
+    fn directory_synchronization_reopens_an_opath_capability() -> Result<(), Box<dyn Error>> {
+        let sandbox = TestDirectory::create("catalog-artifact-opath-sync")?;
+        let directory = Dir::open_ambient_dir(sandbox.path(), ambient_authority())?;
+
+        super::synchronize_directory(&directory)?;
+
+        drop(directory);
+        sandbox.remove()?;
+        Ok(())
     }
 }

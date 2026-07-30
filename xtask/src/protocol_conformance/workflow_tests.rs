@@ -9,6 +9,9 @@ const CHUNK_GUIDE: &str = include_str!("../../../conformance/chunk-id/v1/README.
 const CI_WORKFLOW: &str = include_str!("../../../.github/workflows/ci.yml");
 const COMMAND: &str = "cargo xtask conformance-check";
 const CI_RUN_STEP: &str = "run: cargo xtask conformance-check";
+const CRASH_MATRIX_DEBUG_STEP: &str = "run: cargo xtask durability-crash-matrix";
+const CRASH_MATRIX_RELEASE_STEP: &str =
+    "run: cargo run --quiet --release --locked --package xtask -- durability-crash-matrix";
 
 #[test]
 fn ci_and_living_guides_route_both_corpora_through_rust() {
@@ -34,6 +37,25 @@ fn a_commented_command_is_not_ci_execution() {
     assert!(!ci_executes_conformance(
         "# cargo xtask conformance-check\n"
     ));
+}
+
+#[test]
+fn ci_executes_the_complete_crash_matrix_in_debug_and_optimized_profiles() {
+    assert_eq!(
+        exact_run_step_count(CI_WORKFLOW, CRASH_MATRIX_DEBUG_STEP),
+        1
+    );
+    assert_eq!(
+        exact_run_step_count(CI_WORKFLOW, CRASH_MATRIX_RELEASE_STEP),
+        1
+    );
+}
+
+fn exact_run_step_count(workflow: &str, command: &str) -> usize {
+    workflow
+        .lines()
+        .filter(|line| line.trim() == command)
+        .count()
 }
 
 #[test]

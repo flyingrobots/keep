@@ -23,7 +23,23 @@ pub(super) fn write(
     publisher: &mut FilesystemCatalogPublisher,
     catalog: &CanonicalCatalog,
 ) -> io::Result<()> {
-    stage_mut(publisher)?.write_all(catalog.encoded())
+    write_bytes(publisher, catalog.encoded())
+}
+
+#[cfg(feature = "repository-tasks")]
+pub(super) fn write_prefix(
+    publisher: &mut FilesystemCatalogPublisher,
+    catalog: &CanonicalCatalog,
+    prefix: usize,
+) -> io::Result<()> {
+    let bytes = catalog.encoded().get(..prefix).ok_or_else(|| {
+        io::Error::new(io::ErrorKind::InvalidInput, "catalog prefix exceeds bytes")
+    })?;
+    write_bytes(publisher, bytes)
+}
+
+fn write_bytes(publisher: &mut FilesystemCatalogPublisher, bytes: &[u8]) -> io::Result<()> {
+    stage_mut(publisher)?.write_all(bytes)
 }
 
 pub(super) fn flush(publisher: &mut FilesystemCatalogPublisher) -> io::Result<()> {

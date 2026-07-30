@@ -2,11 +2,12 @@
 
 use std::collections::HashSet;
 
+use super::recovery_segment_resume_state::RecoverySegmentResumeState;
 use super::segment_digest_builder::SegmentDigestBuilder;
 use super::{
-    AdmittedSegmentRecord, SealedSegment, SegmentDurabilityPhase, SegmentHeader,
-    SegmentRecordIdentity, SegmentRecordLimit, SegmentSeal, SegmentStage, SegmentWriteError,
-    SegmentWritePhase, segment_seal_builder, segment_stage_write,
+    AdmittedSegmentRecord, RecoverySegmentResumeRequest, SealedSegment, SegmentDurabilityPhase,
+    SegmentHeader, SegmentReadError, SegmentRecordIdentity, SegmentRecordLimit, SegmentSeal,
+    SegmentStage, SegmentWriteError, SegmentWritePhase, segment_seal_builder, segment_stage_write,
 };
 
 /// An exclusively owned append-only segment stage.
@@ -60,6 +61,22 @@ where
             record_limit,
             record_count: 0,
             bytes_written,
+        })
+    }
+
+    pub(super) fn resume_admitted(
+        stage: S,
+        encoded: &[u8],
+        request: RecoverySegmentResumeRequest,
+    ) -> Result<Self, SegmentReadError> {
+        let recovered = RecoverySegmentResumeState::rebuild(encoded, request)?;
+        Ok(Self {
+            stage,
+            digest: recovered.digest,
+            identities: recovered.identities,
+            record_limit: recovered.record_limit,
+            record_count: recovered.record_count,
+            bytes_written: recovered.bytes_written,
         })
     }
 

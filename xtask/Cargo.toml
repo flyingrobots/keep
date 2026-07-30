@@ -14,6 +14,8 @@ repository-tasks = [
     "dep:blake3",
     "dep:cap-fs-ext",
     "dep:cap-std",
+    "dep:keep",
+    "keep/repository-tasks",
     "dep:md-5",
     "dep:repository-process-spawn",
     "dep:rustix",
@@ -28,6 +30,7 @@ blake3 = { version = "=1.8.5", default-features = false, features = ["pure", "st
 # Capability-relative, no-follow opens close source-scan replacement races.
 cap-fs-ext = { version = "=4.0.2", default-features = false, features = ["std"], optional = true }
 cap-std = { version = "=4.0.2", default-features = false, optional = true }
+keep = { path = "..", optional = true }
 # Pure Rust MD5 regenerates the public Gear-table recipe; it is not an identity primitive.
 md-5 = { version = "=0.11.0", default-features = false, optional = true }
 # Dedicated unsafe boundary sets exact child working directories by descriptor.

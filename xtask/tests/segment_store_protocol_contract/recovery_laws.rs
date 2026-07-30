@@ -40,9 +40,9 @@ fn durable_stage_recovery_can_complete_only_immutable_pool_publication() {
         "## Complete a durable stage",
         "reverifies and resynchronizes the complete staged\n\
          artifact",
-        "reuses `KEEP-CRASH-009`–`012`",
+        "reuses `KEEP-CRASH-008`–`012`",
         "catalog completion reuses\n\
-         `KEEP-CRASH-017`–`020`",
+         `KEEP-CRASH-016`–`020`",
         "returns a\n\
          valid-orphan receipt",
         "never creates or finalizes a publication head",
@@ -50,6 +50,28 @@ fn durable_stage_recovery_can_complete_only_immutable_pool_publication() {
         assert!(
             SPECIFICATION.contains(required),
             "missing durable-stage completion law: {required}"
+        );
+    }
+}
+
+#[test]
+fn next_head_finalization_requires_one_exact_transition_and_durable_receipt() {
+    for required in [
+        "## Leftover next head",
+        "complete transitive catalog view",
+        "`plan_recovery_next_head_finalization` refuses a mismatched\n\
+         snapshot",
+        "generation one over an uninitialized root",
+        "expected exact successor",
+        "`execute_recovery_next_head_finalization` revalidates durable current state",
+        "synchronized and reverified before it atomically replaces `HEAD`",
+        "requires `head.next` to be absent and skips replacement",
+        "`FilesystemRecoveryNextHeadFinalizer` binds this port",
+        "`RecoveryNextHeadFinalizationReceipt`",
+    ] {
+        assert!(
+            SPECIFICATION.contains(required),
+            "missing next-head finalization law: {required}"
         );
     }
 }

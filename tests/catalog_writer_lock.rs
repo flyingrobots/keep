@@ -34,6 +34,29 @@ fn one_persistent_lock_excludes_every_second_writer() -> Result<(), Box<dyn Erro
 }
 
 #[test]
+fn replacing_the_lock_entry_cannot_split_live_writer_authority() -> Result<(), Box<dyn Error>> {
+    let sandbox = initialized_lock("writer-lock-replacement")?;
+    let first = FilesystemWriterLock::try_acquire(sandbox.path())?;
+    fs::rename(
+        sandbox.path().join(LOCK_NAME),
+        sandbox.path().join("displaced.lock"),
+    )?;
+    fs::write(sandbox.path().join(LOCK_NAME), RETAINED_EVIDENCE)?;
+
+    let error = require_error(
+        FilesystemWriterLock::try_acquire(sandbox.path()),
+        "replacement lock entry split live writer authority",
+    )?;
+    assert!(matches!(error, WriterLockAcquireError::Busy));
+
+    drop(first);
+    let successor = FilesystemWriterLock::try_acquire(sandbox.path())?;
+    drop(successor);
+    sandbox.remove()?;
+    Ok(())
+}
+
+#[test]
 fn missing_lock_evidence_is_never_created_by_acquisition() -> Result<(), Box<dyn Error>> {
     let sandbox = TestDirectory::create("writer-lock-missing")?;
     let error = require_error(

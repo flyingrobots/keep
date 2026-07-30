@@ -37,8 +37,15 @@ verification. A platform-admitted `FilesystemCatalogPublisher` exclusively
 creates the fixed `current.seg` stage without truncating existing evidence,
 and the `FilesystemSegmentStage` lifetime keeps that writer authority borrowed
 until the writable stage closes. Publisher construction consumes an
-unforgeable `FilesystemPlatformAdmission`; no public producer exists until
-issue #17 implements crash-tested initialization and platform admission.
+unforgeable `FilesystemPlatformAdmission`. On Linux, its public initializer
+admits only one writable, non-casefolded ext4 store profile, requires every
+existing protocol directory to share the root's filesystem and mount identity,
+refuses unknown, aliased, or foreign namespace entries before mutation, creates
+or verifies the canonical `writer.lock`, `staging`, `segments`, and `catalogs`
+shape, and returns only after root synchronization with the writer lock
+retained. After publication, `FilesystemPlatformAdmission::reopen` reacquires
+the existing writer lock without mutation and requires that exact initialized
+shape plus a regular `HEAD` before returning new publisher authority.
 
 `FilesystemCatalogPublisher` retains one kernel-managed writer lock and pinned
 root, staging, segment-pool, and catalog-pool capabilities for the complete
@@ -56,16 +63,69 @@ logical reads.
 
 The reference CAS is executable evidence for M2 storage laws, not a durable
 backend. Its committed state is process memory; process death loses it all.
-The durable boundary does not yet initialize, platform-admit, or recover a
-store root. Acquiring `FilesystemWriterLock` alone cannot construct a
-filesystem publisher. Issue #17 must admit the exact existing `writer.lock`,
-`staging`, `segments`, and `catalogs` namespace before it can return
-`FilesystemPlatformAdmission`. Leftover `head.next`, staged recovery evidence,
-unknown namespace entries, and ambiguous crash states remain explicit recovery
-work. An absent `HEAD` is admitted for first publication only when both
-immutable pools are empty. Retention, complete namespace verification,
-compaction, and garbage collection remain planned. Presence in the reference
-CAS does not claim retention, crash recovery, or durability.
+The durable boundary can initialize or reopen and platform-admit a store only
+under the documented Linux ext4 contract. Acquiring `FilesystemWriterLock`
+alone cannot construct a filesystem publisher. Ambiguous crash states remain
+explicit recovery work. An absent `HEAD` is admitted for first publication
+only when both immutable pools are empty. The public storage-independent
+recovery inventory counts all four protocol namespaces before retaining names,
+applies a configurable ceiling no greater than 2,097,152 entries, and returns
+duplicate-free deterministic raw name order.
+`FilesystemRecoveryInventoryReader` implements that contract with pinned,
+no-follow namespace capabilities and pre/post identity verification on the
+admitted Linux ext4 profile. Its bounded stage-fingerprint operation opens
+fixed stages relative to those capabilities, refuses links and nonregular
+files, and verifies entry identity and length after reading. Complete
+caller-supplied segment-stage bytes can be classified as a reusable prefix,
+complete admitted segment, or exact truncation only while every available
+fixed-framing byte remains canonical. Catalog and next-head stages apply the
+same prefix rule before distinguishing truncation from complete canonical
+bytes.
+Materialized bytes enter read-only semantic assessment only after their stage,
+length, and recomputed fingerprint match prior observation evidence.
+An exact reusable segment assessment can authorize storage-independent
+continuation: the executor consumes writer authority, re-admits the complete
+bounded prefix, rebuilds digest and duplicate-identity state, and returns the
+ordinary append-only stage without rewriting admitted bytes.
+`FilesystemRecoverySegmentResumer` implements that contract with pinned
+namespaces and writer authority, no-follow read-write reopening, exact bounded
+materialization, final streamed fingerprint plus entry and namespace
+revalidation, and an append position equal to the admitted prefix length.
+
+Exact truncation assessments can authorize durable, evidence-bound discard.
+Complete segment and catalog assessments can authorize verified immutable-pool
+completion through `FilesystemRecoveryStageCompleter`; its receipt proves a
+valid orphan, not reachability. A complete `head.next` and its transitive
+`CatalogSnapshot` can authorize storage-independent finalization only when the
+candidate is generation one over an uninitialized root or the exact successor
+of the expected current snapshot. The executor distinguishes first
+finalization from an already-finalized retry and returns only after root
+synchronization. `FilesystemRecoveryNextHeadFinalizer` retains pinned writer
+authority, reconstructs the complete current and candidate views without
+following links, verifies namespace and stage identity, synchronizes and
+reverifies the exact candidate, atomically replaces `HEAD`, and synchronizes
+the root. An already-finalized retry requires `head.next` to be absent.
+The repository-owned process-death matrix executes all 105
+`KEEP-CRASH-001`–`KEEP-CRASH-035` before/during/after coordinates in isolated
+process groups. Crash children execute the production initialization,
+segment-writing, catalog-publication, and recovery-discard protocols through
+fault-injecting port decorators; they do not synthesize the target namespace.
+Restart verification compares the exact Golden File Worldline namespace and
+bytes, checks hard-link identity and writer-lock release, runs the production
+recovery classifiers and immutable-artifact admission, and reconstructs the
+exact published generation and visible one-zero chunk when `HEAD` exists. This
+matrix proves application process-death behavior; it does not simulate host
+power loss. Retention, compaction, and garbage collection remain planned.
+Presence in the reference CAS does not claim retention, crash recovery, or
+durability.
+
+Run the complete debug-profile matrix:
+
+```bash
+cargo xtask durability-crash-matrix
+```
+
+CI also runs the command through an optimized `xtask` build.
 
 ```rust
 use keep::BlobId;

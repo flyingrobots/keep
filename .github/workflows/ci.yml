@@ -33,6 +33,12 @@ jobs:
       - name: Check Golden File Worldline corpus
         run: cargo xtask golden-file-worldline-check
 
+      - name: Run process-death crash matrix (debug)
+        run: cargo xtask durability-crash-matrix
+
+      - name: Run process-death crash matrix (optimized)
+        run: cargo run --quiet --release --locked --package xtask -- durability-crash-matrix
+
       - name: Check protocol conformance corpora
         run: cargo xtask conformance-check
 

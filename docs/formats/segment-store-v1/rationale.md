@@ -135,13 +135,17 @@ only after the root-directory sync following head replacement.
 
 ## Persistent advisory lock
 
-The writer lock file persists and its contents carry no authority. Successful
-exclusive kernel lock acquisition is the only ownership evidence. Process
-death releases the lock without requiring presence-based stale-file cleanup.
+The writer lock file persists and its contents carry no authority. Writer
+ownership requires successful exclusive kernel locks on both the pinned store
+root inode and the exact `writer.lock` inode. The root lock prevents a second
+cooperative Keep process from acquiring a replacement lock-file inode while
+the first writer remains live. Process death releases both locks without
+requiring presence-based stale-file cleanup.
 
-This deliberately excludes multi-host and filesystems whose advisory locks do
-not provide the required exclusion. Weakening the lock would violate
-one-writer publication rather than improve availability.
+This deliberately excludes uncooperative processes, multi-host operation, and
+filesystems whose advisory locks do not provide the required exclusion.
+Weakening either lock would violate one-writer publication rather than improve
+availability.
 
 ## Platform admission before publication
 
@@ -152,11 +156,19 @@ therefore consumes an opaque `FilesystemPlatformAdmission` that owns the
 acquired lock. The proof is bound to that exact root authority and cannot be
 constructed from metadata or caller assertion.
 
-Issue #16 exposes no public proof producer. Its crate-internal transition tests
-use an explicitly test-only unchecked value, while issue #17 owns the
-crash-tested initializer and platform checks that may return production
-admission. This staging prevents an incomplete probe from turning successful
-syscalls into a durability claim.
+The production proof producer admits one deliberately narrow profile: Linux,
+writable ext4, a store-root inode without ext4 casefolding, no symbolic link in
+the selected path, and successful file and directory synchronization calls.
+Initialization then refuses any noncanonical root entry before mutation,
+acquires and retains `writer.lock`, completes the three canonical directories
+in protocol order, and synchronizes the root before returning the proof.
+
+The profile treats local single-host mounting as an environmental precondition,
+not as a fact derivable from `statfs`. A shared or multiply mounted ext4 volume
+is outside the admitted operating contract even if its filesystem magic
+matches. Keep can prove the selected kernel and filesystem mechanisms; it
+cannot prove that an administrator has not exposed the block device to another
+host or that acknowledged synchronization survives dishonest hardware.
 
 Rejected alternatives were treating `FilesystemWriterLock` as sufficient,
 accepting a caller-selected boolean or platform enum, and approving any

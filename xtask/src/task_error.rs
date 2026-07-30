@@ -6,6 +6,7 @@ use std::fmt;
 use crate::benchmark_baseline::BenchmarkBaselineError;
 use crate::diagnostic::escaped_controls;
 use crate::documentation_integrity::DocumentationError;
+use crate::durability_crash_matrix::DurabilityCrashMatrixError;
 use crate::fuzz_campaign::FuzzCampaignError;
 use crate::fuzz_seed_corpus::FuzzSeedError;
 use crate::golden_file_worldline::GoldenError;
@@ -16,6 +17,7 @@ pub(super) enum TaskError {
     BenchmarkBaseline(BenchmarkBaselineError),
     Conformance(ConformanceError),
     Documentation(DocumentationError),
+    DurabilityCrashMatrix(DurabilityCrashMatrixError),
     FuzzCampaign(FuzzCampaignError),
     FuzzSeed(FuzzSeedError),
     Golden(GoldenError),
@@ -40,6 +42,7 @@ impl fmt::Display for TaskError {
             Self::BenchmarkBaseline(error) => write!(formatter, "{error}"),
             Self::Conformance(error) => write!(formatter, "{error}"),
             Self::Documentation(error) => write!(formatter, "{error}"),
+            Self::DurabilityCrashMatrix(error) => write!(formatter, "{error}"),
             Self::FuzzCampaign(error) => write!(formatter, "{error}"),
             Self::FuzzSeed(error) => write!(formatter, "{error}"),
             Self::Golden(error) => write!(formatter, "{error}"),
@@ -66,6 +69,7 @@ impl fmt::Display for TaskError {
                  <benchmark-baseline|cdc-profile-conformance-check|\
                  chunk-id-conformance-check|conformance-check|\
                  documentation-integrity-check|documentation-refusal-check|\
+                 durability-crash-matrix|\
                  golden-file-worldline-check|\
                  prepare-fuzz-corpus|fuzz|\
                  source-structure-check|verify>",
@@ -80,6 +84,7 @@ impl Error for TaskError {
             Self::BenchmarkBaseline(error) => Some(error),
             Self::Conformance(error) => Some(error),
             Self::Documentation(error) => Some(error),
+            Self::DurabilityCrashMatrix(error) => Some(error),
             Self::FuzzCampaign(error) => Some(error),
             Self::FuzzSeed(error) => Some(error),
             Self::Golden(error) => Some(error),
@@ -109,6 +114,12 @@ impl From<ConformanceError> for TaskError {
 impl From<DocumentationError> for TaskError {
     fn from(error: DocumentationError) -> Self {
         Self::Documentation(error)
+    }
+}
+
+impl From<DurabilityCrashMatrixError> for TaskError {
+    fn from(error: DurabilityCrashMatrixError) -> Self {
+        Self::DurabilityCrashMatrix(error)
     }
 }
 

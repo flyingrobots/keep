@@ -10,13 +10,112 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Repository crash-matrix execution now terminates isolated writer process
+  groups at all 105 canonical before/during/after coordinates, retains open
+  writer and stage authority until termination, executes production
+  initialization, segment-writing, catalog-publication, and recovery-discard
+  protocols through fault-injecting port decorators, and verifies exact Golden
+  File Worldline namespaces, bytes, hard links, released locks, recovery
+  classifications, immutable artifacts, and published visible state after
+  restart. CI runs the complete matrix in debug and optimized profiles.
+- Production filesystem initialization now admits only one documented
+  writable, non-casefolded Linux ext4 profile, independently applies it to
+  every existing protocol directory, requires each child to share the root's
+  device and mount identity, refuses ambiguous or foreign root namespaces
+  before mutation, completes the canonical directory shape idempotently,
+  retains writer authority, and returns only after synchronizing the root.
+- Published filesystem stores can now reacquire writer authority without
+  mutation through a typed platform-admission boundary that requires the exact
+  initialized root shape plus a regular `HEAD`.
+- Writer-lock acquisition now reopens `writer.lock` after kernel locking and
+  refuses when the resolved entry no longer has the locked device and inode.
+- Writer authority now also retains an advisory lock on the pinned store-root
+  inode, so replacing `writer.lock` cannot split live cooperative authority.
+- Recovery inventory now counts the root and three protocol directories before
+  retaining names, enforces the configurable protocol-bounded entry ceiling,
+  stops namespace counting at the first globally excessive entry, refuses
+  count drift and duplicates exactly, and returns deterministic
+  namespace-and-raw-byte ordering through a read-only storage port.
+- Filesystem recovery inventory now pins the root and all three protocol
+  directories without following links, verifies child-directory identity
+  before and after bounded scanning, and preserves raw Linux entry-name bytes
+  without mutating protocol state.
+- Fixed recovery stages can now be fingerprinted relative to the pinned
+  recovery inventory capability. Observation admits only regular files, never
+  follows links, streams under the name-selected bound, and refuses entry
+  replacement or length drift without mutating protocol state.
+- Complete caller-supplied segment-stage bytes now classify as a validated
+  reusable prefix, a complete admitted immutable segment, or an exact
+  truncation only while every available fixed-framing byte remains canonical.
+  Proven partial-framing corruption, complete-looking corruption, duplicate
+  identities, and caller-policy excess remain typed refusals.
+- Storage-independent reusable-segment recovery now plans only from an exact
+  reusable assessment within the selected resource policy, consumes reopening
+  authority, re-admits the materialized prefix against saved evidence, rebuilds
+  digest and duplicate-identity state, and returns the ordinary append-only
+  stage without rewriting admitted bytes.
+- Filesystem reusable-segment recovery now retains pinned root, namespace, and
+  writer-lock authority in the returned stage; reopens `current.seg` read-write
+  without following links or truncation; bounds, materializes, and re-admits
+  its exact prefix; recomputes exact stage evidence immediately before handoff;
+  revalidates the final entry and append position; and refuses missing,
+  changed, linked, replaced, or namespace-drifted evidence before writing.
+- Complete caller-supplied catalog and candidate-head stages now distinguish
+  exact fixed-header, declared-body, or fixed-width truncation from canonical
+  bytes only while every available fixed-framing byte remains canonical.
+  Proven partial-framing corruption, complete-looking corruption, and
+  oversized stages remain typed refusals without claiming transitive catalog
+  reachability.
+- Read-only recovery assessment now admits materialized stage bytes only when
+  their canonical-name stage, exact length, and recomputed versioned
+  fingerprint equal prior observation evidence, then dispatches through the
+  stage-selected semantic classifier.
+- Explicit truncated-stage recovery now plans only from an exact semantic
+  truncation, retains its evidence and reason, refuses changed evidence before
+  mutation, and returns a discard receipt only after the name-selected parent
+  directory is synchronized. An already absent stage remains an idempotent
+  input and still requires synchronization.
+- Filesystem truncated-stage discard now admits the platform, retains the root
+  and `writer.lock` locks, pins every protocol namespace, reopens stage bytes
+  without following links, refuses replacement or fingerprint drift before
+  unlink, and synchronizes the typed `staging` or root parent before returning
+  a receipt.
+- Explicit complete-stage recovery now plans only from exact complete segment
+  or catalog assessments, owns bounded stage evidence and immutable-pool
+  coordinates, re-synchronizes an exact present stage before linking, verifies
+  existing pool entries, synchronizes the selected pool before exact stage
+  removal, and returns a valid-orphan receipt only after staging
+  synchronization. It never creates or finalizes a publication head.
+- Filesystem complete-stage recovery now retains pinned root and writer
+  authority, revalidates exact stage evidence at synchronization and link
+  boundaries, uses no-clobber immutable-pool links, never follows stage or pool
+  links, preserves conflicting or replaced entries, verifies exact pool bytes,
+  and accepts stage/pool, reappeared-stage, and completed pool-only retries.
+- Storage-independent next-head recovery now binds a complete `head.next`
+  assessment to its exact transitive catalog snapshot, admits only generation
+  one over an uninitialized root or the exact successor of an expected current
+  snapshot, synchronizes a ready candidate before replacement, distinguishes
+  ready from already-finalized retries, and returns a receipt only after root
+  synchronization.
+- Filesystem next-head recovery now retains pinned root and writer authority,
+  reconstructs complete current and candidate views under exact namespace and
+  stage evidence, synchronizes and reverifies the candidate before atomic
+  replacement, refuses reappeared candidates on retry, and returns only after
+  root synchronization.
+- Store initialization now exposes one storage-port state machine that admits
+  the platform before mutation, opens and locks `writer.lock`, admits the three
+  protocol directories in order, synchronizes the root, and preserves the
+  exact failed phase without executing later transitions.
+- Repository crash-matrix tooling now exposes one typed, ordered vocabulary for
+  `KEEP-CRASH-001` through `KEEP-CRASH-035`. Each identifier is bound to its
+  segment, catalog, head, recovery-discard, or initialization sequence, and
+  only record append admits an occurrence counter.
 - Catalog decoding now verifies the catalog checksum and physical digest before
   interpreting entry semantics. Corrupt identity-bearing bytes therefore fail
   at the integrity boundary instead of producing a semantic entry error.
-- Filesystem catalog publisher construction now consumes an unforgeable
-  `FilesystemPlatformAdmission`. No public producer exists until crash-tested
-  initialization can establish the platform contract in issue #17; acquiring
-  `FilesystemWriterLock` alone no longer authorizes production construction.
+- Filesystem catalog publisher construction consumes an unforgeable
+  `FilesystemPlatformAdmission`; acquiring `FilesystemWriterLock` alone does
+  not authorize production construction.
 - Filesystem segment selection now consumes sealed stages through the publisher
   that created them. Process-local publisher authority prevents an unrelated
   metadata-equivalent `ClosedSegment` from authorizing retained

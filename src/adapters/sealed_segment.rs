@@ -53,6 +53,22 @@ where
         self.digest
     }
 
+    /// Replaces a repository-only storage decorator while preserving sealed
+    /// metadata.
+    ///
+    /// This supports transparent storage-port decorators. The mapping does not
+    /// change, revalidate, or publish the sealed bytes; authority-bound
+    /// adapters still validate the returned stage before publication.
+    #[cfg(feature = "repository-tasks")]
+    #[doc(hidden)]
+    pub fn map_stage<T>(self, map: impl FnOnce(S) -> T) -> SealedSegment<T>
+    where
+        T: SegmentStage,
+    {
+        let (stage, record_count, segment_length, digest) = self.into_parts();
+        SealedSegment::admitted(map(stage), record_count, segment_length, digest)
+    }
+
     pub(super) fn into_parts(self) -> (S, u32, u64, SegmentDigest) {
         let Self {
             _stage: stage,

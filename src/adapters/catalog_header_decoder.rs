@@ -30,6 +30,16 @@ pub(super) fn decode(encoded: &[u8]) -> Result<DecodedCatalogHeader, CatalogDeco
             observed: encoded.len(),
         });
     }
+    decode_header(encoded)
+}
+
+pub(super) fn decode_header(encoded: &[u8]) -> Result<DecodedCatalogHeader, CatalogDecodeError> {
+    if encoded.len() < HEADER_LENGTH_BYTES {
+        return Err(CatalogDecodeError::MinimumLength {
+            minimum: HEADER_LENGTH_BYTES,
+            observed: encoded.len(),
+        });
+    }
     Ok(DecodedCatalogHeader {
         magic: read_array(encoded, 0)?,
         version: u16::from_be_bytes(read_array(encoded, 16)?),

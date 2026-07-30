@@ -3,7 +3,7 @@
 use super::{
     AdmittedCatalog, AdmittedSegmentRecord, ChecksummedPublicationHead, SegmentRecordIdentity,
 };
-use crate::{CatalogDigest, CatalogGeneration};
+use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
 /// One complete immutable catalog generation pinned by a checksummed head.
 ///
@@ -25,6 +25,16 @@ impl<'head, 'catalog, 'records> CatalogSnapshot<'head, 'catalog, 'records> {
     /// Returns the verified physical digest pinned by the head.
     pub const fn catalog_digest(&self) -> CatalogDigest {
         self.head.catalog_digest()
+    }
+
+    /// Returns the verified catalog byte length pinned by the head.
+    pub const fn catalog_length(&self) -> CatalogLength {
+        self.catalog.length()
+    }
+
+    /// Returns the verified predecessor coordinate from the admitted catalog.
+    pub const fn previous_catalog_digest(&self) -> Option<CatalogDigest> {
+        self.catalog.previous_catalog_digest()
     }
 
     /// Returns the exact number of logical record bindings.
