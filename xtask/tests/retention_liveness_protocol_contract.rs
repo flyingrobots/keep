@@ -87,6 +87,9 @@ fn generation_transitions_and_gc_snapshots_fail_closed() {
         "whole immutable segment",
         "any contained record is live",
         "durably published compaction successor",
+        "current catalog names no candidate retirement segment",
+        "catalog successor is durable before any old segment unlink",
+        "`HEAD` never names a catalog with a missing segment",
         "does not promise immediate physical erasure",
     ] {
         assert!(

@@ -240,6 +240,19 @@ the resulting view. Only after that durably published compaction successor and
 the required reader and recovery fences may the complete old segment enter a
 retirement plan.
 
+No segment is an executable retirement candidate until the current catalog
+names no candidate retirement segment. If the current catalog still contains
+any record in a planned segment, GC first constructs a canonical successor
+that either omits unreachable records or names verified replacements for live
+records. It publishes that successor through the complete catalog protocol.
+The catalog successor is durable before any old segment unlink.
+
+Execution then reopens the exact current snapshot and proves every retirement
+segment absent from it. A catalog-generation check alone is insufficient.
+`HEAD` never names a catalog with a missing segment; process death before
+successor publication leaves every old segment reachable, and process death
+after publication leaves the old segments as intact retired candidates.
+
 Planning is observational and carries no mutation authority. Execution must
 acquire the same exclusive writer authority used by catalog publication and
 recovery, then retain it from revalidation through physical mutation,
