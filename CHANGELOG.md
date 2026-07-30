@@ -303,6 +303,11 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Specified `keep.segment-store/v2` retention values, root generations,
+  liveness manifests, reader snapshots, one-way staged migration, exact crash
+  boundaries, and reserved GC/disposition records. Version-1 immutable bytes
+  remain authoritative; production version-2 writing remains unavailable until
+  issue #19's executable evidence is complete.
 - Accepted ADR-0009 defines caller-supplied retention namespaces,
   `BlobId`/`LayoutId` reconstruction anchors, fail-closed canonical closure,
   generation-checked retention publication, immutable liveness snapshots,

@@ -8,7 +8,8 @@ admitted merely because one Rust type can serialize and deserialize it.
 | Format | Coordinate | Status | Evidence |
 | --- | --- | --- | --- |
 | [Flat Chunk Layout v1](flat-chunk-layout-v1/README.md) | `keep.flat-chunks/v1` | Implemented through verified reconstruction in issues #10 and #13 | [Golden corpus](../../conformance/layout/v1/README.md) |
-| [Durable Segment Store v1](segment-store-v1/README.md) | `keep.segment-store/v1` | Specified in issue #14; segment I/O implemented in issue #15; publication and recovery remain in issues #16–#17 | [Golden corpus](../../conformance/segment-store/v1/README.md) |
+| [Durable Segment Store v1](segment-store-v1/README.md) | `keep.segment-store/v1` | Implemented through initialization, publication, restart, and recovery in issues #14–#17 | [Golden corpus](../../conformance/segment-store/v1/README.md) |
+| [Durable Segment Store v2](segment-store-v2/README.md) | `keep.segment-store/v2` | Retention transition implementation and executable evidence planned in issue #19 | Golden corpus planned in issue #19 |
 
 The registry records protocol specifications, including formats whose
 implementation is still planned. Each format page states its exact proof
