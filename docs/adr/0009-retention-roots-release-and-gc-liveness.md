@@ -203,13 +203,13 @@ made durable before a head can name them. Publication returns an explicit
 fallible receipt and never relies on `Drop`.
 
 One immutable global retention manifest names the complete sorted map from
-every admitted `RetentionNamespace` to its exact `RootGeneration`. Each
-manifest carries a `LivenessGeneration`. The first manifest generation is one,
-and every successor is exactly one greater under checked arithmetic. A
-namespace transition publishes a new namespace generation and a new global
-manifest, then atomically replaces the retention head under writer authority.
-This top-level generation prevents a GC scan from missing a namespace created
-concurrently with enumeration.
+every admitted `RetentionNamespace` to its exact root generation and canonical
+digest. Each manifest carries a `LivenessGeneration`. The first manifest
+generation is one, and every successor is exactly one greater under checked
+arithmetic. A namespace transition publishes a new namespace generation and a
+new global manifest, then atomically replaces the retention head under writer
+authority. This top-level generation prevents a GC scan from missing a
+namespace created concurrently with enumeration.
 
 Retrying an already committed byte-identical transition may return a typed
 already-committed outcome with the original evidence. Any different candidate
@@ -288,10 +288,10 @@ state by inference.
 A GC planner first admits one immutable liveness snapshot. The snapshot binds:
 
 - the exact global retention-manifest generation and digest;
-- the complete sorted namespace-to-root-generation map;
+- the complete sorted namespace-to-root generation and canonical digest map;
 - every verified reconstruction anchor and canonical closure;
 - every exact realization profile identity, version, and digest;
-- the exact catalog generation used to resolve physical records; and
+- the exact catalog generation and canonical digest used to resolve records;
 - the explicit traversal and materialization limits used to establish it.
 
 Planning is a pure deterministic comparison between that snapshot and one
@@ -332,11 +332,13 @@ durability synchronization, and receipt construction. No application callback
 or external policy evaluation occurs while that authority is held.
 
 After acquiring writer authority, execution revalidates the retention head,
-catalog generation, candidate identity, exact realization-profile coordinate,
-and all safety fences before physical mutation. Any changed generation,
-unavailable or mismatched profile, missing evidence, corrupt member, ambiguous
-alias, or active protection invalidates the plan. A plan never carries
-authority across a changed liveness or catalog view.
+complete root and catalog generation-and-digest coordinates, candidate
+identity, exact realization-profile coordinate, and all safety fences.
+It compares these complete coordinates before mutation; byte-valid material at
+the same generation but with a different canonical digest is a refusal. Any
+changed coordinate, unavailable or mismatched profile, missing evidence,
+corrupt member, ambiguous alias, or active protection invalidates the plan. A
+plan never carries authority across a changed liveness or catalog view.
 
 ### GC execution and crash recovery
 
