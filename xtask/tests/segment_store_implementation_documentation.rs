@@ -11,7 +11,10 @@ fn living_documentation_names_the_implemented_segment_boundary() {
     for (document, claim) in [
         (ROOT_README, "`StagedSegment`"),
         (ROOT_README, "`AdmittedSegment`"),
-        (FORMAT_REGISTRY, "segment I/O implemented in issue #15"),
+        (
+            FORMAT_REGISTRY,
+            "Implemented through initialization, publication, restart, and recovery in issues #14–#17",
+        ),
         (
             FORMAT_README,
             "Segment writing and verified reading are implemented in issue #15",
