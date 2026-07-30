@@ -171,20 +171,20 @@ root's separate anchor-set digest; neither digest substitutes for the other.
 
 ## Executable evidence
 
-- The [one-anchor closure law](../../../tests/retention_closure.rs) freezes the
-  exact counters, canonical member transcript, closure digest, and authenticated
-  reconstruction result.
-- The
-  [repeated-chunk law](../../../tests/retention_closure/repeated_chunk_law.rs)
-  proves that logical reconstruction work and unique-node evidence remain
-  separate.
-- The
-  [adversarial-catalog laws](../../../tests/retention_closure/adversarial_catalog_laws.rs)
-  prove exact missing-member refusal and target-mismatch precedence.
-- The
-  [limit-precedence laws](../../../tests/retention_closure/limit_precedence_laws.rs)
-  prove the documented depth, node, physical-byte, and encoded-byte refusal
-  order.
+- The [one-anchor law](../../../tests/retention_closure.rs) freezes exact
+  counters, the member transcript, the digest, and reconstruction.
+- The [repeated-chunk
+  law](../../../tests/retention_closure/repeated_chunk_law.rs) separates
+  reconstruction work from unique-node evidence.
+- The [adversarial-catalog
+  laws](../../../tests/retention_closure/adversarial_catalog_laws.rs) prove exact
+  missing-member and target-mismatch precedence.
+- The [limit-precedence
+  laws](../../../tests/retention_closure/limit_precedence_laws.rs) prove the
+  depth, node, physical-byte, and encoded-byte refusal order.
+- The [closure model
+  laws](../../../tests/retention_closure/closure_model_laws.rs) compare all
+  `3 × 3 × 3 × 5 = 135` one-zero boundary policies with a boring model.
 
 ## Evidence and nonclaims
 

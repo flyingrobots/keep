@@ -2,6 +2,8 @@
 
 #[path = "retention_closure/adversarial_catalog_laws.rs"]
 mod adversarial_catalog_laws;
+#[path = "retention_closure/closure_model_laws.rs"]
+mod closure_model_laws;
 #[path = "retention_closure/limit_precedence_laws.rs"]
 mod limit_precedence_laws;
 #[path = "retention_closure/memory_stage.rs"]
