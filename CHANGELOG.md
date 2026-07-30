@@ -10,12 +10,12 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
-- The version-2 store-format marker now has exact canonical encoding and
-  admission, while migration intents admit exact catalog, predecessor, root,
-  definition, store-identity, checksum, and digest coordinates. Retention
-  preflight combines expected-generation planning with deterministic closure
-  verification; authority-revalidated 17-phase orchestration returns an
-  unforgeable complete-coordinate receipt after durable cleanup.
+- Version-2 marker, migration-intent, and completion-receipt admission now bind
+  exact catalog, predecessor, root, definition, store, empty-state, checksum,
+  digest, and synchronization-mask coordinates. Retention preflight combines
+  expected-generation planning with deterministic closure verification;
+  authority-revalidated 17-phase orchestration returns an unforgeable
+  complete-coordinate receipt after durable cleanup.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

@@ -33,9 +33,11 @@
 //! canonical encoding, registered-definition admission, checksum verification,
 //! and domain-separated identity. Migration-intent admission validates its
 //! framing, checksum, catalog and predecessor grammar, registered definition,
-//! deterministic store identity, and typed recovery coordinates. Live
-//! inventory and root revalidation, filesystem migration, retention execution,
-//! recovery, and garbage collection remain intentionally absent.
+//! deterministic store identity, and typed recovery coordinates. Completion
+//! receipts bind an admitted intent and marker, registered empty-state digests,
+//! and the complete synchronization mask. Live inventory and root revalidation,
+//! filesystem migration, retention execution, recovery, and garbage collection
+//! remain intentionally absent.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -54,26 +56,27 @@ mod retention;
 pub use adapters::RepositoryInitializationStorage;
 pub use adapters::{
     AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedSegment, AdmittedSegmentRecord,
-    AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, BlobIdBinaryParseError,
-    BlobIdTextParseError, CanonicalCatalog, CanonicalLayoutRecord, CanonicalPublicationHead,
-    CanonicalStoreFormatMarker, CatalogAdmissionError, CatalogAllocationPhase, CatalogDecodeError,
-    CatalogEncodeError, CatalogEntryDecodeError, CatalogPublicationError,
-    CatalogPublicationExpectation, CatalogPublicationOutcome, CatalogPublicationPhase,
-    CatalogPublicationReadiness, CatalogPublicationReceipt, CatalogPublicationStorage,
-    CatalogRestartArtifact, CatalogRestartByteLimit, CatalogRestartByteLimitError,
-    CatalogRestartError, CatalogRestartPhase, CatalogRestartPolicy, CatalogSnapshot,
-    CatalogSnapshotError, CatalogSuccessor, CatalogTransitionError, ChecksummedCatalog,
-    ChecksummedPublicationHead, ChecksummedSegmentRecord, ClosedSegment,
-    FilesystemCatalogPublicationError, FilesystemCatalogPublisher, FilesystemCatalogSnapshot,
-    FilesystemPlatformAdmission, FilesystemPlatformAdmissionError,
+    AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, AdmittedStoreMigrationReceipt,
+    BlobIdBinaryParseError, BlobIdTextParseError, CanonicalCatalog, CanonicalLayoutRecord,
+    CanonicalPublicationHead, CanonicalStoreFormatMarker, CatalogAdmissionError,
+    CatalogAllocationPhase, CatalogDecodeError, CatalogEncodeError, CatalogEntryDecodeError,
+    CatalogPublicationError, CatalogPublicationExpectation, CatalogPublicationOutcome,
+    CatalogPublicationPhase, CatalogPublicationReadiness, CatalogPublicationReceipt,
+    CatalogPublicationStorage, CatalogRestartArtifact, CatalogRestartByteLimit,
+    CatalogRestartByteLimitError, CatalogRestartError, CatalogRestartPhase, CatalogRestartPolicy,
+    CatalogSnapshot, CatalogSnapshotError, CatalogSuccessor, CatalogTransitionError,
+    ChecksummedCatalog, ChecksummedPublicationHead, ChecksummedSegmentRecord, ClosedSegment,
+    EmptyDispositionSetDigest, FilesystemCatalogPublicationError, FilesystemCatalogPublisher,
+    FilesystemCatalogSnapshot, FilesystemPlatformAdmission, FilesystemPlatformAdmissionError,
     FilesystemRecoveryInventoryReader, FilesystemRecoveryNextHeadFinalizationOpenError,
     FilesystemRecoveryNextHeadFinalizer, FilesystemRecoverySegmentResumeOpenError,
     FilesystemRecoverySegmentResumer, FilesystemRecoverySegmentStage,
     FilesystemRecoveryStageCompleter, FilesystemRecoveryStageCompletionOpenError,
     FilesystemRecoveryStageDiscardOpenError, FilesystemRecoveryStageDiscarder,
     FilesystemRecoveryStageError, FilesystemSegmentStage, FilesystemWriterLock,
-    ImmutablePoolInventoryDigest, LayoutDecodeError, LayoutDecodePolicy, LayoutEncodeError,
-    LayoutIdBinaryParseError, LayoutIdTextParseError, OpenedReusableSegment,
+    ImmutablePoolInventoryDigest, InitialGcStateDigest, InitialRetentionStateDigest,
+    LayoutDecodeError, LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError,
+    LayoutIdTextParseError, MigrationSynchronizationMask, OpenedReusableSegment,
     PublicationHeadDecodeError, RecoveryCatalogStage, RecoveryCatalogStageError, RecoveryEntryName,
     RecoveryEntryNameError, RecoveryEntryRole, RecoveryInventory, RecoveryInventoryEntry,
     RecoveryInventoryError, RecoveryInventoryLimit, RecoveryInventoryLimitError,
@@ -107,8 +110,8 @@ pub use adapters::{
     StoreFormatDefinitionDigest, StoreFormatMarkerDecodeError, StoreFormatMarkerDigest,
     StoreIdentifier, StoreInitializationError, StoreInitializationPhase,
     StoreInitializationReceipt, StoreInitializationStorage, StoreMigrationIntentDecodeError,
-    StoreMigrationIntentDigest, StoreRootDeviceIdentity, StoreRootFileIdentity,
-    StoreRootMountIdentity, WriterLockAcquireError, WriterLockAcquirePhase,
+    StoreMigrationIntentDigest, StoreMigrationReceiptDecodeError, StoreRootDeviceIdentity,
+    StoreRootFileIdentity, StoreRootMountIdentity, WriterLockAcquireError, WriterLockAcquirePhase,
     admit_recovery_stage_bytes, assess_recovery_stage, classify_recovery_catalog_stage,
     classify_recovery_names, classify_recovery_next_head_stage, classify_recovery_segment_stage,
     execute_recovery_next_head_finalization, execute_recovery_segment_resume,

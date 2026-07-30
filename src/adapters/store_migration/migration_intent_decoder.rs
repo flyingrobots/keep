@@ -1,7 +1,7 @@
 //! This boundary module owns store-migration intent decoding order.
 
 use super::admitted_migration_intent::StoreMigrationIntentFields;
-use super::migration_intent_bytes::{
+use super::migration_record_bytes::{
     read_array, read_u16, read_u32, read_u64, require_length, wrong_length,
 };
 use super::{

@@ -29,7 +29,7 @@ case is not evidence.
 | ID | Requirement | Evidence | Status |
 | --- | --- | --- | --- |
 | `KEEP-MIGRATION-001` | Exact version-1 stores remain admitted until a durable migration artifact exists | compatibility fixtures | Planned in #19 |
-| `KEEP-MIGRATION-002` | Format marker, intent, and receipt have complete fixed byte tables, named domains, bounds, checksums, deterministic store identity, and exact initial-state digests | exact marker and intent admission in `tests/store_format_marker.rs` and `tests/store_migration_intent.rs`; receipt admission remains | In progress in #19 |
+| `KEEP-MIGRATION-002` | Format marker, intent, and receipt have complete fixed byte tables, named domains, bounds, checksums, deterministic store identity, and exact initial-state digests | exact admission in `tests/store_format_marker.rs`, `tests/store_migration_intent.rs`, and `tests/store_migration_receipt.rs` | Implemented |
 | `KEEP-MIGRATION-003` | Migration revalidates version-1 head, catalog, pools, root identity, and writer authority before mutation | capability-relative integration tests | Planned in #19 |
 | `KEEP-MIGRATION-004` | Every partial migration prefix continues idempotently under writer authority | state-machine and recovery tests | Planned in #19 |
 | `KEEP-MIGRATION-005` | Unknown, out-of-order, substituted, corrupt, conflicting, or changed evidence is unrecoverable ambiguity | corruption and mutation matrix | Planned in #19 |

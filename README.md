@@ -116,14 +116,14 @@ recovery classifiers and immutable-artifact admission, and reconstructs the
 exact published generation and visible one-zero chunk when `HEAD` exists. This
 matrix proves application process-death behavior; it does not simulate host
 power loss. Canonical version-2 store-format marker encoding and exact
-migration-intent admission are implemented. Version-2 retention values;
-canonical in-memory root, global manifest, and retention-head codecs;
-storage-independent expected-state transition planning; deterministic bounded
-closure verification against a pinned catalog; a combined transition preflight
-proof; and the exact 17-phase publication vocabulary with a blocking storage
-capability port are implemented. Private-field proofs retain every receipt
-coordinate. Ordered storage-port orchestration revalidates current authority,
-executes all 17 durability phases, and returns a consequential
+migration-intent and completion-receipt admission are implemented. Version-2
+retention values; canonical in-memory root, global manifest, and retention-head
+codecs; storage-independent expected-state transition planning; deterministic
+bounded closure verification against a pinned catalog; a combined transition
+preflight proof; and the exact 17-phase publication vocabulary with a blocking
+storage capability port are implemented. Private-field proofs retain every
+receipt coordinate. Ordered storage-port orchestration revalidates current
+authority, executes all 17 durability phases, and returns a consequential
 complete-coordinate receipt. Filesystem migration, retention execution,
 recovery, compaction, and garbage collection remain planned.
 Presence in the reference CAS does not claim durable retention or crash
