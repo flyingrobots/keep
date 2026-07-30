@@ -35,13 +35,47 @@ fn admitted_coordinates_reproduce_the_frozen_intent() -> Result<(), Box<dyn Erro
 
     assert_eq!(canonical.encoded(), expected);
     assert_eq!(canonical.digest(), admitted.digest());
-    assert_eq!(canonical.store_identifier(), admitted.store_identifier());
+    assert_canonical_coordinates(&canonical, &admitted);
     assert_eq!(canonical.digest().as_bytes(), &fixture::INTENT_DIGEST);
     assert_eq!(
         canonical.store_identifier().as_bytes(),
         &fixture::STORE_IDENTIFIER
     );
     Ok(())
+}
+
+fn assert_canonical_coordinates(
+    canonical: &CanonicalStoreMigrationIntent,
+    admitted: &AdmittedStoreMigrationIntent<'_>,
+) {
+    assert_eq!(
+        canonical.catalog_generation(),
+        admitted.catalog_generation()
+    );
+    assert_eq!(canonical.catalog_length(), admitted.catalog_length());
+    assert_eq!(canonical.catalog_digest(), admitted.catalog_digest());
+    assert_eq!(
+        canonical.predecessor_catalog_digest(),
+        admitted.predecessor_catalog_digest()
+    );
+    assert_eq!(canonical.inventory_digest(), admitted.inventory_digest());
+    assert_eq!(
+        canonical.root_device_identity(),
+        admitted.root_device_identity()
+    );
+    assert_eq!(
+        canonical.root_mount_identity(),
+        admitted.root_mount_identity()
+    );
+    assert_eq!(
+        canonical.root_file_identity(),
+        admitted.root_file_identity()
+    );
+    assert_eq!(
+        canonical.target_definition_digest(),
+        admitted.target_definition_digest()
+    );
+    assert_eq!(canonical.store_identifier(), admitted.store_identifier());
 }
 
 #[test]

@@ -1,5 +1,6 @@
 //! This boundary module owns canonical migration-intent encoding.
 
+use super::admitted_migration_intent::StoreMigrationIntentFields;
 use super::migration_intent_format::StoreIdentifierFields;
 use super::{
     CanonicalStoreMigrationIntent, ImmutablePoolInventoryDigest, StoreFormatDefinitionDigest,
@@ -41,7 +42,22 @@ pub(super) fn encode(
     write_preimage(preimage, &fields, roots, store_identifier);
     checksum_slot.copy_from_slice(&format::checksum(preimage));
     let digest = format::digest(&encoded);
-    CanonicalStoreMigrationIntent::admitted(encoded, digest, store_identifier)
+    CanonicalStoreMigrationIntent::admitted(
+        encoded,
+        StoreMigrationIntentFields {
+            catalog_generation: fields.catalog_generation,
+            catalog_length: fields.catalog_length,
+            catalog_digest: fields.catalog_digest,
+            predecessor_catalog_digest: fields.predecessor_catalog_digest,
+            inventory_digest: fields.inventory_digest,
+            root_device_identity: roots.device,
+            root_mount_identity: roots.mount,
+            root_file_identity: roots.file,
+            target_definition_digest: fields.target_definition_digest,
+            store_identifier,
+        },
+        digest,
+    )
 }
 
 fn write_preimage(
