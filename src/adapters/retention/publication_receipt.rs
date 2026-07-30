@@ -13,8 +13,7 @@ use crate::{
 #[must_use = "retention publication receipts bind the durable outcome"]
 #[derive(Debug, Eq, PartialEq)]
 pub struct RetentionPublicationReceipt {
-    outcome: RetentionPublicationOutcome,
-    namespace_admission: Option<RetentionNamespaceAdmission>,
+    effect: RetentionPublicationEffect,
     namespace: RetentionNamespaceDigest,
     expected: RetentionGenerationExpectation,
     observed: Option<RootGeneration>,
@@ -32,12 +31,20 @@ pub struct RetentionPublicationReceipt {
 impl RetentionPublicationReceipt {
     /// Returns the durable publication outcome.
     pub const fn outcome(&self) -> RetentionPublicationOutcome {
-        self.outcome
+        match self.effect {
+            RetentionPublicationEffect::Published(_) => RetentionPublicationOutcome::Published,
+            RetentionPublicationEffect::AlreadyCommitted => {
+                RetentionPublicationOutcome::AlreadyCommitted
+            }
+        }
     }
 
     /// Returns namespace creation or admission for a new publication.
     pub const fn namespace_admission(&self) -> Option<RetentionNamespaceAdmission> {
-        self.namespace_admission
+        match self.effect {
+            RetentionPublicationEffect::Published(admission) => Some(admission),
+            RetentionPublicationEffect::AlreadyCommitted => None,
+        }
     }
 
     /// Returns the selected retention namespace digest.
@@ -100,16 +107,28 @@ impl RetentionPublicationReceipt {
         self.catalog_digest
     }
 
-    pub(super) fn new(
-        outcome: RetentionPublicationOutcome,
-        namespace_admission: Option<RetentionNamespaceAdmission>,
+    pub(super) fn published(
+        namespace_admission: RetentionNamespaceAdmission,
+        preparation: &RetentionPublicationPreparation<'_>,
+    ) -> Self {
+        Self::new(
+            RetentionPublicationEffect::Published(namespace_admission),
+            preparation,
+        )
+    }
+
+    pub(super) fn already_committed(preparation: &RetentionPublicationPreparation<'_>) -> Self {
+        Self::new(RetentionPublicationEffect::AlreadyCommitted, preparation)
+    }
+
+    fn new(
+        effect: RetentionPublicationEffect,
         preparation: &RetentionPublicationPreparation<'_>,
     ) -> Self {
         let candidate = preparation.candidate();
         let closure = preparation.closure();
         Self {
-            outcome,
-            namespace_admission,
+            effect,
             namespace: candidate.root().namespace().digest(),
             expected: preparation.expected(),
             observed: preparation.observed(),
@@ -124,4 +143,10 @@ impl RetentionPublicationReceipt {
             catalog_digest: closure.catalog_digest(),
         }
     }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+enum RetentionPublicationEffect {
+    Published(RetentionNamespaceAdmission),
+    AlreadyCommitted,
 }

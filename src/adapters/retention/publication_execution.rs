@@ -4,8 +4,8 @@ use std::io;
 
 use super::{
     PreparedRetentionPublication, RetentionNamespaceAdmission, RetentionPublicationError,
-    RetentionPublicationOutcome, RetentionPublicationPhase, RetentionPublicationPreparation,
-    RetentionPublicationReceipt, RetentionPublicationStorage, RetentionTransitionDisposition,
+    RetentionPublicationPhase, RetentionPublicationPreparation, RetentionPublicationReceipt,
+    RetentionPublicationStorage, RetentionTransitionDisposition,
 };
 
 /// Executes one prepared retention transition under revalidated authority.
@@ -26,11 +26,7 @@ pub fn execute_retention_publication(
         .verify_current(preparation)
         .map_err(|source| RetentionPublicationError::CurrentVerification { source })?;
     if observed == RetentionTransitionDisposition::AlreadyCommitted {
-        return Ok(RetentionPublicationReceipt::new(
-            RetentionPublicationOutcome::AlreadyCommitted,
-            None,
-            preparation,
-        ));
+        return Ok(RetentionPublicationReceipt::already_committed(preparation));
     }
     if preparation.disposition() != RetentionTransitionDisposition::Publish {
         return Err(RetentionPublicationError::DispositionMismatch {
@@ -45,9 +41,8 @@ pub fn execute_retention_publication(
     execute_manifest(storage, publication)?;
     execute_head(storage, publication)?;
     execute_cleanup(storage)?;
-    Ok(RetentionPublicationReceipt::new(
-        RetentionPublicationOutcome::Published,
-        Some(namespace_admission),
+    Ok(RetentionPublicationReceipt::published(
+        namespace_admission,
         preparation,
     ))
 }
