@@ -20,9 +20,9 @@
 //! explicit. Exact next-head finalization now has a storage-independent
 //! contract and a pinned writer-authorized filesystem adapter. Reusable-stage
 //! continuation has a storage-independent planning and execution boundary plus
-//! a pinned writer-authorized filesystem adapter. Retention and garbage
-//! collection remain intentionally absent until their contracts have
-//! executable specifications.
+//! a pinned writer-authorized filesystem adapter. Core retention namespaces,
+//! generations, and reconstruction anchors are validated. Retention
+//! publication, recovery, and garbage collection remain intentionally absent.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -34,6 +34,7 @@ mod chunk;
 mod layout;
 mod profile;
 mod reference;
+mod retention;
 
 #[cfg(feature = "repository-tasks")]
 #[doc(hidden)]
@@ -118,4 +119,8 @@ pub use reference::{
     IngestionAllocation, IngestionError, ProfileBoundary, PublishError, PublishedBlob,
     RangeReadError, RangeReadReceipt, ReconstructionError, ReconstructionReceipt, ReferenceStore,
     ReferenceStoreCapacity, StagedBlob,
+};
+pub use retention::{
+    LivenessGeneration, LivenessGenerationError, RetentionAnchor, RetentionNamespace,
+    RetentionNamespaceDigest, RetentionNamespaceError, RootGeneration, RootGenerationError,
 };

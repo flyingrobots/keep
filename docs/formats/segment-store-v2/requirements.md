@@ -9,7 +9,7 @@ case is not evidence.
 
 | ID | Requirement | Evidence | Status |
 | --- | --- | --- | --- |
-| `KEEP-RETENTION-001` | `RetentionNamespace`, `RootGeneration`, `LivenessGeneration`, profile coordinates, limits, anchors, and digests are validated typed values | unit and public API tests | Planned in #19 |
+| `KEEP-RETENTION-001` | `RetentionNamespace`, `RootGeneration`, `LivenessGeneration`, profile coordinates, limits, anchors, and digests are validated typed values | `tests/retention_values.rs` covers namespace, digest, generations, and anchors; profile and limit evidence remains | In progress in #19 |
 | `KEEP-RETENTION-002` | Root, manifest, and head codecs implement the exact canonical grammars and fixed bounds | golden-format fixtures plus independent oracle | Planned in #19 |
 | `KEEP-RETENTION-003` | Every structural field, truncation boundary, ordering law, duplicate, overflow, flag, reserved byte, digest, checksum, and trailing byte has a precise refusal | corruption matrix and fuzz | Planned in #19 |
 | `KEEP-RETENTION-004` | Retain and release compare expected and observed generations and publish exact successors only | unit and model-based transition tests | Planned in #19 |

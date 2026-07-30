@@ -66,8 +66,11 @@ re-encode them.
 
 ## Status
 
-The format contract is frozen by ADR-0009 and this specification. Requirements
-marked **Planned in #19** or **Planned in #21** are not implementation evidence.
-A store must refuse version-2 state until the relevant parser, corruption,
+The format contract is frozen by ADR-0009 and this specification. Public core
+types now admit exact namespace bytes, namespace digests, root and liveness
+generations, and reconstruction anchors. No production version-2 parser,
+transition, migration, or writer exists yet. Requirements that remain marked
+as planned in issue #19 or issue #21 are not implementation evidence. A store
+must refuse version-2 state until the relevant parser, corruption,
 golden-format, model-based, crash-injection, recovery, and fuzz evidence is
 implemented.
