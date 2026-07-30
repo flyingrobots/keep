@@ -72,6 +72,8 @@ fn generation_transitions_and_gc_snapshots_fail_closed() {
         "missing or corrupt closure member",
         "immutable liveness snapshot",
         "catalog generation",
+        "same exclusive writer authority",
+        "from revalidation through physical mutation",
         "does not promise immediate physical erasure",
     ] {
         assert!(

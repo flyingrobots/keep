@@ -194,11 +194,17 @@ bounded physical inventory. It classifies material as live, unreachable,
 corrupt, ambiguous, recovery-protected, reader-protected, or already retired.
 Only unreachable material may become a collectible candidate.
 
-Execution revalidates the retention head, catalog generation, candidate
-identity, and all safety fences before physical mutation. Any changed
-generation, missing evidence, corrupt member, ambiguous alias, or active
-protection invalidates the plan. A plan never carries authority across a
-changed liveness or catalog view.
+Planning is observational and carries no mutation authority. Execution must
+acquire the same exclusive writer authority used by catalog publication and
+recovery, then retain it from revalidation through physical mutation,
+durability synchronization, and receipt construction. No application callback
+or external policy evaluation occurs while that authority is held.
+
+After acquiring writer authority, execution revalidates the retention head,
+catalog generation, candidate identity, and all safety fences before physical
+mutation. Any changed generation, missing evidence, corrupt member, ambiguous
+alias, or active protection invalidates the plan. A plan never carries
+authority across a changed liveness or catalog view.
 
 ### Evidence and nonclaims
 
