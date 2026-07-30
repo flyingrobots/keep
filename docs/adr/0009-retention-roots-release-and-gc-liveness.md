@@ -211,10 +211,14 @@ new global manifest, then atomically replaces the retention head under writer
 authority. This top-level generation prevents a GC scan from missing a
 namespace created concurrently with enumeration.
 
-Retrying an already committed byte-identical transition may return a typed
-already-committed outcome with the original evidence. Any different candidate
-against the old expected generation is stale and must not be merged
-implicitly.
+Retrying a byte-identical transition may return a typed already-committed
+outcome with the original evidence only while the exact committed successor
+remains current. The executor compares its root generation and canonical
+digest, realization-profile coordinate, and anchor-set canonical digest with
+the current retention head. Otherwise the observed state is stale; the typed
+outcome preserves the expected committed and observed current coordinates.
+Any different candidate against the old expected generation is also stale and
+must not be merged implicitly.
 
 ### State meanings
 

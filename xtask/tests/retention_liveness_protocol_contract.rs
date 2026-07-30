@@ -76,6 +76,8 @@ fn generation_transitions_and_gc_snapshots_fail_closed() {
         "initial `RootGeneration` is one",
         "`LivenessGeneration`",
         "empty anchor set remains",
+        "exact committed successor remains current",
+        "Otherwise the observed state is stale",
         "sorted, duplicate-free",
         "bounded, cycle-safe",
         "fail-closed",
