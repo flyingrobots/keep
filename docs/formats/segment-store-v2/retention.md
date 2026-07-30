@@ -251,8 +251,8 @@ live set.
 `preflight_retention_transition` combines steps 3 and 4 without I/O, returning
 publish or already-committed only after generation and closure verification.
 `prepare_retention_publication` binds that proof to the current manifest,
-refuses incoherent root coordinates, and derives exact canonical successors;
-exact retry produces no new global artifacts.
+preserves expected and observed generations, refuses incoherent coordinates,
+and derives exact canonical successors; exact retry creates no global artifacts.
 
 Version-2 catalog publication holds the same writer authority and proves every
 current retained closure against its candidate catalog before replacing the

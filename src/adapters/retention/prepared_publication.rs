@@ -4,7 +4,7 @@ use super::{
     AdmittedRetentionRoot, CanonicalRetentionHead, CanonicalRetentionManifest,
     VerifiedRetentionClosure,
 };
-use crate::LivenessGeneration;
+use crate::{LivenessGeneration, RetentionGenerationExpectation, RootGeneration};
 
 /// Canonical global artifacts ready for ordered storage execution.
 #[must_use = "prepared retention publication must be executed or handled explicitly"]
@@ -48,12 +48,24 @@ impl PreparedRetentionPublication {
 #[must_use = "retention publication preparation must be handled explicitly"]
 #[derive(Debug)]
 pub struct RetentionPublicationPreparation<'encoded> {
+    expected: RetentionGenerationExpectation,
+    observed: Option<RootGeneration>,
     candidate: AdmittedRetentionRoot<'encoded>,
     closure: VerifiedRetentionClosure,
     publication: Option<PreparedRetentionPublication>,
 }
 
 impl<'encoded> RetentionPublicationPreparation<'encoded> {
+    /// Returns the caller-supplied expected namespace generation.
+    pub const fn expected(&self) -> RetentionGenerationExpectation {
+        self.expected
+    }
+
+    /// Returns the namespace generation observed during transition planning.
+    pub const fn observed(&self) -> Option<RootGeneration> {
+        self.observed
+    }
+
     /// Borrows the admitted candidate root.
     pub const fn candidate(&self) -> &AdmittedRetentionRoot<'encoded> {
         &self.candidate
@@ -70,11 +82,15 @@ impl<'encoded> RetentionPublicationPreparation<'encoded> {
     }
 
     pub(super) const fn publish(
+        expected: RetentionGenerationExpectation,
+        observed: Option<RootGeneration>,
         candidate: AdmittedRetentionRoot<'encoded>,
         closure: VerifiedRetentionClosure,
         publication: PreparedRetentionPublication,
     ) -> Self {
         Self {
+            expected,
+            observed,
             candidate,
             closure,
             publication: Some(publication),
@@ -82,10 +98,14 @@ impl<'encoded> RetentionPublicationPreparation<'encoded> {
     }
 
     pub(super) const fn already_committed(
+        expected: RetentionGenerationExpectation,
+        observed: Option<RootGeneration>,
         candidate: AdmittedRetentionRoot<'encoded>,
         closure: VerifiedRetentionClosure,
     ) -> Self {
         Self {
+            expected,
+            observed,
             candidate,
             closure,
             publication: None,

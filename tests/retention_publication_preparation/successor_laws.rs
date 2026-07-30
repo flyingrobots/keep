@@ -29,6 +29,11 @@ fn successor_replaces_only_the_selected_manifest_entry() -> Result<(), Box<dyn E
     })??;
 
     let preparation = prepare_retention_publication(preflight, Some(&current_manifest))?;
+    assert_eq!(
+        preparation.expected(),
+        RetentionGenerationExpectation::Current(RootGeneration::INITIAL)
+    );
+    assert_eq!(preparation.observed(), Some(RootGeneration::INITIAL));
     let publication = preparation
         .publication()
         .ok_or("successor transition did not prepare publication")?;
@@ -75,6 +80,11 @@ fn new_namespace_is_inserted_without_changing_existing_entry() -> Result<(), Box
     })??;
 
     let preparation = prepare_retention_publication(preflight, Some(&current_manifest))?;
+    assert_eq!(
+        preparation.expected(),
+        RetentionGenerationExpectation::Absent
+    );
+    assert_eq!(preparation.observed(), None);
     let publication = preparation
         .publication()
         .ok_or("new namespace did not prepare publication")?;
@@ -110,6 +120,11 @@ fn exact_retry_prepares_no_new_global_artifacts() -> Result<(), Box<dyn Error>> 
 
     let preparation = prepare_retention_publication(preflight, Some(&current_manifest))?;
 
+    assert_eq!(
+        preparation.expected(),
+        RetentionGenerationExpectation::Absent
+    );
+    assert_eq!(preparation.observed(), Some(RootGeneration::INITIAL));
     assert!(preparation.publication().is_none());
     assert_eq!(preparation.candidate().digest(), current.digest());
     assert_eq!(preparation.closure().usage().node_count(), 2);

@@ -23,13 +23,23 @@ pub fn prepare_retention_publication<'encoded>(
     current_manifest: Option<&AdmittedRetentionManifest<'_>>,
 ) -> Result<RetentionPublicationPreparation<'encoded>, RetentionPublicationPreparationError> {
     match preflight {
-        RetentionTransitionPreflight::AlreadyCommitted { candidate, closure } => {
+        RetentionTransitionPreflight::AlreadyCommitted {
+            expected,
+            observed,
+            candidate,
+            closure,
+        } => {
             successor_manifest::require_current_selection(&candidate, current_manifest)?;
             Ok(RetentionPublicationPreparation::already_committed(
-                candidate, closure,
+                expected, observed, candidate, closure,
             ))
         }
-        RetentionTransitionPreflight::Publish { candidate, closure } => {
+        RetentionTransitionPreflight::Publish {
+            expected,
+            observed,
+            candidate,
+            closure,
+        } => {
             let semantic_manifest = successor_manifest::build(&candidate, current_manifest)?;
             let liveness_generation = semantic_manifest.generation();
             let predecessor = semantic_manifest.predecessor();
@@ -48,6 +58,8 @@ pub fn prepare_retention_publication<'encoded>(
             let publication =
                 PreparedRetentionPublication::new(manifest, head, liveness_generation);
             Ok(RetentionPublicationPreparation::publish(
+                expected,
+                observed,
                 candidate,
                 closure,
                 publication,

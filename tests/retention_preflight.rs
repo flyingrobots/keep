@@ -44,11 +44,14 @@ fn publish_preflight_binds_generation_and_closure_proofs() -> Result<(), Box<dyn
         },
     )??;
 
+    assert_eq!(preflight.expected(), RetentionGenerationExpectation::Absent);
+    assert_eq!(preflight.observed(), None);
     assert!(matches!(
         preflight,
         RetentionTransitionPreflight::Publish {
             candidate,
             closure,
+            ..
         } if candidate.root().generation() == RootGeneration::INITIAL
             && closure.usage().node_count() == 2
     ));
@@ -136,6 +139,8 @@ fn exact_retry_still_returns_current_closure_evidence() -> Result<(), Box<dyn Er
         },
     )??;
 
+    assert_eq!(preflight.expected(), RetentionGenerationExpectation::Absent);
+    assert_eq!(preflight.observed(), Some(RootGeneration::INITIAL));
     assert!(matches!(
         preflight,
         RetentionTransitionPreflight::AlreadyCommitted { closure, .. }
