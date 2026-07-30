@@ -41,12 +41,6 @@ mod retention;
 #[cfg(feature = "repository-tasks")]
 #[doc(hidden)]
 pub use adapters::RepositoryInitializationStorage;
-pub use adapters::retention::{
-    AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
-    CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
-    RetentionHeadDecodeError, RetentionManifestDecodeError, RetentionManifestEncodeError,
-    RetentionRootDecodeError, RetentionRootEncodeError,
-};
 pub use adapters::{
     AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedSegment, AdmittedSegmentRecord,
     BlobIdBinaryParseError, BlobIdTextParseError, CanonicalCatalog, CanonicalLayoutRecord,
@@ -107,6 +101,12 @@ pub use adapters::{
     initialize_store, plan_recovery_next_head_finalization, plan_recovery_segment_resume,
     plan_recovery_stage_completion, plan_recovery_stage_discard, publish_catalog_generation,
     read_recovery_inventory,
+};
+pub use adapters::{
+    AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
+    CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
+    RetentionHeadDecodeError, RetentionManifestDecodeError, RetentionManifestEncodeError,
+    RetentionRootDecodeError, RetentionRootEncodeError,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
