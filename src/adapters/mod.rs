@@ -234,7 +234,7 @@ mod recovery_stage_pool_outcome;
 mod recovery_stage_synchronization_outcome;
 #[cfg(feature = "repository-tasks")]
 mod repository_initialization_storage;
-mod retention;
+pub(crate) mod retention;
 mod sealed_segment;
 mod segment_digest;
 mod segment_digest_builder;
@@ -449,12 +449,6 @@ pub use recovery_stage_pool_outcome::RecoveryStagePoolOutcome;
 pub use recovery_stage_synchronization_outcome::RecoveryStageSynchronizationOutcome;
 #[cfg(feature = "repository-tasks")]
 pub use repository_initialization_storage::RepositoryInitializationStorage;
-pub use retention::{
-    AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
-    CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
-    RetentionHeadDecodeError, RetentionManifestDecodeError, RetentionManifestEncodeError,
-    RetentionRootDecodeError, RetentionRootEncodeError,
-};
 pub use sealed_segment::SealedSegment;
 pub use segment_digest::SegmentDigest;
 pub use segment_header::SegmentHeader;
