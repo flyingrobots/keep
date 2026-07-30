@@ -1,24 +1,16 @@
 //! This boundary module owns store-migration intent decoding order.
 
 use super::admitted_migration_intent::StoreMigrationIntentFields;
+use super::migration_intent_format::{self as format, StoreIdentifierFields};
 use super::migration_record_bytes::{
     read_array, read_u16, read_u32, read_u64, require_length, wrong_length,
 };
 use super::{
     AdmittedStoreMigrationIntent, ImmutablePoolInventoryDigest, StoreFormatDefinitionDigest,
-    StoreIdentifier, StoreMigrationIntentDecodeError, StoreMigrationIntentDigest,
-    StoreRootDeviceIdentity, StoreRootFileIdentity, StoreRootMountIdentity,
+    StoreIdentifier, StoreMigrationIntentDecodeError, StoreRootDeviceIdentity,
+    StoreRootFileIdentity, StoreRootMountIdentity,
 };
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
-
-const CHECKSUM_OFFSET: usize = 224;
-const MAGIC: [u8; 16] = *b"KEEP:MIG:INT2\0\0\0";
-const VERSION: u16 = 2;
-const RECORD_LENGTH: u16 = 256;
-const CHECKSUM_DOMAIN: &[u8] = b"keep.store-migration-intent-checksum/v2\0";
-const DIGEST_DOMAIN: &[u8] = b"keep.store-migration-intent/v2\0";
-const STORE_IDENTIFIER_DOMAIN: &[u8] = b"keep.store-identifier/v2\0";
-const ZERO_DIGEST: [u8; 32] = [0; 32];
 
 pub(super) fn decode(
     encoded: &[u8],
@@ -47,26 +39,26 @@ pub(super) fn decode(
     Ok(AdmittedStoreMigrationIntent::admitted(
         encoded,
         fields,
-        digest(encoded),
+        format::digest(encoded),
     ))
 }
 
 fn validate_fixed_fields(encoded: &[u8]) -> Result<(), StoreMigrationIntentDecodeError> {
     let magic = read_array(encoded, 0)?;
-    if magic != MAGIC {
+    if magic != format::MAGIC {
         return Err(StoreMigrationIntentDecodeError::InvalidMagic { observed: magic });
     }
     let version = read_u16(encoded, 16)?;
-    if version != VERSION {
+    if version != format::VERSION {
         return Err(StoreMigrationIntentDecodeError::UnsupportedVersion {
-            expected: VERSION,
+            expected: format::VERSION,
             observed: version,
         });
     }
     let record_length = read_u16(encoded, 18)?;
-    if record_length != RECORD_LENGTH {
+    if record_length != format::RECORD_LENGTH {
         return Err(StoreMigrationIntentDecodeError::InvalidRecordLength {
-            expected: RECORD_LENGTH,
+            expected: format::RECORD_LENGTH,
             observed: record_length,
         });
     }
@@ -79,10 +71,10 @@ fn validate_fixed_fields(encoded: &[u8]) -> Result<(), StoreMigrationIntentDecod
 
 fn verify_checksum(encoded: &[u8]) -> Result<(), StoreMigrationIntentDecodeError> {
     let preimage = encoded
-        .get(..CHECKSUM_OFFSET)
+        .get(..format::CHECKSUM_OFFSET)
         .ok_or_else(|| wrong_length(encoded))?;
-    let observed = read_array(encoded, CHECKSUM_OFFSET)?;
-    let expected = hash(CHECKSUM_DOMAIN, &[preimage]);
+    let observed = read_array(encoded, format::CHECKSUM_OFFSET)?;
+    let expected = format::checksum(preimage);
     if observed == expected {
         Ok(())
     } else {
@@ -111,13 +103,13 @@ fn read_predecessor(
     observed: [u8; 32],
 ) -> Result<Option<CatalogDigest>, StoreMigrationIntentDecodeError> {
     if generation.get() == 1 {
-        return if observed == ZERO_DIGEST {
+        return if observed == format::ZERO_DIGEST {
             Ok(None)
         } else {
             Err(StoreMigrationIntentDecodeError::NonZeroInitialPredecessor { observed })
         };
     }
-    if observed == ZERO_DIGEST {
+    if observed == format::ZERO_DIGEST {
         return Err(
             StoreMigrationIntentDecodeError::MissingSuccessorPredecessor {
                 generation: generation.get(),
@@ -144,38 +136,21 @@ fn read_definition_digest(
 fn verify_store_identifier(
     fields: &StoreMigrationIntentFields,
 ) -> Result<(), StoreMigrationIntentDecodeError> {
-    let predecessor = fields
-        .predecessor_catalog_digest
-        .as_ref()
-        .map_or(&ZERO_DIGEST, CatalogDigest::as_bytes);
-    let expected = hash(
-        STORE_IDENTIFIER_DOMAIN,
-        &[
-            &fields.catalog_generation.get().to_be_bytes(),
-            &fields.catalog_length.get().to_be_bytes(),
-            fields.catalog_digest.as_bytes(),
-            predecessor,
-            fields.inventory_digest.as_bytes(),
-            fields.target_definition_digest.as_bytes(),
-        ],
-    );
+    let expected = format::store_identifier(&StoreIdentifierFields {
+        catalog_generation: fields.catalog_generation,
+        catalog_length: fields.catalog_length,
+        catalog_digest: fields.catalog_digest,
+        predecessor_catalog_digest: fields.predecessor_catalog_digest,
+        inventory_digest: fields.inventory_digest,
+        target_definition_digest: fields.target_definition_digest,
+    });
     let observed = *fields.store_identifier.as_bytes();
-    if observed == expected {
+    if observed == *expected.as_bytes() {
         Ok(())
     } else {
-        Err(StoreMigrationIntentDecodeError::StoreIdentifierMismatch { expected, observed })
+        Err(StoreMigrationIntentDecodeError::StoreIdentifierMismatch {
+            expected: *expected.as_bytes(),
+            observed,
+        })
     }
-}
-
-fn digest(encoded: &[u8]) -> StoreMigrationIntentDigest {
-    StoreMigrationIntentDigest::from_hash(hash(DIGEST_DOMAIN, &[encoded]))
-}
-
-fn hash(domain: &[u8], fields: &[&[u8]]) -> [u8; 32] {
-    let mut hasher = blake3::Hasher::new();
-    hasher.update(domain);
-    for field in fields {
-        hasher.update(field);
-    }
-    *hasher.finalize().as_bytes()
 }

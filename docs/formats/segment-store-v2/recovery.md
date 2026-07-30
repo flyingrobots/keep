@@ -61,7 +61,7 @@ corpus `definition.tsv` bytes. The format-marker digest is BLAKE3-256 of
 `keep.store-format-marker/v2\0` followed by all 96 marker bytes.
 
 `CanonicalStoreFormatMarker` produces the registered marker; `AdmittedStoreFormatMarker` admits its framing, checksum, definition, and namespace bound.
-`AdmittedStoreMigrationIntent` admits intent integrity and identity; `AdmittedStoreMigrationReceipt` binds that intent, the marker, registered empty states, and all synchronization bits.
+`CanonicalStoreMigrationIntent` reproduces intent bytes from typed coordinates; `AdmittedStoreMigrationIntent` admits integrity and identity; `AdmittedStoreMigrationReceipt` binds the intent, marker, empty states, and synchronization bits.
 These record boundaries do not prove the named live inventory, physical root,
 store version, or execution of filesystem migration.
 
