@@ -38,6 +38,29 @@ The fixed stage is not authority. `migration.intent` becomes migration
 authority only after its canonical link and store-root synchronization.
 `migration.receipt` becomes completion evidence at the equivalent boundary.
 
+## Receipt synchronization mask
+
+`migration.receipt` records the exact pre-receipt mask
+`0x00000000000003ff`. Bits are:
+
+| Bit | Completed evidence |
+| ---: | --- |
+| 0 | canonical migration intent and store root synchronized |
+| 1 | `reader.lock` verified, synchronized, and root-synchronized |
+| 2 | `retention` created and parent synchronized |
+| 3 | `retention/roots` created and parent synchronized |
+| 4 | `retention/manifests` created and parent synchronized |
+| 5 | `gc` created and parent synchronized |
+| 6 | `recovery` created and parent synchronized |
+| 7 | `recovery/dispositions` created and parent synchronized |
+| 8 | canonical format marker and store root synchronized |
+| 9 | complete version-2 view reopened and verified |
+
+Bits 10 through 63 are zero and refuse when set. The mask records only
+evidence completed before receipt construction; receipt-stage publication and
+its final root synchronizations are established by admission of the canonical
+receipt, not claimed by its own bytes.
+
 ## Namespace prefix
 
 After durable intent publication, migration creates persistent `reader.lock`

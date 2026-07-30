@@ -47,10 +47,16 @@ The following pages form one protocol:
   recovery-disposition reservation, and restart behavior.
 - [Migration crash points](migration-crash.md) owns fixed-stage publication and
   the exact process-death boundaries for migration.
+- [Migration inventory](migration-inventory.md) owns the bounded canonical
+  digest over preserved version-1 immutable pools.
 - [Requirements and evidence](requirements.md) owns stable requirement and
   crash identifiers, evidence status, compatibility, and nonclaims.
 - [Format rationale](rationale.md) records format-local choices and rejected
   alternatives.
+
+The [version-2 golden corpus](../../../conformance/segment-store/v2/README.md)
+freezes independent definition, profile, inventory, and record bytes. It is
+format evidence, not production-writer evidence.
 
 The version-1 [segment](../segment-store-v1/segment.md),
 [catalog](../segment-store-v1/catalog.md), and

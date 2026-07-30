@@ -71,9 +71,10 @@ Version 2 admits one realization profile:
 - exact witness count `1` for each layout and chunk identity; and
 - selection by canonical physical catalog coordinate.
 
-The stored profile coordinate is the `u32` identity, `u32` version, and
-BLAKE3-256 digest of its canonical definition bytes. Any unknown or mismatched
-coordinate refuses. A future profile requires a successor specification.
+The stored coordinate is its `u32` identity, `u32` version, and BLAKE3-256 of
+`keep.retention-realization-profile/v1\0` followed by the exact corpus
+`retention-profile.tsv` bytes. Any mismatch refuses. A future profile requires
+a successor specification.
 
 Each root generation stores caller-selected limits no greater than these
 implementation ceilings:
@@ -202,13 +203,10 @@ count is 4,096 and the maximum manifest length is 295,136 bytes.
 
 <!-- markdownlint-enable MD013 -->
 
-The entry-set, manifest, and checksum domains are respectively:
-
-```text
-keep.retention-manifest-entries/v2\0
-keep.retention-manifest/v2\0
-keep.retention-manifest-checksum/v2\0
-```
+The `keep.retention-manifest-entries/v2\0` preimage is
+`entry-count-u32 || entries`. The `keep.retention-manifest/v2\0` preimage is
+`header || entries`. The `keep.retention-manifest-checksum/v2\0` preimage is
+`header || entries || manifest-digest`. Each operation is BLAKE3-256.
 
 The manifest pool coordinate is:
 

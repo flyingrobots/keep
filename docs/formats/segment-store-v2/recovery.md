@@ -56,6 +56,10 @@ The definition and checksum domains are
 when the exact version-1 namespace admits. An unsupported, corrupt,
 substituted, or same-name/different-digest marker refuses.
 
+The format-definition digest is BLAKE3-256 of its domain followed by the exact
+corpus `definition.tsv` bytes. The format-marker digest is BLAKE3-256 of
+`keep.store-format-marker/v2\0` followed by all 96 marker bytes.
+
 ## Reader fence
 
 `reader.lock` is a persistent regular zero-length file. Its contents and
@@ -101,10 +105,13 @@ Version 1 is never extended in place without durable migration evidence.
 
 <!-- markdownlint-enable MD013 -->
 
-The checksum domain is `keep.store-migration-intent-checksum/v2\0`. The pool
-inventory digest uses `keep.store-v1-pool-inventory/v2\0` over the sorted,
-duplicate-free canonical names, lengths, and verified content digests from
-both immutable pools. The intent therefore binds the exact catalog generation,
+The checksum domain is `keep.store-migration-intent-checksum/v2\0`. The
+receipt's intent digest is BLAKE3-256 of
+`keep.store-migration-intent/v2\0` followed by all 256 intent bytes.
+
+The [migration inventory](migration-inventory.md) defines its domain and law:
+each migration inventory entry is exactly 56 bytes, and the fixed maximum is
+2,097,152 entries. The intent therefore binds the exact catalog generation,
 length, and digest named by the admitted version-1 `HEAD`.
 
 The deterministically derived store identifier is:
