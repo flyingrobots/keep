@@ -198,6 +198,32 @@ These states are explicit evidence postures, not path properties. Every state
 transition requires the evidence defined above and cannot be inferred from
 existence, age, recent access, or absence from one catalog.
 
+### Recovery evidence disposition
+
+A completely verified orphan left by interrupted publication remains
+recovery-protected until an explicit finalize-or-retire transition disposes of
+that authority. Root absence, catalog absence, age, and successful
+reconstruction do not release it.
+
+Finalization consumes the evidence through the existing recovery completion or
+publication protocol and preserves it as visible or recoverable state.
+Retirement is a separate writer-authorized transition that proves the exact
+artifact is not named by `HEAD`, a fixed recovery stage, a pending publication,
+a retained closure, or an active reader. Ambiguous, changed, or corrupt
+evidence cannot receive a retirement disposition.
+
+A successful retirement durably publishes a `RecoveryDispositionReceipt`
+before GC planning may classify the artifact as unreachable. The receipt binds
+the artifact identity and digest, its admitted recovery classification, the
+observed head, catalog, retention, and reader-safety coordinates, and the exact
+retirement decision. Process death before durable receipt publication leaves
+the artifact recovery-protected; an exact retry either finishes that
+publication or reports the changed evidence.
+
+GC cannot infer recovery release. It admits only the exact durable disposition
+receipt and revalidates every bound coordinate under writer authority. An
+absent, stale, mismatched, or superseded receipt keeps the material protected.
+
 ### Release and grace
 
 Release removes an anchor from a newly published namespace generation. It
