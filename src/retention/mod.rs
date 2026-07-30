@@ -6,19 +6,37 @@
 //! collection.
 
 mod anchor;
+mod closure_limit;
+mod closure_limit_error;
+mod closure_limits;
 mod liveness_generation;
 mod liveness_generation_error;
 mod namespace;
 mod namespace_digest;
 mod namespace_error;
+mod policy;
+mod profile;
+mod profile_admission_error;
+mod root;
+mod root_digest;
+mod root_error;
 mod root_generation;
 mod root_generation_error;
 
 pub use anchor::RetentionAnchor;
+pub use closure_limit::RetentionClosureLimit;
+pub use closure_limit_error::RetentionClosureLimitError;
+pub use closure_limits::RetentionClosureLimits;
 pub use liveness_generation::LivenessGeneration;
 pub use liveness_generation_error::LivenessGenerationError;
 pub use namespace::RetentionNamespace;
 pub use namespace_digest::RetentionNamespaceDigest;
 pub use namespace_error::RetentionNamespaceError;
+pub use policy::RetentionPolicy;
+pub use profile::RegisteredRetentionProfile;
+pub use profile_admission_error::RetentionProfileAdmissionError;
+pub use root::RetentionRoot;
+pub use root_digest::RetentionRootDigest;
+pub use root_error::RetentionRootError;
 pub use root_generation::RootGeneration;
 pub use root_generation_error::RootGenerationError;

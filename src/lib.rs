@@ -21,7 +21,8 @@
 //! contract and a pinned writer-authorized filesystem adapter. Reusable-stage
 //! continuation has a storage-independent planning and execution boundary plus
 //! a pinned writer-authorized filesystem adapter. Core retention namespaces,
-//! generations, and reconstruction anchors are validated. Retention
+//! generations, realization policy, reconstruction anchors, and semantic roots
+//! are validated; canonical root encoding is available. Retention decoding,
 //! publication, recovery, and garbage collection remain intentionally absent.
 
 #[cfg(test)]
@@ -42,14 +43,14 @@ pub use adapters::RepositoryInitializationStorage;
 pub use adapters::{
     AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedSegment, AdmittedSegmentRecord,
     BlobIdBinaryParseError, BlobIdTextParseError, CanonicalCatalog, CanonicalLayoutRecord,
-    CanonicalPublicationHead, CatalogAdmissionError, CatalogAllocationPhase, CatalogDecodeError,
-    CatalogEncodeError, CatalogEntryDecodeError, CatalogPublicationError,
-    CatalogPublicationExpectation, CatalogPublicationOutcome, CatalogPublicationPhase,
-    CatalogPublicationReadiness, CatalogPublicationReceipt, CatalogPublicationStorage,
-    CatalogRestartArtifact, CatalogRestartByteLimit, CatalogRestartByteLimitError,
-    CatalogRestartError, CatalogRestartPhase, CatalogRestartPolicy, CatalogSnapshot,
-    CatalogSnapshotError, CatalogSuccessor, CatalogTransitionError, ChecksummedCatalog,
-    ChecksummedPublicationHead, ChecksummedSegmentRecord, ClosedSegment,
+    CanonicalPublicationHead, CanonicalRetentionRoot, CatalogAdmissionError,
+    CatalogAllocationPhase, CatalogDecodeError, CatalogEncodeError, CatalogEntryDecodeError,
+    CatalogPublicationError, CatalogPublicationExpectation, CatalogPublicationOutcome,
+    CatalogPublicationPhase, CatalogPublicationReadiness, CatalogPublicationReceipt,
+    CatalogPublicationStorage, CatalogRestartArtifact, CatalogRestartByteLimit,
+    CatalogRestartByteLimitError, CatalogRestartError, CatalogRestartPhase, CatalogRestartPolicy,
+    CatalogSnapshot, CatalogSnapshotError, CatalogSuccessor, CatalogTransitionError,
+    ChecksummedCatalog, ChecksummedPublicationHead, ChecksummedSegmentRecord, ClosedSegment,
     FilesystemCatalogPublicationError, FilesystemCatalogPublisher, FilesystemCatalogSnapshot,
     FilesystemPlatformAdmission, FilesystemPlatformAdmissionError,
     FilesystemRecoveryInventoryReader, FilesystemRecoveryNextHeadFinalizationOpenError,
@@ -83,20 +84,21 @@ pub use adapters::{
     RecoveryStageFingerprintAlgorithm, RecoveryStageFingerprintError, RecoveryStageLength,
     RecoveryStageMetadata, RecoveryStageMetadataError, RecoveryStageNamespacePhase,
     RecoveryStageParent, RecoveryStagePoolOutcome, RecoveryStageSynchronizationOutcome,
-    ReusableRecoverySegment, SealedSegment, SegmentDigest, SegmentDurabilityPhase, SegmentHeader,
-    SegmentHeaderError, SegmentPublication, SegmentPublicationError, SegmentReadError,
-    SegmentReadPolicy, SegmentRecordAdmissionError, SegmentRecordChecksum,
-    SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError, SegmentRecordIdentity,
-    SegmentRecordLength, SegmentRecordLimit, SegmentRecordLimitError, SegmentRecordPayloadLength,
-    SegmentRecords, SegmentSeal, SegmentSealError, SegmentStage, SegmentStageCreateError,
-    SegmentWriteError, SegmentWritePhase, StagedSegment, StorageProfileIdParseError,
-    StoreInitializationError, StoreInitializationPhase, StoreInitializationReceipt,
-    StoreInitializationStorage, WriterLockAcquireError, WriterLockAcquirePhase,
-    admit_recovery_stage_bytes, assess_recovery_stage, classify_recovery_catalog_stage,
-    classify_recovery_names, classify_recovery_next_head_stage, classify_recovery_segment_stage,
-    execute_recovery_next_head_finalization, execute_recovery_segment_resume,
-    execute_recovery_stage_completion, execute_recovery_stage_discard, fingerprint_recovery_stage,
-    initialize_store, plan_recovery_next_head_finalization, plan_recovery_segment_resume,
+    RetentionRootEncodeError, ReusableRecoverySegment, SealedSegment, SegmentDigest,
+    SegmentDurabilityPhase, SegmentHeader, SegmentHeaderError, SegmentPublication,
+    SegmentPublicationError, SegmentReadError, SegmentReadPolicy, SegmentRecordAdmissionError,
+    SegmentRecordChecksum, SegmentRecordDecodeError, SegmentRecordHeader, SegmentRecordHeaderError,
+    SegmentRecordIdentity, SegmentRecordLength, SegmentRecordLimit, SegmentRecordLimitError,
+    SegmentRecordPayloadLength, SegmentRecords, SegmentSeal, SegmentSealError, SegmentStage,
+    SegmentStageCreateError, SegmentWriteError, SegmentWritePhase, StagedSegment,
+    StorageProfileIdParseError, StoreInitializationError, StoreInitializationPhase,
+    StoreInitializationReceipt, StoreInitializationStorage, WriterLockAcquireError,
+    WriterLockAcquirePhase, admit_recovery_stage_bytes, assess_recovery_stage,
+    classify_recovery_catalog_stage, classify_recovery_names, classify_recovery_next_head_stage,
+    classify_recovery_segment_stage, execute_recovery_next_head_finalization,
+    execute_recovery_segment_resume, execute_recovery_stage_completion,
+    execute_recovery_stage_discard, fingerprint_recovery_stage, initialize_store,
+    plan_recovery_next_head_finalization, plan_recovery_segment_resume,
     plan_recovery_stage_completion, plan_recovery_stage_discard, publish_catalog_generation,
     read_recovery_inventory,
 };
@@ -121,6 +123,9 @@ pub use reference::{
     ReferenceStoreCapacity, StagedBlob,
 };
 pub use retention::{
-    LivenessGeneration, LivenessGenerationError, RetentionAnchor, RetentionNamespace,
-    RetentionNamespaceDigest, RetentionNamespaceError, RootGeneration, RootGenerationError,
+    LivenessGeneration, LivenessGenerationError, RegisteredRetentionProfile, RetentionAnchor,
+    RetentionClosureLimit, RetentionClosureLimitError, RetentionClosureLimits, RetentionNamespace,
+    RetentionNamespaceDigest, RetentionNamespaceError, RetentionPolicy,
+    RetentionProfileAdmissionError, RetentionRoot, RetentionRootDigest, RetentionRootError,
+    RootGeneration, RootGenerationError,
 };

@@ -3,7 +3,8 @@
 //! This module owns decoding raw input into validated domain types, encoding
 //! validated domain types into canonical bytes, and exact immutable-segment
 //! ingress and egress. It does not own identity calculation, logical layout
-//! policy, physical location, namespace publication, recovery, or retention.
+//! policy, physical location, namespace publication, recovery, or retention
+//! policy.
 
 mod admitted_catalog;
 mod admitted_recovery_stage_bytes;
@@ -233,6 +234,7 @@ mod recovery_stage_pool_outcome;
 mod recovery_stage_synchronization_outcome;
 #[cfg(feature = "repository-tasks")]
 mod repository_initialization_storage;
+mod retention;
 mod sealed_segment;
 mod segment_digest;
 mod segment_digest_builder;
@@ -447,6 +449,7 @@ pub use recovery_stage_pool_outcome::RecoveryStagePoolOutcome;
 pub use recovery_stage_synchronization_outcome::RecoveryStageSynchronizationOutcome;
 #[cfg(feature = "repository-tasks")]
 pub use repository_initialization_storage::RepositoryInitializationStorage;
+pub use retention::{CanonicalRetentionRoot, RetentionRootEncodeError};
 pub use sealed_segment::SealedSegment;
 pub use segment_digest::SegmentDigest;
 pub use segment_header::SegmentHeader;
