@@ -13,6 +13,9 @@ use super::RootGenerationError;
 pub struct RootGeneration(NonZeroU64);
 
 impl RootGeneration {
+    /// Initial published root generation.
+    pub const INITIAL: Self = Self(NonZeroU64::MIN);
+
     /// Admits one positive root generation.
     ///
     /// # Errors

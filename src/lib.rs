@@ -23,8 +23,9 @@
 //! a pinned writer-authorized filesystem adapter. Core retention namespaces,
 //! generations, realization policy, reconstruction anchors, and semantic roots
 //! are validated; canonical in-memory root, manifest, and head encoding and
-//! decoding are available. Retention publication, recovery, and garbage
-//! collection remain intentionally absent.
+//! decoding plus storage-independent expected-state transition planning are
+//! available. Closure verification, retention publication, recovery, and
+//! garbage collection remain intentionally absent.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -106,7 +107,8 @@ pub use adapters::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
     CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
     RetentionHeadDecodeError, RetentionManifestDecodeError, RetentionManifestEncodeError,
-    RetentionRootDecodeError, RetentionRootEncodeError,
+    RetentionRootDecodeError, RetentionRootEncodeError, RetentionTransitionError,
+    RetentionTransitionReadiness, plan_retention_transition,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
@@ -130,10 +132,11 @@ pub use reference::{
 };
 pub use retention::{
     LivenessGeneration, LivenessGenerationError, RegisteredRetentionProfile, RetentionAnchor,
-    RetentionClosureLimit, RetentionClosureLimitError, RetentionClosureLimits, RetentionHead,
-    RetentionHeadError, RetentionManifest, RetentionManifestDigest, RetentionManifestEntry,
-    RetentionManifestError, RetentionManifestLength, RetentionManifestLengthError,
-    RetentionNamespace, RetentionNamespaceDigest, RetentionNamespaceError, RetentionPolicy,
+    RetentionClosureLimit, RetentionClosureLimitError, RetentionClosureLimits,
+    RetentionGenerationExpectation, RetentionHead, RetentionHeadError, RetentionManifest,
+    RetentionManifestDigest, RetentionManifestEntry, RetentionManifestError,
+    RetentionManifestLength, RetentionManifestLengthError, RetentionNamespace,
+    RetentionNamespaceDigest, RetentionNamespaceError, RetentionPolicy,
     RetentionProfileAdmissionError, RetentionRoot, RetentionRootDigest, RetentionRootError,
     RootGeneration, RootGenerationError,
 };

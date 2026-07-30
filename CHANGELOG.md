@@ -317,9 +317,13 @@ after its public API and format compatibility policies are established.
   history, namespace uniqueness, bounds, ordering, and all three integrity
   layers. Typed manifest lengths and semantic global heads now reproduce and
   admit the exact 144-byte head fixture with fixed framing, checksum-first
-  semantic admission, and explicit generation-history laws. Version-1
-  immutable bytes remain authoritative; production version-2 writing remains
-  unavailable until issue #19's executable evidence is complete.
+  semantic admission, and explicit generation-history laws. Storage-independent
+  transition planning now compares absent or exact-generation expectations,
+  admits only same-namespace exact successors, preserves expected and observed
+  stale coordinates, and distinguishes byte-identical already-committed
+  replay. Version-1 immutable bytes remain authoritative; production version-2
+  writing remains unavailable until issue #19's executable evidence is
+  complete.
 - Accepted ADR-0009 defines caller-supplied retention namespaces,
   `BlobId`/`LayoutId` reconstruction anchors, fail-closed canonical closure,
   generation-checked retention publication, immutable liveness snapshots,

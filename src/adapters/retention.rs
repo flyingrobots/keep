@@ -30,6 +30,9 @@ mod root_field_decoder;
 mod root_header_decoder;
 mod root_integrity;
 mod root_semantic_header;
+mod transition_error;
+mod transition_planner;
+mod transition_readiness;
 
 pub use admitted_manifest::AdmittedRetentionManifest;
 pub use admitted_root::AdmittedRetentionRoot;
@@ -42,3 +45,6 @@ pub use manifest_decode_error::RetentionManifestDecodeError;
 pub use manifest_encode_error::RetentionManifestEncodeError;
 pub use root_decode_error::RetentionRootDecodeError;
 pub use root_encode_error::RetentionRootEncodeError;
+pub use transition_error::RetentionTransitionError;
+pub use transition_planner::plan_retention_transition;
+pub use transition_readiness::RetentionTransitionReadiness;
