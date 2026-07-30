@@ -9,7 +9,7 @@ case is not evidence.
 
 | ID | Requirement | Evidence | Status |
 | --- | --- | --- | --- |
-| `KEEP-RETENTION-001` | `RetentionNamespace`, `RootGeneration`, `LivenessGeneration`, profile coordinates, limits, anchors, and digests are validated typed values | `tests/retention_values.rs` and `tests/retention_root_encoding.rs` | Implemented |
+| `KEEP-RETENTION-001` | `RetentionNamespace`, `RootGeneration`, `LivenessGeneration`, profile coordinates, limits, anchors, and digests are validated typed values | `tests/retention_values.rs`, `tests/retention_root_encoding.rs`, and typed verified anchor-set evidence in `tests/retention_root_decoding.rs` | Implemented |
 | `KEEP-RETENTION-002` | Root, manifest, and head codecs implement the exact canonical grammars and fixed bounds | independent golden corpus plus `tests/retention_root_encoding.rs`, `tests/retention_root_decoding.rs`, `tests/retention_manifest_codec.rs`, and `tests/retention_head_codec.rs` | Implemented |
 | `KEEP-RETENTION-003` | Every structural field, truncation boundary, ordering law, duplicate, overflow, flag, reserved byte, digest, checksum, and trailing byte has a precise refusal | corruption matrix and fuzz | Planned in #19 |
 | `KEEP-RETENTION-004` | Retain and release compare expected and observed generations and publish exact successors only | unforgeable storage-independent readiness and preflight proofs with preserved disposition and coordinates in `tests/retention_transition.rs` and `tests/retention_preflight.rs`; exact global successor preparation in `tests/retention_publication_preparation.rs`; publication evidence remains | In progress in #19 |

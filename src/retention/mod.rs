@@ -6,6 +6,7 @@
 //! collection.
 
 mod anchor;
+mod anchor_set_digest;
 mod closure_counter;
 mod closure_digest;
 mod closure_limit;
@@ -36,6 +37,7 @@ mod root_generation;
 mod root_generation_error;
 
 pub use anchor::RetentionAnchor;
+pub use anchor_set_digest::RetentionAnchorSetDigest;
 pub use closure_counter::RetentionClosureCounter;
 pub use closure_digest::RetentionClosureDigest;
 pub use closure_limit::RetentionClosureLimit;

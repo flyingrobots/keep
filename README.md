@@ -120,10 +120,10 @@ manifest, and retention-head codecs; storage-independent expected-state
 transition planning; deterministic bounded closure verification against a
 pinned catalog; a combined transition preflight proof; and the exact 17-phase
 publication vocabulary with a blocking storage capability port are
-implemented. Private-field proofs preserve typed disposition plus expected and
-observed namespace generations through canonical manifest and head preparation.
-Publication orchestration, filesystem execution, recovery, compaction, and
-garbage collection remain planned.
+implemented. Private-field proofs preserve typed disposition, expected and
+observed namespace generations, and the verified anchor-set digest through
+canonical manifest and head preparation. Publication orchestration, filesystem
+execution, recovery, compaction, and garbage collection remain planned.
 Presence in the reference CAS does not claim durable retention or crash
 recovery.
 

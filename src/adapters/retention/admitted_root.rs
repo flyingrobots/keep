@@ -1,7 +1,7 @@
 //! This boundary module owns one decoded and admitted retention root.
 
 use super::{RetentionRootDecodeError, root_decoder};
-use crate::{RetentionRoot, RetentionRootDigest};
+use crate::{RetentionAnchorSetDigest, RetentionRoot, RetentionRootDigest};
 
 /// Borrowed canonical bytes paired with their admitted semantic root.
 ///
@@ -14,6 +14,7 @@ use crate::{RetentionRoot, RetentionRootDigest};
 pub struct AdmittedRetentionRoot<'encoded> {
     encoded: &'encoded [u8],
     root: RetentionRoot,
+    anchor_set_digest: RetentionAnchorSetDigest,
     digest: RetentionRootDigest,
 }
 
@@ -39,6 +40,11 @@ impl<'encoded> AdmittedRetentionRoot<'encoded> {
         &self.root
     }
 
+    /// Returns the verified canonical anchor-set digest.
+    pub const fn anchor_set_digest(&self) -> RetentionAnchorSetDigest {
+        self.anchor_set_digest
+    }
+
     /// Returns the verified canonical root digest.
     pub const fn digest(&self) -> RetentionRootDigest {
         self.digest
@@ -47,11 +53,13 @@ impl<'encoded> AdmittedRetentionRoot<'encoded> {
     pub(super) const fn admitted(
         encoded: &'encoded [u8],
         root: RetentionRoot,
+        anchor_set_digest: RetentionAnchorSetDigest,
         digest: RetentionRootDigest,
     ) -> Self {
         Self {
             encoded,
             root,
+            anchor_set_digest,
             digest,
         }
     }

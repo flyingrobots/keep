@@ -141,10 +141,10 @@ pub use reference::{
 };
 pub use retention::{
     LivenessGeneration, LivenessGenerationError, RegisteredRetentionProfile, RetentionAnchor,
-    RetentionClosureCounter, RetentionClosureDigest, RetentionClosureLimit,
-    RetentionClosureLimitError, RetentionClosureLimits, RetentionClosureUsage,
-    RetentionGenerationExpectation, RetentionHead, RetentionHeadError, RetentionManifest,
-    RetentionManifestDigest, RetentionManifestEntry, RetentionManifestError,
+    RetentionAnchorSetDigest, RetentionClosureCounter, RetentionClosureDigest,
+    RetentionClosureLimit, RetentionClosureLimitError, RetentionClosureLimits,
+    RetentionClosureUsage, RetentionGenerationExpectation, RetentionHead, RetentionHeadError,
+    RetentionManifest, RetentionManifestDigest, RetentionManifestEntry, RetentionManifestError,
     RetentionManifestLength, RetentionManifestLengthError, RetentionNamespace,
     RetentionNamespaceDigest, RetentionNamespaceError, RetentionPolicy,
     RetentionProfileAdmissionError, RetentionRoot, RetentionRootDigest, RetentionRootError,

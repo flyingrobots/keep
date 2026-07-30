@@ -1,6 +1,7 @@
 //! This boundary module owns retention root digest and checksum verification.
 
 use super::RetentionRootDecodeError;
+use crate::RetentionAnchorSetDigest;
 
 pub(super) fn verify(
     encoded: &[u8],
@@ -45,14 +46,14 @@ pub(super) fn verify_anchor_set(
     anchor_count: u32,
     anchors: &[u8],
     observed: [u8; 32],
-) -> Result<(), RetentionRootDecodeError> {
+) -> Result<RetentionAnchorSetDigest, RetentionRootDecodeError> {
     let mut hasher = blake3::Hasher::new();
     hasher.update(b"keep.retention-anchor-set/v2\0");
     hasher.update(&anchor_count.to_be_bytes());
     hasher.update(anchors);
     let expected = *hasher.finalize().as_bytes();
     if observed == expected {
-        Ok(())
+        Ok(RetentionAnchorSetDigest::from_verified(expected))
     } else {
         Err(RetentionRootDecodeError::AnchorSetDigestMismatch { expected, observed })
     }

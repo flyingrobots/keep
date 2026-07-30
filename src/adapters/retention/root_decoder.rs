@@ -28,7 +28,11 @@ pub(super) fn decode(
             observed: encoded.len(),
         },
     )?;
-    root_integrity::verify_anchor_set(header.anchor_count, anchor_bytes, header.anchor_set_digest)?;
+    let anchor_set_digest = root_integrity::verify_anchor_set(
+        header.anchor_count,
+        anchor_bytes,
+        header.anchor_set_digest,
+    )?;
     let admitted_header = root_semantic_header::admit(&header)?;
     let namespace = RetentionNamespace::try_from(namespace_bytes)
         .map_err(|source| RetentionRootDecodeError::Namespace { source })?;
@@ -45,6 +49,7 @@ pub(super) fn decode(
     Ok(AdmittedRetentionRoot::admitted(
         encoded,
         root,
+        anchor_set_digest,
         RetentionRootDigest::from_hash(digest),
     ))
 }

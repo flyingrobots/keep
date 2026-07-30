@@ -8,6 +8,7 @@ use keep::{AdmittedRetentionRoot, RetentionRootDecodeError};
 
 const ONE_ANCHOR_ROOT: &str = include_str!("../conformance/segment-store/v2/one-anchor-root.hex");
 const ANCHOR_SET_DIGEST_OFFSET: usize = 148;
+const ANCHOR_SET_DIGEST_END: usize = 180;
 const ANCHOR_BODY_OFFSET: usize = 195;
 const ROOT_DIGEST_OFFSET: usize = 314;
 const CHECKSUM_OFFSET: usize = 346;
@@ -21,6 +22,12 @@ fn frozen_root_decodes_to_one_complete_semantic_generation()
     assert_eq!(admitted.root().namespace().as_bytes(), &[0x00, 0x2f, 0xff]);
     assert_eq!(admitted.root().generation().get(), 1);
     assert_eq!(admitted.root().anchor_count(), 1);
+    assert_eq!(
+        admitted.anchor_set_digest().as_bytes(),
+        bytes
+            .get(ANCHOR_SET_DIGEST_OFFSET..ANCHOR_SET_DIGEST_END)
+            .ok_or_else(|| io::Error::other("frozen root lacks its anchor-set digest"))?
+    );
     assert_eq!(
         admitted.digest().as_bytes(),
         bytes.get(314..346).ok_or_else(|| {

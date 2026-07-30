@@ -160,9 +160,9 @@ retention/roots/<namespace-digest>/
 ```
 
 Names with alternate width, case, suffix, generation, or digest refuse. Keep
-implements validated in-memory root, manifest, and head codecs,
-storage-independent expected-state transition planning, deterministic closure
-verification, and a blocking publication storage capability port. Publication
+implements root, manifest, and head codecs with a typed verified anchor-set
+digest, expected-state transition planning, deterministic closure verification,
+and a blocking publication storage capability port. Publication
 orchestration, filesystem execution, recovery, and garbage collection remain
 absent.
 
