@@ -13,6 +13,9 @@ use super::LivenessGenerationError;
 pub struct LivenessGeneration(NonZeroU64);
 
 impl LivenessGeneration {
+    /// First global retention liveness generation.
+    pub const INITIAL: Self = Self(NonZeroU64::MIN);
+
     /// Admits one positive liveness generation.
     ///
     /// # Errors
