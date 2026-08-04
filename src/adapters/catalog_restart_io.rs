@@ -1,5 +1,5 @@
 //! This module owns exact capability-relative restart artifact reads and
-//! bounded streaming writes.
+//! bounded, exact-transfer streaming.
 
 use std::io::{self, Read};
 use std::path::Path;
@@ -11,6 +11,39 @@ use cap_std::fs::{Dir, File, OpenOptions};
 use super::{CatalogRestartArtifact, CatalogRestartError, CatalogRestartPhase};
 
 const CATALOG_RESTART_READ_BUFFER_LENGTH: usize = 8_192;
+
+#[derive(Clone, Copy, Debug)]
+pub(super) struct ExactTransfer {
+    artifact: CatalogRestartArtifact,
+    phase: CatalogRestartPhase,
+    expected: u64,
+}
+
+impl ExactTransfer {
+    const fn new(
+        artifact: CatalogRestartArtifact,
+        phase: CatalogRestartPhase,
+        expected: u64,
+    ) -> Self {
+        Self {
+            artifact,
+            phase,
+            expected,
+        }
+    }
+
+    fn artifact(&self) -> CatalogRestartArtifact {
+        self.artifact
+    }
+
+    fn phase(&self) -> CatalogRestartPhase {
+        self.phase
+    }
+
+    fn expected(&self) -> u64 {
+        self.expected
+    }
+}
 
 pub(super) fn open_root(root: &Path) -> Result<Dir, CatalogRestartError> {
     Dir::open_ambient_dir(root, ambient_authority())
@@ -43,99 +76,59 @@ pub(super) fn read_exact(
     phase: CatalogRestartPhase,
     expected: u64,
 ) -> Result<Vec<u8>, CatalogRestartError> {
-    let host_length =
-        usize::try_from(expected).map_err(|_source| CatalogRestartError::Allocation {
-            artifact,
-            byte_count: expected,
+    let transfer = ExactTransfer::new(artifact, phase, expected);
+    let host_length = usize::try_from(transfer.expected()).map_err(|_source| {
+        CatalogRestartError::Allocation {
+            artifact: transfer.artifact(),
+            byte_count: transfer.expected(),
             source: None,
-        })?;
+        }
+    })?;
 
     let mut encoded = Vec::new();
     encoded
         .try_reserve_exact(host_length)
         .map_err(|source| CatalogRestartError::Allocation {
-            artifact,
+            artifact: transfer.artifact(),
             byte_count: expected,
             source: Some(source),
         })?;
-    read_exact_to(&mut file, artifact, phase, expected, |chunk| {
+    copy_exact_to_chunks(&mut file, transfer, |chunk| {
         encoded.extend_from_slice(chunk);
         Ok(())
     })?;
     Ok(encoded)
 }
 
-#[cfg(test)]
-pub(super) fn write_exact_to<R, W>(
+pub(super) fn copy_exact<R, W>(
     source: &mut R,
     destination: &mut W,
-    artifact: CatalogRestartArtifact,
-    phase: CatalogRestartPhase,
-    expected: u64,
-) -> Result<(), CatalogRestartError>
+    transfer: ExactTransfer,
+) -> Result<u64, CatalogRestartError>
 where
     R: Read,
     W: io::Write,
 {
-    let mut observed = 0_u64;
-    let mut buffer = [0_u8; CATALOG_RESTART_READ_BUFFER_LENGTH];
-    let chunk_length = u64::try_from(buffer.len())
-        .map_err(|_source| CatalogRestartError::LengthArithmetic { artifact, expected })?;
-
-    while observed < expected {
-        let remaining = expected
-            .checked_sub(observed)
-            .ok_or(CatalogRestartError::LengthArithmetic { artifact, expected })?;
-        let offered = remaining
-            .min(chunk_length)
-            .try_into()
-            .map_err(|_source| CatalogRestartError::LengthArithmetic { artifact, expected })?;
-        let read_buffer = buffer
-            .get_mut(..offered)
-            .ok_or(CatalogRestartError::LengthArithmetic { artifact, expected })?;
-        match source.read(read_buffer) {
-            Ok(0) => {
-                return Err(CatalogRestartError::io(
-                    phase,
-                    io::Error::new(
-                        io::ErrorKind::UnexpectedEof,
-                        "restart artifact ended before the expected boundary",
-                    ),
-                ));
-            }
-            Ok(count) => {
-                let bytes = read_buffer
-                    .get(..count)
-                    .ok_or(CatalogRestartError::LengthArithmetic { artifact, expected })?;
-                destination
-                    .write_all(bytes)
-                    .map_err(|source| CatalogRestartError::io(phase, source))?;
-                let increment = u64::try_from(count).map_err(|_source| {
-                    CatalogRestartError::LengthArithmetic { artifact, expected }
-                })?;
-                observed = observed
-                    .checked_add(increment)
-                    .ok_or(CatalogRestartError::LengthArithmetic { artifact, expected })?;
-            }
-            Err(source) if source.kind() == io::ErrorKind::Interrupted => {}
-            Err(source) => return Err(CatalogRestartError::io(phase, source)),
-        }
-    }
-    reject_trailing_bytes(source, artifact, phase, expected)?;
-    Ok(())
+    copy_exact_to_chunks(source, transfer, |chunk| {
+        destination
+            .write_all(chunk)
+            .map_err(|source| CatalogRestartError::io(transfer.phase(), source))
+    })
 }
 
-pub(super) fn read_exact_to<R, F>(
+pub(super) fn copy_exact_to_chunks<R, F>(
     source: &mut R,
-    artifact: CatalogRestartArtifact,
-    phase: CatalogRestartPhase,
-    expected: u64,
+    transfer: ExactTransfer,
     mut on_chunk: F,
-) -> Result<(), CatalogRestartError>
+) -> Result<u64, CatalogRestartError>
 where
     R: Read,
     F: FnMut(&[u8]) -> Result<(), CatalogRestartError>,
 {
+    let artifact = transfer.artifact();
+    let phase = transfer.phase();
+    let expected = transfer.expected();
+
     let mut observed = 0_u64;
     let mut buffer = [0_u8; CATALOG_RESTART_READ_BUFFER_LENGTH];
     let chunk_length = u64::try_from(buffer.len())
@@ -179,7 +172,7 @@ where
         }
     }
     reject_trailing_bytes(source, artifact, phase, expected)?;
-    Ok(())
+    Ok(observed)
 }
 
 fn reject_trailing_bytes<R: Read>(
@@ -229,11 +222,13 @@ mod tests {
         let mut source = SyntheticStreamingReader::new(TOTAL_BYTES, READER_STRIDE);
         let mut budget = StreamingCallbackBudget::new(TOTAL_BYTES, CALLBACK_BUDGET_BYTES);
 
-        let result = read_exact_to(
+        let result = copy_exact_to_chunks(
             &mut source,
-            CatalogRestartArtifact::Head,
-            CatalogRestartPhase::ReadCatalog,
-            TOTAL_BYTES,
+            ExactTransfer::new(
+                CatalogRestartArtifact::Head,
+                CatalogRestartPhase::ReadCatalog,
+                TOTAL_BYTES,
+            ),
             |chunk| budget.consume(chunk),
         );
 
@@ -261,7 +256,7 @@ mod tests {
     }
 
     #[test]
-    fn write_exact_to_streams_large_virtual_file_with_small_writer_state() {
+    fn copy_exact_streams_large_virtual_file_with_small_writer_state() {
         const TOTAL_BYTES: u64 = 64_u64 * 1024 * 1024;
         const READER_STRIDE: u64 = 2_u64 * 1024;
         const WRITER_BUDGET_BYTES: usize = 4 * 1024;
@@ -269,15 +264,20 @@ mod tests {
         let mut source = SyntheticStreamingReader::new(TOTAL_BYTES, READER_STRIDE);
         let mut sink = StreamingWriteSink::new(WRITER_BUDGET_BYTES);
 
-        let result = write_exact_to(
+        let result = copy_exact(
             &mut source,
             &mut sink,
-            CatalogRestartArtifact::Head,
-            CatalogRestartPhase::ReadCatalog,
-            TOTAL_BYTES,
+            ExactTransfer::new(
+                CatalogRestartArtifact::Head,
+                CatalogRestartPhase::ReadCatalog,
+                TOTAL_BYTES,
+            ),
         );
 
-        assert!(result.is_ok(), "{result:?}");
+        let observed = result.unwrap_or_else(|error| {
+            panic!("copy should succeed for expected length: {error:?}");
+        });
+        assert_eq!(observed, TOTAL_BYTES);
         assert_eq!(sink.observed_bytes(), TOTAL_BYTES);
         assert!(sink.total_chunks() > 0);
         assert!(sink.max_chunk() <= WRITER_BUDGET_BYTES);
@@ -291,11 +291,13 @@ mod tests {
         let mut source = Cursor::new(vec![b'a', b'b', b'c', b'd', b'e', b'f', b'g']);
         let mut observed = Vec::<Vec<u8>>::new();
 
-        let result = read_exact_to(
+        let result = copy_exact_to_chunks(
             &mut source,
-            CatalogRestartArtifact::Head,
-            CatalogRestartPhase::ReadCatalog,
-            7,
+            ExactTransfer::new(
+                CatalogRestartArtifact::Head,
+                CatalogRestartPhase::ReadCatalog,
+                7,
+            ),
             |chunk| {
                 observed.push(chunk.to_vec());
                 Ok(())
@@ -311,11 +313,13 @@ mod tests {
         let mut source = Cursor::new(vec![b'a', b'b']);
         let mut seen = 0_u8;
 
-        let result = read_exact_to(
+        let result = copy_exact_to_chunks(
             &mut source,
-            CatalogRestartArtifact::Head,
-            CatalogRestartPhase::ReadCatalog,
-            4,
+            ExactTransfer::new(
+                CatalogRestartArtifact::Head,
+                CatalogRestartPhase::ReadCatalog,
+                4,
+            ),
             |_chunk| {
                 seen = seen.checked_add(1).expect("unexpected chunk overflow");
                 Ok(())
@@ -337,11 +341,13 @@ mod tests {
     fn read_exact_to_rejects_trailing_bytes() {
         let mut source = Cursor::new(vec![b'a', b'b', b'c']);
 
-        let result = read_exact_to(
+        let result = copy_exact_to_chunks(
             &mut source,
-            CatalogRestartArtifact::Head,
-            CatalogRestartPhase::ReadCatalog,
-            2,
+            ExactTransfer::new(
+                CatalogRestartArtifact::Head,
+                CatalogRestartPhase::ReadCatalog,
+                2,
+            ),
             |_| Ok(()),
         );
 
@@ -359,16 +365,18 @@ mod tests {
     }
 
     #[test]
-    fn write_exact_to_rejects_short_artifacts() {
+    fn copy_exact_rejects_short_artifacts() {
         let mut source = Cursor::new(vec![b'a', b'b']);
         let mut sink = StreamingWriteSink::new(16 * 1024);
 
-        let result = write_exact_to(
+        let result = copy_exact(
             &mut source,
             &mut sink,
-            CatalogRestartArtifact::Head,
-            CatalogRestartPhase::ReadCatalog,
-            4,
+            ExactTransfer::new(
+                CatalogRestartArtifact::Head,
+                CatalogRestartPhase::ReadCatalog,
+                4,
+            ),
         );
 
         let error = result.unwrap_err();
@@ -383,16 +391,18 @@ mod tests {
     }
 
     #[test]
-    fn write_exact_to_rejects_trailing_bytes() {
+    fn copy_exact_rejects_trailing_bytes() {
         let mut source = Cursor::new(vec![b'a', b'b', b'c']);
         let mut sink = StreamingWriteSink::new(16 * 1024);
 
-        let result = write_exact_to(
+        let result = copy_exact(
             &mut source,
             &mut sink,
-            CatalogRestartArtifact::Head,
-            CatalogRestartPhase::ReadCatalog,
-            2,
+            ExactTransfer::new(
+                CatalogRestartArtifact::Head,
+                CatalogRestartPhase::ReadCatalog,
+                2,
+            ),
         );
 
         let error = result.unwrap_err();
