@@ -93,20 +93,20 @@ fn reject_trailing_bytes(
                         observed: expected.get(),
                     }
                 })?;
-                let observed = expected.get().checked_add(increment).ok_or(
+                let observed = expected.get().checked_add(increment).ok_or_else(|| {
                     FilesystemRecoveryStageError::LengthChanged {
                         stage,
                         expected,
                         observed: expected.get(),
-                    },
-                )?;
+                    }
+                })?;
                 return Err(FilesystemRecoveryStageError::LengthChanged {
                     stage,
                     expected,
                     observed,
                 });
             }
-            Err(source) if source.kind() == io::ErrorKind::Interrupted => continue,
+            Err(source) if source.kind() == io::ErrorKind::Interrupted => {}
             Err(source) => {
                 return Err(FilesystemRecoveryStageError::Materialize {
                     stage,
@@ -141,7 +141,8 @@ pub(super) fn verify_position(
 mod tests {
     use std::error::Error;
     use std::fs;
-    use std::path::PathBuf;
+    use std::io;
+    use std::path::{Path, PathBuf};
     use std::sync::atomic::{AtomicU64, Ordering};
 
     use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
@@ -175,12 +176,16 @@ mod tests {
         let path = sandbox.path().join("stage.bin");
         fs::write(&path, b"abc")?;
         let mut file = open_for_tests(&path)?;
-        let error = super::read_and_position(
+        let Err(error) = super::read_and_position(
             &mut file,
             RecoveryStage::Segment,
             RecoveryStageLength::from_validated(5),
-        )
-        .expect_err("short stage materialization was admitted");
+        ) else {
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "short stage materialization should have failed",
+            )));
+        };
 
         assert!(matches!(
             error,
@@ -201,12 +206,16 @@ mod tests {
         let path = sandbox.path().join("stage.bin");
         fs::write(&path, b"abcdef")?;
         let mut file = open_for_tests(&path)?;
-        let error = super::read_and_position(
+        let Err(error) = super::read_and_position(
             &mut file,
             RecoveryStage::Segment,
             RecoveryStageLength::from_validated(3),
-        )
-        .expect_err("trailing-stage materialization was admitted");
+        ) else {
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "trailing stage materialization should have failed",
+            )));
+        };
 
         assert!(matches!(
             error,
@@ -221,21 +230,26 @@ mod tests {
         Ok(())
     }
 
-    fn open_for_tests(path: &PathBuf) -> Result<File, Box<dyn Error>> {
-        let directory = Dir::open_ambient_dir(
-            path.parent()
-                .expect("directory parent exists for stage fixture"),
-            ambient_authority(),
-        )?;
+    fn open_for_tests(path: &Path) -> Result<File, Box<dyn Error>> {
+        let directory_path = path.parent().ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "stage fixture path does not have a parent directory",
+            )
+        })?;
+        let file_name = path
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or_else(|| {
+                io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "stage fixture path has no UTF-8 file name",
+                )
+            })?;
+        let directory = Dir::open_ambient_dir(directory_path, ambient_authority())?;
         let mut options = OpenOptions::new();
         options.read(true).follow(FollowSymlinks::No).nonblock(true);
-        let file = directory.open_with(
-            path.file_name()
-                .expect("file path has file name for fixture")
-                .to_str()
-                .expect("file name is UTF-8 for fixture"),
-            &options,
-        )?;
+        let file = directory.open_with(file_name, &options)?;
         Ok(file)
     }
 

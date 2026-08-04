@@ -222,6 +222,7 @@ impl Write for VecWrite<'_> {
 
 #[cfg(test)]
 mod tests {
+    use std::error::Error;
     use std::io;
     use std::io::{Cursor, ErrorKind, Read, Write};
     use std::mem::size_of;
@@ -229,15 +230,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn read_exact_to_streams_large_virtual_file_with_small_callback_memory() {
+    fn read_exact_to_streams_large_virtual_file_with_small_callback_memory()
+    -> Result<(), Box<dyn Error>> {
         const TOTAL_BYTES: u64 = 64_u64 * 1024 * 1024;
-        const READER_STRIDE: u64 = 2_u64 * 1024;
+        const READER_STRIDE_BYTES: usize = 2_usize * 1024;
         const CALLBACK_BUDGET_BYTES: usize = 16 * 1024;
+        let Ok(reader_stride) = u64::try_from(READER_STRIDE_BYTES) else {
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "reader stride is outside supported range",
+            )));
+        };
 
-        let mut source = SyntheticStreamingReader::new(TOTAL_BYTES, READER_STRIDE);
+        let mut source = SyntheticStreamingReader::new(TOTAL_BYTES, reader_stride);
         let mut budget = StreamingCallbackBudget::new(TOTAL_BYTES, CALLBACK_BUDGET_BYTES);
 
-        let result = copy_exact_to_chunks(
+        let _observed = copy_exact_to_chunks(
             &mut source,
             ExactTransfer::new(
                 CatalogRestartArtifact::Head,
@@ -245,13 +253,12 @@ mod tests {
                 TOTAL_BYTES,
             ),
             |chunk| budget.consume(chunk),
-        );
+        )?;
 
-        assert!(result.is_ok(), "{result:?}");
         assert!(budget.observed_bytes() > 0);
         assert_eq!(budget.observed_bytes(), TOTAL_BYTES);
         assert!(
-            budget.max_chunk() >= READER_STRIDE as usize,
+            budget.max_chunk() >= READER_STRIDE_BYTES,
             "reader stride should be observed"
         );
         assert!(
@@ -268,18 +275,26 @@ mod tests {
             "callback state should stay compact"
         );
         assert_eq!(budget.observed_bytes(), TOTAL_BYTES);
+        Ok(())
     }
 
     #[test]
-    fn copy_exact_streams_large_virtual_file_with_small_writer_state() {
+    fn copy_exact_streams_large_virtual_file_with_small_writer_state() -> Result<(), Box<dyn Error>>
+    {
         const TOTAL_BYTES: u64 = 64_u64 * 1024 * 1024;
-        const READER_STRIDE: u64 = 2_u64 * 1024;
+        const READER_STRIDE_BYTES: usize = 2_usize * 1024;
         const WRITER_BUDGET_BYTES: usize = 4 * 1024;
+        let Ok(reader_stride) = u64::try_from(READER_STRIDE_BYTES) else {
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "reader stride is outside supported range",
+            )));
+        };
 
-        let mut source = SyntheticStreamingReader::new(TOTAL_BYTES, READER_STRIDE);
+        let mut source = SyntheticStreamingReader::new(TOTAL_BYTES, reader_stride);
         let mut sink = StreamingWriteSink::new(WRITER_BUDGET_BYTES);
 
-        let result = copy_exact(
+        let observed = copy_exact(
             &mut source,
             &mut sink,
             ExactTransfer::new(
@@ -287,26 +302,23 @@ mod tests {
                 CatalogRestartPhase::ReadCatalog,
                 TOTAL_BYTES,
             ),
-        );
-
-        let observed = result.unwrap_or_else(|error| {
-            panic!("copy should succeed for expected length: {error:?}");
-        });
+        )?;
         assert_eq!(observed, TOTAL_BYTES);
         assert_eq!(sink.observed_bytes(), TOTAL_BYTES);
         assert!(sink.total_chunks() > 0);
         assert!(sink.max_chunk() <= WRITER_BUDGET_BYTES);
         assert!(sink.max_chunk() <= CATALOG_RESTART_READ_BUFFER_LENGTH);
-        assert!(sink.max_chunk() >= READER_STRIDE as usize);
+        assert!(sink.max_chunk() >= READER_STRIDE_BYTES);
         assert!(size_of::<StreamingWriteSink>() < 64);
+        Ok(())
     }
 
     #[test]
-    fn copy_exact_to_chunks_streams() {
+    fn copy_exact_to_chunks_streams() -> Result<(), Box<dyn Error>> {
         let mut source = Cursor::new(vec![b'a', b'b', b'c', b'd', b'e', b'f', b'g']);
         let mut observed = Vec::<Vec<u8>>::new();
 
-        let result = copy_exact_to_chunks(
+        let _observed = copy_exact_to_chunks(
             &mut source,
             ExactTransfer::new(
                 CatalogRestartArtifact::Head,
@@ -317,14 +329,14 @@ mod tests {
                 observed.push(chunk.to_vec());
                 Ok(())
             },
-        );
+        )?;
 
-        assert!(result.is_ok());
         assert_eq!(observed.concat(), b"abcdefg");
+        Ok(())
     }
 
     #[test]
-    fn copy_exact_to_chunks_rejects_short_artifacts() {
+    fn copy_exact_to_chunks_rejects_short_artifacts() -> Result<(), Box<dyn Error>> {
         let mut source = Cursor::new(vec![b'a', b'b']);
         let mut seen = 0_u8;
 
@@ -336,12 +348,25 @@ mod tests {
                 4,
             ),
             |_chunk| {
-                seen = seen.checked_add(1).expect("unexpected chunk overflow");
+                seen = match seen.checked_add(1) {
+                    Some(total) => total,
+                    None => {
+                        return Err(CatalogRestartError::LengthArithmetic {
+                            artifact: CatalogRestartArtifact::Head,
+                            expected: 4,
+                        });
+                    }
+                };
                 Ok(())
             },
         );
 
-        let error = result.unwrap_err();
+        let Err(error) = result else {
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "short artifact should have been rejected",
+            )));
+        };
         assert_eq!(seen, 1);
         assert!(matches!(
             error,
@@ -350,10 +375,11 @@ mod tests {
                 ref source,
             } if source.kind() == ErrorKind::UnexpectedEof
         ));
+        Ok(())
     }
 
     #[test]
-    fn copy_exact_to_chunks_rejects_trailing_bytes() {
+    fn copy_exact_to_chunks_rejects_trailing_bytes() -> Result<(), Box<dyn Error>> {
         let mut source = Cursor::new(vec![b'a', b'b', b'c']);
 
         let result = copy_exact_to_chunks(
@@ -366,7 +392,12 @@ mod tests {
             |_| Ok(()),
         );
 
-        let error = result.unwrap_err();
+        let Err(error) = result else {
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "trailing bytes should have been rejected",
+            )));
+        };
         let expected = 2_u64;
         assert!(matches!(
             error,
@@ -377,10 +408,11 @@ mod tests {
                 observed: 3
             } if minimum == expected && maximum == expected
         ));
+        Ok(())
     }
 
     #[test]
-    fn copy_exact_rejects_short_artifacts() {
+    fn copy_exact_rejects_short_artifacts() -> Result<(), Box<dyn Error>> {
         let mut source = Cursor::new(vec![b'a', b'b']);
         let mut sink = StreamingWriteSink::new(16 * 1024);
 
@@ -394,7 +426,12 @@ mod tests {
             ),
         );
 
-        let error = result.unwrap_err();
+        let Err(error) = result else {
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "short artifact should have been rejected",
+            )));
+        };
         assert_eq!(sink.observed_bytes(), 2);
         assert!(matches!(
             error,
@@ -403,10 +440,11 @@ mod tests {
                 ref source,
             } if source.kind() == ErrorKind::UnexpectedEof
         ));
+        Ok(())
     }
 
     #[test]
-    fn copy_exact_rejects_trailing_bytes() {
+    fn copy_exact_rejects_trailing_bytes() -> Result<(), Box<dyn Error>> {
         let mut source = Cursor::new(vec![b'a', b'b', b'c']);
         let mut sink = StreamingWriteSink::new(16 * 1024);
 
@@ -420,7 +458,12 @@ mod tests {
             ),
         );
 
-        let error = result.unwrap_err();
+        let Err(error) = result else {
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "trailing bytes should have been rejected",
+            )));
+        };
         let expected = 2_u64;
         assert_eq!(sink.observed_bytes(), 2);
         assert!(matches!(
@@ -432,6 +475,7 @@ mod tests {
                 observed: 3
             } if minimum == expected && maximum == expected
         ));
+        Ok(())
     }
 
     struct SyntheticStreamingReader {
@@ -454,14 +498,11 @@ mod tests {
                 return Ok(0);
             }
 
-            let sink_capacity = match u64::try_from(sink.len()) {
-                Ok(capacity) => capacity,
-                Err(_) => {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidInput,
-                        "sink capacity exceeds supported range",
-                    ));
-                }
+            let Ok(sink_capacity) = u64::try_from(sink.len()) else {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "sink capacity exceeds supported range",
+                ));
             };
             let emitted: usize = match self
                 .emit_stride
@@ -478,9 +519,16 @@ mod tests {
                 }
             };
 
-            sink[..emitted].fill(0x5a);
-            self.remaining -= u64::try_from(emitted)
+            let read_window = sink.get_mut(..emitted).ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidInput, "read window overflow")
+            })?;
+            read_window.fill(0x5a);
+            let emitted_u64 = u64::try_from(emitted)
                 .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "emit size overflow"))?;
+            self.remaining = self
+                .remaining
+                .checked_sub(emitted_u64)
+                .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "emit underflow"))?;
             Ok(emitted)
         }
     }

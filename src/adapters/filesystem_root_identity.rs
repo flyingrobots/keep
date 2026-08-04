@@ -8,6 +8,10 @@ pub(super) struct FilesystemRootIdentity {
 }
 
 impl FilesystemRootIdentity {
+    #[cfg(any(
+        target_os = "linux",
+        all(not(target_os = "linux"), any(test, feature = "repository-tasks"))
+    ))]
     pub(super) const fn new(device: u64, mount: u64, file: u64) -> Self {
         Self {
             device,
