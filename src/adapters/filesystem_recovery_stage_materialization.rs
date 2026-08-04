@@ -1,6 +1,6 @@
 //! This module owns exact writable recovery-stage materialization.
 
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{self, Read, Seek, SeekFrom};
 
 use cap_std::fs::File;
 
@@ -14,12 +14,7 @@ pub(super) fn read_and_position(
     let mut encoded = allocate(stage, length)?;
     file.seek(SeekFrom::Start(0))
         .map_err(|source| FilesystemRecoveryStageError::Position { stage, source })?;
-    file.read_exact(&mut encoded)
-        .map_err(|source| FilesystemRecoveryStageError::Materialize {
-            stage,
-            expected: length,
-            source,
-        })?;
+    read_exact(file, stage, length, &mut encoded)?;
     verify_position(file, stage, length)?;
     Ok(encoded.into_boxed_slice())
 }
@@ -42,8 +37,85 @@ fn allocate(
             source,
         }
     })?;
-    encoded.resize(host_length, 0);
     Ok(encoded)
+}
+
+fn read_exact(
+    file: &mut File,
+    stage: RecoveryStage,
+    length: RecoveryStageLength,
+    encoded: &mut Vec<u8>,
+) -> Result<(), FilesystemRecoveryStageError> {
+    let expected = length.get();
+    let observed = file
+        .by_ref()
+        .take(expected)
+        .read_to_end(encoded)
+        .map_err(|source| FilesystemRecoveryStageError::Materialize {
+            stage,
+            expected: length,
+            source,
+        })?;
+    let observed =
+        u64::try_from(observed).map_err(|_source| FilesystemRecoveryStageError::LengthChanged {
+            stage,
+            expected: length,
+            observed: expected,
+        })?;
+    if observed < expected {
+        return Err(FilesystemRecoveryStageError::Materialize {
+            stage,
+            expected: length,
+            source: io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "recovery stage ended before the expected boundary",
+            ),
+        });
+    }
+    reject_trailing_bytes(file, stage, length)?;
+    Ok(())
+}
+
+fn reject_trailing_bytes(
+    file: &mut File,
+    stage: RecoveryStage,
+    expected: RecoveryStageLength,
+) -> Result<(), FilesystemRecoveryStageError> {
+    let mut trailing = [0_u8; 1];
+    loop {
+        match file.read(&mut trailing) {
+            Ok(0) => return Ok(()),
+            Ok(read_bytes) => {
+                let increment = u64::try_from(read_bytes).map_err(|_source| {
+                    FilesystemRecoveryStageError::LengthChanged {
+                        stage,
+                        expected,
+                        observed: expected.get(),
+                    }
+                })?;
+                let observed = expected.get().checked_add(increment).ok_or(
+                    FilesystemRecoveryStageError::LengthChanged {
+                        stage,
+                        expected,
+                        observed: expected.get(),
+                    },
+                )?;
+                return Err(FilesystemRecoveryStageError::LengthChanged {
+                    stage,
+                    expected,
+                    observed,
+                });
+            }
+            Err(source) if source.kind() == io::ErrorKind::Interrupted => continue,
+            Err(source) => {
+                return Err(FilesystemRecoveryStageError::Materialize {
+                    stage,
+                    expected,
+                    source,
+                });
+            }
+        }
+    }
 }
 
 pub(super) fn verify_position(
@@ -62,5 +134,130 @@ pub(super) fn verify_position(
             expected,
             observed,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::error::Error;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
+    use cap_std::fs::OpenOptions;
+    use cap_std::{ambient_authority, fs::Dir};
+
+    use super::*;
+
+    static NEXT_DIRECTORY: AtomicU64 = AtomicU64::new(0);
+
+    #[test]
+    fn read_exact_reads_expected_bytes_without_trailing() -> Result<(), Box<dyn Error>> {
+        let sandbox = TestDirectory::create("stage-materialization-exact")?;
+        let path = sandbox.path().join("stage.bin");
+        fs::write(&path, b"abcdef")?;
+        let mut file = open_for_tests(&path)?;
+        let encoded = super::read_and_position(
+            &mut file,
+            RecoveryStage::Segment,
+            RecoveryStageLength::from_validated(6),
+        )?;
+        assert_eq!(encoded.as_ref(), b"abcdef");
+        drop(file);
+        sandbox.remove()?;
+        Ok(())
+    }
+
+    #[test]
+    fn read_and_position_rejects_short_stage() -> Result<(), Box<dyn Error>> {
+        let sandbox = TestDirectory::create("stage-materialization-short")?;
+        let path = sandbox.path().join("stage.bin");
+        fs::write(&path, b"abc")?;
+        let mut file = open_for_tests(&path)?;
+        let error = super::read_and_position(
+            &mut file,
+            RecoveryStage::Segment,
+            RecoveryStageLength::from_validated(5),
+        )
+        .expect_err("short stage materialization was admitted");
+
+        assert!(matches!(
+            error,
+            FilesystemRecoveryStageError::Materialize {
+                stage: RecoveryStage::Segment,
+                expected,
+                source,
+            } if expected.get() == 5 && source.kind() == std::io::ErrorKind::UnexpectedEof
+        ));
+        drop(file);
+        sandbox.remove()?;
+        Ok(())
+    }
+
+    #[test]
+    fn read_and_position_rejects_trailing_bytes() -> Result<(), Box<dyn Error>> {
+        let sandbox = TestDirectory::create("stage-materialization-trailing")?;
+        let path = sandbox.path().join("stage.bin");
+        fs::write(&path, b"abcdef")?;
+        let mut file = open_for_tests(&path)?;
+        let error = super::read_and_position(
+            &mut file,
+            RecoveryStage::Segment,
+            RecoveryStageLength::from_validated(3),
+        )
+        .expect_err("trailing-stage materialization was admitted");
+
+        assert!(matches!(
+            error,
+            FilesystemRecoveryStageError::LengthChanged {
+                stage: RecoveryStage::Segment,
+                expected,
+                observed: 4,
+            } if expected.get() == 3
+        ));
+        drop(file);
+        sandbox.remove()?;
+        Ok(())
+    }
+
+    fn open_for_tests(path: &PathBuf) -> Result<File, Box<dyn Error>> {
+        let directory = Dir::open_ambient_dir(
+            path.parent()
+                .expect("directory parent exists for stage fixture"),
+            ambient_authority(),
+        )?;
+        let mut options = OpenOptions::new();
+        options.read(true).follow(FollowSymlinks::No).nonblock(true);
+        let file = directory.open_with(
+            path.file_name()
+                .expect("file path has file name for fixture")
+                .to_str()
+                .expect("file name is UTF-8 for fixture"),
+            &options,
+        )?;
+        Ok(file)
+    }
+
+    struct TestDirectory {
+        path: PathBuf,
+    }
+
+    impl TestDirectory {
+        fn create(name: &str) -> std::io::Result<Self> {
+            let sequence = NEXT_DIRECTORY.fetch_add(1, Ordering::Relaxed);
+            let path =
+                std::env::temp_dir().join(format!("keep-{name}-{}-{sequence}", std::process::id()));
+            fs::create_dir(&path)?;
+            Ok(Self { path })
+        }
+
+        fn path(&self) -> &std::path::Path {
+            &self.path
+        }
+
+        fn remove(self) -> std::io::Result<()> {
+            fs::remove_dir_all(self.path)
+        }
     }
 }
