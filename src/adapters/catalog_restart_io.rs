@@ -1,4 +1,5 @@
-//! This module owns exact capability-relative restart artifact reads.
+//! This module owns exact capability-relative restart artifact reads and
+//! bounded streaming writes.
 
 use std::io::{self, Read};
 use std::path::Path;
@@ -62,6 +63,66 @@ pub(super) fn read_exact(
         Ok(())
     })?;
     Ok(encoded)
+}
+
+#[cfg(test)]
+pub(super) fn write_exact_to<R, W>(
+    source: &mut R,
+    destination: &mut W,
+    artifact: CatalogRestartArtifact,
+    phase: CatalogRestartPhase,
+    expected: u64,
+) -> Result<(), CatalogRestartError>
+where
+    R: Read,
+    W: io::Write,
+{
+    let mut observed = 0_u64;
+    let mut buffer = [0_u8; CATALOG_RESTART_READ_BUFFER_LENGTH];
+    let chunk_length = u64::try_from(buffer.len())
+        .map_err(|_source| CatalogRestartError::LengthArithmetic { artifact, expected })?;
+
+    while observed < expected {
+        let remaining = expected
+            .checked_sub(observed)
+            .ok_or(CatalogRestartError::LengthArithmetic { artifact, expected })?;
+        let offered = remaining
+            .min(chunk_length)
+            .try_into()
+            .map_err(|_source| CatalogRestartError::LengthArithmetic { artifact, expected })?;
+        let read_buffer = buffer
+            .get_mut(..offered)
+            .ok_or(CatalogRestartError::LengthArithmetic { artifact, expected })?;
+        match source.read(read_buffer) {
+            Ok(0) => {
+                return Err(CatalogRestartError::io(
+                    phase,
+                    io::Error::new(
+                        io::ErrorKind::UnexpectedEof,
+                        "restart artifact ended before the expected boundary",
+                    ),
+                ));
+            }
+            Ok(count) => {
+                let bytes = read_buffer
+                    .get(..count)
+                    .ok_or(CatalogRestartError::LengthArithmetic { artifact, expected })?;
+                destination
+                    .write_all(bytes)
+                    .map_err(|source| CatalogRestartError::io(phase, source))?;
+                let increment = u64::try_from(count).map_err(|_source| {
+                    CatalogRestartError::LengthArithmetic { artifact, expected }
+                })?;
+                observed = observed
+                    .checked_add(increment)
+                    .ok_or(CatalogRestartError::LengthArithmetic { artifact, expected })?;
+            }
+            Err(source) if source.kind() == io::ErrorKind::Interrupted => {}
+            Err(source) => return Err(CatalogRestartError::io(phase, source)),
+        }
+    }
+    reject_trailing_bytes(source, artifact, phase, expected)?;
+    Ok(())
 }
 
 pub(super) fn read_exact_to<R, F>(
@@ -154,7 +215,7 @@ fn reject_trailing_bytes<R: Read>(
 #[cfg(test)]
 mod tests {
     use std::io;
-    use std::io::{Cursor, ErrorKind, Read};
+    use std::io::{Cursor, ErrorKind, Read, Write};
     use std::mem::size_of;
 
     use super::*;
@@ -197,6 +258,32 @@ mod tests {
             "callback state should stay compact"
         );
         assert_eq!(budget.observed_bytes(), TOTAL_BYTES);
+    }
+
+    #[test]
+    fn write_exact_to_streams_large_virtual_file_with_small_writer_state() {
+        const TOTAL_BYTES: u64 = 64_u64 * 1024 * 1024;
+        const READER_STRIDE: u64 = 2_u64 * 1024;
+        const WRITER_BUDGET_BYTES: usize = 4 * 1024;
+
+        let mut source = SyntheticStreamingReader::new(TOTAL_BYTES, READER_STRIDE);
+        let mut sink = StreamingWriteSink::new(WRITER_BUDGET_BYTES);
+
+        let result = write_exact_to(
+            &mut source,
+            &mut sink,
+            CatalogRestartArtifact::Head,
+            CatalogRestartPhase::ReadCatalog,
+            TOTAL_BYTES,
+        );
+
+        assert!(result.is_ok(), "{result:?}");
+        assert_eq!(sink.observed_bytes(), TOTAL_BYTES);
+        assert!(sink.total_chunks() > 0);
+        assert!(sink.max_chunk() <= WRITER_BUDGET_BYTES);
+        assert!(sink.max_chunk() <= CATALOG_RESTART_READ_BUFFER_LENGTH);
+        assert!(sink.max_chunk() >= READER_STRIDE as usize);
+        assert!(size_of::<StreamingWriteSink>() < 64);
     }
 
     #[test]
@@ -260,6 +347,57 @@ mod tests {
 
         let error = result.unwrap_err();
         let expected = 2_u64;
+        assert!(matches!(
+            error,
+            CatalogRestartError::Length {
+                artifact: CatalogRestartArtifact::Head,
+                minimum,
+                maximum,
+                observed: 3
+            } if minimum == expected && maximum == expected
+        ));
+    }
+
+    #[test]
+    fn write_exact_to_rejects_short_artifacts() {
+        let mut source = Cursor::new(vec![b'a', b'b']);
+        let mut sink = StreamingWriteSink::new(16 * 1024);
+
+        let result = write_exact_to(
+            &mut source,
+            &mut sink,
+            CatalogRestartArtifact::Head,
+            CatalogRestartPhase::ReadCatalog,
+            4,
+        );
+
+        let error = result.unwrap_err();
+        assert_eq!(sink.observed_bytes(), 2);
+        assert!(matches!(
+            error,
+            CatalogRestartError::Io {
+                phase: CatalogRestartPhase::ReadCatalog,
+                ref source,
+            } if source.kind() == ErrorKind::UnexpectedEof
+        ));
+    }
+
+    #[test]
+    fn write_exact_to_rejects_trailing_bytes() {
+        let mut source = Cursor::new(vec![b'a', b'b', b'c']);
+        let mut sink = StreamingWriteSink::new(16 * 1024);
+
+        let result = write_exact_to(
+            &mut source,
+            &mut sink,
+            CatalogRestartArtifact::Head,
+            CatalogRestartPhase::ReadCatalog,
+            2,
+        );
+
+        let error = result.unwrap_err();
+        let expected = 2_u64;
+        assert_eq!(sink.observed_bytes(), 2);
         assert!(matches!(
             error,
             CatalogRestartError::Length {
@@ -382,6 +520,62 @@ mod tests {
 
         fn total_chunks(&self) -> u64 {
             self.total_chunks
+        }
+    }
+
+    struct StreamingWriteSink {
+        observed_bytes: u64,
+        observed_chunks: u64,
+        max_chunk: usize,
+        writer_memory_limit: usize,
+    }
+
+    impl StreamingWriteSink {
+        fn new(writer_memory_limit: usize) -> Self {
+            Self {
+                observed_bytes: 0,
+                observed_chunks: 0,
+                max_chunk: 0,
+                writer_memory_limit,
+            }
+        }
+
+        fn observed_bytes(&self) -> u64 {
+            self.observed_bytes
+        }
+
+        fn total_chunks(&self) -> u64 {
+            self.observed_chunks
+        }
+
+        fn max_chunk(&self) -> usize {
+            self.max_chunk
+        }
+    }
+
+    impl Write for StreamingWriteSink {
+        fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+            self.observed_chunks = self.observed_chunks.checked_add(1).ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidInput, "chunk count overflow")
+            })?;
+            let observed = u64::try_from(bytes.len()).map_err(|_| {
+                io::Error::new(io::ErrorKind::InvalidInput, "chunk length overflow")
+            })?;
+            self.observed_bytes = self.observed_bytes.checked_add(observed).ok_or_else(|| {
+                io::Error::new(io::ErrorKind::InvalidInput, "write count overflow")
+            })?;
+            self.max_chunk = self.max_chunk.max(bytes.len());
+            if bytes.len() > self.writer_memory_limit {
+                return Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "sink memory budget exceeded",
+                ));
+            }
+            Ok(bytes.len())
+        }
+
+        fn flush(&mut self) -> io::Result<()> {
+            Ok(())
         }
     }
 }
