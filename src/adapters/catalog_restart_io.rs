@@ -1,7 +1,7 @@
 //! This module owns exact capability-relative restart artifact reads and
 //! bounded, exact-transfer streaming.
 
-use std::io::{self, Read};
+use std::io::{self, Read, Write};
 use std::path::Path;
 
 use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
@@ -20,7 +20,7 @@ pub(super) struct ExactTransfer {
 }
 
 impl ExactTransfer {
-    const fn new(
+    pub(super) const fn new(
         artifact: CatalogRestartArtifact,
         phase: CatalogRestartPhase,
         expected: u64,
@@ -32,15 +32,15 @@ impl ExactTransfer {
         }
     }
 
-    fn artifact(&self) -> CatalogRestartArtifact {
+    pub(super) const fn artifact(&self) -> CatalogRestartArtifact {
         self.artifact
     }
 
-    fn phase(&self) -> CatalogRestartPhase {
+    pub(super) const fn phase(&self) -> CatalogRestartPhase {
         self.phase
     }
 
-    fn expected(&self) -> u64 {
+    pub(super) const fn expected(&self) -> u64 {
         self.expected
     }
 }
@@ -93,10 +93,10 @@ pub(super) fn read_exact(
             byte_count: expected,
             source: Some(source),
         })?;
-    copy_exact_to_chunks(&mut file, transfer, |chunk| {
-        encoded.extend_from_slice(chunk);
-        Ok(())
-    })?;
+    let mut sink = VecWrite {
+        encoded: &mut encoded,
+    };
+    copy_exact(&mut file, &mut sink, transfer)?;
     Ok(encoded)
 }
 
@@ -205,6 +205,21 @@ fn reject_trailing_bytes<R: Read>(
     }
 }
 
+struct VecWrite<'a> {
+    encoded: &'a mut Vec<u8>,
+}
+
+impl Write for VecWrite<'_> {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.encoded.extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::io;
@@ -287,7 +302,7 @@ mod tests {
     }
 
     #[test]
-    fn read_exact_to_streams_chunks() {
+    fn copy_exact_to_chunks_streams() {
         let mut source = Cursor::new(vec![b'a', b'b', b'c', b'd', b'e', b'f', b'g']);
         let mut observed = Vec::<Vec<u8>>::new();
 
@@ -309,7 +324,7 @@ mod tests {
     }
 
     #[test]
-    fn read_exact_to_rejects_short_artifacts() {
+    fn copy_exact_to_chunks_rejects_short_artifacts() {
         let mut source = Cursor::new(vec![b'a', b'b']);
         let mut seen = 0_u8;
 
@@ -338,7 +353,7 @@ mod tests {
     }
 
     #[test]
-    fn read_exact_to_rejects_trailing_bytes() {
+    fn copy_exact_to_chunks_rejects_trailing_bytes() {
         let mut source = Cursor::new(vec![b'a', b'b', b'c']);
 
         let result = copy_exact_to_chunks(
