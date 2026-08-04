@@ -153,9 +153,51 @@ fn reject_trailing_bytes<R: Read>(
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Cursor, ErrorKind};
+    use std::io;
+    use std::io::{Cursor, ErrorKind, Read};
+    use std::mem::size_of;
 
     use super::*;
+
+    #[test]
+    fn read_exact_to_streams_large_virtual_file_with_small_callback_memory() {
+        const TOTAL_BYTES: u64 = 64_u64 * 1024 * 1024;
+        const READER_STRIDE: u64 = 2_u64 * 1024;
+        const CALLBACK_BUDGET_BYTES: usize = 16 * 1024;
+
+        let mut source = SyntheticStreamingReader::new(TOTAL_BYTES, READER_STRIDE);
+        let mut budget = StreamingCallbackBudget::new(TOTAL_BYTES, CALLBACK_BUDGET_BYTES);
+
+        let result = read_exact_to(
+            &mut source,
+            CatalogRestartArtifact::Head,
+            CatalogRestartPhase::ReadCatalog,
+            TOTAL_BYTES,
+            |chunk| budget.consume(chunk),
+        );
+
+        assert!(result.is_ok(), "{result:?}");
+        assert!(budget.observed_bytes() > 0);
+        assert_eq!(budget.observed_bytes(), TOTAL_BYTES);
+        assert!(
+            budget.max_chunk() >= READER_STRIDE as usize,
+            "reader stride should be observed"
+        );
+        assert!(
+            budget.max_chunk() <= budget.callback_limit(),
+            "callback should remain in budget"
+        );
+        assert!(
+            budget.max_chunk() <= CATALOG_RESTART_READ_BUFFER_LENGTH,
+            "read buffer bounds should hold"
+        );
+        assert!(budget.total_chunks() > 0);
+        assert!(
+            size_of::<StreamingCallbackBudget>() < 128,
+            "callback state should stay compact"
+        );
+        assert_eq!(budget.observed_bytes(), TOTAL_BYTES);
+    }
 
     #[test]
     fn read_exact_to_streams_chunks() {
@@ -227,5 +269,119 @@ mod tests {
                 observed: 3
             } if minimum == expected && maximum == expected
         ));
+    }
+
+    struct SyntheticStreamingReader {
+        remaining: u64,
+        emit_stride: u64,
+    }
+
+    impl SyntheticStreamingReader {
+        fn new(total: u64, emit_stride: u64) -> Self {
+            Self {
+                remaining: total,
+                emit_stride,
+            }
+        }
+    }
+
+    impl Read for SyntheticStreamingReader {
+        fn read(&mut self, sink: &mut [u8]) -> io::Result<usize> {
+            if self.remaining == 0 {
+                return Ok(0);
+            }
+
+            let sink_capacity = match u64::try_from(sink.len()) {
+                Ok(capacity) => capacity,
+                Err(_) => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "sink capacity exceeds supported range",
+                    ));
+                }
+            };
+            let emitted: usize = match self
+                .emit_stride
+                .min(self.remaining)
+                .min(sink_capacity)
+                .try_into()
+            {
+                Ok(size) => size,
+                Err(_) => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "requested read size exceeds supported range",
+                    ));
+                }
+            };
+
+            sink[..emitted].fill(0x5a);
+            self.remaining -= u64::try_from(emitted)
+                .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "emit size overflow"))?;
+            Ok(emitted)
+        }
+    }
+
+    struct StreamingCallbackBudget {
+        observed_bytes: u64,
+        total_chunks: u64,
+        max_chunk: usize,
+        callback_limit: usize,
+        expected_total: u64,
+    }
+
+    impl StreamingCallbackBudget {
+        fn new(expected_total: u64, callback_limit: usize) -> Self {
+            Self {
+                observed_bytes: 0,
+                total_chunks: 0,
+                max_chunk: 0,
+                callback_limit,
+                expected_total,
+            }
+        }
+
+        fn consume(&mut self, chunk: &[u8]) -> Result<(), CatalogRestartError> {
+            self.total_chunks =
+                self.total_chunks
+                    .checked_add(1)
+                    .ok_or(CatalogRestartError::LengthArithmetic {
+                        artifact: CatalogRestartArtifact::Head,
+                        expected: self.expected_total,
+                    })?;
+
+            self.max_chunk = self.max_chunk.max(chunk.len());
+
+            self.observed_bytes = self
+                .observed_bytes
+                .checked_add(u64::try_from(chunk.len()).map_err(|_source| {
+                    CatalogRestartError::LengthArithmetic {
+                        artifact: CatalogRestartArtifact::Head,
+                        expected: self.expected_total,
+                    }
+                })?)
+                .ok_or(CatalogRestartError::LengthArithmetic {
+                    artifact: CatalogRestartArtifact::Head,
+                    expected: self.expected_total,
+                })?;
+
+            Ok(())
+        }
+
+        fn observed_bytes(&self) -> u64 {
+            self.observed_bytes
+        }
+
+        fn max_chunk(&self) -> usize {
+            self.max_chunk
+        }
+
+        fn callback_limit(&self) -> usize {
+            self.callback_limit
+        }
+
+        fn total_chunks(&self) -> u64 {
+            self.total_chunks
+        }
     }
 }
