@@ -26,7 +26,7 @@ repository-tasks = [
 
 [dependencies]
 # Independent Golden File Worldline oracle recomputes BLAKE3 corpus witnesses.
-blake3 = { version = "=1.8.5", default-features = false, features = ["pure", "std"], optional = true }
+blake3 = { version = "=1.8.6", default-features = false, features = ["pure", "std"], optional = true }
 # Capability-relative, no-follow opens close source-scan replacement races.
 cap-fs-ext = { version = "=4.0.2", default-features = false, features = ["std"], optional = true }
 cap-std = { version = "=4.0.2", default-features = false, optional = true }
