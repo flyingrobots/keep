@@ -5,6 +5,10 @@ reconstruction. The public non-durable `ReferenceStore` implements the
 complete-object and exact-range forms. A consolidated durable logical-read
 surface is not yet implemented.
 
+The [rationale](rationale.md) records the governed decisions and rejected
+alternatives. The [requirement ledger](requirements.md) maps each law to its
+oracle and executable evidence or names the remaining gap.
+
 ## Contract
 
 For a requested content identity, Keep either:
@@ -112,13 +116,16 @@ Different bytes or a different target `BlobId` are never lawful substitutes.
 
 An exact-range operation has a deliberately narrower proof scope. Its receipt
 proves that the requested bytes came from completely authenticated overlapping
-chunks under the admitted layout.
+chunks under a layout-to-target binding admitted by the selected store view.
+Structural admission of caller-supplied layout fields alone is insufficient.
+The current caller-supplied entry points calculate the canonical `LayoutId`
+and resolve that exact committed layout before planning or output.
 
 It does not prove that Keep authenticated:
 
 - unrequested chunks;
 - the complete logical blob;
-- every storage-profile boundary.
+- any storage-profile boundary.
 
 A `RangeReadReceipt` must never satisfy an API that requires a complete-object
 `ReconstructionReceipt`. Complete and range operations remain separate public
@@ -211,10 +218,11 @@ A future operation claiming durable logical reconstruction must additionally:
 - separate evidenced refusal from operational failure;
 - preserve the output-visibility rule above.
 
-The current durable segment, catalog, publication, retention, and recovery
-surfaces do not yet form this consolidated high-level `BlobId`-to-writer
-contract. Their existence must not be described as an implemented durable
-logical reconstruction API.
+The current durable segment, catalog, publication, and recovery surfaces do
+not yet form this consolidated high-level `BlobId`-to-writer contract.
+Retention remains planned; no current retention surface protects the evidence
+closure required by this operation. These lower-level surfaces must not be
+described as an implemented durable logical reconstruction API.
 
 ## Current public evidence
 
@@ -223,6 +231,8 @@ Its committed state is process memory; process death loses it all.
 
 Evidence anchors:
 
+- [authenticated-reconstruction requirements](requirements.md)
+- [authenticated-reconstruction rationale](rationale.md)
 - [`ReferenceStore` architecture](../../architecture/reference-store/README.md)
 - [`ReferenceStore` rationale](../../architecture/reference-store/rationale.md)
 - [exact logical byte identity](../../adr/0001-exact-logical-byte-identity.md)
@@ -230,6 +240,8 @@ Evidence anchors:
 - [`ReferenceStore` contract tests](../../../tests/reference_store_contract.rs)
 - [reconstruction implementation](../../../src/reference/reconstruction.rs)
 - [range-read implementation](../../../src/reference/range_read.rs)
+- [whole-object refusal laws](../../../tests/streaming_cas/refusal_laws.rs)
+- [range-read refusal laws](../../../tests/range_read_failures.rs)
 - [reconstruction receipt](../../../src/reference/reconstruction_receipt.rs)
 - [range-read receipt](../../../src/reference/range_read_receipt.rs)
 
