@@ -13,7 +13,8 @@ For a requested content identity, Keep either:
 2. emits exactly the bytes supported by that proof;
 3. returns a receipt stating the exact proposition established;
 
-or it refuses precisely.
+or it returns a precise, evidenced content-related refusal;
+or it returns an operational failure that makes no claim about content truth.
 
 Keep never substitutes different content, promotes a narrower proof into a
 broader one, infers truth from physical existence, or silently repairs
@@ -26,7 +27,8 @@ typed content coordinate
 + caller-owned output
 ────────────────────────────
 authenticated bytes + receipt
-                     or typed refusal
+                     or evidenced refusal
+                     or operational failure
 ```
 
 This contract refines Keep's core law:
@@ -200,7 +202,8 @@ range and explicitly carry the narrower range proof posture.
 A future operation claiming durable logical reconstruction must additionally:
 
 - bind reads to one admitted immutable snapshot or catalog generation;
-- prevent required supporting evidence from being collected during the read;
+- prevent required supporting evidence from being garbage-collected, deleted,
+  or otherwise invalidated during the read;
 - verify the retained closure required by its declared proof scope;
 - resolve and authenticate exact immutable records;
 - preserve the selected view while successor generations publish;
