@@ -19,7 +19,6 @@ struct LinuxDirectoryProperties {
     device_major: u32,
     device_minor: u32,
     mount_id: u64,
-    inode: u64,
 }
 
 #[cfg(target_os = "linux")]
@@ -85,21 +84,42 @@ fn linux_directory_properties(file: &std::fs::File) -> io::Result<LinuxDirectory
         device_major: status.stx_dev_major,
         device_minor: status.stx_dev_minor,
         mount_id: status.stx_mnt_id,
-        inode: status.stx_ino,
     })
 }
 
 #[cfg(target_os = "linux")]
 pub(super) fn root_identity(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
     let file = directory.try_clone()?.into_std_file();
-    let properties = linux_directory_properties(&file)?;
-    Ok(linux_root_identity(properties))
+    linux_file_identity(&file)
 }
 
 #[cfg(target_os = "linux")]
-fn linux_root_identity(properties: LinuxDirectoryProperties) -> FilesystemRootIdentity {
-    let device = rustix::fs::makedev(properties.device_major, properties.device_minor);
-    FilesystemRootIdentity::new(device, properties.mount_id, properties.inode)
+fn linux_file_identity(file: &std::fs::File) -> io::Result<FilesystemRootIdentity> {
+    use rustix::fs::{AtFlags, StatxFlags, statx};
+
+    let required = StatxFlags::BASIC_STATS | StatxFlags::MNT_ID;
+    let status = statx(file, ".", AtFlags::empty(), required)?;
+    let observed = StatxFlags::from_bits_retain(status.stx_mask);
+    if !observed.contains(required) {
+        return Err(unsupported_linux_profile());
+    }
+    Ok(linux_root_identity(
+        status.stx_dev_major,
+        status.stx_dev_minor,
+        status.stx_mnt_id,
+        status.stx_ino,
+    ))
+}
+
+#[cfg(target_os = "linux")]
+fn linux_root_identity(
+    device_major: u32,
+    device_minor: u32,
+    mount_id: u64,
+    inode: u64,
+) -> FilesystemRootIdentity {
+    let device = rustix::fs::makedev(device_major, device_minor);
+    FilesystemRootIdentity::new(device, mount_id, inode)
 }
 
 #[cfg(all(not(target_os = "linux"), any(test, feature = "repository-tasks")))]

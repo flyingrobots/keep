@@ -32,7 +32,7 @@ fn only_writable_case_sensitive_ext4_is_admitted() {
 #[test]
 fn every_protocol_child_must_share_the_root_filesystem_and_mount() {
     assert_eq!(PROTOCOL_DIRECTORIES, ["staging", "segments", "catalogs"]);
-    let root = properties(8, 1, 41, 1);
+    let root = properties(8, 1, 41);
     let mut casefolded = root;
     casefolded.inode_flags = EXT4_CASEFOLD_FLAG;
     let mut read_only = root;
@@ -41,8 +41,8 @@ fn every_protocol_child_must_share_the_root_filesystem_and_mount() {
     foreign_format.filesystem_type = NFS_SUPER_MAGIC;
 
     assert!(admit_linux_child_properties(root, root).is_ok());
-    assert_unsupported(&admit_linux_child_properties(root, properties(8, 2, 41, 1)));
-    assert_unsupported(&admit_linux_child_properties(root, properties(8, 1, 42, 1)));
+    assert_unsupported(&admit_linux_child_properties(root, properties(8, 2, 41)));
+    assert_unsupported(&admit_linux_child_properties(root, properties(8, 1, 42)));
     assert_unsupported(&admit_linux_child_properties(root, casefolded));
     assert_unsupported(&admit_linux_child_properties(root, read_only));
     assert_unsupported(&admit_linux_child_properties(root, foreign_format));
@@ -50,7 +50,7 @@ fn every_protocol_child_must_share_the_root_filesystem_and_mount() {
 
 #[test]
 fn root_identity_uses_linux_device_mount_and_inode_coordinates() {
-    let identity = linux_root_identity(properties(8, 1, 41, 73));
+    let identity = linux_root_identity(8, 1, 41, 73);
     assert_eq!(identity.device(), rustix::fs::makedev(8, 1));
     assert_eq!(identity.mount(), 41);
     assert_eq!(identity.file(), 73);
@@ -70,7 +70,6 @@ const fn properties(
     device_major: u32,
     device_minor: u32,
     mount_id: u64,
-    inode: u64,
 ) -> LinuxDirectoryProperties {
     LinuxDirectoryProperties {
         filesystem_type: EXT4_SUPER_MAGIC,
@@ -79,6 +78,5 @@ const fn properties(
         device_major,
         device_minor,
         mount_id,
-        inode,
     }
 }
