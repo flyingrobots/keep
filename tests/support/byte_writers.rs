@@ -12,12 +12,65 @@ pub(crate) struct PartitionWriter<'a> {
 /// Writer that deterministically refuses every byte.
 pub(crate) struct FailingWriter;
 
+/// Writer that accepts one deterministic nonempty prefix, then fails.
+pub(crate) struct PrefixThenFailWriter {
+    bytes: Vec<u8>,
+    prefix_length: usize,
+}
+
 impl Write for FailingWriter {
     fn write(&mut self, _buffer: &[u8]) -> io::Result<usize> {
         Err(io::Error::new(
             ErrorKind::PermissionDenied,
             "fixture refusal",
         ))
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl PrefixThenFailWriter {
+    /// Constructs a sink that accepts at most `prefix_length` bytes once.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ErrorKind::InvalidInput`] for a zero prefix length.
+    pub(crate) fn new(prefix_length: usize) -> io::Result<Self> {
+        if prefix_length == 0 {
+            return Err(io::Error::new(
+                ErrorKind::InvalidInput,
+                "accepted prefix length must be positive",
+            ));
+        }
+        Ok(Self {
+            bytes: Vec::new(),
+            prefix_length,
+        })
+    }
+
+    /// Returns the exact prefix accepted before failure.
+    #[must_use]
+    pub(crate) fn bytes(&self) -> &[u8] {
+        &self.bytes
+    }
+}
+
+impl Write for PrefixThenFailWriter {
+    fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+        if !self.bytes.is_empty() {
+            return Err(io::Error::new(
+                ErrorKind::PermissionDenied,
+                "fixture refusal after prefix",
+            ));
+        }
+        let accepted_length = self.prefix_length.min(buffer.len());
+        let accepted = buffer
+            .get(..accepted_length)
+            .ok_or_else(|| io::Error::new(ErrorKind::InvalidInput, "invalid prefix length"))?;
+        self.bytes.extend_from_slice(accepted);
+        Ok(accepted_length)
     }
 
     fn flush(&mut self) -> io::Result<()> {
