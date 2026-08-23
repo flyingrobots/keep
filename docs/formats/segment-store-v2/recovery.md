@@ -295,6 +295,6 @@ Each point requires before, during, and after process-death evidence. Restart
 must establish exact catalog visibility, retention head, namespace generation,
 orphan classification, stage disposition, and recovery report.
 
-GC and recovery-disposition grammar and transitions are owned by the
-[GC specification](gc.md). Until issue #21 implements them, any such artifact
-is unsupported mandatory state and refuses without mutation.
+`GcRetirementIntent`, `GcRetirementReceipt`, and
+`RecoveryDispositionReceipt` are owned by the [GC specification](gc.md). Until
+issue #21 implements them, any such artifact is unsupported and refuses.
