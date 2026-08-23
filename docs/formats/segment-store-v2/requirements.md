@@ -30,11 +30,11 @@ case is not evidence.
 | --- | --- | --- | --- |
 | `KEEP-MIGRATION-001` | Exact version-1 stores remain admitted until a durable migration artifact exists | compatibility fixtures | Planned in #19 |
 | `KEEP-MIGRATION-002` | Format marker, intent, and receipt have complete fixed byte tables, named domains, bounds, checksums, deterministic store identity, and exact initial-state digests | exact admission in `tests/store_format_marker.rs`, `tests/store_migration_intent.rs`, and `tests/store_migration_receipt.rs`; canonical construction in `tests/store_migration_intent_encoding.rs` and `tests/store_migration_receipt_encoding.rs`; seeded `migration_format` fuzz target | Implemented |
-| `KEEP-MIGRATION-003` | Migration revalidates version-1 head, catalog, pools, root identity, and writer authority before mutation | bounded canonical pool inventory in `tests/store_migration_inventory.rs`; writer-locked filesystem pool admission in `filesystem_inventory_*_tests`; exact authority observation and drift refusal in `filesystem_migration_authority_tests`; verification-first execution in `tests/store_migration_execution.rs`; filesystem storage integration remains | In progress in #19 |
+| `KEEP-MIGRATION-003` | Migration revalidates version-1 head, catalog, pools, root identity, and writer authority before mutation | bounded canonical pool inventory in `tests/store_migration_inventory.rs`; writer-locked filesystem pool admission in `filesystem_inventory_*_tests`; exact authority observation and drift refusal in `filesystem_migration_authority_tests`; verification-first execution in `tests/store_migration_execution.rs`; fresh filesystem integration and post-publication drift refusal in `filesystem_migration_storage_tests` | Implemented |
 | `KEEP-MIGRATION-004` | Every partial migration prefix continues idempotently under writer authority | state-machine and recovery tests | Planned in #19 |
-| `KEEP-MIGRATION-005` | Unknown, out-of-order, substituted, corrupt, conflicting, or changed evidence is unrecoverable ambiguity | corruption and mutation matrix | Planned in #19 |
-| `KEEP-MIGRATION-006` | Migration never rewrites or deletes admitted version-1 immutable bytes | byte-for-byte before/after witness | Planned in #19 |
-| `KEEP-MIGRATION-007` | Process death around every intent stage, canonical link, namespace prefix, marker stage, receipt stage, cleanup, and synchronization boundary reaches a documented lawful state | ordered phases and capabilities in `tests/store_migration_phase.rs` and `tests/store_migration_storage.rs`; exact phase-failure execution in `tests/store_migration_execution.rs`; `KEEP-CRASH-053..=073` process-death matrix remains | In progress in #19 |
+| `KEEP-MIGRATION-005` | Unknown, out-of-order, substituted, corrupt, conflicting, or changed evidence is unrecoverable ambiguity | forward-execution stage preservation, byte-equal inode-substitution, out-of-order-prefix, and post-publication drift laws in `filesystem_migration_storage_tests`; restart corruption and mutation matrix remains | In progress in #19 |
+| `KEEP-MIGRATION-006` | Migration never rewrites or deletes admitted version-1 immutable bytes | exact segment, catalog, and head before/after witness in `filesystem_migration_storage_tests`; restart-path evidence remains | In progress in #19 |
+| `KEEP-MIGRATION-007` | Process death around every intent stage, canonical link, namespace prefix, marker stage, receipt stage, cleanup, and synchronization boundary reaches a documented lawful state | ordered phases and capabilities in `tests/store_migration_phase.rs` and `tests/store_migration_storage.rs`; exact phase-failure execution in `tests/store_migration_execution.rs`; production 21-phase forward execution in `filesystem_migration_storage_tests`; `KEEP-CRASH-053..=073` process-death matrix remains | In progress in #19 |
 | `KEEP-MIGRATION-008` | Version-1 admission refuses every version-2 or partial-migration artifact after migration begins | `FORMAT` refusal before mutation in `filesystem_migration_authority_tests`; remaining compatibility and fuzz matrix | In progress in #19 |
 
 <!-- markdownlint-enable MD013 -->
@@ -57,7 +57,8 @@ case is not evidence.
 - Migration is one-way and provides no downgrade.
 - Retention evidence proves a bounded physical reconstruction claim, not
   application meaning, causal ownership, future policy, or secure erasure.
-- A version-2 format specification is not proof that a version-2 production
-  writer exists.
+- A fresh forward writer is not proof that version 2 is restart-safe or
+  production-admitted; partial-prefix recovery and crash evidence remain
+  mandatory.
 - Benchmarks are required before performance-sensitive retention or migration
   optimization.

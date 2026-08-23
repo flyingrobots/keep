@@ -8,6 +8,7 @@ use super::filesystem_migration_authority_error::{
 use super::filesystem_migration_authority_validation::{
     artifact_error, require_root, verify_catalog,
 };
+use super::filesystem_migration_fixed_artifact::FilesystemMigrationFixedStage;
 use super::migration_catalog_coordinates::MigrationCatalogCoordinates;
 use super::store_root_identity::StoreRootIdentities;
 use super::{CanonicalStoreMigrationIntent, FilesystemStoreMigrationInventoryReader};
@@ -23,12 +24,21 @@ const HEAD_LENGTH: u64 = 128;
 /// Exclusive authority to observe and migrate one pinned version-1 filesystem root.
 ///
 /// The authority retains the admitted writer lock and pinned root and immutable
-/// pool capabilities for its entire lifetime. Its synchronous,
-/// capability-relative filesystem I/O performs no protocol mutation and uses
-/// neither a network nor an asynchronous runtime.
+/// pool capabilities for its entire lifetime. Observation performs no protocol
+/// mutation. When passed to [`crate::execute_store_migration`], its
+/// [`crate::StoreMigrationStorage`] implementation executes only the fresh
+/// forward protocol from an exactly admitted version-1 root. It retains opened
+/// fixed-record handles through final verification, performs synchronous
+/// capability-relative I/O, and uses neither a network nor an asynchronous
+/// runtime. Reopening a partial migration prefix remains a separate recovery
+/// boundary.
 #[must_use]
 pub struct FilesystemStoreMigrationAuthority {
     inventory: FilesystemStoreMigrationInventoryReader,
+    pub(super) fixed_stage: Option<FilesystemMigrationFixedStage>,
+    pub(super) published_intent: Option<FilesystemMigrationFixedStage>,
+    pub(super) published_marker: Option<FilesystemMigrationFixedStage>,
+    pub(super) published_receipt: Option<FilesystemMigrationFixedStage>,
 }
 
 impl FilesystemStoreMigrationAuthority {
@@ -48,7 +58,13 @@ impl FilesystemStoreMigrationAuthority {
     ) -> Result<Self, Error> {
         let inventory = FilesystemStoreMigrationInventoryReader::open(admission, policy)
             .map_err(|source| Error::Inventory { source })?;
-        Ok(Self { inventory })
+        Ok(Self {
+            inventory,
+            fixed_stage: None,
+            published_intent: None,
+            published_marker: None,
+            published_receipt: None,
+        })
     }
 
     /// Observes one canonical intent from exact current version-1 authority.
@@ -156,5 +172,9 @@ impl FilesystemStoreMigrationAuthority {
             source: Box::new(source),
         })?;
         verify_catalog(head, catalog)
+    }
+
+    pub(super) const fn root(&self) -> &cap_std::fs::Dir {
+        self.inventory.root()
     }
 }

@@ -124,8 +124,14 @@ preflight proof; and the exact 17-phase publication vocabulary with a blocking
 storage capability port are implemented. Private-field proofs retain every
 receipt coordinate. Ordered storage-port orchestration revalidates current
 authority, executes all 17 durability phases, and returns a consequential
-complete-coordinate receipt. Filesystem migration, retention execution,
-recovery, compaction, and garbage collection remain planned.
+complete-coordinate receipt. Writer-locked filesystem authority now implements
+the 21-phase fresh migration storage protocol: it exclusively publishes all
+three fixed records, admits and synchronizes the exact version-2 namespace,
+reopens every canonical view, and retains byte-and-inode evidence through final
+verification without changing version-1 immutable bytes. Partial-prefix
+migration recovery, filesystem retention execution, immutable reader
+snapshots, compaction, and garbage collection remain planned; version 2 is not
+yet an admitted restart-safe production store.
 Presence in the reference CAS does not claim durable retention or crash
 recovery.
 

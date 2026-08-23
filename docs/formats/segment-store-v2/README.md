@@ -81,8 +81,10 @@ vocabulary with a blocking storage capability port are available.
 Storage-independent preparation derives exact canonical manifest and head
 successors from coherent preflight and current-manifest evidence. Ordered
 storage-port orchestration revalidates authority and returns a complete receipt.
-Production filesystem retention publication, recovery, migration, and garbage
+Fresh writer-locked filesystem migration execution now publishes all canonical
+fixed records and the exact empty version-2 namespace without changing
+version-1 immutable bytes. Partial-prefix restart recovery, production
+filesystem retention publication, immutable reader snapshots, and garbage
 collection do not exist yet. Requirements still in progress in issue #19 or
-issue #21 are not complete evidence. A store must refuse version-2 state until
-the relevant
+issue #21 are not complete evidence. A store must refuse version-2 state until the relevant
 corruption, model-based, crash-injection, recovery, and fuzz evidence exists.

@@ -35,9 +35,12 @@
 //! framing, checksum, catalog and predecessor grammar, registered definition,
 //! deterministic store identity, and typed recovery coordinates. Completion
 //! receipts bind an admitted intent and marker, registered empty-state digests,
-//! and the complete synchronization mask. Live inventory and root revalidation,
-//! filesystem migration, retention execution, recovery, and garbage collection
-//! remain intentionally absent.
+//! and the complete synchronization mask. Writer-locked filesystem authority
+//! now executes one fresh forward migration through exact fixed-record and
+//! namespace transitions while retaining version-1 immutable bytes.
+//! Partial-prefix migration recovery, filesystem retention execution,
+//! immutable reader snapshots, and garbage collection remain intentionally
+//! absent.
 
 #[cfg(test)]
 extern crate self as keep;

@@ -40,6 +40,15 @@ mod filesystem_migration_authority_error_display;
 #[cfg(test)]
 mod filesystem_migration_authority_tests;
 mod filesystem_migration_authority_validation;
+mod filesystem_migration_fixed_artifact;
+mod filesystem_migration_namespace;
+mod filesystem_migration_namespace_directory;
+mod filesystem_migration_reader_fence;
+mod filesystem_migration_storage;
+#[cfg(test)]
+mod filesystem_migration_storage_tests;
+#[cfg(test)]
+mod filesystem_migration_test_fixture;
 mod format_definition_digest;
 mod format_marker_decode_error;
 mod format_marker_decode_error_display;

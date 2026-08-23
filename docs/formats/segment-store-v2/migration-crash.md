@@ -104,4 +104,7 @@ prefix, marker, receipt, and cleanup state without depending on a clock,
 filesystem iteration order, or file existence alone.
 
 `StoreMigrationPhase::ALL` freezes the 21 boundaries above in exact order.
-Storage execution and process-death evidence remain unimplemented.
+Fresh writer-locked filesystem execution now implements that exact order and
+has deterministic in-process storage-fault and corruption laws. The
+before/during/after process-death matrix and restart classifier remain
+unimplemented; this page does not yet claim crash recovery.

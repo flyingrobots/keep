@@ -59,7 +59,9 @@ corpus `definition.tsv` bytes. The format-marker digest is BLAKE3-256 of
 `CanonicalStoreFormatMarker` produces the registered marker; `AdmittedStoreFormatMarker` admits its framing, checksum, definition, and namespace bound.
 `CanonicalStoreMigrationIntent` retains typed intent coordinates; `CanonicalStoreMigrationReceipt` binds completion; admitted record types verify both.
 `StoreMigrationStorage` names all 21 durability capabilities; `execute_store_migration` verifies current authority first and returns only after final synchronization.
-`FilesystemStoreMigrationInventoryReader` inventories every version-1 immutable artifact under retained writer authority and pinned pool capabilities; migration-session integration and partial-prefix recovery remain unimplemented.
+`FilesystemStoreMigrationInventoryReader` inventories immutable version-1 bytes
+under retained writer authority and pinned pools. The fresh filesystem writer
+executes once; partial-prefix restart admission and recovery remain absent.
 
 ## Reader fence
 
@@ -168,9 +170,10 @@ absence of `retention/HEAD` is the canonical empty retention state only while
 all retention stages and pools are empty. Any retention artifact routes through
 recovery instead. Direct version-2 initialization is undefined.
 
-The byte-exact offset tables and golden fixtures are requirements
-`KEEP-MIGRATION-002` and `KEEP-MIGRATION-007`; no production writer exists
-until those planned items become implemented evidence.
+The exact offsets and fixtures are requirement `KEEP-MIGRATION-002`. The fresh
+writer emits only those canonical records; success is not restart evidence.
+Version 2 remains unavailable as production until partial-prefix recovery and
+`KEEP-MIGRATION-007` process-death evidence exist.
 
 ## One-way migration protocol
 
@@ -198,7 +201,10 @@ provides no automatic downgrade.
 `FilesystemStoreMigrationAuthority` retains the writer lock and pinned root
 and pools. It admits the version-1 namespace, Linux root identity, `HEAD`,
 complete immutable-pool inventory, and selected catalog. Before mutation, it
-requires the same canonical intent.
+requires the same canonical intent. Its port retains fixed-record handles,
+verifies bytes and inode identity at each publication boundary, and admits only
+ordered prefixes. It reopens the complete view before receipt staging and
+leaves all version-1 immutable bytes untouched.
 Version-1 admission refuses after a migration stage, `migration.intent`,
 `reader.lock`, `FORMAT`, or version-2 directory exists. After durable intent,
 only version-2 migration recovery may continue.
@@ -289,12 +295,6 @@ Each point requires before, during, and after process-death evidence. Restart
 must establish exact catalog visibility, retention head, namespace generation,
 orphan classification, stage disposition, and recovery report.
 
-## GC and recovery-disposition recovery
-
-The [GC and disposition record specification](gc.md) owns the exact
-`GcRetirementIntent`, `GcRetirementReceipt`, and
-`RecoveryDispositionReceipt` grammars and state transitions. Issue #21 owns
-their executable parser, corruption, crash, recovery, and fuzz evidence.
-Issue #19 admits only the absent `gc/intent`, `gc/receipt`,
-`recovery/disposition.next`, and disposition-receipt pool. Any presence is
-unsupported mandatory state and refuses without mutation.
+GC and recovery-disposition grammar and transitions are owned by the
+[GC specification](gc.md). Until issue #21 implements them, any such artifact
+is unsupported mandatory state and refuses without mutation.
