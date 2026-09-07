@@ -24,6 +24,11 @@ pub enum FilesystemPlatformAdmissionError {
         /// Preserved namespace-admission failure.
         source: io::Error,
     },
+    /// A version-two migration record failed exact or joint admission.
+    MigrationRecord {
+        /// Preserved record-admission failure.
+        source: io::Error,
+    },
 }
 
 impl fmt::Display for FilesystemPlatformAdmissionError {
@@ -32,6 +37,7 @@ impl fmt::Display for FilesystemPlatformAdmissionError {
             Self::Platform { .. } => "published store platform admission failed",
             Self::WriterLock { .. } => "published store writer-lock acquisition failed",
             Self::Namespace { .. } => "published store namespace admission failed",
+            Self::MigrationRecord { .. } => "version-two migration record admission failed",
         })
     }
 }
@@ -39,7 +45,9 @@ impl fmt::Display for FilesystemPlatformAdmissionError {
 impl Error for FilesystemPlatformAdmissionError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::Platform { source } | Self::Namespace { source } => Some(source),
+            Self::Platform { source }
+            | Self::Namespace { source }
+            | Self::MigrationRecord { source } => Some(source),
             Self::WriterLock { source } => Some(source),
         }
     }

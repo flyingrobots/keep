@@ -34,6 +34,11 @@ after its public API and format compatibility policies are established.
   pool manifest, and current-state verification admits a successor only when
   the prepared head names the observed manifest as its exact predecessor at the
   next liveness generation; a superseded candidate refuses with zero mutation.
+  `reopen_version_two` reopens `FORMAT`, `migration.intent`, and
+  `migration.receipt` without following links, bounds each to its canonical
+  length, and admits the receipt only against the decoded intent and marker
+  before returning writer authority; `FilesystemPlatformAdmissionError::MigrationRecord`
+  names that refusal.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

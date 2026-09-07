@@ -194,7 +194,8 @@ fn hex(bytes: &[u8; 32]) -> String {
     })
 }
 
-fn migrated_store(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
+/// Builds one completely migrated version-2 store with writer authority released.
+pub(super) fn migrated_store(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
     let sandbox = TestDirectory::create(name)?;
     let admission = FilesystemPlatformAdmission::initialize_unchecked_for_tests(sandbox.path())?;
     write_version_one(&sandbox)?;

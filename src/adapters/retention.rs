@@ -25,6 +25,8 @@ mod filesystem_retention_storage_tests;
 mod filesystem_retention_successor_tests;
 #[cfg(test)]
 mod filesystem_retention_test_fixture;
+#[cfg(test)]
+mod filesystem_version_two_admission_tests;
 mod head_decode_error;
 mod head_decode_error_display;
 mod head_decoder;

@@ -11,7 +11,7 @@ use super::filesystem_initialization_storage::FilesystemInitializationStorage;
 use super::{
     FilesystemPlatformAdmission, FilesystemPlatformAdmissionError, FilesystemWriterLock,
     StoreInitializationError, StoreInitializationPhase, filesystem_initialization_namespace,
-    filesystem_platform_profile, initialize_store,
+    filesystem_platform_profile, filesystem_version_two_records, initialize_store,
 };
 
 impl FilesystemPlatformAdmission {
@@ -126,7 +126,17 @@ fn initialize_storage(
 fn reopen_version_two_root(
     root: cap_std::fs::Dir,
 ) -> Result<FilesystemPlatformAdmission, FilesystemPlatformAdmissionError> {
-    admit_reopened(root, filesystem_initialization_namespace::admit_version_two)
+    let admission = admit_reopened(root, filesystem_initialization_namespace::admit_version_two)?;
+    let (lock, root_identity) = admission.into_parts();
+    let directory = lock
+        .clone_directory()
+        .map_err(|source| FilesystemPlatformAdmissionError::MigrationRecord { source })?;
+    filesystem_version_two_records::admit(&directory)
+        .map_err(|source| FilesystemPlatformAdmissionError::MigrationRecord { source })?;
+    Ok(FilesystemPlatformAdmission::initialized(
+        lock,
+        root_identity,
+    ))
 }
 
 fn reopen_root(

@@ -129,6 +129,7 @@ mod filesystem_store_initializer_tests;
 #[cfg(test)]
 #[path = "../../tests/segment_filesystem_stage/sandbox.rs"]
 mod filesystem_test_sandbox;
+mod filesystem_version_two_records;
 mod filesystem_writer_lock;
 mod framed_blake3;
 mod layout_decode_error;
