@@ -19,7 +19,7 @@ pub struct RecoveryStageCompletionReceipt {
 }
 
 impl RecoveryStageCompletionReceipt {
-    pub(super) const fn new(
+    pub(in crate::adapters) const fn new(
         request: RecoveryStageCompletionRequest,
         synchronization_outcome: RecoveryStageSynchronizationOutcome,
         pool_outcome: RecoveryStagePoolOutcome,

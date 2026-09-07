@@ -8,7 +8,7 @@ use super::RecoveryStageFingerprintAlgorithm;
 pub struct RecoveryStageFingerprint([u8; 32]);
 
 impl RecoveryStageFingerprint {
-    pub(super) const fn from_validated(bytes: [u8; 32]) -> Self {
+    pub(in crate::adapters) const fn from_validated(bytes: [u8; 32]) -> Self {
         Self(bytes)
     }
 

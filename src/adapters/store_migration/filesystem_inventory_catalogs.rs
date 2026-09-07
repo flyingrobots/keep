@@ -16,9 +16,10 @@ use super::filesystem_inventory_names;
 use super::filesystem_inventory_segments::FilesystemMigrationSegmentInventory;
 use super::migration_catalog_admission::{self, MigrationSegmentLoadError};
 use crate::CatalogLength;
+use crate::adapters::recovery::recovery_pool_name;
 use crate::adapters::{
     CatalogRestartArtifact, CatalogRestartError, CatalogRestartPhase, ChecksummedCatalog,
-    RecoveryEntryName, SegmentDigest, SegmentReadPolicy, physical_pool_name, recovery_pool_name,
+    RecoveryEntryName, SegmentDigest, SegmentReadPolicy, physical_pool_name,
 };
 
 const POOL: MigrationInventoryPool = MigrationInventoryPool::Catalogs;

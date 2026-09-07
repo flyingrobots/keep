@@ -11,7 +11,7 @@ pub struct RecoveryStageCompletionRequest {
 }
 
 impl RecoveryStageCompletionRequest {
-    pub(super) const fn new(
+    pub(in crate::adapters) const fn new(
         evidence: RecoveryStageEvidence,
         target: RecoveryStageCompletionTarget,
     ) -> Self {

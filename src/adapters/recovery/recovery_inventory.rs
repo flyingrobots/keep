@@ -32,7 +32,7 @@ impl RecoveryInventoryEntry {
         &self.name
     }
 
-    pub(super) fn into_parts(self) -> (RecoveryNamespace, RecoveryEntryName) {
+    pub(in crate::adapters) fn into_parts(self) -> (RecoveryNamespace, RecoveryEntryName) {
         (self.namespace, self.name)
     }
 }
@@ -50,7 +50,7 @@ impl RecoveryInventory {
         &self.entries
     }
 
-    pub(super) fn into_entries(self) -> Vec<RecoveryInventoryEntry> {
+    pub(in crate::adapters) fn into_entries(self) -> Vec<RecoveryInventoryEntry> {
         self.entries
     }
 }

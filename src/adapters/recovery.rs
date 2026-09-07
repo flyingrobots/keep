@@ -1,0 +1,178 @@
+//! This module owns recovery-stage classification, planning, resumption, and
+//! finalization adapters. Children borrow adapter-level items through `super`.
+
+mod recovery_catalog_stage;
+mod recovery_catalog_stage_error;
+mod recovery_entry_name;
+mod recovery_entry_role;
+mod recovery_fixed_field_prefix;
+mod recovery_inventory;
+mod recovery_inventory_error;
+mod recovery_inventory_limit;
+mod recovery_inventory_operation;
+mod recovery_inventory_storage;
+mod recovery_name_classification;
+mod recovery_name_classification_error;
+mod recovery_name_manifest;
+mod recovery_namespace;
+mod recovery_next_head_finalization_error;
+mod recovery_next_head_finalization_executor;
+mod recovery_next_head_finalization_outcome;
+mod recovery_next_head_finalization_plan_error;
+mod recovery_next_head_finalization_planner;
+mod recovery_next_head_finalization_readiness;
+mod recovery_next_head_finalization_receipt;
+mod recovery_next_head_finalization_request;
+mod recovery_next_head_finalization_storage;
+mod recovery_next_head_finalization_storage_error;
+mod recovery_next_head_finalization_target;
+mod recovery_next_head_stage;
+mod recovery_next_head_stage_error;
+pub(in crate::adapters) mod recovery_pool_name;
+mod recovery_pool_name_error;
+mod recovery_publication_fixed_framing;
+mod recovery_publication_stage_classifier;
+mod recovery_required_entry;
+mod recovery_segment_classifier;
+mod recovery_segment_fixed_framing;
+mod recovery_segment_resume_error;
+mod recovery_segment_resume_executor;
+mod recovery_segment_resume_plan_error;
+mod recovery_segment_resume_planner;
+mod recovery_segment_resume_request;
+pub(in crate::adapters) mod recovery_segment_resume_state;
+mod recovery_segment_resume_storage;
+mod recovery_segment_resume_storage_error;
+mod recovery_segment_stage;
+mod recovery_segment_stage_error;
+mod recovery_segment_truncation;
+mod recovery_stage;
+mod recovery_stage_assessment;
+mod recovery_stage_assessment_error;
+mod recovery_stage_assessor;
+mod recovery_stage_byte_admission;
+mod recovery_stage_byte_admission_error;
+mod recovery_stage_completion_error;
+mod recovery_stage_completion_executor;
+mod recovery_stage_completion_plan_error;
+mod recovery_stage_completion_planner;
+mod recovery_stage_completion_pool;
+mod recovery_stage_completion_receipt;
+mod recovery_stage_completion_request;
+mod recovery_stage_completion_storage;
+mod recovery_stage_completion_storage_error;
+mod recovery_stage_completion_target;
+mod recovery_stage_discard_error;
+mod recovery_stage_discard_executor;
+mod recovery_stage_discard_outcome;
+mod recovery_stage_discard_plan_error;
+mod recovery_stage_discard_planner;
+mod recovery_stage_discard_reason;
+mod recovery_stage_discard_receipt;
+mod recovery_stage_discard_request;
+mod recovery_stage_discard_storage;
+mod recovery_stage_discard_storage_error;
+mod recovery_stage_evidence;
+mod recovery_stage_fingerprint;
+mod recovery_stage_fingerprint_algorithm;
+mod recovery_stage_fingerprint_error;
+mod recovery_stage_fingerprinter;
+mod recovery_stage_length;
+mod recovery_stage_metadata;
+mod recovery_stage_metadata_error;
+mod recovery_stage_parent;
+mod recovery_stage_pool_outcome;
+mod recovery_stage_synchronization_outcome;
+
+use super::{
+    AdmittedRecoveryStageBytes, AdmittedSegment, CatalogDecodeError, CatalogPublicationExpectation,
+    CatalogRestartError, CatalogSnapshot, CatalogTransitionError, ChecksummedCatalog,
+    ChecksummedPublicationHead, FilesystemRecoveryStageError, OpenedReusableSegment,
+    PublicationHeadDecodeError, SegmentDigest, SegmentHeader, SegmentHeaderError, SegmentReadError,
+    SegmentReadPolicy, SegmentRecordHeaderError, SegmentRecordIdentity, SegmentRecordLimit,
+    SegmentSeal, SegmentStage, StagedSegment, catalog_decoder, catalog_header_decoder,
+    catalog_publication_expectation, catalog_transition, framed_blake3, lower_hex,
+    publication_head_decoder, segment_digest_builder, segment_header, segment_identity_index,
+    segment_record_cursor, segment_record_cursor_decode, segment_record_header,
+    segment_record_kind, segment_seal,
+};
+
+pub use recovery_catalog_stage::RecoveryCatalogStage;
+pub use recovery_catalog_stage_error::RecoveryCatalogStageError;
+pub use recovery_entry_name::{RecoveryEntryName, RecoveryEntryNameError};
+pub use recovery_entry_role::RecoveryEntryRole;
+pub use recovery_inventory::{RecoveryInventory, RecoveryInventoryEntry, read_recovery_inventory};
+pub use recovery_inventory_error::RecoveryInventoryError;
+pub use recovery_inventory_limit::{RecoveryInventoryLimit, RecoveryInventoryLimitError};
+pub use recovery_inventory_operation::RecoveryInventoryOperation;
+pub use recovery_inventory_storage::RecoveryInventoryStorage;
+pub use recovery_name_classification::classify_recovery_names;
+pub use recovery_name_classification_error::RecoveryNameClassificationError;
+pub use recovery_name_manifest::{RecoveryNameManifest, RecoveryNamedEntry};
+pub use recovery_namespace::RecoveryNamespace;
+pub use recovery_next_head_finalization_error::RecoveryNextHeadFinalizationError;
+pub use recovery_next_head_finalization_executor::execute_recovery_next_head_finalization;
+pub use recovery_next_head_finalization_outcome::RecoveryNextHeadFinalizationOutcome;
+pub use recovery_next_head_finalization_plan_error::RecoveryNextHeadFinalizationPlanError;
+pub use recovery_next_head_finalization_planner::plan_recovery_next_head_finalization;
+pub use recovery_next_head_finalization_readiness::RecoveryNextHeadFinalizationReadiness;
+pub use recovery_next_head_finalization_receipt::RecoveryNextHeadFinalizationReceipt;
+pub use recovery_next_head_finalization_request::RecoveryNextHeadFinalizationRequest;
+pub use recovery_next_head_finalization_storage::RecoveryNextHeadFinalizationStorage;
+pub use recovery_next_head_finalization_storage_error::RecoveryNextHeadFinalizationStorageError;
+pub use recovery_next_head_finalization_target::RecoveryNextHeadFinalizationTarget;
+pub use recovery_next_head_stage::RecoveryNextHeadStage;
+pub use recovery_next_head_stage_error::RecoveryNextHeadStageError;
+pub use recovery_pool_name_error::RecoveryPoolNameError;
+pub use recovery_publication_stage_classifier::{
+    classify_recovery_catalog_stage, classify_recovery_next_head_stage,
+};
+pub use recovery_required_entry::RecoveryRequiredEntry;
+pub use recovery_segment_classifier::classify_recovery_segment_stage;
+pub use recovery_segment_resume_error::RecoverySegmentResumeError;
+pub use recovery_segment_resume_executor::execute_recovery_segment_resume;
+pub use recovery_segment_resume_plan_error::RecoverySegmentResumePlanError;
+pub use recovery_segment_resume_planner::plan_recovery_segment_resume;
+pub use recovery_segment_resume_request::RecoverySegmentResumeRequest;
+pub use recovery_segment_resume_storage::RecoverySegmentResumeStorage;
+pub use recovery_segment_resume_storage_error::RecoverySegmentResumeStorageError;
+pub use recovery_segment_stage::{RecoverySegmentStage, ReusableRecoverySegment};
+pub use recovery_segment_stage_error::RecoverySegmentStageError;
+pub use recovery_segment_truncation::RecoverySegmentTruncation;
+pub use recovery_stage::RecoveryStage;
+pub use recovery_stage_assessment::RecoveryStageAssessment;
+pub use recovery_stage_assessment_error::RecoveryStageAssessmentError;
+pub use recovery_stage_assessor::assess_recovery_stage;
+pub use recovery_stage_byte_admission::admit_recovery_stage_bytes;
+pub use recovery_stage_byte_admission_error::RecoveryStageByteAdmissionError;
+pub use recovery_stage_completion_error::RecoveryStageCompletionError;
+pub use recovery_stage_completion_executor::execute_recovery_stage_completion;
+pub use recovery_stage_completion_plan_error::RecoveryStageCompletionPlanError;
+pub use recovery_stage_completion_planner::plan_recovery_stage_completion;
+pub use recovery_stage_completion_pool::RecoveryStageCompletionPool;
+pub use recovery_stage_completion_receipt::RecoveryStageCompletionReceipt;
+pub use recovery_stage_completion_request::RecoveryStageCompletionRequest;
+pub use recovery_stage_completion_storage::RecoveryStageCompletionStorage;
+pub use recovery_stage_completion_storage_error::RecoveryStageCompletionStorageError;
+pub use recovery_stage_completion_target::RecoveryStageCompletionTarget;
+pub use recovery_stage_discard_error::RecoveryStageDiscardError;
+pub use recovery_stage_discard_executor::execute_recovery_stage_discard;
+pub use recovery_stage_discard_outcome::RecoveryStageDiscardOutcome;
+pub use recovery_stage_discard_plan_error::RecoveryStageDiscardPlanError;
+pub use recovery_stage_discard_planner::plan_recovery_stage_discard;
+pub use recovery_stage_discard_reason::RecoveryStageDiscardReason;
+pub use recovery_stage_discard_receipt::RecoveryStageDiscardReceipt;
+pub use recovery_stage_discard_request::RecoveryStageDiscardRequest;
+pub use recovery_stage_discard_storage::RecoveryStageDiscardStorage;
+pub use recovery_stage_discard_storage_error::RecoveryStageDiscardStorageError;
+pub use recovery_stage_evidence::RecoveryStageEvidence;
+pub use recovery_stage_fingerprint::RecoveryStageFingerprint;
+pub use recovery_stage_fingerprint_algorithm::RecoveryStageFingerprintAlgorithm;
+pub use recovery_stage_fingerprint_error::RecoveryStageFingerprintError;
+pub use recovery_stage_fingerprinter::fingerprint_recovery_stage;
+pub use recovery_stage_length::RecoveryStageLength;
+pub use recovery_stage_metadata::RecoveryStageMetadata;
+pub use recovery_stage_metadata_error::RecoveryStageMetadataError;
+pub use recovery_stage_parent::RecoveryStageParent;
+pub use recovery_stage_pool_outcome::RecoveryStagePoolOutcome;
+pub use recovery_stage_synchronization_outcome::RecoveryStageSynchronizationOutcome;

@@ -13,7 +13,7 @@ pub struct RecoverySegmentResumeRequest {
 }
 
 impl RecoverySegmentResumeRequest {
-    pub(super) const fn new(
+    pub(in crate::adapters) const fn new(
         evidence: RecoveryStageEvidence,
         record_count: u32,
         length: RecoveryStageLength,

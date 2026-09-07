@@ -14,7 +14,7 @@ pub struct RecoveryStageDiscardReceipt {
 }
 
 impl RecoveryStageDiscardReceipt {
-    pub(super) const fn new(
+    pub(in crate::adapters) const fn new(
         request: RecoveryStageDiscardRequest,
         outcome: RecoveryStageDiscardOutcome,
     ) -> Self {

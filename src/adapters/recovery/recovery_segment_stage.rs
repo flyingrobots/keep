@@ -22,7 +22,7 @@ pub struct ReusableRecoverySegment {
 }
 
 impl ReusableRecoverySegment {
-    pub(super) const fn new(record_count: u32, length: RecoveryStageLength) -> Self {
+    pub(in crate::adapters) const fn new(record_count: u32, length: RecoveryStageLength) -> Self {
         Self {
             record_count,
             length,

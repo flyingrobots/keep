@@ -6,7 +6,7 @@ use super::{
     publication_head_decoder,
 };
 
-pub(super) fn catalog_header(encoded: &[u8]) -> Result<(), CatalogDecodeError> {
+pub(in crate::adapters) fn catalog_header(encoded: &[u8]) -> Result<(), CatalogDecodeError> {
     let magic = observed_field(encoded, 0, catalog_decoder::MAGIC);
     if magic != catalog_decoder::MAGIC {
         return Err(CatalogDecodeError::InvalidMagic { observed: magic });
@@ -87,7 +87,7 @@ fn validate_catalog_coordinates(encoded: &[u8]) -> Result<(), CatalogDecodeError
     }
 }
 
-pub(super) fn next_head(encoded: &[u8]) -> Result<(), PublicationHeadDecodeError> {
+pub(in crate::adapters) fn next_head(encoded: &[u8]) -> Result<(), PublicationHeadDecodeError> {
     let magic = observed_field(encoded, 0, publication_head_decoder::MAGIC);
     if magic != publication_head_decoder::MAGIC {
         return Err(PublicationHeadDecodeError::InvalidMagic { observed: magic });

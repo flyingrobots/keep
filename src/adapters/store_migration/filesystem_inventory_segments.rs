@@ -12,10 +12,11 @@ use super::filesystem_inventory_file::{
     self, FilesystemInventoryFileError, FilesystemInventoryFilePolicy,
 };
 use super::filesystem_inventory_names;
+use crate::adapters::recovery::recovery_pool_name;
 use crate::adapters::segment_header::MAXIMUM_SEGMENT_LENGTH;
 use crate::adapters::{
     AdmittedSegment, CatalogRestartArtifact, CatalogRestartError, CatalogRestartPhase,
-    RecoveryEntryName, SegmentDigest, SegmentReadPolicy, physical_pool_name, recovery_pool_name,
+    RecoveryEntryName, SegmentDigest, SegmentReadPolicy, physical_pool_name,
 };
 
 const POOL: MigrationInventoryPool = MigrationInventoryPool::Segments;

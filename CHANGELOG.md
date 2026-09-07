@@ -10,6 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- The adapters module root now declares modules only: its public re-export
+  surface lives in `adapters/exports.rs` and the recovery-stage adapters live
+  under `adapters/recovery/` behind one facade. No public path changed; the
+  root fell from 498 lines to 238 against the 500-line hard ceiling.
 - Restart artifact reads use one exact read into a pre-reserved buffer followed
   by trailing-byte rejection; the interim chunked transfer layer, which pumped
   every artifact through an 8 KiB buffer without lowering peak memory, is

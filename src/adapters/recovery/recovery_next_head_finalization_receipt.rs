@@ -14,7 +14,7 @@ pub struct RecoveryNextHeadFinalizationReceipt {
 }
 
 impl RecoveryNextHeadFinalizationReceipt {
-    pub(super) const fn new(
+    pub(in crate::adapters) const fn new(
         request: RecoveryNextHeadFinalizationRequest,
         outcome: RecoveryNextHeadFinalizationOutcome,
     ) -> Self {

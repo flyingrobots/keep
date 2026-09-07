@@ -1,6 +1,6 @@
 //! This module owns completion of available fixed-field recovery prefixes.
 
-pub(super) fn observed_field<const LENGTH: usize>(
+pub(in crate::adapters) fn observed_field<const LENGTH: usize>(
     encoded: &[u8],
     offset: usize,
     canonical: [u8; LENGTH],

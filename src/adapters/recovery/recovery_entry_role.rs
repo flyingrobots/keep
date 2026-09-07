@@ -37,7 +37,7 @@ pub enum RecoveryEntryRole {
 }
 
 impl RecoveryEntryRole {
-    pub(super) const fn is_stage(self) -> bool {
+    pub(in crate::adapters) const fn is_stage(self) -> bool {
         matches!(
             self,
             Self::NextHeadStage | Self::SegmentStage | Self::CatalogStage

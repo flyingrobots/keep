@@ -6,7 +6,7 @@
 pub struct RecoveryStageLength(u64);
 
 impl RecoveryStageLength {
-    pub(super) const fn from_validated(value: u64) -> Self {
+    pub(in crate::adapters) const fn from_validated(value: u64) -> Self {
         Self(value)
     }
 

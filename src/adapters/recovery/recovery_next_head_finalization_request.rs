@@ -14,7 +14,7 @@ pub struct RecoveryNextHeadFinalizationRequest {
 }
 
 impl RecoveryNextHeadFinalizationRequest {
-    pub(super) const fn new(
+    pub(in crate::adapters) const fn new(
         evidence: RecoveryStageEvidence,
         expectation: CatalogPublicationExpectation,
         target: RecoveryNextHeadFinalizationTarget,

@@ -17,7 +17,7 @@ pub enum RecoveryStage {
 }
 
 impl RecoveryStage {
-    pub(super) const fn file_name(self) -> &'static str {
+    pub(in crate::adapters) const fn file_name(self) -> &'static str {
         match self {
             Self::Segment => "current.seg",
             Self::Catalog => "current.cat",

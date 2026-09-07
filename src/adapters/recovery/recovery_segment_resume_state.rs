@@ -9,16 +9,16 @@ use super::{
     SegmentRecordLimit,
 };
 
-pub(super) struct RecoverySegmentResumeState {
-    pub(super) digest: SegmentDigestBuilder,
-    pub(super) identities: HashSet<SegmentRecordIdentity>,
-    pub(super) record_limit: SegmentRecordLimit,
-    pub(super) record_count: u32,
-    pub(super) bytes_written: u64,
+pub(in crate::adapters) struct RecoverySegmentResumeState {
+    pub(in crate::adapters) digest: SegmentDigestBuilder,
+    pub(in crate::adapters) identities: HashSet<SegmentRecordIdentity>,
+    pub(in crate::adapters) record_limit: SegmentRecordLimit,
+    pub(in crate::adapters) record_count: u32,
+    pub(in crate::adapters) bytes_written: u64,
 }
 
 impl RecoverySegmentResumeState {
-    pub(super) fn rebuild(
+    pub(in crate::adapters) fn rebuild(
         encoded: &[u8],
         request: RecoverySegmentResumeRequest,
     ) -> Result<Self, SegmentReadError> {

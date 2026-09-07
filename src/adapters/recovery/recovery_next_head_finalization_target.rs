@@ -22,7 +22,7 @@ impl RecoveryNextHeadFinalizationTarget {
         )
     }
 
-    pub(super) const fn new(
+    pub(in crate::adapters) const fn new(
         generation: CatalogGeneration,
         length: CatalogLength,
         digest: CatalogDigest,

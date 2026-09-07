@@ -11,7 +11,7 @@ pub struct RecoveryNamedEntry {
 }
 
 impl RecoveryNamedEntry {
-    pub(super) const fn new(
+    pub(in crate::adapters) const fn new(
         namespace: RecoveryNamespace,
         name: RecoveryEntryName,
         role: RecoveryEntryRole,
@@ -49,7 +49,7 @@ pub struct RecoveryNameManifest {
 }
 
 impl RecoveryNameManifest {
-    pub(super) const fn new(entries: Vec<RecoveryNamedEntry>) -> Self {
+    pub(in crate::adapters) const fn new(entries: Vec<RecoveryNamedEntry>) -> Self {
         Self { entries }
     }
 

@@ -49,7 +49,7 @@ pub enum RecoveryInventoryError {
 }
 
 impl RecoveryInventoryError {
-    pub(super) const fn io(
+    pub(in crate::adapters) const fn io(
         namespace: RecoveryNamespace,
         operation: RecoveryInventoryOperation,
         source: io::Error,

@@ -10,12 +10,12 @@ use super::{
     segment_record_kind::SegmentRecordKind, segment_seal,
 };
 
-pub(super) fn segment_header(encoded: &[u8]) -> Result<(), SegmentHeaderError> {
+pub(in crate::adapters) fn segment_header(encoded: &[u8]) -> Result<(), SegmentHeaderError> {
     let completed = observed_field(encoded, 0, SegmentHeader::admitted().encode());
     SegmentHeader::decode(&completed).map(|_header| ())
 }
 
-pub(super) fn segment_tail(encoded: &[u8]) -> Result<(), SegmentRecordHeaderError> {
+pub(in crate::adapters) fn segment_tail(encoded: &[u8]) -> Result<(), SegmentRecordHeaderError> {
     if segment_seal::MAGIC.starts_with(encoded) {
         return Ok(());
     }

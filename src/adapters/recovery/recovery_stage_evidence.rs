@@ -12,7 +12,7 @@ pub struct RecoveryStageEvidence {
 }
 
 impl RecoveryStageEvidence {
-    pub(super) const fn new(
+    pub(in crate::adapters) const fn new(
         stage: RecoveryStage,
         length: RecoveryStageLength,
         fingerprint: RecoveryStageFingerprint,

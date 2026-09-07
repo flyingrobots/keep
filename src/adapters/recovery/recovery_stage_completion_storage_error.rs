@@ -29,7 +29,7 @@ pub enum RecoveryStageCompletionStorageError {
 }
 
 impl RecoveryStageCompletionStorageError {
-    pub(super) const fn storage(source: io::Error) -> Self {
+    pub(in crate::adapters) const fn storage(source: io::Error) -> Self {
         Self::Storage { source }
     }
 }

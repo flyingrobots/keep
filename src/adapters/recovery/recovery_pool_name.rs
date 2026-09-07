@@ -8,7 +8,9 @@ const SEGMENT_NAME_LENGTH: usize = 68;
 const CATALOG_NAME_LENGTH: usize = 85;
 const GENERATION_LENGTH: usize = 16;
 
-pub(super) fn segment(name: &RecoveryEntryName) -> Result<SegmentDigest, RecoveryPoolNameError> {
+pub(in crate::adapters) fn segment(
+    name: &RecoveryEntryName,
+) -> Result<SegmentDigest, RecoveryPoolNameError> {
     let bytes = name.as_bytes();
     require_length(bytes, SEGMENT_NAME_LENGTH)?;
     let digest = bytes
@@ -17,7 +19,7 @@ pub(super) fn segment(name: &RecoveryEntryName) -> Result<SegmentDigest, Recover
     decode_digest(digest).map(SegmentDigest::from_validated)
 }
 
-pub(super) fn catalog(
+pub(in crate::adapters) fn catalog(
     name: &RecoveryEntryName,
 ) -> Result<(CatalogGeneration, CatalogDigest), RecoveryPoolNameError> {
     let bytes = name.as_bytes();
