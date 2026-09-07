@@ -9,6 +9,12 @@ use super::root_field_decoder::{
 pub(super) const HEADER_LENGTH: usize = 192;
 const ANCHOR_WIDTH: usize = 119;
 const TRAILER_LENGTH: usize = 64;
+/// Longest canonical root: the header, a namespace at
+/// `RetentionNamespace::MAXIMUM_BYTE_LENGTH` (255), `RetentionRoot::
+/// MAXIMUM_ANCHOR_COUNT` (65,536) anchors, and the trailer. Pinned against the
+/// typed constants by `filesystem_retention_expectation_tests`.
+pub(super) const MAXIMUM_ENCODED_LENGTH: usize =
+    HEADER_LENGTH + 255 + 65_536 * ANCHOR_WIDTH + TRAILER_LENGTH;
 
 pub(super) struct DecodedRootHeader {
     pub(super) generation: u64,

@@ -13,7 +13,7 @@ use super::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, RetentionCurrentStateRefusal,
     RetentionPublicationStorage,
 };
-use crate::execute_retention_publication;
+use crate::{RetentionNamespace, RetentionRoot, execute_retention_publication};
 
 #[test]
 fn absent_head_with_retention_artifacts_refuses_as_recovery() -> Result<(), Box<dyn Error>> {
@@ -99,5 +99,76 @@ fn current_expectation_refuses_when_the_namespace_directory_is_absent() -> Resul
     assert_eq!(error.kind(), io::ErrorKind::InvalidData);
     drop(authority);
     sandbox.remove()?;
+    Ok(())
+}
+
+#[test]
+fn successor_refuses_when_the_predecessor_root_file_is_absent() -> Result<(), Box<dyn Error>> {
+    let (sandbox, mut authority) = open_authority("filesystem-retention-predecessor-absent")?;
+    let root_bytes = fixture(ROOT_HEX)?;
+    let _published =
+        execute_retention_publication(&mut authority, &initial_preparation(&root_bytes)?)?;
+    let current = authority
+        .observe_current()?
+        .ok_or("published retention head was not observed")?;
+    let current_root = AdmittedRetentionRoot::decode(&root_bytes)?;
+    let current_manifest = AdmittedRetentionManifest::decode(current.manifest_bytes())?;
+    fs::remove_file(root_pool_path(sandbox.path(), &current_root))?;
+    let candidate = successor_root(&current_root)?;
+    let preparation = successor_preparation(&current_root, &current_manifest, candidate.encoded())?;
+    let before = retention_witness(sandbox.path())?;
+
+    let error = RetentionPublicationStorage::verify_current(&mut authority, &preparation)
+        .err()
+        .ok_or("successor was admitted over an absent predecessor root file")?;
+
+    assert!(matches!(
+        refusal(&error),
+        Some(RetentionCurrentStateRefusal::PredecessorRootAbsent)
+    ));
+    assert_eq!(retention_witness(sandbox.path())?, before);
+    drop(authority);
+    sandbox.remove()?;
+    Ok(())
+}
+
+#[test]
+fn successor_refuses_when_the_predecessor_root_bytes_changed() -> Result<(), Box<dyn Error>> {
+    let (sandbox, mut authority) = open_authority("filesystem-retention-predecessor-changed")?;
+    let root_bytes = fixture(ROOT_HEX)?;
+    let _published =
+        execute_retention_publication(&mut authority, &initial_preparation(&root_bytes)?)?;
+    let current = authority
+        .observe_current()?
+        .ok_or("published retention head was not observed")?;
+    let current_root = AdmittedRetentionRoot::decode(&root_bytes)?;
+    let current_manifest = AdmittedRetentionManifest::decode(current.manifest_bytes())?;
+    let pool_entry = root_pool_path(sandbox.path(), &current_root);
+    let mut changed = fs::read(&pool_entry)?;
+    *changed.last_mut().ok_or("empty root pool entry")? ^= 0x01;
+    fs::write(&pool_entry, &changed)?;
+    let candidate = successor_root(&current_root)?;
+    let preparation = successor_preparation(&current_root, &current_manifest, candidate.encoded())?;
+
+    let error = RetentionPublicationStorage::verify_current(&mut authority, &preparation)
+        .err()
+        .ok_or("successor was admitted over changed predecessor root bytes")?;
+
+    assert!(matches!(
+        refusal(&error),
+        Some(RetentionCurrentStateRefusal::PredecessorRootChanged)
+    ));
+    drop(authority);
+    sandbox.remove()?;
+    Ok(())
+}
+
+#[test]
+fn predecessor_read_bound_derives_from_the_typed_root_limits() -> Result<(), Box<dyn Error>> {
+    let anchors = usize::try_from(RetentionRoot::MAXIMUM_ANCHOR_COUNT)?;
+    let namespace = usize::from(RetentionNamespace::MAXIMUM_BYTE_LENGTH);
+    let derived = 192_usize + namespace + anchors * 119 + 64;
+
+    assert_eq!(super::root_header_decoder::MAXIMUM_ENCODED_LENGTH, derived);
     Ok(())
 }

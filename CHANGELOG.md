@@ -10,6 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- A successor retention publication now reopens the predecessor root the
+  current manifest selects, bounded by the root format's maximum encoded
+  length, and requires it to decode to exactly that generation and digest; a
+  namespace directory alone no longer stands in for an available predecessor.
 - Retention current-state verification binds this store's catalog `HEAD` to
   the closure's catalog coordinates for every disposition, so an
   already-committed retry no longer returns a receipt citing a catalog this

@@ -6,6 +6,7 @@ use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncEx
 use cap_std::fs::{Dir, OpenOptions};
 
 use super::filesystem_retention_pool_name as pool_name;
+use super::root_header_decoder;
 use super::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, ChecksummedRetentionHead,
     RetentionCurrentStateRefusal, RetentionPublicationPreparation, RetentionTransitionDisposition,
@@ -158,6 +159,57 @@ pub(super) fn verify_committed(
         Ok(())
     } else {
         Err(RetentionCurrentStateRefusal::CommittedRootChanged.into_io())
+    }
+}
+
+/// Reopens the predecessor root a `Current(_)` successor claims to advance.
+///
+/// The observed manifest must select the candidate's namespace, the candidate
+/// must name that selection as its predecessor, and the selection's root pool
+/// entry must reopen and decode to exactly that generation and digest. A
+/// namespace directory alone is not proof the predecessor is available.
+pub(super) fn verify_predecessor(
+    roots: &Dir,
+    current: &ObservedRetentionState,
+    candidate: &AdmittedRetentionRoot<'_>,
+) -> io::Result<()> {
+    let manifest = AdmittedRetentionManifest::decode(current.manifest_bytes())
+        .map_err(|source| RetentionCurrentStateRefusal::ManifestRefused { source }.into_io())?;
+    let namespace = candidate.root().namespace().digest();
+    let entries = manifest.manifest().entries();
+    let entry = entries
+        .binary_search_by_key(&namespace, |entry| entry.namespace())
+        .ok()
+        .and_then(|index| entries.get(index).copied())
+        .ok_or_else(|| RetentionCurrentStateRefusal::CommittedSelectionMissing.into_io())?;
+    if candidate.root().predecessor() != Some(entry.root_digest()) {
+        return Err(RetentionCurrentStateRefusal::PredecessorMismatch.into_io());
+    }
+    let directory = roots
+        .open_dir_nofollow(pool_name::namespace(namespace))
+        .map_err(|_source| RetentionCurrentStateRefusal::CommittedNamespaceUnavailable.into_io())?;
+    let name = pool_name::root(entry.root_generation(), entry.root_digest());
+    let length = match directory.symlink_metadata(&name) {
+        Ok(metadata) => usize::try_from(metadata.len())
+            .map_err(|_source| RetentionCurrentStateRefusal::RecordLengthOverflow.into_io())?,
+        Err(source) if source.kind() == io::ErrorKind::NotFound => {
+            return Err(RetentionCurrentStateRefusal::PredecessorRootAbsent.into_io());
+        }
+        Err(source) => return Err(source),
+    };
+    if length > root_header_decoder::MAXIMUM_ENCODED_LENGTH {
+        return Err(RetentionCurrentStateRefusal::PredecessorRootAbsent.into_io());
+    }
+    let bytes = read_exact_optional(&directory, &name, length)?
+        .ok_or_else(|| RetentionCurrentStateRefusal::PredecessorRootAbsent.into_io())?;
+    let predecessor = AdmittedRetentionRoot::decode(&bytes)
+        .map_err(|_source| RetentionCurrentStateRefusal::PredecessorRootChanged.into_io())?;
+    if predecessor.digest() == entry.root_digest()
+        && predecessor.root().generation() == entry.root_generation()
+    {
+        Ok(())
+    } else {
+        Err(RetentionCurrentStateRefusal::PredecessorRootChanged.into_io())
     }
 }
 

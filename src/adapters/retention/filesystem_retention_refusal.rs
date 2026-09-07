@@ -75,6 +75,12 @@ pub enum RetentionCurrentStateRefusal {
     CommittedRootAbsent,
     /// The committed root pool entry holds different bytes.
     CommittedRootChanged,
+    /// The candidate does not name the manifest's current root as its predecessor.
+    PredecessorMismatch,
+    /// The predecessor root pool entry is absent or exceeds the format bound.
+    PredecessorRootAbsent,
+    /// The predecessor root pool entry does not decode to the manifest's selection.
+    PredecessorRootChanged,
     /// A record's kind or length disagreed with its declaration.
     RecordKindOrLength,
     /// A record carried bytes beyond its declared length.
@@ -113,6 +119,9 @@ impl fmt::Display for RetentionCurrentStateRefusal {
             Self::CommittedNamespaceUnavailable => formatter.write_str("committed root namespace directory is unavailable"),
             Self::CommittedRootAbsent => formatter.write_str("committed root pool entry is absent"),
             Self::CommittedRootChanged => formatter.write_str("committed root pool entry bytes disagreed"),
+            Self::PredecessorMismatch => formatter.write_str("candidate does not name the current root as its predecessor"),
+            Self::PredecessorRootAbsent => formatter.write_str("predecessor root pool entry is absent or exceeds the format bound"),
+            Self::PredecessorRootChanged => formatter.write_str("predecessor root pool entry does not decode to the manifest's selection"),
             Self::RecordKindOrLength => formatter.write_str("retention record kind or length disagreed"),
             Self::RecordTrailingBytes => formatter.write_str("retention record carried trailing bytes"),
             Self::RecordLengthOverflow => formatter.write_str("retention record length exceeded the addressable range"),

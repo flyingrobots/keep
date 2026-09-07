@@ -16,6 +16,7 @@ use super::{
     RetentionCurrentStateRefusal, RetentionNamespaceAdmission, RetentionPublicationPreparation,
     RetentionPublicationStorage, RetentionTransitionDisposition,
 };
+use crate::RetentionGenerationExpectation;
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
 
 impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
@@ -44,6 +45,15 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
                 &self.roots,
                 preparation.candidate(),
             )?;
+            if let (RetentionGenerationExpectation::Current(_), Some(current)) =
+                (preparation.expected(), current.as_ref())
+            {
+                filesystem_retention_current::verify_predecessor(
+                    &self.roots,
+                    current,
+                    preparation.candidate(),
+                )?;
+            }
         }
         if disposition == RetentionTransitionDisposition::AlreadyCommitted {
             let current = current
