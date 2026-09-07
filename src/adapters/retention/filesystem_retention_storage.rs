@@ -24,7 +24,18 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
         self.liveness_generation = Some(preparation.liveness_generation());
         require_no_retained_stage(&self.retention)?;
         let current = filesystem_retention_current::observe(&self.retention, &self.manifests)?;
-        filesystem_retention_current::disposition(preparation, current.as_ref())
+        let disposition = filesystem_retention_current::disposition(preparation, current.as_ref())?;
+        if disposition == RetentionTransitionDisposition::AlreadyCommitted {
+            let current = current
+                .as_ref()
+                .ok_or_else(|| invalid_data("already-committed disposition without a head"))?;
+            filesystem_retention_current::verify_committed(
+                &self.roots,
+                current,
+                preparation.candidate(),
+            )?;
+        }
+        Ok(disposition)
     }
 
     fn write_root_stage(&mut self, root: &AdmittedRetentionRoot<'_>) -> io::Result<()> {

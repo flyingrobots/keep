@@ -38,7 +38,10 @@ after its public API and format compatibility policies are established.
   `migration.receipt` without following links, bounds each to its canonical
   length, and admits the receipt only against the decoded intent and marker
   before returning writer authority; `FilesystemPlatformAdmissionError::MigrationRecord`
-  names that refusal.
+  names that refusal. An already-committed retention retry now reopens the
+  manifest entry and the root pool bytes the head selects and refuses absent,
+  changed, or corrupt evidence instead of inferring the commit from head
+  agreement alone.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

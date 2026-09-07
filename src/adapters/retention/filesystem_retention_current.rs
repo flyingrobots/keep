@@ -2,14 +2,14 @@
 
 use std::io::{self, Read};
 
-use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt};
+use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt};
 use cap_std::fs::{Dir, OpenOptions};
 
 use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_stage::invalid_data;
 use super::{
-    AdmittedRetentionManifest, ChecksummedRetentionHead, RetentionPublicationPreparation,
-    RetentionTransitionDisposition,
+    AdmittedRetentionManifest, AdmittedRetentionRoot, ChecksummedRetentionHead,
+    RetentionPublicationPreparation, RetentionTransitionDisposition,
 };
 use crate::RetentionGenerationExpectation;
 
@@ -118,6 +118,48 @@ pub(super) fn disposition(
         Err(invalid_data(
             "current retention head is not the prepared predecessor; the candidate is superseded",
         ))
+    }
+}
+
+/// Reopens the evidence behind an `AlreadyCommitted` disposition.
+///
+/// The observed manifest must select `candidate`'s namespace at exactly its
+/// generation and digest, and the immutable root-pool entry must reopen with
+/// exactly `candidate`'s bytes. A head that merely agrees with its manifest is
+/// not proof that the claimed root is still available.
+pub(super) fn verify_committed(
+    roots: &Dir,
+    current: &ObservedRetentionState,
+    candidate: &AdmittedRetentionRoot<'_>,
+) -> io::Result<()> {
+    let manifest = AdmittedRetentionManifest::decode(current.manifest_bytes())
+        .map_err(|_source| invalid_data("observed retention manifest refused admission"))?;
+    let namespace = candidate.root().namespace().digest();
+    let entries = manifest.manifest().entries();
+    let entry = entries
+        .binary_search_by_key(&namespace, |entry| entry.namespace())
+        .ok()
+        .and_then(|index| entries.get(index).copied())
+        .ok_or_else(|| {
+            invalid_data("committed manifest does not select the candidate namespace")
+        })?;
+    if entry.root_generation() != candidate.root().generation()
+        || entry.root_digest() != candidate.digest()
+    {
+        return Err(invalid_data(
+            "committed manifest selects a different root for the candidate namespace",
+        ));
+    }
+    let directory = roots
+        .open_dir_nofollow(pool_name::namespace(namespace))
+        .map_err(|_source| invalid_data("committed root namespace directory is unavailable"))?;
+    let name = pool_name::root(candidate.root().generation(), candidate.digest());
+    let observed = read_exact_optional(&directory, &name, candidate.encoded().len())?
+        .ok_or_else(|| invalid_data("committed root pool entry is absent"))?;
+    if observed.as_ref() == candidate.encoded() {
+        Ok(())
+    } else {
+        Err(invalid_data("committed root pool entry bytes disagreed"))
     }
 }
 
