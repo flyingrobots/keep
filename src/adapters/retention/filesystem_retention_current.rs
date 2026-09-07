@@ -2,7 +2,7 @@
 
 use std::io::{self, Read};
 
-use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt};
+use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
 use cap_std::fs::{Dir, OpenOptions};
 
 use super::filesystem_retention_pool_name as pool_name;
@@ -189,7 +189,7 @@ fn read_exact_optional(
     length: usize,
 ) -> io::Result<Option<Box<[u8]>>> {
     let mut options = OpenOptions::new();
-    options.read(true).follow(FollowSymlinks::No);
+    options.read(true).follow(FollowSymlinks::No).nonblock(true);
     let mut file = match directory.open_with(name, &options) {
         Ok(file) => file,
         Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),

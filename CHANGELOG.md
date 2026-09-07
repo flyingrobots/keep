@@ -61,6 +61,9 @@ after its public API and format compatibility policies are established.
   synchronization now also synchronizes the `retention` directory, so the
   `root.next`, `manifest.next`, and `head.next` entries are durable before the
   namespace directory, pool links, or head replacement that depend on them.
+  Every read-side reopen in retention publication and version-two admission
+  opens with `O_NONBLOCK`, so a FIFO planted at `retention/HEAD`, `FORMAT`, or a
+  pool name refuses by kind instead of blocking under the writer lock.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

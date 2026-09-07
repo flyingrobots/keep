@@ -2,7 +2,7 @@
 
 use std::io::{self, Read};
 
-use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt};
+use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
 use cap_std::fs::{Dir, OpenOptions};
 
 use super::{
@@ -37,7 +37,7 @@ pub(super) fn admit(root: &Dir) -> io::Result<()> {
 
 fn read_exact(root: &Dir, name: &str, length: usize) -> io::Result<Vec<u8>> {
     let mut options = OpenOptions::new();
-    options.read(true).follow(FollowSymlinks::No);
+    options.read(true).follow(FollowSymlinks::No).nonblock(true);
     let mut file = root.open_with(name, &options)?;
     let expected_length = u64::try_from(length)
         .map_err(|_source| invalid_data(name, &"record length exceeded u64"))?;

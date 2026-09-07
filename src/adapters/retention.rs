@@ -22,6 +22,8 @@ mod filesystem_retention_current;
 mod filesystem_retention_current_tests;
 #[cfg(test)]
 mod filesystem_retention_expectation_tests;
+#[cfg(test)]
+mod filesystem_retention_fifo_tests;
 mod filesystem_retention_namespace;
 #[cfg(test)]
 mod filesystem_retention_namespace_tests;

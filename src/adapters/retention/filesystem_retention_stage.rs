@@ -2,7 +2,7 @@
 
 use std::io::{self, Read, Write};
 
-use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt};
+use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt, OpenOptionsSyncExt};
 use cap_std::fs::{Dir, File, Metadata, OpenOptions};
 
 use crate::adapters::filesystem_catalog_artifact;
@@ -112,7 +112,7 @@ fn verify_name(
     identity: StageIdentity,
 ) -> io::Result<()> {
     let mut options = OpenOptions::new();
-    options.read(true).follow(FollowSymlinks::No);
+    options.read(true).follow(FollowSymlinks::No).nonblock(true);
     let mut file = directory.open_with(name, &options)?;
     require_metadata(&file.metadata()?, expected.len(), identity)?;
     require_metadata(&directory.symlink_metadata(name)?, expected.len(), identity)?;
