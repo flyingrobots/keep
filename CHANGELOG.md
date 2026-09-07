@@ -567,6 +567,9 @@ after its public API and format compatibility policies are established.
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
+- `FilesystemRecoveryStageError::LengthChanged` reports the stage's actual
+  on-disk length in `observed` when trailing bytes are found, instead of the
+  expected length plus the one byte that detected them.
 - Version-two record admission and catalog-head binding carry their decode
   errors as sources: `VersionTwoRecordRefusal` names which of `FORMAT`,
   `migration.intent`, or `migration.receipt` refused and preserves the

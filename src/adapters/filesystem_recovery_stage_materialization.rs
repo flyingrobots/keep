@@ -56,12 +56,16 @@ fn read_exact(
             expected: length,
             source,
         })?;
-    let observed =
-        u64::try_from(observed).map_err(|_source| FilesystemRecoveryStageError::LengthChanged {
-            stage,
-            expected: length,
-            observed: expected,
-        })?;
+    let observed = match u64::try_from(observed) {
+        Ok(observed) => observed,
+        Err(_source) => {
+            return Err(FilesystemRecoveryStageError::LengthChanged {
+                stage,
+                expected: length,
+                observed: observed_length(file, stage, length)?,
+            });
+        }
+    };
     if observed < expected {
         return Err(FilesystemRecoveryStageError::Materialize {
             stage,
@@ -85,25 +89,11 @@ fn reject_trailing_bytes(
     loop {
         match file.read(&mut trailing) {
             Ok(0) => return Ok(()),
-            Ok(read_bytes) => {
-                let increment = u64::try_from(read_bytes).map_err(|_source| {
-                    FilesystemRecoveryStageError::LengthChanged {
-                        stage,
-                        expected,
-                        observed: expected.get(),
-                    }
-                })?;
-                let observed = expected.get().checked_add(increment).ok_or_else(|| {
-                    FilesystemRecoveryStageError::LengthChanged {
-                        stage,
-                        expected,
-                        observed: expected.get(),
-                    }
-                })?;
+            Ok(_trailing_bytes) => {
                 return Err(FilesystemRecoveryStageError::LengthChanged {
                     stage,
                     expected,
-                    observed,
+                    observed: observed_length(file, stage, expected)?,
                 });
             }
             Err(source) if source.kind() == io::ErrorKind::Interrupted => {}
@@ -116,6 +106,24 @@ fn reject_trailing_bytes(
             }
         }
     }
+}
+
+/// Reports the stage's actual length when its bytes disagree with `expected`.
+///
+/// `LengthChanged.observed` names what the filesystem holds now, not a guess
+/// derived from the read that detected the disagreement.
+fn observed_length(
+    file: &File,
+    stage: RecoveryStage,
+    expected: RecoveryStageLength,
+) -> Result<u64, FilesystemRecoveryStageError> {
+    file.metadata()
+        .map(|metadata| metadata.len())
+        .map_err(|source| FilesystemRecoveryStageError::Materialize {
+            stage,
+            expected,
+            source,
+        })
 }
 
 pub(super) fn verify_position(
@@ -222,7 +230,7 @@ mod tests {
             FilesystemRecoveryStageError::LengthChanged {
                 stage: RecoveryStage::Segment,
                 expected,
-                observed: 4,
+                observed: 6,
             } if expected.get() == 3
         ));
         drop(file);
