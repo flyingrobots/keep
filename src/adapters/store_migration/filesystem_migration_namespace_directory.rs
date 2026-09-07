@@ -3,8 +3,9 @@
 use std::ffi::OsStr;
 use std::io;
 
-use cap_fs_ext::MetadataExt;
-use cap_std::fs::{Dir, Metadata};
+use cap_std::fs::Dir;
+
+use crate::adapters::filesystem_exact_record::EntryIdentity;
 
 use crate::adapters::{
     filesystem_catalog_artifact, filesystem_platform_profile, sync_capable_directory,
@@ -12,7 +13,7 @@ use crate::adapters::{
 
 pub(super) struct PinnedMigrationDirectory {
     name: &'static str,
-    identity: DirectoryIdentity,
+    identity: EntryIdentity,
     directory: Dir,
 }
 
@@ -25,7 +26,7 @@ impl PinnedMigrationDirectory {
         };
         let directory = sync_capable_directory::open(parent, name)?;
         require_same_filesystem(parent, &directory)?;
-        let identity = DirectoryIdentity::from(&directory.dir_metadata()?);
+        let identity = EntryIdentity::from(&directory.dir_metadata()?);
         let pinned = Self {
             name,
             identity,
@@ -39,15 +40,15 @@ impl PinnedMigrationDirectory {
     }
 
     pub(super) fn verify(&self, parent: &Dir) -> io::Result<()> {
-        let handle = DirectoryIdentity::from(&self.directory.dir_metadata()?);
+        let handle = EntryIdentity::from(&self.directory.dir_metadata()?);
         let current = sync_capable_directory::open(parent, self.name)?;
         require_same_filesystem(parent, &current)?;
-        let current = DirectoryIdentity::from(&current.dir_metadata()?);
+        let current = EntryIdentity::from(&current.dir_metadata()?);
         let metadata = parent.symlink_metadata(self.name)?;
         if metadata.is_dir()
             && handle == self.identity
             && current == self.identity
-            && DirectoryIdentity::from(&metadata) == handle
+            && EntryIdentity::from(&metadata) == handle
         {
             Ok(())
         } else {
@@ -57,21 +58,6 @@ impl PinnedMigrationDirectory {
 
     pub(super) const fn directory(&self) -> &Dir {
         &self.directory
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-struct DirectoryIdentity {
-    device: u64,
-    inode: u64,
-}
-
-impl From<&Metadata> for DirectoryIdentity {
-    fn from(metadata: &Metadata) -> Self {
-        Self {
-            device: metadata.dev(),
-            inode: metadata.ino(),
-        }
     }
 }
 
@@ -87,7 +73,7 @@ pub(super) fn optional_directory(
             require_same_filesystem(parent, &directory)?;
             let pinned = PinnedMigrationDirectory {
                 name,
-                identity: DirectoryIdentity::from(&metadata),
+                identity: EntryIdentity::from(&metadata),
                 directory,
             };
             pinned.verify(parent)?;

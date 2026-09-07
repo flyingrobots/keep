@@ -27,6 +27,13 @@ impl EntryIdentity {
     pub(super) fn of_file(file: &File) -> io::Result<Self> {
         file.metadata().map(|metadata| Self::from(&metadata))
     }
+
+    /// Reads the identity behind a pinned directory capability.
+    pub(super) fn of_directory(directory: &Dir) -> io::Result<Self> {
+        directory
+            .dir_metadata()
+            .map(|metadata| Self::from(&metadata))
+    }
 }
 
 impl From<&Metadata> for EntryIdentity {

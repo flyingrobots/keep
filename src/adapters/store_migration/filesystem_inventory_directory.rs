@@ -1,7 +1,8 @@
 //! This module owns pinned migration pool-directory identity.
 
-use cap_fs_ext::MetadataExt;
-use cap_std::fs::{Dir, Metadata};
+use cap_std::fs::Dir;
+
+use crate::adapters::filesystem_exact_record::EntryIdentity;
 
 use super::filesystem_inventory_error::{
     FilesystemMigrationInventoryError, FilesystemMigrationInventoryOperation,
@@ -12,7 +13,7 @@ use crate::adapters::sync_capable_directory;
 pub(super) struct PinnedMigrationPoolDirectory {
     pool: MigrationInventoryPool,
     name: &'static str,
-    identity: DirectoryIdentity,
+    identity: EntryIdentity,
     directory: Dir,
 }
 
@@ -29,7 +30,7 @@ impl PinnedMigrationPoolDirectory {
                 source,
             }
         })?;
-        let identity = DirectoryIdentity::read(&directory).map_err(|source| {
+        let identity = EntryIdentity::of_directory(&directory).map_err(|source| {
             FilesystemMigrationInventoryError::Io {
                 namespace: MigrationInventoryNamespace::from(pool),
                 operation: FilesystemMigrationInventoryOperation::OpenPool,
@@ -45,7 +46,7 @@ impl PinnedMigrationPoolDirectory {
     }
 
     pub(super) fn verify(&self, root: &Dir) -> Result<(), FilesystemMigrationInventoryError> {
-        let handle = DirectoryIdentity::read(&self.directory).map_err(|source| {
+        let handle = EntryIdentity::of_directory(&self.directory).map_err(|source| {
             FilesystemMigrationInventoryError::Io {
                 namespace: MigrationInventoryNamespace::from(self.pool),
                 operation: FilesystemMigrationInventoryOperation::VerifyPool,
@@ -59,7 +60,7 @@ impl PinnedMigrationPoolDirectory {
                 source,
             }
         })?;
-        let current = DirectoryIdentity::from(&metadata);
+        let current = EntryIdentity::from(&metadata);
         if metadata.is_dir() && handle == self.identity && current == self.identity {
             Ok(())
         } else {
@@ -69,28 +70,5 @@ impl PinnedMigrationPoolDirectory {
 
     pub(super) const fn directory(&self) -> &Dir {
         &self.directory
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-struct DirectoryIdentity {
-    device: u64,
-    inode: u64,
-}
-
-impl DirectoryIdentity {
-    fn read(directory: &Dir) -> std::io::Result<Self> {
-        directory
-            .dir_metadata()
-            .map(|metadata| Self::from(&metadata))
-    }
-}
-
-impl From<&Metadata> for DirectoryIdentity {
-    fn from(metadata: &Metadata) -> Self {
-        Self {
-            device: metadata.dev(),
-            inode: metadata.ino(),
-        }
     }
 }
