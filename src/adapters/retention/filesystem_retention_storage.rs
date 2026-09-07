@@ -8,10 +8,10 @@ use cap_std::fs::Dir;
 use super::filesystem_retention_attempt::{self as attempt, PublicationAttempt};
 use super::filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
 use super::filesystem_retention_catalog;
-use super::filesystem_retention_current;
+use super::filesystem_retention_current::{self, ObservedDisposition};
 use super::filesystem_retention_namespace;
 use super::filesystem_retention_pool_name as pool_name;
-use super::filesystem_retention_stage::{FilesystemRetentionStage, invalid_data};
+use super::filesystem_retention_stage::FilesystemRetentionStage;
 use super::{
     AdmittedRetentionRoot, CanonicalRetentionHead, CanonicalRetentionManifest,
     RetentionCurrentStateRefusal, RetentionNamespaceAdmission, RetentionPublicationPreparation,
@@ -33,44 +33,43 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
         if current.is_none() && !census.is_empty() {
             return Err(RetentionCurrentStateRefusal::HeadAbsentWithArtifacts.into_io());
         }
-        let disposition = filesystem_retention_current::disposition(preparation, current.as_ref())?;
+        let observed = filesystem_retention_current::disposition(preparation, current.as_ref())?;
         filesystem_retention_catalog::require_current_catalog(&self.root, preparation)?;
-        if disposition == RetentionTransitionDisposition::Publish {
-            filesystem_retention_namespace::admit_expectation(
-                &self.roots,
-                preparation.candidate(),
-                preparation.expected(),
-            )?;
-            filesystem_retention_namespace::admit_capacity(
-                census,
-                &self.roots,
-                preparation.candidate(),
-            )?;
-            if let (RetentionGenerationExpectation::Current(_), Some(current)) =
-                (preparation.expected(), current.as_ref())
-            {
-                filesystem_retention_current::verify_predecessor(
+        match observed {
+            ObservedDisposition::Publish => {
+                filesystem_retention_namespace::admit_expectation(
+                    &self.roots,
+                    preparation.candidate(),
+                    preparation.expected(),
+                )?;
+                filesystem_retention_namespace::admit_capacity(
+                    census,
+                    &self.roots,
+                    preparation.candidate(),
+                )?;
+                if let (RetentionGenerationExpectation::Current(_), Some(current)) =
+                    (preparation.expected(), current.as_ref())
+                {
+                    filesystem_retention_current::verify_predecessor(
+                        &self.roots,
+                        current,
+                        preparation.candidate(),
+                    )?;
+                }
+                self.attempt = Some(PublicationAttempt::new(
+                    preparation.expected(),
+                    preparation.liveness_generation(),
+                ));
+            }
+            ObservedDisposition::Committed(current) => {
+                filesystem_retention_current::verify_committed(
                     &self.roots,
                     current,
                     preparation.candidate(),
                 )?;
             }
-            self.attempt = Some(PublicationAttempt::new(
-                preparation.expected(),
-                preparation.liveness_generation(),
-            ));
         }
-        if disposition == RetentionTransitionDisposition::AlreadyCommitted {
-            let current = current
-                .as_ref()
-                .ok_or_else(|| invalid_data("already-committed disposition without a head"))?;
-            filesystem_retention_current::verify_committed(
-                &self.roots,
-                current,
-                preparation.candidate(),
-            )?;
-        }
-        Ok(disposition)
+        Ok(observed.transition())
     }
 
     fn write_root_stage(&mut self, root: &AdmittedRetentionRoot<'_>) -> io::Result<()> {

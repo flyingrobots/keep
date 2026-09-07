@@ -242,6 +242,11 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- `ObservedRetentionState` carries the decoded head and manifest alongside
+  their exact bytes, so disposition, already-committed verification, and
+  predecessor verification decode each record once; the disposition names the
+  observed state it was derived from, which removes an unreachable
+  already-committed-without-a-head refusal.
 - The retention head, catalog head, format marker, migration intent, and
   migration receipt readers take their fixed record lengths from the decoders
   that define those formats instead of restating the numbers; a contract test

@@ -11,26 +11,29 @@ use super::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, ChecksummedRetentionHead,
     RetentionCurrentStateRefusal, RetentionPublicationPreparation, RetentionTransitionDisposition,
 };
-use crate::RetentionGenerationExpectation;
+use crate::{RetentionGenerationExpectation, RetentionHead, RetentionManifest};
 
 const HEAD_LENGTH: usize = super::head_decoder::ENCODED_LENGTH;
 
-/// Exact bytes of one published retention head and the manifest it selects.
+/// One published retention head and the manifest it selects, bytes and values.
 ///
 /// Both records were reopened without following links, bounded by their
-/// declared lengths, decoded, and cross-checked: the manifest's canonical
-/// digest equals the digest the head names. Callers decode the bytes with
-/// [`ChecksummedRetentionHead`] and [`AdmittedRetentionManifest`] to plan the
-/// next transition.
+/// declared lengths, decoded exactly once, and cross-checked: the manifest's
+/// canonical digest, generation, and predecessor equal what the head names.
+/// Callers plan the next transition from the decoded values or re-admit the
+/// exact bytes with [`ChecksummedRetentionHead`] and
+/// [`AdmittedRetentionManifest`].
 #[must_use]
 #[derive(Debug)]
 pub struct ObservedRetentionState {
     head: Box<[u8]>,
     manifest: Box<[u8]>,
+    decoded_head: RetentionHead,
+    decoded_manifest: RetentionManifest,
 }
 
 impl ObservedRetentionState {
-    /// Returns the exact 144 published head bytes.
+    /// Returns the exact published head bytes.
     pub const fn head_bytes(&self) -> &[u8] {
         &self.head
     }
@@ -38,6 +41,34 @@ impl ObservedRetentionState {
     /// Returns the exact bytes of the manifest the head selects.
     pub const fn manifest_bytes(&self) -> &[u8] {
         &self.manifest
+    }
+
+    /// Returns the decoded head coordinate.
+    pub const fn head(&self) -> &RetentionHead {
+        &self.decoded_head
+    }
+
+    /// Returns the decoded manifest the head selects.
+    pub const fn manifest(&self) -> &RetentionManifest {
+        &self.decoded_manifest
+    }
+}
+
+/// The verified relationship between one preparation and the observed state.
+#[derive(Clone, Copy)]
+pub(super) enum ObservedDisposition<'state> {
+    /// The observed head already names the prepared successor.
+    Committed(&'state ObservedRetentionState),
+    /// The prepared successor advances the observed state.
+    Publish,
+}
+
+impl ObservedDisposition<'_> {
+    pub(super) const fn transition(self) -> RetentionTransitionDisposition {
+        match self {
+            Self::Committed(_) => RetentionTransitionDisposition::AlreadyCommitted,
+            Self::Publish => RetentionTransitionDisposition::Publish,
+        }
     }
 }
 
@@ -71,7 +102,14 @@ pub(super) fn observe(
     if admitted.manifest().predecessor() != selected.predecessor() {
         return Err(RetentionCurrentStateRefusal::HeadPredecessorDisagreed.into_io());
     }
-    Ok(Some(ObservedRetentionState { head, manifest }))
+    let decoded_head = *selected;
+    let decoded_manifest = admitted.manifest().clone();
+    Ok(Some(ObservedRetentionState {
+        head,
+        manifest,
+        decoded_head,
+        decoded_manifest,
+    }))
 }
 
 /// Compares one preparation against the observed current state.
@@ -80,27 +118,27 @@ pub(super) fn observe(
 /// equals the prepared successor is `AlreadyCommitted`. Otherwise the head
 /// must be the exact predecessor the prepared successor names, or the
 /// candidate is superseded and refuses.
-pub(super) fn disposition(
+pub(super) fn disposition<'state>(
     preparation: &RetentionPublicationPreparation<'_>,
-    current: Option<&ObservedRetentionState>,
-) -> io::Result<RetentionTransitionDisposition> {
+    current: Option<&'state ObservedRetentionState>,
+) -> io::Result<ObservedDisposition<'state>> {
     let Some(current) = current else {
         return match preparation.expected() {
-            RetentionGenerationExpectation::Absent => require_initial_publication(preparation),
+            RetentionGenerationExpectation::Absent => {
+                require_initial_publication(preparation).map(|()| ObservedDisposition::Publish)
+            }
             RetentionGenerationExpectation::Current(_) => {
                 Err(RetentionCurrentStateRefusal::ExpectedCurrentOverAbsentHead.into_io())
             }
         };
     };
-    let head = ChecksummedRetentionHead::decode(current.head_bytes())
-        .map_err(|source| RetentionCurrentStateRefusal::HeadRefused { source }.into_io())?;
-    let head = head.head();
+    let head = current.head();
     let committed = (
         preparation.liveness_generation(),
         preparation.manifest_digest(),
     );
     if (head.generation(), head.manifest_digest()) == committed {
-        return Ok(RetentionTransitionDisposition::AlreadyCommitted);
+        return Ok(ObservedDisposition::Committed(current));
     }
     let publication = preparation
         .publication()
@@ -114,7 +152,7 @@ pub(super) fn disposition(
     if prepared.head().predecessor() == Some(head.manifest_digest())
         && prepared.head().generation() == expected_generation
     {
-        Ok(RetentionTransitionDisposition::Publish)
+        Ok(ObservedDisposition::Publish)
     } else {
         Err(RetentionCurrentStateRefusal::Superseded {
             current_generation: head.generation(),
@@ -135,10 +173,8 @@ pub(super) fn verify_committed(
     current: &ObservedRetentionState,
     candidate: &AdmittedRetentionRoot<'_>,
 ) -> io::Result<()> {
-    let manifest = AdmittedRetentionManifest::decode(current.manifest_bytes())
-        .map_err(|source| RetentionCurrentStateRefusal::ManifestRefused { source }.into_io())?;
     let namespace = candidate.root().namespace().digest();
-    let entries = manifest.manifest().entries();
+    let entries = current.manifest().entries();
     let entry = entries
         .binary_search_by_key(&namespace, |entry| entry.namespace())
         .ok()
@@ -173,10 +209,8 @@ pub(super) fn verify_predecessor(
     current: &ObservedRetentionState,
     candidate: &AdmittedRetentionRoot<'_>,
 ) -> io::Result<()> {
-    let manifest = AdmittedRetentionManifest::decode(current.manifest_bytes())
-        .map_err(|source| RetentionCurrentStateRefusal::ManifestRefused { source }.into_io())?;
     let namespace = candidate.root().namespace().digest();
-    let entries = manifest.manifest().entries();
+    let entries = current.manifest().entries();
     let entry = entries
         .binary_search_by_key(&namespace, |entry| entry.namespace())
         .ok()
@@ -216,7 +250,7 @@ pub(super) fn verify_predecessor(
 /// The empty retention state admits only a generation-one head with no predecessor.
 fn require_initial_publication(
     preparation: &RetentionPublicationPreparation<'_>,
-) -> io::Result<RetentionTransitionDisposition> {
+) -> io::Result<()> {
     let publication = preparation
         .publication()
         .ok_or_else(|| RetentionCurrentStateRefusal::StaleCommittedRetry.into_io())?;
@@ -225,7 +259,7 @@ fn require_initial_publication(
     if prepared.head().generation() == crate::LivenessGeneration::INITIAL
         && prepared.head().predecessor().is_none()
     {
-        Ok(RetentionTransitionDisposition::Publish)
+        Ok(())
     } else {
         Err(RetentionCurrentStateRefusal::NonInitialOverAbsentHead.into_io())
     }
