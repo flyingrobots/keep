@@ -77,6 +77,7 @@ mod filesystem_catalog_publisher_tests;
 mod filesystem_catalog_segment;
 mod filesystem_catalog_snapshot;
 mod filesystem_catalog_storage;
+mod filesystem_exact_record;
 mod filesystem_initialization_namespace;
 mod filesystem_initialization_storage;
 mod filesystem_platform_admission;

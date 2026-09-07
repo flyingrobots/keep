@@ -124,3 +124,28 @@ fn no_source_module_spawns_a_process() -> Result<(), Box<dyn std::error::Error>>
     }
     Ok(())
 }
+
+const EXACT_RECORD_CONSUMERS: [(&str, &str); 1] = [(
+    "src/adapters/retention/filesystem_retention_stage.rs",
+    include_str!("../src/adapters/retention/filesystem_retention_stage.rs"),
+)];
+
+/// Modules ported onto `filesystem_exact_record` no longer open, read, or
+/// identity-check records themselves; one implementation of the no-follow,
+/// non-blocking, exact-length read serves every stage and record reader.
+#[test]
+fn exact_record_consumers_do_not_open_records_themselves() {
+    for (path, source) in EXACT_RECORD_CONSUMERS {
+        for forbidden in [
+            "nonblock(true)",
+            "fn verify_name(",
+            "fn require_metadata(",
+            "fn require_absent(",
+        ] {
+            assert!(
+                !source.contains(forbidden),
+                "{path} reimplements the exact-record primitive `{forbidden}`"
+            );
+        }
+    }
+}

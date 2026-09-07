@@ -242,6 +242,11 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Stage publishers share one exact-record module for no-follow non-blocking
+  opens, exact-length verification, trailing-byte refusal, device-and-inode
+  reverification, absence checks, and no-replacement links; the retention
+  stage is the first consumer, and a contract test keeps ported modules from
+  reimplementing those primitives.
 - The retention FIFO laws run only on Linux through `mknodat`; the `mkfifo(1)`
   fallback for other hosts is removed, and a contract test keeps every module
   under `src/` free of process spawns. The fallback's spawned child briefly
