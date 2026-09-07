@@ -5,11 +5,12 @@ use std::fs;
 use std::io;
 
 use super::filesystem_retention_test_fixture::{
-    ROOT_HEX, fixture, initial_preparation, open_authority, refusal, retention_witness,
-    root_pool_path,
+    ROOT_HEX, fixture, initial_preparation, initial_root, open_authority, refusal,
+    retention_witness, root_pool_path,
 };
 use super::{
-    RetentionCurrentStateRefusal, RetentionPublicationStorage, RetentionTransitionDisposition,
+    AdmittedRetentionRoot, RetentionCurrentStateRefusal, RetentionNamespaceAdmission,
+    RetentionPublicationStorage, RetentionTransitionDisposition,
 };
 
 #[test]
@@ -102,6 +103,39 @@ fn namespace_admission_refuses_a_directory_the_expectation_excludes() -> Result<
     assert!(matches!(
         refusal(&error),
         Some(RetentionCurrentStateRefusal::NamespaceExpectationViolated)
+    ));
+    drop(authority);
+    sandbox.remove()?;
+    Ok(())
+}
+
+#[test]
+fn namespace_phases_refuse_a_root_outside_the_admitted_namespace() -> Result<(), Box<dyn Error>> {
+    let (sandbox, mut authority) = open_authority("filesystem-retention-attempt-other-root")?;
+    let root_bytes = fixture(ROOT_HEX)?;
+    let preparation = initial_preparation(&root_bytes)?;
+    assert_eq!(
+        authority.verify_current(&preparation)?,
+        RetentionTransitionDisposition::Publish
+    );
+    authority.write_root_stage(preparation.candidate())?;
+    authority.synchronize_root_stage()?;
+    assert_eq!(
+        authority.admit_root_namespace(preparation.candidate())?,
+        RetentionNamespaceAdmission::Created
+    );
+    let template = AdmittedRetentionRoot::decode(&root_bytes)?;
+    let other = initial_root(b"a-namespace-the-attempt-did-not-admit", &template)?;
+    let other = AdmittedRetentionRoot::decode(other.encoded())?;
+
+    let error = authority
+        .synchronize_root_namespace(&other)
+        .err()
+        .ok_or("a root outside the admitted namespace was synchronized")?;
+
+    assert!(matches!(
+        refusal(&error),
+        Some(RetentionCurrentStateRefusal::AttemptNamespaceDisagreed)
     ));
     drop(authority);
     sandbox.remove()?;

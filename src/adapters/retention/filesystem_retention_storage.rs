@@ -115,7 +115,7 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
             }
             Err(source) => return Err(source),
         };
-        attempt.retain_namespace(namespace);
+        attempt.retain_namespace(name, namespace);
         Ok(admission)
     }
 
@@ -125,16 +125,22 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
 
     fn link_root(&mut self, root: &AdmittedRetentionRoot<'_>) -> io::Result<()> {
         let attempt = attempt::require_mut(&mut self.attempt)?;
+        let namespace = pool_name::namespace(root.root().namespace().digest());
         let name = pool_name::root(root.root().generation(), root.digest());
-        attempt
-            .root_stage()?
-            .link(&self.retention, attempt.namespace()?, &name)?;
+        attempt.root_stage()?.link(
+            &self.retention,
+            attempt.require_namespace(&namespace)?,
+            &name,
+        )?;
         attempt.retain_root_name(name);
         Ok(())
     }
 
-    fn synchronize_root_namespace(&mut self, _root: &AdmittedRetentionRoot<'_>) -> io::Result<()> {
-        synchronize_directory(attempt::require(self.attempt.as_ref())?.namespace()?)
+    fn synchronize_root_namespace(&mut self, root: &AdmittedRetentionRoot<'_>) -> io::Result<()> {
+        let namespace = pool_name::namespace(root.root().namespace().digest());
+        synchronize_directory(
+            attempt::require(self.attempt.as_ref())?.require_namespace(&namespace)?,
+        )
     }
 
     fn write_manifest_stage(&mut self, manifest: &CanonicalRetentionManifest) -> io::Result<()> {

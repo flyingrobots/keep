@@ -103,6 +103,9 @@ pub enum RetentionCurrentStateRefusal {
     /// The candidate's namespace directory disagreed with the claimed
     /// expectation, at verification or when it was admitted between phases.
     NamespaceExpectationViolated,
+    /// A later phase received a root whose namespace is not the one the
+    /// attempt admitted.
+    AttemptNamespaceDisagreed,
     /// A record's kind or length disagreed with its declaration.
     RecordKindOrLength,
     /// A record carried bytes beyond its declared length.
@@ -121,35 +124,6 @@ impl RetentionCurrentStateRefusal {
 impl fmt::Display for RetentionCurrentStateRefusal {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::RetainedStage => {
-                formatter.write_str("retained retention stage requires recovery before publication")
-            }
-            Self::HeadAbsentWithArtifacts => formatter.write_str(
-                "retention head is absent while retention pools hold artifacts; recovery is \
-                 required",
-            ),
-            Self::ExpectedCurrentOverAbsentHead => formatter
-                .write_str("expected a current retention generation but no head is published"),
-            Self::NonInitialOverAbsentHead => formatter.write_str(
-                "absent retention head admits only an initial publication with no predecessor",
-            ),
-            Self::HeadRefused { .. } => {
-                formatter.write_str("current retention head refused admission")
-            }
-            Self::PreparedHeadRefused { .. } => {
-                formatter.write_str("prepared retention head refused admission")
-            }
-            Self::ManifestAbsent => {
-                formatter.write_str("current retention head names an absent manifest")
-            }
-            Self::ManifestRefused { .. } => {
-                formatter.write_str("current retention manifest refused admission")
-            }
-            Self::ManifestDisagreed => {
-                formatter.write_str("current retention manifest disagreed with its head")
-            }
-            Self::HeadPredecessorDisagreed => formatter
-                .write_str("current retention head and its manifest name different predecessors"),
             Self::CatalogDisagreed {
                 expected_generation,
                 ..
@@ -159,14 +133,6 @@ impl fmt::Display for RetentionCurrentStateRefusal {
                  current catalog",
                 expected_generation.get()
             ),
-            Self::CatalogHeadRefused { .. } => {
-                formatter.write_str("this store's catalog head refused admission")
-            }
-            Self::LivenessExhausted => {
-                formatter.write_str("current liveness generation cannot advance")
-            }
-            Self::StaleCommittedRetry => formatter
-                .write_str("already-committed retry is stale: another successor is current"),
             Self::Superseded {
                 current_generation, ..
             } => write!(
@@ -174,51 +140,79 @@ impl fmt::Display for RetentionCurrentStateRefusal {
                 "candidate is superseded: the current head is liveness generation {}",
                 current_generation.get()
             ),
-            Self::CommittedSelectionMissing => {
-                formatter.write_str("committed manifest does not select the candidate namespace")
-            }
-            Self::CommittedSelectionMismatch => formatter.write_str(
-                "committed manifest selects a different root for the candidate namespace",
-            ),
-            Self::CommittedNamespaceUnavailable => {
-                formatter.write_str("committed root namespace directory is unavailable")
-            }
-            Self::CommittedRootAbsent => formatter.write_str("committed root pool entry is absent"),
-            Self::CommittedRootChanged => {
-                formatter.write_str("committed root pool entry bytes disagreed")
-            }
-            Self::PredecessorMismatch => {
-                formatter.write_str("candidate does not name the current root as its predecessor")
-            }
-            Self::PredecessorRootAbsent => formatter
-                .write_str("predecessor root pool entry is absent or exceeds the format bound"),
-            Self::PredecessorRootChanged => formatter.write_str(
-                "predecessor root pool entry does not decode to the manifest's selection",
-            ),
-            Self::UnknownRetentionEntry => {
-                formatter.write_str("retention namespace carries an unknown entry")
-            }
-            Self::NonNamespaceEntry => {
-                formatter.write_str("retention roots carries a non-namespace entry")
-            }
             Self::NoncanonicalPoolEntry { pool } => {
                 write!(formatter, "retention {pool} carries a noncanonical entry")
             }
-            Self::NamespaceCapacity => {
-                formatter.write_str("retention namespace or pool count would exceed its ceiling")
+            _ => formatter.write_str(self.message()),
+        }
+    }
+}
+
+impl RetentionCurrentStateRefusal {
+    /// The fixed description of every variant that renders no field.
+    const fn message(&self) -> &'static str {
+        match self {
+            Self::RetainedStage => "retained retention stage requires recovery before publication",
+            Self::HeadAbsentWithArtifacts => {
+                "retention head is absent while retention pools hold artifacts; recovery is \
+             required"
             }
-            Self::NamespaceExpectationViolated => formatter.write_str(
-                "namespace directory state disagreed with the claimed generation expectation",
-            ),
-            Self::RecordKindOrLength => {
-                formatter.write_str("retention record kind or length disagreed")
+            Self::ExpectedCurrentOverAbsentHead => {
+                "expected a current retention generation but no head is published"
             }
-            Self::RecordTrailingBytes => {
-                formatter.write_str("retention record carried trailing bytes")
+            Self::NonInitialOverAbsentHead => {
+                "absent retention head admits only an initial publication with no predecessor"
             }
-            Self::RecordLengthOverflow => {
-                formatter.write_str("retention record length exceeded the addressable range")
+            Self::HeadRefused { .. } => "current retention head refused admission",
+            Self::PreparedHeadRefused { .. } => "prepared retention head refused admission",
+            Self::ManifestAbsent => "current retention head names an absent manifest",
+            Self::ManifestRefused { .. } => "current retention manifest refused admission",
+            Self::ManifestDisagreed => "current retention manifest disagreed with its head",
+            Self::HeadPredecessorDisagreed => {
+                "current retention head and its manifest name different predecessors"
             }
+            Self::CatalogHeadRefused { .. } => "this store's catalog head refused admission",
+            Self::LivenessExhausted => "current liveness generation cannot advance",
+            Self::StaleCommittedRetry => {
+                "already-committed retry is stale: another successor is current"
+            }
+            Self::CommittedSelectionMissing => {
+                "committed manifest does not select the candidate namespace"
+            }
+            Self::CommittedSelectionMismatch => {
+                "committed manifest selects a different root for the candidate namespace"
+            }
+            Self::CommittedNamespaceUnavailable => {
+                "committed root namespace directory is unavailable"
+            }
+            Self::CommittedRootAbsent => "committed root pool entry is absent",
+            Self::CommittedRootChanged => "committed root pool entry bytes disagreed",
+            Self::PredecessorMismatch => {
+                "candidate does not name the current root as its predecessor"
+            }
+            Self::PredecessorRootAbsent => {
+                "predecessor root pool entry is absent or exceeds the format bound"
+            }
+            Self::PredecessorRootChanged => {
+                "predecessor root pool entry does not decode to the manifest's selection"
+            }
+            Self::UnknownRetentionEntry => "retention namespace carries an unknown entry",
+            Self::NonNamespaceEntry => "retention roots carries a non-namespace entry",
+            Self::NamespaceCapacity => "retention namespace or pool count would exceed its ceiling",
+            Self::NamespaceExpectationViolated => {
+                "namespace directory state disagreed with the claimed generation expectation"
+            }
+            Self::RecordKindOrLength => "retention record kind or length disagreed",
+            Self::RecordTrailingBytes => "retention record carried trailing bytes",
+            Self::RecordLengthOverflow => "retention record length exceeded the addressable range",
+            Self::AttemptNamespaceDisagreed => {
+                "root handed to a publication phase names a different namespace than admitted"
+            }
+            Self::CatalogDisagreed { .. } => {
+                "closure was verified against a catalog that is not this store's current catalog"
+            }
+            Self::Superseded { .. } => "candidate is superseded by the current head",
+            Self::NoncanonicalPoolEntry { .. } => "retention pool carries a noncanonical entry",
         }
     }
 }

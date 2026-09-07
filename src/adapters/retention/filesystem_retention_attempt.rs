@@ -4,9 +4,9 @@ use std::io;
 
 use cap_std::fs::Dir;
 
-use super::CanonicalRetentionManifest;
 use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_stage::{FilesystemRetentionStage, invalid_data};
+use super::{CanonicalRetentionManifest, RetentionCurrentStateRefusal};
 use crate::{LivenessGeneration, RetentionGenerationExpectation};
 
 /// Everything one publication attempt retains between storage-port phases.
@@ -19,7 +19,7 @@ use crate::{LivenessGeneration, RetentionGenerationExpectation};
 pub(super) struct PublicationAttempt {
     expected: RetentionGenerationExpectation,
     liveness_generation: LivenessGeneration,
-    namespace: Option<Dir>,
+    namespace: Option<(String, Dir)>,
     retained_root: Option<String>,
     retained_manifest: Option<String>,
     root_stage: Option<FilesystemRetentionStage>,
@@ -69,14 +69,28 @@ impl PublicationAttempt {
         pool_name::manifest(self.liveness_generation, manifest.digest())
     }
 
-    pub(super) fn retain_namespace(&mut self, namespace: Dir) {
-        self.namespace = Some(namespace);
+    pub(super) fn retain_namespace(&mut self, name: String, namespace: Dir) {
+        self.namespace = Some((name, namespace));
     }
 
     pub(super) fn namespace(&self) -> io::Result<&Dir> {
         self.namespace
             .as_ref()
+            .map(|(_name, namespace)| namespace)
             .ok_or_else(|| invalid_data("retention root namespace was not admitted"))
+    }
+
+    /// Returns the admitted namespace only if `name` is the namespace it admitted.
+    pub(super) fn require_namespace(&self, name: &str) -> io::Result<&Dir> {
+        let (admitted, namespace) = self
+            .namespace
+            .as_ref()
+            .ok_or_else(|| invalid_data("retention root namespace was not admitted"))?;
+        if admitted == name {
+            Ok(namespace)
+        } else {
+            Err(RetentionCurrentStateRefusal::AttemptNamespaceDisagreed.into_io())
+        }
     }
 
     pub(super) fn retain_root_name(&mut self, name: String) {

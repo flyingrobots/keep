@@ -590,6 +590,10 @@ after its public API and format compatibility policies are established.
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
+- The root-link and namespace-synchronization phases require the root handed
+  to them to name the namespace the attempt admitted, refusing with
+  `RetentionCurrentStateRefusal::AttemptNamespaceDisagreed` instead of
+  synchronizing whatever directory the attempt holds.
 - `FilesystemRecoveryStageError::LengthChanged` reports the stage's actual
   on-disk length in `observed` when trailing bytes are found, instead of the
   expected length plus the one byte that detected them.
