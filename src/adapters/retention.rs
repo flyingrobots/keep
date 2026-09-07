@@ -13,6 +13,8 @@ mod closure_error_display;
 mod closure_member;
 mod closure_profile_error;
 mod closure_verifier;
+#[cfg(test)]
+mod filesystem_recovery_admission_tests;
 mod filesystem_retention_authority;
 mod filesystem_retention_authority_error;
 #[cfg(test)]

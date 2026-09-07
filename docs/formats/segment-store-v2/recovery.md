@@ -61,7 +61,7 @@ corpus `definition.tsv` bytes. The format-marker digest is BLAKE3-256 of
 `StoreMigrationStorage` names all 21 durability capabilities; `execute_store_migration` verifies current authority first and returns only after final synchronization.
 `FilesystemStoreMigrationInventoryReader` inventories version-1 bytes under
 retained writer authority. The fresh writer executes once; partial-prefix
-recovery is absent and version-1 reopen refuses a migrated root.
+recovery is absent; version-1 reopen and recovery both refuse a migrated root.
 
 ## Reader fence
 
