@@ -15,6 +15,8 @@ mod closure_profile_error;
 mod closure_verifier;
 mod filesystem_retention_authority;
 mod filesystem_retention_authority_error;
+#[cfg(test)]
+mod filesystem_retention_capacity_tests;
 mod filesystem_retention_current;
 #[cfg(test)]
 mod filesystem_retention_current_tests;

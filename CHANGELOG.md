@@ -48,7 +48,10 @@ after its public API and format compatibility policies are established.
   publication admits the complete `retention` namespace before any forward
   write: only `HEAD`, `roots`, and `manifests` may exist, every namespace
   directory is 64 lowercase hex, and every pool entry is a regular
-  `<generation>-<digest>` file with its canonical suffix.
+  `<generation>-<digest>` file with its canonical suffix. Existing namespace
+  directories, including recovery-protected orphans, count against the 4,096
+  namespace ceiling, and a candidate whose namespace would be the 4,097th
+  refuses before its root stage exists.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

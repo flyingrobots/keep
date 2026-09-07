@@ -6,8 +6,10 @@ use std::io;
 use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
 
+use super::AdmittedRetentionRoot;
 use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_stage::invalid_data;
+use crate::RetentionManifest;
 
 const CANONICAL_ENTRIES: [&str; 3] = [pool_name::HEAD, pool_name::ROOTS, pool_name::MANIFESTS];
 const DIGEST_HEX: usize = 64;
@@ -58,6 +60,34 @@ pub(super) fn admit(
     }
     admit_pool(manifests, MANIFEST_SUFFIX, "retention manifest pool")?;
     Ok(RetentionNamespaceCensus { namespace_count })
+}
+
+/// Refuses a candidate that would create a namespace beyond the format ceiling.
+///
+/// Orphan namespace directories protected by recovery count exactly like
+/// manifest entries: a candidate whose namespace directory is absent may be
+/// admitted only while the observed count is below
+/// [`RetentionManifest::MAXIMUM_ENTRY_COUNT`]. A candidate whose namespace
+/// already exists creates nothing and is not bounded here.
+pub(super) fn admit_capacity(
+    census: RetentionNamespaceCensus,
+    roots: &Dir,
+    candidate: &AdmittedRetentionRoot<'_>,
+) -> io::Result<()> {
+    let name = pool_name::namespace(candidate.root().namespace().digest());
+    match roots.symlink_metadata(&name) {
+        Ok(_) => Ok(()),
+        Err(source) if source.kind() == io::ErrorKind::NotFound => {
+            if census.namespace_count < RetentionManifest::MAXIMUM_ENTRY_COUNT {
+                Ok(())
+            } else {
+                Err(invalid_data(
+                    "retention namespace pool is at its maximum count",
+                ))
+            }
+        }
+        Err(source) => Err(source),
+    }
 }
 
 fn admit_pool(pool: &Dir, suffix: &str, label: &'static str) -> io::Result<()> {
