@@ -246,8 +246,9 @@ after its public API and format compatibility policies are established.
   no-follow non-blocking opens, exact-length reads, trailing-byte refusal,
   device-and-inode reverification, absence checks, and no-replacement links;
   the retention stage, the migration fixed-record stage, the retention
-  current-state reader, and the version-two record reader consume it, and a
-  contract test keeps ported modules from reimplementing those primitives.
+  current-state reader, the version-two record reader, and the version-one
+  segment and catalog publishers' pool links consume it, and a contract test
+  keeps ported modules from reimplementing those primitives.
 - The retention FIFO laws run only on Linux through `mknodat`; the `mkfifo(1)`
   fallback for other hosts is removed, and a contract test keeps every module
   under `src/` free of process spawns. The fallback's spawned child briefly

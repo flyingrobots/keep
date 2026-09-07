@@ -30,19 +30,6 @@ pub(super) fn synchronize_directory(directory: &Dir) -> io::Result<()> {
         .sync_all()
 }
 
-pub(super) fn link_without_replacement(
-    source_directory: &Dir,
-    source_name: &str,
-    destination_directory: &Dir,
-    destination_name: &str,
-) -> io::Result<()> {
-    match source_directory.hard_link(source_name, destination_directory, destination_name) {
-        Ok(()) => Ok(()),
-        Err(source) if source.kind() == io::ErrorKind::AlreadyExists => Ok(()),
-        Err(source) => Err(source),
-    }
-}
-
 pub(super) fn verify_segment(
     directory: &Dir,
     name: &str,
