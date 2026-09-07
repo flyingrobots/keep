@@ -50,8 +50,6 @@ mod catalog_restart_artifact;
 mod catalog_restart_byte_limit;
 mod catalog_restart_error;
 mod catalog_restart_io;
-#[cfg(test)]
-mod catalog_restart_io_test_doubles;
 mod catalog_restart_loader;
 mod catalog_restart_phase;
 mod catalog_restart_policy;

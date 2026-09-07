@@ -10,6 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Restart artifact reads use one exact read into a pre-reserved buffer followed
+  by trailing-byte rejection; the interim chunked transfer layer, which pumped
+  every artifact through an 8 KiB buffer without lowering peak memory, is
+  removed with no change to refusal behaviour.
 - Version-2 marker, typed canonical intent/receipt construction, and record admission bind
   exact catalog, predecessor, root, definition, store, empty-state, and checksum,
   digest, and synchronization-mask coordinates; migration fuzzing drives all
