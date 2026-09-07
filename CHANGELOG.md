@@ -44,7 +44,11 @@ after its public API and format compatibility policies are established.
   agreement alone. On Linux, `reopen_version_two` admits `retention`,
   `retention/roots`, `retention/manifests`, `gc`, `recovery`, and
   `recovery/dispositions` against the root's filesystem, mount, and inode
-  flags exactly as the version-1 protocol directories are admitted.
+  flags exactly as the version-1 protocol directories are admitted. Retention
+  publication admits the complete `retention` namespace before any forward
+  write: only `HEAD`, `roots`, and `manifests` may exist, every namespace
+  directory is 64 lowercase hex, and every pool entry is a regular
+  `<generation>-<digest>` file with its canonical suffix.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

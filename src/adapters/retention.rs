@@ -18,6 +18,9 @@ mod filesystem_retention_authority_error;
 mod filesystem_retention_current;
 #[cfg(test)]
 mod filesystem_retention_current_tests;
+mod filesystem_retention_namespace;
+#[cfg(test)]
+mod filesystem_retention_namespace_tests;
 mod filesystem_retention_pool_name;
 mod filesystem_retention_stage;
 mod filesystem_retention_storage;

@@ -7,6 +7,7 @@ use cap_std::fs::Dir;
 
 use super::filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
 use super::filesystem_retention_current;
+use super::filesystem_retention_namespace;
 use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_stage::{FilesystemRetentionStage, invalid_data};
 use super::{
@@ -23,6 +24,8 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
     ) -> io::Result<RetentionTransitionDisposition> {
         self.liveness_generation = Some(preparation.liveness_generation());
         require_no_retained_stage(&self.retention)?;
+        let _census =
+            filesystem_retention_namespace::admit(&self.retention, &self.roots, &self.manifests)?;
         let current = filesystem_retention_current::observe(&self.retention, &self.manifests)?;
         let disposition = filesystem_retention_current::disposition(preparation, current.as_ref())?;
         if disposition == RetentionTransitionDisposition::AlreadyCommitted {
