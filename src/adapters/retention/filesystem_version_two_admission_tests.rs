@@ -144,3 +144,54 @@ fn reopened_root_identity_must_match_the_intent_coordinates() {
         })
     ));
 }
+
+fn refuses_namespace(
+    name: &str,
+    mutate: impl FnOnce(&std::path::Path) -> Result<(), Box<dyn Error>>,
+) -> Result<(), Box<dyn Error>> {
+    let sandbox = migrated_store(name)?;
+    mutate(sandbox.path())?;
+
+    let error = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())
+        .err()
+        .ok_or_else(|| format!("{name}: version-two root was unexpectedly admitted"))?;
+
+    assert!(
+        matches!(error, FilesystemPlatformAdmissionError::Namespace { .. }),
+        "{name}: expected a Namespace refusal, got {error:?}"
+    );
+    sandbox.remove()?;
+    Ok(())
+}
+
+#[test]
+fn version_two_reopen_refuses_a_missing_dispositions_directory() -> Result<(), Box<dyn Error>> {
+    refuses_namespace("version-two-admission-no-dispositions", |root| {
+        fs::remove_dir(root.join("recovery").join("dispositions"))?;
+        Ok(())
+    })
+}
+
+#[test]
+fn version_two_reopen_refuses_a_stray_gc_entry() -> Result<(), Box<dyn Error>> {
+    refuses_namespace("version-two-admission-gc-junk", |root| {
+        fs::write(root.join("gc").join("junk"), b"")?;
+        Ok(())
+    })
+}
+
+#[test]
+fn version_two_reopen_refuses_a_stray_recovery_entry() -> Result<(), Box<dyn Error>> {
+    refuses_namespace("version-two-admission-recovery-junk", |root| {
+        fs::write(root.join("recovery").join("junk"), b"")?;
+        Ok(())
+    })
+}
+
+#[test]
+fn version_two_reopen_refuses_a_missing_retention_pool() -> Result<(), Box<dyn Error>> {
+    refuses_namespace("version-two-admission-no-roots", |root| {
+        fs::remove_dir(root.join("retention").join("roots"))?;
+        Ok(())
+    })
+}

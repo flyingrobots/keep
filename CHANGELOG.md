@@ -10,6 +10,11 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Version-two namespace admission now descends into the protocol directories:
+  `retention` must hold both immutable pools, `gc` must be empty, and
+  `recovery` must hold exactly an empty `dispositions`, matching what the
+  migration writer verifies at completion, so post-migration drift refuses at
+  admission instead of surfacing later as a pinning failure.
 - Version-two reopen compares the reopened root's device, mount, and file
   identity with the coordinates bound into `migration.intent` and refuses a
   relocated or restored store with
