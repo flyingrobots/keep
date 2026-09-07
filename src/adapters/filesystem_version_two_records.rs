@@ -1,11 +1,11 @@
 //! This module owns joint admission of the three fixed version-two migration records.
 
-use std::io::{self, Read};
+use std::io;
 
-use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
-use cap_std::fs::{Dir, OpenOptions};
+use cap_std::fs::Dir;
 
 use super::VersionTwoRecordRefusal as Refusal;
+use super::filesystem_exact_record::{self as exact_record, ExactRecordError, ExactRecordRefusal};
 use super::store_migration::{
     FORMAT_MARKER_LENGTH, MIGRATION_INTENT_LENGTH, MIGRATION_RECEIPT_LENGTH,
 };
@@ -74,21 +74,18 @@ pub(super) fn admit(root: &Dir) -> io::Result<BoundRootIdentity> {
     ))
 }
 
+/// Reads one required record, mapping shared refusals onto this record's refusal.
 fn read_exact(root: &Dir, name: &'static str, length: usize) -> io::Result<Vec<u8>> {
-    let mut options = OpenOptions::new();
-    options.read(true).follow(FollowSymlinks::No).nonblock(true);
-    let mut file = root.open_with(name, &options)?;
-    let expected_length =
-        u64::try_from(length).map_err(|_source| Refusal::LengthOverflow { name }.into_io())?;
-    let metadata = file.metadata()?;
-    if !metadata.is_file() || metadata.len() != expected_length {
-        return Err(Refusal::KindOrLength { name }.into_io());
-    }
-    let mut bytes = vec![0_u8; length];
-    file.read_exact(&mut bytes)?;
-    let mut trailing = [0_u8; 1];
-    if file.read(&mut trailing)? != 0 {
-        return Err(Refusal::TrailingBytes { name }.into_io());
-    }
-    Ok(bytes)
+    exact_record::read_exact_regular(root, name, length).map_err(|error| match error {
+        ExactRecordError::Io(source) => source,
+        ExactRecordError::Refused(refusal) => match refusal {
+            ExactRecordRefusal::LengthOverflow => Refusal::LengthOverflow { name },
+            ExactRecordRefusal::TrailingBytes => Refusal::TrailingBytes { name },
+            ExactRecordRefusal::KindOrLength
+            | ExactRecordRefusal::KindLengthOrIdentity
+            | ExactRecordRefusal::Bytes
+            | ExactRecordRefusal::RemainedVisible => Refusal::KindOrLength { name },
+        }
+        .into_io(),
+    })
 }

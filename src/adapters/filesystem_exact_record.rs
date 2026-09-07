@@ -122,6 +122,21 @@ pub(super) fn read_exact_optional(
         Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),
         Err(source) => return Err(source.into()),
     };
+    read_opened_exactly(&mut file, length).map(Some)
+}
+
+/// Reads exactly `length` bytes of the regular file `name`; absence is the
+/// filesystem's own `NotFound` error, since the record is required.
+pub(super) fn read_exact_regular(
+    directory: &Dir,
+    name: &str,
+    length: usize,
+) -> Result<Vec<u8>, ExactRecordError> {
+    let mut file = open_read(directory, name)?;
+    read_opened_exactly(&mut file, length)
+}
+
+fn read_opened_exactly(file: &mut File, length: usize) -> Result<Vec<u8>, ExactRecordError> {
     let expected_length = exact_length(length)?;
     let metadata = file.metadata()?;
     if !metadata.is_file() || metadata.len() != expected_length {
@@ -129,8 +144,8 @@ pub(super) fn read_exact_optional(
     }
     let mut bytes = vec![0_u8; length];
     file.read_exact(&mut bytes)?;
-    require_no_trailing_bytes(&mut file)?;
-    Ok(Some(bytes))
+    require_no_trailing_bytes(file)?;
+    Ok(bytes)
 }
 
 /// Reverifies that `name` is exactly `expected` with `identity`, before and after reading.

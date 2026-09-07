@@ -5,7 +5,9 @@ use std::fs;
 
 use cap_std::fs::Dir;
 
-use super::{EntryIdentity, ExactRecordError, ExactRecordRefusal, read_exact_optional};
+use super::{
+    EntryIdentity, ExactRecordError, ExactRecordRefusal, read_exact_optional, read_exact_regular,
+};
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
 
 fn open(sandbox: &TestDirectory) -> Result<Dir, Box<dyn Error>> {
@@ -33,6 +35,26 @@ fn absent_record_reads_as_none_and_exact_record_reads_its_bytes() -> Result<(), 
         read_exact_optional(&directory, "record", 5)?.as_deref(),
         Some(b"exact".as_slice())
     );
+    drop(directory);
+    sandbox.remove()?;
+    Ok(())
+}
+
+#[test]
+fn required_record_reports_absence_as_the_filesystem_error() -> Result<(), Box<dyn Error>> {
+    let sandbox = TestDirectory::create("exact-record-required")?;
+    let directory = open(&sandbox)?;
+    fs::write(sandbox.path().join("record"), b"exact")?;
+
+    assert_eq!(read_exact_regular(&directory, "record", 5)?, b"exact");
+    let absent = read_exact_regular(&directory, "absent", 5)
+        .err()
+        .ok_or("absent required record was admitted")?;
+
+    assert!(matches!(
+        absent,
+        ExactRecordError::Io(ref source) if source.kind() == std::io::ErrorKind::NotFound
+    ));
     drop(directory);
     sandbox.remove()?;
     Ok(())
