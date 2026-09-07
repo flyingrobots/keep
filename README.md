@@ -87,14 +87,45 @@ Its first rule: *a planned case is not evidence.*
 
 ## How it works
 
-Four layers, each named separately so the physical layer can change without
-the logical name moving:
+Three layers. Names point down into storage; proofs point back up. Every
+physical thing is named by a hash of what it contains, and every retention
+claim is verified by walking down to the bytes. Only two files are ever
+replaced in place:
 
-```text
- identity    BlobId · ChunkId · LayoutId         what the bytes ARE
- chunks      fastcdc-64k-v1 · flat-chunks/v1     how they are split and reassembled
- segments    immutable segments · catalogs · HEAD where they physically live
- retention   namespaces · roots · manifests       what must remain reconstructible
+```mermaid
+flowchart TB
+    IN([bytes in]) --> CHUNK
+
+    subgraph LOGICAL["Logical — names, never locations"]
+        direction LR
+        CHUNK["chunk<br/>fastcdc-64k-v1"] --> CID["ChunkId"]
+        CID --> ASM["assemble<br/>flat-chunks/v1"] --> LID["LayoutId"]
+        LID --> BID["BlobId<br/>the whole payload"]
+    end
+
+    subgraph PHYSICAL["Physical — where bytes live"]
+        direction LR
+        HEAD["HEAD · 128 B<br/>the only file v1 ever replaces"]
+        CAT["catalog @ generation N<br/>identity → location"]
+        SEG["immutable segments<br/>sealed, never edited"]
+        HEAD --> CAT --> SEG
+    end
+
+    subgraph RETENTION["Retention — what must survive"]
+        direction LR
+        RHEAD["retention/HEAD · 144 B<br/>the only file v2 adds to that list"]
+        MAN["manifest<br/>namespace → root generation"]
+        ROOT["root<br/>anchors are BlobIds, generation-checked"]
+        RHEAD --> MAN --> ROOT
+    end
+
+    CID -- "stored as records in" --> SEG
+    LID -- "stored as records in" --> SEG
+    ROOT -. "closure walk proves every anchor reconstructs" .-> BID
+    BID --> OUT([exact bytes out — or a refusal])
+
+    classDef mutable stroke-width:3px
+    class HEAD,RHEAD mutable
 ```
 
 The core protocol logic knows nothing about filesystems. It is written
