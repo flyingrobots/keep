@@ -125,10 +125,16 @@ fn no_source_module_spawns_a_process() -> Result<(), Box<dyn std::error::Error>>
     Ok(())
 }
 
-const EXACT_RECORD_CONSUMERS: [(&str, &str); 1] = [(
-    "src/adapters/retention/filesystem_retention_stage.rs",
-    include_str!("../src/adapters/retention/filesystem_retention_stage.rs"),
-)];
+const EXACT_RECORD_CONSUMERS: [(&str, &str); 2] = [
+    (
+        "src/adapters/retention/filesystem_retention_stage.rs",
+        include_str!("../src/adapters/retention/filesystem_retention_stage.rs"),
+    ),
+    (
+        "src/adapters/store_migration/filesystem_migration_fixed_artifact.rs",
+        include_str!("../src/adapters/store_migration/filesystem_migration_fixed_artifact.rs"),
+    ),
+];
 
 /// Modules ported onto `filesystem_exact_record` no longer open, read, or
 /// identity-check records themselves; one implementation of the no-follow,

@@ -1,12 +1,14 @@
 //! This module owns exact fixed-record migration publication.
 
-use std::io::{self, Read, Write};
+use std::io::{self, Write};
 
-use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt, OpenOptionsSyncExt};
-use cap_std::fs::{Dir, File, Metadata, OpenOptions};
+use cap_std::fs::{Dir, File};
 
 use super::{format_marker_decoder, migration_intent_format, migration_receipt_format};
 use crate::adapters::filesystem_catalog_artifact;
+use crate::adapters::filesystem_exact_record::{
+    self as exact_record, EntryIdentity, ExactRecordError, ExactRecordRefusal,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum FilesystemMigrationFixedArtifact {
@@ -44,7 +46,7 @@ impl FilesystemMigrationFixedArtifact {
 pub(super) struct FilesystemMigrationFixedStage {
     artifact: FilesystemMigrationFixedArtifact,
     expected: Box<[u8]>,
-    identity: FixedFileIdentity,
+    identity: EntryIdentity,
     file: File,
 }
 
@@ -56,7 +58,7 @@ impl FilesystemMigrationFixedStage {
     ) -> io::Result<Self> {
         require_length(artifact, expected)?;
         let mut file = filesystem_catalog_artifact::create_exclusive(root, artifact.stage_name())?;
-        let identity = FixedFileIdentity::read_file(&file)?;
+        let identity = EntryIdentity::of_file(&file)?;
         file.write_all(expected)?;
         file.flush()?;
         Ok(Self {
@@ -81,22 +83,19 @@ impl FilesystemMigrationFixedStage {
     ) -> io::Result<()> {
         self.require_record(artifact, expected)?;
         self.verify_stage(root)?;
-        match root.hard_link(
+        exact_record::link_without_replacement(
+            root,
             self.artifact.stage_name(),
             root,
             self.artifact.canonical_name(),
-        ) {
-            Ok(()) => {}
-            Err(source) if source.kind() == io::ErrorKind::AlreadyExists => {}
-            Err(source) => return Err(source),
-        }
+        )?;
         self.verify_linked_names(root)
     }
 
     pub(super) fn remove(self, root: &Dir) -> io::Result<Self> {
         self.verify_linked_names(root)?;
         root.remove_file(self.artifact.stage_name())?;
-        require_absent(root, self.artifact.stage_name())?;
+        exact_record::require_absent(root, self.artifact.stage_name()).map_err(migration_error)?;
         self.verify_canonical(root)?;
         Ok(self)
     }
@@ -107,7 +106,7 @@ impl FilesystemMigrationFixedStage {
 
     pub(super) fn verify_canonical(&self, root: &Dir) -> io::Result<()> {
         self.require_handle()?;
-        verify_name(
+        verify_named_record(
             root,
             self.artifact.canonical_name(),
             &self.expected,
@@ -120,7 +119,7 @@ impl FilesystemMigrationFixedStage {
     }
 
     fn require_handle(&self) -> io::Result<()> {
-        let observed = FixedFileIdentity::read_file(&self.file)?;
+        let observed = EntryIdentity::of_file(&self.file)?;
         if observed == self.identity {
             Ok(())
         } else {
@@ -141,7 +140,7 @@ impl FilesystemMigrationFixedStage {
     }
 
     fn verify_stage(&self, root: &Dir) -> io::Result<()> {
-        verify_name(
+        verify_named_record(
             root,
             self.artifact.stage_name(),
             &self.expected,
@@ -151,7 +150,7 @@ impl FilesystemMigrationFixedStage {
 
     fn verify_linked_names(&self, root: &Dir) -> io::Result<()> {
         self.verify_stage(root)?;
-        verify_name(
+        verify_named_record(
             root,
             self.artifact.canonical_name(),
             &self.expected,
@@ -160,64 +159,29 @@ impl FilesystemMigrationFixedStage {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-struct FixedFileIdentity {
-    device: u64,
-    inode: u64,
-}
-
-impl FixedFileIdentity {
-    fn read_file(file: &File) -> io::Result<Self> {
-        file.metadata().map(|metadata| Self::from(&metadata))
-    }
-}
-
-impl From<&Metadata> for FixedFileIdentity {
-    fn from(metadata: &Metadata) -> Self {
-        Self {
-            device: metadata.dev(),
-            inode: metadata.ino(),
-        }
-    }
-}
-
-fn verify_name(
+fn verify_named_record(
     root: &Dir,
     name: &str,
     expected: &[u8],
-    identity: FixedFileIdentity,
+    identity: EntryIdentity,
 ) -> io::Result<()> {
-    let mut options = OpenOptions::new();
-    options.read(true).follow(FollowSymlinks::No).nonblock(true);
-    let mut file = root.open_with(name, &options)?;
-    require_metadata(&file.metadata()?, expected.len(), identity)?;
-    require_metadata(&root.symlink_metadata(name)?, expected.len(), identity)?;
-    let mut observed = vec![0_u8; expected.len()];
-    file.read_exact(&mut observed)?;
-    let mut trailing = [0_u8; 1];
-    if observed != expected || file.read(&mut trailing)? != 0 {
-        return Err(invalid_data("migration fixed-record bytes disagreed"));
-    }
-    require_metadata(&file.metadata()?, expected.len(), identity)?;
-    require_metadata(&root.symlink_metadata(name)?, expected.len(), identity)
+    exact_record::verify_named(root, name, expected, identity).map_err(migration_error)
 }
 
-fn require_metadata(
-    metadata: &Metadata,
-    expected_length: usize,
-    expected_identity: FixedFileIdentity,
-) -> io::Result<()> {
-    let expected_length = u64::try_from(expected_length)
-        .map_err(|_source| invalid_data("migration fixed-record length exceeded u64"))?;
-    if metadata.is_file()
-        && metadata.len() == expected_length
-        && FixedFileIdentity::from(metadata) == expected_identity
-    {
-        Ok(())
-    } else {
-        Err(invalid_data(
-            "migration fixed-record kind, length, or identity disagreed",
-        ))
+/// Maps a shared exact-record failure onto this protocol's refusal messages.
+fn migration_error(error: ExactRecordError) -> io::Error {
+    match error {
+        ExactRecordError::Io(source) => source,
+        ExactRecordError::Refused(refusal) => invalid_data(match refusal {
+            ExactRecordRefusal::LengthOverflow => "migration fixed-record length exceeded u64",
+            ExactRecordRefusal::KindLengthOrIdentity => {
+                "migration fixed-record kind, length, or identity disagreed"
+            }
+            ExactRecordRefusal::Bytes | ExactRecordRefusal::TrailingBytes => {
+                "migration fixed-record bytes disagreed"
+            }
+            ExactRecordRefusal::RemainedVisible => "removed migration stage remained visible",
+        }),
     }
 }
 
@@ -226,14 +190,6 @@ fn require_length(artifact: FilesystemMigrationFixedArtifact, expected: &[u8]) -
         Ok(())
     } else {
         Err(invalid_data("migration fixed-record length disagreed"))
-    }
-}
-
-fn require_absent(root: &Dir, name: &str) -> io::Result<()> {
-    match root.symlink_metadata(name) {
-        Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(()),
-        Ok(_) => Err(invalid_data("removed migration stage remained visible")),
-        Err(source) => Err(source),
     }
 }
 
