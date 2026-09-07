@@ -78,3 +78,37 @@ fn version_two_reopen_admits_exact_migration_records() -> Result<(), Box<dyn Err
     sandbox.remove()?;
     Ok(())
 }
+
+#[cfg(target_os = "linux")]
+#[test]
+fn production_version_two_reopen_refuses_an_aliased_protocol_directory()
+-> Result<(), Box<dyn Error>> {
+    let sandbox = migrated_store("version-two-admission-aliased-gc")?;
+    let alias_target = sandbox.path().join("elsewhere");
+    fs::create_dir(&alias_target)?;
+    fs::remove_dir(sandbox.path().join("gc"))?;
+    std::os::unix::fs::symlink(&alias_target, sandbox.path().join("gc"))?;
+
+    let error = FilesystemPlatformAdmission::reopen_version_two(sandbox.path())
+        .err()
+        .ok_or("aliased gc protocol directory was unexpectedly admitted")?;
+
+    assert!(matches!(
+        error,
+        FilesystemPlatformAdmissionError::Platform { .. }
+    ));
+    sandbox.remove()?;
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn production_version_two_reopen_admits_an_exact_migrated_store() -> Result<(), Box<dyn Error>> {
+    let sandbox = migrated_store("version-two-admission-production-exact")?;
+
+    let admission = FilesystemPlatformAdmission::reopen_version_two(sandbox.path())?;
+
+    drop(admission);
+    sandbox.remove()?;
+    Ok(())
+}

@@ -41,7 +41,10 @@ after its public API and format compatibility policies are established.
   names that refusal. An already-committed retention retry now reopens the
   manifest entry and the root pool bytes the head selects and refuses absent,
   changed, or corrupt evidence instead of inferring the commit from head
-  agreement alone.
+  agreement alone. On Linux, `reopen_version_two` admits `retention`,
+  `retention/roots`, `retention/manifests`, `gc`, `recovery`, and
+  `recovery/dispositions` against the root's filesystem, mount, and inode
+  flags exactly as the version-1 protocol directories are admitted.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

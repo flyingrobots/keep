@@ -9,6 +9,23 @@ use super::filesystem_root_identity::FilesystemRootIdentity;
 
 #[cfg(target_os = "linux")]
 const PROTOCOL_DIRECTORIES: [&str; 3] = ["staging", "segments", "catalogs"];
+/// Every version-two protocol directory, including nested immutable pools.
+///
+/// A migrated root receives writer authority only when each of these shares
+/// the root's filesystem type, device, and mount identity and is not
+/// casefolded or read-only.
+#[cfg(target_os = "linux")]
+const VERSION_TWO_PROTOCOL_DIRECTORIES: [&str; 9] = [
+    "staging",
+    "segments",
+    "catalogs",
+    "retention",
+    "retention/roots",
+    "retention/manifests",
+    "gc",
+    "recovery",
+    "recovery/dispositions",
+];
 
 #[cfg(target_os = "linux")]
 #[derive(Clone, Copy)]
@@ -35,7 +52,30 @@ pub(super) fn open(store_root: &Path) -> io::Result<Dir> {
         ResolveFlags::NO_MAGICLINKS | ResolveFlags::NO_SYMLINKS,
     )?;
     let directory = Dir::from_std_file(File::from(descriptor));
-    admit_linux_profile(&directory)?;
+    admit_linux_profile(&directory, &PROTOCOL_DIRECTORIES)?;
+    Ok(directory)
+}
+
+/// Opens one version-two store root under the admitted Linux profile.
+///
+/// Identical to [`open`], but every version-two protocol directory that
+/// exists must satisfy the same filesystem, mount, and inode-flag laws as the
+/// root; absence is left to namespace admission.
+#[cfg(target_os = "linux")]
+pub(super) fn open_version_two(store_root: &Path) -> io::Result<Dir> {
+    use std::fs::File;
+
+    use rustix::fs::{CWD, Mode, OFlags, ResolveFlags, openat2};
+
+    let descriptor = openat2(
+        CWD,
+        store_root,
+        OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC,
+        Mode::empty(),
+        ResolveFlags::NO_MAGICLINKS | ResolveFlags::NO_SYMLINKS,
+    )?;
+    let directory = Dir::from_std_file(File::from(descriptor));
+    admit_linux_profile(&directory, &VERSION_TWO_PROTOCOL_DIRECTORIES)?;
     Ok(directory)
 }
 
@@ -47,13 +87,21 @@ pub(super) fn open(_store_root: &Path) -> io::Result<Dir> {
     ))
 }
 
+#[cfg(not(target_os = "linux"))]
+pub(super) fn open_version_two(_store_root: &Path) -> io::Result<Dir> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "version-two reopen currently requires the admitted Linux ext4 profile",
+    ))
+}
+
 #[cfg(target_os = "linux")]
-fn admit_linux_profile(directory: &Dir) -> io::Result<()> {
+fn admit_linux_profile(directory: &Dir, protocol_directories: &[&str]) -> io::Result<()> {
     let file = directory.try_clone()?.into_std_file();
     let root = linux_directory_properties(&file)?;
     admit_linux_properties(root.filesystem_type, root.mount_flags, root.inode_flags)?;
-    for name in PROTOCOL_DIRECTORIES {
-        let child = match super::sync_capable_directory::open(directory, name) {
+    for name in protocol_directories {
+        let child = match open_protocol_directory(directory, name) {
             Ok(child) => child,
             Err(source) if source.kind() == io::ErrorKind::NotFound => continue,
             Err(source) => return Err(source),
@@ -62,6 +110,20 @@ fn admit_linux_profile(directory: &Dir) -> io::Result<()> {
         admit_linux_child_properties(root, child)?;
     }
     file.sync_all()
+}
+
+/// Opens a possibly nested protocol directory one no-follow component at a time.
+#[cfg(target_os = "linux")]
+fn open_protocol_directory(root: &Dir, name: &str) -> io::Result<Dir> {
+    let mut components = name.split('/');
+    let first = components
+        .next()
+        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "empty protocol name"))?;
+    let mut current = super::sync_capable_directory::open(root, first)?;
+    for component in components {
+        current = super::sync_capable_directory::open(&current, component)?;
+    }
+    Ok(current)
 }
 
 #[cfg(target_os = "linux")]

@@ -1,8 +1,8 @@
 //! Linux filesystem platform-profile laws.
 
 use super::{
-    LinuxDirectoryProperties, PROTOCOL_DIRECTORIES, admit_linux_child_properties,
-    admit_linux_properties, linux_root_identity,
+    LinuxDirectoryProperties, PROTOCOL_DIRECTORIES, VERSION_TWO_PROTOCOL_DIRECTORIES,
+    admit_linux_child_properties, admit_linux_properties, linux_root_identity,
 };
 use rustix::fs::{NFS_SUPER_MAGIC, StatVfsMountFlags};
 
@@ -78,5 +78,26 @@ const fn properties(
         device_major,
         device_minor,
         mount_id,
+    }
+}
+
+#[test]
+fn version_two_admission_covers_every_protocol_directory() {
+    assert_eq!(
+        VERSION_TWO_PROTOCOL_DIRECTORIES,
+        [
+            "staging",
+            "segments",
+            "catalogs",
+            "retention",
+            "retention/roots",
+            "retention/manifests",
+            "gc",
+            "recovery",
+            "recovery/dispositions",
+        ]
+    );
+    for name in PROTOCOL_DIRECTORIES {
+        assert!(VERSION_TWO_PROTOCOL_DIRECTORIES.contains(&name));
     }
 }

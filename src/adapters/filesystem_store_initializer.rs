@@ -68,9 +68,10 @@ impl FilesystemPlatformAdmission {
 
     /// Reacquires writer authority over one completely migrated version-2 store.
     ///
-    /// The call mutates no protocol state. It admits the production platform,
-    /// acquires the existing writer lock, and requires the exact version-2 root
-    /// namespace. Retention and recovery adapters perform content-level
+    /// The call mutates no protocol state. It admits the production platform
+    /// for every version-2 protocol directory, acquires the existing writer
+    /// lock, requires the exact version-2 root namespace, and jointly admits the
+    /// marker, intent, and receipt records. Retention and recovery adapters perform content-level
     /// validation under the returned authority. The synchronous call may block
     /// on filesystem I/O.
     ///
@@ -79,7 +80,7 @@ impl FilesystemPlatformAdmission {
     /// Returns [`FilesystemPlatformAdmissionError`] with the exact platform,
     /// writer-lock, or namespace boundary and preserved source.
     pub fn reopen_version_two(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
-        let root = filesystem_platform_profile::open(store_root)
+        let root = filesystem_platform_profile::open_version_two(store_root)
             .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
         reopen_version_two_root(root)
     }
