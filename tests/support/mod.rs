@@ -14,7 +14,9 @@ use std::io;
 use keep::{ChunkSpan, FastCdc};
 
 pub(crate) use byte_readers::{FailingReader, LyingReader, PartitionReader};
-pub(crate) use byte_writers::{FailingWriter, LyingWriter, PartitionWriter, ZeroWriter};
+pub(crate) use byte_writers::{
+    FailingWriter, LyingWriter, PartitionWriter, PrefixThenFailWriter, ZeroWriter,
+};
 
 const LAYOUTS: &str = include_str!("../../conformance/layout/v1/layouts.tsv");
 

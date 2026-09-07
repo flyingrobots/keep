@@ -5,6 +5,10 @@
 > For a given content identity, Keep must return exactly the bytes named by
 > that identity—or refuse.
 
+The [authenticated reconstruction contract](docs/invariants/authenticated-reconstruction/README.md)
+defines the proof scopes, output-failure rule, receipt posture, and precise
+limits of that promise.
+
 Keep is a standalone Rust library for durable, content-addressed storage. It is
 intended to provide streaming ingestion, content-defined chunking, physical
 deduplication, exact range reads, explicit retention, integrity verification,

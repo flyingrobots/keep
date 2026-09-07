@@ -9,7 +9,7 @@ use keep::{
 };
 
 use crate::layout_mutation_support::mutation_cases;
-use crate::support::{FailingWriter, LyingWriter, ZeroWriter};
+use crate::support::{FailingWriter, LyingWriter, PrefixThenFailWriter, ZeroWriter};
 
 #[test]
 fn malformed_layout_refuses_before_chunk_lookup_or_output() -> Result<(), Box<dyn Error>> {
@@ -120,6 +120,39 @@ fn broken_writers_preserve_exact_failure_boundaries() -> Result<(), Box<dyn Erro
             ..
         } if bytes_written.is_empty() && source.kind() == ErrorKind::PermissionDenied
     ));
+    assert!(Error::source(&error).is_some());
+    Ok(())
+}
+
+#[test]
+fn whole_object_failure_reports_the_prefix_already_accepted() -> Result<(), Box<dyn Error>> {
+    let source = b"an accepted prefix remains untrusted without a receipt";
+    let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+    let mut reader = Cursor::new(source);
+    let published = store
+        .stage(&mut reader, LayoutEntryLimit::MAXIMUM)?
+        .commit(&mut store)?;
+    let accepted_length = 7_usize;
+    let mut output = PrefixThenFailWriter::new(accepted_length)?;
+
+    let error = store
+        .reconstruct(published.target(), &mut output)
+        .err()
+        .ok_or("prefix-failing writer unexpectedly reconstructed")?;
+
+    assert!(matches!(
+        error,
+        ReconstructionError::Write {
+            bytes_written,
+            ref source,
+            ..
+        } if bytes_written.get() == u64::try_from(accepted_length)?
+            && source.kind() == ErrorKind::PermissionDenied
+    ));
+    assert_eq!(
+        output.bytes(),
+        source.get(..accepted_length).ok_or("prefix")?
+    );
     assert!(Error::source(&error).is_some());
     Ok(())
 }
