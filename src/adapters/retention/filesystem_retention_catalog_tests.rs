@@ -68,3 +68,38 @@ fn committed_retry_over_a_foreign_catalog_refuses_before_reporting_committed()
     sandbox.remove()?;
     Ok(())
 }
+
+#[test]
+fn a_corrupt_catalog_head_refuses_with_its_decode_error() -> Result<(), Box<dyn Error>> {
+    let (sandbox, mut authority) = super::filesystem_retention_test_fixture::open_authority(
+        "filesystem-retention-catalog-corrupt-head",
+    )?;
+    let root_bytes = super::filesystem_retention_test_fixture::fixture(
+        super::filesystem_retention_test_fixture::ROOT_HEX,
+    )?;
+    let preparation = super::filesystem_retention_test_fixture::initial_preparation(&root_bytes)?;
+    let head = sandbox.path().join("HEAD");
+    let mut bytes = std::fs::read(&head)?;
+    *bytes
+        .get_mut(100)
+        .ok_or("catalog head shorter than 101 bytes")? ^= 0x01;
+    std::fs::write(&head, &bytes)?;
+
+    let error = RetentionPublicationStorage::verify_current(&mut authority, &preparation)
+        .err()
+        .ok_or("corrupt catalog head was unexpectedly admitted")?;
+
+    let refusal = super::filesystem_retention_test_fixture::refusal(&error)
+        .ok_or("catalog head refusal was not typed")?;
+    assert!(matches!(
+        refusal,
+        RetentionCurrentStateRefusal::CatalogHeadRefused { .. }
+    ));
+    assert!(
+        refusal.source().is_some(),
+        "the decode error must travel as the refusal's source"
+    );
+    drop(authority);
+    sandbox.remove()?;
+    Ok(())
+}

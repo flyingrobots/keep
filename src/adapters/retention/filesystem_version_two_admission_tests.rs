@@ -8,6 +8,7 @@ use crate::adapters::filesystem_root_identity::FilesystemRootIdentity;
 use crate::adapters::filesystem_version_two_admission::{BoundRootIdentity, require_root_identity};
 use crate::adapters::{
     FilesystemPlatformAdmissionError, FilesystemVersionTwoAdmission, StoreRootIdentityCoordinate,
+    VersionTwoRecordRefusal,
 };
 
 #[test]
@@ -24,9 +25,14 @@ fn version_two_reopen_refuses_a_corrupt_format_marker() -> Result<(), Box<dyn Er
         .err()
         .ok_or("corrupt format marker was unexpectedly admitted")?;
 
+    let FilesystemPlatformAdmissionError::MigrationRecord { source } = error else {
+        return Err("corrupt format marker refused outside record admission".into());
+    };
     assert!(matches!(
-        error,
-        FilesystemPlatformAdmissionError::MigrationRecord { .. }
+        source
+            .get_ref()
+            .and_then(|refusal| refusal.downcast_ref::<VersionTwoRecordRefusal>()),
+        Some(VersionTwoRecordRefusal::Marker { .. })
     ));
     sandbox.remove()?;
     Ok(())

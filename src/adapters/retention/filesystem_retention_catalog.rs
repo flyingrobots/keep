@@ -32,7 +32,7 @@ pub(super) fn require_current_catalog(
         .into_io()
     })?;
     let head = ChecksummedPublicationHead::decode(&bytes)
-        .map_err(|_source| RetentionCurrentStateRefusal::CatalogHeadRefused.into_io())?;
+        .map_err(|source| RetentionCurrentStateRefusal::CatalogHeadRefused { source }.into_io())?;
     if head.generation() == expected_generation && head.catalog_digest() == closure.catalog_digest()
     {
         Ok(())

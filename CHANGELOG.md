@@ -567,6 +567,11 @@ after its public API and format compatibility policies are established.
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
+- Version-two record admission and catalog-head binding carry their decode
+  errors as sources: `VersionTwoRecordRefusal` names which of `FORMAT`,
+  `migration.intent`, or `migration.receipt` refused and preserves the
+  decoder's diagnosis, and `CatalogHeadRefused` carries the
+  `PublicationHeadDecodeError`.
 - Retention namespace admission refuses with typed
   `RetentionCurrentStateRefusal` variants (`UnknownRetentionEntry`,
   `NonNamespaceEntry`, `NoncanonicalPoolEntry`, `NamespaceCapacity`,

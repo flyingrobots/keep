@@ -5,6 +5,7 @@ use std::io::{self, Read};
 use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
 use cap_std::fs::{Dir, OpenOptions};
 
+use super::VersionTwoRecordRefusal as Refusal;
 use super::store_migration::{
     FORMAT_MARKER_LENGTH, MIGRATION_INTENT_LENGTH, MIGRATION_RECEIPT_LENGTH,
 };
@@ -52,18 +53,20 @@ impl BoundRootIdentity {
 /// canonical length, and decoded. The receipt is admitted only against the
 /// decoded intent and marker, so a record set that is individually
 /// well-formed but mutually inconsistent refuses. Writer authority over a
-/// version-two root must not be returned before this admission succeeds. The
-/// intent's bound root coordinates are returned for identity comparison.
+/// version-two root must not be returned before this admission succeeds. Every
+/// refusal is an `InvalidData` error whose source is a
+/// [`VersionTwoRecordRefusal`](super::VersionTwoRecordRefusal). The intent's
+/// bound root coordinates are returned for identity comparison.
 pub(super) fn admit(root: &Dir) -> io::Result<BoundRootIdentity> {
     let marker_bytes = read_exact(root, MARKER_NAME, FORMAT_MARKER_LENGTH)?;
     let intent_bytes = read_exact(root, INTENT_NAME, MIGRATION_INTENT_LENGTH)?;
     let receipt_bytes = read_exact(root, RECEIPT_NAME, MIGRATION_RECEIPT_LENGTH)?;
     let marker = AdmittedStoreFormatMarker::decode(&marker_bytes)
-        .map_err(|source| invalid_data(MARKER_NAME, &source))?;
+        .map_err(|source| Refusal::Marker { source }.into_io())?;
     let intent = AdmittedStoreMigrationIntent::decode(&intent_bytes)
-        .map_err(|source| invalid_data(INTENT_NAME, &source))?;
+        .map_err(|source| Refusal::Intent { source }.into_io())?;
     let _receipt = AdmittedStoreMigrationReceipt::decode(&receipt_bytes, &intent, &marker)
-        .map_err(|source| invalid_data(RECEIPT_NAME, &source))?;
+        .map_err(|source| Refusal::Receipt { source }.into_io())?;
     Ok(BoundRootIdentity::new(
         intent.root_device_identity().get(),
         intent.root_mount_identity().get(),
@@ -71,28 +74,21 @@ pub(super) fn admit(root: &Dir) -> io::Result<BoundRootIdentity> {
     ))
 }
 
-fn read_exact(root: &Dir, name: &str, length: usize) -> io::Result<Vec<u8>> {
+fn read_exact(root: &Dir, name: &'static str, length: usize) -> io::Result<Vec<u8>> {
     let mut options = OpenOptions::new();
     options.read(true).follow(FollowSymlinks::No).nonblock(true);
     let mut file = root.open_with(name, &options)?;
-    let expected_length = u64::try_from(length)
-        .map_err(|_source| invalid_data(name, &"record length exceeded u64"))?;
+    let expected_length =
+        u64::try_from(length).map_err(|_source| Refusal::LengthOverflow { name }.into_io())?;
     let metadata = file.metadata()?;
     if !metadata.is_file() || metadata.len() != expected_length {
-        return Err(invalid_data(name, &"record kind or length disagreed"));
+        return Err(Refusal::KindOrLength { name }.into_io());
     }
     let mut bytes = vec![0_u8; length];
     file.read_exact(&mut bytes)?;
     let mut trailing = [0_u8; 1];
     if file.read(&mut trailing)? != 0 {
-        return Err(invalid_data(name, &"record carried trailing bytes"));
+        return Err(Refusal::TrailingBytes { name }.into_io());
     }
     Ok(bytes)
-}
-
-fn invalid_data(name: &str, source: &dyn std::fmt::Display) -> io::Error {
-    io::Error::new(
-        io::ErrorKind::InvalidData,
-        format!("version-two record {name} refused admission: {source}"),
-    )
 }

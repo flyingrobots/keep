@@ -56,6 +56,7 @@ pub use super::filesystem_recovery_stage_error::{
 };
 pub use super::filesystem_segment_stage::FilesystemSegmentStage;
 pub use super::filesystem_version_two_admission::FilesystemVersionTwoAdmission;
+pub use super::filesystem_version_two_record_refusal::VersionTwoRecordRefusal;
 pub use super::filesystem_writer_lock::FilesystemWriterLock;
 pub use super::layout_decode_error::LayoutDecodeError;
 pub use super::layout_decode_policy::LayoutDecodePolicy;

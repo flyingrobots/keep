@@ -5,6 +5,7 @@ use std::fmt;
 use std::io;
 
 use super::{RetentionHeadDecodeError, RetentionManifestDecodeError};
+use crate::adapters::PublicationHeadDecodeError;
 use crate::{CatalogGeneration, LivenessGeneration, RetentionManifestDigest};
 
 /// Exact reason filesystem current-state verification refused a transition.
@@ -54,8 +55,11 @@ pub enum RetentionCurrentStateRefusal {
         /// The catalog generation the store's head names, if it decoded.
         observed_generation: Option<CatalogGeneration>,
     },
-    /// The store's catalog head refused admission.
-    CatalogHeadRefused,
+    /// This store's catalog `HEAD` did not decode.
+    CatalogHeadRefused {
+        /// The exact decode refusal.
+        source: PublicationHeadDecodeError,
+    },
     /// The current liveness generation has no successor.
     LivenessExhausted,
     /// A byte-identical retry found that another successor is current.
@@ -155,7 +159,7 @@ impl fmt::Display for RetentionCurrentStateRefusal {
                  current catalog",
                 expected_generation.get()
             ),
-            Self::CatalogHeadRefused => {
+            Self::CatalogHeadRefused { .. } => {
                 formatter.write_str("this store's catalog head refused admission")
             }
             Self::LivenessExhausted => {
@@ -224,6 +228,7 @@ impl Error for RetentionCurrentStateRefusal {
         match self {
             Self::HeadRefused { source } | Self::PreparedHeadRefused { source } => Some(source),
             Self::ManifestRefused { source } => Some(source),
+            Self::CatalogHeadRefused { source } => Some(source),
             _ => None,
         }
     }
