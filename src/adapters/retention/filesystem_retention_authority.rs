@@ -8,6 +8,7 @@ use cap_std::fs::Dir;
 use super::filesystem_retention_authority_error::{
     FilesystemRetentionAuthorityError as Error, RetentionAuthorityDirectory as Directory,
 };
+use super::filesystem_retention_current::{self, ObservedRetentionState};
 use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_stage::{FilesystemRetentionStage, invalid_data};
 use crate::adapters::{FilesystemPlatformAdmission, FilesystemWriterLock};
@@ -72,6 +73,20 @@ impl FilesystemRetentionPublicationAuthority {
             head_stage: None,
             _lock: lock,
         })
+    }
+
+    /// Observes the published retention head and the manifest it selects.
+    ///
+    /// Returns `None` when no retention head has been published. This
+    /// synchronous read performs no protocol mutation and does not consult
+    /// retained stages; callers decode the returned bytes to plan the next
+    /// transition, then let publication revalidate them under authority.
+    ///
+    /// # Errors
+    ///
+    /// Returns the exact open, kind, length, decode, or cross-check refusal.
+    pub fn observe_current(&self) -> io::Result<Option<ObservedRetentionState>> {
+        filesystem_retention_current::observe(&self.retention, &self.manifests)
     }
 
     pub(super) fn namespace(&self) -> io::Result<&Dir> {

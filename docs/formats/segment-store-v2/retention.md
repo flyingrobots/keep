@@ -163,8 +163,9 @@ Names with alternate width, case, suffix, generation, or digest refuse. Keep
 implements root, manifest, and head codecs with a typed verified anchor-set
 digest, expected-state transition planning, deterministic closure verification,
 a blocking publication storage capability port, and ordered storage-port
-orchestration. `FilesystemRetentionPublicationAuthority` executes that protocol
-once; retained-stage recovery, reader fencing, and collection remain absent.
+orchestration. `FilesystemRetentionPublicationAuthority` publishes initial and
+successor generations against its observed head and refuses superseded
+candidates and retained stages; recovery, fencing, and collection remain absent.
 
 ## Global retention manifest
 

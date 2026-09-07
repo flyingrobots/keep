@@ -30,7 +30,10 @@ after its public API and format compatibility policies are established.
   its receipt with zero retention mutation, and any retained stage refuses as
   recovery-required rather than being continued. Version-1 reopen now refuses a
   migrated root, and `admit_version_two` owns the separate version-2 namespace
-  boundary.
+  boundary. `observe_current` returns the published head and its cross-verified
+  pool manifest, and current-state verification admits a successor only when
+  the prepared head names the observed manifest as its exact predecessor at the
+  next liveness generation; a superseded candidate refuses with zero mutation.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

@@ -1,21 +1,20 @@
 //! This module owns forward filesystem retention publication execution.
 
-use std::io::{self, Read};
+use std::io;
 
-use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt};
-use cap_std::fs::{Dir, OpenOptions};
+use cap_fs_ext::DirExt;
+use cap_std::fs::Dir;
 
 use super::filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
+use super::filesystem_retention_current;
 use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_stage::{FilesystemRetentionStage, invalid_data};
 use super::{
     AdmittedRetentionRoot, CanonicalRetentionHead, CanonicalRetentionManifest,
-    ChecksummedRetentionHead, RetentionNamespaceAdmission, RetentionPublicationPreparation,
-    RetentionPublicationStorage, RetentionTransitionDisposition,
+    RetentionNamespaceAdmission, RetentionPublicationPreparation, RetentionPublicationStorage,
+    RetentionTransitionDisposition,
 };
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
-
-const HEAD_LENGTH: usize = 144;
 
 impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
     fn verify_current(
@@ -24,19 +23,8 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
     ) -> io::Result<RetentionTransitionDisposition> {
         self.liveness_generation = Some(preparation.liveness_generation());
         require_no_retained_stage(&self.retention)?;
-        let Some(head_bytes) = read_head(&self.retention)? else {
-            return Ok(RetentionTransitionDisposition::Publish);
-        };
-        let head = ChecksummedRetentionHead::decode(&head_bytes)
-            .map_err(|_source| invalid_data("current retention head refused admission"))?;
-        if head.head().generation() == preparation.liveness_generation()
-            && head.head().manifest_digest() == preparation.manifest_digest()
-        {
-            return Ok(RetentionTransitionDisposition::AlreadyCommitted);
-        }
-        Err(invalid_data(
-            "current retention head is not the prepared predecessor; recovery is required",
-        ))
+        let current = filesystem_retention_current::observe(&self.retention, &self.manifests)?;
+        filesystem_retention_current::disposition(preparation, current.as_ref())
     }
 
     fn write_root_stage(&mut self, root: &AdmittedRetentionRoot<'_>) -> io::Result<()> {
@@ -166,29 +154,6 @@ fn require_no_retained_stage(retention: &Dir) -> io::Result<()> {
         }
     }
     Ok(())
-}
-
-fn read_head(retention: &Dir) -> io::Result<Option<Vec<u8>>> {
-    let mut options = OpenOptions::new();
-    options.read(true).follow(FollowSymlinks::No);
-    let mut file = match retention.open_with(pool_name::HEAD, &options) {
-        Ok(file) => file,
-        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(source) => return Err(source),
-    };
-    let expected_length = u64::try_from(HEAD_LENGTH)
-        .map_err(|_source| invalid_data("retention head length exceeded u64"))?;
-    let metadata = file.metadata()?;
-    if !metadata.is_file() || metadata.len() != expected_length {
-        return Err(invalid_data("retention head kind or length disagreed"));
-    }
-    let mut bytes = vec![0_u8; HEAD_LENGTH];
-    file.read_exact(&mut bytes)?;
-    let mut trailing = [0_u8; 1];
-    if file.read(&mut trailing)? != 0 {
-        return Err(invalid_data("retention head carried trailing bytes"));
-    }
-    Ok(Some(bytes))
 }
 
 impl FilesystemRetentionPublicationAuthority {
