@@ -7,8 +7,8 @@ use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
 
 use super::AdmittedRetentionRoot;
+use super::RetentionCurrentStateRefusal as Refusal;
 use super::filesystem_retention_pool_name as pool_name;
-use super::filesystem_retention_stage::invalid_data;
 use crate::{RetentionGenerationExpectation, RetentionManifest};
 
 const CANONICAL_ENTRIES: [&str; 3] = [pool_name::HEAD, pool_name::ROOTS, pool_name::MANIFESTS];
@@ -49,7 +49,7 @@ pub(super) fn admit(
     for entry in retention.entries()? {
         let name = entry?.file_name();
         if !CANONICAL_ENTRIES.iter().any(|canonical| name == *canonical) {
-            return Err(invalid_data("retention namespace carries an unknown entry"));
+            return Err(Refusal::UnknownRetentionEntry.into_io());
         }
     }
     let mut namespace_count = 0_u32;
@@ -57,17 +57,15 @@ pub(super) fn admit(
         let entry = entry?;
         let name = entry.file_name();
         if !is_lower_hex(&name, DIGEST_HEX) || !entry.metadata()?.is_dir() {
-            return Err(invalid_data(
-                "retention roots carries a non-namespace entry",
-            ));
+            return Err(Refusal::NonNamespaceEntry.into_io());
         }
         namespace_count = namespace_count
             .checked_add(1)
-            .ok_or_else(|| invalid_data("retention namespace count overflowed"))?;
+            .ok_or_else(|| Refusal::NamespaceCapacity.into_io())?;
         let namespace = roots.open_dir_nofollow(&name)?;
-        let _roots = admit_pool(&namespace, ROOT_SUFFIX, "retention root pool")?;
+        let _roots = admit_pool(&namespace, ROOT_SUFFIX, "root pool")?;
     }
-    let manifest_count = admit_pool(manifests, MANIFEST_SUFFIX, "retention manifest pool")?;
+    let manifest_count = admit_pool(manifests, MANIFEST_SUFFIX, "manifest pool")?;
     Ok(RetentionNamespaceCensus {
         namespace_count,
         manifest_count,
@@ -93,9 +91,7 @@ pub(super) fn admit_capacity(
             if census.namespace_count < RetentionManifest::MAXIMUM_ENTRY_COUNT {
                 Ok(())
             } else {
-                Err(invalid_data(
-                    "retention namespace pool is at its maximum count",
-                ))
+                Err(Refusal::NamespaceCapacity.into_io())
             }
         }
         Err(source) => Err(source),
@@ -122,31 +118,23 @@ pub(super) fn admit_expectation(
     match (expected, observed) {
         (RetentionGenerationExpectation::Absent, None)
         | (RetentionGenerationExpectation::Current(_), Some(true)) => Ok(()),
-        (RetentionGenerationExpectation::Absent, Some(_)) => Err(invalid_data(
-            "namespace directory exists although the namespace is expected absent",
-        )),
-        (RetentionGenerationExpectation::Current(_), None) => Err(invalid_data(
-            "namespace directory is absent although a current generation is expected",
-        )),
-        (RetentionGenerationExpectation::Current(_), Some(false)) => {
-            Err(invalid_data("namespace entry is not a directory"))
+        (RetentionGenerationExpectation::Absent, Some(_))
+        | (RetentionGenerationExpectation::Current(_), None | Some(false)) => {
+            Err(Refusal::NamespaceExpectationViolated.into_io())
         }
     }
 }
 
-fn admit_pool(pool: &Dir, suffix: &str, label: &'static str) -> io::Result<u32> {
+fn admit_pool(directory: &Dir, suffix: &str, pool: &'static str) -> io::Result<u32> {
     let mut count = 0_u32;
-    for entry in pool.entries()? {
+    for entry in directory.entries()? {
         let entry = entry?;
         if !is_pool_name(&entry.file_name(), suffix) || !entry.metadata()?.is_file() {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("{label} carries a noncanonical entry"),
-            ));
+            return Err(Refusal::NoncanonicalPoolEntry { pool }.into_io());
         }
         count = count
             .checked_add(1)
-            .ok_or_else(|| invalid_data("retention pool entry count overflowed"))?;
+            .ok_or_else(|| Refusal::NamespaceCapacity.into_io())?;
     }
     Ok(count)
 }

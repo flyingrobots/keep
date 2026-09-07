@@ -83,8 +83,21 @@ pub enum RetentionCurrentStateRefusal {
     PredecessorRootAbsent,
     /// The predecessor root pool entry does not decode to the manifest's selection.
     PredecessorRootChanged,
+    /// The `retention` directory carries an entry outside `HEAD`, `roots`,
+    /// and `manifests`.
+    UnknownRetentionEntry,
+    /// A `retention/roots` entry is not a 64-lowercase-hex directory.
+    NonNamespaceEntry,
+    /// A pool entry is not a regular `<generation>-<digest>` file with the
+    /// pool's canonical suffix.
+    NoncanonicalPoolEntry {
+        /// The pool that carries the entry.
+        pool: &'static str,
+    },
+    /// Admitting the candidate would exceed the namespace or pool ceiling.
+    NamespaceCapacity,
     /// The candidate's namespace directory disagreed with the claimed
-    /// expectation when it was admitted between phases.
+    /// expectation, at verification or when it was admitted between phases.
     NamespaceExpectationViolated,
     /// A record's kind or length disagreed with its declaration.
     RecordKindOrLength,
@@ -178,6 +191,18 @@ impl fmt::Display for RetentionCurrentStateRefusal {
             Self::PredecessorRootChanged => formatter.write_str(
                 "predecessor root pool entry does not decode to the manifest's selection",
             ),
+            Self::UnknownRetentionEntry => {
+                formatter.write_str("retention namespace carries an unknown entry")
+            }
+            Self::NonNamespaceEntry => {
+                formatter.write_str("retention roots carries a non-namespace entry")
+            }
+            Self::NoncanonicalPoolEntry { pool } => {
+                write!(formatter, "retention {pool} carries a noncanonical entry")
+            }
+            Self::NamespaceCapacity => {
+                formatter.write_str("retention namespace or pool count would exceed its ceiling")
+            }
             Self::NamespaceExpectationViolated => formatter.write_str(
                 "namespace directory state disagreed with the claimed generation expectation",
             ),

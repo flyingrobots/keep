@@ -66,6 +66,10 @@ fn absent_expectation_refuses_an_orphan_directory_for_a_new_namespace() -> Resul
         .ok_or("orphan namespace directory was unexpectedly admitted for an Absent expectation")?;
 
     assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        super::filesystem_retention_test_fixture::refusal(&error),
+        Some(super::RetentionCurrentStateRefusal::NamespaceExpectationViolated)
+    ));
     assert_eq!(retention_witness(sandbox.path())?, before);
     drop(authority);
     sandbox.remove()?;
@@ -97,6 +101,10 @@ fn current_expectation_refuses_when_the_namespace_directory_is_absent() -> Resul
         .ok_or("successor over an absent namespace directory was unexpectedly admitted")?;
 
     assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        super::filesystem_retention_test_fixture::refusal(&error),
+        Some(super::RetentionCurrentStateRefusal::NamespaceExpectationViolated)
+    ));
     drop(authority);
     sandbox.remove()?;
     Ok(())

@@ -558,6 +558,11 @@ after its public API and format compatibility policies are established.
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
+- Retention namespace admission refuses with typed
+  `RetentionCurrentStateRefusal` variants (`UnknownRetentionEntry`,
+  `NonNamespaceEntry`, `NoncanonicalPoolEntry`, `NamespaceCapacity`,
+  `NamespaceExpectationViolated`) instead of bare `InvalidData` strings, so
+  callers can tell an unknown entry from a full namespace pool.
 - Every coordinate a retention publication retains between phases now lives on
   one publication attempt that current-state verification creates and the next
   verification or cleanup discards: a refused verification admits no later

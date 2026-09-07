@@ -25,6 +25,10 @@ fn unknown_retention_entry_refuses_before_any_stage_is_written() -> Result<(), B
         .ok_or("unknown retention entry was unexpectedly admitted")?;
 
     assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        super::filesystem_retention_test_fixture::refusal(&error),
+        Some(super::RetentionCurrentStateRefusal::UnknownRetentionEntry)
+    ));
     assert_eq!(retention_witness(sandbox.path())?, before);
     drop(authority);
     sandbox.remove()?;
@@ -49,6 +53,10 @@ fn non_digest_root_namespace_directory_refuses() -> Result<(), Box<dyn Error>> {
         .ok_or("non-digest namespace directory was unexpectedly admitted")?;
 
     assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        super::filesystem_retention_test_fixture::refusal(&error),
+        Some(super::RetentionCurrentStateRefusal::NonNamespaceEntry)
+    ));
     drop(authority);
     sandbox.remove()?;
     Ok(())
@@ -73,6 +81,10 @@ fn malformed_manifest_pool_name_refuses() -> Result<(), Box<dyn Error>> {
         .ok_or("malformed manifest pool name was unexpectedly admitted")?;
 
     assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        super::filesystem_retention_test_fixture::refusal(&error),
+        Some(super::RetentionCurrentStateRefusal::NoncanonicalPoolEntry { .. })
+    ));
     drop(authority);
     sandbox.remove()?;
     Ok(())
@@ -99,6 +111,10 @@ fn uppercase_root_pool_name_refuses() -> Result<(), Box<dyn Error>> {
         .ok_or("uppercase root pool name was unexpectedly admitted")?;
 
     assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        super::filesystem_retention_test_fixture::refusal(&error),
+        Some(super::RetentionCurrentStateRefusal::NoncanonicalPoolEntry { .. })
+    ));
     drop(authority);
     sandbox.remove()?;
     Ok(())
