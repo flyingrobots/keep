@@ -10,11 +10,12 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
-- Version-one recovery adapters admit the root namespace before pinning any
-  pool: every root entry must be one of `writer.lock`, `staging`, `segments`,
-  `catalogs`, `HEAD`, or `head.next`, so recovery discard, completion, resume,
-  and finalization refuse a migrated version-two root instead of rewriting its
-  version-one pools.
+- Version-one recovery adapters refuse version-two residue at the store root
+  before pinning any pool: a format marker, reader fence, migration record or
+  stage, or a `retention`, `gc`, or `recovery` directory means recovery
+  discard, completion, resume, and finalization refuse instead of rewriting a
+  migrated store's version-one pools. Unknown entries continue to be refused
+  by recovery name classification.
 - The Rust quality gates now build the crate documentation with
   `cargo doc --workspace --no-deps --locked`, so a broken intra-doc link under
   `#![deny(warnings)]` fails CI instead of only failing anyone who documents

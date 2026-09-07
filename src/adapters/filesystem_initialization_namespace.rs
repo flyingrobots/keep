@@ -18,14 +18,17 @@ const PUBLISHED_NAMES: [&str; 5] = [
     CATALOGS_NAME,
     HEAD_NAME,
 ];
-const NEXT_HEAD_NAME: &str = "head.next";
-const RECOVERABLE_NAMES: [&str; 6] = [
-    LOCK_NAME,
-    STAGING_NAME,
-    SEGMENTS_NAME,
-    CATALOGS_NAME,
-    HEAD_NAME,
-    NEXT_HEAD_NAME,
+const VERSION_TWO_MARKERS: [&str; 10] = [
+    "reader.lock",
+    "FORMAT",
+    "FORMAT.next",
+    "migration.intent",
+    "migration.intent.next",
+    "migration.receipt",
+    "migration.receipt.next",
+    "retention",
+    "gc",
+    "recovery",
 ];
 const READER_LOCK_NAME: &str = "reader.lock";
 const MARKER_NAME: &str = "FORMAT";
@@ -66,17 +69,23 @@ pub(super) fn admit_published(directory: &Dir) -> io::Result<()> {
     admit_membership(directory, &PUBLISHED_NAMES)
 }
 
-/// Admits a version-1 root at any recovery-lawful point of its lifecycle.
+/// Refuses version-two residue before version-one recovery touches a pool.
 ///
-/// Recovery may open a store that crashed before its first publication or
-/// mid-publication, so every entry is optional and `head.next` may be present.
-/// What is not optional is that every present entry be one of the six
-/// version-1 root names: any version-2 or foreign entry means this is not a
-/// version-1 root and version-1 recovery must refuse before touching a pool.
-/// Entry kinds are verified by the recovery pinning and classification code,
-/// which reports the exact namespace and operation.
+/// Recovery may open a store at any lawful point of its version-one lifecycle,
+/// including before first publication and with `head.next` retained, and the
+/// recovery inventory already classifies every unknown root entry as
+/// unexpected. What that classification cannot express is that a root has left
+/// version one entirely: a format marker, reader fence, migration record or
+/// stage, or a `retention`, `gc`, or `recovery` directory means version-one
+/// recovery must refuse before pinning anything.
 pub(super) fn admit_recoverable(directory: &Dir) -> io::Result<()> {
-    admit_membership(directory, &RECOVERABLE_NAMES)
+    for entry in directory.entries()? {
+        let name = entry?.file_name();
+        if is_canonical(&name, &VERSION_TWO_MARKERS) {
+            return Err(ambiguous_namespace());
+        }
+    }
+    Ok(())
 }
 
 /// Admits the exact completely migrated version-2 root namespace.
