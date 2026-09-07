@@ -96,23 +96,20 @@ replaced in place:
 flowchart TB
     IN([bytes in]) --> CHUNK
 
-    subgraph LOGICAL["Logical — names, never locations"]
-        direction LR
+    subgraph LOGICAL["Logical"]
         CHUNK["chunk<br/>fastcdc-64k-v1"] --> CID["ChunkId"]
         CID --> ASM["assemble<br/>flat-chunks/v1"] --> LID["LayoutId"]
         LID --> BID["BlobId<br/>the whole payload"]
     end
 
-    subgraph PHYSICAL["Physical — where bytes live"]
-        direction LR
+    subgraph PHYSICAL["Physical"]
         HEAD["HEAD · 128 B<br/>the only file v1 ever replaces"]
         CAT["catalog @ generation N<br/>identity → location"]
         SEG["immutable segments<br/>sealed, never edited"]
         HEAD --> CAT --> SEG
     end
 
-    subgraph RETENTION["Retention — what must survive"]
-        direction LR
+    subgraph RETENTION["Retention"]
         RHEAD["retention/HEAD · 144 B<br/>the only file v2 adds to that list"]
         MAN["manifest<br/>namespace → root generation"]
         ROOT["root<br/>anchors are BlobIds, generation-checked"]
