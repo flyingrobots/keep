@@ -1,8 +1,7 @@
 //! Exact immutable-pool filename emission.
 
-use std::fmt;
-
 use super::SegmentDigest;
+use super::digest_hex::DigestHex;
 use crate::{CatalogDigest, CatalogGeneration};
 
 pub(super) fn segment(digest: SegmentDigest) -> String {
@@ -15,15 +14,4 @@ pub(super) fn catalog(generation: CatalogGeneration, digest: CatalogDigest) -> S
         generation.get(),
         DigestHex(digest.as_bytes())
     )
-}
-
-struct DigestHex<'a>(&'a [u8; 32]);
-
-impl fmt::Display for DigestHex<'_> {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for byte in self.0 {
-            write!(formatter, "{byte:02x}")?;
-        }
-        Ok(())
-    }
 }

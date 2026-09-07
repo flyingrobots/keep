@@ -1,7 +1,6 @@
 //! Exact retention immutable-pool and namespace filename emission.
 
-use std::fmt;
-
+use crate::adapters::digest_hex::DigestHex;
 use crate::{
     LivenessGeneration, RetentionManifestDigest, RetentionNamespaceDigest, RetentionRootDigest,
     RootGeneration,
@@ -33,15 +32,4 @@ pub(super) fn manifest(generation: LivenessGeneration, digest: RetentionManifest
         generation.get(),
         DigestHex(digest.as_bytes())
     )
-}
-
-struct DigestHex<'a>(&'a [u8; 32]);
-
-impl fmt::Display for DigestHex<'_> {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for byte in self.0 {
-            write!(formatter, "{byte:02x}")?;
-        }
-        Ok(())
-    }
 }

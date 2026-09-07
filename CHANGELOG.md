@@ -242,6 +242,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Version-1 and version-2 pool and namespace filenames render their digest
+  component through one shared lowercase-hexadecimal renderer instead of two
+  identical private copies.
 - Stage publishers and fixed-record readers share one exact-record module for
   no-follow non-blocking opens, exact-length reads, trailing-byte refusal,
   device-and-inode reverification, absence checks, and no-replacement links;
