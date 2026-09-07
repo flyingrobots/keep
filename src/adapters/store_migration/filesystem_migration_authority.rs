@@ -109,7 +109,7 @@ impl FilesystemStoreMigrationAuthority {
     /// # Errors
     ///
     /// Returns the exact observation refusal or
-    /// [`FilesystemMigrationAuthorityError::IntentChanged`] with both intent
+    /// [`Error::IntentChanged`] with both intent
     /// digests when current authority no longer reproduces `expected`.
     pub fn verify_current(&self, expected: &CanonicalStoreMigrationIntent) -> Result<(), Error> {
         let observed = self.observe_intent()?;

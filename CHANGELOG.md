@@ -10,6 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- The Rust quality gates now build the crate documentation with
+  `cargo doc --workspace --no-deps --locked`, so a broken intra-doc link under
+  `#![deny(warnings)]` fails CI instead of only failing anyone who documents
+  the crate locally.
 - The adapters module root now declares modules only: its public re-export
   surface lives in `adapters/exports.rs` and the recovery-stage adapters live
   under `adapters/recovery/` behind one facade. No public path changed; the
