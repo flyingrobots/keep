@@ -83,6 +83,9 @@ pub enum RetentionCurrentStateRefusal {
     PredecessorRootAbsent,
     /// The predecessor root pool entry does not decode to the manifest's selection.
     PredecessorRootChanged,
+    /// The candidate's namespace directory disagreed with the claimed
+    /// expectation when it was admitted between phases.
+    NamespaceExpectationViolated,
     /// A record's kind or length disagreed with its declaration.
     RecordKindOrLength,
     /// A record carried bytes beyond its declared length.
@@ -174,6 +177,9 @@ impl fmt::Display for RetentionCurrentStateRefusal {
                 .write_str("predecessor root pool entry is absent or exceeds the format bound"),
             Self::PredecessorRootChanged => formatter.write_str(
                 "predecessor root pool entry does not decode to the manifest's selection",
+            ),
+            Self::NamespaceExpectationViolated => formatter.write_str(
+                "namespace directory state disagreed with the claimed generation expectation",
             ),
             Self::RecordKindOrLength => {
                 formatter.write_str("retention record kind or length disagreed")

@@ -558,6 +558,12 @@ after its public API and format compatibility policies are established.
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
+- Every coordinate a retention publication retains between phases now lives on
+  one publication attempt that current-state verification creates and the next
+  verification or cleanup discards: a refused verification admits no later
+  phase, a stage handle from an interrupted run is never reused, and namespace
+  admission refuses a directory the claimed expectation excludes with
+  `RetentionCurrentStateRefusal::NamespaceExpectationViolated`.
 - An already-committed retention retry reopens the manifest entry and the root
   pool bytes the head selects and refuses absent, changed, or corrupt evidence
   instead of inferring the commit from head agreement alone.

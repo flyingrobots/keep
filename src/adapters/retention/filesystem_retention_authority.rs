@@ -5,24 +5,26 @@ use std::io;
 use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
 
+use super::filesystem_retention_attempt::PublicationAttempt;
 use super::filesystem_retention_authority_error::{
     FilesystemRetentionAuthorityError as Error, RetentionAuthorityDirectory as Directory,
 };
 use super::filesystem_retention_current::{self, ObservedRetentionState};
 use super::filesystem_retention_pool_name as pool_name;
-use super::filesystem_retention_stage::{FilesystemRetentionStage, invalid_data};
 use crate::adapters::{FilesystemVersionTwoAdmission, FilesystemWriterLock};
 
 /// Exclusive authority to publish retention transitions on one pinned root.
 ///
-/// The authority retains the admitted writer lock and pinned `retention`,
-/// `retention/roots`, and `retention/manifests` capabilities for its entire
-/// lifetime. When passed to
+/// The authority retains the admitted writer lock and pinned root,
+/// `retention`, `retention/roots`, and `retention/manifests` capabilities for
+/// its entire lifetime. When passed to
 /// [`execute_retention_publication`](crate::execute_retention_publication) its
 /// [`RetentionPublicationStorage`](super::RetentionPublicationStorage)
 /// implementation executes only the forward publication protocol from an
-/// exactly admitted current state. It retains opened stage handles through
-/// final verification, performs synchronous capability-relative I/O, and uses
+/// exactly admitted current state. Every coordinate one run retains between
+/// phases, including opened stage handles, lives on one publication attempt
+/// that current-state verification creates and the next verification or
+/// cleanup discards. It performs synchronous capability-relative I/O and uses
 /// neither a network nor an asynchronous runtime. Reopening a retained stage
 /// prefix remains a separate recovery boundary.
 #[must_use]
@@ -31,13 +33,7 @@ pub struct FilesystemRetentionPublicationAuthority {
     pub(super) retention: Dir,
     pub(super) roots: Dir,
     pub(super) manifests: Dir,
-    pub(super) namespace: Option<Dir>,
-    pub(super) liveness_generation: Option<crate::LivenessGeneration>,
-    pub(super) retained_root: Option<String>,
-    pub(super) retained_manifest: Option<String>,
-    pub(super) root_stage: Option<FilesystemRetentionStage>,
-    pub(super) manifest_stage: Option<FilesystemRetentionStage>,
-    pub(super) head_stage: Option<FilesystemRetentionStage>,
+    pub(super) attempt: Option<PublicationAttempt>,
     _lock: FilesystemWriterLock,
 }
 
@@ -69,13 +65,7 @@ impl FilesystemRetentionPublicationAuthority {
             retention,
             roots,
             manifests,
-            namespace: None,
-            liveness_generation: None,
-            retained_root: None,
-            retained_manifest: None,
-            root_stage: None,
-            manifest_stage: None,
-            head_stage: None,
+            attempt: None,
             _lock: lock,
         })
     }
@@ -92,48 +82,6 @@ impl FilesystemRetentionPublicationAuthority {
     /// Returns the exact open, kind, length, decode, or cross-check refusal.
     pub fn observe_current(&self) -> io::Result<Option<ObservedRetentionState>> {
         filesystem_retention_current::observe(&self.retention, &self.manifests)
-    }
-
-    pub(super) fn namespace(&self) -> io::Result<&Dir> {
-        self.namespace
-            .as_ref()
-            .ok_or_else(|| invalid_data("retention root namespace was not admitted"))
-    }
-
-    pub(super) fn take_root_stage(&mut self) -> io::Result<FilesystemRetentionStage> {
-        self.root_stage
-            .take()
-            .ok_or_else(|| invalid_data("retention root stage was not retained"))
-    }
-
-    pub(super) fn take_manifest_stage(&mut self) -> io::Result<FilesystemRetentionStage> {
-        self.manifest_stage
-            .take()
-            .ok_or_else(|| invalid_data("retention manifest stage was not retained"))
-    }
-
-    pub(super) fn take_head_stage(&mut self) -> io::Result<FilesystemRetentionStage> {
-        self.head_stage
-            .take()
-            .ok_or_else(|| invalid_data("retention head stage was not retained"))
-    }
-
-    pub(super) fn root_stage(&self) -> io::Result<&FilesystemRetentionStage> {
-        self.root_stage
-            .as_ref()
-            .ok_or_else(|| invalid_data("retention root stage was not retained"))
-    }
-
-    pub(super) fn manifest_stage(&self) -> io::Result<&FilesystemRetentionStage> {
-        self.manifest_stage
-            .as_ref()
-            .ok_or_else(|| invalid_data("retention manifest stage was not retained"))
-    }
-
-    pub(super) fn head_stage(&self) -> io::Result<&FilesystemRetentionStage> {
-        self.head_stage
-            .as_ref()
-            .ok_or_else(|| invalid_data("retention head stage was not retained"))
     }
 }
 

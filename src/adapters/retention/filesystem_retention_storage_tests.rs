@@ -44,6 +44,10 @@ fn existing_root_stage_is_never_truncated() -> Result<(), Box<dyn Error>> {
     let (sandbox, mut authority) = open_authority("filesystem-retention-exclusive-stage")?;
     let root_bytes = fixture(ROOT_HEX)?;
     let preparation = initial_preparation(&root_bytes)?;
+    assert_eq!(
+        authority.verify_current(&preparation)?,
+        super::RetentionTransitionDisposition::Publish
+    );
     let stage = sandbox.path().join("retention").join("root.next");
     fs::write(&stage, b"retained partial evidence")?;
 
