@@ -67,6 +67,9 @@ pub(super) fn observe(
     {
         return Err(RetentionCurrentStateRefusal::ManifestDisagreed.into_io());
     }
+    if admitted.manifest().predecessor() != selected.predecessor() {
+        return Err(RetentionCurrentStateRefusal::HeadPredecessorDisagreed.into_io());
+    }
     Ok(Some(ObservedRetentionState { head, manifest }))
 }
 
@@ -176,7 +179,7 @@ fn require_initial_publication(
     }
 }
 
-fn read_exact_optional(
+pub(super) fn read_exact_optional(
     directory: &Dir,
     name: &str,
     length: usize,

@@ -27,6 +27,7 @@ use crate::adapters::{FilesystemVersionTwoAdmission, FilesystemWriterLock};
 /// prefix remains a separate recovery boundary.
 #[must_use]
 pub struct FilesystemRetentionPublicationAuthority {
+    pub(super) root: Dir,
     pub(super) retention: Dir,
     pub(super) roots: Dir,
     pub(super) manifests: Dir,
@@ -64,6 +65,7 @@ impl FilesystemRetentionPublicationAuthority {
         let roots = open_directory(&retention, pool_name::ROOTS, Directory::Roots)?;
         let manifests = open_directory(&retention, pool_name::MANIFESTS, Directory::Manifests)?;
         Ok(Self {
+            root,
             retention,
             roots,
             manifests,

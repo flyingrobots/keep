@@ -69,6 +69,12 @@ after its public API and format compatibility policies are established.
   returns, so a superseded candidate, a stale committed retry, an absent head
   over populated pools, and each corruption or decode refusal are
   distinguishable to callers and preserve their underlying decode errors.
+  Before any forward retention write, the authority reopens this store's own
+  catalog `HEAD` and requires it to name exactly the catalog generation and
+  digest the candidate closure was verified against, so a preparation built
+  from another store's `CatalogSnapshot` refuses instead of publishing anchors
+  whose records these pools may not hold. Observing the current state also
+  requires the head's predecessor digest to equal its manifest's predecessor.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

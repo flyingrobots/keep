@@ -5,7 +5,7 @@ use std::fmt;
 use std::io;
 
 use super::{RetentionHeadDecodeError, RetentionManifestDecodeError};
-use crate::{LivenessGeneration, RetentionManifestDigest};
+use crate::{CatalogGeneration, LivenessGeneration, RetentionManifestDigest};
 
 /// Exact reason filesystem current-state verification refused a transition.
 ///
@@ -43,6 +43,17 @@ pub enum RetentionCurrentStateRefusal {
     },
     /// The head-selected manifest disagrees with the head's digest or generation.
     ManifestDisagreed,
+    /// The head's predecessor digest disagrees with its manifest's predecessor.
+    HeadPredecessorDisagreed,
+    /// The store's catalog head is not the catalog the closure was verified against.
+    CatalogDisagreed {
+        /// The catalog generation the closure was verified against.
+        expected_generation: CatalogGeneration,
+        /// The catalog generation the store's head names, if it decoded.
+        observed_generation: Option<CatalogGeneration>,
+    },
+    /// The store's catalog head refused admission.
+    CatalogHeadRefused,
     /// The current liveness generation has no successor.
     LivenessExhausted,
     /// A byte-identical retry found that another successor is current.
@@ -91,6 +102,9 @@ impl fmt::Display for RetentionCurrentStateRefusal {
             Self::ManifestAbsent => formatter.write_str("current retention head names an absent manifest"),
             Self::ManifestRefused { .. } => formatter.write_str("current retention manifest refused admission"),
             Self::ManifestDisagreed => formatter.write_str("current retention manifest disagreed with its head"),
+            Self::HeadPredecessorDisagreed => formatter.write_str("current retention head and its manifest name different predecessors"),
+            Self::CatalogDisagreed { expected_generation, .. } => write!(formatter, "closure was verified against catalog generation {} which is not this store's current catalog", expected_generation.get()),
+            Self::CatalogHeadRefused => formatter.write_str("this store's catalog head refused admission"),
             Self::LivenessExhausted => formatter.write_str("current liveness generation cannot advance"),
             Self::StaleCommittedRetry => formatter.write_str("already-committed retry is stale: another successor is current"),
             Self::Superseded { current_generation, .. } => write!(formatter, "candidate is superseded: the current head is liveness generation {}", current_generation.get()),

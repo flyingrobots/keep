@@ -6,6 +6,7 @@ use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
 
 use super::filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
+use super::filesystem_retention_catalog;
 use super::filesystem_retention_current;
 use super::filesystem_retention_namespace;
 use super::filesystem_retention_pool_name as pool_name;
@@ -32,6 +33,7 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
         }
         let disposition = filesystem_retention_current::disposition(preparation, current.as_ref())?;
         if disposition == RetentionTransitionDisposition::Publish {
+            filesystem_retention_catalog::require_current_catalog(&self.root, preparation)?;
             filesystem_retention_namespace::admit_expectation(
                 &self.roots,
                 preparation.candidate(),
