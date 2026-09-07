@@ -129,6 +129,7 @@ mod filesystem_store_initializer_tests;
 #[cfg(test)]
 #[path = "../../tests/segment_filesystem_stage/sandbox.rs"]
 mod filesystem_test_sandbox;
+mod filesystem_version_two_admission;
 mod filesystem_version_two_records;
 mod filesystem_writer_lock;
 mod framed_blake3;
@@ -364,6 +365,7 @@ pub use filesystem_recovery_stage_error::{
     FilesystemRecoveryStageError, RecoveryStageNamespacePhase,
 };
 pub use filesystem_segment_stage::FilesystemSegmentStage;
+pub use filesystem_version_two_admission::FilesystemVersionTwoAdmission;
 pub use filesystem_writer_lock::FilesystemWriterLock;
 pub use layout_decode_error::LayoutDecodeError;
 pub use layout_decode_policy::LayoutDecodePolicy;

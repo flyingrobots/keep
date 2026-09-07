@@ -34,14 +34,15 @@ after its public API and format compatibility policies are established.
   pool manifest, and current-state verification admits a successor only when
   the prepared head names the observed manifest as its exact predecessor at the
   next liveness generation; a superseded candidate refuses with zero mutation.
-  `reopen_version_two` reopens `FORMAT`, `migration.intent`, and
+  `FilesystemVersionTwoAdmission::reopen` reopens `FORMAT`, `migration.intent`, and
   `migration.receipt` without following links, bounds each to its canonical
   length, and admits the receipt only against the decoded intent and marker
   before returning writer authority; `FilesystemPlatformAdmissionError::MigrationRecord`
-  names that refusal. An already-committed retention retry now reopens the
+  names that refusal. Version-two writer authority is its own type, so no
+  version-one publisher can consume it. An already-committed retention retry now reopens the
   manifest entry and the root pool bytes the head selects and refuses absent,
   changed, or corrupt evidence instead of inferring the commit from head
-  agreement alone. On Linux, `reopen_version_two` admits `retention`,
+  agreement alone. On Linux, `FilesystemVersionTwoAdmission::reopen` admits `retention`,
   `retention/roots`, `retention/manifests`, `gc`, `recovery`, and
   `recovery/dispositions` against the root's filesystem, mount, and inode
   flags exactly as the version-1 protocol directories are admitted. Retention

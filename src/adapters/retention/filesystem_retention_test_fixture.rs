@@ -19,7 +19,7 @@ use crate::adapters::test_support::decode_hex;
 use crate::adapters::{
     AdmittedCatalog, AdmittedSegment, CatalogSnapshot, ChecksummedCatalog,
     ChecksummedPublicationHead, FilesystemPlatformAdmission, FilesystemStoreMigrationAuthority,
-    SegmentReadPolicy, SegmentRecordLimit,
+    FilesystemVersionTwoAdmission, SegmentReadPolicy, SegmentRecordLimit,
 };
 use crate::{
     RetentionGenerationExpectation, RetentionNamespace, RetentionPolicy, RetentionRoot,
@@ -57,8 +57,7 @@ pub(super) fn open_authority(
     name: &str,
 ) -> Result<(TestDirectory, FilesystemRetentionPublicationAuthority), Box<dyn Error>> {
     let sandbox = migrated_store(name)?;
-    let admission =
-        FilesystemPlatformAdmission::reopen_version_two_unchecked_for_tests(sandbox.path())?;
+    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
     let authority = FilesystemRetentionPublicationAuthority::open(admission)?;
     Ok((sandbox, authority))
 }

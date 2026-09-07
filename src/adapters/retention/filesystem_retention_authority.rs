@@ -11,7 +11,7 @@ use super::filesystem_retention_authority_error::{
 use super::filesystem_retention_current::{self, ObservedRetentionState};
 use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_stage::{FilesystemRetentionStage, invalid_data};
-use crate::adapters::{FilesystemPlatformAdmission, FilesystemWriterLock};
+use crate::adapters::{FilesystemVersionTwoAdmission, FilesystemWriterLock};
 
 /// Exclusive authority to publish retention transitions on one pinned root.
 ///
@@ -41,7 +41,10 @@ pub struct FilesystemRetentionPublicationAuthority {
 }
 
 impl FilesystemRetentionPublicationAuthority {
-    /// Pins one migrated version-2 root for retention publication.
+    /// Pins one admitted version-two root for retention publication.
+    ///
+    /// Only [`FilesystemVersionTwoAdmission`] is accepted, so version-one
+    /// writer authority can never reach retention publication.
     ///
     /// This synchronous constructor opens pinned directory capabilities but
     /// materializes no record bodies and performs no protocol mutation.
@@ -51,7 +54,7 @@ impl FilesystemRetentionPublicationAuthority {
     /// Returns [`FilesystemRetentionAuthorityError`](super::FilesystemRetentionAuthorityError)
     /// when the root capability cannot be cloned or the retention namespace and
     /// either immutable pool cannot be pinned without following links.
-    pub fn open(admission: FilesystemPlatformAdmission) -> Result<Self, Error> {
+    pub fn open(admission: FilesystemVersionTwoAdmission) -> Result<Self, Error> {
         let lock = admission.into_lock();
         let root = lock.clone_directory().map_err(|source| Error::Directory {
             directory: Directory::Root,

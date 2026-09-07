@@ -11,7 +11,7 @@ use super::filesystem_initialization_storage::FilesystemInitializationStorage;
 use super::{
     FilesystemPlatformAdmission, FilesystemPlatformAdmissionError, FilesystemWriterLock,
     StoreInitializationError, StoreInitializationPhase, filesystem_initialization_namespace,
-    filesystem_platform_profile, filesystem_version_two_records, initialize_store,
+    filesystem_platform_profile, initialize_store,
 };
 
 impl FilesystemPlatformAdmission {
@@ -66,34 +66,6 @@ impl FilesystemPlatformAdmission {
         initialize_storage(storage)
     }
 
-    /// Reacquires writer authority over one completely migrated version-2 store.
-    ///
-    /// The call mutates no protocol state. It admits the production platform
-    /// for every version-2 protocol directory, acquires the existing writer
-    /// lock, requires the exact version-2 root namespace, and jointly admits the
-    /// marker, intent, and receipt records. Retention and recovery adapters perform content-level
-    /// validation under the returned authority. The synchronous call may block
-    /// on filesystem I/O.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`FilesystemPlatformAdmissionError`] with the exact platform,
-    /// writer-lock, or namespace boundary and preserved source.
-    pub fn reopen_version_two(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
-        let root = filesystem_platform_profile::open_version_two(store_root)
-            .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
-        reopen_version_two_root(root)
-    }
-
-    #[cfg(test)]
-    pub(super) fn reopen_version_two_unchecked_for_tests(
-        store_root: &Path,
-    ) -> Result<Self, FilesystemPlatformAdmissionError> {
-        let root = Dir::open_ambient_dir(store_root, ambient_authority())
-            .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
-        reopen_version_two_root(root)
-    }
-
     #[cfg(test)]
     pub(super) fn reopen_unchecked_for_tests(
         store_root: &Path,
@@ -118,22 +90,6 @@ fn initialize_storage(
         filesystem_platform_profile::root_identity(&directory).map_err(|source| {
             StoreInitializationError::io(StoreInitializationPhase::AdmitPlatform, source)
         })?;
-    Ok(FilesystemPlatformAdmission::initialized(
-        lock,
-        root_identity,
-    ))
-}
-
-fn reopen_version_two_root(
-    root: cap_std::fs::Dir,
-) -> Result<FilesystemPlatformAdmission, FilesystemPlatformAdmissionError> {
-    let admission = admit_reopened(root, filesystem_initialization_namespace::admit_version_two)?;
-    let (lock, root_identity) = admission.into_parts();
-    let directory = lock
-        .clone_directory()
-        .map_err(|source| FilesystemPlatformAdmissionError::MigrationRecord { source })?;
-    filesystem_version_two_records::admit(&directory)
-        .map_err(|source| FilesystemPlatformAdmissionError::MigrationRecord { source })?;
     Ok(FilesystemPlatformAdmission::initialized(
         lock,
         root_identity,
