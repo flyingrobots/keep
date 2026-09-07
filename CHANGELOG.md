@@ -242,6 +242,11 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- The retention FIFO laws run only on Linux through `mknodat`; the `mkfifo(1)`
+  fallback for other hosts is removed, and a contract test keeps every module
+  under `src/` free of process spawns. The fallback's spawned child briefly
+  held copies of other tests' lock descriptors, which surfaced locally as an
+  intermittent `WriterLock { source: Busy }` at reopen.
 - The formats index and the version-two overview state what is implemented
   (one-way migration, version-two reopen, forward retention publication) and
   what remains planned in issue #19 (retention recovery, reader fencing,

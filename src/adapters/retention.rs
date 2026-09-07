@@ -30,7 +30,7 @@ mod filesystem_retention_current;
 mod filesystem_retention_current_tests;
 #[cfg(test)]
 mod filesystem_retention_expectation_tests;
-#[cfg(test)]
+#[cfg(all(test, target_os = "linux"))]
 mod filesystem_retention_fifo_tests;
 mod filesystem_retention_namespace;
 #[cfg(test)]

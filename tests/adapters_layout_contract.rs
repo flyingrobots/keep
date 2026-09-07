@@ -1,6 +1,7 @@
 //! Source-layout laws for the adapters tree: the module root stays a scannable
 //! manifest, files rustfmt cannot rewrap stay within the standard width, and
-//! record readers take their fixed lengths from the decoders that define them.
+//! record readers take their fixed lengths from the decoders that define them,
+//! and no module under `src/` spawns a process.
 
 const ADAPTERS_ROOT: &str = include_str!("../src/adapters/mod.rs");
 const RETENTION_REFUSAL: &str =
@@ -95,4 +96,31 @@ fn record_readers_take_lengths_from_the_decoders() {
             );
         }
     }
+}
+
+/// No source module spawns a process, test scaffolding included. A spawned
+/// child briefly holds copies of every open descriptor, so a `mkfifo(1)`
+/// fallback in one law kept another law's `flock` alive across its
+/// drop-and-reopen and surfaced as an intermittent `WriterLock { Busy }`.
+/// Laws that need a device node use the kernel API and are gated to Linux.
+#[test]
+fn no_source_module_spawns_a_process() -> Result<(), Box<dyn std::error::Error>> {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let mut pending = vec![root];
+    while let Some(directory) = pending.pop() {
+        for entry in std::fs::read_dir(&directory)? {
+            let path = entry?.path();
+            if path.is_dir() {
+                pending.push(path);
+            } else if path.extension().is_some_and(|extension| extension == "rs") {
+                let source = std::fs::read_to_string(&path)?;
+                assert!(
+                    !source.contains("process::Command") && !source.contains("Command::new("),
+                    "{} spawns a process",
+                    path.display()
+                );
+            }
+        }
+    }
+    Ok(())
 }

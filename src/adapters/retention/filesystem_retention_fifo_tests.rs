@@ -1,4 +1,6 @@
 //! Filesystem retention non-regular-file laws: a FIFO at a protocol name refuses, never blocks.
+//!
+//! Linux only: the fixture creates the FIFO through `mknodat`.
 
 use std::error::Error;
 use std::path::Path;
@@ -71,25 +73,16 @@ fn a_fifo_at_a_manifest_pool_name_refuses_instead_of_blocking() -> Result<(), Bo
 
 /// Creates a FIFO at `path` for the law under test.
 ///
-/// rustix compiles `mknodat` out on Apple targets, so the fixture falls back
-/// to `mkfifo(1)` there. This is test scaffolding only; no storage path
-/// spawns a process.
-#[cfg(target_os = "linux")]
+/// These laws run only on Linux, where rustix exposes `mknodat`; rustix
+/// compiles it out on Apple targets, and spawning `mkfifo(1)` instead is not
+/// acceptable scaffolding: a spawned child briefly holds copies of every open
+/// descriptor, which kept another law's `flock` alive across its
+/// drop-and-reopen. CI runs these laws.
 fn make_fifo(path: &Path) -> Result<(), Box<dyn Error>> {
     use rustix::fs::{CWD, FileType, Mode, mknodat};
 
     mknodat(CWD, path, FileType::Fifo, Mode::RUSR | Mode::WUSR, 0)?;
     Ok(())
-}
-
-#[cfg(not(target_os = "linux"))]
-fn make_fifo(path: &Path) -> Result<(), Box<dyn Error>> {
-    let status = std::process::Command::new("mkfifo").arg(path).status()?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(format!("mkfifo exited with {status}").into())
-    }
 }
 
 /// Runs `operation` on its own thread and refuses the test if it does not finish.
