@@ -28,6 +28,7 @@ mod filesystem_retention_namespace;
 #[cfg(test)]
 mod filesystem_retention_namespace_tests;
 mod filesystem_retention_pool_name;
+mod filesystem_retention_refusal;
 mod filesystem_retention_stage;
 mod filesystem_retention_storage;
 #[cfg(test)]
@@ -95,6 +96,7 @@ pub use filesystem_retention_authority_error::{
     FilesystemRetentionAuthorityError, RetentionAuthorityDirectory,
 };
 pub use filesystem_retention_current::ObservedRetentionState;
+pub use filesystem_retention_refusal::RetentionCurrentStateRefusal;
 pub use head_decode_error::RetentionHeadDecodeError;
 pub use manifest_decode_error::RetentionManifestDecodeError;
 pub use manifest_encode_error::RetentionManifestEncodeError;

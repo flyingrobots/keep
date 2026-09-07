@@ -6,10 +6,9 @@ use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncEx
 use cap_std::fs::{Dir, OpenOptions};
 
 use super::filesystem_retention_pool_name as pool_name;
-use super::filesystem_retention_stage::invalid_data;
 use super::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, ChecksummedRetentionHead,
-    RetentionPublicationPreparation, RetentionTransitionDisposition,
+    RetentionCurrentStateRefusal, RetentionPublicationPreparation, RetentionTransitionDisposition,
 };
 use crate::RetentionGenerationExpectation;
 
@@ -54,21 +53,19 @@ pub(super) fn observe(
         return Ok(None);
     };
     let decoded = ChecksummedRetentionHead::decode(&head)
-        .map_err(|_source| invalid_data("current retention head refused admission"))?;
+        .map_err(|source| RetentionCurrentStateRefusal::HeadRefused { source }.into_io())?;
     let selected = decoded.head();
     let length = usize::try_from(selected.manifest_length().get())
-        .map_err(|_source| invalid_data("current manifest length exceeded usize"))?;
+        .map_err(|_source| RetentionCurrentStateRefusal::RecordLengthOverflow.into_io())?;
     let name = pool_name::manifest(selected.generation(), selected.manifest_digest());
     let manifest = read_exact_optional(manifests, &name, length)?
-        .ok_or_else(|| invalid_data("current retention head names an absent manifest"))?;
+        .ok_or_else(|| RetentionCurrentStateRefusal::ManifestAbsent.into_io())?;
     let admitted = AdmittedRetentionManifest::decode(&manifest)
-        .map_err(|_source| invalid_data("current retention manifest refused admission"))?;
+        .map_err(|source| RetentionCurrentStateRefusal::ManifestRefused { source }.into_io())?;
     if admitted.digest() != selected.manifest_digest()
         || admitted.manifest().generation() != selected.generation()
     {
-        return Err(invalid_data(
-            "current retention manifest disagreed with its head",
-        ));
+        return Err(RetentionCurrentStateRefusal::ManifestDisagreed.into_io());
     }
     Ok(Some(ObservedRetentionState { head, manifest }))
 }
@@ -86,13 +83,13 @@ pub(super) fn disposition(
     let Some(current) = current else {
         return match preparation.expected() {
             RetentionGenerationExpectation::Absent => require_initial_publication(preparation),
-            RetentionGenerationExpectation::Current(_) => Err(invalid_data(
-                "expected a current retention generation but no head is published",
-            )),
+            RetentionGenerationExpectation::Current(_) => {
+                Err(RetentionCurrentStateRefusal::ExpectedCurrentOverAbsentHead.into_io())
+            }
         };
     };
     let head = ChecksummedRetentionHead::decode(current.head_bytes())
-        .map_err(|_source| invalid_data("observed retention head refused admission"))?;
+        .map_err(|source| RetentionCurrentStateRefusal::HeadRefused { source }.into_io())?;
     let head = head.head();
     let committed = (
         preparation.liveness_generation(),
@@ -101,23 +98,25 @@ pub(super) fn disposition(
     if (head.generation(), head.manifest_digest()) == committed {
         return Ok(RetentionTransitionDisposition::AlreadyCommitted);
     }
-    let publication = preparation.publication().ok_or_else(|| {
-        invalid_data("already-committed retry is stale: another successor is current")
-    })?;
+    let publication = preparation
+        .publication()
+        .ok_or_else(|| RetentionCurrentStateRefusal::StaleCommittedRetry.into_io())?;
     let prepared = ChecksummedRetentionHead::decode(publication.head().encoded())
-        .map_err(|_source| invalid_data("prepared retention head refused admission"))?;
+        .map_err(|source| RetentionCurrentStateRefusal::PreparedHeadRefused { source }.into_io())?;
     let expected_generation = head
         .generation()
         .successor()
-        .map_err(|_source| invalid_data("current liveness generation cannot advance"))?;
+        .map_err(|_source| RetentionCurrentStateRefusal::LivenessExhausted.into_io())?;
     if prepared.head().predecessor() == Some(head.manifest_digest())
         && prepared.head().generation() == expected_generation
     {
         Ok(RetentionTransitionDisposition::Publish)
     } else {
-        Err(invalid_data(
-            "current retention head is not the prepared predecessor; the candidate is superseded",
-        ))
+        Err(RetentionCurrentStateRefusal::Superseded {
+            current_generation: head.generation(),
+            current_digest: head.manifest_digest(),
+        }
+        .into_io())
     }
 }
 
@@ -133,33 +132,29 @@ pub(super) fn verify_committed(
     candidate: &AdmittedRetentionRoot<'_>,
 ) -> io::Result<()> {
     let manifest = AdmittedRetentionManifest::decode(current.manifest_bytes())
-        .map_err(|_source| invalid_data("observed retention manifest refused admission"))?;
+        .map_err(|source| RetentionCurrentStateRefusal::ManifestRefused { source }.into_io())?;
     let namespace = candidate.root().namespace().digest();
     let entries = manifest.manifest().entries();
     let entry = entries
         .binary_search_by_key(&namespace, |entry| entry.namespace())
         .ok()
         .and_then(|index| entries.get(index).copied())
-        .ok_or_else(|| {
-            invalid_data("committed manifest does not select the candidate namespace")
-        })?;
+        .ok_or_else(|| RetentionCurrentStateRefusal::CommittedSelectionMissing.into_io())?;
     if entry.root_generation() != candidate.root().generation()
         || entry.root_digest() != candidate.digest()
     {
-        return Err(invalid_data(
-            "committed manifest selects a different root for the candidate namespace",
-        ));
+        return Err(RetentionCurrentStateRefusal::CommittedSelectionMismatch.into_io());
     }
     let directory = roots
         .open_dir_nofollow(pool_name::namespace(namespace))
-        .map_err(|_source| invalid_data("committed root namespace directory is unavailable"))?;
+        .map_err(|_source| RetentionCurrentStateRefusal::CommittedNamespaceUnavailable.into_io())?;
     let name = pool_name::root(candidate.root().generation(), candidate.digest());
     let observed = read_exact_optional(&directory, &name, candidate.encoded().len())?
-        .ok_or_else(|| invalid_data("committed root pool entry is absent"))?;
+        .ok_or_else(|| RetentionCurrentStateRefusal::CommittedRootAbsent.into_io())?;
     if observed.as_ref() == candidate.encoded() {
         Ok(())
     } else {
-        Err(invalid_data("committed root pool entry bytes disagreed"))
+        Err(RetentionCurrentStateRefusal::CommittedRootChanged.into_io())
     }
 }
 
@@ -169,17 +164,15 @@ fn require_initial_publication(
 ) -> io::Result<RetentionTransitionDisposition> {
     let publication = preparation
         .publication()
-        .ok_or_else(|| invalid_data("already-committed retry against an absent retention head"))?;
+        .ok_or_else(|| RetentionCurrentStateRefusal::StaleCommittedRetry.into_io())?;
     let prepared = ChecksummedRetentionHead::decode(publication.head().encoded())
-        .map_err(|_source| invalid_data("prepared retention head refused admission"))?;
+        .map_err(|source| RetentionCurrentStateRefusal::PreparedHeadRefused { source }.into_io())?;
     if prepared.head().generation() == crate::LivenessGeneration::INITIAL
         && prepared.head().predecessor().is_none()
     {
         Ok(RetentionTransitionDisposition::Publish)
     } else {
-        Err(invalid_data(
-            "absent retention head admits only an initial publication with no predecessor",
-        ))
+        Err(RetentionCurrentStateRefusal::NonInitialOverAbsentHead.into_io())
     }
 }
 
@@ -196,16 +189,16 @@ fn read_exact_optional(
         Err(source) => return Err(source),
     };
     let expected_length = u64::try_from(length)
-        .map_err(|_source| invalid_data("retention record length exceeded u64"))?;
+        .map_err(|_source| RetentionCurrentStateRefusal::RecordLengthOverflow.into_io())?;
     let metadata = file.metadata()?;
     if !metadata.is_file() || metadata.len() != expected_length {
-        return Err(invalid_data("retention record kind or length disagreed"));
+        return Err(RetentionCurrentStateRefusal::RecordKindOrLength.into_io());
     }
     let mut bytes = vec![0_u8; length];
     file.read_exact(&mut bytes)?;
     let mut trailing = [0_u8; 1];
     if file.read(&mut trailing)? != 0 {
-        return Err(invalid_data("retention record carried trailing bytes"));
+        return Err(RetentionCurrentStateRefusal::RecordTrailingBytes.into_io());
     }
     Ok(Some(bytes.into_boxed_slice()))
 }

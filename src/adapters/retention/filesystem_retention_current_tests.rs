@@ -4,11 +4,11 @@ use std::error::Error;
 use std::fs;
 use std::io;
 
-use super::RetentionPublicationError;
 use super::filesystem_retention_test_fixture::{
-    ROOT_HEX, fixture, initial_preparation, manifest_pool_path, open_authority, retention_witness,
-    root_pool_path,
+    ROOT_HEX, fixture, initial_preparation, manifest_pool_path, open_authority, refusal,
+    retention_witness, root_pool_path,
 };
+use super::{RetentionCurrentStateRefusal, RetentionPublicationError};
 use crate::execute_retention_publication;
 
 #[test]
@@ -29,6 +29,10 @@ fn committed_retry_refuses_when_the_selected_root_is_absent() -> Result<(), Box<
         return Err("absent root refused outside current-state verification".into());
     };
     assert_eq!(source.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        refusal(&source),
+        Some(RetentionCurrentStateRefusal::CommittedRootAbsent)
+    ));
     assert_eq!(retention_witness(sandbox.path())?, before);
     drop(authority);
     sandbox.remove()?;
@@ -55,6 +59,10 @@ fn committed_retry_refuses_when_the_selected_root_bytes_changed() -> Result<(), 
         return Err("changed root refused outside current-state verification".into());
     };
     assert_eq!(source.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        refusal(&source),
+        Some(RetentionCurrentStateRefusal::CommittedRootChanged)
+    ));
     drop(authority);
     sandbox.remove()?;
     Ok(())

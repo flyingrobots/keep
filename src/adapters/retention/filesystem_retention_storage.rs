@@ -12,8 +12,8 @@ use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_stage::{FilesystemRetentionStage, invalid_data};
 use super::{
     AdmittedRetentionRoot, CanonicalRetentionHead, CanonicalRetentionManifest,
-    RetentionNamespaceAdmission, RetentionPublicationPreparation, RetentionPublicationStorage,
-    RetentionTransitionDisposition,
+    RetentionCurrentStateRefusal, RetentionNamespaceAdmission, RetentionPublicationPreparation,
+    RetentionPublicationStorage, RetentionTransitionDisposition,
 };
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
 
@@ -28,9 +28,7 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
             filesystem_retention_namespace::admit(&self.retention, &self.roots, &self.manifests)?;
         let current = filesystem_retention_current::observe(&self.retention, &self.manifests)?;
         if current.is_none() && !census.is_empty() {
-            return Err(invalid_data(
-                "retention head is absent while retention pools hold artifacts; recovery is required",
-            ));
+            return Err(RetentionCurrentStateRefusal::HeadAbsentWithArtifacts.into_io());
         }
         let disposition = filesystem_retention_current::disposition(preparation, current.as_ref())?;
         if disposition == RetentionTransitionDisposition::Publish {
@@ -180,9 +178,7 @@ fn require_no_retained_stage(retention: &Dir) -> io::Result<()> {
         match retention.symlink_metadata(stage) {
             Err(source) if source.kind() == io::ErrorKind::NotFound => {}
             Ok(_) => {
-                return Err(invalid_data(
-                    "retained retention stage requires recovery before publication",
-                ));
+                return Err(RetentionCurrentStateRefusal::RetainedStage.into_io());
             }
             Err(source) => return Err(source),
         }

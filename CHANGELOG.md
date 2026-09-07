@@ -64,6 +64,11 @@ after its public API and format compatibility policies are established.
   Every read-side reopen in retention publication and version-two admission
   opens with `O_NONBLOCK`, so a FIFO planted at `retention/HEAD`, `FORMAT`, or a
   pool name refuses by kind instead of blocking under the writer lock.
+  Filesystem current-state verification now carries a typed
+  `RetentionCurrentStateRefusal` as the source of every `InvalidData` it
+  returns, so a superseded candidate, a stale committed retry, an absent head
+  over populated pools, and each corruption or decode refusal are
+  distinguishable to callers and preserve their underlying decode errors.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

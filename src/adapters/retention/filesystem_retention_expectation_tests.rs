@@ -6,9 +6,13 @@ use std::io;
 
 use super::filesystem_retention_test_fixture::{
     ROOT_HEX, fixture, head_path, initial_preparation, initial_root, new_namespace_preparation,
-    open_authority, retention_witness, root_pool_path, successor_preparation, successor_root,
+    open_authority, refusal, retention_witness, root_pool_path, successor_preparation,
+    successor_root,
 };
-use super::{AdmittedRetentionManifest, AdmittedRetentionRoot, RetentionPublicationStorage};
+use super::{
+    AdmittedRetentionManifest, AdmittedRetentionRoot, RetentionCurrentStateRefusal,
+    RetentionPublicationStorage,
+};
 use crate::execute_retention_publication;
 
 #[test]
@@ -26,6 +30,10 @@ fn absent_head_with_retention_artifacts_refuses_as_recovery() -> Result<(), Box<
         .ok_or("absent head over populated pools was unexpectedly treated as empty")?;
 
     assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        refusal(&error),
+        Some(RetentionCurrentStateRefusal::HeadAbsentWithArtifacts)
+    ));
     assert_eq!(retention_witness(sandbox.path())?, before);
     drop(authority);
     sandbox.remove()?;

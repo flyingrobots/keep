@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 use super::filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
 use super::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionRoot,
-    RetentionPublicationPreparation, RetentionTransitionDisposition,
+    RetentionCurrentStateRefusal, RetentionPublicationPreparation, RetentionTransitionDisposition,
 };
 use crate::LayoutEntryLimit;
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
@@ -167,6 +167,13 @@ pub(super) fn successor_root(
         current.root().anchors().to_vec(),
     )?;
     CanonicalRetentionRoot::from_root(&root).map_err(Into::into)
+}
+
+/// Extracts the typed current-state refusal carried by a verification error.
+pub(super) fn refusal(source: &io::Error) -> Option<&RetentionCurrentStateRefusal> {
+    source
+        .get_ref()
+        .and_then(|inner| inner.downcast_ref::<RetentionCurrentStateRefusal>())
 }
 
 pub(super) fn head_path(root: &Path) -> PathBuf {

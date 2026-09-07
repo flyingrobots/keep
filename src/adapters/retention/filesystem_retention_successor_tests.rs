@@ -6,12 +6,13 @@ use std::io;
 
 use super::filesystem_retention_test_fixture::{
     ROOT_HEX, fixture, head_path, initial_generation, initial_preparation, manifest_pool_path,
-    open_authority, retention_witness, root_pool_path, successor_preparation, successor_root,
+    open_authority, refusal, retention_witness, root_pool_path, successor_preparation,
+    successor_root,
 };
 use super::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, ChecksummedRetentionHead,
-    RetentionNamespaceAdmission, RetentionPublicationError, RetentionPublicationOutcome,
-    RetentionPublicationStorage,
+    RetentionCurrentStateRefusal, RetentionNamespaceAdmission, RetentionPublicationError,
+    RetentionPublicationOutcome, RetentionPublicationStorage,
 };
 use crate::execute_retention_publication;
 
@@ -90,6 +91,10 @@ fn superseded_candidate_refuses_once_a_successor_is_current() -> Result<(), Box<
         return Err("superseded candidate refused outside current-state verification".into());
     };
     assert_eq!(source.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        refusal(&source),
+        Some(RetentionCurrentStateRefusal::Superseded { .. })
+    ));
     assert_eq!(retention_witness(sandbox.path())?, after_successor);
     drop(authority);
     sandbox.remove()?;
