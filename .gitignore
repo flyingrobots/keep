@@ -29,3 +29,6 @@
 *.swp
 *.swo
 *~
+
+# Local mktxt repository snapshots (exceed the documentation corpus byte budget)
+/keep.txt

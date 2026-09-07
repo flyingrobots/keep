@@ -66,6 +66,33 @@ impl FilesystemPlatformAdmission {
         initialize_storage(storage)
     }
 
+    /// Reacquires writer authority over one completely migrated version-2 store.
+    ///
+    /// The call mutates no protocol state. It admits the production platform,
+    /// acquires the existing writer lock, and requires the exact version-2 root
+    /// namespace. Retention and recovery adapters perform content-level
+    /// validation under the returned authority. The synchronous call may block
+    /// on filesystem I/O.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FilesystemPlatformAdmissionError`] with the exact platform,
+    /// writer-lock, or namespace boundary and preserved source.
+    pub fn reopen_version_two(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
+        let root = filesystem_platform_profile::open(store_root)
+            .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
+        reopen_version_two_root(root)
+    }
+
+    #[cfg(test)]
+    pub(super) fn reopen_version_two_unchecked_for_tests(
+        store_root: &Path,
+    ) -> Result<Self, FilesystemPlatformAdmissionError> {
+        let root = Dir::open_ambient_dir(store_root, ambient_authority())
+            .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
+        reopen_version_two_root(root)
+    }
+
     #[cfg(test)]
     pub(super) fn reopen_unchecked_for_tests(
         store_root: &Path,
@@ -96,15 +123,28 @@ fn initialize_storage(
     ))
 }
 
+fn reopen_version_two_root(
+    root: cap_std::fs::Dir,
+) -> Result<FilesystemPlatformAdmission, FilesystemPlatformAdmissionError> {
+    admit_reopened(root, filesystem_initialization_namespace::admit_version_two)
+}
+
 fn reopen_root(
     root: cap_std::fs::Dir,
+) -> Result<FilesystemPlatformAdmission, FilesystemPlatformAdmissionError> {
+    admit_reopened(root, filesystem_initialization_namespace::admit_published)
+}
+
+fn admit_reopened(
+    root: cap_std::fs::Dir,
+    admit_namespace: fn(&cap_std::fs::Dir) -> std::io::Result<()>,
 ) -> Result<FilesystemPlatformAdmission, FilesystemPlatformAdmissionError> {
     let lock = FilesystemWriterLock::try_acquire_in(root)
         .map_err(|source| FilesystemPlatformAdmissionError::WriterLock { source })?;
     let directory = lock
         .clone_directory()
         .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
-    filesystem_initialization_namespace::admit_published(&directory)
+    admit_namespace(&directory)
         .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
     let root_identity = filesystem_platform_profile::root_identity(&directory)
         .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;

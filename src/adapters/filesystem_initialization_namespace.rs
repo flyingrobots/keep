@@ -18,6 +18,27 @@ const PUBLISHED_NAMES: [&str; 5] = [
     CATALOGS_NAME,
     HEAD_NAME,
 ];
+const READER_LOCK_NAME: &str = "reader.lock";
+const MARKER_NAME: &str = "FORMAT";
+const INTENT_NAME: &str = "migration.intent";
+const RECEIPT_NAME: &str = "migration.receipt";
+const RETENTION_NAME: &str = "retention";
+const GC_NAME: &str = "gc";
+const RECOVERY_NAME: &str = "recovery";
+const VERSION_TWO_NAMES: [&str; 12] = [
+    LOCK_NAME,
+    STAGING_NAME,
+    SEGMENTS_NAME,
+    CATALOGS_NAME,
+    HEAD_NAME,
+    READER_LOCK_NAME,
+    MARKER_NAME,
+    INTENT_NAME,
+    RECEIPT_NAME,
+    RETENTION_NAME,
+    GC_NAME,
+    RECOVERY_NAME,
+];
 
 pub(super) fn admit(directory: &Dir) -> io::Result<()> {
     admit_optional_file(directory, LOCK_NAME)?;
@@ -34,6 +55,27 @@ pub(super) fn admit_published(directory: &Dir) -> io::Result<()> {
     admit_required_directory(directory, CATALOGS_NAME)?;
     admit_required_file(directory, HEAD_NAME)?;
     admit_membership(directory, &PUBLISHED_NAMES)
+}
+
+/// Admits the exact completely migrated version-2 root namespace.
+///
+/// Every version-1 published entry, the persistent reader fence, the format
+/// marker, both migration records, and all three protocol directories must be
+/// present. Any other entry is unrecoverable ambiguity.
+pub(super) fn admit_version_two(directory: &Dir) -> io::Result<()> {
+    admit_required_file(directory, LOCK_NAME)?;
+    admit_required_directory(directory, STAGING_NAME)?;
+    admit_required_directory(directory, SEGMENTS_NAME)?;
+    admit_required_directory(directory, CATALOGS_NAME)?;
+    admit_required_file(directory, HEAD_NAME)?;
+    admit_required_file(directory, READER_LOCK_NAME)?;
+    admit_required_file(directory, MARKER_NAME)?;
+    admit_required_file(directory, INTENT_NAME)?;
+    admit_required_file(directory, RECEIPT_NAME)?;
+    admit_required_directory(directory, RETENTION_NAME)?;
+    admit_required_directory(directory, GC_NAME)?;
+    admit_required_directory(directory, RECOVERY_NAME)?;
+    admit_membership(directory, &VERSION_TWO_NAMES)
 }
 
 fn admit_optional_file(directory: &Dir, name: &str) -> io::Result<()> {

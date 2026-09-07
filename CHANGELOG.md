@@ -21,6 +21,16 @@ after its public API and format compatibility policies are established.
   verification-first execution.
   Retention preflight combines expected-generation planning with deterministic
   closure verification; authority-revalidated 17-phase orchestration returns its receipt after durable cleanup.
+  `FilesystemRetentionPublicationAuthority` executes those 17 phases against a
+  completely migrated version-2 root: it stages `root.next`, `manifest.next`,
+  and `head.next` exclusively, verifies device and inode identity at every
+  transition, hard-links both immutable pool entries without replacement,
+  atomically replaces `retention/HEAD`, and removes retained stages only after
+  its canonical target verifies. An exact already-committed candidate returns
+  its receipt with zero retention mutation, and any retained stage refuses as
+  recovery-required rather than being continued. Version-1 reopen now refuses a
+  migrated root, and `admit_version_two` owns the separate version-2 namespace
+  boundary.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production

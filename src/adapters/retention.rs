@@ -13,6 +13,15 @@ mod closure_error_display;
 mod closure_member;
 mod closure_profile_error;
 mod closure_verifier;
+mod filesystem_retention_authority;
+mod filesystem_retention_authority_error;
+mod filesystem_retention_pool_name;
+mod filesystem_retention_stage;
+mod filesystem_retention_storage;
+#[cfg(test)]
+mod filesystem_retention_storage_tests;
+#[cfg(test)]
+mod filesystem_retention_test_fixture;
 mod head_decode_error;
 mod head_decode_error_display;
 mod head_decoder;
@@ -65,6 +74,10 @@ pub use canonical_root::CanonicalRetentionRoot;
 pub use checksummed_head::ChecksummedRetentionHead;
 pub use closure_error::RetentionClosureVerificationError;
 pub use closure_verifier::verify_retention_closure;
+pub use filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
+pub use filesystem_retention_authority_error::{
+    FilesystemRetentionAuthorityError, RetentionAuthorityDirectory,
+};
 pub use head_decode_error::RetentionHeadDecodeError;
 pub use manifest_decode_error::RetentionManifestDecodeError;
 pub use manifest_encode_error::RetentionManifestEncodeError;
