@@ -32,3 +32,6 @@
 
 # Local mktxt repository snapshots (exceed the documentation corpus byte budget)
 /keep.txt
+
+# Local agent journals (code-smell and cool-idea logs); never tracked.
+.claude/
