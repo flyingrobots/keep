@@ -149,26 +149,75 @@ fn linux_directory_properties(file: &std::fs::File) -> io::Result<LinuxDirectory
     })
 }
 
-#[cfg(target_os = "linux")]
-pub(super) fn root_identity(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-    let file = directory.try_clone()?.into_std_file();
-    linux_file_identity(&file)
+/// Whether an identity probe may proceed when `statx` omits `STATX_MNT_ID`.
+///
+/// Production admission requires the mount identity: without it a bind-mounted
+/// or relocated root cannot be told apart from the original. The test and
+/// repository-task bypass records an unreported mount identity as zero instead,
+/// so the suite runs on kernels older than 5.8 while every production probe
+/// stays strict.
+#[cfg(any(target_os = "linux", test))]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum MountIdentityPolicy {
+    Required,
+    #[cfg(any(test, feature = "repository-tasks"))]
+    Lenient,
+}
+
+/// Selects the recorded mount identity from what `statx` reported.
+///
+/// Returns `None` exactly when the policy requires a mount identity the kernel
+/// did not report.
+#[cfg(any(target_os = "linux", test))]
+const fn admit_mount_identity(
+    policy: MountIdentityPolicy,
+    reported: bool,
+    mount_id: u64,
+) -> Option<u64> {
+    match (policy, reported) {
+        (_, true) => Some(mount_id),
+        (MountIdentityPolicy::Required, false) => None,
+        #[cfg(any(test, feature = "repository-tasks"))]
+        (MountIdentityPolicy::Lenient, false) => Some(0),
+    }
 }
 
 #[cfg(target_os = "linux")]
-fn linux_file_identity(file: &std::fs::File) -> io::Result<FilesystemRootIdentity> {
+pub(super) fn root_identity(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
+    let file = directory.try_clone()?.into_std_file();
+    linux_file_identity(&file, MountIdentityPolicy::Required)
+}
+
+/// Probes root identity for the test and repository-task admission bypass.
+///
+/// Identical to [`root_identity`] except that an unreported mount identity is
+/// recorded as zero instead of refusing; production admission never uses it.
+#[cfg(all(target_os = "linux", any(test, feature = "repository-tasks")))]
+pub(super) fn root_identity_lenient(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
+    let file = directory.try_clone()?.into_std_file();
+    linux_file_identity(&file, MountIdentityPolicy::Lenient)
+}
+
+#[cfg(target_os = "linux")]
+fn linux_file_identity(
+    file: &std::fs::File,
+    policy: MountIdentityPolicy,
+) -> io::Result<FilesystemRootIdentity> {
     use rustix::fs::{AtFlags, StatxFlags, statx};
 
-    let required = StatxFlags::BASIC_STATS | StatxFlags::MNT_ID;
-    let status = statx(file, ".", AtFlags::empty(), required)?;
+    let requested = StatxFlags::BASIC_STATS | StatxFlags::MNT_ID;
+    let status = statx(file, ".", AtFlags::empty(), requested)?;
     let observed = StatxFlags::from_bits_retain(status.stx_mask);
-    if !observed.contains(required) {
+    if !observed.contains(StatxFlags::BASIC_STATS) {
         return Err(unsupported_linux_profile());
     }
+    let reported = observed.contains(StatxFlags::MNT_ID);
+    let mount_id = admit_mount_identity(policy, reported, status.stx_mnt_id)
+        .ok_or_else(unsupported_linux_profile)?;
     Ok(linux_root_identity(
         status.stx_dev_major,
         status.stx_dev_minor,
-        status.stx_mnt_id,
+        mount_id,
         status.stx_ino,
     ))
 }
@@ -194,6 +243,11 @@ pub(super) fn root_identity(directory: &Dir) -> io::Result<FilesystemRootIdentit
         metadata.dev(),
         metadata.ino(),
     ))
+}
+
+#[cfg(all(not(target_os = "linux"), any(test, feature = "repository-tasks")))]
+pub(super) fn root_identity_lenient(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
+    root_identity(directory)
 }
 
 #[cfg(all(not(target_os = "linux"), not(any(test, feature = "repository-tasks"))))]
@@ -251,3 +305,7 @@ fn unsupported_linux_profile() -> io::Error {
 #[cfg(all(test, target_os = "linux"))]
 #[path = "filesystem_platform_profile_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "filesystem_platform_profile_policy_tests.rs"]
+mod policy_tests;

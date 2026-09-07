@@ -10,6 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- The test and repository-task admission bypass now probes root identity
+  through a lenient path that records an unreported `STATX_MNT_ID` as zero, so
+  the suite and crash matrix run on kernels older than 5.8; every production
+  probe still refuses without a reported mount identity.
 - A retention stage left behind by a failed write is documented as recovery
   evidence: it is never unlinked, and the next publication refuses until
   recovery classifies it, exactly as the segment-stage doctrine already states.

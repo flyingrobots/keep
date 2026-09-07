@@ -44,10 +44,13 @@ impl FilesystemPlatformAdmission {
         (self.lock, self.root_identity)
     }
 
+    /// Grants authority without platform admission for tests and repository
+    /// tasks; the identity probe tolerates a kernel that reports no mount
+    /// identity so the bypass does not require `STATX_MNT_ID`.
     #[cfg(any(test, feature = "repository-tasks"))]
     fn unchecked(lock: FilesystemWriterLock) -> std::io::Result<Self> {
         let directory = lock.clone_directory()?;
-        let root_identity = super::filesystem_platform_profile::root_identity(&directory)?;
+        let root_identity = super::filesystem_platform_profile::root_identity_lenient(&directory)?;
         Ok(Self::initialized(lock, root_identity))
     }
 }
