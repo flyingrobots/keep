@@ -242,6 +242,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- The formats index and the version-two overview state what is implemented
+  (one-way migration, version-two reopen, forward retention publication) and
+  what remains planned in issue #19 (retention recovery, reader fencing,
+  collection), instead of describing the whole version as planned.
 - `FilesystemPlatformAdmissionError` is `#[non_exhaustive]`, so a future
   admission refusal can be added without a breaking change; a source contract
   pins the attribute.

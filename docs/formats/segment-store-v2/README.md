@@ -7,10 +7,12 @@ reader fences, migration evidence, and reserved GC and recovery-disposition
 namespaces.
 
 ADR-0009 owns the cross-cutting retention and liveness decision. These pages
-own its durable representation. Issue #19 must supply the production retention
-implementation and executable evidence before any version-2 writer is
-available. Until that implementation lands, version 1 remains the only
-admitted production store.
+own its durable representation. The one-way migration, version-two reopen, and
+forward retention publication are implemented with executable evidence;
+recovery of retained retention stages, reader fencing, and collection remain
+planned in issue #19, and the [requirements ledger](requirements.md) records
+exactly which requirements are proven. A version-1 store remains admitted until
+its owner migrates it.
 
 ## Core laws
 
