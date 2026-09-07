@@ -20,6 +20,8 @@ mod filesystem_retention_capacity_tests;
 mod filesystem_retention_current;
 #[cfg(test)]
 mod filesystem_retention_current_tests;
+#[cfg(test)]
+mod filesystem_retention_expectation_tests;
 mod filesystem_retention_namespace;
 #[cfg(test)]
 mod filesystem_retention_namespace_tests;

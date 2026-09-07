@@ -8,9 +8,13 @@ use std::path::Path;
 
 use super::filesystem_retention_test_fixture::{
     ROOT_HEX, fixture, initial_preparation, open_authority, retention_witness,
+    successor_preparation, successor_root,
 };
-use super::{AdmittedRetentionRoot, RetentionPublicationStorage, RetentionTransitionDisposition};
-use crate::RetentionManifest;
+use super::{
+    AdmittedRetentionManifest, AdmittedRetentionRoot, RetentionPublicationStorage,
+    RetentionTransitionDisposition,
+};
+use crate::{RetentionManifest, execute_retention_publication};
 
 #[test]
 fn a_full_namespace_pool_refuses_a_new_namespace_before_staging() -> Result<(), Box<dyn Error>> {
@@ -34,18 +38,24 @@ fn a_full_namespace_pool_refuses_a_new_namespace_before_staging() -> Result<(), 
 }
 
 #[test]
-fn a_full_namespace_pool_admits_a_candidate_whose_namespace_exists() -> Result<(), Box<dyn Error>> {
+fn a_full_namespace_pool_admits_a_successor_in_an_existing_namespace() -> Result<(), Box<dyn Error>>
+{
     let (sandbox, mut authority) = open_authority("filesystem-retention-capacity-existing")?;
     let root_bytes = fixture(ROOT_HEX)?;
-    let candidate = AdmittedRetentionRoot::decode(&root_bytes)?;
-    let own = namespace_hex(&candidate);
+    let _published =
+        execute_retention_publication(&mut authority, &initial_preparation(&root_bytes)?)?;
+    let current = authority
+        .observe_current()?
+        .ok_or("published retention head was not observed")?;
+    let current_root = AdmittedRetentionRoot::decode(&root_bytes)?;
+    let current_manifest = AdmittedRetentionManifest::decode(current.manifest_bytes())?;
     create_orphans(
         sandbox.path(),
         RetentionManifest::MAXIMUM_ENTRY_COUNT - 1,
-        &own,
+        &namespace_hex(&current_root),
     )?;
-    fs::create_dir(sandbox.path().join("retention").join("roots").join(&own))?;
-    let preparation = initial_preparation(&root_bytes)?;
+    let candidate = successor_root(&current_root)?;
+    let preparation = successor_preparation(&current_root, &current_manifest, candidate.encoded())?;
 
     let disposition = RetentionPublicationStorage::verify_current(&mut authority, &preparation)?;
 

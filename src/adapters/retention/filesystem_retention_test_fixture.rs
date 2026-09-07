@@ -22,8 +22,9 @@ use crate::adapters::{
     SegmentReadPolicy, SegmentRecordLimit,
 };
 use crate::{
-    RetentionGenerationExpectation, RetentionPolicy, RetentionRoot, RootGeneration,
-    execute_store_migration, preflight_retention_transition, prepare_retention_publication,
+    RetentionGenerationExpectation, RetentionNamespace, RetentionPolicy, RetentionRoot,
+    RootGeneration, execute_store_migration, preflight_retention_transition,
+    prepare_retention_publication,
 };
 
 /// Frozen canonical generation-one root.
@@ -116,6 +117,38 @@ pub(super) fn successor_preparation<'encoded>(
         preflight_retention_transition(
             RetentionGenerationExpectation::Current(current.root().generation()),
             Some(current),
+            candidate,
+            snapshot,
+        )
+    })??;
+    prepare_retention_publication(preflight, Some(current_manifest)).map_err(Into::into)
+}
+
+/// Builds a generation-one root for another namespace from `template`'s policy.
+pub(super) fn initial_root(
+    namespace: &[u8],
+    template: &AdmittedRetentionRoot<'_>,
+) -> Result<CanonicalRetentionRoot, Box<dyn Error>> {
+    let root = RetentionRoot::new(
+        RetentionNamespace::try_from(namespace)?,
+        RootGeneration::INITIAL,
+        RetentionPolicy::new(template.root().profile(), template.root().limits()),
+        None,
+        template.root().anchors().to_vec(),
+    )?;
+    CanonicalRetentionRoot::from_root(&root).map_err(Into::into)
+}
+
+/// Prepares `candidate_bytes` as a new namespace inserted into `current_manifest`.
+pub(super) fn new_namespace_preparation<'encoded>(
+    current_manifest: &AdmittedRetentionManifest<'_>,
+    candidate_bytes: &'encoded [u8],
+) -> Result<RetentionPublicationPreparation<'encoded>, Box<dyn Error>> {
+    let candidate = AdmittedRetentionRoot::decode(candidate_bytes)?;
+    let preflight = with_snapshot(|snapshot| {
+        preflight_retention_transition(
+            RetentionGenerationExpectation::Absent,
+            None,
             candidate,
             snapshot,
         )

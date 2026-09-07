@@ -26,13 +26,25 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
         require_no_retained_stage(&self.retention)?;
         let census =
             filesystem_retention_namespace::admit(&self.retention, &self.roots, &self.manifests)?;
-        filesystem_retention_namespace::admit_capacity(
-            census,
-            &self.roots,
-            preparation.candidate(),
-        )?;
         let current = filesystem_retention_current::observe(&self.retention, &self.manifests)?;
+        if current.is_none() && !census.is_empty() {
+            return Err(invalid_data(
+                "retention head is absent while retention pools hold artifacts; recovery is required",
+            ));
+        }
         let disposition = filesystem_retention_current::disposition(preparation, current.as_ref())?;
+        if disposition == RetentionTransitionDisposition::Publish {
+            filesystem_retention_namespace::admit_expectation(
+                &self.roots,
+                preparation.candidate(),
+                preparation.expected(),
+            )?;
+            filesystem_retention_namespace::admit_capacity(
+                census,
+                &self.roots,
+                preparation.candidate(),
+            )?;
+        }
         if disposition == RetentionTransitionDisposition::AlreadyCommitted {
             let current = current
                 .as_ref()

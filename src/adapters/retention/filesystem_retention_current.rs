@@ -85,7 +85,7 @@ pub(super) fn disposition(
 ) -> io::Result<RetentionTransitionDisposition> {
     let Some(current) = current else {
         return match preparation.expected() {
-            RetentionGenerationExpectation::Absent => Ok(RetentionTransitionDisposition::Publish),
+            RetentionGenerationExpectation::Absent => require_initial_publication(preparation),
             RetentionGenerationExpectation::Current(_) => Err(invalid_data(
                 "expected a current retention generation but no head is published",
             )),
@@ -160,6 +160,26 @@ pub(super) fn verify_committed(
         Ok(())
     } else {
         Err(invalid_data("committed root pool entry bytes disagreed"))
+    }
+}
+
+/// The empty retention state admits only a generation-one head with no predecessor.
+fn require_initial_publication(
+    preparation: &RetentionPublicationPreparation<'_>,
+) -> io::Result<RetentionTransitionDisposition> {
+    let publication = preparation
+        .publication()
+        .ok_or_else(|| invalid_data("already-committed retry against an absent retention head"))?;
+    let prepared = ChecksummedRetentionHead::decode(publication.head().encoded())
+        .map_err(|_source| invalid_data("prepared retention head refused admission"))?;
+    if prepared.head().generation() == crate::LivenessGeneration::INITIAL
+        && prepared.head().predecessor().is_none()
+    {
+        Ok(RetentionTransitionDisposition::Publish)
+    } else {
+        Err(invalid_data(
+            "absent retention head admits only an initial publication with no predecessor",
+        ))
     }
 }
 

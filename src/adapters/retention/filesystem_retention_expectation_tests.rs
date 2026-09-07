@@ -1,0 +1,95 @@
+//! Filesystem retention expectation laws: the head and namespace must match the claim.
+
+use std::error::Error;
+use std::fs;
+use std::io;
+
+use super::filesystem_retention_test_fixture::{
+    ROOT_HEX, fixture, head_path, initial_preparation, initial_root, new_namespace_preparation,
+    open_authority, retention_witness, root_pool_path, successor_preparation, successor_root,
+};
+use super::{AdmittedRetentionManifest, AdmittedRetentionRoot, RetentionPublicationStorage};
+use crate::execute_retention_publication;
+
+#[test]
+fn absent_head_with_retention_artifacts_refuses_as_recovery() -> Result<(), Box<dyn Error>> {
+    let (sandbox, mut authority) = open_authority("filesystem-retention-absent-head-artifacts")?;
+    let root_bytes = fixture(ROOT_HEX)?;
+    let published = initial_preparation(&root_bytes)?;
+    let _receipt = execute_retention_publication(&mut authority, &published)?;
+    fs::remove_file(head_path(sandbox.path()))?;
+    let before = retention_witness(sandbox.path())?;
+    let retry = initial_preparation(&root_bytes)?;
+
+    let error = RetentionPublicationStorage::verify_current(&mut authority, &retry)
+        .err()
+        .ok_or("absent head over populated pools was unexpectedly treated as empty")?;
+
+    assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert_eq!(retention_witness(sandbox.path())?, before);
+    drop(authority);
+    sandbox.remove()?;
+    Ok(())
+}
+
+#[test]
+fn absent_expectation_refuses_an_orphan_directory_for_a_new_namespace() -> Result<(), Box<dyn Error>>
+{
+    let (sandbox, mut authority) = open_authority("filesystem-retention-orphan-new-namespace")?;
+    let root_bytes = fixture(ROOT_HEX)?;
+    let _published =
+        execute_retention_publication(&mut authority, &initial_preparation(&root_bytes)?)?;
+    let current = authority
+        .observe_current()?
+        .ok_or("published retention head was not observed")?;
+    let current_manifest = AdmittedRetentionManifest::decode(current.manifest_bytes())?;
+    let template = AdmittedRetentionRoot::decode(&root_bytes)?;
+    let candidate = initial_root(b"second-namespace", &template)?;
+    let preparation = new_namespace_preparation(&current_manifest, candidate.encoded())?;
+    let namespace = root_pool_path(sandbox.path(), preparation.candidate())
+        .parent()
+        .ok_or("root pool path has no namespace directory")?
+        .to_path_buf();
+    fs::create_dir(&namespace)?;
+    let before = retention_witness(sandbox.path())?;
+
+    let error = RetentionPublicationStorage::verify_current(&mut authority, &preparation)
+        .err()
+        .ok_or("orphan namespace directory was unexpectedly admitted for an Absent expectation")?;
+
+    assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert_eq!(retention_witness(sandbox.path())?, before);
+    drop(authority);
+    sandbox.remove()?;
+    Ok(())
+}
+
+#[test]
+fn current_expectation_refuses_when_the_namespace_directory_is_absent() -> Result<(), Box<dyn Error>>
+{
+    let (sandbox, mut authority) = open_authority("filesystem-retention-current-namespace-absent")?;
+    let root_bytes = fixture(ROOT_HEX)?;
+    let _published =
+        execute_retention_publication(&mut authority, &initial_preparation(&root_bytes)?)?;
+    let current = authority
+        .observe_current()?
+        .ok_or("published retention head was not observed")?;
+    let current_root = AdmittedRetentionRoot::decode(&root_bytes)?;
+    let current_manifest = AdmittedRetentionManifest::decode(current.manifest_bytes())?;
+    let namespace = root_pool_path(sandbox.path(), &current_root)
+        .parent()
+        .ok_or("root pool path has no namespace directory")?
+        .to_path_buf();
+    fs::remove_dir_all(&namespace)?;
+    let candidate = successor_root(&current_root)?;
+    let preparation = successor_preparation(&current_root, &current_manifest, candidate.encoded())?;
+
+    let error = RetentionPublicationStorage::verify_current(&mut authority, &preparation)
+        .err()
+        .ok_or("successor over an absent namespace directory was unexpectedly admitted")?;
+
+    assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    drop(authority);
+    sandbox.remove()?;
+    Ok(())
+}

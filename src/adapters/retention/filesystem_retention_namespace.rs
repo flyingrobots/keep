@@ -9,7 +9,7 @@ use cap_std::fs::Dir;
 use super::AdmittedRetentionRoot;
 use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_stage::invalid_data;
-use crate::RetentionManifest;
+use crate::{RetentionGenerationExpectation, RetentionManifest};
 
 const CANONICAL_ENTRIES: [&str; 3] = [pool_name::HEAD, pool_name::ROOTS, pool_name::MANIFESTS];
 const DIGEST_HEX: usize = 64;
@@ -23,6 +23,15 @@ const MANIFEST_SUFFIX: &str = ".manifest";
 pub(super) struct RetentionNamespaceCensus {
     /// Digest-named root namespace directories currently present.
     pub(super) namespace_count: u32,
+    /// Canonical manifest pool entries currently present.
+    pub(super) manifest_count: u32,
+}
+
+impl RetentionNamespaceCensus {
+    /// Returns whether no retention artifact exists in either pool.
+    pub(super) const fn is_empty(self) -> bool {
+        self.namespace_count == 0 && self.manifest_count == 0
+    }
 }
 
 /// Admits the complete `retention` namespace before any forward write.
@@ -56,10 +65,13 @@ pub(super) fn admit(
             .checked_add(1)
             .ok_or_else(|| invalid_data("retention namespace count overflowed"))?;
         let namespace = roots.open_dir_nofollow(&name)?;
-        admit_pool(&namespace, ROOT_SUFFIX, "retention root pool")?;
+        let _roots = admit_pool(&namespace, ROOT_SUFFIX, "retention root pool")?;
     }
-    admit_pool(manifests, MANIFEST_SUFFIX, "retention manifest pool")?;
-    Ok(RetentionNamespaceCensus { namespace_count })
+    let manifest_count = admit_pool(manifests, MANIFEST_SUFFIX, "retention manifest pool")?;
+    Ok(RetentionNamespaceCensus {
+        namespace_count,
+        manifest_count,
+    })
 }
 
 /// Refuses a candidate that would create a namespace beyond the format ceiling.
@@ -90,7 +102,40 @@ pub(super) fn admit_capacity(
     }
 }
 
-fn admit_pool(pool: &Dir, suffix: &str, label: &'static str) -> io::Result<()> {
+/// Requires the candidate's namespace directory to match the claimed expectation.
+///
+/// An `Absent` expectation asserts the namespace has never been published, so
+/// any existing directory is an orphan or a substitution and refuses. A
+/// `Current` expectation asserts a published generation, so an absent
+/// directory means the claimed predecessor is unavailable and refuses.
+pub(super) fn admit_expectation(
+    roots: &Dir,
+    candidate: &AdmittedRetentionRoot<'_>,
+    expected: RetentionGenerationExpectation,
+) -> io::Result<()> {
+    let name = pool_name::namespace(candidate.root().namespace().digest());
+    let observed = match roots.symlink_metadata(&name) {
+        Ok(metadata) => Some(metadata.is_dir()),
+        Err(source) if source.kind() == io::ErrorKind::NotFound => None,
+        Err(source) => return Err(source),
+    };
+    match (expected, observed) {
+        (RetentionGenerationExpectation::Absent, None)
+        | (RetentionGenerationExpectation::Current(_), Some(true)) => Ok(()),
+        (RetentionGenerationExpectation::Absent, Some(_)) => Err(invalid_data(
+            "namespace directory exists although the namespace is expected absent",
+        )),
+        (RetentionGenerationExpectation::Current(_), None) => Err(invalid_data(
+            "namespace directory is absent although a current generation is expected",
+        )),
+        (RetentionGenerationExpectation::Current(_), Some(false)) => {
+            Err(invalid_data("namespace entry is not a directory"))
+        }
+    }
+}
+
+fn admit_pool(pool: &Dir, suffix: &str, label: &'static str) -> io::Result<u32> {
+    let mut count = 0_u32;
     for entry in pool.entries()? {
         let entry = entry?;
         if !is_pool_name(&entry.file_name(), suffix) || !entry.metadata()?.is_file() {
@@ -99,8 +144,11 @@ fn admit_pool(pool: &Dir, suffix: &str, label: &'static str) -> io::Result<()> {
                 format!("{label} carries a noncanonical entry"),
             ));
         }
+        count = count
+            .checked_add(1)
+            .ok_or_else(|| invalid_data("retention pool entry count overflowed"))?;
     }
-    Ok(())
+    Ok(count)
 }
 
 fn is_pool_name(name: &OsStr, suffix: &str) -> bool {

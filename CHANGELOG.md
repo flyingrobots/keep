@@ -51,7 +51,12 @@ after its public API and format compatibility policies are established.
   `<generation>-<digest>` file with its canonical suffix. Existing namespace
   directories, including recovery-protected orphans, count against the 4,096
   namespace ceiling, and a candidate whose namespace would be the 4,097th
-  refuses before its root stage exists.
+  refuses before its root stage exists. Current-state verification now binds
+  on-disk state to the claimed expectation: an absent `retention/HEAD` is the
+  empty state only while both pools are empty and admits only an initial head
+  with no predecessor; a namespace directory must be absent for an `Absent`
+  expectation and present for a `Current` one. Every mismatch refuses as
+  recovery-required before any stage is written.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production
