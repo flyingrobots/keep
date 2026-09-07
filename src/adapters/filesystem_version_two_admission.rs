@@ -7,9 +7,11 @@ use cap_std::ambient_authority;
 use cap_std::fs::Dir;
 
 use super::filesystem_root_identity::FilesystemRootIdentity;
+pub(super) use super::filesystem_version_two_records::BoundRootIdentity;
 use super::{
-    FilesystemPlatformAdmissionError, FilesystemWriterLock, filesystem_initialization_namespace,
-    filesystem_platform_profile, filesystem_version_two_records,
+    FilesystemPlatformAdmissionError, FilesystemWriterLock, StoreRootIdentityCoordinate,
+    filesystem_initialization_namespace, filesystem_platform_profile,
+    filesystem_version_two_records,
 };
 
 /// Exclusive writer authority over a completely migrated version-two root.
@@ -66,11 +68,49 @@ impl FilesystemVersionTwoAdmission {
             .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
         filesystem_initialization_namespace::admit_version_two(&directory)
             .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
-        let _root_identity: FilesystemRootIdentity =
-            filesystem_platform_profile::root_identity(&directory)
-                .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
-        filesystem_version_two_records::admit(&directory)
+        let observed = filesystem_platform_profile::root_identity(&directory)
+            .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
+        let bound = filesystem_version_two_records::admit(&directory)
             .map_err(|source| FilesystemPlatformAdmissionError::MigrationRecord { source })?;
+        require_root_identity(bound, observed)?;
         Ok(Self { lock })
     }
+}
+
+/// Requires the reopened root to be the physical root the migration intent bound.
+///
+/// Device, mount, and file coordinates are compared exactly, as the migration
+/// authority compares them before mutation. A relocated or restored store
+/// refuses rather than receiving retention authority over a root whose intent
+/// describes a different volume.
+pub(super) fn require_root_identity(
+    bound: BoundRootIdentity,
+    observed: FilesystemRootIdentity,
+) -> Result<(), FilesystemPlatformAdmissionError> {
+    for (coordinate, expected, actual) in [
+        (
+            StoreRootIdentityCoordinate::Device,
+            bound.device(),
+            observed.device(),
+        ),
+        (
+            StoreRootIdentityCoordinate::Mount,
+            bound.mount(),
+            observed.mount(),
+        ),
+        (
+            StoreRootIdentityCoordinate::File,
+            bound.file(),
+            observed.file(),
+        ),
+    ] {
+        if expected != actual {
+            return Err(FilesystemPlatformAdmissionError::RootIdentityChanged {
+                coordinate,
+                expected,
+                observed: actual,
+            });
+        }
+    }
+    Ok(())
 }

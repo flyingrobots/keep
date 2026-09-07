@@ -15,14 +15,45 @@ const RECEIPT_NAME: &str = "migration.receipt";
 const MARKER_LENGTH: usize = 96;
 const RECORD_LENGTH: usize = 256;
 
+/// Root identity coordinates bound into an admitted `migration.intent`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct BoundRootIdentity {
+    device: u64,
+    mount: u64,
+    file: u64,
+}
+
+impl BoundRootIdentity {
+    pub(super) const fn new(device: u64, mount: u64, file: u64) -> Self {
+        Self {
+            device,
+            mount,
+            file,
+        }
+    }
+
+    pub(super) const fn device(self) -> u64 {
+        self.device
+    }
+
+    pub(super) const fn mount(self) -> u64 {
+        self.mount
+    }
+
+    pub(super) const fn file(self) -> u64 {
+        self.file
+    }
+}
+
 /// Reads and jointly admits `FORMAT`, `migration.intent`, and `migration.receipt`.
 ///
 /// Each record is reopened without following links, bounded to its exact
 /// canonical length, and decoded. The receipt is admitted only against the
 /// decoded intent and marker, so a record set that is individually
 /// well-formed but mutually inconsistent refuses. Writer authority over a
-/// version-two root must not be returned before this admission succeeds.
-pub(super) fn admit(root: &Dir) -> io::Result<()> {
+/// version-two root must not be returned before this admission succeeds. The
+/// intent's bound root coordinates are returned for identity comparison.
+pub(super) fn admit(root: &Dir) -> io::Result<BoundRootIdentity> {
     let marker_bytes = read_exact(root, MARKER_NAME, MARKER_LENGTH)?;
     let intent_bytes = read_exact(root, INTENT_NAME, RECORD_LENGTH)?;
     let receipt_bytes = read_exact(root, RECEIPT_NAME, RECORD_LENGTH)?;
@@ -32,7 +63,11 @@ pub(super) fn admit(root: &Dir) -> io::Result<()> {
         .map_err(|source| invalid_data(INTENT_NAME, &source))?;
     let _receipt = AdmittedStoreMigrationReceipt::decode(&receipt_bytes, &intent, &marker)
         .map_err(|source| invalid_data(RECEIPT_NAME, &source))?;
-    Ok(())
+    Ok(BoundRootIdentity::new(
+        intent.root_device_identity().get(),
+        intent.root_mount_identity().get(),
+        intent.root_file_identity().get(),
+    ))
 }
 
 fn read_exact(root: &Dir, name: &str, length: usize) -> io::Result<Vec<u8>> {

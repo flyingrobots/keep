@@ -10,6 +10,11 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Version-two reopen compares the reopened root's device, mount, and file
+  identity with the coordinates bound into `migration.intent` and refuses a
+  relocated or restored store with
+  `FilesystemPlatformAdmissionError::RootIdentityChanged`, matching the
+  comparison the migration authority makes before mutation.
 - A successor retention publication now reopens the predecessor root the
   current manifest selects, bounded by the root format's maximum encoded
   length, and requires it to decode to exactly that generation and digest; a

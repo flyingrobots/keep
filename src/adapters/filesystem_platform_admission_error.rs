@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fmt;
 use std::io;
 
-use super::WriterLockAcquireError;
+use super::{StoreRootIdentityCoordinate, WriterLockAcquireError};
 
 /// Failure to reacquire writer authority over one published filesystem store.
 #[derive(Debug)]
@@ -29,6 +29,15 @@ pub enum FilesystemPlatformAdmissionError {
         /// Preserved record-admission failure.
         source: io::Error,
     },
+    /// The reopened root's physical identity is not the one the migration intent bound.
+    RootIdentityChanged {
+        /// The coordinate that disagreed.
+        coordinate: StoreRootIdentityCoordinate,
+        /// The value bound into `migration.intent`.
+        expected: u64,
+        /// The value observed on reopen.
+        observed: u64,
+    },
 }
 
 impl fmt::Display for FilesystemPlatformAdmissionError {
@@ -38,6 +47,9 @@ impl fmt::Display for FilesystemPlatformAdmissionError {
             Self::WriterLock { .. } => "published store writer-lock acquisition failed",
             Self::Namespace { .. } => "published store namespace admission failed",
             Self::MigrationRecord { .. } => "version-two migration record admission failed",
+            Self::RootIdentityChanged { .. } => {
+                "reopened root identity disagrees with the migration intent"
+            }
         })
     }
 }
@@ -48,6 +60,7 @@ impl Error for FilesystemPlatformAdmissionError {
             Self::Platform { source }
             | Self::Namespace { source }
             | Self::MigrationRecord { source } => Some(source),
+            Self::RootIdentityChanged { .. } => None,
             Self::WriterLock { source } => Some(source),
         }
     }

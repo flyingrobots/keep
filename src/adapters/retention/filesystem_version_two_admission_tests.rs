@@ -4,7 +4,11 @@ use std::error::Error;
 use std::fs;
 
 use super::filesystem_retention_test_fixture::migrated_store;
-use crate::adapters::{FilesystemPlatformAdmissionError, FilesystemVersionTwoAdmission};
+use crate::adapters::filesystem_root_identity::FilesystemRootIdentity;
+use crate::adapters::filesystem_version_two_admission::{BoundRootIdentity, require_root_identity};
+use crate::adapters::{
+    FilesystemPlatformAdmissionError, FilesystemVersionTwoAdmission, StoreRootIdentityCoordinate,
+};
 
 #[test]
 fn version_two_reopen_refuses_a_corrupt_format_marker() -> Result<(), Box<dyn Error>> {
@@ -110,4 +114,33 @@ fn production_version_two_reopen_admits_an_exact_migrated_store() -> Result<(), 
     drop(admission);
     sandbox.remove()?;
     Ok(())
+}
+
+#[test]
+fn reopened_root_identity_must_match_the_intent_coordinates() {
+    let bound = BoundRootIdentity::new(1, 2, 3);
+
+    assert!(require_root_identity(bound, FilesystemRootIdentity::new(1, 2, 3)).is_ok());
+    assert!(matches!(
+        require_root_identity(bound, FilesystemRootIdentity::new(1, 2, 4)),
+        Err(FilesystemPlatformAdmissionError::RootIdentityChanged {
+            coordinate: StoreRootIdentityCoordinate::File,
+            expected: 3,
+            observed: 4,
+        })
+    ));
+    assert!(matches!(
+        require_root_identity(bound, FilesystemRootIdentity::new(9, 2, 3)),
+        Err(FilesystemPlatformAdmissionError::RootIdentityChanged {
+            coordinate: StoreRootIdentityCoordinate::Device,
+            ..
+        })
+    ));
+    assert!(matches!(
+        require_root_identity(bound, FilesystemRootIdentity::new(1, 7, 3)),
+        Err(FilesystemPlatformAdmissionError::RootIdentityChanged {
+            coordinate: StoreRootIdentityCoordinate::Mount,
+            ..
+        })
+    ));
 }
