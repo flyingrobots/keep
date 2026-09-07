@@ -32,8 +32,8 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
             return Err(RetentionCurrentStateRefusal::HeadAbsentWithArtifacts.into_io());
         }
         let disposition = filesystem_retention_current::disposition(preparation, current.as_ref())?;
+        filesystem_retention_catalog::require_current_catalog(&self.root, preparation)?;
         if disposition == RetentionTransitionDisposition::Publish {
-            filesystem_retention_catalog::require_current_catalog(&self.root, preparation)?;
             filesystem_retention_namespace::admit_expectation(
                 &self.roots,
                 preparation.candidate(),

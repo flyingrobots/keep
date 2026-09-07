@@ -10,6 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Retention current-state verification binds this store's catalog `HEAD` to
+  the closure's catalog coordinates for every disposition, so an
+  already-committed retry no longer returns a receipt citing a catalog this
+  store does not name.
 - Version-one recovery adapters refuse version-two residue at the store root
   before pinning any pool: a format marker, reader fence, migration record or
   stage, or a `retention`, `gc`, or `recovery` directory means recovery
