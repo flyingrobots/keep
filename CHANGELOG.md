@@ -10,6 +10,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- A retention stage left behind by a failed write is documented as recovery
+  evidence: it is never unlinked, and the next publication refuses until
+  recovery classifies it, exactly as the segment-stage doctrine already states.
 - Version-two namespace admission now descends into the protocol directories:
   `retention` must hold both immutable pools, `gc` must be empty, and
   `recovery` must hold exactly an empty `dispositions`, matching what the

@@ -152,3 +152,29 @@ fn migrated_witness(root: &Path) -> io::Result<Vec<(PathBuf, Vec<u8>)>> {
     witness.sort();
     Ok(witness)
 }
+
+#[test]
+fn retained_manifest_stage_refuses_publication_before_recovery() -> Result<(), Box<dyn Error>> {
+    let (sandbox, mut authority) =
+        open_authority("filesystem-retention-recovery-required-manifest")?;
+    let root_bytes = fixture(ROOT_HEX)?;
+    let preparation = initial_preparation(&root_bytes)?;
+    fs::write(
+        sandbox.path().join("retention").join("manifest.next"),
+        b"partial bytes left by a failed write",
+    )?;
+    let before = retention_witness(sandbox.path())?;
+
+    let error = execute_retention_publication(&mut authority, &preparation)
+        .err()
+        .ok_or("retained manifest stage was unexpectedly published over")?;
+
+    let RetentionPublicationError::CurrentVerification { source } = error else {
+        return Err("retained stage refused outside current-state verification".into());
+    };
+    assert_eq!(source.kind(), io::ErrorKind::InvalidData);
+    assert_eq!(retention_witness(sandbox.path())?, before);
+    drop(authority);
+    sandbox.remove()?;
+    Ok(())
+}

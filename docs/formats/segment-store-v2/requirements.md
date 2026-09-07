@@ -61,6 +61,8 @@ case is not evidence.
   production-admitted; partial-prefix recovery and crash evidence remain
   mandatory. This applies to retention publication exactly as it applies to
   migration: the filesystem publication writer refuses every retained stage
-  instead of continuing it.
+  instead of continuing it. A stage left behind by a failed write is recovery
+  evidence like any crash residue; it is never unlinked, and the next
+  publication refuses until recovery classifies it.
 - Benchmarks are required before performance-sensitive retention or migration
   optimization.
