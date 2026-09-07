@@ -125,9 +125,13 @@ pub(super) fn require_directory(parent: &Dir, name: &str) -> io::Result<()> {
     }
 }
 
-pub(super) fn require_regular(parent: &Dir, name: &str, length: Option<u64>) -> io::Result<()> {
+pub(super) fn require_regular(parent: &Dir, name: &str, length: Option<usize>) -> io::Result<()> {
     let metadata = parent.symlink_metadata(name)?;
-    if metadata.is_file() && length.is_none_or(|expected| metadata.len() == expected) {
+    let expected = length
+        .map(u64::try_from)
+        .transpose()
+        .map_err(|_source| ambiguous("required migration file length exceeded u64"))?;
+    if metadata.is_file() && expected.is_none_or(|expected| metadata.len() == expected) {
         Ok(())
     } else {
         Err(ambiguous(

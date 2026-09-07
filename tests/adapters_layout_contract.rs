@@ -1,5 +1,6 @@
 //! Source-layout laws for the adapters tree: the module root stays a scannable
-//! manifest, and files rustfmt cannot rewrap stay within the standard width.
+//! manifest, files rustfmt cannot rewrap stay within the standard width, and
+//! record readers take their fixed lengths from the decoders that define them.
 
 const ADAPTERS_ROOT: &str = include_str!("../src/adapters/mod.rs");
 const RETENTION_REFUSAL: &str =
@@ -51,5 +52,47 @@ fn retention_refusal_lines_stay_within_one_hundred_columns() {
             "filesystem_retention_refusal.rs:{} is {width} columns wide",
             index + 1
         );
+    }
+}
+
+const RECORD_READERS: [(&str, &str); 4] = [
+    (
+        "src/adapters/retention/filesystem_retention_current.rs",
+        include_str!("../src/adapters/retention/filesystem_retention_current.rs"),
+    ),
+    (
+        "src/adapters/retention/filesystem_retention_catalog.rs",
+        include_str!("../src/adapters/retention/filesystem_retention_catalog.rs"),
+    ),
+    (
+        "src/adapters/filesystem_version_two_records.rs",
+        include_str!("../src/adapters/filesystem_version_two_records.rs"),
+    ),
+    (
+        "src/adapters/store_migration/filesystem_migration_namespace.rs",
+        include_str!("../src/adapters/store_migration/filesystem_migration_namespace.rs"),
+    ),
+];
+
+/// Fixed record lengths belong to the decoders that define the formats. A
+/// reader that restates `144`, `128`, `96`, or `256` can drift from them, so
+/// only comments may carry those numbers in the record-reading modules.
+#[test]
+fn record_readers_take_lengths_from_the_decoders() {
+    for (path, source) in RECORD_READERS {
+        for (index, line) in source.lines().enumerate() {
+            let code = line.trim_start();
+            if code.starts_with("//") {
+                continue;
+            }
+            let restated = code
+                .split(|character: char| !character.is_ascii_alphanumeric() && character != '_')
+                .any(|token| matches!(token, "144" | "128" | "96" | "256"));
+            assert!(
+                !restated,
+                "{path}:{} restates a record length instead of naming its decoder: {line}",
+                index + 1
+            );
+        }
     }
 }

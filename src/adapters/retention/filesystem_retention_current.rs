@@ -13,7 +13,7 @@ use super::{
 };
 use crate::RetentionGenerationExpectation;
 
-const HEAD_LENGTH: usize = 144;
+const HEAD_LENGTH: usize = super::head_decoder::ENCODED_LENGTH;
 
 /// Exact bytes of one published retention head and the manifest it selects.
 ///

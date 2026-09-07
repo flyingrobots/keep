@@ -5,6 +5,9 @@ use std::io::{self, Read};
 use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
 use cap_std::fs::{Dir, OpenOptions};
 
+use super::store_migration::{
+    FORMAT_MARKER_LENGTH, MIGRATION_INTENT_LENGTH, MIGRATION_RECEIPT_LENGTH,
+};
 use super::{
     AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, AdmittedStoreMigrationReceipt,
 };
@@ -12,8 +15,6 @@ use super::{
 const MARKER_NAME: &str = "FORMAT";
 const INTENT_NAME: &str = "migration.intent";
 const RECEIPT_NAME: &str = "migration.receipt";
-const MARKER_LENGTH: usize = 96;
-const RECORD_LENGTH: usize = 256;
 
 /// Root identity coordinates bound into an admitted `migration.intent`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -54,9 +55,9 @@ impl BoundRootIdentity {
 /// version-two root must not be returned before this admission succeeds. The
 /// intent's bound root coordinates are returned for identity comparison.
 pub(super) fn admit(root: &Dir) -> io::Result<BoundRootIdentity> {
-    let marker_bytes = read_exact(root, MARKER_NAME, MARKER_LENGTH)?;
-    let intent_bytes = read_exact(root, INTENT_NAME, RECORD_LENGTH)?;
-    let receipt_bytes = read_exact(root, RECEIPT_NAME, RECORD_LENGTH)?;
+    let marker_bytes = read_exact(root, MARKER_NAME, FORMAT_MARKER_LENGTH)?;
+    let intent_bytes = read_exact(root, INTENT_NAME, MIGRATION_INTENT_LENGTH)?;
+    let receipt_bytes = read_exact(root, RECEIPT_NAME, MIGRATION_RECEIPT_LENGTH)?;
     let marker = AdmittedStoreFormatMarker::decode(&marker_bytes)
         .map_err(|source| invalid_data(MARKER_NAME, &source))?;
     let intent = AdmittedStoreMigrationIntent::decode(&intent_bytes)

@@ -9,7 +9,7 @@ use super::{RetentionCurrentStateRefusal, RetentionPublicationPreparation};
 use crate::adapters::ChecksummedPublicationHead;
 
 const HEAD_NAME: &str = "HEAD";
-const HEAD_LENGTH: usize = 128;
+const HEAD_LENGTH: usize = crate::adapters::publication_head_decoder::ENCODED_LENGTH;
 
 /// Requires the store's catalog head to name the catalog the closure was verified against.
 ///

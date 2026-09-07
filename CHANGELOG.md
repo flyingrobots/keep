@@ -242,6 +242,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- The retention head, catalog head, format marker, migration intent, and
+  migration receipt readers take their fixed record lengths from the decoders
+  that define those formats instead of restating the numbers; a contract test
+  keeps the record-reading modules free of bare length literals.
 - Version-one reopen refuses a migrated root, and `admit_version_two` owns the
   separate version-2 namespace boundary. Version-one recovery adapters refuse
   version-two residue at the store root before pinning any pool: a format

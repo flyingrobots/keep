@@ -6,7 +6,7 @@ use super::{
 };
 use crate::RetentionManifest;
 
-pub(super) const ENCODED_LENGTH: usize = 96;
+pub(in crate::adapters) const ENCODED_LENGTH: usize = 96;
 pub(super) const CHECKSUM_OFFSET: usize = 64;
 pub(super) const MAGIC: [u8; 16] = *b"KEEP:STORE:V2\0\0\0";
 pub(super) const VERSION: u16 = 2;

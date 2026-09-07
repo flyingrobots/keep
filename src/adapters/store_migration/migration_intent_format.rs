@@ -7,7 +7,7 @@ use super::{
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
 pub(super) const CHECKSUM_OFFSET: usize = 224;
-pub(super) const ENCODED_LENGTH: usize = 256;
+pub(in crate::adapters) const ENCODED_LENGTH: usize = 256;
 pub(super) const MAGIC: [u8; 16] = *b"KEEP:MIG:INT2\0\0\0";
 pub(super) const RECORD_LENGTH: u16 = 256;
 pub(super) const VERSION: u16 = 2;

@@ -10,6 +10,8 @@ use super::filesystem_migration_namespace_directory::{
     require_regular, required_directory,
 };
 use super::filesystem_migration_reader_fence;
+use super::{FORMAT_MARKER_LENGTH, MIGRATION_INTENT_LENGTH, MIGRATION_RECEIPT_LENGTH};
+use crate::adapters::publication_head_decoder::ENCODED_LENGTH as PUBLICATION_HEAD_LENGTH;
 
 const WRITER_LOCK: &str = "writer.lock";
 const STAGING: &str = "staging";
@@ -137,13 +139,13 @@ pub(super) fn verify_marker_view(root: &Dir) -> io::Result<()> {
 
 pub(super) fn verify_marker_contents(root: &Dir) -> io::Result<()> {
     verify_prefix_directories(root)?;
-    require_regular(root, "FORMAT", Some(96))
+    require_regular(root, "FORMAT", Some(FORMAT_MARKER_LENGTH))
 }
 
 pub(super) fn verify_receipt_view(root: &Dir) -> io::Result<()> {
     verify_prefix_directories(root)?;
-    require_regular(root, "FORMAT", Some(96))?;
-    require_regular(root, "migration.receipt", Some(256))?;
+    require_regular(root, "FORMAT", Some(FORMAT_MARKER_LENGTH))?;
+    require_regular(root, "migration.receipt", Some(MIGRATION_RECEIPT_LENGTH))?;
     require_exact_membership(root, &RECEIPT_ROOT)
 }
 
@@ -177,8 +179,8 @@ fn require_v1_and_intent(root: &Dir) -> io::Result<()> {
     require_directory(root, STAGING)?;
     require_directory(root, SEGMENTS)?;
     require_directory(root, CATALOGS)?;
-    require_regular(root, HEAD, Some(128))?;
-    require_regular(root, INTENT, Some(256))
+    require_regular(root, HEAD, Some(PUBLICATION_HEAD_LENGTH))?;
+    require_regular(root, INTENT, Some(MIGRATION_INTENT_LENGTH))
 }
 
 fn verify_prefix_directories(root: &Dir) -> io::Result<()> {
