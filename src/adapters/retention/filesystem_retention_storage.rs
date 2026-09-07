@@ -68,7 +68,8 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
     }
 
     fn synchronize_root_stage(&mut self) -> io::Result<()> {
-        self.root_stage()?.synchronize(&self.retention)
+        self.root_stage()?.synchronize(&self.retention)?;
+        synchronize_directory(&self.retention)
     }
 
     fn admit_root_namespace(
@@ -113,7 +114,8 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
     }
 
     fn synchronize_manifest_stage(&mut self) -> io::Result<()> {
-        self.manifest_stage()?.synchronize(&self.retention)
+        self.manifest_stage()?.synchronize(&self.retention)?;
+        synchronize_directory(&self.retention)
     }
 
     fn link_manifest(&mut self, manifest: &CanonicalRetentionManifest) -> io::Result<()> {
@@ -138,7 +140,8 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
     }
 
     fn synchronize_head_stage(&mut self) -> io::Result<()> {
-        self.head_stage()?.synchronize(&self.retention)
+        self.head_stage()?.synchronize(&self.retention)?;
+        synchronize_directory(&self.retention)
     }
 
     fn replace_head(&mut self) -> io::Result<()> {

@@ -57,7 +57,10 @@ after its public API and format compatibility policies are established.
   empty state only while both pools are empty and admits only an initial head
   with no predecessor; a namespace directory must be absent for an `Absent`
   expectation and present for a `Current` one. Every mismatch refuses as
-  recovery-required before any stage is written.
+  recovery-required before any stage is written. Each retention stage
+  synchronization now also synchronizes the `retention` directory, so the
+  `root.next`, `manifest.next`, and `head.next` entries are durable before the
+  namespace directory, pool links, or head replacement that depend on them.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production
