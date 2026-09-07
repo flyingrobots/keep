@@ -242,6 +242,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- `FilesystemPlatformAdmissionError` is `#[non_exhaustive]`, so a future
+  admission refusal can be added without a breaking change; a source contract
+  pins the attribute.
 - `ObservedRetentionState` carries the decoded head and manifest alongside
   their exact bytes, so disposition, already-committed verification, and
   predecessor verification decode each record once; the disposition names the

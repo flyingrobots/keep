@@ -8,6 +8,7 @@ use super::{StoreRootIdentityCoordinate, WriterLockAcquireError};
 
 /// Failure to reacquire writer authority over one published filesystem store.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum FilesystemPlatformAdmissionError {
     /// The store root does not satisfy the production platform profile.
     Platform {
