@@ -43,6 +43,8 @@ impl From<&Metadata> for EntryIdentity {
 pub(super) enum ExactRecordRefusal {
     /// The expected length does not fit the filesystem's `u64` length.
     LengthOverflow,
+    /// The entry is not a regular file of the expected length.
+    KindOrLength,
     /// The entry's kind, length, or device and inode identity disagreed.
     KindLengthOrIdentity,
     /// The entry's bytes disagreed with the expected record.
@@ -66,6 +68,7 @@ impl fmt::Display for ExactRecordRefusal {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(match self {
             Self::LengthOverflow => "exact record length exceeded the filesystem's range",
+            Self::KindOrLength => "exact record kind or length disagreed",
             Self::KindLengthOrIdentity => "exact record kind, length, or identity disagreed",
             Self::Bytes => "exact record bytes disagreed",
             Self::TrailingBytes => "exact record carried trailing bytes",
@@ -102,6 +105,32 @@ impl From<ExactRecordRefusal> for ExactRecordError {
     fn from(refusal: ExactRecordRefusal) -> Self {
         Self::Refused(refusal)
     }
+}
+
+/// Reads exactly `length` bytes of the regular file `name`, or `None` if absent.
+///
+/// The open follows no links and does not block. A present entry that is not
+/// a regular file of exactly `length` bytes refuses before any byte is read,
+/// and bytes beyond `length` refuse after.
+pub(super) fn read_exact_optional(
+    directory: &Dir,
+    name: &str,
+    length: usize,
+) -> Result<Option<Vec<u8>>, ExactRecordError> {
+    let mut file = match open_read(directory, name) {
+        Ok(file) => file,
+        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(source) => return Err(source.into()),
+    };
+    let expected_length = exact_length(length)?;
+    let metadata = file.metadata()?;
+    if !metadata.is_file() || metadata.len() != expected_length {
+        return Err(ExactRecordRefusal::KindOrLength.into());
+    }
+    let mut bytes = vec![0_u8; length];
+    file.read_exact(&mut bytes)?;
+    require_no_trailing_bytes(&mut file)?;
+    Ok(Some(bytes))
 }
 
 /// Reverifies that `name` is exactly `expected` with `identity`, before and after reading.

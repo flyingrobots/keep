@@ -1,15 +1,18 @@
 //! This module owns exact observation of the current filesystem retention state.
 
-use std::io::{self, Read};
+use std::io;
 
-use cap_fs_ext::{DirExt, FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
-use cap_std::fs::{Dir, OpenOptions};
+use cap_fs_ext::DirExt;
+use cap_std::fs::Dir;
 
 use super::filesystem_retention_pool_name as pool_name;
 use super::root_header_decoder;
 use super::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, ChecksummedRetentionHead,
     RetentionCurrentStateRefusal, RetentionPublicationPreparation, RetentionTransitionDisposition,
+};
+use crate::adapters::filesystem_exact_record::{
+    self as exact_record, ExactRecordError, ExactRecordRefusal,
 };
 use crate::{RetentionGenerationExpectation, RetentionHead, RetentionManifest};
 
@@ -265,29 +268,27 @@ fn require_initial_publication(
     }
 }
 
+/// Reads one optional exact record, mapping shared refusals onto this protocol's.
 pub(super) fn read_exact_optional(
     directory: &Dir,
     name: &str,
     length: usize,
 ) -> io::Result<Option<Box<[u8]>>> {
-    let mut options = OpenOptions::new();
-    options.read(true).follow(FollowSymlinks::No).nonblock(true);
-    let mut file = match directory.open_with(name, &options) {
-        Ok(file) => file,
-        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(source) => return Err(source),
-    };
-    let expected_length = u64::try_from(length)
-        .map_err(|_source| RetentionCurrentStateRefusal::RecordLengthOverflow.into_io())?;
-    let metadata = file.metadata()?;
-    if !metadata.is_file() || metadata.len() != expected_length {
-        return Err(RetentionCurrentStateRefusal::RecordKindOrLength.into_io());
+    match exact_record::read_exact_optional(directory, name, length) {
+        Ok(bytes) => Ok(bytes.map(Vec::into_boxed_slice)),
+        Err(ExactRecordError::Io(source)) => Err(source),
+        Err(ExactRecordError::Refused(refusal)) => Err(match refusal {
+            ExactRecordRefusal::LengthOverflow => {
+                RetentionCurrentStateRefusal::RecordLengthOverflow
+            }
+            ExactRecordRefusal::TrailingBytes => RetentionCurrentStateRefusal::RecordTrailingBytes,
+            ExactRecordRefusal::KindOrLength
+            | ExactRecordRefusal::KindLengthOrIdentity
+            | ExactRecordRefusal::Bytes
+            | ExactRecordRefusal::RemainedVisible => {
+                RetentionCurrentStateRefusal::RecordKindOrLength
+            }
+        }
+        .into_io()),
     }
-    let mut bytes = vec![0_u8; length];
-    file.read_exact(&mut bytes)?;
-    let mut trailing = [0_u8; 1];
-    if file.read(&mut trailing)? != 0 {
-        return Err(RetentionCurrentStateRefusal::RecordTrailingBytes.into_io());
-    }
-    Ok(Some(bytes.into_boxed_slice()))
 }

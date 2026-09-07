@@ -125,7 +125,11 @@ fn no_source_module_spawns_a_process() -> Result<(), Box<dyn std::error::Error>>
     Ok(())
 }
 
-const EXACT_RECORD_CONSUMERS: [(&str, &str); 2] = [
+const EXACT_RECORD_CONSUMERS: [(&str, &str); 3] = [
+    (
+        "src/adapters/retention/filesystem_retention_current.rs",
+        include_str!("../src/adapters/retention/filesystem_retention_current.rs"),
+    ),
     (
         "src/adapters/retention/filesystem_retention_stage.rs",
         include_str!("../src/adapters/retention/filesystem_retention_stage.rs"),

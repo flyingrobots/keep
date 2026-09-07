@@ -97,7 +97,7 @@ fn retention_error(error: ExactRecordError) -> io::Error {
         ExactRecordError::Io(source) => source,
         ExactRecordError::Refused(refusal) => invalid_data(match refusal {
             ExactRecordRefusal::LengthOverflow => "retention record length exceeded u64",
-            ExactRecordRefusal::KindLengthOrIdentity => {
+            ExactRecordRefusal::KindOrLength | ExactRecordRefusal::KindLengthOrIdentity => {
                 "retention record kind, length, or identity disagreed"
             }
             ExactRecordRefusal::Bytes | ExactRecordRefusal::TrailingBytes => {
