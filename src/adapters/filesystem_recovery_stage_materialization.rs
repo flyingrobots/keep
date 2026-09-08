@@ -150,16 +150,14 @@ mod tests {
     use std::error::Error;
     use std::fs;
     use std::io;
-    use std::path::{Path, PathBuf};
-    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::path::Path;
 
     use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
     use cap_std::fs::OpenOptions;
     use cap_std::{ambient_authority, fs::Dir};
 
     use super::*;
-
-    static NEXT_DIRECTORY: AtomicU64 = AtomicU64::new(0);
+    use crate::adapters::filesystem_test_sandbox::TestDirectory;
 
     #[test]
     fn read_exact_reads_expected_bytes_without_trailing() -> Result<(), Box<dyn Error>> {
@@ -259,27 +257,5 @@ mod tests {
         options.read(true).follow(FollowSymlinks::No).nonblock(true);
         let file = directory.open_with(file_name, &options)?;
         Ok(file)
-    }
-
-    struct TestDirectory {
-        path: PathBuf,
-    }
-
-    impl TestDirectory {
-        fn create(name: &str) -> std::io::Result<Self> {
-            let sequence = NEXT_DIRECTORY.fetch_add(1, Ordering::Relaxed);
-            let path =
-                std::env::temp_dir().join(format!("keep-{name}-{}-{sequence}", std::process::id()));
-            fs::create_dir(&path)?;
-            Ok(Self { path })
-        }
-
-        fn path(&self) -> &std::path::Path {
-            &self.path
-        }
-
-        fn remove(self) -> std::io::Result<()> {
-            fs::remove_dir_all(self.path)
-        }
     }
 }

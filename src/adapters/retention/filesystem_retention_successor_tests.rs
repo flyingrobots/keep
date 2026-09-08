@@ -61,8 +61,6 @@ fn successor_publication_over_existing_head_publishes_exact_successor() -> Resul
             );
         }
     }
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -96,8 +94,6 @@ fn superseded_candidate_refuses_once_a_successor_is_current() -> Result<(), Box<
         Some(RetentionCurrentStateRefusal::Superseded { .. })
     ));
     assert_eq!(retention_witness(sandbox.path())?, after_successor);
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -123,7 +119,5 @@ fn expected_current_generation_refuses_when_no_head_is_published() -> Result<(),
     ));
     assert!(authority.observe_current()?.is_none());
     assert!(!head_path(sandbox.path()).exists());
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }

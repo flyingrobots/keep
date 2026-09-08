@@ -25,7 +25,6 @@ fn recovery_inventory_reader_refuses_a_migrated_root() -> Result<(), Box<dyn Err
             ..
         }
     ));
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -41,6 +40,5 @@ fn recovery_stage_discarder_refuses_a_migrated_root() -> Result<(), Box<dyn Erro
         error,
         FilesystemRecoveryStageDiscardOpenError::Namespace { .. }
     ));
-    sandbox.remove()?;
     Ok(())
 }

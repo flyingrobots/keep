@@ -37,8 +37,6 @@ fn committed_retry_refuses_when_the_selected_root_is_absent() -> Result<(), Box<
         Some(RetentionCurrentStateRefusal::CommittedRootAbsent)
     ));
     assert_eq!(retention_witness(sandbox.path())?, before);
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -66,8 +64,6 @@ fn committed_retry_refuses_when_the_selected_root_bytes_changed() -> Result<(), 
         refusal(&source),
         Some(RetentionCurrentStateRefusal::CommittedRootChanged)
     ));
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -92,8 +88,6 @@ fn committed_retry_refuses_when_the_selected_manifest_is_corrupt() -> Result<(),
         error,
         RetentionPublicationError::CurrentVerification { .. }
     ));
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -137,7 +131,5 @@ fn head_predecessor_disagreeing_with_its_manifest_refuses() -> Result<(), Box<dy
         refusal(&error),
         Some(RetentionCurrentStateRefusal::HeadPredecessorDisagreed)
     ));
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }

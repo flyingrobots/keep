@@ -39,8 +39,6 @@ fn refused_verification_admits_no_later_phase() -> Result<(), Box<dyn Error>> {
 
     assert_eq!(error.kind(), io::ErrorKind::InvalidData);
     assert_eq!(retention_witness(sandbox.path())?, before);
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -73,8 +71,6 @@ fn stale_stage_handle_does_not_survive_a_refused_verification() -> Result<(), Bo
         sandbox.path().join("retention").join("root.next").is_file(),
         "retained stage evidence must remain for recovery"
     );
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -104,14 +100,12 @@ fn namespace_admission_refuses_a_directory_the_expectation_excludes() -> Result<
         refusal(&error),
         Some(RetentionCurrentStateRefusal::NamespaceExpectationViolated)
     ));
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
 #[test]
 fn namespace_phases_refuse_a_root_outside_the_admitted_namespace() -> Result<(), Box<dyn Error>> {
-    let (sandbox, mut authority) = open_authority("filesystem-retention-attempt-other-root")?;
+    let (_sandbox, mut authority) = open_authority("filesystem-retention-attempt-other-root")?;
     let root_bytes = fixture(ROOT_HEX)?;
     let preparation = initial_preparation(&root_bytes)?;
     assert_eq!(
@@ -137,7 +131,5 @@ fn namespace_phases_refuse_a_root_outside_the_admitted_namespace() -> Result<(),
         refusal(&error),
         Some(RetentionCurrentStateRefusal::AttemptNamespaceDisagreed)
     ));
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }

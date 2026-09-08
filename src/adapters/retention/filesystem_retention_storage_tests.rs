@@ -34,8 +34,6 @@ fn complete_publication_preserves_migrated_bytes_and_publishes_exact_retention_p
         fixture(MANIFEST_HEX)?
     );
     assert_stages_absent(sandbox.path())?;
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -58,8 +56,6 @@ fn existing_root_stage_is_never_truncated() -> Result<(), Box<dyn Error>> {
 
     assert_eq!(error.kind(), io::ErrorKind::AlreadyExists);
     assert_eq!(fs::read(&stage)?, b"retained partial evidence");
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -82,8 +78,6 @@ fn retained_stage_refuses_publication_before_recovery() -> Result<(), Box<dyn Er
     };
     assert_eq!(source.kind(), io::ErrorKind::InvalidData);
     assert!(!head_path(sandbox.path()).exists());
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -105,8 +99,6 @@ fn byte_equal_substituted_canonical_root_is_refused() -> Result<(), Box<dyn Erro
         .ok_or("byte-equal substituted root was unexpectedly admitted")?;
 
     assert_eq!(error.kind(), io::ErrorKind::InvalidData);
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -126,8 +118,6 @@ fn exact_committed_retry_mutates_nothing() -> Result<(), Box<dyn Error>> {
         RetentionPublicationOutcome::AlreadyCommitted
     );
     assert_eq!(retention_witness(sandbox.path())?, after_publication);
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -178,7 +168,5 @@ fn retained_manifest_stage_refuses_publication_before_recovery() -> Result<(), B
     };
     assert_eq!(source.kind(), io::ErrorKind::InvalidData);
     assert_eq!(retention_witness(sandbox.path())?, before);
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }

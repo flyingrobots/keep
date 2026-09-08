@@ -131,3 +131,16 @@ fn require_absent_refuses_a_visible_entry_and_links_never_replace() -> Result<()
     sandbox.remove()?;
     Ok(())
 }
+
+#[test]
+fn a_dropped_sandbox_no_longer_exists() -> Result<(), Box<dyn Error>> {
+    let sandbox = TestDirectory::create("exact-record-dropped-sandbox")?;
+    let path = sandbox.path().to_path_buf();
+    fs::write(path.join("evidence"), b"left behind by an early return")?;
+    assert!(path.is_dir());
+
+    drop(sandbox);
+
+    assert!(!path.exists(), "a dropped sandbox must remove itself");
+    Ok(())
+}

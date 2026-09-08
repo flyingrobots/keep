@@ -46,8 +46,6 @@ fn a_full_namespace_pool_refuses_a_new_namespace_before_staging() -> Result<(), 
         Some(RetentionCurrentStateRefusal::NamespaceCapacity)
     ));
     assert_eq!(retention_witness(sandbox.path())?, before);
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -74,8 +72,6 @@ fn a_full_namespace_pool_admits_a_successor_in_an_existing_namespace() -> Result
     let disposition = RetentionPublicationStorage::verify_current(&mut authority, &preparation)?;
 
     assert_eq!(disposition, RetentionTransitionDisposition::Publish);
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 

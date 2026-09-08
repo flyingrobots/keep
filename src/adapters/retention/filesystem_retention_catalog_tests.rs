@@ -35,8 +35,6 @@ fn closure_verified_against_another_catalog_refuses_before_staging() -> Result<(
         Some(RetentionCurrentStateRefusal::CatalogDisagreed { .. })
     ));
     assert_eq!(retention_witness(sandbox.path())?, before);
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -64,8 +62,6 @@ fn committed_retry_over_a_foreign_catalog_refuses_before_reporting_committed()
         Some(RetentionCurrentStateRefusal::CatalogDisagreed { .. })
     ));
     assert_eq!(retention_witness(sandbox.path())?, before);
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -99,7 +95,5 @@ fn a_corrupt_catalog_head_refuses_with_its_decode_error() -> Result<(), Box<dyn 
         refusal.source().is_some(),
         "the decode error must travel as the refusal's source"
     );
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }

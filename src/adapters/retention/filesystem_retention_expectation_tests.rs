@@ -35,8 +35,6 @@ fn absent_head_with_retention_artifacts_refuses_as_recovery() -> Result<(), Box<
         Some(RetentionCurrentStateRefusal::HeadAbsentWithArtifacts)
     ));
     assert_eq!(retention_witness(sandbox.path())?, before);
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -71,8 +69,6 @@ fn absent_expectation_refuses_an_orphan_directory_for_a_new_namespace() -> Resul
         Some(super::RetentionCurrentStateRefusal::NamespaceExpectationViolated)
     ));
     assert_eq!(retention_witness(sandbox.path())?, before);
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -105,8 +101,6 @@ fn current_expectation_refuses_when_the_namespace_directory_is_absent() -> Resul
         super::filesystem_retention_test_fixture::refusal(&error),
         Some(super::RetentionCurrentStateRefusal::NamespaceExpectationViolated)
     ));
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -135,8 +129,6 @@ fn successor_refuses_when_the_predecessor_root_file_is_absent() -> Result<(), Bo
         Some(RetentionCurrentStateRefusal::PredecessorRootAbsent)
     ));
     assert_eq!(retention_witness(sandbox.path())?, before);
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -166,8 +158,6 @@ fn successor_refuses_when_the_predecessor_root_bytes_changed() -> Result<(), Box
         refusal(&error),
         Some(RetentionCurrentStateRefusal::PredecessorRootChanged)
     ));
-    drop(authority);
-    sandbox.remove()?;
     Ok(())
 }
 

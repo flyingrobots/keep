@@ -39,10 +39,21 @@ impl TestDirectory {
 
     /// Removes the complete sandbox after all test handles are closed.
     ///
+    /// Dropping the sandbox also removes it, so a law that returns early on a
+    /// failed assertion leaves no evidence behind; call this only to observe
+    /// the removal error itself.
+    ///
     /// # Errors
     ///
     /// Returns the exact recursive-removal filesystem failure.
     pub(super) fn remove(self) -> io::Result<()> {
-        fs::remove_dir_all(self.path)
+        fs::remove_dir_all(&self.path)
+    }
+}
+
+impl Drop for TestDirectory {
+    /// Best-effort removal; an already removed sandbox is not an error.
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.path);
     }
 }

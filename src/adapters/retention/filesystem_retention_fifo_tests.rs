@@ -24,7 +24,6 @@ fn a_fifo_at_the_retention_head_refuses_instead_of_blocking() -> Result<(), Box<
     let outcome = completes_within(move || authority.observe_current().map(|_| ()))?;
 
     assert!(outcome.is_err(), "FIFO head was unexpectedly admitted");
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -43,7 +42,6 @@ fn a_fifo_at_the_format_marker_refuses_instead_of_blocking() -> Result<(), Box<d
         outcome.is_err(),
         "FIFO format marker was unexpectedly admitted"
     );
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -67,7 +65,6 @@ fn a_fifo_at_a_manifest_pool_name_refuses_instead_of_blocking() -> Result<(), Bo
         outcome.is_err(),
         "FIFO pool target was unexpectedly admitted"
     );
-    sandbox.remove()?;
     Ok(())
 }
 

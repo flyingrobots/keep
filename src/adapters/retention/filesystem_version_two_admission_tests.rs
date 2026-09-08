@@ -34,7 +34,6 @@ fn version_two_reopen_refuses_a_corrupt_format_marker() -> Result<(), Box<dyn Er
             .and_then(|refusal| refusal.downcast_ref::<VersionTwoRecordRefusal>()),
         Some(VersionTwoRecordRefusal::Marker { .. })
     ));
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -54,7 +53,6 @@ fn version_two_reopen_refuses_an_oversized_format_marker() -> Result<(), Box<dyn
         error,
         FilesystemPlatformAdmissionError::MigrationRecord { .. }
     ));
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -73,7 +71,6 @@ fn version_two_reopen_refuses_a_receipt_that_disagrees_with_its_intent()
         error,
         FilesystemPlatformAdmissionError::MigrationRecord { .. }
     ));
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -84,7 +81,6 @@ fn version_two_reopen_admits_exact_migration_records() -> Result<(), Box<dyn Err
     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
 
     drop(admission);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -106,7 +102,6 @@ fn production_version_two_reopen_refuses_an_aliased_protocol_directory()
         error,
         FilesystemPlatformAdmissionError::Platform { .. }
     ));
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -118,7 +113,6 @@ fn production_version_two_reopen_admits_an_exact_migrated_store() -> Result<(), 
     let admission = FilesystemVersionTwoAdmission::reopen(sandbox.path())?;
 
     drop(admission);
-    sandbox.remove()?;
     Ok(())
 }
 
@@ -166,7 +160,6 @@ fn refuses_namespace(
         matches!(error, FilesystemPlatformAdmissionError::Namespace { .. }),
         "{name}: expected a Namespace refusal, got {error:?}"
     );
-    sandbox.remove()?;
     Ok(())
 }
 
