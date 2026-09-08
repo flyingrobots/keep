@@ -49,6 +49,10 @@ pub(super) fn is_namespace_name(name: &OsStr) -> bool {
 }
 
 /// Whether `name` is a canonical `<generation>-<digest><suffix>` pool entry name.
+///
+/// The generation component must spell a positive `u64` in exactly 16 lowercase
+/// hex digits: root and liveness generations are positive, so a zero encoding
+/// names no protocol coordinate and refuses as noncanonical.
 pub(super) fn is_pool_name(name: &OsStr, suffix: &str) -> bool {
     let Some(name) = name.to_str() else {
         return false;
@@ -59,8 +63,12 @@ pub(super) fn is_pool_name(name: &OsStr, suffix: &str) -> bool {
     let Some((generation, digest)) = stem.split_once('-') else {
         return false;
     };
-    is_lower_hex(OsStr::new(generation), GENERATION_HEX)
-        && is_lower_hex(OsStr::new(digest), DIGEST_HEX)
+    is_positive_generation(generation) && is_lower_hex(OsStr::new(digest), DIGEST_HEX)
+}
+
+fn is_positive_generation(text: &str) -> bool {
+    is_lower_hex(OsStr::new(text), GENERATION_HEX)
+        && u64::from_str_radix(text, 16).is_ok_and(|generation| generation != 0)
 }
 
 fn is_lower_hex(name: &OsStr, length: usize) -> bool {

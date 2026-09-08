@@ -111,3 +111,31 @@ fn uppercase_root_pool_name_refuses() -> Result<(), Box<dyn Error>> {
     ));
     Ok(())
 }
+
+#[test]
+fn zero_generation_root_pool_name_refuses() -> Result<(), Box<dyn Error>> {
+    let (sandbox, mut authority) = open_authority("filesystem-retention-zero-generation")?;
+    let namespace = sandbox
+        .path()
+        .join("retention")
+        .join("roots")
+        .join("b".repeat(64));
+    fs::create_dir(&namespace)?;
+    fs::write(
+        namespace.join(format!("{}-{}.root", "0".repeat(16), "c".repeat(64))),
+        b"impossible generation zero",
+    )?;
+    let root_bytes = fixture(ROOT_HEX)?;
+    let preparation = initial_preparation(&root_bytes)?;
+
+    let error = RetentionPublicationStorage::verify_current(&mut authority, &preparation)
+        .err()
+        .ok_or("a zero-generation pool name was unexpectedly admitted")?;
+
+    assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        super::filesystem_retention_test_fixture::refusal(&error),
+        Some(super::RetentionCurrentStateRefusal::NoncanonicalPoolEntry { .. })
+    ));
+    Ok(())
+}

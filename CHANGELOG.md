@@ -605,6 +605,9 @@ after its public API and format compatibility policies are established.
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
+- Retention pool names whose generation component encodes zero refuse as
+  noncanonical; root and liveness generations are positive, so the census no
+  longer treats an impossible coordinate as a canonical entry.
 - An already-committed retry presented over an absent retention head refuses
   as `CommittedRetryOverAbsentHead` instead of the misnamed
   `StaleCommittedRetry`; the successor-over-absent-head law now downcasts to
