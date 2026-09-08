@@ -5,7 +5,7 @@ use std::fmt;
 use std::io;
 
 use super::{RetentionHeadDecodeError, RetentionManifestDecodeError};
-use crate::adapters::PublicationHeadDecodeError;
+use crate::adapters::{CatalogDecodeError, PublicationHeadDecodeError};
 use crate::{CatalogGeneration, LivenessGeneration, RetentionManifestDigest};
 
 /// Exact reason filesystem current-state verification refused a transition.
@@ -60,6 +60,16 @@ pub enum RetentionCurrentStateRefusal {
         /// The exact decode refusal.
         source: PublicationHeadDecodeError,
     },
+    /// The catalog pool entry this store's `HEAD` selects is absent.
+    CatalogAbsent,
+    /// The catalog pool entry this store's `HEAD` selects did not decode.
+    CatalogRefused {
+        /// The exact decode refusal.
+        source: Box<CatalogDecodeError>,
+    },
+    /// The catalog pool entry decodes to a generation or digest other than the
+    /// one `HEAD` names.
+    CatalogChanged,
     /// The current liveness generation has no successor.
     LivenessExhausted,
     /// A byte-identical retry found that another successor is current.
@@ -177,6 +187,13 @@ impl RetentionCurrentStateRefusal {
             Self::HeadPredecessorDisagreed => {
                 "current retention head and its manifest name different predecessors"
             }
+            Self::CatalogAbsent => "this store's catalog head selects an absent catalog pool entry",
+            Self::CatalogRefused { .. } => {
+                "this store's selected catalog pool entry refused admission"
+            }
+            Self::CatalogChanged => {
+                "this store's selected catalog pool entry names another generation or digest"
+            }
             Self::CatalogHeadRefused { .. } => "this store's catalog head refused admission",
             Self::LivenessExhausted => "current liveness generation cannot advance",
             Self::StaleCommittedRetry => {
@@ -235,6 +252,7 @@ impl Error for RetentionCurrentStateRefusal {
             Self::HeadRefused { source } | Self::PreparedHeadRefused { source } => Some(source),
             Self::ManifestRefused { source } => Some(source),
             Self::CatalogHeadRefused { source } => Some(source),
+            Self::CatalogRefused { source } => Some(source.as_ref()),
             _ => None,
         }
     }

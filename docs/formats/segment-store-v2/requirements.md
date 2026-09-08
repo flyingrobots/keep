@@ -64,5 +64,9 @@ case is not evidence.
   instead of continuing it. A stage left behind by a failed write is recovery
   evidence like any crash residue; it is never unlinked, and the next
   publication refuses until recovery classifies it.
+- Publication binds this store's catalog `HEAD` to the verified closure and
+  reopens the head-selected catalog pool entry under authority, but it does
+  not re-read closure-member segments: every read authenticates them, and
+  their re-verification under authority belongs to retention recovery.
 - Benchmarks are required before performance-sensitive retention or migration
   optimization.

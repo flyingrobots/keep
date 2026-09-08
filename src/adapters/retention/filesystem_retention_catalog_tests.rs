@@ -97,3 +97,30 @@ fn a_corrupt_catalog_head_refuses_with_its_decode_error() -> Result<(), Box<dyn 
     );
     Ok(())
 }
+
+#[test]
+fn an_absent_selected_catalog_refuses_publication() -> Result<(), Box<dyn Error>> {
+    let (sandbox, mut authority) = super::filesystem_retention_test_fixture::open_authority(
+        "filesystem-retention-catalog-absent",
+    )?;
+    let root_bytes = super::filesystem_retention_test_fixture::fixture(
+        super::filesystem_retention_test_fixture::ROOT_HEX,
+    )?;
+    let preparation = super::filesystem_retention_test_fixture::initial_preparation(&root_bytes)?;
+    std::fs::remove_file(
+        sandbox
+            .path()
+            .join("catalogs")
+            .join(super::filesystem_retention_test_fixture::CATALOG_NAME),
+    )?;
+
+    let error = RetentionPublicationStorage::verify_current(&mut authority, &preparation)
+        .err()
+        .ok_or("publication proceeded although the head-selected catalog is absent")?;
+
+    assert!(matches!(
+        super::filesystem_retention_test_fixture::refusal(&error),
+        Some(RetentionCurrentStateRefusal::CatalogAbsent)
+    ));
+    Ok(())
+}

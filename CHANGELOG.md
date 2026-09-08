@@ -605,6 +605,11 @@ after its public API and format compatibility policies are established.
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
+- Retention publication reopens the catalog pool entry this store's `HEAD`
+  selects, bounded by the head's declared length, and requires it to decode
+  to that generation and digest (`CatalogAbsent`, `CatalogRefused`,
+  `CatalogChanged`), so a preparation verified before the catalog was lost no
+  longer publishes; closure-member segments are documented as not re-read.
 - `FilesystemVersionTwoAdmission` retains the `retention`, `roots`, and
   `manifests` capabilities it admitted and hands them to the publication
   authority, and current-state verification requires those names to still

@@ -45,7 +45,7 @@ const CATALOG_HEAD_HEX: &str =
     include_str!("../../../conformance/segment-store/v1/one-zero-bundle-head.hex");
 
 const SEGMENT_NAME: &str = "221f6745cd8a5221c9a87c3707593608479282b54a4a74d0e753fd76f70e8db2.seg";
-const CATALOG_NAME: &str =
+pub(super) const CATALOG_NAME: &str =
     "0000000000000001-0b7cad1b6de663d34beacbc214db7497f2e36ab6b08dfbd5febbc8d06a418811.cat";
 
 /// Builds one migrated version-2 store and pins its retention authority.
