@@ -44,7 +44,7 @@ serde_json = { version = "=1.0.151", default-features = false, features = ["std"
 # Safe self-pipe delivery forwards terminal signals to active child groups.
 signal-hook = { version = "=0.4.4", default-features = false, features = ["iterator"], optional = true }
 # Pure Rust YAML admission identifies executable GitHub Actions steps.
-yaml-rust2 = { version = "=0.11.0", default-features = false, optional = true }
+yaml-rust2 = { version = "=0.12.0", default-features = false, optional = true }
 
 [[bin]]
 name = "xtask"
