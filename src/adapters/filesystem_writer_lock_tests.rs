@@ -2,16 +2,13 @@
 
 use std::error::Error;
 use std::fs;
-use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use cap_std::ambient_authority;
 use cap_std::fs::Dir;
 
 use super::{FileIdentity, LOCK_FILE_NAME, open_existing, verify_current_identity};
+use crate::adapters::filesystem_test_sandbox::TestDirectory;
 use crate::adapters::{WriterLockAcquireError, WriterLockAcquirePhase};
-
-static NEXT_DIRECTORY: AtomicU64 = AtomicU64::new(0);
 
 #[test]
 fn replaced_lock_entry_cannot_authorize_the_opened_handle() -> Result<(), Box<dyn Error>> {
@@ -40,26 +37,4 @@ fn replaced_lock_entry_cannot_authorize_the_opened_handle() -> Result<(), Box<dy
     drop(opened);
     sandbox.remove()?;
     Ok(())
-}
-
-struct TestDirectory {
-    path: PathBuf,
-}
-
-impl TestDirectory {
-    fn create(name: &str) -> std::io::Result<Self> {
-        let sequence = NEXT_DIRECTORY.fetch_add(1, Ordering::Relaxed);
-        let path =
-            std::env::temp_dir().join(format!("keep-{name}-{}-{sequence}", std::process::id()));
-        fs::create_dir(&path)?;
-        Ok(Self { path })
-    }
-
-    fn path(&self) -> &Path {
-        &self.path
-    }
-
-    fn remove(self) -> std::io::Result<()> {
-        fs::remove_dir_all(self.path)
-    }
 }

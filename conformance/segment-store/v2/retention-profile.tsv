@@ -1,0 +1,3 @@
+keep.retention-realization-profiles/v1
+identity	version	canonical_name	witness_count	selection
+1	1	keep.retention-single-canonical-witness/v1	1	canonical-physical-catalog-coordinate

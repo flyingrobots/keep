@@ -10,7 +10,6 @@ mod chunk_verification;
 mod ingestion;
 mod ingestion_error;
 mod output_write;
-mod profile_boundary;
 mod profile_verification;
 mod publish_error;
 mod published_blob;
@@ -27,9 +26,9 @@ mod reconstruction_receipt;
 mod staged_blob;
 mod store;
 
+pub use crate::profile::ProfileBoundary;
 pub use capacity::ReferenceStoreCapacity;
 pub use ingestion_error::{IngestionAllocation, IngestionError};
-pub use profile_boundary::ProfileBoundary;
 pub use publish_error::PublishError;
 pub use published_blob::PublishedBlob;
 pub use range_read_error::RangeReadError;

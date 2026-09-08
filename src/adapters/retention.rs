@@ -1,0 +1,129 @@
+//! This module owns canonical retention record boundary adapters.
+
+mod admitted_manifest;
+mod admitted_root;
+mod canonical_head;
+mod canonical_manifest;
+mod canonical_root;
+mod checksummed_head;
+mod closure_accounting;
+mod closure_digest;
+mod closure_error;
+mod closure_error_display;
+mod closure_member;
+mod closure_profile_error;
+mod closure_verifier;
+#[cfg(test)]
+mod filesystem_recovery_admission_tests;
+mod filesystem_retention_attempt;
+#[cfg(test)]
+mod filesystem_retention_attempt_tests;
+mod filesystem_retention_authority;
+mod filesystem_retention_authority_error;
+#[cfg(test)]
+mod filesystem_retention_capacity_tests;
+mod filesystem_retention_catalog;
+#[cfg(test)]
+mod filesystem_retention_catalog_tests;
+mod filesystem_retention_current;
+#[cfg(test)]
+mod filesystem_retention_current_tests;
+#[cfg(test)]
+mod filesystem_retention_expectation_tests;
+#[cfg(all(test, target_os = "linux"))]
+mod filesystem_retention_fifo_tests;
+mod filesystem_retention_namespace;
+#[cfg(test)]
+mod filesystem_retention_namespace_tests;
+mod filesystem_retention_pool_name;
+mod filesystem_retention_refusal;
+mod filesystem_retention_stage;
+mod filesystem_retention_storage;
+#[cfg(test)]
+mod filesystem_retention_storage_tests;
+#[cfg(test)]
+mod filesystem_retention_successor_tests;
+#[cfg(test)]
+mod filesystem_retention_test_fixture;
+#[cfg(test)]
+mod filesystem_version_two_admission_tests;
+mod head_decode_error;
+mod head_decode_error_display;
+mod head_decoder;
+mod head_encoder;
+mod manifest_decode_error;
+mod manifest_decode_error_display;
+mod manifest_decoder;
+mod manifest_encode_error;
+mod manifest_encoder;
+mod manifest_entry_decoder;
+mod manifest_entry_update;
+mod manifest_field_decoder;
+mod manifest_header_decoder;
+mod manifest_integrity;
+mod manifest_semantic_header;
+mod namespace_admission;
+mod prepared_publication;
+mod publication_error;
+mod publication_execution;
+mod publication_outcome;
+mod publication_phase;
+mod publication_preparation;
+mod publication_preparation_error;
+mod publication_receipt;
+mod publication_storage;
+mod root_anchor_decoder;
+mod root_decode_error;
+mod root_decode_error_display;
+mod root_decoder;
+mod root_encode_error;
+mod root_encoder;
+mod root_field_decoder;
+mod root_header_decoder;
+mod root_integrity;
+mod root_semantic_header;
+mod successor_manifest;
+mod transition_disposition;
+mod transition_error;
+mod transition_planner;
+mod transition_preflight;
+mod transition_preflight_error;
+mod transition_readiness;
+mod verified_closure;
+
+pub use admitted_manifest::AdmittedRetentionManifest;
+pub use admitted_root::AdmittedRetentionRoot;
+pub use canonical_head::CanonicalRetentionHead;
+pub use canonical_manifest::CanonicalRetentionManifest;
+pub use canonical_root::CanonicalRetentionRoot;
+pub use checksummed_head::ChecksummedRetentionHead;
+pub use closure_error::RetentionClosureVerificationError;
+pub use closure_verifier::verify_retention_closure;
+pub use filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
+pub use filesystem_retention_authority_error::{
+    FilesystemRetentionAuthorityError, RetentionAuthorityDirectory,
+};
+pub use filesystem_retention_current::ObservedRetentionState;
+pub use filesystem_retention_refusal::RetentionCurrentStateRefusal;
+pub use head_decode_error::RetentionHeadDecodeError;
+pub use manifest_decode_error::RetentionManifestDecodeError;
+pub use manifest_encode_error::RetentionManifestEncodeError;
+pub use namespace_admission::RetentionNamespaceAdmission;
+pub use prepared_publication::{PreparedRetentionPublication, RetentionPublicationPreparation};
+pub use publication_error::RetentionPublicationError;
+pub use publication_execution::execute_retention_publication;
+pub use publication_outcome::RetentionPublicationOutcome;
+pub use publication_phase::RetentionPublicationPhase;
+pub use publication_preparation::prepare_retention_publication;
+pub use publication_preparation_error::RetentionPublicationPreparationError;
+pub use publication_receipt::RetentionPublicationReceipt;
+pub use publication_storage::RetentionPublicationStorage;
+pub use root_decode_error::RetentionRootDecodeError;
+pub use root_encode_error::RetentionRootEncodeError;
+pub use transition_disposition::RetentionTransitionDisposition;
+pub use transition_error::RetentionTransitionError;
+pub use transition_planner::plan_retention_transition;
+pub use transition_preflight::{RetentionTransitionPreflight, preflight_retention_transition};
+pub use transition_preflight_error::RetentionTransitionPreflightError;
+pub use transition_readiness::RetentionTransitionReadiness;
+pub use verified_closure::VerifiedRetentionClosure;

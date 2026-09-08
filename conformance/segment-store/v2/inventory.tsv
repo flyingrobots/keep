@@ -1,0 +1,4 @@
+keep.segment-store-v2.inventory/v1
+kind	generation	byte_length	artifact_digest_hex	source_fixture
+segment	0	337	b7542dced2ab770894a14d1d04b066e3a899942602c5986d35ba6df6c1a35cfc	one-zero-segment.hex
+catalog	1	352	04b82519b0399baefd0b9c0f32a871052e4c47e3a00226ab03b21661470f7320	one-zero-catalog.hex

@@ -51,6 +51,10 @@ impl<'a> AdmittedSegment<'a> {
         self.seal.digest()
     }
 
+    pub(super) const fn segment_length(&self) -> u64 {
+        self.seal.segment_length()
+    }
+
     /// Returns a revalidating iterator over records in physical order.
     #[must_use]
     pub const fn records(&self) -> SegmentRecords<'a> {

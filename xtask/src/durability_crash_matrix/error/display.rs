@@ -217,7 +217,9 @@ fn format_boundary(
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
     match error {
-        DurabilityCrashMatrixError::Io { action, .. } => write!(formatter, "cannot {action}"),
+        DurabilityCrashMatrixError::Io { action, source } => {
+            write!(formatter, "cannot {action}: {source}")
+        }
         DurabilityCrashMatrixError::NonUnicodeStatePath => {
             formatter.write_str("post-crash store path is not valid Unicode")
         }
@@ -231,5 +233,24 @@ fn format_boundary(
             "post-crash verification failed while attempting to {phase}: {source}"
         ),
         _ => Err(fmt::Error),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io;
+
+    use super::DurabilityCrashMatrixError;
+
+    #[test]
+    fn io_boundary_diagnostics_preserve_the_exact_source() {
+        let error = DurabilityCrashMatrixError::io(
+            "open crash catalog publisher",
+            io::Error::new(io::ErrorKind::Unsupported, "profile probe escaped bypass"),
+        );
+        assert_eq!(
+            error.to_string(),
+            "cannot open crash catalog publisher: profile probe escaped bypass"
+        );
     }
 }

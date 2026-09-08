@@ -83,18 +83,40 @@ fn initialize_storage(
     let lock = storage.into_lock().map_err(|source| {
         StoreInitializationError::io(StoreInitializationPhase::OpenAndLockWriterFile, source)
     })?;
-    Ok(FilesystemPlatformAdmission::initialized(lock))
+    let directory = lock.clone_directory().map_err(|source| {
+        StoreInitializationError::io(StoreInitializationPhase::AdmitPlatform, source)
+    })?;
+    let root_identity =
+        filesystem_platform_profile::root_identity(&directory).map_err(|source| {
+            StoreInitializationError::io(StoreInitializationPhase::AdmitPlatform, source)
+        })?;
+    Ok(FilesystemPlatformAdmission::initialized(
+        lock,
+        root_identity,
+    ))
 }
 
 fn reopen_root(
     root: cap_std::fs::Dir,
+) -> Result<FilesystemPlatformAdmission, FilesystemPlatformAdmissionError> {
+    admit_reopened(root, filesystem_initialization_namespace::admit_published)
+}
+
+fn admit_reopened(
+    root: cap_std::fs::Dir,
+    admit_namespace: fn(&cap_std::fs::Dir) -> std::io::Result<()>,
 ) -> Result<FilesystemPlatformAdmission, FilesystemPlatformAdmissionError> {
     let lock = FilesystemWriterLock::try_acquire_in(root)
         .map_err(|source| FilesystemPlatformAdmissionError::WriterLock { source })?;
     let directory = lock
         .clone_directory()
         .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
-    filesystem_initialization_namespace::admit_published(&directory)
+    admit_namespace(&directory)
         .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
-    Ok(FilesystemPlatformAdmission::initialized(lock))
+    let root_identity = filesystem_platform_profile::root_identity(&directory)
+        .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
+    Ok(FilesystemPlatformAdmission::initialized(
+        lock,
+        root_identity,
+    ))
 }

@@ -2,8 +2,9 @@
 
 use std::io;
 
-use cap_fs_ext::MetadataExt;
-use cap_std::fs::{Dir, Metadata};
+use cap_std::fs::Dir;
+
+use super::filesystem_exact_record::EntryIdentity;
 
 use super::{
     RecoveryInventoryError, RecoveryInventoryOperation, RecoveryNamespace, sync_capable_directory,
@@ -12,7 +13,7 @@ use super::{
 pub(super) struct PinnedRecoveryDirectory {
     namespace: RecoveryNamespace,
     name: &'static str,
-    identity: DirectoryIdentity,
+    identity: EntryIdentity,
     directory: Dir,
 }
 
@@ -25,7 +26,7 @@ impl PinnedRecoveryDirectory {
         let directory = sync_capable_directory::open(root, name).map_err(|source| {
             RecoveryInventoryError::io(namespace, RecoveryInventoryOperation::OpenNamespace, source)
         })?;
-        let identity = DirectoryIdentity::read(&directory).map_err(|source| {
+        let identity = EntryIdentity::of_directory(&directory).map_err(|source| {
             RecoveryInventoryError::io(namespace, RecoveryInventoryOperation::OpenNamespace, source)
         })?;
         Ok(Self {
@@ -44,7 +45,7 @@ impl PinnedRecoveryDirectory {
                 source,
             )
         })?;
-        let observed = DirectoryIdentity::from(&metadata);
+        let observed = EntryIdentity::from(&metadata);
         if metadata.is_dir() && observed == self.identity {
             return Ok(());
         }
@@ -60,28 +61,5 @@ impl PinnedRecoveryDirectory {
 
     pub(super) const fn directory(&self) -> &Dir {
         &self.directory
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-struct DirectoryIdentity {
-    device: u64,
-    inode: u64,
-}
-
-impl DirectoryIdentity {
-    fn read(directory: &Dir) -> io::Result<Self> {
-        directory
-            .dir_metadata()
-            .map(|metadata| Self::from(&metadata))
-    }
-}
-
-impl From<&Metadata> for DirectoryIdentity {
-    fn from(metadata: &Metadata) -> Self {
-        Self {
-            device: metadata.dev(),
-            inode: metadata.ino(),
-        }
     }
 }

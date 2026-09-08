@@ -8,8 +8,307 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+### Added
+
+- `FilesystemRetentionPublicationAuthority` executes the 17 ordered retention
+  publication phases against a completely migrated version-2 root. It stages
+  `root.next`, `manifest.next`, and `head.next` exclusively, verifies device
+  and inode identity at every transition, hard-links both immutable pool
+  entries without replacement, atomically replaces `retention/HEAD`, and
+  removes retained stages only after its canonical target verifies. A
+  successor is admitted only when the prepared head names the observed
+  manifest as its exact predecessor at the next liveness generation; a
+  superseded candidate, an exact already-committed retry, and every retained
+  stage refuse or return with zero retention mutation.
+- `FilesystemVersionTwoAdmission::reopen` grants version-two writer authority
+  as its own type, so no version-one publisher can consume it. It reopens
+  `FORMAT`, `migration.intent`, and `migration.receipt` without following
+  links, bounds each to its canonical length, admits the receipt only against
+  the decoded intent and marker, and on Linux admits `retention`,
+  `retention/roots`, `retention/manifests`, `gc`, `recovery`, and
+  `recovery/dispositions` against the root's filesystem, mount, and inode
+  flags exactly as the version-1 protocol directories are admitted.
+  `FilesystemPlatformAdmissionError::MigrationRecord` names a record refusal.
+- `observe_current` returns the published retention head and its
+  cross-verified pool manifest.
+- `RetentionCurrentStateRefusal` travels as the source of every `InvalidData`
+  that filesystem current-state verification returns, so a superseded
+  candidate, a stale committed retry, an absent head over populated pools, and
+  each corruption or decode refusal are distinguishable to callers and
+  preserve their underlying decode errors.
+- Version-2 format marker, typed canonical intent and receipt construction,
+  and record admission bind exact catalog, predecessor, root, definition,
+  store, empty-state, checksum, digest, and synchronization-mask coordinates.
+- `StoreMigrationPhase` freezes the 21 migration transitions with explicit
+  storage and verification-first execution. The filesystem migration
+  authority derives and revalidates one canonical intent from exact Linux
+  root, namespace, head, catalog, and inventory coordinates; its streamed
+  inventory is bounded and completely admits every immutable-pool artifact
+  under the writer lock.
+- Retention preflight combines expected-generation planning with
+  deterministic closure verification, and authority-revalidated 17-phase
+  orchestration returns its receipt only after durable cleanup.
+- The `retention_format` and `migration_format` fuzz targets drive the
+  retention root, manifest, and head decoders and all three migration record
+  decoders.
+- Specified `keep.segment-store/v2` retention values, root generations,
+  liveness manifests, reader snapshots, one-way staged migration, exact crash
+  boundaries, and reserved GC/disposition records. Validated public
+  `RetentionNamespace`, namespace-digest, `RootGeneration`,
+  `LivenessGeneration`, `RetentionAnchor`, realization profile, closure limits,
+  and semantic root values now establish the core boundary. The canonical root
+  encoder reproduces the independent version-2 golden bytes, and the decoder
+  verifies framing, checksum, root digest, anchor-set digest, nested identities,
+  resource bounds, canonical anchor order, and semantic invariants before
+  admission. Validated global manifest values and their canonical encoder and
+  decoder now reproduce the independent manifest fixture and enforce liveness
+  history, namespace uniqueness, bounds, ordering, and all three integrity
+  layers. Typed manifest lengths and semantic global heads now reproduce and
+  admit the exact 144-byte head fixture with fixed framing, checksum-first
+  semantic admission, and explicit generation-history laws. Storage-independent
+  transition planning now compares absent or exact-generation expectations,
+  admits only same-namespace exact successors, preserves expected and observed
+  stale coordinates, and distinguishes byte-identical already-committed
+  replay. Deterministic storage-independent closure verification now derives
+  unique catalog members, enforces exact node, depth, encoded-byte, and
+  physical-byte accounting, replays the registered storage profile,
+  authenticates each complete retained blob, and emits a catalog-bound
+  canonical closure digest. Version-1 immutable bytes remain authoritative;
+  production version-2 writing remains unavailable until issue #19's
+  executable evidence is complete.
+- Accepted ADR-0009 defines caller-supplied retention namespaces,
+  `BlobId`/`LayoutId` reconstruction anchors, fail-closed canonical closure,
+  generation-checked retention publication, immutable liveness snapshots,
+  release nonclaims, and GC evidence boundaries. This records the M4 design
+  contract; it does not claim that retention transitions or GC are
+  implemented.
+- Checked catalog generations; canonical catalog and publication-head codecs;
+  exact logical-record-to-segment admission with one bounded physical lookup
+  plan, one scan per referenced segment, and refusal of every unreferenced
+  caller-supplied segment during construction or admission; deterministic
+  successor proofs; immutable reader snapshots; seeded parser fuzzing; and
+  `BTreeMap` transition-model evidence for `keep.segment-store/v1`.
+- Blocking `FilesystemCatalogPublisher` publication under a persistent
+  kernel-managed writer lock and required `FilesystemPlatformAdmission`, with
+  pinned directory capabilities,
+  no-replacement immutable-pool links, complete post-link verification,
+  explicit file and directory synchronization, transitive `head.next`
+  verification, atomic `HEAD` replacement, and stale or recovery-required
+  refusal before mutation. New filesystem segment publication consumes the
+  sealed stage through its creating publisher, checks process-local publisher
+  authority, and closes the writable handle before any immutable-pool link;
+  publisher teardown closes every retained writable handle before releasing
+  writer authority.
+  Retry of an already-current complete candidate re-synchronizes the root and
+  returns an explicit `CatalogPublicationOutcome::AlreadyPublished` receipt
+  without repeating publication mutations. Retained `head.next` or
+  `current.cat`, an unselected `current.seg`, and every fixed-name stage on an
+  already-current retry now refuse at current-state verification before any
+  publication mutation. An absent `HEAD` with any retained segment-pool or
+  catalog-pool entry also refuses before mutation.
+- Bounded `FilesystemCatalogSnapshot` restart loading that follows only exact
+  checksummed head, catalog, and segment coordinates; refuses symbolic links,
+  nonregular files, malformed or conflicting bytes, dangling entries, and
+  resource-limit violations; and retains immutable bytes for pinned logical
+  reads.
+- Public, allocation-free `SegmentHeader` admission and emission for the exact
+  `keep.segment-store/v1` 64-byte header, with field-complete typed refusals
+  and golden-corpus evidence.
+- Public, allocation-free `SegmentRecordHeader` admission and emission for the
+  exact 112-byte chunk and flat-layout record grammar, with typed logical
+  identities, checked length derivation, and field-complete corruption laws.
+- Borrowed `ChecksummedSegmentRecord` and `AdmittedSegmentRecord` states for
+  bounded complete-record framing, checksum verification, logical
+  content-identity admission, and allocation-free chunk preparation.
+- Public, allocation-free `SegmentSeal` admission and emission for the exact
+  128-byte immutable-segment terminator, with checked physical coordinates,
+  domain-separated digest verification, and seal-checksum corruption laws.
+- Borrowed `AdmittedSegment` reading with explicit record and layout resource
+  limits, exact nested framing and identity admission, physical-order record
+  iteration, trailing-byte refusal, and duplicate-identity index reservation
+  bounded by both the configured count and physical record-header capacity.
+- Consuming `StagedSegment` transitions and immutable `SealedSegment` receipts
+  for exact append-only record writing, streaming seal construction, explicit
+  prefix/sealed flush-and-sync order, phase-typed I/O refusals, and a fallibly
+  reserved membership index for sublinear duplicate admission.
+- Writer-authorized `FilesystemSegmentStage` creation for the fixed
+  `current.seg` staging name, with a lifetime that retains the
+  `FilesystemCatalogPublisher` lock, atomic no-replacement admission,
+  preserved existing evidence, zero-origin writing, and no implicit cleanup
+  from `Drop`.
+- Rust cargo-fuzz coverage for the public segment header, record header,
+  complete record, seal, and complete-segment parser boundaries, seeded from
+  the canonical version-1 segment fixtures through `cargo xtask`.
+- ADR-0005 and the implementation-independent `keep.segment-store/v1`
+  protocol: exact immutable segment, catalog-generation, and publication-head
+  grammars; canonical ordering, bounds, and domain-separated checksums;
+  one-writer/many-reader publication with explicit flush, synchronization,
+  atomic replacement, and directory-synchronization order; stable
+  `KEEP-CRASH-001`–`035` transitions; typed recovery classifications; and
+  golden physical artifacts. Directory-synchronization crash classes admit
+  both the lawful pre-sync and durable namespace states, and recovery admits
+  only the exact verified stage/pool digest duplicate created by interrupted
+  hard-link publication. Fresh-store initialization is writer-locked,
+  idempotent across every partial canonical namespace set, and admitted only
+  after root synchronization. Explicit recovery can complete a durable
+  fixed-name stage into its immutable pool and durably clear the stage without
+  promoting a publication head. Explicit discard receipts now follow
+  synchronization of the stage's actual parent: `staging` for segment and
+  catalog stages, or the store root for `head.next`. Segment and catalog
+  production are implemented; crash recovery remains assigned to issue #17.
+  The golden corpus now includes a generation-2 catalog/head pair whose
+  predecessor field is the exact generation-1 catalog digest.
+- A deterministic, bounded, license-safe streaming CAS benchmark corpus and
+  release-only `cargo xtask benchmark-baseline` workflow covering all required
+  ingestion, edit, deduplication, range-read, verification, and input
+  partitioning scenarios. The versioned TSV report records exact semantic I/O,
+  amplification and reuse ratios, p50/p95/p99 wall latency, process CPU time,
+  throughput, allocations, incremental peak live heap, five chunking-profile
+  comparisons, compiler/target/Git/host identity bound across execution,
+  refusal of ambient code-generation settings and external Cargo
+  configuration, single-writer recoverable artifact publication, and an
+  explicit refusal to invent regression thresholds before controlled baseline
+  history exists.
+- Validated half-open `ByteRange` coordinates and allocation-free range
+  planning, plus exact synchronous reference-store range reads that load only
+  overlapping chunks, authenticate each selected complete chunk before
+  slicing, reauthenticate before output, and return a receipt whose deliberately
+  narrow verification scope excludes the complete blob, unrequested chunks,
+  and storage-profile boundaries. Caller-supplied layouts and records must
+  resolve to a committed target-layout binding before chunk lookup.
+- Expected-`BlobId` staging with typed complete-stream mismatch refusal; the
+  Golden File Worldline scenario and every claimed-content mutation now run
+  through public stage, commit, and reconstruct APIs instead of only the
+  private test model.
+- Publication now calculates and validates the final materialized-byte count
+  before changing visible reference-store state, so intervening capacity
+  exhaustion cannot expose a partial commit.
+- Publication refuses staged work whose destination lacks a required chunk,
+  preventing cross-store commits from exposing incomplete layouts.
+- Bounded canonical layout-record reconstruction with typed pre-output refusal
+  for malformed records, zero-progress and over-reporting writers, output I/O
+  failures, conflicting stored chunks, corrupted chunk content, and ordinary
+  publication attempts that would silently repair missing committed chunks or
+  missing, incomplete, or wrong-target committed layout indexes.
+- Exact synchronous reference-store reconstruction that authenticates every
+  chunk, the registered storage-profile boundaries, and the complete named
+  blob before output, reverifies chunks during emission, completes short
+  writes, retries interruptions, and reports missing or mismatched content
+  with typed expected and observed identities.
+- Capacity-bounded streaming ingestion into a non-durable in-memory reference
+  adapter, with exact blob, chunk, and layout identity calculation, typed
+  source and capacity refusals, streaming enforcement of the caller's layout
+  entry cap, identity-based chunk deduplication, and an explicit
+  staged-to-visible commit transition.
+- An independent field-by-field flat-layout fixture oracle that verifies every
+  fixed offset, checksum, and `LayoutId` before cross-checking the production
+  encoder.
+- Validated flat-layout admission with explicit entry caps and an exact
+  canonical version-1 encoder backed by every frozen record and `LayoutId`
+  witness.
+- Bounded flat-layout decoding through explicit parse, validate, and admit
+  stages with deterministic first-failure errors for every frozen structural
+  mutation and optional final expected-`LayoutId` verification.
+- Generated flat-layout canonicality properties and a continuous
+  `layout_record` decoder fuzz target seeded through the Rust `xtask` with all
+  four frozen binary records.
+- Canonical `StorageProfileId` text coordinates and explicit admission of the
+  frozen `fastcdc-64k-v1` profile through `RegisteredStorageProfile`.
+- Canonical binary and text `LayoutId` coordinates with typed plan-length and
+  digest mismatch reporting backed by every coordinate refusal vector.
+- The canonical `keep.flat-chunks/v1` durable layout specification, typed
+  `LayoutId` grammar, checked flat-plan bounds, domain-separated checksum,
+  exact golden records, field-complete `LayoutId` refusal tables and
+  cardinality-before-aggregate first-failure plan mutation ledger, and
+  verified storage-profile boundary replay law.
+- Canonical version-1 `ChunkId` calculation in a domain distinct from
+  `BlobId`, with independent golden vectors.
+- A constant-memory `FastCdc` detector for `fastcdc-64k-v1` that preserves
+  boundaries and chunk identities across arbitrary feed partitioning, batches
+  contiguous identity-hash updates, and enters an explicit failed state after
+  a typed refusal.
+- Typed `ChunkLength`, `ChunkOffset`, and `ChunkSpan` values, corpus-driven
+  property and adversarial tests, measured allocation and throughput evidence,
+  and a fail-closed streaming CDC fuzz target.
+- Canonical version-1 `BlobId` calculation over exact logical bytes using a
+  one-pass, length-committing BLAKE3-256 preimage.
+- Strict, allocation-bounded text and fixed-width binary `BlobId` codecs with
+  typed refusal for malformed and unsupported encodings.
+- The implementation-independent Golden File Worldline v1 conformance corpus,
+  independent vector checker, mutation cases, and bounded reference model.
+- A versioned Gear64/FastCDC content-defined chunking profile, canonical
+  `StorageProfileId`, and language-neutral golden boundary corpus.
+- Initial repository foundation.
+
 ### Changed
 
+- The version-two retention and recovery pages each split their largest
+  sections into `retention-publication.md` (closure admission and the
+  generation transition) and `migration-recovery.md` (the one-way migration
+  protocol and partial-migration recovery), so every page sits well under the
+  300-line review threshold; the overview routes to both and the protocol
+  contract pins their phrases.
+- The README's two overlong link lines use reference-style links so every
+  line fits the 80-column width without breaking a URL.
+- Retention pool and namespace name predicates live beside their emitters in
+  one module, and the namespace census classifies entries from the directory
+  listing's file type instead of a metadata call per entry; its doc states the
+  bound on the work it performs.
+- The version-two admission type boundary is proven by a `compile_fail`
+  doctest on `FilesystemRetentionPublicationAuthority::open`; the source
+  contract keeps only per-file markers instead of exact signatures.
+- Version-1 and version-2 pool and namespace filenames render their digest
+  component through one shared lowercase-hexadecimal renderer instead of two
+  identical private copies.
+- Stage publishers and fixed-record readers share one exact-record module for
+  no-follow non-blocking opens, exact-length reads, trailing-byte refusal,
+  device-and-inode reverification, absence checks, and no-replacement links;
+  the retention stage, the migration fixed-record stage, the retention
+  current-state reader, the version-two record reader, and the version-one
+  segment and catalog publishers' pool links consume it, the three pinned
+  directory identity types collapse onto its `EntryIdentity`, and a contract
+  test keeps ported modules from reimplementing those primitives.
+- The retention FIFO laws run only on Linux through `mknodat`; the `mkfifo(1)`
+  fallback for other hosts is removed, and a contract test keeps every module
+  under `src/` free of process spawns. The fallback's spawned child briefly
+  held copies of other tests' lock descriptors, which surfaced locally as an
+  intermittent `WriterLock { source: Busy }` at reopen.
+- The formats index and the version-two overview state what is implemented
+  (one-way migration, version-two reopen, forward retention publication) and
+  what remains planned in issue #19 (retention recovery, reader fencing,
+  collection), instead of describing the whole version as planned.
+- `FilesystemPlatformAdmissionError` is `#[non_exhaustive]`, so a future
+  admission refusal can be added without a breaking change; a source contract
+  pins the attribute.
+- `ObservedRetentionState` carries the decoded head and manifest alongside
+  their exact bytes, so disposition, already-committed verification, and
+  predecessor verification decode each record once; the disposition names the
+  observed state it was derived from, which removes an unreachable
+  already-committed-without-a-head refusal.
+- The retention head, catalog head, format marker, migration intent, and
+  migration receipt readers take their fixed record lengths from the decoders
+  that define those formats instead of restating the numbers; a contract test
+  keeps the record-reading modules free of bare length literals.
+- Version-one reopen refuses a migrated root, and `admit_version_two` owns the
+  separate version-2 namespace boundary. Version-one recovery adapters refuse
+  version-two residue at the store root before pinning any pool: a format
+  marker, reader fence, migration record or stage, or a `retention`, `gc`, or
+  `recovery` directory means recovery discard, completion, resume, and
+  finalization refuse instead of rewriting a migrated store's version-one
+  pools. Unknown entries continue to be refused by recovery name
+  classification.
+- The Rust quality gates now build the crate documentation with
+  `cargo doc --workspace --no-deps --locked`, so a broken intra-doc link under
+  `#![deny(warnings)]` fails CI instead of only failing anyone who documents
+  the crate locally.
+- The adapters module root now declares modules only: its public re-export
+  surface lives in `adapters/exports.rs` and the recovery-stage adapters live
+  under `adapters/recovery/` behind one facade. No public path changed; the
+  root fell from 498 lines to 238 against the 500-line hard ceiling.
+- Restart artifact reads use one exact read into a pre-reserved buffer followed
+  by trailing-byte rejection; the interim chunked transfer layer, which pumped
+  every artifact through an 8 KiB buffer without lowering peak memory, is
+  removed with no change to refusal behaviour.
 - Repository crash-matrix execution now terminates isolated writer process
   groups at all 105 canonical before/during/after coordinates, retains open
   writer and stage authority until termination, executes production
@@ -301,168 +600,105 @@ after its public API and format compatibility policies are established.
   longer depends on the adapter-owned `Display` impl. `Debug` output carries
   no stability contract; this is not a format change.
 
-### Added
+### Fixed
 
-- Accepted ADR-0009 defines caller-supplied retention namespaces,
-  `BlobId`/`LayoutId` reconstruction anchors, fail-closed canonical closure,
-  generation-checked retention publication, immutable liveness snapshots,
-  release nonclaims, and GC evidence boundaries. This records the M4 design
-  contract; it does not claim that retention transitions or GC are
-  implemented.
-- Checked catalog generations; canonical catalog and publication-head codecs;
-  exact logical-record-to-segment admission with one bounded physical lookup
-  plan, one scan per referenced segment, and refusal of every unreferenced
-  caller-supplied segment during construction or admission; deterministic
-  successor proofs; immutable reader snapshots; seeded parser fuzzing; and
-  `BTreeMap` transition-model evidence for `keep.segment-store/v1`.
-- Blocking `FilesystemCatalogPublisher` publication under a persistent
-  kernel-managed writer lock and required `FilesystemPlatformAdmission`, with
-  pinned directory capabilities,
-  no-replacement immutable-pool links, complete post-link verification,
-  explicit file and directory synchronization, transitive `head.next`
-  verification, atomic `HEAD` replacement, and stale or recovery-required
-  refusal before mutation. New filesystem segment publication consumes the
-  sealed stage through its creating publisher, checks process-local publisher
-  authority, and closes the writable handle before any immutable-pool link;
-  publisher teardown closes every retained writable handle before releasing
-  writer authority.
-  Retry of an already-current complete candidate re-synchronizes the root and
-  returns an explicit `CatalogPublicationOutcome::AlreadyPublished` receipt
-  without repeating publication mutations. Retained `head.next` or
-  `current.cat`, an unselected `current.seg`, and every fixed-name stage on an
-  already-current retry now refuse at current-state verification before any
-  publication mutation. An absent `HEAD` with any retained segment-pool or
-  catalog-pool entry also refuses before mutation.
-- Bounded `FilesystemCatalogSnapshot` restart loading that follows only exact
-  checksummed head, catalog, and segment coordinates; refuses symbolic links,
-  nonregular files, malformed or conflicting bytes, dangling entries, and
-  resource-limit violations; and retains immutable bytes for pinned logical
-  reads.
-- Public, allocation-free `SegmentHeader` admission and emission for the exact
-  `keep.segment-store/v1` 64-byte header, with field-complete typed refusals
-  and golden-corpus evidence.
-- Public, allocation-free `SegmentRecordHeader` admission and emission for the
-  exact 112-byte chunk and flat-layout record grammar, with typed logical
-  identities, checked length derivation, and field-complete corruption laws.
-- Borrowed `ChecksummedSegmentRecord` and `AdmittedSegmentRecord` states for
-  bounded complete-record framing, checksum verification, logical
-  content-identity admission, and allocation-free chunk preparation.
-- Public, allocation-free `SegmentSeal` admission and emission for the exact
-  128-byte immutable-segment terminator, with checked physical coordinates,
-  domain-separated digest verification, and seal-checksum corruption laws.
-- Borrowed `AdmittedSegment` reading with explicit record and layout resource
-  limits, exact nested framing and identity admission, physical-order record
-  iteration, trailing-byte refusal, and duplicate-identity index reservation
-  bounded by both the configured count and physical record-header capacity.
-- Consuming `StagedSegment` transitions and immutable `SealedSegment` receipts
-  for exact append-only record writing, streaming seal construction, explicit
-  prefix/sealed flush-and-sync order, phase-typed I/O refusals, and a fallibly
-  reserved membership index for sublinear duplicate admission.
-- Writer-authorized `FilesystemSegmentStage` creation for the fixed
-  `current.seg` staging name, with a lifetime that retains the
-  `FilesystemCatalogPublisher` lock, atomic no-replacement admission,
-  preserved existing evidence, zero-origin writing, and no implicit cleanup
-  from `Drop`.
-- Rust cargo-fuzz coverage for the public segment header, record header,
-  complete record, seal, and complete-segment parser boundaries, seeded from
-  the canonical version-1 segment fixtures through `cargo xtask`.
-- ADR-0005 and the implementation-independent `keep.segment-store/v1`
-  protocol: exact immutable segment, catalog-generation, and publication-head
-  grammars; canonical ordering, bounds, and domain-separated checksums;
-  one-writer/many-reader publication with explicit flush, synchronization,
-  atomic replacement, and directory-synchronization order; stable
-  `KEEP-CRASH-001`–`035` transitions; typed recovery classifications; and
-  golden physical artifacts. Directory-synchronization crash classes admit
-  both the lawful pre-sync and durable namespace states, and recovery admits
-  only the exact verified stage/pool digest duplicate created by interrupted
-  hard-link publication. Fresh-store initialization is writer-locked,
-  idempotent across every partial canonical namespace set, and admitted only
-  after root synchronization. Explicit recovery can complete a durable
-  fixed-name stage into its immutable pool and durably clear the stage without
-  promoting a publication head. Explicit discard receipts now follow
-  synchronization of the stage's actual parent: `staging` for segment and
-  catalog stages, or the store root for `head.next`. Segment and catalog
-  production are implemented; crash recovery remains assigned to issue #17.
-  The golden corpus now includes a generation-2 catalog/head pair whose
-  predecessor field is the exact generation-1 catalog digest.
-- A deterministic, bounded, license-safe streaming CAS benchmark corpus and
-  release-only `cargo xtask benchmark-baseline` workflow covering all required
-  ingestion, edit, deduplication, range-read, verification, and input
-  partitioning scenarios. The versioned TSV report records exact semantic I/O,
-  amplification and reuse ratios, p50/p95/p99 wall latency, process CPU time,
-  throughput, allocations, incremental peak live heap, five chunking-profile
-  comparisons, compiler/target/Git/host identity bound across execution,
-  refusal of ambient code-generation settings and external Cargo
-  configuration, single-writer recoverable artifact publication, and an
-  explicit refusal to invent regression thresholds before controlled baseline
-  history exists.
-- Validated half-open `ByteRange` coordinates and allocation-free range
-  planning, plus exact synchronous reference-store range reads that load only
-  overlapping chunks, authenticate each selected complete chunk before
-  slicing, reauthenticate before output, and return a receipt whose deliberately
-  narrow verification scope excludes the complete blob, unrequested chunks,
-  and storage-profile boundaries. Caller-supplied layouts and records must
-  resolve to a committed target-layout binding before chunk lookup.
-- Expected-`BlobId` staging with typed complete-stream mismatch refusal; the
-  Golden File Worldline scenario and every claimed-content mutation now run
-  through public stage, commit, and reconstruct APIs instead of only the
-  private test model.
-- Publication now calculates and validates the final materialized-byte count
-  before changing visible reference-store state, so intervening capacity
-  exhaustion cannot expose a partial commit.
-- Publication refuses staged work whose destination lacks a required chunk,
-  preventing cross-store commits from exposing incomplete layouts.
-- Bounded canonical layout-record reconstruction with typed pre-output refusal
-  for malformed records, zero-progress and over-reporting writers, output I/O
-  failures, conflicting stored chunks, corrupted chunk content, and ordinary
-  publication attempts that would silently repair missing committed chunks or
-  missing, incomplete, or wrong-target committed layout indexes.
-- Exact synchronous reference-store reconstruction that authenticates every
-  chunk, the registered storage-profile boundaries, and the complete named
-  blob before output, reverifies chunks during emission, completes short
-  writes, retries interruptions, and reports missing or mismatched content
-  with typed expected and observed identities.
-- Capacity-bounded streaming ingestion into a non-durable in-memory reference
-  adapter, with exact blob, chunk, and layout identity calculation, typed
-  source and capacity refusals, streaming enforcement of the caller's layout
-  entry cap, identity-based chunk deduplication, and an explicit
-  staged-to-visible commit transition.
-- An independent field-by-field flat-layout fixture oracle that verifies every
-  fixed offset, checksum, and `LayoutId` before cross-checking the production
-  encoder.
-- Validated flat-layout admission with explicit entry caps and an exact
-  canonical version-1 encoder backed by every frozen record and `LayoutId`
-  witness.
-- Bounded flat-layout decoding through explicit parse, validate, and admit
-  stages with deterministic first-failure errors for every frozen structural
-  mutation and optional final expected-`LayoutId` verification.
-- Generated flat-layout canonicality properties and a continuous
-  `layout_record` decoder fuzz target seeded through the Rust `xtask` with all
-  four frozen binary records.
-- Canonical `StorageProfileId` text coordinates and explicit admission of the
-  frozen `fastcdc-64k-v1` profile through `RegisteredStorageProfile`.
-- Canonical binary and text `LayoutId` coordinates with typed plan-length and
-  digest mismatch reporting backed by every coordinate refusal vector.
-- The canonical `keep.flat-chunks/v1` durable layout specification, typed
-  `LayoutId` grammar, checked flat-plan bounds, domain-separated checksum,
-  exact golden records, field-complete `LayoutId` refusal tables and
-  cardinality-before-aggregate first-failure plan mutation ledger, and
-  verified storage-profile boundary replay law.
-- Canonical version-1 `ChunkId` calculation in a domain distinct from
-  `BlobId`, with independent golden vectors.
-- A constant-memory `FastCdc` detector for `fastcdc-64k-v1` that preserves
-  boundaries and chunk identities across arbitrary feed partitioning, batches
-  contiguous identity-hash updates, and enters an explicit failed state after
-  a typed refusal.
-- Typed `ChunkLength`, `ChunkOffset`, and `ChunkSpan` values, corpus-driven
-  property and adversarial tests, measured allocation and throughput evidence,
-  and a fail-closed streaming CDC fuzz target.
-- Canonical version-1 `BlobId` calculation over exact logical bytes using a
-  one-pass, length-committing BLAKE3-256 preimage.
-- Strict, allocation-bounded text and fixed-width binary `BlobId` codecs with
-  typed refusal for malformed and unsupported encodings.
-- The implementation-independent Golden File Worldline v1 conformance corpus,
-  independent vector checker, mutation cases, and bounded reference model.
-- A versioned Gear64/FastCDC content-defined chunking profile, canonical
-  `StorageProfileId`, and language-neutral golden boundary corpus.
-- Initial repository foundation.
+Review corrections to the unreleased retention and migration work above; none
+of these shipped in a release.
+
+- Retention publication reopens the catalog pool entry this store's `HEAD`
+  selects, bounded by the head's declared length, and requires it to decode
+  to that generation and digest (`CatalogAbsent`, `CatalogRefused`,
+  `CatalogChanged`), so a preparation verified before the catalog was lost no
+  longer publishes; closure-member segments are documented as not re-read.
+- `FilesystemVersionTwoAdmission` retains the `retention`, `roots`, and
+  `manifests` capabilities it admitted and hands them to the publication
+  authority, and current-state verification requires those names to still
+  resolve to the pinned directories (`ProtocolDirectoryReplaced`), so a
+  directory swapped in after reopen is neither opened nor published into.
+- Migration refuses a version-one store whose `staging` directory holds a
+  retained stage, so an interrupted version-one publication is recovered
+  before the intent exists instead of being stranded behind the version-two
+  markers.
+- A retention store already holding more than 4,096 namespace directories
+  refuses every publication as `NamespaceCapacity`, including a successor in
+  an existing namespace, instead of only refusing the 4,097th directory.
+- Retention pool names whose generation component encodes zero refuse as
+  noncanonical; root and liveness generations are positive, so the census no
+  longer treats an impossible coordinate as a canonical entry.
+- An already-committed retry presented over an absent retention head refuses
+  as `CommittedRetryOverAbsentHead` instead of the misnamed
+  `StaleCommittedRetry`; the successor-over-absent-head law now downcasts to
+  `ExpectedCurrentOverAbsentHead`.
+- The root-link and namespace-synchronization phases require the root handed
+  to them to name the namespace the attempt admitted, refusing with
+  `RetentionCurrentStateRefusal::AttemptNamespaceDisagreed` instead of
+  synchronizing whatever directory the attempt holds.
+- `FilesystemRecoveryStageError::LengthChanged` reports the stage's actual
+  on-disk length in `observed` when trailing bytes are found, instead of the
+  expected length plus the one byte that detected them.
+- Version-two record admission and catalog-head binding carry their decode
+  errors as sources: `VersionTwoRecordRefusal` names which of `FORMAT`,
+  `migration.intent`, or `migration.receipt` refused and preserves the
+  decoder's diagnosis, and `CatalogHeadRefused` carries the
+  `PublicationHeadDecodeError`.
+- Retention namespace admission refuses with typed
+  `RetentionCurrentStateRefusal` variants (`UnknownRetentionEntry`,
+  `NonNamespaceEntry`, `NoncanonicalPoolEntry`, `NamespaceCapacity`,
+  `NamespaceExpectationViolated`) instead of bare `InvalidData` strings, so
+  callers can tell an unknown entry from a full namespace pool.
+- Every coordinate a retention publication retains between phases now lives on
+  one publication attempt that current-state verification creates and the next
+  verification or cleanup discards: a refused verification admits no later
+  phase, a stage handle from an interrupted run is never reused, and namespace
+  admission refuses a directory the claimed expectation excludes with
+  `RetentionCurrentStateRefusal::NamespaceExpectationViolated`.
+- An already-committed retention retry reopens the manifest entry and the root
+  pool bytes the head selects and refuses absent, changed, or corrupt evidence
+  instead of inferring the commit from head agreement alone.
+- Retention current-state verification binds this store's catalog `HEAD` to
+  the closure's catalog coordinates for every disposition: a preparation built
+  from another store's `CatalogSnapshot` refuses before any forward write, and
+  an already-committed retry no longer returns a receipt citing a catalog this
+  store does not name. Observing the current state also requires the head's
+  predecessor digest to equal its manifest's predecessor.
+- A successor retention publication reopens the predecessor root the current
+  manifest selects, bounded by the root format's maximum encoded length, and
+  requires it to decode to exactly that generation and digest; a namespace
+  directory alone no longer stands in for an available predecessor.
+- Version-two reopen compares the reopened root's device, mount, and file
+  identity with the coordinates bound into `migration.intent` and refuses a
+  relocated or restored store with
+  `FilesystemPlatformAdmissionError::RootIdentityChanged`, matching the
+  comparison the migration authority makes before mutation.
+- Version-two namespace admission descends into the protocol directories:
+  `retention` must hold both immutable pools, `gc` must be empty, and
+  `recovery` must hold exactly an empty `dispositions`, matching what the
+  migration writer verifies at completion, so post-migration drift refuses at
+  admission instead of surfacing later as a pinning failure.
+- Retention publication admits the complete `retention` namespace before any
+  forward write: only `HEAD`, `roots`, and `manifests` may exist, every
+  namespace directory is 64 lowercase hex, and every pool entry is a regular
+  `<generation>-<digest>` file with its canonical suffix.
+- Existing namespace directories, including recovery-protected orphans, count
+  against the 4,096 namespace ceiling, and a candidate whose namespace would
+  be the 4,097th refuses before its root stage exists.
+- Current-state verification binds on-disk state to the claimed expectation:
+  an absent `retention/HEAD` is the empty state only while both pools are
+  empty and admits only an initial head with no predecessor; a namespace
+  directory must be absent for an `Absent` expectation and present for a
+  `Current` one. Every mismatch refuses as recovery-required before any stage
+  is written.
+- Each retention stage synchronization also synchronizes the `retention`
+  directory, so the `root.next`, `manifest.next`, and `head.next` entries are
+  durable before the namespace directory, pool links, or head replacement that
+  depend on them.
+- Every read-side reopen in retention publication and version-two admission
+  opens with `O_NONBLOCK`, so a FIFO planted at `retention/HEAD`, `FORMAT`, or
+  a pool name refuses by kind instead of blocking under the writer lock.
+- A retention stage left behind by a failed write is documented as recovery
+  evidence: it is never unlinked, and the next publication refuses until
+  recovery classifies it, exactly as the segment-stage doctrine already states.
+- The test and repository-task admission bypass probes root identity through a
+  lenient path that records an unreported `STATX_MNT_ID` as zero, so the suite
+  and crash matrix run on kernels older than 5.8; every production probe still
+  refuses without a reported mount identity.

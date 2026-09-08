@@ -69,6 +69,9 @@ jobs:
       - name: Test documentation
         run: cargo test --workspace --doc --locked
 
+      - name: Build documentation
+        run: cargo doc --workspace --no-deps --locked
+
       - name: Check MSRV contract
         run: cargo +1.96.0 check --workspace --all-targets --all-features --locked
 

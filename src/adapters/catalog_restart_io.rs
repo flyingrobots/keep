@@ -34,8 +34,15 @@ pub(super) fn open_regular(
     Ok((file, metadata.len()))
 }
 
-pub(super) fn read_exact(
-    mut file: File,
+/// Reads exactly `expected` bytes into one pre-reserved buffer and refuses any trailing byte.
+///
+/// The complete artifact is reserved before the first read, so an artifact
+/// that cannot fit in process memory refuses with
+/// [`CatalogRestartError::Allocation`] and never allocates. A short source
+/// refuses with the `phase` I/O error, and a longer source refuses with the
+/// exact observed length.
+pub(super) fn read_exact<R: Read>(
+    mut source: R,
     artifact: CatalogRestartArtifact,
     phase: CatalogRestartPhase,
     expected: u64,
@@ -55,21 +62,22 @@ pub(super) fn read_exact(
             source: Some(source),
         })?;
     encoded.resize(host_length, 0);
-    file.read_exact(&mut encoded)
+    source
+        .read_exact(&mut encoded)
         .map_err(|source| CatalogRestartError::io(phase, source))?;
-    reject_trailing_bytes(&mut file, artifact, phase, expected)?;
+    reject_trailing_bytes(&mut source, artifact, phase, expected)?;
     Ok(encoded)
 }
 
-fn reject_trailing_bytes(
-    file: &mut File,
+fn reject_trailing_bytes<R: Read>(
+    source: &mut R,
     artifact: CatalogRestartArtifact,
     phase: CatalogRestartPhase,
     expected: u64,
 ) -> Result<(), CatalogRestartError> {
     let mut trailing = [0_u8; 1];
     loop {
-        match file.read(&mut trailing) {
+        match source.read(&mut trailing) {
             Ok(0) => return Ok(()),
             Ok(observed) => {
                 let increment = u64::try_from(observed).map_err(|_source| {
@@ -88,5 +96,85 @@ fn reject_trailing_bytes(
             Err(source) if source.kind() == io::ErrorKind::Interrupted => {}
             Err(source) => return Err(CatalogRestartError::io(phase, source)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::error::Error;
+    use std::io::{self, Cursor, ErrorKind};
+
+    use super::*;
+
+    #[test]
+    fn read_exact_returns_exact_bytes() -> Result<(), Box<dyn Error>> {
+        let source = Cursor::new(b"abcdefg".to_vec());
+
+        let encoded = read_exact(
+            source,
+            CatalogRestartArtifact::Head,
+            CatalogRestartPhase::ReadCatalog,
+            7,
+        )?;
+
+        assert_eq!(encoded, b"abcdefg");
+        Ok(())
+    }
+
+    #[test]
+    fn read_exact_rejects_short_artifacts() -> Result<(), Box<dyn Error>> {
+        let source = Cursor::new(vec![b'a', b'b']);
+
+        let result = read_exact(
+            source,
+            CatalogRestartArtifact::Head,
+            CatalogRestartPhase::ReadCatalog,
+            4,
+        );
+
+        let Err(error) = result else {
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "short artifact should have been rejected",
+            )));
+        };
+        assert!(matches!(
+            error,
+            CatalogRestartError::Io {
+                phase: CatalogRestartPhase::ReadCatalog,
+                ref source,
+            } if source.kind() == ErrorKind::UnexpectedEof
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn read_exact_rejects_trailing_bytes() -> Result<(), Box<dyn Error>> {
+        let source = Cursor::new(vec![b'a', b'b', b'c']);
+
+        let result = read_exact(
+            source,
+            CatalogRestartArtifact::Head,
+            CatalogRestartPhase::ReadCatalog,
+            2,
+        );
+
+        let Err(error) = result else {
+            return Err(Box::new(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "trailing bytes should have been rejected",
+            )));
+        };
+        let expected = 2_u64;
+        assert!(matches!(
+            error,
+            CatalogRestartError::Length {
+                artifact: CatalogRestartArtifact::Head,
+                minimum,
+                maximum,
+                observed: 3
+            } if minimum == expected && maximum == expected
+        ));
+        Ok(())
     }
 }

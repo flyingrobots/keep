@@ -3,6 +3,7 @@
 use std::ffi::OsStr;
 use std::io;
 
+use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
 
 const LOCK_NAME: &str = "writer.lock";
@@ -17,6 +18,42 @@ const PUBLISHED_NAMES: [&str; 5] = [
     SEGMENTS_NAME,
     CATALOGS_NAME,
     HEAD_NAME,
+];
+const VERSION_TWO_MARKERS: [&str; 10] = [
+    "reader.lock",
+    "FORMAT",
+    "FORMAT.next",
+    "migration.intent",
+    "migration.intent.next",
+    "migration.receipt",
+    "migration.receipt.next",
+    "retention",
+    "gc",
+    "recovery",
+];
+const READER_LOCK_NAME: &str = "reader.lock";
+const MARKER_NAME: &str = "FORMAT";
+const INTENT_NAME: &str = "migration.intent";
+const RECEIPT_NAME: &str = "migration.receipt";
+const RETENTION_NAME: &str = "retention";
+const GC_NAME: &str = "gc";
+const RECOVERY_NAME: &str = "recovery";
+const ROOTS_NAME: &str = "roots";
+const MANIFESTS_NAME: &str = "manifests";
+const DISPOSITIONS_NAME: &str = "dispositions";
+const VERSION_TWO_NAMES: [&str; 12] = [
+    LOCK_NAME,
+    STAGING_NAME,
+    SEGMENTS_NAME,
+    CATALOGS_NAME,
+    HEAD_NAME,
+    READER_LOCK_NAME,
+    MARKER_NAME,
+    INTENT_NAME,
+    RECEIPT_NAME,
+    RETENTION_NAME,
+    GC_NAME,
+    RECOVERY_NAME,
 ];
 
 pub(super) fn admit(directory: &Dir) -> io::Result<()> {
@@ -34,6 +71,68 @@ pub(super) fn admit_published(directory: &Dir) -> io::Result<()> {
     admit_required_directory(directory, CATALOGS_NAME)?;
     admit_required_file(directory, HEAD_NAME)?;
     admit_membership(directory, &PUBLISHED_NAMES)
+}
+
+/// Refuses version-two residue before version-one recovery touches a pool.
+///
+/// Recovery may open a store at any lawful point of its version-one lifecycle,
+/// including before first publication and with `head.next` retained, and the
+/// recovery inventory already classifies every unknown root entry as
+/// unexpected. What that classification cannot express is that a root has left
+/// version one entirely: a format marker, reader fence, migration record or
+/// stage, or a `retention`, `gc`, or `recovery` directory means version-one
+/// recovery must refuse before pinning anything.
+pub(super) fn admit_recoverable(directory: &Dir) -> io::Result<()> {
+    for entry in directory.entries()? {
+        let name = entry?.file_name();
+        if is_canonical(&name, &VERSION_TWO_MARKERS) {
+            return Err(ambiguous_namespace());
+        }
+    }
+    Ok(())
+}
+
+/// Admits the exact completely migrated version-2 root namespace.
+///
+/// Every version-1 published entry, the persistent reader fence, the format
+/// marker, both migration records, and all three protocol directories must be
+/// present. Any other entry is unrecoverable ambiguity.
+pub(super) fn admit_version_two(directory: &Dir) -> io::Result<()> {
+    admit_required_file(directory, LOCK_NAME)?;
+    admit_required_directory(directory, STAGING_NAME)?;
+    admit_required_directory(directory, SEGMENTS_NAME)?;
+    admit_required_directory(directory, CATALOGS_NAME)?;
+    admit_required_file(directory, HEAD_NAME)?;
+    admit_required_file(directory, READER_LOCK_NAME)?;
+    admit_required_file(directory, MARKER_NAME)?;
+    admit_required_file(directory, INTENT_NAME)?;
+    admit_required_file(directory, RECEIPT_NAME)?;
+    admit_required_directory(directory, RETENTION_NAME)?;
+    admit_required_directory(directory, GC_NAME)?;
+    admit_required_directory(directory, RECOVERY_NAME)?;
+    admit_membership(directory, &VERSION_TWO_NAMES)?;
+    admit_version_two_protocol_directories(directory)
+}
+
+/// Admits the nested version-2 protocol directories the migration writer left.
+///
+/// `retention` must carry both immutable pools (its head and stages belong to
+/// retention publication); `gc` must be empty until `KEEP-GC-001` implements
+/// its records; `recovery` must hold exactly an empty `dispositions`. This is
+/// the same membership `verify_prefix_directories` requires at the end of
+/// migration, so a root that drifted after migration refuses here rather than
+/// as a later pinning failure.
+fn admit_version_two_protocol_directories(directory: &Dir) -> io::Result<()> {
+    let retention = directory.open_dir_nofollow(RETENTION_NAME)?;
+    admit_required_directory(&retention, ROOTS_NAME)?;
+    admit_required_directory(&retention, MANIFESTS_NAME)?;
+    let gc = directory.open_dir_nofollow(GC_NAME)?;
+    admit_membership(&gc, &[])?;
+    let recovery = directory.open_dir_nofollow(RECOVERY_NAME)?;
+    admit_required_directory(&recovery, DISPOSITIONS_NAME)?;
+    admit_membership(&recovery, &[DISPOSITIONS_NAME])?;
+    let dispositions = recovery.open_dir_nofollow(DISPOSITIONS_NAME)?;
+    admit_membership(&dispositions, &[])
 }
 
 fn admit_optional_file(directory: &Dir, name: &str) -> io::Result<()> {

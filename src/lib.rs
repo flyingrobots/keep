@@ -20,9 +20,27 @@
 //! explicit. Exact next-head finalization now has a storage-independent
 //! contract and a pinned writer-authorized filesystem adapter. Reusable-stage
 //! continuation has a storage-independent planning and execution boundary plus
-//! a pinned writer-authorized filesystem adapter. Retention and garbage
-//! collection remain intentionally absent until their contracts have
-//! executable specifications.
+//! a pinned writer-authorized filesystem adapter. Core retention namespaces,
+//! generations, realization policy, reconstruction anchors, and semantic roots
+//! are validated; canonical in-memory root, manifest, and head encoding and
+//! decoding, storage-independent expected-state transition planning,
+//! deterministic bounded closure verification against a pinned catalog, and a
+//! combined transition preflight proof and exact publication phase vocabulary
+//! with a blocking storage capability port are available. Storage-independent
+//! preparation binds preflight to exact canonical manifest and head successors.
+//! Ordered publication revalidates authority, executes all durability phases,
+//! and returns a complete receipt. The exact version-2 store-format marker has
+//! canonical encoding, registered-definition admission, checksum verification,
+//! and domain-separated identity. Migration-intent admission validates its
+//! framing, checksum, catalog and predecessor grammar, registered definition,
+//! deterministic store identity, and typed recovery coordinates. Completion
+//! receipts bind an admitted intent and marker, registered empty-state digests,
+//! and the complete synchronization mask. Writer-locked filesystem authority
+//! now executes one fresh forward migration through exact fixed-record and
+//! namespace transitions while retaining version-1 immutable bytes.
+//! Partial-prefix migration recovery, filesystem retention execution,
+//! immutable reader snapshots, and garbage collection remain intentionally
+//! absent.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -34,47 +52,55 @@ mod chunk;
 mod layout;
 mod profile;
 mod reference;
+mod retention;
 
 #[cfg(feature = "repository-tasks")]
 #[doc(hidden)]
 pub use adapters::RepositoryInitializationStorage;
 pub use adapters::{
     AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedSegment, AdmittedSegmentRecord,
+    AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, AdmittedStoreMigrationReceipt,
     BlobIdBinaryParseError, BlobIdTextParseError, CanonicalCatalog, CanonicalLayoutRecord,
-    CanonicalPublicationHead, CatalogAdmissionError, CatalogAllocationPhase, CatalogDecodeError,
-    CatalogEncodeError, CatalogEntryDecodeError, CatalogPublicationError,
+    CanonicalPublicationHead, CanonicalStoreFormatMarker, CanonicalStoreMigrationIntent,
+    CanonicalStoreMigrationReceipt, CatalogAdmissionError, CatalogAllocationPhase,
+    CatalogDecodeError, CatalogEncodeError, CatalogEntryDecodeError, CatalogPublicationError,
     CatalogPublicationExpectation, CatalogPublicationOutcome, CatalogPublicationPhase,
     CatalogPublicationReadiness, CatalogPublicationReceipt, CatalogPublicationStorage,
     CatalogRestartArtifact, CatalogRestartByteLimit, CatalogRestartByteLimitError,
     CatalogRestartError, CatalogRestartPhase, CatalogRestartPolicy, CatalogSnapshot,
     CatalogSnapshotError, CatalogSuccessor, CatalogTransitionError, ChecksummedCatalog,
-    ChecksummedPublicationHead, ChecksummedSegmentRecord, ClosedSegment,
+    ChecksummedPublicationHead, ChecksummedSegmentRecord, ClosedSegment, EmptyDispositionSetDigest,
     FilesystemCatalogPublicationError, FilesystemCatalogPublisher, FilesystemCatalogSnapshot,
+    FilesystemMigrationAuthorityArtifact, FilesystemMigrationAuthorityError,
+    FilesystemMigrationInventoryError, FilesystemMigrationInventoryOperation,
     FilesystemPlatformAdmission, FilesystemPlatformAdmissionError,
     FilesystemRecoveryInventoryReader, FilesystemRecoveryNextHeadFinalizationOpenError,
     FilesystemRecoveryNextHeadFinalizer, FilesystemRecoverySegmentResumeOpenError,
     FilesystemRecoverySegmentResumer, FilesystemRecoverySegmentStage,
     FilesystemRecoveryStageCompleter, FilesystemRecoveryStageCompletionOpenError,
     FilesystemRecoveryStageDiscardOpenError, FilesystemRecoveryStageDiscarder,
-    FilesystemRecoveryStageError, FilesystemSegmentStage, FilesystemWriterLock, LayoutDecodeError,
-    LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
-    OpenedReusableSegment, PublicationHeadDecodeError, RecoveryCatalogStage,
-    RecoveryCatalogStageError, RecoveryEntryName, RecoveryEntryNameError, RecoveryEntryRole,
-    RecoveryInventory, RecoveryInventoryEntry, RecoveryInventoryError, RecoveryInventoryLimit,
-    RecoveryInventoryLimitError, RecoveryInventoryOperation, RecoveryInventoryStorage,
-    RecoveryNameClassificationError, RecoveryNameManifest, RecoveryNamedEntry, RecoveryNamespace,
-    RecoveryNextHeadFinalizationError, RecoveryNextHeadFinalizationOutcome,
-    RecoveryNextHeadFinalizationPlanError, RecoveryNextHeadFinalizationReadiness,
-    RecoveryNextHeadFinalizationReceipt, RecoveryNextHeadFinalizationRequest,
-    RecoveryNextHeadFinalizationStorage, RecoveryNextHeadFinalizationStorageError,
-    RecoveryNextHeadFinalizationTarget, RecoveryNextHeadStage, RecoveryNextHeadStageError,
-    RecoveryPoolNameError, RecoveryRequiredEntry, RecoverySegmentResumeError,
-    RecoverySegmentResumePlanError, RecoverySegmentResumeRequest, RecoverySegmentResumeStorage,
-    RecoverySegmentResumeStorageError, RecoverySegmentStage, RecoverySegmentStageError,
-    RecoverySegmentTruncation, RecoveryStage, RecoveryStageAssessment,
-    RecoveryStageAssessmentError, RecoveryStageByteAdmissionError, RecoveryStageCompletionError,
-    RecoveryStageCompletionPlanError, RecoveryStageCompletionPool, RecoveryStageCompletionReceipt,
-    RecoveryStageCompletionRequest, RecoveryStageCompletionStorage,
+    FilesystemRecoveryStageError, FilesystemSegmentStage, FilesystemStoreMigrationAuthority,
+    FilesystemStoreMigrationInventoryReader, FilesystemVersionTwoAdmission, FilesystemWriterLock,
+    ImmutablePoolInventoryDigest, InitialGcStateDigest, InitialRetentionStateDigest,
+    LayoutDecodeError, LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError,
+    LayoutIdTextParseError, MigrationInventoryNamespace, MigrationInventoryPool,
+    MigrationSynchronizationMask, OpenedReusableSegment, PublicationHeadDecodeError,
+    RecoveryCatalogStage, RecoveryCatalogStageError, RecoveryEntryName, RecoveryEntryNameError,
+    RecoveryEntryRole, RecoveryInventory, RecoveryInventoryEntry, RecoveryInventoryError,
+    RecoveryInventoryLimit, RecoveryInventoryLimitError, RecoveryInventoryOperation,
+    RecoveryInventoryStorage, RecoveryNameClassificationError, RecoveryNameManifest,
+    RecoveryNamedEntry, RecoveryNamespace, RecoveryNextHeadFinalizationError,
+    RecoveryNextHeadFinalizationOutcome, RecoveryNextHeadFinalizationPlanError,
+    RecoveryNextHeadFinalizationReadiness, RecoveryNextHeadFinalizationReceipt,
+    RecoveryNextHeadFinalizationRequest, RecoveryNextHeadFinalizationStorage,
+    RecoveryNextHeadFinalizationStorageError, RecoveryNextHeadFinalizationTarget,
+    RecoveryNextHeadStage, RecoveryNextHeadStageError, RecoveryPoolNameError,
+    RecoveryRequiredEntry, RecoverySegmentResumeError, RecoverySegmentResumePlanError,
+    RecoverySegmentResumeRequest, RecoverySegmentResumeStorage, RecoverySegmentResumeStorageError,
+    RecoverySegmentStage, RecoverySegmentStageError, RecoverySegmentTruncation, RecoveryStage,
+    RecoveryStageAssessment, RecoveryStageAssessmentError, RecoveryStageByteAdmissionError,
+    RecoveryStageCompletionError, RecoveryStageCompletionPlanError, RecoveryStageCompletionPool,
+    RecoveryStageCompletionReceipt, RecoveryStageCompletionRequest, RecoveryStageCompletionStorage,
     RecoveryStageCompletionStorageError, RecoveryStageCompletionTarget, RecoveryStageDiscardError,
     RecoveryStageDiscardOutcome, RecoveryStageDiscardPlanError, RecoveryStageDiscardReason,
     RecoveryStageDiscardReceipt, RecoveryStageDiscardRequest, RecoveryStageDiscardStorage,
@@ -89,15 +115,37 @@ pub use adapters::{
     SegmentRecordLength, SegmentRecordLimit, SegmentRecordLimitError, SegmentRecordPayloadLength,
     SegmentRecords, SegmentSeal, SegmentSealError, SegmentStage, SegmentStageCreateError,
     SegmentWriteError, SegmentWritePhase, StagedSegment, StorageProfileIdParseError,
-    StoreInitializationError, StoreInitializationPhase, StoreInitializationReceipt,
-    StoreInitializationStorage, WriterLockAcquireError, WriterLockAcquirePhase,
+    StoreFormatDefinitionDigest, StoreFormatMarkerDecodeError, StoreFormatMarkerDigest,
+    StoreIdentifier, StoreInitializationError, StoreInitializationPhase,
+    StoreInitializationReceipt, StoreInitializationStorage, StoreMigrationError,
+    StoreMigrationIntentDecodeError, StoreMigrationIntentDigest, StoreMigrationInventoryEntry,
+    StoreMigrationInventoryEntryCount, StoreMigrationInventoryEntryCountError,
+    StoreMigrationInventoryError, StoreMigrationInventoryHasher, StoreMigrationPhase,
+    StoreMigrationReceiptDecodeError, StoreMigrationStorage, StoreRootDeviceIdentity,
+    StoreRootFileIdentity, StoreRootIdentityCoordinate, StoreRootMountIdentity,
+    VersionTwoRecordRefusal, WriterLockAcquireError, WriterLockAcquirePhase,
     admit_recovery_stage_bytes, assess_recovery_stage, classify_recovery_catalog_stage,
     classify_recovery_names, classify_recovery_next_head_stage, classify_recovery_segment_stage,
     execute_recovery_next_head_finalization, execute_recovery_segment_resume,
-    execute_recovery_stage_completion, execute_recovery_stage_discard, fingerprint_recovery_stage,
-    initialize_store, plan_recovery_next_head_finalization, plan_recovery_segment_resume,
-    plan_recovery_stage_completion, plan_recovery_stage_discard, publish_catalog_generation,
-    read_recovery_inventory,
+    execute_recovery_stage_completion, execute_recovery_stage_discard, execute_store_migration,
+    fingerprint_recovery_stage, initialize_store, plan_recovery_next_head_finalization,
+    plan_recovery_segment_resume, plan_recovery_stage_completion, plan_recovery_stage_discard,
+    publish_catalog_generation, read_recovery_inventory,
+};
+pub use adapters::{
+    AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
+    CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
+    FilesystemRetentionAuthorityError, FilesystemRetentionPublicationAuthority,
+    ObservedRetentionState, PreparedRetentionPublication, RetentionAuthorityDirectory,
+    RetentionClosureVerificationError, RetentionCurrentStateRefusal, RetentionHeadDecodeError,
+    RetentionManifestDecodeError, RetentionManifestEncodeError, RetentionNamespaceAdmission,
+    RetentionPublicationError, RetentionPublicationOutcome, RetentionPublicationPhase,
+    RetentionPublicationPreparation, RetentionPublicationPreparationError,
+    RetentionPublicationReceipt, RetentionPublicationStorage, RetentionRootDecodeError,
+    RetentionRootEncodeError, RetentionTransitionDisposition, RetentionTransitionError,
+    RetentionTransitionPreflight, RetentionTransitionPreflightError, RetentionTransitionReadiness,
+    VerifiedRetentionClosure, execute_retention_publication, plan_retention_transition,
+    preflight_retention_transition, prepare_retention_publication, verify_retention_closure,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
@@ -118,4 +166,15 @@ pub use reference::{
     IngestionAllocation, IngestionError, ProfileBoundary, PublishError, PublishedBlob,
     RangeReadError, RangeReadReceipt, ReconstructionError, ReconstructionReceipt, ReferenceStore,
     ReferenceStoreCapacity, StagedBlob,
+};
+pub use retention::{
+    LivenessGeneration, LivenessGenerationError, RegisteredRetentionProfile, RetentionAnchor,
+    RetentionAnchorSetDigest, RetentionClosureCounter, RetentionClosureDigest,
+    RetentionClosureLimit, RetentionClosureLimitError, RetentionClosureLimits,
+    RetentionClosureUsage, RetentionGenerationExpectation, RetentionHead, RetentionHeadError,
+    RetentionManifest, RetentionManifestDigest, RetentionManifestEntry, RetentionManifestError,
+    RetentionManifestLength, RetentionManifestLengthError, RetentionNamespace,
+    RetentionNamespaceDigest, RetentionNamespaceError, RetentionPolicy,
+    RetentionProfileAdmissionError, RetentionRoot, RetentionRootDigest, RetentionRootError,
+    RootGeneration, RootGenerationError,
 };
