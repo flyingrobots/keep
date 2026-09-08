@@ -605,6 +605,11 @@ after its public API and format compatibility policies are established.
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
+- `FilesystemVersionTwoAdmission` retains the `retention`, `roots`, and
+  `manifests` capabilities it admitted and hands them to the publication
+  authority, and current-state verification requires those names to still
+  resolve to the pinned directories (`ProtocolDirectoryReplaced`), so a
+  directory swapped in after reopen is neither opened nor published into.
 - Migration refuses a version-one store whose `staging` directory holds a
   retained stage, so an interrupted version-one publication is recovered
   before the intent exists instead of being stranded behind the version-two

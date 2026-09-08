@@ -109,6 +109,9 @@ pub enum RetentionCurrentStateRefusal {
     /// A byte-identical already-committed retry was presented while no
     /// retention head is published, so nothing can have committed it.
     CommittedRetryOverAbsentHead,
+    /// A protocol directory named at admission (`retention`, `roots`, or
+    /// `manifests`) no longer names the pinned directory that was admitted.
+    ProtocolDirectoryReplaced,
     /// A record's kind or length disagreed with its declaration.
     RecordKindOrLength,
     /// A record carried bytes beyond its declared length.
@@ -208,6 +211,9 @@ impl RetentionCurrentStateRefusal {
             Self::RecordKindOrLength => "retention record kind or length disagreed",
             Self::RecordTrailingBytes => "retention record carried trailing bytes",
             Self::RecordLengthOverflow => "retention record length exceeded the addressable range",
+            Self::ProtocolDirectoryReplaced => {
+                "a retention protocol directory was replaced after admission"
+            }
             Self::CommittedRetryOverAbsentHead => {
                 "already-committed retry presented while no retention head is published"
             }

@@ -2,7 +2,6 @@
 
 use std::io;
 
-use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
 
 use super::filesystem_retention_attempt::PublicationAttempt;
@@ -10,7 +9,6 @@ use super::filesystem_retention_authority_error::{
     FilesystemRetentionAuthorityError as Error, RetentionAuthorityDirectory as Directory,
 };
 use super::filesystem_retention_current::{self, ObservedRetentionState};
-use super::filesystem_retention_pool_name as pool_name;
 use crate::adapters::{FilesystemVersionTwoAdmission, FilesystemWriterLock};
 
 /// Exclusive authority to publish retention transitions on one pinned root.
@@ -56,17 +54,14 @@ impl FilesystemRetentionPublicationAuthority {
     /// # Errors
     ///
     /// Returns [`FilesystemRetentionAuthorityError`](super::FilesystemRetentionAuthorityError)
-    /// when the root capability cannot be cloned or the retention namespace and
-    /// either immutable pool cannot be pinned without following links.
+    /// when the root capability cannot be cloned. The retention namespace and
+    /// both immutable pools arrive already pinned by admission.
     pub fn open(admission: FilesystemVersionTwoAdmission) -> Result<Self, Error> {
-        let lock = admission.into_lock();
+        let (lock, retention, roots, manifests) = admission.into_parts();
         let root = lock.clone_directory().map_err(|source| Error::Directory {
             directory: Directory::Root,
             source,
         })?;
-        let retention = open_directory(&root, pool_name::RETENTION, Directory::Retention)?;
-        let roots = open_directory(&retention, pool_name::ROOTS, Directory::Roots)?;
-        let manifests = open_directory(&retention, pool_name::MANIFESTS, Directory::Manifests)?;
         Ok(Self {
             root,
             retention,
@@ -90,10 +85,4 @@ impl FilesystemRetentionPublicationAuthority {
     pub fn observe_current(&self) -> io::Result<Option<ObservedRetentionState>> {
         filesystem_retention_current::observe(&self.retention, &self.manifests)
     }
-}
-
-fn open_directory(parent: &Dir, name: &str, directory: Directory) -> Result<Dir, Error> {
-    parent
-        .open_dir_nofollow(name)
-        .map_err(|source| Error::Directory { directory, source })
 }

@@ -19,6 +19,7 @@ use super::{
 };
 use crate::RetentionGenerationExpectation;
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
+use crate::adapters::filesystem_exact_record::EntryIdentity;
 
 impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
     fn verify_current(
@@ -26,6 +27,7 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
         preparation: &RetentionPublicationPreparation<'_>,
     ) -> io::Result<RetentionTransitionDisposition> {
         self.attempt = None;
+        require_pinned_directories(&self.root, &self.retention, &self.roots, &self.manifests)?;
         require_no_retained_stage(&self.retention)?;
         let census =
             filesystem_retention_namespace::admit(&self.retention, &self.roots, &self.manifests)?;
@@ -228,6 +230,37 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
         self.attempt = None;
         Ok(())
     }
+}
+
+/// Requires the protocol names to still resolve to the directories admission pinned.
+///
+/// The authority operates only on the pinned capabilities, but a `retention`,
+/// `roots`, or `manifests` entry renamed and replaced after admission means the
+/// store's namespace no longer describes the admitted state; publication
+/// refuses instead of writing into a directory no reader would find.
+fn require_pinned_directories(
+    root: &Dir,
+    retention: &Dir,
+    roots: &Dir,
+    manifests: &Dir,
+) -> io::Result<()> {
+    for (parent, name, pinned) in [
+        (root, pool_name::RETENTION, retention),
+        (retention, pool_name::ROOTS, roots),
+        (retention, pool_name::MANIFESTS, manifests),
+    ] {
+        let current = match parent.open_dir_nofollow(name) {
+            Ok(current) => current,
+            Err(source) if source.kind() == io::ErrorKind::NotFound => {
+                return Err(RetentionCurrentStateRefusal::ProtocolDirectoryReplaced.into_io());
+            }
+            Err(source) => return Err(source),
+        };
+        if EntryIdentity::of_directory(&current)? != EntryIdentity::of_directory(pinned)? {
+            return Err(RetentionCurrentStateRefusal::ProtocolDirectoryReplaced.into_io());
+        }
+    }
+    Ok(())
 }
 
 fn require_no_retained_stage(retention: &Dir) -> io::Result<()> {

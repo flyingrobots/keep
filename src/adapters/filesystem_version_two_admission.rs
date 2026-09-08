@@ -2,6 +2,7 @@
 
 use std::path::Path;
 
+use cap_fs_ext::DirExt;
 #[cfg(test)]
 use cap_std::ambient_authority;
 use cap_std::fs::Dir;
@@ -20,10 +21,16 @@ use super::{
 /// [`FilesystemPlatformAdmission`](super::FilesystemPlatformAdmission): a
 /// version-one publisher cannot consume it, so version-one catalog publication
 /// can never run against a migrated root and leave residue no adapter admits.
-/// Fields are private so only version-two admission can create values.
+/// Fields are private so only version-two admission can create values. The
+/// admitted `retention`, `roots`, and `manifests` capabilities are retained,
+/// so the authority built from this value operates on the directories that
+/// passed admission and not on whatever those names resolve to later.
 #[must_use]
 pub struct FilesystemVersionTwoAdmission {
     lock: FilesystemWriterLock,
+    retention: Dir,
+    roots: Dir,
+    manifests: Dir,
 }
 
 impl FilesystemVersionTwoAdmission {
@@ -56,8 +63,9 @@ impl FilesystemVersionTwoAdmission {
         Self::admit(root)
     }
 
-    pub(super) fn into_lock(self) -> FilesystemWriterLock {
-        self.lock
+    /// Releases the writer lock and the three pinned retention capabilities.
+    pub(super) fn into_parts(self) -> (FilesystemWriterLock, Dir, Dir, Dir) {
+        (self.lock, self.retention, self.roots, self.manifests)
     }
 
     fn admit(root: Dir) -> Result<Self, FilesystemPlatformAdmissionError> {
@@ -73,8 +81,23 @@ impl FilesystemVersionTwoAdmission {
         let bound = filesystem_version_two_records::admit(&directory)
             .map_err(|source| FilesystemPlatformAdmissionError::MigrationRecord { source })?;
         require_root_identity(bound, observed)?;
-        Ok(Self { lock })
+        let retention = pin(&directory, "retention")?;
+        let roots = pin(&retention, "roots")?;
+        let manifests = pin(&retention, "manifests")?;
+        Ok(Self {
+            lock,
+            retention,
+            roots,
+            manifests,
+        })
     }
+}
+
+/// Pins one admitted protocol directory without following links.
+fn pin(parent: &Dir, name: &str) -> Result<Dir, FilesystemPlatformAdmissionError> {
+    parent
+        .open_dir_nofollow(name)
+        .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })
 }
 
 /// Requires the reopened root to be the physical root the migration intent bound.
