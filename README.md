@@ -7,8 +7,7 @@
 
 Everything else in this repository exists to make that sentence true under
 power loss, process death, corrupted disks, and byte-identical files swapped
-in underneath it. The
-[authenticated reconstruction contract](docs/invariants/authenticated-reconstruction/README.md)
+in underneath it. The [authenticated reconstruction contract][reconstruction]
 states the promise precisely, including its limits.
 
 Keep is a standalone Rust library. It is the storage layer beneath
@@ -81,9 +80,8 @@ publishes a successor generation; it does not assert that bytes were
 destroyed.
 
 The authoritative status of every requirement, with the test that proves it,
-is the ledger in
-[`docs/formats/segment-store-v2/requirements.md`](docs/formats/segment-store-v2/requirements.md).
-Its first rule: *a planned case is not evidence.*
+is the [requirements ledger][ledger]. Its first rule: *a planned case is not
+evidence.*
 
 ## How it works
 
@@ -225,3 +223,6 @@ Report vulnerabilities through [SECURITY.md](SECURITY.md). Do not include
 plaintext content, keys, or sensitive paths in a public issue.
 
 Licensed under the [Apache License 2.0](LICENSE).
+
+[reconstruction]: docs/invariants/authenticated-reconstruction/README.md
+[ledger]: docs/formats/segment-store-v2/requirements.md

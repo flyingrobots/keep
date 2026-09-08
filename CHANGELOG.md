@@ -242,6 +242,8 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- The README's two overlong link lines use reference-style links so every
+  line fits the 80-column width without breaking a URL.
 - Retention pool and namespace name predicates live beside their emitters in
   one module, and the namespace census classifies entries from the directory
   listing's file type instead of a metadata call per entry; its doc states the
