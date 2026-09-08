@@ -242,6 +242,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Retention pool and namespace name predicates live beside their emitters in
+  one module, and the namespace census classifies entries from the directory
+  listing's file type instead of a metadata call per entry; its doc states the
+  bound on the work it performs.
 - The version-two admission type boundary is proven by a `compile_fail`
   doctest on `FilesystemRetentionPublicationAuthority::open`; the source
   contract keeps only per-file markers instead of exact signatures.

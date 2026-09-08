@@ -1,6 +1,5 @@
 //! This module owns exact admission of the `retention` protocol namespace.
 
-use std::ffi::OsStr;
 use std::io;
 
 use cap_fs_ext::DirExt;
@@ -12,10 +11,6 @@ use super::filesystem_retention_pool_name as pool_name;
 use crate::{RetentionGenerationExpectation, RetentionManifest};
 
 const CANONICAL_ENTRIES: [&str; 3] = [pool_name::HEAD, pool_name::ROOTS, pool_name::MANIFESTS];
-const DIGEST_HEX: usize = 64;
-const GENERATION_HEX: usize = 16;
-const ROOT_SUFFIX: &str = ".root";
-const MANIFEST_SUFFIX: &str = ".manifest";
 
 /// Bounded observation of the admitted retention namespace.
 #[must_use]
@@ -41,6 +36,12 @@ impl RetentionNamespaceCensus {
 /// regular `<generation>-<digest>.root` files; every `manifests` entry must be
 /// a regular `<generation>-<digest>.manifest` file. Kinds are observed without
 /// following links. Any other entry is unrecoverable ambiguity and refuses.
+///
+/// The census is bounded: it visits every `roots` entry, every root pool, and
+/// the manifest pool exactly once, retains only two counters, reads no entry
+/// bytes, and classifies each entry from the directory listing's own file type.
+/// Its work is therefore proportional to the entry count, which the 4,096
+/// namespace ceiling and the pools' generation histories bound.
 pub(super) fn admit(
     retention: &Dir,
     roots: &Dir,
@@ -56,16 +57,16 @@ pub(super) fn admit(
     for entry in roots.entries()? {
         let entry = entry?;
         let name = entry.file_name();
-        if !is_lower_hex(&name, DIGEST_HEX) || !entry.metadata()?.is_dir() {
+        if !pool_name::is_namespace_name(&name) || !entry.file_type()?.is_dir() {
             return Err(Refusal::NonNamespaceEntry.into_io());
         }
         namespace_count = namespace_count
             .checked_add(1)
             .ok_or_else(|| Refusal::NamespaceCapacity.into_io())?;
         let namespace = roots.open_dir_nofollow(&name)?;
-        let _roots = admit_pool(&namespace, ROOT_SUFFIX, "root pool")?;
+        let _roots = admit_pool(&namespace, pool_name::ROOT_SUFFIX, "root pool")?;
     }
-    let manifest_count = admit_pool(manifests, MANIFEST_SUFFIX, "manifest pool")?;
+    let manifest_count = admit_pool(manifests, pool_name::MANIFEST_SUFFIX, "manifest pool")?;
     Ok(RetentionNamespaceCensus {
         namespace_count,
         manifest_count,
@@ -129,7 +130,7 @@ fn admit_pool(directory: &Dir, suffix: &str, pool: &'static str) -> io::Result<u
     let mut count = 0_u32;
     for entry in directory.entries()? {
         let entry = entry?;
-        if !is_pool_name(&entry.file_name(), suffix) || !entry.metadata()?.is_file() {
+        if !pool_name::is_pool_name(&entry.file_name(), suffix) || !entry.file_type()?.is_file() {
             return Err(Refusal::NoncanonicalPoolEntry { pool }.into_io());
         }
         count = count
@@ -137,27 +138,4 @@ fn admit_pool(directory: &Dir, suffix: &str, pool: &'static str) -> io::Result<u
             .ok_or_else(|| Refusal::NamespaceCapacity.into_io())?;
     }
     Ok(count)
-}
-
-fn is_pool_name(name: &OsStr, suffix: &str) -> bool {
-    let Some(name) = name.to_str() else {
-        return false;
-    };
-    let Some(stem) = name.strip_suffix(suffix) else {
-        return false;
-    };
-    let Some((generation, digest)) = stem.split_once('-') else {
-        return false;
-    };
-    is_lower_hex(OsStr::new(generation), GENERATION_HEX)
-        && is_lower_hex(OsStr::new(digest), DIGEST_HEX)
-}
-
-fn is_lower_hex(name: &OsStr, length: usize) -> bool {
-    name.to_str().is_some_and(|text| {
-        text.len() == length
-            && text
-                .bytes()
-                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
-    })
 }
