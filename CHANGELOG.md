@@ -242,6 +242,9 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- The version-two admission type boundary is proven by a `compile_fail`
+  doctest on `FilesystemRetentionPublicationAuthority::open`; the source
+  contract keeps only per-file markers instead of exact signatures.
 - Version-1 and version-2 pool and namespace filenames render their digest
   component through one shared lowercase-hexadecimal renderer instead of two
   identical private copies.

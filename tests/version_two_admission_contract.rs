@@ -11,17 +11,21 @@ const MIGRATION_AUTHORITY: &str =
 const ADMISSION_ERROR: &str =
     include_str!("../src/adapters/filesystem_platform_admission_error.rs");
 
+/// The type-level proof is the `compile_fail` doctest on
+/// `FilesystemRetentionPublicationAuthority::open`, which refuses a
+/// `FilesystemPlatformAdmission` argument at compile time. These markers only
+/// keep each file on its side of the boundary without pinning a signature.
 #[test]
 fn retention_publication_consumes_only_version_two_authority() {
-    assert!(RETENTION_AUTHORITY.contains("pub fn open(admission: FilesystemVersionTwoAdmission)"));
+    assert!(RETENTION_AUTHORITY.contains("FilesystemVersionTwoAdmission"));
     assert!(!RETENTION_AUTHORITY.contains("admission: FilesystemPlatformAdmission"));
 }
 
 #[test]
 fn version_one_publishers_consume_only_version_one_authority() {
-    assert!(CATALOG_PUBLISHER.contains("admission: FilesystemPlatformAdmission,"));
+    assert!(CATALOG_PUBLISHER.contains("FilesystemPlatformAdmission"));
     assert!(!CATALOG_PUBLISHER.contains("FilesystemVersionTwoAdmission"));
-    assert!(MIGRATION_AUTHORITY.contains("admission: FilesystemPlatformAdmission,"));
+    assert!(MIGRATION_AUTHORITY.contains("FilesystemPlatformAdmission"));
     assert!(!MIGRATION_AUTHORITY.contains("FilesystemVersionTwoAdmission"));
 }
 

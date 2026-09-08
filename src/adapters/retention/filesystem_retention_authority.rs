@@ -41,7 +41,14 @@ impl FilesystemRetentionPublicationAuthority {
     /// Pins one admitted version-two root for retention publication.
     ///
     /// Only [`FilesystemVersionTwoAdmission`] is accepted, so version-one
-    /// writer authority can never reach retention publication.
+    /// writer authority can never reach retention publication; the type
+    /// system refuses it:
+    ///
+    /// ```compile_fail
+    /// fn publish(admission: keep::FilesystemPlatformAdmission) {
+    ///     let _ = keep::FilesystemRetentionPublicationAuthority::open(admission);
+    /// }
+    /// ```
     ///
     /// This synchronous constructor opens pinned directory capabilities but
     /// materializes no record bodies and performs no protocol mutation.
