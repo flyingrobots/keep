@@ -605,6 +605,10 @@ after its public API and format compatibility policies are established.
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
+- Migration refuses a version-one store whose `staging` directory holds a
+  retained stage, so an interrupted version-one publication is recovered
+  before the intent exists instead of being stranded behind the version-two
+  markers.
 - A retention store already holding more than 4,096 namespace directories
   refuses every publication as `NamespaceCapacity`, including a successor in
   an existing namespace, instead of only refusing the 4,097th directory.

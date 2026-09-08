@@ -201,3 +201,28 @@ fn directory_names(path: &Path) -> io::Result<BTreeSet<OsString>> {
         .map(|entry| entry.map(|entry| entry.file_name()))
         .collect()
 }
+
+#[test]
+fn a_retained_version_one_stage_refuses_migration_before_any_intent() -> Result<(), Box<dyn Error>>
+{
+    let (sandbox, authority) = open_authority("filesystem-migration-retained-stage")?;
+    fs::write(
+        sandbox.path().join("staging").join("current.seg"),
+        b"interrupted version-one publication",
+    )?;
+    let before = version_one_witness(sandbox.path())?;
+
+    let error = authority
+        .observe_intent()
+        .err()
+        .ok_or("a store with a retained version-one stage was admitted for migration")?;
+
+    assert!(matches!(
+        error,
+        crate::adapters::FilesystemMigrationAuthorityError::Namespace { .. }
+    ));
+    assert_eq!(version_one_witness(sandbox.path())?, before);
+    assert!(!sandbox.path().join("migration.intent").exists());
+    assert!(!sandbox.path().join("migration.intent.next").exists());
+    Ok(())
+}

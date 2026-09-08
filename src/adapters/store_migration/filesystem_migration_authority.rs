@@ -1,5 +1,7 @@
 //! This module owns exact writer-locked filesystem migration authority.
 
+use cap_fs_ext::DirExt;
+
 use super::filesystem_inventory_file::{self, FilesystemInventoryFilePolicy};
 use super::filesystem_migration_authority_error::{
     FilesystemMigrationAuthorityArtifact as Artifact, FilesystemMigrationAuthorityError as Error,
@@ -19,6 +21,7 @@ use crate::adapters::{
 };
 
 const HEAD_NAME: &str = "HEAD";
+const STAGING_NAME: &str = "staging";
 const HEAD_LENGTH: u64 = 128;
 
 /// Exclusive authority to observe and migrate one pinned version-1 filesystem root.
@@ -123,9 +126,34 @@ impl FilesystemStoreMigrationAuthority {
         }
     }
 
+    /// Admits the exact published version-one root and requires `staging` to
+    /// hold nothing.
+    ///
+    /// A retained `current.seg` or `current.cat` is version-one recovery
+    /// evidence. Migration never inventories `staging`, and once the version-two
+    /// markers exist the version-one recovery constructors refuse the root, so
+    /// migrating over a retained stage would strand a recoverable crash state.
+    /// Recovery must complete before the intent is observed.
     fn verify_namespace(&self) -> Result<(), Error> {
-        filesystem_initialization_namespace::admit_published(self.inventory.root())
-            .map_err(|source| Error::Namespace { source })
+        let root = self.inventory.root();
+        filesystem_initialization_namespace::admit_published(root)
+            .map_err(|source| Error::Namespace { source })?;
+        let staging = root
+            .open_dir_nofollow(STAGING_NAME)
+            .map_err(|source| Error::Namespace { source })?;
+        let mut entries = staging
+            .entries()
+            .map_err(|source| Error::Namespace { source })?;
+        match entries.next().transpose() {
+            Ok(None) => Ok(()),
+            Ok(Some(_entry)) => Err(Error::Namespace {
+                source: std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "version-one staging holds a retained stage; recover it before migration",
+                ),
+            }),
+            Err(source) => Err(Error::Namespace { source }),
+        }
     }
 
     fn verify_root_identity(&self) -> Result<StoreRootIdentities, Error> {
