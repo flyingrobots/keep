@@ -94,8 +94,12 @@ fn verify_named_refuses_different_bytes_and_a_byte_equal_substitute() -> Result<
     let bytes = super::verify_named(&directory, "record", b"other", identity)
         .err()
         .ok_or("different bytes admitted")?;
-    fs::remove_file(&path)?;
-    fs::write(&path, b"exact")?;
+    // Create the substitute beside the original and rename it over the entry:
+    // two files that exist at once cannot share an inode, whereas a file
+    // recreated after deletion may be handed the freed inode number on ext4.
+    let substitute_path = sandbox.path().join("substitute");
+    fs::write(&substitute_path, b"exact")?;
+    fs::rename(&substitute_path, &path)?;
     let substitute = super::verify_named(&directory, "record", b"exact", identity)
         .err()
         .ok_or("byte-equal substitute admitted")?;
