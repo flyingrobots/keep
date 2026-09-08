@@ -242,6 +242,12 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- The version-two retention and recovery pages each split their largest
+  sections into `retention-publication.md` (closure admission and the
+  generation transition) and `migration-recovery.md` (the one-way migration
+  protocol and partial-migration recovery), so every page sits well under the
+  300-line review threshold; the overview routes to both and the protocol
+  contract pins their phrases.
 - The README's two overlong link lines use reference-style links so every
   line fits the 80-column width without breaking a URL.
 - Retention pool and namespace name predicates live beside their emitters in

@@ -48,11 +48,13 @@ fn version_two_is_one_routed_protocol() -> Result<(), Box<dyn std::error::Error>
     for required in [
         "`keep.segment-store/v2`",
         "successor to `keep.segment-store/v1`",
-        "[Retention records and publication](retention.md)",
+        "[Retention records](retention.md)",
+        "[Retention publication](retention-publication.md)",
         "[Closure verification](closure.md)",
         "[Closure corruption boundary](closure-corruption.md)",
         "[GC and disposition records](gc.md)",
         "[Migration and recovery](recovery.md)",
+        "[Migration protocol and recovery](migration-recovery.md)",
         "[Migration crash points](migration-crash.md)",
         "[Migration inventory](migration-inventory.md)",
         "[Requirements and evidence](requirements.md)",
@@ -87,6 +89,14 @@ fn retention_records_have_exact_canonical_grammars() -> Result<(), Box<dyn std::
         "unknown mandatory flags",
         "maximum admitted namespace count",
         "before any namespace-generation or manifest bytes are staged",
+    ] {
+        assert!(
+            retention.contains(required),
+            "segment-store v2 retention grammar omits `{required}`"
+        );
+    }
+    let publication = normalized(&read(&format!("{FORMAT_ROOT}/retention-publication.md"))?);
+    for required in [
         "expected and observed generations",
         "already committed",
         "one complete root generation",
@@ -95,8 +105,8 @@ fn retention_records_have_exact_canonical_grammars() -> Result<(), Box<dyn std::
         "same coordinates before and after",
     ] {
         assert!(
-            retention.contains(required),
-            "segment-store v2 retention grammar omits `{required}`"
+            publication.contains(required),
+            "segment-store v2 retention publication omits `{required}`"
         );
     }
     Ok(())
@@ -162,9 +172,11 @@ fn version_two_pages_stay_within_the_review_threshold() -> Result<(), Box<dyn st
         "gc.md",
         "migration-crash.md",
         "migration-inventory.md",
+        "migration-recovery.md",
         "rationale.md",
         "recovery.md",
         "requirements.md",
+        "retention-publication.md",
         "retention.md",
     ] {
         let line_count = read(&format!("{FORMAT_ROOT}/{name}"))?.lines().count();

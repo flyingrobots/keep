@@ -40,8 +40,10 @@ Version 2 retains every version-1 physical law and adds these:
 
 The following pages form one protocol:
 
-- [Retention records and publication](retention.md) owns canonical namespace,
-  root-generation, manifest, retention-head, and transition rules.
+- [Retention records](retention.md) owns canonical namespace, root-generation,
+  manifest, and retention-head rules.
+- [Retention publication](retention-publication.md) owns closure admission and
+  the generation transition.
 - [Closure verification](closure.md) owns deterministic traversal, exact
   resource accounting, authenticated reconstruction, and closure evidence.
 - [Closure corruption boundary](closure-corruption.md) owns the admitted-record
@@ -49,8 +51,10 @@ The following pages form one protocol:
 - [GC and disposition records](gc.md) owns the canonical planned intent,
   completion, and recovery-disposition byte grammars.
 - [Migration and recovery](recovery.md) owns the exact root namespace,
-  version marker, reader fence, one-way migration, crash states, GC reservation,
+  version marker, reader fence, migration records, GC reservation,
   recovery-disposition reservation, and restart behavior.
+- [Migration protocol and recovery](migration-recovery.md) owns the ordered
+  one-way migration protocol and partial-migration recovery.
 - [Migration crash points](migration-crash.md) owns fixed-stage publication and
   the exact process-death boundaries for migration.
 - [Migration inventory](migration-inventory.md) owns the bounded canonical

@@ -5,7 +5,14 @@ use super::{FORMAT_ROOT, normalized, read};
 #[test]
 fn migration_and_recovery_define_every_authority_boundary() -> Result<(), Box<dyn std::error::Error>>
 {
-    let recovery = normalized(&read(&format!("{FORMAT_ROOT}/recovery.md"))?);
+    // recovery.md owns the namespace, marker, fence, and record grammars;
+    // migration-recovery.md owns the ordered protocol and partial recovery. The
+    // two pages state one contract, so the laws read them together.
+    let recovery = format!(
+        "{}\n{}",
+        normalized(&read(&format!("{FORMAT_ROOT}/recovery.md"))?),
+        normalized(&read(&format!("{FORMAT_ROOT}/migration-recovery.md"))?)
+    );
 
     for required in [
         "one-way explicit migration",
@@ -44,7 +51,7 @@ fn migration_and_recovery_define_every_authority_boundary() -> Result<(), Box<dy
     ] {
         assert!(
             recovery.contains(required),
-            "segment-store v2 recovery contract omits `{required}`"
+            "segment-store v2 migration and recovery pages omit `{required}`"
         );
     }
     Ok(())
