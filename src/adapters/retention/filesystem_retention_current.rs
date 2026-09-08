@@ -256,7 +256,7 @@ fn require_initial_publication(
 ) -> io::Result<()> {
     let publication = preparation
         .publication()
-        .ok_or_else(|| RetentionCurrentStateRefusal::StaleCommittedRetry.into_io())?;
+        .ok_or_else(|| RetentionCurrentStateRefusal::CommittedRetryOverAbsentHead.into_io())?;
     let prepared = ChecksummedRetentionHead::decode(publication.head().encoded())
         .map_err(|source| RetentionCurrentStateRefusal::PreparedHeadRefused { source }.into_io())?;
     if prepared.head().generation() == crate::LivenessGeneration::INITIAL

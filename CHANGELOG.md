@@ -590,6 +590,10 @@ after its public API and format compatibility policies are established.
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
+- An already-committed retry presented over an absent retention head refuses
+  as `CommittedRetryOverAbsentHead` instead of the misnamed
+  `StaleCommittedRetry`; the successor-over-absent-head law now downcasts to
+  `ExpectedCurrentOverAbsentHead`.
 - The root-link and namespace-synchronization phases require the root handed
   to them to name the namespace the attempt admitted, refusing with
   `RetentionCurrentStateRefusal::AttemptNamespaceDisagreed` instead of

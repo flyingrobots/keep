@@ -106,6 +106,9 @@ pub enum RetentionCurrentStateRefusal {
     /// A later phase received a root whose namespace is not the one the
     /// attempt admitted.
     AttemptNamespaceDisagreed,
+    /// A byte-identical already-committed retry was presented while no
+    /// retention head is published, so nothing can have committed it.
+    CommittedRetryOverAbsentHead,
     /// A record's kind or length disagreed with its declaration.
     RecordKindOrLength,
     /// A record carried bytes beyond its declared length.
@@ -205,6 +208,9 @@ impl RetentionCurrentStateRefusal {
             Self::RecordKindOrLength => "retention record kind or length disagreed",
             Self::RecordTrailingBytes => "retention record carried trailing bytes",
             Self::RecordLengthOverflow => "retention record length exceeded the addressable range",
+            Self::CommittedRetryOverAbsentHead => {
+                "already-committed retry presented while no retention head is published"
+            }
             Self::AttemptNamespaceDisagreed => {
                 "root handed to a publication phase names a different namespace than admitted"
             }

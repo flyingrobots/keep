@@ -117,6 +117,10 @@ fn expected_current_generation_refuses_when_no_head_is_published() -> Result<(),
         .ok_or("successor over an absent head was unexpectedly admitted")?;
 
     assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        refusal(&error),
+        Some(RetentionCurrentStateRefusal::ExpectedCurrentOverAbsentHead)
+    ));
     assert!(authority.observe_current()?.is_none());
     assert!(!head_path(sandbox.path()).exists());
     drop(authority);
