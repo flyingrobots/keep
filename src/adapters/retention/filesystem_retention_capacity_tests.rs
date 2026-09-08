@@ -107,3 +107,36 @@ fn namespace_hex(candidate: &AdmittedRetentionRoot<'_>) -> String {
             rendered
         })
 }
+
+#[test]
+fn an_overfull_namespace_pool_refuses_even_a_successor_in_an_existing_namespace()
+-> Result<(), Box<dyn Error>> {
+    let (sandbox, mut authority) = open_authority("filesystem-retention-capacity-overfull")?;
+    let root_bytes = fixture(ROOT_HEX)?;
+    let _published =
+        execute_retention_publication(&mut authority, &initial_preparation(&root_bytes)?)?;
+    let current = authority
+        .observe_current()?
+        .ok_or("published retention head was not observed")?;
+    let current_root = AdmittedRetentionRoot::decode(&root_bytes)?;
+    let current_manifest = AdmittedRetentionManifest::decode(current.manifest_bytes())?;
+    create_orphans(
+        sandbox.path(),
+        RetentionManifest::MAXIMUM_ENTRY_COUNT,
+        &namespace_hex(&current_root),
+    )?;
+    let candidate = successor_root(&current_root)?;
+    let preparation = successor_preparation(&current_root, &current_manifest, candidate.encoded())?;
+    let before = retention_witness(sandbox.path())?;
+
+    let error = RetentionPublicationStorage::verify_current(&mut authority, &preparation)
+        .err()
+        .ok_or("a store beyond the namespace ceiling admitted a successor")?;
+
+    assert!(matches!(
+        refusal(&error),
+        Some(RetentionCurrentStateRefusal::NamespaceCapacity)
+    ));
+    assert_eq!(retention_witness(sandbox.path())?, before);
+    Ok(())
+}

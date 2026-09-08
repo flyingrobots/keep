@@ -78,13 +78,19 @@ pub(super) fn admit(
 /// Orphan namespace directories protected by recovery count exactly like
 /// manifest entries: a candidate whose namespace directory is absent may be
 /// admitted only while the observed count is below
-/// [`RetentionManifest::MAXIMUM_ENTRY_COUNT`]. A candidate whose namespace
-/// already exists creates nothing and is not bounded here.
+/// [`RetentionManifest::MAXIMUM_ENTRY_COUNT`]. A store already holding more
+/// namespaces than the ceiling is beyond the format and refuses every
+/// publication, including a successor in an existing namespace, until
+/// recovery reduces it. Otherwise a candidate whose namespace already exists
+/// creates nothing and is not bounded here.
 pub(super) fn admit_capacity(
     census: RetentionNamespaceCensus,
     roots: &Dir,
     candidate: &AdmittedRetentionRoot<'_>,
 ) -> io::Result<()> {
+    if census.namespace_count > RetentionManifest::MAXIMUM_ENTRY_COUNT {
+        return Err(Refusal::NamespaceCapacity.into_io());
+    }
     let name = pool_name::namespace(candidate.root().namespace().digest());
     match roots.symlink_metadata(&name) {
         Ok(_) => Ok(()),

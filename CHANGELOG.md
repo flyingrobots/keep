@@ -605,6 +605,9 @@ after its public API and format compatibility policies are established.
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
+- A retention store already holding more than 4,096 namespace directories
+  refuses every publication as `NamespaceCapacity`, including a successor in
+  an existing namespace, instead of only refusing the 4,097th directory.
 - Retention pool names whose generation component encodes zero refuse as
   noncanonical; root and liveness generations are positive, so the census no
   longer treats an impossible coordinate as a canonical entry.
