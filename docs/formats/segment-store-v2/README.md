@@ -76,21 +76,29 @@ re-encode them.
 
 ## Status
 
-The format contract is frozen by ADR-0009 and this specification. Public core
-types now admit exact namespace bytes, namespace digests, root and liveness
-generations, registered realization profiles, bounded closure policies,
-reconstruction anchors, and semantic roots. Canonical root, manifest, and head
-codecs match their independent golden records. Storage-independent transition
-planning, deterministic bounded closure verification against one pinned
-catalog, their combined preflight proof, and the exact 17-phase publication
-vocabulary with a blocking storage capability port are available.
-Storage-independent preparation derives exact canonical manifest and head
-successors from coherent preflight and current-manifest evidence. Ordered
-storage-port orchestration revalidates authority and returns a complete receipt.
-Fresh writer-locked filesystem migration execution now publishes all canonical
-fixed records and the exact empty version-2 namespace without changing
-version-1 immutable bytes. Partial-prefix restart recovery, production
-filesystem retention publication, immutable reader snapshots, and garbage
-collection do not exist yet. Requirements still in progress in issue #19 or
-issue #21 are not complete evidence. A store must refuse version-2 state until the relevant
-corruption, model-based, crash-injection, recovery, and fuzz evidence exists.
+The format contract is frozen by ADR-0009 and this specification.
+
+Implemented with executable evidence: public core types for namespaces,
+generations, realization profiles, closure policies, anchors, and roots;
+canonical root, manifest, and head codecs matching their golden records;
+storage-independent transition planning, bounded closure verification against
+one pinned catalog, preflight, preparation, and the 17-phase publication port;
+fresh writer-locked filesystem migration through all 21 phases, refusing a
+version-one store that still holds a retained stage;
+`FilesystemVersionTwoAdmission::reopen`, which jointly admits the marker,
+intent, and receipt, binds the root's device, mount, and inode identity to the
+intent, and pins the retention directories it admitted; and
+`FilesystemRetentionPublicationAuthority`, which publishes initial and
+successor generations against the observed head, binds this store's catalog
+head and the catalog it selects, and refuses superseded candidates, retained
+stages, replaced protocol directories, and every namespace or capacity
+violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
+
+Not implemented: retention publication recovery and `KEEP-CRASH-036..052`
+process-death evidence, partial-prefix migration recovery and
+`KEEP-CRASH-053..073`, the reader fence, model-based transition evidence, and
+garbage collection. Issue #19 owns the first four and issue #21 the last;
+issue #97 owns the restart-stable root identity coordinate. A version-1 store
+remains admitted until its owner migrates it, and the
+[requirements ledger](requirements.md) is the authority on which requirements
+are proven.

@@ -220,8 +220,9 @@ A future operation claiming durable logical reconstruction must additionally:
 
 The current durable segment, catalog, publication, and recovery surfaces do
 not yet form this consolidated high-level `BlobId`-to-writer contract.
-Retention remains planned; no current retention surface protects the evidence
-closure required by this operation. These lower-level surfaces must not be
+Retention publication now records verified closures as generation-checked
+roots, but nothing collects or fences yet, so no current surface protects or
+releases the evidence closure this operation requires. These lower-level surfaces must not be
 described as an implemented durable logical reconstruction API.
 
 ## Current public evidence

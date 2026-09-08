@@ -174,8 +174,9 @@ recovery instead. Direct version-2 initialization is undefined.
 
 The exact offsets and fixtures are requirement `KEEP-MIGRATION-002`. The fresh
 writer emits only those canonical records; success is not restart evidence.
-Version 2 remains unavailable as production until partial-prefix recovery and
-`KEEP-MIGRATION-007` process-death evidence exist.
+A migrated store is admitted for forward publication, but partial-prefix
+recovery and `KEEP-MIGRATION-007` process-death evidence remain absent, so an
+interrupted migration waits for recovery instead of continuing.
 
 ## Retention publication recovery
 
