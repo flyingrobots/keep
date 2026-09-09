@@ -232,7 +232,9 @@ The retention crash points are:
 | `KEEP-CRASH-052` | retention cleanup synchronization |
 
 `RetentionPublicationPhase::ALL` freezes this exact order as a typed public
-vocabulary. Storage execution and process-death evidence remain unimplemented.
+vocabulary. `FilesystemRetentionPublicationAuthority::recover` implements the
+classification above and its effects; process-death evidence remains
+unimplemented.
 
 Each point requires before, during, and after process-death evidence. Restart
 must establish exact catalog visibility, retention head, namespace generation,

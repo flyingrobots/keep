@@ -40,6 +40,8 @@ mod filesystem_retention_recovery;
 mod filesystem_retention_recovery_error;
 mod filesystem_retention_recovery_observation;
 #[cfg(test)]
+mod filesystem_retention_recovery_prefix_tests;
+#[cfg(test)]
 mod filesystem_retention_recovery_tests;
 mod filesystem_retention_refusal;
 mod filesystem_retention_stage;

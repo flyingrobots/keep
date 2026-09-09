@@ -4,49 +4,13 @@ use std::error::Error;
 use std::fs;
 
 use super::filesystem_retention_test_fixture::{
-    ROOT_HEX, fixture, head_path, initial_preparation, manifest_pool_path, open_authority,
-    root_pool_path,
+    ROOT_HEX, drive_publication, fixture, head_path, initial_preparation, manifest_pool_path,
+    open_authority, root_pool_path,
 };
 use super::{
-    FilesystemRetentionPublicationAuthority, RetentionPublicationOutcome,
-    RetentionPublicationPreparation, RetentionPublicationStorage,
-    RetentionRecoveryOutcome as Outcome, RetentionRecoveryStep as Step,
+    RetentionPublicationOutcome, RetentionRecoveryOutcome as Outcome, RetentionRecoveryStep as Step,
 };
 use crate::execute_retention_publication;
-
-type Phase<'a> =
-    &'a mut dyn FnMut(&mut FilesystemRetentionPublicationAuthority) -> std::io::Result<()>;
-
-/// Executes publication phases 1 through `count` and stops, like a crash there.
-fn drive(
-    authority: &mut FilesystemRetentionPublicationAuthority,
-    preparation: &RetentionPublicationPreparation<'_>,
-    count: usize,
-) -> Result<(), Box<dyn Error>> {
-    let publication = preparation
-        .publication()
-        .ok_or("preparation carries no publication")?;
-    let root = preparation.candidate();
-    let phases: [Phase<'_>; 13] = [
-        &mut |a| a.verify_current(preparation).map(|_| ()),
-        &mut |a| a.write_root_stage(root),
-        &mut |a| a.synchronize_root_stage(),
-        &mut |a| a.admit_root_namespace(root).map(|_| ()),
-        &mut |a| a.synchronize_roots_after_namespace(),
-        &mut |a| a.link_root(root),
-        &mut |a| a.synchronize_root_namespace(root),
-        &mut |a| a.write_manifest_stage(publication.manifest()),
-        &mut |a| a.synchronize_manifest_stage(),
-        &mut |a| a.link_manifest(publication.manifest()),
-        &mut |a| a.synchronize_manifest_pool(),
-        &mut |a| a.write_head_stage(publication.head()),
-        &mut |a| a.synchronize_head_stage(),
-    ];
-    for phase in phases.into_iter().take(count) {
-        phase(authority)?;
-    }
-    Ok(())
-}
 
 #[test]
 fn a_clean_store_recovers_to_clean() -> Result<(), Box<dyn Error>> {
@@ -62,7 +26,7 @@ fn a_written_root_stage_is_linked_and_protected() -> Result<(), Box<dyn Error>> 
     let (sandbox, mut authority) = open_authority("filesystem-retention-recovery-root")?;
     let root_bytes = fixture(ROOT_HEX)?;
     let preparation = initial_preparation(&root_bytes)?;
-    drive(&mut authority, &preparation, 3)?;
+    drive_publication(&mut authority, &preparation, 3)?;
 
     let receipt = authority.recover()?;
 
@@ -89,7 +53,7 @@ fn a_synchronized_head_stage_is_finalized_and_the_retry_is_already_committed()
     let (sandbox, mut authority) = open_authority("filesystem-retention-recovery-head")?;
     let root_bytes = fixture(ROOT_HEX)?;
     let preparation = initial_preparation(&root_bytes)?;
-    drive(&mut authority, &preparation, 13)?;
+    drive_publication(&mut authority, &preparation, 13)?;
     let publication = preparation.publication().ok_or("no publication")?;
 
     let receipt = authority.recover()?;
