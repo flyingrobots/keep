@@ -69,11 +69,15 @@ Keep is required to refuse all three, before mutating anything.
 
 ## What it does not do yet
 
-Version 2 writes correctly from a clean start and, if it finds the residue of
-an interrupted publication, refuses rather than guesses. Nothing yet recovers
-that residue, and readers have no fence, so **an interrupted version-2
-publication waits for a human until #19 lands.** A version-1 store stays
-admitted until its owner migrates it; migrate only if you accept that wait.
+Version 2 writes correctly from a clean start, and the next publication
+recovers the residue of an interrupted one: a stage cut mid-write is
+discarded, a head already synchronized is finalized, and a byte-identical
+retry reports already committed. The one state that waits for a human is a
+complete orphan, a crash between the root link and the head finalization,
+which stays recovery-protected until explicit disposition lands with garbage
+collection (#21). Readers have no fence yet, and process-death evidence for
+the recovery itself is still to come (#19). A version-1 store stays admitted
+until its owner migrates it.
 
 | Gap | Tracked |
 | --- | --- |

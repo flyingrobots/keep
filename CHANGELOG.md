@@ -29,7 +29,10 @@ after its public API and format compatibility policies are established.
   publication prefix from 0 through 18 phases, truncate each stage mid-write,
   and replay successor prefixes over a published generation; each recovers to
   its documented state, recovery is idempotent, and the forward retry reports
-  the predicted outcome.
+  the predicted outcome. Publication runs that recovery as its first step, so
+  an interrupted publication no longer waits for a human unless it left a
+  complete orphan; `RecoveryRefused` and `RecoveryStepRefused` carry
+  recovery's own errors through `RetentionCurrentStateRefusal`.
 - `FilesystemRetentionPublicationAuthority` executes the 17 ordered retention
   publication phases against a completely migrated version-2 root. It stages
   `root.next`, `manifest.next`, and `head.next` exclusively, verifies device

@@ -14,8 +14,9 @@ use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_stage::FilesystemRetentionStage;
 use super::{
     AdmittedRetentionRoot, CanonicalRetentionHead, CanonicalRetentionManifest,
-    RetentionCurrentStateRefusal, RetentionNamespaceAdmission, RetentionPublicationPreparation,
-    RetentionPublicationStorage, RetentionTransitionDisposition,
+    FilesystemRetentionRecoveryError, RetentionCurrentStateRefusal, RetentionNamespaceAdmission,
+    RetentionPublicationPreparation, RetentionPublicationStorage, RetentionRecoveryOutcome,
+    RetentionTransitionDisposition,
 };
 use crate::RetentionGenerationExpectation;
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
@@ -28,6 +29,21 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
     ) -> io::Result<RetentionTransitionDisposition> {
         self.attempt = None;
         require_pinned_directories(&self.root, &self.retention, &self.roots, &self.manifests)?;
+        let recovery = self.recover().map_err(|error| match error {
+            FilesystemRetentionRecoveryError::Observe { source } => source,
+            FilesystemRetentionRecoveryError::Plan { source } => {
+                RetentionCurrentStateRefusal::RecoveryRefused { source }.into_io()
+            }
+            FilesystemRetentionRecoveryError::Execute { source } => {
+                RetentionCurrentStateRefusal::RecoveryStepRefused { source }.into_io()
+            }
+        })?;
+        if matches!(
+            recovery.outcome(),
+            RetentionRecoveryOutcome::Protected { .. }
+        ) {
+            return Err(RetentionCurrentStateRefusal::RetainedStage.into_io());
+        }
         require_no_retained_stage(&self.retention)?;
         let census =
             filesystem_retention_namespace::admit(&self.retention, &self.roots, &self.manifests)?;

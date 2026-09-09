@@ -94,10 +94,10 @@ head and the catalog it selects, and refuses superseded candidates, retained
 stages, replaced protocol directories, and every namespace or capacity
 violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 
-Not implemented: retention publication recovery and `KEEP-CRASH-036..052`
-process-death evidence, partial-prefix migration recovery and
-`KEEP-CRASH-053..073`, the reader fence, model-based transition evidence, and
-garbage collection. Issue #19 owns the first four and issue #21 the last;
+Retention publication recovery is implemented and proven in-process for every
+crash prefix; its `KEEP-CRASH-036..052` process-death evidence is not.
+Not implemented: partial-prefix migration recovery and `KEEP-CRASH-053..073`,
+the reader fence, model-based transition evidence, and garbage collection. Issue #19 owns the first four and issue #21 the last;
 issue #97 owns the restart-stable root identity coordinate. A version-1 store
 remains admitted until its owner migrates it, and the
 [requirements ledger](requirements.md) is the authority on which requirements

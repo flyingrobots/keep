@@ -60,10 +60,11 @@ case is not evidence.
 - A fresh forward writer is not proof that version 2 is restart-safe or
   production-admitted; partial-prefix recovery and crash evidence remain
   mandatory. This applies to retention publication exactly as it applies to
-  migration: the filesystem publication writer refuses every retained stage
-  instead of continuing it. A stage left behind by a failed write is recovery
-  evidence like any crash residue; it is never unlinked, and the next
-  publication refuses until recovery classifies it.
+  migration: the filesystem publication writer never continues a retained
+  stage; it recovers it first, discarding a pre-effect truncated stage,
+  finalizing a complete head, and refusing a complete orphan until explicit
+  disposition. A stage left behind by a failed write is recovery evidence like
+  any crash residue and is classified the same way.
 - Publication binds this store's catalog `HEAD` to the verified closure and
   reopens the head-selected catalog pool entry under authority, but it does
   not re-read closure-member segments: every read authenticates them, and

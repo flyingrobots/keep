@@ -117,8 +117,8 @@ impl FilesystemRetentionPublicationAuthority {
     /// returns an empty receipt; a truncated pre-effect stage is discarded; a
     /// complete stage is linked and retained as a recovery-protected orphan;
     /// a complete head over linked stages is finalized. Any pending
-    /// publication attempt is discarded first, and the caller re-verifies
-    /// current state afterwards.
+    /// publication attempt is discarded first. Publication calls this itself
+    /// as its first step; callers may also run it explicitly at restart.
     ///
     /// # Errors
     ///

@@ -20,17 +20,17 @@ fn refused_verification_admits_no_later_phase() -> Result<(), Box<dyn Error>> {
     let preparation = initial_preparation(&root_bytes)?;
     fs::write(
         sandbox.path().join("retention").join("head.next"),
-        b"retained",
+        fixture(super::filesystem_retention_test_fixture::HEAD_HEX)?,
     )?;
     let before = retention_witness(sandbox.path())?;
 
     let error = authority
         .verify_current(&preparation)
         .err()
-        .ok_or("retained head stage was admitted")?;
+        .ok_or("an ambiguous head stage was admitted")?;
     assert!(matches!(
         refusal(&error),
-        Some(RetentionCurrentStateRefusal::RetainedStage)
+        Some(RetentionCurrentStateRefusal::RecoveryRefused { .. })
     ));
     let error = authority
         .write_root_stage(preparation.candidate())
