@@ -70,6 +70,26 @@ impl FilesystemStoreMigrationAuthority {
         })
     }
 
+    /// Pins a root for migration without platform admission for repository tasks.
+    ///
+    /// Repository tools such as the crash matrix run on hosts outside the
+    /// admitted Linux profile; namespace, head, catalog, inventory, and record
+    /// laws still apply in full. Production callers use [`Self::open`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FilesystemMigrationAuthorityError`](super::FilesystemMigrationAuthorityError)
+    /// when the root identity cannot be read or the pools cannot be pinned.
+    #[cfg(feature = "repository-tasks")]
+    pub fn open_unchecked_for_repository_tasks(
+        lock: crate::adapters::FilesystemWriterLock,
+        policy: SegmentReadPolicy,
+    ) -> Result<Self, Error> {
+        let admission = FilesystemPlatformAdmission::unchecked_for_repository_tasks(lock)
+            .map_err(|source| Error::RootIdentity { source })?;
+        Self::open(admission, policy)
+    }
+
     /// Observes one canonical intent from exact current version-1 authority.
     ///
     /// The synchronous call admits the exact published root namespace, physical

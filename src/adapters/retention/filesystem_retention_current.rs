@@ -57,6 +57,23 @@ impl ObservedRetentionState {
     }
 }
 
+#[cfg(test)]
+impl ObservedRetentionState {
+    /// Builds the observed state from exact head and manifest bytes.
+    pub(super) fn for_tests(head: &[u8], manifest: &[u8]) -> io::Result<Self> {
+        let decoded = ChecksummedRetentionHead::decode(head)
+            .map_err(|source| RetentionCurrentStateRefusal::HeadRefused { source }.into_io())?;
+        let admitted = AdmittedRetentionManifest::decode(manifest)
+            .map_err(|source| RetentionCurrentStateRefusal::ManifestRefused { source }.into_io())?;
+        Ok(Self {
+            head: Box::from(head),
+            manifest: Box::from(manifest),
+            decoded_head: *decoded.head(),
+            decoded_manifest: admitted.manifest().clone(),
+        })
+    }
+}
+
 /// The verified relationship between one preparation and the observed state.
 #[derive(Clone, Copy)]
 pub(super) enum ObservedDisposition<'state> {

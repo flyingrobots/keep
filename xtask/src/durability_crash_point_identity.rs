@@ -42,6 +42,23 @@ impl DurabilityCrashPoint {
             Self::CreateSegmentPoolDirectory => "KEEP-CRASH-033",
             Self::CreateCatalogPoolDirectory => "KEEP-CRASH-034",
             Self::SynchronizeRootAfterInitialization => "KEEP-CRASH-035",
+            Self::WriteRootStage => "KEEP-CRASH-036",
+            Self::SynchronizeRootStage => "KEEP-CRASH-037",
+            Self::AdmitRootNamespace => "KEEP-CRASH-038",
+            Self::SynchronizeRootsAfterNamespace => "KEEP-CRASH-039",
+            Self::LinkRoot => "KEEP-CRASH-040",
+            Self::SynchronizeRootNamespace => "KEEP-CRASH-041",
+            Self::WriteManifestStage => "KEEP-CRASH-042",
+            Self::SynchronizeManifestStage => "KEEP-CRASH-043",
+            Self::LinkManifest => "KEEP-CRASH-044",
+            Self::SynchronizeManifestPool => "KEEP-CRASH-045",
+            Self::WriteHeadStage => "KEEP-CRASH-046",
+            Self::SynchronizeHeadStage => "KEEP-CRASH-047",
+            Self::ReplaceRetentionHead => "KEEP-CRASH-048",
+            Self::SynchronizeRetentionNamespace => "KEEP-CRASH-049",
+            Self::RemoveRootStage => "KEEP-CRASH-050",
+            Self::RemoveManifestStage => "KEEP-CRASH-051",
+            Self::SynchronizeRetentionCleanup => "KEEP-CRASH-052",
         }
     }
 }

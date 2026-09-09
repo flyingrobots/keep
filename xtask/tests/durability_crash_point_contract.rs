@@ -4,7 +4,7 @@
 
 use xtask::{DurabilityCrashPoint, DurabilityCrashSequence};
 
-use DurabilityCrashSequence::{Catalog, Head, Initialization, RecoveryDiscard, Segment};
+use DurabilityCrashSequence::{Catalog, Head, Initialization, RecoveryDiscard, Retention, Segment};
 
 const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
     (
@@ -161,6 +161,87 @@ const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
         DurabilityCrashPoint::SynchronizeRootAfterInitialization,
         "KEEP-CRASH-035",
         Initialization,
+    ),
+    (
+        DurabilityCrashPoint::WriteRootStage,
+        "KEEP-CRASH-036",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::SynchronizeRootStage,
+        "KEEP-CRASH-037",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::AdmitRootNamespace,
+        "KEEP-CRASH-038",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::SynchronizeRootsAfterNamespace,
+        "KEEP-CRASH-039",
+        Retention,
+    ),
+    (DurabilityCrashPoint::LinkRoot, "KEEP-CRASH-040", Retention),
+    (
+        DurabilityCrashPoint::SynchronizeRootNamespace,
+        "KEEP-CRASH-041",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::WriteManifestStage,
+        "KEEP-CRASH-042",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::SynchronizeManifestStage,
+        "KEEP-CRASH-043",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::LinkManifest,
+        "KEEP-CRASH-044",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::SynchronizeManifestPool,
+        "KEEP-CRASH-045",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::WriteHeadStage,
+        "KEEP-CRASH-046",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::SynchronizeHeadStage,
+        "KEEP-CRASH-047",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::ReplaceRetentionHead,
+        "KEEP-CRASH-048",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::SynchronizeRetentionNamespace,
+        "KEEP-CRASH-049",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::RemoveRootStage,
+        "KEEP-CRASH-050",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::RemoveManifestStage,
+        "KEEP-CRASH-051",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::SynchronizeRetentionCleanup,
+        "KEEP-CRASH-052",
+        Retention,
     ),
 ];
 

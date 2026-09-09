@@ -36,7 +36,18 @@ mod filesystem_retention_namespace;
 #[cfg(test)]
 mod filesystem_retention_namespace_tests;
 mod filesystem_retention_pool_name;
+mod filesystem_retention_recovery;
+mod filesystem_retention_recovery_error;
+mod filesystem_retention_recovery_observation;
+#[cfg(test)]
+mod filesystem_retention_recovery_prefix_tests;
+#[cfg(test)]
+mod filesystem_retention_recovery_tests;
 mod filesystem_retention_refusal;
+mod filesystem_retention_snapshot;
+mod filesystem_retention_snapshot_error;
+#[cfg(test)]
+mod filesystem_retention_snapshot_tests;
 mod filesystem_retention_stage;
 mod filesystem_retention_storage;
 #[cfg(test)]
@@ -91,6 +102,24 @@ mod transition_preflight_error;
 mod transition_readiness;
 mod verified_closure;
 
+mod reader_attempt_limit;
+mod reader_fence;
+mod recovery_evidence;
+mod recovery_execution;
+#[cfg(test)]
+mod recovery_execution_tests;
+mod recovery_plan;
+mod recovery_planner;
+#[cfg(test)]
+mod recovery_planner_tests;
+mod recovery_refusal;
+mod recovery_stage_assessment;
+mod recovery_storage;
+#[cfg(test)]
+mod retention_model_tests;
+mod retention_view_collector;
+#[cfg(test)]
+mod retention_view_collector_tests;
 pub use admitted_manifest::AdmittedRetentionManifest;
 pub use admitted_root::AdmittedRetentionRoot;
 pub use canonical_head::CanonicalRetentionHead;
@@ -104,7 +133,10 @@ pub use filesystem_retention_authority_error::{
     FilesystemRetentionAuthorityError, RetentionAuthorityDirectory,
 };
 pub use filesystem_retention_current::ObservedRetentionState;
+pub use filesystem_retention_recovery_error::FilesystemRetentionRecoveryError;
 pub use filesystem_retention_refusal::RetentionCurrentStateRefusal;
+pub use filesystem_retention_snapshot::FilesystemRetentionSnapshot;
+pub use filesystem_retention_snapshot_error::FilesystemRetentionSnapshotError;
 pub use head_decode_error::RetentionHeadDecodeError;
 pub use manifest_decode_error::RetentionManifestDecodeError;
 pub use manifest_encode_error::RetentionManifestEncodeError;
@@ -118,6 +150,26 @@ pub use publication_preparation::prepare_retention_publication;
 pub use publication_preparation_error::RetentionPublicationPreparationError;
 pub use publication_receipt::RetentionPublicationReceipt;
 pub use publication_storage::RetentionPublicationStorage;
+pub use reader_attempt_limit::ReaderAttemptLimit;
+pub use reader_fence::ReaderFence;
+pub use recovery_evidence::{
+    RetentionPoolEntryObservation, RetentionPoolObservations, RetentionRecoveryEvidence,
+    RetentionStageAssessments,
+};
+pub use recovery_execution::{
+    RetentionRecoveryError, RetentionRecoveryReceipt, execute_retention_recovery,
+};
+pub use recovery_plan::{RetentionRecoveryOutcome, RetentionRecoveryPlan, RetentionRecoveryStep};
+pub use recovery_planner::plan_retention_recovery;
+pub use recovery_refusal::{RetentionFixedStage, RetentionPool, RetentionRecoveryRefusal};
+pub use recovery_stage_assessment::{
+    RetentionHeadStageAssessment, RetentionManifestStageAssessment, RetentionRootStageAssessment,
+    RetentionStageAssessment, assess_head_stage, assess_manifest_stage, assess_root_stage,
+};
+pub use recovery_storage::RetentionRecoveryStorage;
+pub use retention_view_collector::{
+    RetentionViewCoordinates, RetentionViewError, RetentionViewSource, collect_retention_view,
+};
 pub use root_decode_error::RetentionRootDecodeError;
 pub use root_encode_error::RetentionRootEncodeError;
 pub use transition_disposition::RetentionTransitionDisposition;

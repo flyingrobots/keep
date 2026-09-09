@@ -205,7 +205,8 @@ pub(super) fn link_without_replacement(
     }
 }
 
-fn open_read(directory: &Dir, name: &str) -> io::Result<File> {
+/// Opens `name` read-only without following links or blocking.
+pub(super) fn open_read(directory: &Dir, name: &str) -> io::Result<File> {
     let mut options = OpenOptions::new();
     options.read(true).follow(FollowSymlinks::No).nonblock(true);
     directory.open_with(name, &options)

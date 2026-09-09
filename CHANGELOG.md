@@ -10,6 +10,49 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Model-based retention evidence: every three-operation sequence over initial
+  publications of two namespaces, a successor, a byte-identical retry, and a
+  stale initial (125 sequences, each in a fresh migrated store) agrees with a
+  deterministic namespace-to-(generation, anchor-set) map and liveness after
+  every step, observed through the fenced reader view; a source contract
+  keeps clocks, paths, environment, and identity out of the retention core.
+- `FilesystemRetentionSnapshot` is the version-two reader view: it admits the
+  root as version two, acquires a shared `ReaderFence` on `reader.lock`,
+  double-collects the catalog and retention heads around loading through
+  `collect_retention_view` (bounded by `ReaderAttemptLimit`, refusing an
+  exhausted limit or an absent catalog), binds the catalog snapshot, the
+  retention head, and its manifest, and verifies each selected root against
+  the manifest on demand while the fence is held.
+- Storage-independent retention recovery planning: `assess_root_stage`,
+  `assess_manifest_stage`, and `assess_head_stage` classify each fixed stage
+  as absent, complete, truncated, or corrupt through the decoders' own
+  truncation laws; `plan_retention_recovery` turns that evidence, the observed
+  current state, and pool-entry observations into an ordered
+  `RetentionRecoveryPlan` (discard a pre-effect truncated stage, link and
+  protect complete orphans, finalize a complete head over linked stages, clean
+  up stages the published head already names) or a typed
+  `RetentionRecoveryRefusal`. `RetentionRecoveryStorage` names one blocking
+  capability per step and `execute_retention_recovery` runs a plan in order,
+  stopping at the first refused step with the completed prefix named in
+  `RetentionRecoveryError`. `FilesystemRetentionPublicationAuthority::recover`
+  observes the stages within their format bounds, reopens complete stages
+  bound to their identity, and executes the plan under the retained writer
+  lock, so a crash after the head stage is synchronized finalizes on restart
+  and a byte-identical retry is already committed. Laws drive every
+  publication prefix from 0 through 18 phases, truncate each stage mid-write,
+  and replay successor prefixes over a published generation; each recovers to
+  its documented state, recovery is idempotent, and the forward retry reports
+  the predicted outcome. Publication runs that recovery as its first step, so
+  an interrupted publication no longer waits for a human unless it left a
+  complete orphan; `RecoveryRefused` and `RecoveryStepRefused` carry
+  recovery's own errors through `RetentionCurrentStateRefusal`. The crash
+  matrix gains `KEEP-CRASH-036` through `052`: a child migrates a golden
+  bundle store, publishes retention generation one, and is killed before,
+  during, or after each of the seventeen phases; restart reopens the store,
+  runs recovery, and requires the documented steps, outcome, and forward
+  retry. `FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks`
+  and `FilesystemStoreMigrationAuthority::open_unchecked_for_repository_tasks`
+  give repository tools the same bypass version one already had.
 - `FilesystemRetentionPublicationAuthority` executes the 17 ordered retention
   publication phases against a completely migrated version-2 root. It stages
   `root.next`, `manifest.next`, and `head.next` exclusively, verifies device
