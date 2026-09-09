@@ -76,14 +76,14 @@ retry reports already committed. The one state that waits for a human is a
 complete orphan, a crash between the root link and the head finalization,
 which stays recovery-protected until explicit disposition lands with garbage
 collection (#21). The crash matrix proves that recovery by killing real
-writer processes at all 51 retention coordinates. Readers have no fence yet
-(#19). A version-1 store stays admitted until its owner migrates it.
+writer processes at all 51 retention coordinates. Readers hold a shared
+fence and double-collect both heads, so a view never straddles a
+publication. A version-1 store stays admitted until its owner migrates it.
 
 | Gap | Tracked |
 | --- | --- |
 | Restart recovery for retention publication and migration | [#19](https://github.com/flyingrobots/keep/issues/19) |
 | Restart-stable root identity coordinate in the migration intent | [#97](https://github.com/flyingrobots/keep/issues/97) |
-| Reader fence binding one consistent catalog + retention snapshot | [#19](https://github.com/flyingrobots/keep/issues/19) |
 | Precise verification reports at explicit depths | [#20](https://github.com/flyingrobots/keep/issues/20) |
 | Garbage collection and identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |
 | Bounded production ingestion through the durable store | [#82](https://github.com/flyingrobots/keep/issues/82) |

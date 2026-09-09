@@ -10,6 +10,13 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- `FilesystemRetentionSnapshot` is the version-two reader view: it admits the
+  root as version two, acquires a shared `ReaderFence` on `reader.lock`,
+  double-collects the catalog and retention heads around loading through
+  `collect_retention_view` (bounded by `ReaderAttemptLimit`, refusing an
+  exhausted limit or an absent catalog), binds the catalog snapshot, the
+  retention head, and its manifest, and verifies each selected root against
+  the manifest on demand while the fence is held.
 - Storage-independent retention recovery planning: `assess_root_stage`,
   `assess_manifest_stage`, and `assess_head_stage` classify each fixed stage
   as absent, complete, truncated, or corrupt through the decoders' own
