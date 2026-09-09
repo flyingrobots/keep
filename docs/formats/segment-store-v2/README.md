@@ -98,9 +98,10 @@ Retention publication recovery is implemented and proven both in-process for
 every crash prefix and by the crash matrix, which kills a real writer before,
 during, and after `KEEP-CRASH-036` through `052`.
 Readers bind one consistent catalog, retention head, and manifest view under a
-shared `ReaderFence` and verify selected roots on demand.
+shared `ReaderFence` and verify selected roots on demand. Every three-operation
+transition sequence agrees with a deterministic namespace-to-anchor-set model.
 Not implemented: partial-prefix migration recovery and `KEEP-CRASH-053..073`,
-model-based transition evidence, and garbage collection. Issue #19 owns the first four and issue #21 the last;
+and garbage collection. Issue #19 owns the first four and issue #21 the last;
 issue #97 owns the restart-stable root identity coordinate. A version-1 store
 remains admitted until its owner migrates it, and the
 [requirements ledger](requirements.md) is the authority on which requirements

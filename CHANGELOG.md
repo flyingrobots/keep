@@ -10,6 +10,12 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Model-based retention evidence: every three-operation sequence over initial
+  publications of two namespaces, a successor, a byte-identical retry, and a
+  stale initial (125 sequences, each in a fresh migrated store) agrees with a
+  deterministic namespace-to-(generation, anchor-set) map and liveness after
+  every step, observed through the fenced reader view; a source contract
+  keeps clocks, paths, environment, and identity out of the retention core.
 - `FilesystemRetentionSnapshot` is the version-two reader view: it admits the
   root as version two, acquires a shared `ReaderFence` on `reader.lock`,
   double-collects the catalog and retention heads around loading through

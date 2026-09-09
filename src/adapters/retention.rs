@@ -115,6 +115,8 @@ mod recovery_planner_tests;
 mod recovery_refusal;
 mod recovery_stage_assessment;
 mod recovery_storage;
+#[cfg(test)]
+mod retention_model_tests;
 mod retention_view_collector;
 #[cfg(test)]
 mod retention_view_collector_tests;
