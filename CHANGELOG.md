@@ -242,6 +242,10 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Documentation refreshed after the version-two merge: the README, the
+  version-two overview status, the closure and recovery status lines, the
+  reconstruction contract's retention note, and the requirements ledger state
+  what is implemented and what remains planned in #19, #21, and #97.
 - The version-two retention and recovery pages each split their largest
   sections into `retention-publication.md` (closure admission and the
   generation transition) and `migration-recovery.md` (the one-way migration

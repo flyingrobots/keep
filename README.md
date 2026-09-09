@@ -58,17 +58,27 @@ Keep is required to refuse all three, before mutating anything.
 - **Version-2 retention and migration, forward path.** Explicit retention
   roots, deterministic closure verification, a one-way 21-phase migration,
   and a 17-phase retention publication — all with production filesystem
-  writers, all preserving every version-1 byte.
+  writers, all preserving every version-1 byte. Reopening a migrated store
+  jointly admits its marker, intent, and receipt, binds the root's device,
+  mount, and inode identity to the intent, and pins the directories it
+  admitted. Publication binds this store's own catalog head and the catalog
+  it selects, and refuses retained stages, superseded candidates, substituted
+  files, replaced protocol directories, and every namespace or capacity
+  violation before it writes anything. Each refusal is a typed value, not a
+  string.
 
 ## What it does not do yet
 
-Version 2 writes correctly from a clean start. It cannot yet pick up the
-pieces if it dies partway through. Until it can, **version 1 is the only
-store admitted for production.**
+Version 2 writes correctly from a clean start and, if it finds the residue of
+an interrupted publication, refuses rather than guesses. Nothing yet recovers
+that residue, and readers have no fence, so **an interrupted version-2
+publication waits for a human until #19 lands.** A version-1 store stays
+admitted until its owner migrates it; migrate only if you accept that wait.
 
 | Gap | Tracked |
 | --- | --- |
 | Restart recovery for retention publication and migration | [#19](https://github.com/flyingrobots/keep/issues/19) |
+| Restart-stable root identity coordinate in the migration intent | [#97](https://github.com/flyingrobots/keep/issues/97) |
 | Reader fence binding one consistent catalog + retention snapshot | [#19](https://github.com/flyingrobots/keep/issues/19) |
 | Precise verification reports at explicit depths | [#20](https://github.com/flyingrobots/keep/issues/20) |
 | Garbage collection and identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |
@@ -208,7 +218,8 @@ has one job; this one is the front door.
 | Understand what is proved and what is not | [`docs/invariants/`](docs/invariants/) |
 | Read the byte-level formats | [`docs/formats/`](docs/formats/) |
 | See the architecture and port boundaries | [`docs/architecture/`](docs/architecture/) |
-| Follow the crash and recovery rules | [`segment-store-v1/recovery.md`](docs/formats/segment-store-v1/recovery.md) · [`segment-store-v2/recovery.md`](docs/formats/segment-store-v2/recovery.md) |
+| Follow the crash and recovery rules | [`segment-store-v1/recovery.md`](docs/formats/segment-store-v1/recovery.md) · [`segment-store-v2/recovery.md`](docs/formats/segment-store-v2/recovery.md) · [`segment-store-v2/migration-recovery.md`](docs/formats/segment-store-v2/migration-recovery.md) |
+| See how a retention generation is published | [`segment-store-v2/retention-publication.md`](docs/formats/segment-store-v2/retention-publication.md) |
 | Check reproducible performance evidence | [`docs/benchmarks/`](docs/benchmarks/) |
 | Run the language-neutral corpora | [`conformance/`](conformance/) |
 | See what changed | [`CHANGELOG.md`](CHANGELOG.md) |
