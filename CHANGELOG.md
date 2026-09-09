@@ -21,7 +21,11 @@ after its public API and format compatibility policies are established.
   `RetentionRecoveryRefusal`. `RetentionRecoveryStorage` names one blocking
   capability per step and `execute_retention_recovery` runs a plan in order,
   stopping at the first refused step with the completed prefix named in
-  `RetentionRecoveryError`; the filesystem implementation is the next step.
+  `RetentionRecoveryError`. `FilesystemRetentionPublicationAuthority::recover`
+  observes the stages within their format bounds, reopens complete stages
+  bound to their identity, and executes the plan under the retained writer
+  lock, so a crash after the head stage is synchronized finalizes on restart
+  and a byte-identical retry is already committed.
 - `FilesystemRetentionPublicationAuthority` executes the 17 ordered retention
   publication phases against a completely migrated version-2 root. It stages
   `root.next`, `manifest.next`, and `head.next` exclusively, verifies device

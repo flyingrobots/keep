@@ -37,6 +37,23 @@ impl FilesystemRetentionStage {
         })
     }
 
+    /// Reopens a retained stage whose exact bytes restart already read.
+    ///
+    /// The handle and the named entry are verified against `expected` and
+    /// bound to the entry's identity, so every later transition refuses a
+    /// substituted or replaced stage exactly as a freshly created one would.
+    pub(super) fn reopen(root: &Dir, name: &'static str, expected: &[u8]) -> io::Result<Self> {
+        let file = exact_record::open_read(root, name)?;
+        let identity = EntryIdentity::of_file(&file)?;
+        verify_named_record(root, name, expected, identity)?;
+        Ok(Self {
+            name,
+            expected: Box::from(expected),
+            identity,
+            file,
+        })
+    }
+
     /// Synchronizes the complete stage and reverifies its exact bytes.
     pub(super) fn synchronize(&self, root: &Dir) -> io::Result<()> {
         self.require_handle()?;
