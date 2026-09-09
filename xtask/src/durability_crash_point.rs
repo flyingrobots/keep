@@ -13,6 +13,8 @@ pub enum DurabilityCrashSequence {
     RecoveryDiscard,
     /// Writer-locked store initialization.
     Initialization,
+    /// Version-two retention publication, `KEEP-CRASH-036` through `052`.
+    Retention,
 }
 
 /// One stable process-death boundary in the durable segment-store protocol.
@@ -88,11 +90,45 @@ pub enum DurabilityCrashPoint {
     CreateCatalogPoolDirectory,
     /// Synchronize the store root after initialization.
     SynchronizeRootAfterInitialization,
+    /// Retention root stage write.
+    WriteRootStage,
+    /// Retention root stage synchronization.
+    SynchronizeRootStage,
+    /// New namespace-directory creation or exact admission.
+    AdmitRootNamespace,
+    /// Namespace-pool synchronization after creation.
+    SynchronizeRootsAfterNamespace,
+    /// Immutable root link.
+    LinkRoot,
+    /// Root namespace-directory synchronization.
+    SynchronizeRootNamespace,
+    /// Retention manifest stage write.
+    WriteManifestStage,
+    /// Retention manifest stage synchronization.
+    SynchronizeManifestStage,
+    /// Immutable manifest link.
+    LinkManifest,
+    /// Manifest pool synchronization.
+    SynchronizeManifestPool,
+    /// Retention-head stage write.
+    WriteHeadStage,
+    /// Retention-head stage synchronization.
+    SynchronizeHeadStage,
+    /// Retention-head atomic replacement.
+    ReplaceRetentionHead,
+    /// Committed retention namespace synchronization.
+    SynchronizeRetentionNamespace,
+    /// Retained root-stage removal.
+    RemoveRootStage,
+    /// Retained manifest-stage removal.
+    RemoveManifestStage,
+    /// Retention cleanup synchronization.
+    SynchronizeRetentionCleanup,
 }
 
 impl DurabilityCrashPoint {
     /// Every crash boundary in stable protocol order.
-    pub const ALL: [Self; 35] = [
+    pub const ALL: [Self; 52] = [
         Self::CreateSegmentStage,
         Self::WriteSegmentHeader,
         Self::AppendSegmentRecord,
@@ -128,6 +164,23 @@ impl DurabilityCrashPoint {
         Self::CreateSegmentPoolDirectory,
         Self::CreateCatalogPoolDirectory,
         Self::SynchronizeRootAfterInitialization,
+        Self::WriteRootStage,
+        Self::SynchronizeRootStage,
+        Self::AdmitRootNamespace,
+        Self::SynchronizeRootsAfterNamespace,
+        Self::LinkRoot,
+        Self::SynchronizeRootNamespace,
+        Self::WriteManifestStage,
+        Self::SynchronizeManifestStage,
+        Self::LinkManifest,
+        Self::SynchronizeManifestPool,
+        Self::WriteHeadStage,
+        Self::SynchronizeHeadStage,
+        Self::ReplaceRetentionHead,
+        Self::SynchronizeRetentionNamespace,
+        Self::RemoveRootStage,
+        Self::RemoveManifestStage,
+        Self::SynchronizeRetentionCleanup,
     ];
 
     /// Parses one exact stable crash identifier.
@@ -177,6 +230,23 @@ impl DurabilityCrashPoint {
             | Self::CreateSegmentPoolDirectory
             | Self::CreateCatalogPoolDirectory
             | Self::SynchronizeRootAfterInitialization => DurabilityCrashSequence::Initialization,
+            Self::WriteRootStage
+            | Self::SynchronizeRootStage
+            | Self::AdmitRootNamespace
+            | Self::SynchronizeRootsAfterNamespace
+            | Self::LinkRoot
+            | Self::SynchronizeRootNamespace
+            | Self::WriteManifestStage
+            | Self::SynchronizeManifestStage
+            | Self::LinkManifest
+            | Self::SynchronizeManifestPool
+            | Self::WriteHeadStage
+            | Self::SynchronizeHeadStage
+            | Self::ReplaceRetentionHead
+            | Self::SynchronizeRetentionNamespace
+            | Self::RemoveRootStage
+            | Self::RemoveManifestStage
+            | Self::SynchronizeRetentionCleanup => DurabilityCrashSequence::Retention,
         }
     }
 

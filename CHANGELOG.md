@@ -32,7 +32,14 @@ after its public API and format compatibility policies are established.
   the predicted outcome. Publication runs that recovery as its first step, so
   an interrupted publication no longer waits for a human unless it left a
   complete orphan; `RecoveryRefused` and `RecoveryStepRefused` carry
-  recovery's own errors through `RetentionCurrentStateRefusal`.
+  recovery's own errors through `RetentionCurrentStateRefusal`. The crash
+  matrix gains `KEEP-CRASH-036` through `052`: a child migrates a golden
+  bundle store, publishes retention generation one, and is killed before,
+  during, or after each of the seventeen phases; restart reopens the store,
+  runs recovery, and requires the documented steps, outcome, and forward
+  retry. `FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks`
+  and `FilesystemStoreMigrationAuthority::open_unchecked_for_repository_tasks`
+  give repository tools the same bypass version one already had.
 - `FilesystemRetentionPublicationAuthority` executes the 17 ordered retention
   publication phases against a completely migrated version-2 root. It stages
   `root.next`, `manifest.next`, and `head.next` exclusively, verifies device

@@ -1,6 +1,7 @@
 //! This module owns independent post-process-death store verification.
 
 mod expectation;
+mod retention;
 mod semantic;
 
 use std::collections::BTreeSet;
@@ -17,6 +18,9 @@ pub(super) fn verify(
     store_root: &Path,
     case: DurabilityCrashCase,
 ) -> Result<(), DurabilityCrashMatrixError> {
+    if case.point().sequence() == xtask::DurabilityCrashSequence::Retention {
+        return retention::verify(store_root, case);
+    }
     let expected = ExpectedStoreState::for_case(case)?;
     let observed_paths = inventory(store_root)?;
     if observed_paths != expected.paths() {

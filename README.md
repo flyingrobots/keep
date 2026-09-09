@@ -51,10 +51,10 @@ Keep is required to refuse all three, before mutating anything.
   generation-versioned catalogs, and a fixed-width `HEAD` are published
   through an ordered protocol whose every step is a named crash point.
   Platform admission is Linux ext4, non-casefolded, one writer.
-- **Proven restart recovery for version 1.** The crash matrix kills real
-  writer processes at 105 before/during/after coordinates
-  (`KEEP-CRASH-001`–`035`) and verifies the store lands in exactly one
-  documented lawful state each time.
+- **Proven restart recovery.** The crash matrix kills real writer processes
+  at 156 before/during/after coordinates (`KEEP-CRASH-001`–`052`) and
+  verifies the store lands in exactly one documented lawful state each time,
+  for version-1 publication and for version-2 retention publication.
 - **Version-2 retention and migration, forward path.** Explicit retention
   roots, deterministic closure verification, a one-way 21-phase migration,
   and a 17-phase retention publication — all with production filesystem
@@ -75,9 +75,9 @@ discarded, a head already synchronized is finalized, and a byte-identical
 retry reports already committed. The one state that waits for a human is a
 complete orphan, a crash between the root link and the head finalization,
 which stays recovery-protected until explicit disposition lands with garbage
-collection (#21). Readers have no fence yet, and process-death evidence for
-the recovery itself is still to come (#19). A version-1 store stays admitted
-until its owner migrates it.
+collection (#21). The crash matrix proves that recovery by killing real
+writer processes at all 51 retention coordinates. Readers have no fence yet
+(#19). A version-1 store stays admitted until its owner migrates it.
 
 | Gap | Tracked |
 | --- | --- |

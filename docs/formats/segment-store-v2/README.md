@@ -94,8 +94,9 @@ head and the catalog it selects, and refuses superseded candidates, retained
 stages, replaced protocol directories, and every namespace or capacity
 violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 
-Retention publication recovery is implemented and proven in-process for every
-crash prefix; its `KEEP-CRASH-036..052` process-death evidence is not.
+Retention publication recovery is implemented and proven both in-process for
+every crash prefix and by the crash matrix, which kills a real writer before,
+during, and after `KEEP-CRASH-036` through `052`.
 Not implemented: partial-prefix migration recovery and `KEEP-CRASH-053..073`,
 the reader fence, model-based transition evidence, and garbage collection. Issue #19 owns the first four and issue #21 the last;
 issue #97 owns the restart-stable root identity coordinate. A version-1 store
