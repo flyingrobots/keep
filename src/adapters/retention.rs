@@ -91,6 +91,13 @@ mod transition_preflight_error;
 mod transition_readiness;
 mod verified_closure;
 
+mod recovery_evidence;
+mod recovery_plan;
+mod recovery_planner;
+#[cfg(test)]
+mod recovery_planner_tests;
+mod recovery_refusal;
+mod recovery_stage_assessment;
 pub use admitted_manifest::AdmittedRetentionManifest;
 pub use admitted_root::AdmittedRetentionRoot;
 pub use canonical_head::CanonicalRetentionHead;
@@ -118,6 +125,17 @@ pub use publication_preparation::prepare_retention_publication;
 pub use publication_preparation_error::RetentionPublicationPreparationError;
 pub use publication_receipt::RetentionPublicationReceipt;
 pub use publication_storage::RetentionPublicationStorage;
+pub use recovery_evidence::{
+    RetentionPoolEntryObservation, RetentionPoolObservations, RetentionRecoveryEvidence,
+    RetentionStageAssessments,
+};
+pub use recovery_plan::{RetentionRecoveryOutcome, RetentionRecoveryPlan, RetentionRecoveryStep};
+pub use recovery_planner::plan_retention_recovery;
+pub use recovery_refusal::{RetentionFixedStage, RetentionPool, RetentionRecoveryRefusal};
+pub use recovery_stage_assessment::{
+    RetentionHeadStageAssessment, RetentionManifestStageAssessment, RetentionRootStageAssessment,
+    RetentionStageAssessment, assess_head_stage, assess_manifest_stage, assess_root_stage,
+};
 pub use root_decode_error::RetentionRootDecodeError;
 pub use root_encode_error::RetentionRootEncodeError;
 pub use transition_disposition::RetentionTransitionDisposition;

@@ -10,6 +10,16 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Storage-independent retention recovery planning: `assess_root_stage`,
+  `assess_manifest_stage`, and `assess_head_stage` classify each fixed stage
+  as absent, complete, truncated, or corrupt through the decoders' own
+  truncation laws; `plan_retention_recovery` turns that evidence, the observed
+  current state, and pool-entry observations into an ordered
+  `RetentionRecoveryPlan` (discard a pre-effect truncated stage, link and
+  protect complete orphans, finalize a complete head over linked stages, clean
+  up stages the published head already names) or a typed
+  `RetentionRecoveryRefusal`. Planning performs no I/O; storage execution is
+  the next step.
 - `FilesystemRetentionPublicationAuthority` executes the 17 ordered retention
   publication phases against a completely migrated version-2 root. It stages
   `root.next`, `manifest.next`, and `head.next` exclusively, verifies device
