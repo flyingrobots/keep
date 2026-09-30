@@ -47,6 +47,8 @@ mod filesystem_migration_reader_fence;
 mod filesystem_migration_recovery;
 #[cfg(test)]
 mod filesystem_migration_recovery_tests;
+#[cfg(feature = "repository-tasks")]
+mod filesystem_migration_repository_tasks;
 mod filesystem_migration_residue;
 mod filesystem_migration_storage;
 #[cfg(test)]

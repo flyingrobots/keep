@@ -51,10 +51,12 @@ Keep is required to refuse all three, before mutating anything.
   generation-versioned catalogs, and a fixed-width `HEAD` are published
   through an ordered protocol whose every step is a named crash point.
   Platform admission is Linux ext4, non-casefolded, one writer.
-- **Proven restart recovery for version 1.** The crash matrix kills real
-  writer processes at 105 before/during/after coordinates
-  (`KEEP-CRASH-001`–`035`) and verifies the store lands in exactly one
-  documented lawful state each time.
+- **Proven restart recovery for version 1 and for migration.** The crash
+  matrix kills real writer processes at 173 before/during/after coordinates
+  (`KEEP-CRASH-001`–`035` for version 1, `053`–`073` for the one-way
+  migration) and verifies the store lands in exactly one documented lawful
+  state each time; every interrupted migration recovers to one complete
+  migration with every version-1 byte intact.
 - **Version-2 retention and migration, forward path.** Explicit retention
   roots, deterministic closure verification, a one-way 21-phase migration,
   and a 17-phase retention publication — all with production filesystem
@@ -72,8 +74,7 @@ Keep is required to refuse all three, before mutating anything.
 Version 2 writes correctly from a clean start. An interrupted migration
 recovers: `FilesystemStoreMigrationAuthority::reopen_for_recovery` and
 `recover_store_migration` resume any prefix of the twenty-one phases, proven
-in-process for every prefix; the process-death matrix for those phases is
-still open in [#108](https://github.com/flyingrobots/keep/issues/108). An
+in-process for every prefix and by killing a real writer at every boundary. An
 interrupted retention publication is refused rather than guessed at, and
 readers have no fence, so **an interrupted version-2 publication waits for a
 human** until [PR #99](https://github.com/flyingrobots/keep/pull/99) merges.
@@ -82,7 +83,6 @@ A version-1 store stays admitted until its owner migrates it.
 | Gap | Tracked |
 | --- | --- |
 | Restart recovery for retention publication | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
-| Process-death evidence for migration recovery | [#108](https://github.com/flyingrobots/keep/issues/108) |
 | Reader fence binding one consistent catalog + retention snapshot | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
 | Durable authenticated reads bound to a fenced snapshot | [#109](https://github.com/flyingrobots/keep/issues/109) |
 | Verification reports at durable depths and a replayable receipt | [#20](https://github.com/flyingrobots/keep/issues/20) |

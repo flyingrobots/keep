@@ -10,6 +10,20 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Migration process-death matrix. `cargo xtask durability-crash-matrix`
+  now runs `KEEP-CRASH-053` through `-073`: 68 cases that publish the Golden
+  File Worldline version-1 store in an isolated child, execute the production
+  21-phase migration with one boundary gated, kill the child's process group
+  before, during, or after it (one `during` case per admitted
+  directory-prefix length for `KEEP-CRASH-060`), then compare the restarted
+  root against an independent expected-state model, require
+  `recover_store_migration` to report the recovery plan the table predicts,
+  run it (or the forward retry after an untouched version-1 store admits), and
+  require one complete migration with every version-1 byte intact and a
+  second recovery that reports `Complete`. `--sequence <name>` selects one
+  protocol sequence and `--case` accepts an occurrence. The ledger is
+  `conformance/segment-store/v2/transitions.tsv`; `KEEP-MIGRATION-007` moves
+  to Implemented (#108).
 - Reference-store staging memory contract. `ReferenceStore::STAGING_SCRATCH_LIMIT_BYTES`
   names the fixed scratch one `stage` call holds beyond the new unique chunk
   bytes it copies (the 8 KiB read buffer, one maximum-length chunk buffer,
@@ -40,8 +54,7 @@ after its public API and format compatibility policies are established.
   stage. Every prefix of zero through twenty-one phases and a truncated stage
   recover in-process to one complete migration with every version-1 byte
   intact; a corrupt durable intent refuses before any mutation.
-  `KEEP-MIGRATION-001` and `-004` move to Implemented; the
-  `KEEP-CRASH-053..073` process-death matrix remains open in #108.
+  `KEEP-MIGRATION-001` and `-004` move to Implemented.
 - Explicit-depth verification. `VerificationDepth` is one ordered
   enumeration from `Framing` to `RetentionClosure`; `ReferenceStore::verify`
   and `verify_admitted_layout` establish exactly the requested depth and

@@ -95,7 +95,7 @@ names; use those in code, tests, and commits.
 
 - [x] [F-15 Retention roots, release, and GC liveness model](#f-15-retention-roots-release-and-gc-liveness-model) — Done (ADR-0009)
 - [x] [F-16 Version-2 format records and codecs](#f-16-version-2-format-records-and-codecs) — Done
-- [ ] [F-17 One-way migration from version 1 to version 2](#f-17-one-way-migration-from-version-1-to-version-2) — Partial (#97 and in-process recovery done on this branch; the crash matrix is #108)
+- [ ] [F-17 One-way migration from version 1 to version 2](#f-17-one-way-migration-from-version-1-to-version-2) — Partial (#97, in-process recovery, and the `KEEP-CRASH-053`–`073` matrix done on this branch; `KEEP-MIGRATION-005` and `-008` residue remains)
 - [ ] [F-18 Retention publication](#f-18-retention-publication) — Partial; recovery in review (PR #99)
 - [ ] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — In review (PR #99)
 - [ ] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — In review (PR #99)
@@ -694,9 +694,10 @@ decoder that refuses every structural fault before admission.
 ### F-17 One-way migration from version 1 to version 2
 
 **Status:** Partial. The fresh forward path is Done (issue #19, PR #78).
-Partial-prefix recovery, the `KEEP-CRASH-053` to `-073` matrix, and
-`KEEP-MIGRATION-001`, `-004`, `-005`, `-006`, `-007`, `-008` residue remain,
-gated by #97.
+Partial-prefix recovery and the `KEEP-CRASH-053` to `-073` process-death
+matrix are Done on this branch (`KEEP-MIGRATION-001`, `-004`, `-006`, `-007`
+Implemented); the `KEEP-MIGRATION-005` corruption matrix (F-21) and `-008`
+compatibility residue remain.
 
 A complete version-2 store is entered only by migrating a version-1 store:
 admit and recover v1, revalidate head, catalog, pools, root identity, and
@@ -803,8 +804,12 @@ Direct version-2 initialization is undefined. There is no downgrade.
   - **Documentation:** `migration-recovery.md` Status, `recovery.md`,
     `requirements.md`, CHANGELOG.
   - **Dependencies:** needs T-17.1. Blocks T-17.3, F-43.
-- [ ] T-17.3 Migration crash matrix `KEEP-CRASH-053` to `-073`
-  (`KEEP-MIGRATION-007`).
+- [x] T-17.3 Migration crash matrix `KEEP-CRASH-053` to `-073`
+  (`KEEP-MIGRATION-007`) — `cargo xtask durability-crash-matrix --sequence
+  migration` runs 68 killed-writer cases against an independent
+  expected-state model and the predicted recovery plan;
+  `conformance/segment-store/v2/transitions.tsv` is the ledger. Original
+  task fields:
   - **Requirements:** real writer processes killed before, during, and
     after each of the 21 boundaries (`KEEP-CRASH-060` needs one case per
     admitted directory-prefix length); restart runs T-17.2 and the forward

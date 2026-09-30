@@ -45,6 +45,6 @@ pub(super) fn restart_policy() -> Result<CatalogRestartPolicy, DurabilityCrashMa
     Ok(CatalogRestartPolicy::new(segment_policy(), byte_limit))
 }
 
-pub(super) const fn segment_policy() -> SegmentReadPolicy {
+pub(in crate::durability_crash_matrix) const fn segment_policy() -> SegmentReadPolicy {
     SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM)
 }

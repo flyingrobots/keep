@@ -94,12 +94,14 @@ head and the catalog it selects, and refuses superseded candidates, retained
 stages, replaced protocol directories, and every namespace or capacity
 violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 
+Migration recovery is proven in-process for every prefix and by the
+`KEEP-CRASH-053..073` process-death matrix, which kills a real writer at each
+of its 68 boundary coordinates and recovers the restarted root.
+
 Not implemented: retention publication recovery and `KEEP-CRASH-036..052`
-process-death evidence, the `KEEP-CRASH-053..073` process-death matrix for
-migration recovery (in-process recovery of every prefix is implemented), the
-reader fence, model-based transition evidence, and garbage collection. The
-retention items are issue #19, the migration matrix is #108, and collection
-is #21.
+process-death evidence, the reader fence, model-based transition evidence,
+and garbage collection. The retention items are issue #19; collection is
+issue #21.
 Reopen compares only the restart-stable root coordinates, device and inode,
 against the intent; see
 [root identity across restart](recovery.md#root-identity-across-restart). A

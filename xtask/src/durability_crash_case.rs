@@ -2,7 +2,7 @@
 
 use crate::{
     DurabilityCrashCaseError, DurabilityCrashOccurrence, DurabilityCrashPoint,
-    DurabilityCrashPosition,
+    DurabilityCrashPosition, DurabilityCrashSequence,
 };
 
 /// One validated process-death coordinate in the durability crash matrix.
@@ -41,11 +41,38 @@ impl DurabilityCrashCase {
     }
 
     /// Returns every canonical case in point-major, position-minor order.
+    ///
+    /// A boundary with more than one `during` occurrence contributes one
+    /// `during` case per occurrence, in occurrence order, between its
+    /// `before` and `after` cases.
     pub fn all() -> impl Iterator<Item = Self> {
         DurabilityCrashPoint::ALL.into_iter().flat_map(|point| {
             DurabilityCrashPosition::ALL
                 .into_iter()
-                .map(move |position| Self::canonical(point, position))
+                .flat_map(move |position| Self::canonical_at(point, position))
+        })
+    }
+
+    /// Returns every canonical case whose boundary belongs to `sequence`.
+    pub fn in_sequence(sequence: DurabilityCrashSequence) -> impl Iterator<Item = Self> {
+        Self::all().filter(move |case| case.point().sequence() == sequence)
+    }
+
+    fn canonical_at(
+        point: DurabilityCrashPoint,
+        position: DurabilityCrashPosition,
+    ) -> impl Iterator<Item = Self> {
+        let occurrences = if position == DurabilityCrashPosition::During {
+            point.during_occurrences()
+        } else {
+            1
+        };
+        (0..occurrences).map(move |ordinal| {
+            let mut case = Self::canonical(point, position);
+            if point.occurrence_counted() {
+                case.occurrence = Some(DurabilityCrashOccurrence::new(ordinal));
+            }
+            case
         })
     }
 

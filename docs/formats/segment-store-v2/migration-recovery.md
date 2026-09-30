@@ -94,5 +94,6 @@ Every forward prefix of zero through twenty-one phases, and each incomplete
 pre-effect stage, recovers in-process to exactly one complete migration with
 every version-1 byte intact; a corrupt durable intent refuses before any
 mutation. The before, during, and after process-death matrix for
-`KEEP-CRASH-053..073` remains
-([#108](https://github.com/flyingrobots/keep/issues/108)).
+`KEEP-CRASH-053..073` kills real writer processes at every boundary and
+verifies the same outcome from the restarted root; see
+[migration crash points](migration-crash.md#process-death-matrix).

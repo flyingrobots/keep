@@ -69,6 +69,25 @@ impl FilesystemMigrationFixedStage {
         })
     }
 
+    /// Creates the stage exclusively and writes only `expected[..end]`,
+    /// leaving an unsynchronized incomplete pre-effect stage behind. The
+    /// handle is dropped: repository crash tasks kill the process next.
+    pub(super) fn create_prefix(
+        root: &Dir,
+        artifact: FilesystemMigrationFixedArtifact,
+        expected: &[u8],
+        end: usize,
+    ) -> io::Result<()> {
+        require_length(artifact, expected)?;
+        let prefix = expected
+            .get(..end)
+            .filter(|prefix| prefix.len() < expected.len())
+            .ok_or_else(|| invalid_data("migration stage prefix is not strict"))?;
+        let mut file = filesystem_catalog_artifact::create_exclusive(root, artifact.stage_name())?;
+        file.write_all(prefix)?;
+        file.flush()
+    }
+
     pub(super) fn synchronize(&self, root: &Dir) -> io::Result<()> {
         self.require_handle()?;
         self.file.sync_all()?;

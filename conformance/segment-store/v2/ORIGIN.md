@@ -6,6 +6,11 @@ The corpus was constructed on 2026-07-29 with:
 - `cargo 1.96.0 (30a34c682 2026-05-25)`; and
 - `b3sum 1.8.5`.
 
+`transitions.tsv` was added on 2026-09-30 by transcribing the 21 boundaries of
+`StoreMigrationPhase::ALL` and the recovery table in
+`docs/formats/segment-store-v2/migration-recovery.md`; the crash matrix in
+`xtask` is its executable check.
+
 ## Independent inputs
 
 The oracle imports exact bytes only from these previously accepted fixtures:

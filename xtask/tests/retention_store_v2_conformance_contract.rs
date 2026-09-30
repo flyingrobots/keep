@@ -17,6 +17,7 @@ const REQUIRED_PATHS: &[&str] = &[
     "inventory.tsv",
     "migration-source.tsv",
     "artifacts.tsv",
+    "transitions.tsv",
     "format-marker.hex",
     "migration-intent.hex",
     "migration-receipt.hex",

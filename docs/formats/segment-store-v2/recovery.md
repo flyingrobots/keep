@@ -206,9 +206,8 @@ The exact offsets and fixtures are requirement `KEEP-MIGRATION-002`. The fresh
 writer emits only those canonical records; success is not restart evidence.
 A migrated store is admitted for forward publication, and an interrupted
 migration resumes from any prefix through
-[partial migration recovery](migration-recovery.md), proven in-process; the
-`KEEP-MIGRATION-007` process-death evidence remains
-([#108](https://github.com/flyingrobots/keep/issues/108)).
+[partial migration recovery](migration-recovery.md), proven both in-process
+and by the `KEEP-MIGRATION-007` process-death matrix.
 
 ## Retention publication recovery
 

@@ -56,7 +56,7 @@ impl FilesystemStoreMigrationAuthority {
         Self::recover_root(root, policy)
     }
 
-    fn recover_root(root: Dir, policy: SegmentReadPolicy) -> Result<Self, Error> {
+    pub(super) fn recover_root(root: Dir, policy: SegmentReadPolicy) -> Result<Self, Error> {
         let lock = FilesystemWriterLock::try_acquire_in(root)
             .map_err(|source| Error::WriterLock { source })?;
         let directory = lock
