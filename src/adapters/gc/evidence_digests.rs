@@ -54,3 +54,25 @@ evidence_digest! {
     /// Digest of the verified, synchronized segment pool after retirement.
     PoolStateDigest
 }
+
+evidence_digest! {
+    /// Physical evidence identity of one disposed artifact: its pool-name
+    /// digest.
+    ArtifactIdentityDigest
+}
+
+evidence_digest! {
+    /// Digest of one disposed artifact's exact verified bytes under the
+    /// registered artifact domain.
+    ArtifactContentDigest
+}
+
+evidence_digest! {
+    /// Digest of the complete canonical proof behind one disposition.
+    DecisionEvidenceDigest
+}
+
+evidence_digest! {
+    /// The publication-head checksum observed when a disposition was decided.
+    ObservedHeadChecksum
+}

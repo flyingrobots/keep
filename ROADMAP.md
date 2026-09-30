@@ -100,7 +100,7 @@ names; use those in code, tests, and commits.
 - [x] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — Done on this branch (merged from PR #99)
 - [x] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — Done on this branch (merged from PR #99)
 - [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Planned (#20)
-- [ ] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Partial (#21; codecs and the deterministic planner done on this branch)
+- [ ] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Partial (#21; all three codecs and the deterministic planner done on this branch)
 - [ ] [F-23 Durable authenticated reads and refusal receipts](#f-23-durable-authenticated-reads-and-refusal-receipts) — Planned (#109)
 - [ ] [F-24 Bounded production ingestion through the durable store](#f-24-bounded-production-ingestion-through-the-durable-store) — Planned (#82, #72)
 
@@ -1145,10 +1145,9 @@ quarantines, or rewrites physical state.
 ### F-22 Garbage collection, compaction, and recovery dispositions
 
 **Status:** Partial (#21, P1, M4). Grammars are frozen and their presence
-refuses (`KEEP-GC-001`, `-002`). The intent and receipt codecs (T-22.1) and
-the deterministic planner (T-22.2) landed on this branch; the disposition
-codec waits on an enumeration decision (T-22.1a); compaction, execution,
-and orphan disposition remain.
+refuses (`KEEP-GC-002`). All three codecs (T-22.1, T-22.1a;
+`KEEP-GC-001` Implemented) and the deterministic planner (T-22.2) landed on
+this branch; compaction, execution, and orphan disposition remain.
 
 Plan GC from an immutable liveness snapshot; classify every segment as
 live, unreachable, corrupt, ambiguous, recovery-protected,
@@ -1167,7 +1166,11 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
   `tests/gc_retirement_receipt.rs`, `fuzz/fuzz_targets/gc_format.rs`,
   fixtures `one-candidate-gc-intent.hex` and `one-candidate-gc-receipt.hex`.
   Original task fields:
-- [ ] T-22.1a Register the disposition enumerations and ship its codec.
+- [x] T-22.1a Register the disposition enumerations and ship its codec —
+  four `definition.tsv` rows, the corpus rematerialized through the oracle
+  (new definition digest `6cbc1c75…`), `src/adapters/gc/disposition*.rs`,
+  `tests/recovery_disposition_receipt.rs`, `gc_format` selector 2.
+  Original task fields:
   - **Requirements:** `gc.md` says the artifact kind, decision, and
     classification fields are "registered" enumerations but names no
     values; freezing them means adding rows to `definition.tsv`, which

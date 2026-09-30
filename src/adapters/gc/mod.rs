@@ -4,14 +4,21 @@
 //! canonical encoders, and their admitting decoders, and the deterministic
 //! planner that classifies one physical inventory against one immutable
 //! liveness snapshot. It does not own GC execution, reader fencing,
-//! recovery, or the recovery-disposition receipt, whose registered
-//! enumerations are not yet frozen in the format definition.
+//! or recovery.
 
+mod admitted_disposition;
 mod admitted_intent;
 mod admitted_receipt;
 mod candidate;
+mod canonical_disposition;
 mod canonical_intent;
 mod canonical_receipt;
+mod disposition;
+mod disposition_decode_error;
+mod disposition_decoder;
+mod disposition_encoder;
+mod disposition_enums;
+mod disposition_format;
 mod evidence_digests;
 mod intent;
 mod intent_candidate_decoder;
@@ -50,14 +57,24 @@ mod retained_closure;
 mod segment_classification;
 mod segment_pool_inventory;
 
+pub use admitted_disposition::AdmittedRecoveryDispositionReceipt;
 pub use admitted_intent::AdmittedGcRetirementIntent;
 pub use admitted_receipt::AdmittedGcRetirementReceipt;
 pub use candidate::GcCandidate;
+pub use canonical_disposition::CanonicalRecoveryDispositionReceipt;
 pub use canonical_intent::CanonicalGcRetirementIntent;
 pub use canonical_receipt::CanonicalGcRetirementReceipt;
+pub use disposition::{
+    RecoveryDispositionArtifact, RecoveryDispositionCoordinates, RecoveryDispositionReceipt,
+};
+pub use disposition_decode_error::{RecoveryDispositionDecodeError, RecoveryDispositionField};
+pub use disposition_enums::{
+    RecoveryArtifactKind, RecoveryClassification, RecoveryDispositionDecision,
+};
 pub use evidence_digests::{
-    CatalogSuccessorProofDigest, DispositionSetDigest, PoolStateDigest, SegmentPoolIdentityDigest,
-    VerificationEvidenceDigest,
+    ArtifactContentDigest, ArtifactIdentityDigest, CatalogSuccessorProofDigest,
+    DecisionEvidenceDigest, DispositionSetDigest, ObservedHeadChecksum, PoolStateDigest,
+    SegmentPoolIdentityDigest, VerificationEvidenceDigest,
 };
 pub use intent::GcRetirementIntent;
 pub use intent_coordinates::GcRetirementIntentCoordinates;

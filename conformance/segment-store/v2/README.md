@@ -24,6 +24,7 @@ migration, retention transition, or garbage collector exists.
 | `one-root-head.hex` | Generation-1 retention head |
 | `one-candidate-gc-intent.hex` | Generation-1 GC retirement intent naming one candidate |
 | `one-candidate-gc-receipt.hex` | Generation-1 GC retirement receipt completing that intent |
+| `one-orphan-retire-disposition.hex` | Disposition retiring the one-zero segment as a complete orphan |
 | `ORIGIN.md` | Construction provenance and verification boundary |
 
 Every text file uses UTF-8 or ASCII, LF line endings, and one final newline.
@@ -32,8 +33,9 @@ In `artifacts.tsv`, `bound_digest_hex` is the marker content digest for
 `format-marker`, the intent digest for `migration-intent`, the referenced
 intent digest for `migration-receipt`, the canonical record digest for
 `retention-root` and `retention-manifest`, the referenced manifest digest
-for `retention-head`, the intent digest for `gc-intent`, and the referenced
-intent digest for `gc-receipt`.
+for `retention-head`, the intent digest for `gc-intent`, the referenced
+intent digest for `gc-receipt`, and the artifact identity digest for
+`recovery-disposition`.
 
 ## Frozen identities
 
@@ -43,16 +45,17 @@ It hashes the exact `retention-profile.tsv` bytes under the registered profile
 domain.
 
 The format-definition digest is
-`32381f1ac332d1277a7e1faf8f11576993cb55b7e85d2a110b74dc9c3b873427`.
+`6cbc1c75f6efab18c7c50ae281edef77a8b0c9ba19f618b28b18483d08462c92`.
 It hashes the exact `definition.tsv` bytes under the registered format domain.
 The definition binds the profile digest, every named domain, magic, version,
-field order, record width, format limit, and migration synchronization mask.
+field order, record width, format limit, migration synchronization mask, and
+the registered recovery-disposition enumerations.
 
 The migration fixture preserves the version-1 one-zero segment and generation-1
 catalog. Its canonical two-entry inventory digest is
 `40bf5d49c34847ac9cf46a256f343cee80cd980d1405d2dd02ceff8f58d674f9`.
 The derived logical store identifier is
-`0cd9d3dfbec9b349fe42d21475271b0e8de23c043440d6427a1c37898ad1dd79`.
+`2b5ed4bcc926a6a5fa9fd5f749c134894de99d37bdf2def4e83bdf99a6539720`.
 Fixture-only root device, mount, and file coordinates are `1`, `2`, and `3`;
 they bind in-place recovery but do not enter the logical store identifier.
 

@@ -6,17 +6,29 @@ use super::{FuzzSeedError, MAX_SEED_BYTES, Seed, prefixed};
 
 const GC_INTENT_FIXTURE: &str = "one-candidate-gc-intent.hex";
 const GC_RECEIPT_FIXTURE: &str = "one-candidate-gc-receipt.hex";
+const DISPOSITION_FIXTURE: &str = "one-orphan-retire-disposition.hex";
 
-pub(super) const FIXTURES: [(u8, &str); 2] = [(0, GC_INTENT_FIXTURE), (1, GC_RECEIPT_FIXTURE)];
+pub(super) const FIXTURES: [(u8, &str); 3] = [
+    (0, GC_INTENT_FIXTURE),
+    (1, GC_RECEIPT_FIXTURE),
+    (2, DISPOSITION_FIXTURE),
+];
 
 pub(super) fn seeds(files: &RepositoryFiles) -> Result<Vec<Seed>, FuzzSeedError> {
     let [
         (intent_selector, intent_fixture),
         (receipt_selector, receipt_fixture),
+        (disposition_selector, disposition_fixture),
     ] = FIXTURES;
     let intent = segment_store_v2_fixture::read_hex(files, intent_fixture)?;
     let receipt = segment_store_v2_fixture::read_hex(files, receipt_fixture)?;
+    let disposition = segment_store_v2_fixture::read_hex(files, disposition_fixture)?;
     Ok(vec![
+        Seed::new(
+            "gc_format",
+            "one-orphan-retire-disposition",
+            prefixed(disposition_selector, &disposition)?,
+        )?,
         Seed::new(
             "gc_format",
             "one-candidate-gc-intent",

@@ -17,6 +17,25 @@ one-anchor root under the generation-one manifest) and transcribing the
 classification of its one segment; `src/adapters/gc/planner_tests.rs`
 recomputes it from the fixtures on every run.
 
+## Disposition enumeration registration
+
+On 2026-09-30 `definition.tsv` gained four rows: the
+`keep.recovery-disposition-artifact/v2\0` domain and the artifact-kind,
+decision, and classification enumerations the `RecoveryDispositionReceipt`
+grammar had left unregistered. That changed the format-definition digest
+and therefore the format marker, the migration intent, the migration
+receipt, the derived store identifier, and their `artifacts.tsv` and
+`migration-source.tsv` rows. Every affected fixture was rematerialized
+through the same temporary, removed write path from the handwritten oracle;
+no other fixture changed. `one-orphan-retire-disposition.hex` was added in
+the same pass: it retires the one-zero segment (identity digest at 273 of
+`one-zero-segment.hex`, content digest of its exact bytes under the
+artifact domain, length 337) as a complete orphan under the generation-two
+catalog and head, the generation-one manifest, and the fixture-only
+reader-lock coordinates `4`, `5`, `6`; its decision-evidence digest is the
+segment's record checksum at 177, fixture-only evidence like the GC intent's
+candidate evidence.
+
 ## Independent inputs
 
 The oracle imports exact bytes only from these previously accepted fixtures:
@@ -63,7 +82,7 @@ The format-definition digest was checked independently with:
 Exact output:
 
 ```text
-32381f1ac332d1277a7e1faf8f11576993cb55b7e85d2a110b74dc9c3b873427
+6cbc1c75f6efab18c7c50ae281edef77a8b0c9ba19f618b28b18483d08462c92
 ```
 
 ## Materialization boundary

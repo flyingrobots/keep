@@ -273,5 +273,6 @@ must establish exact catalog visibility, retention head, namespace generation,
 orphan classification, stage disposition, and recovery report.
 
 `GcRetirementIntent`, `GcRetirementReceipt`, and
-`RecoveryDispositionReceipt` are owned by the [GC specification](gc.md). Until
-issue #21 implements them, any such artifact is unsupported and refuses.
+`RecoveryDispositionReceipt` are owned by the [GC specification](gc.md).
+Their codecs exist; until issue #21 implements the protocols that write
+them, any such artifact on disk is unsupported and refuses.

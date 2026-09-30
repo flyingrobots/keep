@@ -8,18 +8,19 @@ Issue #21 owns their implementation. They are specified now so version 2 has
 one exact root grammar, but their presence remains unsupported mandatory state
 until every **Planned in #21** requirement becomes executable evidence.
 
-Implemented: the intent and receipt codecs. `GcRetirementIntent` admits a
-canonical candidate set over its coordinates; `CanonicalGcRetirementIntent`
-and `AdmittedGcRetirementIntent` reproduce and admit the frozen
+Implemented: all three codecs. `GcRetirementIntent` admits a canonical
+candidate set over its coordinates; `CanonicalGcRetirementIntent` and
+`AdmittedGcRetirementIntent` reproduce and admit the frozen
 `one-candidate-gc-intent.hex`; `CanonicalGcRetirementReceipt` and
 `AdmittedGcRetirementReceipt` bind a receipt to its admitted intent. The
 receipt's synchronization count is exactly one per candidate: the
-pool-directory synchronization that follows each unlink. The
-`RecoveryDispositionReceipt` codec waits for its artifact-kind, decision, and
-classification enumerations to be registered in `definition.tsv`, which
-changes the definition digest and therefore every version-2 fixture; that is
-a specification decision, not an implementation gap. Namespace admission
-still refuses every one of these records on disk.
+pool-directory synchronization that follows each unlink.
+`CanonicalRecoveryDispositionReceipt` and
+`AdmittedRecoveryDispositionReceipt` reproduce and admit the frozen
+`one-orphan-retire-disposition.hex` over the artifact-kind, decision, and
+classification enumerations registered in `definition.tsv`. Namespace
+admission still refuses every one of these records on disk: no execution,
+retirement, or disposition protocol writes them yet.
 
 ## Common rules
 
@@ -162,7 +163,26 @@ The checksum domain is `keep.gc-retirement-receipt-checksum/v2\0`.
 <!-- markdownlint-enable MD013 -->
 
 The checksum domain is `keep.recovery-disposition-receipt-checksum/v2\0`.
-Unknown artifact kinds, decisions, or classifications refuse.
+The artifact content digest is BLAKE3-256 of the artifact's exact bytes under
+`keep.recovery-disposition-artifact/v2\0`; the artifact identity digest is
+the artifact's pool-name digest. The three enumerations are registered in
+`definition.tsv` and any other code refuses:
+
+<!-- markdownlint-disable MD013 -->
+
+| Field | Registered values |
+| --- | --- |
+| artifact kind | `segment:1`, `catalog:2`, `retention-root:3`, `retention-manifest:4`, `retention-head:5` |
+| decision | `finalize:1`, `retire:2` |
+| classification | `complete-orphan:1`, `complete-stage:2`, `stale-generation:3` |
+
+<!-- markdownlint-enable MD013 -->
+
+A `complete-orphan` is a complete, verified artifact linked into its pool
+that no head, catalog, or manifest names; a `complete-stage` is a complete,
+verified fixed stage not yet linked; a `stale-generation` is a complete
+artifact whose generation a later publication superseded before it became
+visible. Every generation field must be positive.
 
 The pool coordinate is:
 

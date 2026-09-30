@@ -6,6 +6,8 @@ const GC_INTENT_DOMAIN: &[u8] = b"keep.gc-retirement-intent/v2\0";
 const GC_INTENT_CHECKSUM_DOMAIN: &[u8] = b"keep.gc-retirement-intent-checksum/v2\0";
 const GC_RECEIPT_CHECKSUM_DOMAIN: &[u8] = b"keep.gc-retirement-receipt-checksum/v2\0";
 const EMPTY_DISPOSITION_SET_DOMAIN: &[u8] = b"keep.empty-disposition-set/v2\0";
+const DISPOSITION_CHECKSUM_DOMAIN: &[u8] = b"keep.recovery-disposition-receipt-checksum/v2\0";
+const DISPOSITION_ARTIFACT_DOMAIN: &[u8] = b"keep.recovery-disposition-artifact/v2\0";
 
 struct GcSource {
     candidate_segment_digest: [u8; 32],
@@ -130,6 +132,53 @@ fn build_gc_receipt(intent: &Artifact) -> Result<Artifact, String> {
         bound_digest: intent.bound_digest,
         final_checksum: checksum,
         fixture: "one-candidate-gc-receipt.hex",
+        bytes,
+    })
+}
+
+/// The disposition that retires the one-zero segment as a complete orphan
+/// under the generation-two catalog and head, the generation-one manifest,
+/// and the fixture-only reader-lock coordinates the GC intent uses.
+fn build_recovery_disposition(manifest: &ManifestArtifact) -> Result<Artifact, String> {
+    let source = gc_source()?;
+    let segment = decode_hex(V1_SEGMENT)?;
+    let head_two = decode_hex(V1_HEAD_TWO)?;
+    let content_digest = hash(DISPOSITION_ARTIFACT_DOMAIN, &[&segment]);
+    let mut bytes = Vec::with_capacity(320);
+    bytes.extend_from_slice(b"KEEP:REC:DISP2\0\0");
+    push_u16(&mut bytes, 2);
+    push_u16(&mut bytes, 320);
+    push_u32(&mut bytes, 0);
+    push_u16(&mut bytes, 1);
+    push_u16(&mut bytes, 2);
+    push_u16(&mut bytes, 1);
+    push_u16(&mut bytes, 0);
+    push_u64(&mut bytes, source.candidate_segment_length);
+    bytes.extend_from_slice(&source.candidate_segment_digest);
+    bytes.extend_from_slice(&content_digest);
+    push_u64(&mut bytes, u64_at(&head_two, 24)?);
+    bytes.extend_from_slice(&source.catalog_proof_digest);
+    push_u64(&mut bytes, 2);
+    bytes.extend_from_slice(&source.catalog_digest);
+    push_u64(&mut bytes, 1);
+    bytes.extend_from_slice(&manifest.digest);
+    push_u64(&mut bytes, 4);
+    push_u64(&mut bytes, 5);
+    push_u64(&mut bytes, 6);
+    bytes.extend_from_slice(&source.candidate_evidence_digest);
+    bytes.extend_from_slice(&[0; 8]);
+    require_length(&bytes, 288, "recovery disposition checksum preimage")?;
+    let checksum = hash(DISPOSITION_CHECKSUM_DOMAIN, &[&bytes]);
+    bytes.extend_from_slice(&checksum);
+    require_length(&bytes, 320, "recovery disposition receipt")?;
+    Ok(Artifact {
+        case_name: "one-orphan-retire-disposition",
+        kind: "recovery-disposition",
+        generation: "2",
+        entry_count: "-",
+        bound_digest: source.candidate_segment_digest,
+        final_checksum: checksum,
+        fixture: "one-orphan-retire-disposition.hex",
         bytes,
     })
 }

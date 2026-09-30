@@ -10,6 +10,20 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- `RecoveryDispositionReceipt` codec and its registered enumerations.
+  `definition.tsv` now registers the artifact kinds (`segment`, `catalog`,
+  `retention-root`, `retention-manifest`, `retention-head`), decisions
+  (`finalize`, `retire`), classifications (`complete-orphan`,
+  `complete-stage`, `stale-generation`), and the
+  `keep.recovery-disposition-artifact/v2` domain; the format-definition
+  digest, the format marker, the migration intent and receipt, and the
+  derived store identifier were rematerialized through the corpus oracle.
+  `CanonicalRecoveryDispositionReceipt` and
+  `AdmittedRecoveryDispositionReceipt` encode and admit the frozen
+  `one-orphan-retire-disposition.hex`; every unregistered code and zero
+  generation refuses; the `gc_format` fuzz target covers all three GC
+  records. `KEEP-GC-001` moves to Implemented. Namespace admission still
+  refuses every GC record on disk.
 - Deterministic GC planning. `GcLivenessSnapshot` is one immutable liveness
   snapshot plus one bounded physical inventory: the fenced catalog's
   generation and digest, the retention state, every segment the catalog

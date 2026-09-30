@@ -27,6 +27,7 @@ const REQUIRED_PATHS: &[&str] = &[
     "one-root-head.hex",
     "one-candidate-gc-intent.hex",
     "one-candidate-gc-receipt.hex",
+    "one-orphan-retire-disposition.hex",
 ];
 
 fn repository_root() -> Result<PathBuf, io::Error> {

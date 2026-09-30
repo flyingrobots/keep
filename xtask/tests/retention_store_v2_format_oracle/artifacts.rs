@@ -18,6 +18,7 @@ fn build_corpus() -> Result<Corpus, String> {
     let head = build_retention_head(&manifest)?;
     let gc_intent = build_gc_intent(profile_digest, inventory.digest, &manifest)?;
     let gc_receipt = build_gc_receipt(&gc_intent)?;
+    let disposition = build_recovery_disposition(&manifest)?;
     let artifacts = vec![
         format,
         intent,
@@ -45,6 +46,7 @@ fn build_corpus() -> Result<Corpus, String> {
         head,
         gc_intent,
         gc_receipt,
+        disposition,
     ];
     Ok(Corpus {
         profile_digest,
