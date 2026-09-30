@@ -35,6 +35,7 @@ fn checked_in_harness_set_is_exact_and_sorted() -> Result<(), Box<dyn Error>> {
             "repository_json",
             "retention_format",
             "segment_format",
+            "verification_receipt",
         ]
     );
     Ok(())

@@ -1,4 +1,8 @@
-//! Version-two writer authority is a distinct type that version-one publishers cannot consume.
+//! Version-two writer authority is a distinct type that version-one publishers
+//! cannot consume. The one deliberate exception is the catalog publisher's
+//! `open_version_two`, which compaction uses to publish catalog successors
+//! over a migrated root: it consumes a version-two admission by value and
+//! never accepts version-one authority for a version-two root.
 
 const RETENTION_AUTHORITY: &str =
     include_str!("../src/adapters/retention/filesystem_retention_authority.rs");
@@ -23,10 +27,26 @@ fn retention_publication_consumes_only_version_two_authority() {
 
 #[test]
 fn version_one_publishers_consume_only_version_one_authority() {
-    assert!(CATALOG_PUBLISHER.contains("FilesystemPlatformAdmission"));
-    assert!(!CATALOG_PUBLISHER.contains("FilesystemVersionTwoAdmission"));
+    assert!(CATALOG_PUBLISHER.contains("admission: FilesystemPlatformAdmission"));
     assert!(MIGRATION_AUTHORITY.contains("FilesystemPlatformAdmission"));
     assert!(!MIGRATION_AUTHORITY.contains("FilesystemVersionTwoAdmission"));
+}
+
+#[test]
+fn catalog_successors_consume_version_two_authority_only_as_a_proof() {
+    assert!(
+        CATALOG_PUBLISHER.contains(
+            "pub fn open_version_two(\n        admission: FilesystemVersionTwoAdmission,"
+        )
+    );
+    assert_eq!(
+        CATALOG_PUBLISHER
+            .matches("FilesystemVersionTwoAdmission")
+            .count(),
+        2,
+        "the import and the one by-value parameter"
+    );
+    assert!(!CATALOG_PUBLISHER.contains("FilesystemVersionTwoAdmission::"));
 }
 
 #[test]

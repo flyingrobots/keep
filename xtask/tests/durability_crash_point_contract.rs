@@ -4,19 +4,20 @@
 
 use xtask::{DurabilityCrashPoint, DurabilityCrashSequence};
 
-use DurabilityCrashSequence::{Gc, Migration};
+use DurabilityCrashSequence::{
+    Catalog, Gc, Head, Initialization, Migration, RecoveryDiscard, Retention, Segment,
+};
 
-use expected::EXPECTED;
-
-#[path = "durability_crash_point_contract/expected.rs"]
-mod expected;
+fn expected() -> &'static [(DurabilityCrashPoint, &'static str, DurabilityCrashSequence)] {
+    include!("durability_crash_point_contract/expected.rs")
+}
 
 #[test]
 fn crash_boundaries_have_one_contiguous_stable_vocabulary() {
     let actual =
         DurabilityCrashPoint::ALL.map(|point| (point, point.identifier(), point.sequence()));
 
-    assert_eq!(actual.as_slice(), EXPECTED);
+    assert_eq!(actual.as_slice(), expected());
 }
 
 #[test]

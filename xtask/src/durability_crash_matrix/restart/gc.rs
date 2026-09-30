@@ -28,7 +28,7 @@ pub(super) fn verify(
         if report != (GcRecoveryPlan::DiscardStage { stage }) {
             return Err(mismatch(
                 case,
-                format!("expected discard of {stage:?}, got {report:?}"),
+                &format!("expected discard of {stage:?}, got {report:?}"),
             ));
         }
     }
@@ -37,7 +37,7 @@ pub(super) fn verify(
     if report != expected {
         return Err(mismatch(
             case,
-            format!("expected {expected:?}, recovered {report:?}"),
+            &format!("expected {expected:?}, recovered {report:?}"),
         ));
     }
     if report == GcRecoveryPlan::Idle {
@@ -70,7 +70,7 @@ fn require_complete(
 ) -> Result<(), DurabilityCrashMatrixError> {
     require_live_segment(store_root)?;
     if store_root.join(SEGMENT_POOL_PATH).exists() {
-        return Err(mismatch(case, "the retired orphan is still present".into()));
+        return Err(mismatch(case, "the retired orphan is still present"));
     }
     let mut entries: Vec<String> = fs::read_dir(store_root.join("gc"))
         .map_err(|source| DurabilityCrashMatrixError::io("list crash gc directory", source))?
@@ -81,12 +81,12 @@ fn require_complete(
     if entries != ["receipt"] {
         return Err(mismatch(
             case,
-            format!("gc holds {entries:?}, expected only the receipt"),
+            &format!("gc holds {entries:?}, expected only the receipt"),
         ));
     }
     let plan = plan(store_root)?;
     if plan.candidate_count() != 0 || plan.already_retired().len() != 1 {
-        return Err(mismatch(case, "a fresh plan still names the orphan".into()));
+        return Err(mismatch(case, "a fresh plan still names the orphan"));
     }
     let settled = recover(store_root)?;
     if settled == GcRecoveryPlan::Complete {
@@ -94,7 +94,7 @@ fn require_complete(
     } else {
         Err(mismatch(
             case,
-            format!("settled residue planned {settled:?}"),
+            &format!("settled residue planned {settled:?}"),
         ))
     }
 }
@@ -108,7 +108,7 @@ fn recover(store_root: &Path) -> Result<GcRecoveryPlan, DurabilityCrashMatrixErr
         .map_err(|source| verification("recover production GC retirement", source))
 }
 
-fn mismatch(case: DurabilityCrashCase, message: String) -> DurabilityCrashMatrixError {
+fn mismatch(case: DurabilityCrashCase, message: &str) -> DurabilityCrashMatrixError {
     verification(
         "verify crash GC recovery",
         io::Error::other(format!(

@@ -1,12 +1,6 @@
-//! The one contiguous stable crash-boundary vocabulary.
-
-use xtask::{DurabilityCrashPoint, DurabilityCrashSequence};
-
-use DurabilityCrashSequence::{
-    Catalog, Gc, Head, Initialization, Migration, RecoveryDiscard, Retention, Segment,
-};
-
-pub(super) const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
+// The one contiguous stable crash-boundary vocabulary, spliced into
+// `expected()` by the contract file.
+&[
     (
         DurabilityCrashPoint::CreateSegmentStage,
         "KEEP-CRASH-001",
@@ -406,4 +400,4 @@ pub(super) const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequenc
         "KEEP-CRASH-087",
         Gc,
     ),
-];
+]

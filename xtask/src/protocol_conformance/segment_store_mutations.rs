@@ -124,13 +124,12 @@ fn check_ledger(
         require_outcome(schema, case, row.field("expected_outcome")?, records)?;
         require_requirement(schema, case, row.field("requirement")?)?;
         let fixture = row.field("base_fixture")?;
-        let length = match fixture_lengths.get(fixture) {
-            Some(length) => *length,
-            None => {
-                let length = fixture_length(&corpus, fixture)?;
-                fixture_lengths.insert(fixture.to_owned(), length);
-                length
-            }
+        let length = if let Some(length) = fixture_lengths.get(fixture) {
+            *length
+        } else {
+            let length = fixture_length(&corpus, fixture)?;
+            fixture_lengths.insert(fixture.to_owned(), length);
+            length
         };
         require_span(schema, case, row, length)?;
     }
@@ -221,7 +220,7 @@ fn require_requirement(
 }
 
 fn fixture_length(corpus: &Corpus, fixture: &str) -> Result<usize, ConformanceError> {
-    if !fixture.ends_with(".hex") {
+    if fixture.strip_suffix(".hex").is_none() {
         return Err(ConformanceError::violation(format!(
             "mutation ledger names a non-hexadecimal fixture {fixture:?}"
         )));
@@ -239,7 +238,7 @@ fn fixture_length(corpus: &Corpus, fixture: &str) -> Result<usize, ConformanceEr
             "fixture {fixture} is not lowercase hexadecimal"
         )));
     }
-    Ok(text.len() / 2)
+    Ok(text.len().div_euclid(2))
 }
 
 fn require_span(
@@ -261,7 +260,7 @@ fn require_span(
             .bytes()
             .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
     {
-        Some(parameter.len() / 2)
+        Some(parameter.len().div_euclid(2))
     } else {
         return Err(violation(
             schema,

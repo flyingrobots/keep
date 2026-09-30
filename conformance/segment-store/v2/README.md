@@ -57,7 +57,7 @@ The migration fixture preserves the version-1 one-zero segment and generation-1
 catalog. Its canonical two-entry inventory digest is
 `40bf5d49c34847ac9cf46a256f343cee80cd980d1405d2dd02ceff8f58d674f9`.
 The derived logical store identifier is
-`2b5ed4bcc926a6a5fa9fd5f749c134894de99d37bdf2def4e83bdf99a6539720`.
+`a046bebd6d1b05d33b56e26e131e5d44bc1872d875d339f837eecd21caa0c1e1`.
 Fixture-only root device, mount, and file coordinates are `1`, `2`, and `3`;
 they bind in-place recovery but do not enter the logical store identifier.
 
