@@ -46,13 +46,13 @@ pub(super) fn long_content() -> Vec<u8> {
         .collect()
 }
 
-struct Identified {
-    target: BlobId,
-    spans: Vec<ChunkSpan>,
-    record: CanonicalLayoutRecord,
+pub(super) struct Identified {
+    pub(super) target: BlobId,
+    pub(super) spans: Vec<ChunkSpan>,
+    pub(super) record: CanonicalLayoutRecord,
 }
 
-fn identify(bytes: &[u8]) -> Result<Identified, Box<dyn Error>> {
+pub(super) fn identify(bytes: &[u8]) -> Result<Identified, Box<dyn Error>> {
     let mut hasher = BlobHasher::new();
     hasher.update(bytes)?;
     let mut detector = FastCdc::new();

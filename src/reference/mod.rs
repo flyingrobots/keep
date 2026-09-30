@@ -35,7 +35,13 @@ pub use capacity::ReferenceStoreCapacity;
     reason = "the durable adapter reaches the shared read cores through this crate-private surface"
 )]
 pub(crate) use chunk_verification::ChunkSource;
+#[expect(
+    clippy::redundant_pub_crate,
+    reason = "the durable adapter reaches the streaming core through this crate-private surface"
+)]
+pub(crate) use ingestion::{ChunkSink, ingest_stream};
 pub use ingestion_error::{IngestionAllocation, IngestionError};
+pub use port::ReferenceStagedContent;
 pub use publish_error::PublishError;
 pub use published_blob::PublishedBlob;
 pub use range_read_error::RangeReadError;

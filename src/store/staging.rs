@@ -17,10 +17,11 @@ pub trait CommitReceipt: Copy + Debug + Eq {
     fn layout_id(&self) -> LayoutId;
 }
 
-/// Content staged but not yet visible.
+/// Content staged into one store but not yet visible.
+///
+/// The staging borrows its store for its lifetime, so the store cannot
+/// change underneath it, and commit needs no second reference.
 pub trait StagedContent: Sized {
-    /// The store the staging commits into.
-    type Store: ?Sized;
     /// The commit receipt.
     type Receipt: CommitReceipt;
     /// Why the commit returned no receipt.
@@ -32,18 +33,20 @@ pub trait StagedContent: Sized {
     /// The exact layout the staging will commit under.
     fn layout_id(&self) -> LayoutId;
 
-    /// Makes the staged content visible in `store`, or leaves it invisible.
+    /// Makes the staged content visible, or leaves it invisible.
     ///
     /// # Errors
     ///
     /// Returns the backend's refusal; nothing becomes visible on failure.
-    fn commit(self, store: &mut Self::Store) -> Result<Self::Receipt, Self::Error>;
+    fn commit(self) -> Result<Self::Receipt, Self::Error>;
 }
 
 /// Staging an unknown-length source under count-and-byte limits.
 pub trait ContentStaging {
-    /// The staged, not-yet-visible content.
-    type Staged: StagedContent;
+    /// The staged, not-yet-visible content, borrowing this store.
+    type Staged<'store>: StagedContent
+    where
+        Self: 'store;
     /// Why staging returned nothing.
     type Error: Error + 'static;
 
@@ -53,11 +56,11 @@ pub trait ContentStaging {
     /// # Errors
     ///
     /// Returns the backend's refusal or the source's failure.
-    fn stage(
-        &self,
+    fn stage<'store>(
+        &'store mut self,
         source: &mut dyn Read,
         limits: StagingLimits,
-    ) -> Result<Self::Staged, Self::Error>;
+    ) -> Result<Self::Staged<'store>, Self::Error>;
 
     /// As [`Self::stage`], refusing when the source does not hash to
     /// `expected`.
@@ -65,10 +68,10 @@ pub trait ContentStaging {
     /// # Errors
     ///
     /// As [`Self::stage`], plus the identity mismatch.
-    fn stage_expected(
-        &self,
+    fn stage_expected<'store>(
+        &'store mut self,
         source: &mut dyn Read,
         expected: BlobId,
         limits: StagingLimits,
-    ) -> Result<Self::Staged, Self::Error>;
+    ) -> Result<Self::Staged<'store>, Self::Error>;
 }

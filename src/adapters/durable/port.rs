@@ -1,11 +1,16 @@
-//! The durable snapshot's implementation of the content-store read port.
+//! The durable adapter's implementations of the content-store port: the
+//! snapshot answers the read half; the writer and its staging answer the
+//! write half.
 
-use std::io::Write;
+use std::io::{Read, Write};
 
 use super::{
-    DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt, DurableSnapshot,
+    DurableIngestionError, DurableIngestionReceipt, DurableRangeReadReceipt, DurableReadError,
+    DurableReconstructionReceipt, DurableSnapshot, DurableStagedBlob, DurableWriter,
 };
-use crate::{BlobId, ByteRange, ContentReads, LayoutId};
+use crate::{
+    BlobId, ByteRange, ContentReads, ContentStaging, LayoutId, StagedContent, StagingLimits,
+};
 
 impl ContentReads for DurableSnapshot {
     type ReconstructionReceipt = DurableReconstructionReceipt;
@@ -49,5 +54,44 @@ impl ContentReads for DurableSnapshot {
         output: &mut dyn Write,
     ) -> Result<DurableRangeReadReceipt, DurableReadError> {
         Self::read_layout_range(self, layout_id, requested, output)
+    }
+}
+
+impl ContentStaging for DurableWriter {
+    type Staged<'store> = DurableStagedBlob<'store>;
+    type Error = DurableIngestionError;
+
+    fn stage<'store>(
+        &'store mut self,
+        source: &mut dyn Read,
+        limits: StagingLimits,
+    ) -> Result<DurableStagedBlob<'store>, DurableIngestionError> {
+        Self::stage(self, source, limits)
+    }
+
+    fn stage_expected<'store>(
+        &'store mut self,
+        source: &mut dyn Read,
+        expected: BlobId,
+        limits: StagingLimits,
+    ) -> Result<DurableStagedBlob<'store>, DurableIngestionError> {
+        Self::stage_expected(self, source, expected, limits)
+    }
+}
+
+impl StagedContent for DurableStagedBlob<'_> {
+    type Receipt = DurableIngestionReceipt;
+    type Error = DurableIngestionError;
+
+    fn target(&self) -> BlobId {
+        Self::target(self)
+    }
+
+    fn layout_id(&self) -> LayoutId {
+        Self::layout_id(self)
+    }
+
+    fn commit(self) -> Result<DurableIngestionReceipt, DurableIngestionError> {
+        Self::commit(self)
     }
 }

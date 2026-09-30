@@ -15,6 +15,15 @@ use super::{
 use super::{CanonicalCatalog, CanonicalPublicationHead, filesystem_catalog_catalog};
 
 pub(super) const CURRENT_SEGMENT: &str = "current.seg";
+
+/// A closed, synchronized stage's metadata with the authority that created
+/// it, held between sealing and selection without borrowing the publisher.
+#[must_use]
+pub(super) struct ClosedSelection {
+    closed: ClosedSegment,
+    authority: FilesystemPublisherAuthority,
+}
+
 pub(super) const CURRENT_CATALOG: &str = "current.cat";
 pub(super) const HEAD: &str = "HEAD";
 pub(super) const NEXT_HEAD: &str = "head.next";
@@ -157,16 +166,47 @@ impl FilesystemCatalogPublisher {
         sealed: SealedSegment<FilesystemSegmentStage<'_>>,
         admitted: &'selection AdmittedSegment<'records>,
     ) -> Result<SegmentPublication<'selection, 'records>, SegmentPublicationError> {
+        let closed = self.close_sealed(sealed)?;
+        self.select_closed(closed, admitted)
+    }
+
+    /// Closes one synchronized stage created by this publisher into a
+    /// handle-free selection input that no longer borrows the publisher.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SegmentPublicationError::PublisherAuthority`] when `sealed`
+    /// was created by another publisher.
+    pub(super) fn close_sealed(
+        &self,
+        sealed: SealedSegment<FilesystemSegmentStage<'_>>,
+    ) -> Result<ClosedSelection, SegmentPublicationError> {
         let (stage, record_count, segment_length, digest) = sealed.into_parts();
         let authority = stage.close();
         if !self.authority.matches(&authority) {
             return Err(SegmentPublicationError::PublisherAuthority);
         }
-        SegmentPublication::one_bound(
-            ClosedSegment::admitted(record_count, segment_length, digest),
-            admitted,
+        Ok(ClosedSelection {
+            closed: ClosedSegment::admitted(record_count, segment_length, digest),
             authority,
-        )
+        })
+    }
+
+    /// Binds a closed selection input from [`Self::close_sealed`] to the
+    /// exact admitted stage bytes.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::select_segment`].
+    pub(super) fn select_closed<'selection, 'records>(
+        &self,
+        selection: ClosedSelection,
+        admitted: &'selection AdmittedSegment<'records>,
+    ) -> Result<SegmentPublication<'selection, 'records>, SegmentPublicationError> {
+        if !self.authority.matches(&selection.authority) {
+            return Err(SegmentPublicationError::PublisherAuthority);
+        }
+        SegmentPublication::one_bound(selection.closed, admitted, selection.authority)
     }
 
     /// Writes a strict prefix through the production catalog-stage adapter.

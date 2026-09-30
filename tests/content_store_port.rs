@@ -27,11 +27,13 @@ fn content(seed: u64, length: usize) -> Vec<u8> {
         .collect()
 }
 
+/// The committed identity and the bytes read back through the port.
+type RoundTrip = Result<(BlobId, Vec<u8>), Box<dyn Error>>;
+
 /// Backend-neutral: stage, commit, and read back through the port alone.
-fn round_trip<S>(store: &mut S, bytes: &[u8]) -> Result<(BlobId, Vec<u8>), Box<dyn Error>>
+fn round_trip<S>(store: &mut S, bytes: &[u8]) -> RoundTrip
 where
     S: ContentStaging + ContentReads,
-    S::Staged: StagedContent<Store = S>,
 {
     let staged = store.stage(
         &mut Cursor::new(bytes),
@@ -39,14 +41,16 @@ where
     )?;
     let expected_target = staged.target();
     let expected_layout = staged.layout_id();
-    let receipt = staged.commit(store)?;
-    assert_eq!(receipt.target(), expected_target);
-    assert_eq!(receipt.layout_id(), expected_layout);
+    let receipt = staged.commit()?;
+    let (target, layout_id) = (receipt.target(), receipt.layout_id());
+    drop(receipt);
+    assert_eq!(target, expected_target);
+    assert_eq!(layout_id, expected_layout);
     let mut output = Vec::new();
     store
-        .reconstruct_layout(receipt.layout_id(), &mut output)
+        .reconstruct_layout(layout_id, &mut output)
         .map_err(|error| error.to_string())?;
-    Ok((receipt.target(), output))
+    Ok((target, output))
 }
 
 #[test]
@@ -68,7 +72,7 @@ fn staging_refuses_the_byte_limit_before_anything_is_visible() -> Result<(), Box
     let bytes = content(0xfeed_beef_dead_c0de, 96 * 1024);
     let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(CAPACITY));
     let limits = StagingLimits::new(LayoutEntryLimit::MAXIMUM, StagedByteLimit::new(64 * 1024));
-    let refusal = ContentStaging::stage(&store, &mut Cursor::new(&bytes), limits);
+    let refusal = ContentStaging::stage(&mut store, &mut Cursor::new(&bytes), limits);
     assert!(matches!(
         refusal,
         Err(IngestionError::ByteLimitExceeded { limit, .. }) if limit.get() == 64 * 1024
@@ -81,9 +85,9 @@ fn staging_refuses_the_byte_limit_before_anything_is_visible() -> Result<(), Box
 #[test]
 fn staging_refuses_the_entry_limit_through_the_port() -> Result<(), Box<dyn Error>> {
     let bytes = content(0x0bad_cafe_f00d_face, 512 * 1024);
-    let store = ReferenceStore::new(ReferenceStoreCapacity::new(CAPACITY));
+    let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(CAPACITY));
     let limits = StagingLimits::entries(LayoutEntryLimit::new(1)?);
-    let refusal = ContentStaging::stage(&store, &mut Cursor::new(&bytes), limits);
+    let refusal = ContentStaging::stage(&mut store, &mut Cursor::new(&bytes), limits);
     assert!(refusal.is_err());
     Ok(())
 }
@@ -91,13 +95,13 @@ fn staging_refuses_the_entry_limit_through_the_port() -> Result<(), Box<dyn Erro
 #[test]
 fn an_expected_identity_that_does_not_match_refuses_with_both() -> Result<(), Box<dyn Error>> {
     let bytes = content(0x7777_1111_2222_3333, 8 * 1024);
-    let store = ReferenceStore::new(ReferenceStoreCapacity::new(CAPACITY));
+    let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(CAPACITY));
     let wrong = BlobHasher::new().finish();
     let mut hasher = BlobHasher::new();
     hasher.update(&bytes)?;
     let right = hasher.finish();
     let refusal = ContentStaging::stage_expected(
-        &store,
+        &mut store,
         &mut Cursor::new(&bytes),
         wrong,
         StagingLimits::entries(LayoutEntryLimit::MAXIMUM),
@@ -108,7 +112,7 @@ fn an_expected_identity_that_does_not_match_refuses_with_both() -> Result<(), Bo
             if expected == wrong && observed == right
     ));
     let staged = ContentStaging::stage_expected(
-        &store,
+        &mut store,
         &mut Cursor::new(&bytes),
         right,
         StagingLimits::entries(LayoutEntryLimit::MAXIMUM),

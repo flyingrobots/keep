@@ -91,7 +91,6 @@ a publication. A version-1 store stays admitted until its owner migrates it.
 | --- | --- |
 | Durable authenticated reads bound to a fenced snapshot | [#109](https://github.com/flyingrobots/keep/issues/109) |
 | Verification reports at durable depths and a replayable receipt | [#20](https://github.com/flyingrobots/keep/issues/20) |
-| Bounded production ingestion through the durable store | [#82](https://github.com/flyingrobots/keep/issues/82) |
 | Encrypted representations | [#86](https://github.com/flyingrobots/keep/issues/86) |
 
 Keep also does not claim secure deletion. Releasing a retention root
@@ -187,24 +186,39 @@ assert_eq!(output, b"exact bytes, or nothing");
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-A migrated version-two store reads the same way through `DurableStore`, with
-every read pinned to one fenced snapshot and every receipt naming the view.
-Production admission is Linux ext4; this example is not run on other hosts.
+A migrated version-two store writes and reads the same way on disk:
+`DurableWriter` stages a source in one bounded pass, reusing every chunk the
+catalog already holds, and commits it through the catalog protocol;
+`DurableStore` reads with every read pinned to one fenced snapshot and every
+receipt naming the view. Production admission is Linux ext4; this example is
+not run on other hosts.
 
 ```rust,no_run
-use keep::{CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, LayoutEntryLimit,
-    ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit};
+use std::path::Path;
+use keep::{CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, DurableWriter,
+    FilesystemVersionTwoAdmission, LayoutEntryLimit, ReaderAttemptLimit, SegmentReadPolicy,
+    SegmentRecordLimit, StagingLimits};
 
+let root = Path::new("/var/lib/keep/store");
 let policy = CatalogRestartPolicy::new(
     SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
     CatalogRestartByteLimit::new(1 << 30)?,
 );
-let store = DurableStore::open(std::path::Path::new("/var/lib/keep/store"), policy, ReaderAttemptLimit::DEFAULT);
+
+// Write: one pass, chunks the catalog already holds are reused by exact bytes.
+let mut writer = DurableWriter::open(FilesystemVersionTwoAdmission::reopen(root)?, root, policy)?;
+let mut source = std::fs::File::open("build/artifact.tar")?;
+let receipt = writer.stage(&mut source, StagingLimits::entries(LayoutEntryLimit::MAXIMUM))?.commit()?;
+println!("{} new, {} reused", receipt.accounting().physical_new_bytes(),
+    receipt.accounting().physical_reused_bytes());
+drop(writer);
+
+// Read: the committed layout is readable at once; by identity once anchored.
+let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT);
 let snapshot = store.snapshot()?; // shared reader fence held until dropped
-# let blob_id = "keep:blob:v1:blake3-256:1:1cfb8fa9e917aba15a1f592095f377ff180755fe1212b0d7d2ec750bd128b606".parse()?;
 let mut output = Vec::new();
-let receipt = snapshot.reconstruct(blob_id, &mut output)?;
-println!("generation {}", receipt.view().catalog_generation().get());
+let read = snapshot.reconstruct_layout(receipt.layout_id(), &mut output)?;
+println!("generation {}", read.view().catalog_generation().get());
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 

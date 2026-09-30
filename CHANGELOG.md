@@ -10,6 +10,25 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Durable staged ingestion with deduplication. `DurableWriter::open`
+  takes writer authority over a version-two root; `stage(source, limits)`
+  reads the source once through the reference store's streaming core (now
+  generic over a crate-private `ChunkSink`), verifies every chunk the
+  pinned catalog already holds byte for byte and reuses it, and appends
+  every other chunk to `staging/current.seg` as it is produced, creating
+  the stage on the first new chunk; the layout record follows unless the
+  catalog holds it. `DurableStagedBlob::commit(self)` publishes the sealed
+  segment and a catalog successor through `publish_catalog_generation`, or
+  nothing when the catalog already held everything.
+  `DurableIngestionReceipt` binds profile, blob, layout, segment digest,
+  catalog coordinates, and `IngestionAccounting` (logical, physical new,
+  physical reused bytes and chunk counts). `recover_durable_ingestion`
+  runs the recovery protocol with ingestion's complete-stage evidence: a
+  sealed stage the catalog names nothing of is discarded. The writer
+  implements `ContentStaging`; the port's staging now borrows its store
+  (`Staged<'store>`) and `StagedContent::commit(self)` takes no store,
+  with `ReferenceStagedContent` binding a `StagedBlob` to its reference
+  store. Page: `docs/architecture/durable-store/ingestion.md`.
 - Backend-neutral content-store port. `ContentReads` (`contains_blob`,
   `reconstruct`, `reconstruct_layout`, `read_range`, `read_layout_range`)
   is implemented by `ReferenceStore` and `DurableSnapshot`, each with its

@@ -102,7 +102,7 @@ names; use those in code, tests, and commits.
 - [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Partial (#20; report vocabulary, corruption ledgers, and durable receipts done on this branch; durable-view depths land with T-23.1)
 - [x] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Done on this branch (#21; codecs, planner, disposition, retirement, and compaction; crash sequences for disposition and compaction, stress, benchmarks, and re-encoding still owed)
 - [x] [F-23 Durable authenticated reads and refusal receipts](#f-23-durable-authenticated-reads-and-refusal-receipts) — Done on this branch (#109; `DurableStore` reads and verification receipts)
-- [ ] [F-24 Bounded production ingestion through the durable store](#f-24-bounded-production-ingestion-through-the-durable-store) — Planned (#82, #72)
+- [ ] [F-24 Bounded production ingestion through the durable store](#f-24-bounded-production-ingestion-through-the-durable-store) — Partial (#82, #72): T-24.1 and T-24.2 landed; T-24.3 open
 
 ### Integration (M5)
 
@@ -1461,7 +1461,10 @@ and no hidden whole-blob allocation.
 
 ### F-24 Bounded production ingestion through the durable store
 
-**Status:** Planned (#82, P1, M6). Needs #72 (F-06) and F-21.
+**Status:** Partial (#82, P1, M6). T-24.1 (the content-store port) and
+T-24.2 (`DurableWriter`) landed on this branch; T-24.3 (the streaming
+write-through pipeline, #72) is open, as are the owed items listed under
+T-24.2.
 
 One bounded production path from an unknown-length source through the
 registered CDC profile, chunk verification and deduplication, immutable
@@ -1476,10 +1479,10 @@ error precision.
   implements both halves and `DurableSnapshot` the read half; distinct
   receipt types give the compile-time law; generic laws run against both
   backends in-crate plus `tests/content_store_port.rs` from outside; page
-  `docs/architecture/content-store/README.md`. Still owed: the durable
-  writer's `ContentStaging` implementation and the Worldline golden run
-  through the port land with T-24.2, which is the first durable backend a
-  staging can commit into.
+  `docs/architecture/content-store/README.md`. T-24.2 then made the
+  staging borrow its store (`Staged<'store>`, `commit(self)`) and added
+  the durable writer's implementation. Still owed: the Worldline golden run
+  through the port (listed under T-24.2).
   Original task fields:
   - **Requirements:** a trait or port that `ReferenceStore` and the durable
     writer both satisfy where their durability claims overlap: stage,
@@ -1502,7 +1505,21 @@ error precision.
   - **Complexity:** M.
   - **Documentation:** `docs/architecture/` port page.
   - **Dependencies:** T-06.4.
-- [ ] T-24.2 Durable staged ingestion with deduplication.
+- [x] T-24.2 Durable staged ingestion with deduplication. Done 2026-09-30:
+  `DurableWriter::{open, stage, stage_expected}`,
+  `DurableStagedBlob::commit`, `DurableIngestionReceipt` with
+  `IngestionAccounting`, `DurableIngestionError`,
+  `recover_durable_ingestion`; the reference streaming core is generic
+  over a `ChunkSink`; the port's staging borrows its store and commits
+  without a second reference. Laws in
+  `src/adapters/durable/writer_tests.rs`; page
+  `docs/architecture/durable-store/ingestion.md`. Still owed, each named
+  on the page: segment rollover at the ceilings (refused typed today);
+  commit's segment-proportional re-admission (streaming admission);
+  the crash matrix driven by ingestion, the soak, the stress, and the
+  benchmarks; the Worldline `chunk reuse` and `production ingest` rows
+  through the port; the `keep put` and MCP `keep.ingest` adapters (F-42).
+  Original task fields:
   - **Requirements:** single pass over an unknown-length source; existing
     chunks reused only after exact identity and representation
     verification against the pinned catalog; missing chunks stream into a

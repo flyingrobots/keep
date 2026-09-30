@@ -35,15 +35,18 @@ read is accepted, and the refusal
 (`IngestionError::ByteLimitExceeded { limit, accepted, incoming }`) says
 how far the source was admitted and what pushed it over.
 
-`StagedContent::commit(self, store)` makes the staging visible, or leaves
-it invisible; the result is a `CommitReceipt` naming the target and the
-exact committed layout.
+A staging borrows its store (`ContentStaging::Staged<'store>`), so the
+store cannot change underneath it and `StagedContent::commit(self)` needs
+no second reference: it makes the staging visible, or leaves it invisible,
+and returns a `CommitReceipt` naming the target and the exact committed
+layout.
 
-The reference store implements the write half today and stays honest about
-being non-durable: process death loses everything in it, and no port
-method claims otherwise. The durable writer lands with durable staged
-ingestion (T-24.2); until it does, code that needs a durable commit has no
-implementation to reach for, which is the honest state.
+The non-durable `ReferenceStore` implements the write half through
+`ReferenceStagedContent` and stays honest about being non-durable: process
+death loses everything in it, and no port method claims otherwise. The
+[`DurableWriter`](../durable-store/ingestion.md) implements it on disk,
+with deduplication against the pinned catalog and publication through the
+catalog protocol; its receipt is `DurableIngestionReceipt`.
 
 ## The receipt law
 
@@ -65,5 +68,6 @@ function taking a `DurableReconstructionReceipt`.
 - `tests/content_store_port.rs` runs the reference backend from outside the
   crate through the port alone: round trip, byte-limit refusal before
   anything is visible, entry-limit refusal, and expected-identity mismatch.
-- The Worldline golden run through the port is owed with the durable
-  writer; it is listed under T-24.1 in the roadmap.
+- The durable writer's own laws are in `src/adapters/durable/writer_tests.rs`.
+- The Worldline golden run through the port is owed; it is listed under
+  T-24.2 in the roadmap.

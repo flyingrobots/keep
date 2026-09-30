@@ -5,10 +5,10 @@
 authenticated `reconstruct`, `reconstruct_layout`, `read_range`, and
 `read_layout_range` over one fenced version-two snapshot, with the same laws
 and the same reconstruction and range cores, plus a receipt that names the
-view. It is a read surface only: durable ingestion is
-[F-24](../../../ROADMAP.md#f-24-bounded-production-ingestion-through-the-durable-store),
-and content reaches a store through catalog publication and retention
-anchoring.
+view. Its write half is [`DurableWriter`](ingestion.md): one bounded pass
+with deduplication against the pinned catalog, published through the
+version-one catalog protocol. Content becomes readable by identity once a
+retention root anchors it.
 
 ## Contract
 

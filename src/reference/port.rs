@@ -12,6 +12,20 @@ use crate::{
     StagingLimits,
 };
 
+/// A [`StagedBlob`] bound to the reference store it will commit into.
+#[must_use = "staged work remains invisible until commit is called"]
+pub struct ReferenceStagedContent<'store> {
+    store: &'store mut ReferenceStore,
+    staged: StagedBlob,
+}
+
+impl ReferenceStagedContent<'_> {
+    /// The underlying staged work.
+    pub const fn staged(&self) -> &StagedBlob {
+        &self.staged
+    }
+}
+
 impl ContentReads for ReferenceStore {
     type ReconstructionReceipt = ReconstructionReceipt;
     type RangeReceipt = RangeReadReceipt;
@@ -58,47 +72,53 @@ impl ContentReads for ReferenceStore {
 }
 
 impl ContentStaging for ReferenceStore {
-    type Staged = StagedBlob;
+    type Staged<'store> = ReferenceStagedContent<'store>;
     type Error = IngestionError;
 
-    fn stage(
-        &self,
+    fn stage<'store>(
+        &'store mut self,
         source: &mut dyn Read,
         limits: StagingLimits,
-    ) -> Result<StagedBlob, IngestionError> {
-        self.stage_bounded(source, limits)
+    ) -> Result<ReferenceStagedContent<'store>, IngestionError> {
+        let staged = self.stage_bounded(source, limits)?;
+        Ok(ReferenceStagedContent {
+            store: self,
+            staged,
+        })
     }
 
-    fn stage_expected(
-        &self,
+    fn stage_expected<'store>(
+        &'store mut self,
         source: &mut dyn Read,
         expected: BlobId,
         limits: StagingLimits,
-    ) -> Result<StagedBlob, IngestionError> {
+    ) -> Result<ReferenceStagedContent<'store>, IngestionError> {
         let staged = self.stage_bounded(source, limits)?;
         let observed = staged.target();
         if observed != expected {
             return Err(IngestionError::BlobIdentityMismatch { expected, observed });
         }
-        Ok(staged)
+        Ok(ReferenceStagedContent {
+            store: self,
+            staged,
+        })
     }
 }
 
-impl StagedContent for StagedBlob {
-    type Store = ReferenceStore;
+impl StagedContent for ReferenceStagedContent<'_> {
     type Receipt = PublishedBlob;
     type Error = PublishError;
 
     fn target(&self) -> BlobId {
-        Self::target(self)
+        self.staged.target()
     }
 
     fn layout_id(&self) -> LayoutId {
-        Self::layout_id(self)
+        self.staged.layout_id()
     }
 
-    fn commit(self, store: &mut ReferenceStore) -> Result<PublishedBlob, PublishError> {
-        Self::commit(self, store)
+    fn commit(self) -> Result<PublishedBlob, PublishError> {
+        self.staged.commit(self.store)
     }
 }
 

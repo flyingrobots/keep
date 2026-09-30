@@ -202,8 +202,10 @@ pub use adapters::{
     observe_compaction, plan_compaction, recover_compaction,
 };
 pub use adapters::{
-    DurableOutcome, DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt,
-    DurableSnapshot, DurableStore, DurableStoreError, DurableView,
+    DurableIngestionError, DurableIngestionReceipt, DurableOutcome, DurableRangeReadReceipt,
+    DurableReadError, DurableReconstructionReceipt, DurableSnapshot, DurableStagedBlob,
+    DurableStore, DurableStoreError, DurableView, DurableWriter, IngestionAccounting,
+    recover_durable_ingestion,
 };
 pub use adapters::{
     MIGRATION_NAMESPACE_PREFIX, StoreMigrationEffect, StoreMigrationFixedStage,
@@ -229,8 +231,8 @@ pub use layout::{
 pub use profile::{RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId};
 pub use reference::{
     IngestionAllocation, IngestionError, ProfileBoundary, PublishError, PublishedBlob,
-    RangeReadError, RangeReadReceipt, ReconstructionError, ReconstructionReceipt, ReferenceStore,
-    ReferenceStoreCapacity, StagedBlob,
+    RangeReadError, RangeReadReceipt, ReconstructionError, ReconstructionReceipt,
+    ReferenceStagedContent, ReferenceStore, ReferenceStoreCapacity, StagedBlob,
 };
 pub use retention::{
     LivenessGeneration, LivenessGenerationError, RegisteredRetentionProfile, RetentionAnchor,

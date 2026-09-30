@@ -29,3 +29,4 @@ pub use plan::{CompactionPlan, CompactionRefusal, CompactionSegmentDisposition, 
 #[cfg(test)]
 pub(in crate::adapters) use recovery::recover_compaction_unchecked_for_tests;
 pub use recovery::{CompactionRecovery, FilesystemCompactionRecoveryError, recover_compaction};
+pub(in crate::adapters) use recovery::{CompleteStageEvidence, recover_with};

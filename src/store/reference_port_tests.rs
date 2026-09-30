@@ -24,11 +24,11 @@ fn reference_backend_satisfies_the_read_laws_through_the_port() -> Result<(), Bo
     let content = content();
     let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(4 * 1024 * 1024));
     let staged = ContentStaging::stage(
-        &store,
+        &mut store,
         &mut Cursor::new(&content),
         StagingLimits::entries(LayoutEntryLimit::MAXIMUM),
     )?;
-    let receipt = StagedContent::commit(staged, &mut store)?;
+    let receipt = StagedContent::commit(staged)?;
     reconstructs_exactly(&store, receipt.target(), receipt.layout_id(), &content)?;
     ranges_exactly(
         &store,
@@ -43,10 +43,10 @@ fn reference_backend_satisfies_the_read_laws_through_the_port() -> Result<(), Bo
 #[test]
 fn the_byte_limit_refuses_before_any_excess_is_materialized() -> Result<(), Box<dyn Error>> {
     let content = content();
-    let store = ReferenceStore::new(ReferenceStoreCapacity::new(4 * 1024 * 1024));
+    let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(4 * 1024 * 1024));
     let limit = StagedByteLimit::new(u64::try_from(content.len())?.saturating_sub(1));
     let refusal = ContentStaging::stage(
-        &store,
+        &mut store,
         &mut Cursor::new(&content),
         StagingLimits::new(LayoutEntryLimit::MAXIMUM, limit),
     );
@@ -63,10 +63,12 @@ fn the_byte_limit_refuses_before_any_excess_is_materialized() -> Result<(), Box<
     assert!(accepted.saturating_add(u64::try_from(incoming)?) > limit.get());
     let exact = StagedByteLimit::new(u64::try_from(content.len())?);
     let staged = ContentStaging::stage(
-        &store,
+        &mut store,
         &mut Cursor::new(&content),
         StagingLimits::new(LayoutEntryLimit::MAXIMUM, exact),
     )?;
-    assert!(!ContentReads::contains_blob(&store, staged.target()));
+    let target = StagedContent::target(&staged);
+    drop(staged);
+    assert!(!ContentReads::contains_blob(&store, target));
     Ok(())
 }

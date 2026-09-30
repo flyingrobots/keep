@@ -78,9 +78,18 @@ fn refused(
     phase: &'static str,
     source: impl Error + Send + Sync + 'static,
 ) -> FilesystemCompactionRecoveryError {
-    FilesystemCompactionRecoveryError {
-        phase,
-        source: Box::new(source),
+    FilesystemCompactionRecoveryError::refused(phase, source)
+}
+
+impl FilesystemCompactionRecoveryError {
+    pub(in crate::adapters) fn refused(
+        phase: &'static str,
+        source: impl Error + Send + Sync + 'static,
+    ) -> Self {
+        Self {
+            phase,
+            source: Box::new(source),
+        }
     }
 }
 
@@ -103,7 +112,7 @@ pub fn recover_compaction(
 ) -> Result<CompactionRecovery, FilesystemCompactionRecoveryError> {
     let discarder = FilesystemRecoveryStageDiscarder::open_version_two(store_root)
         .map_err(|source| refused("open", source))?;
-    recover_with(discarder, policy)
+    recover_with(discarder, policy, CompleteStageEvidence::Derivable)
 }
 
 #[cfg(test)]
@@ -114,12 +123,24 @@ pub(in crate::adapters) fn recover_compaction_unchecked_for_tests(
     let discarder =
         FilesystemRecoveryStageDiscarder::open_unchecked_version_two_for_tests(store_root)
             .map_err(|source| refused("open", source))?;
-    recover_with(discarder, policy)
+    recover_with(discarder, policy, CompleteStageEvidence::Derivable)
 }
 
-fn recover_with(
+/// What proves a complete staged segment safe to discard.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(in crate::adapters) enum CompleteStageEvidence {
+    /// Every staged record is named byte-identically by the current
+    /// catalog: a compaction copy the next compaction reproduces.
+    Derivable,
+    /// No staged record is named by the current catalog: an ingestion
+    /// stage that was never committed, so nothing published references it.
+    Unpublished,
+}
+
+pub(in crate::adapters) fn recover_with(
     mut discarder: FilesystemRecoveryStageDiscarder,
     policy: CatalogRestartPolicy,
+    evidence: CompleteStageEvidence,
 ) -> Result<CompactionRecovery, FilesystemCompactionRecoveryError> {
     let mut recovery = CompactionRecovery {
         discarded: Vec::new(),
@@ -130,7 +151,7 @@ fn recover_with(
         (RecoveryStage::Catalog, CATALOG_STAGE),
     ] {
         if let Some(bytes) = read_stage(&discarder, RecoveryStageParent::Staging, name)? {
-            resolve_staging(&mut discarder, stage, name, &bytes, policy)?;
+            resolve_staging(&mut discarder, (stage, name), &bytes, policy, evidence)?;
             recovery.discarded.push(stage);
         }
     }
@@ -220,10 +241,10 @@ fn admitted_stage(
 /// catalog does not already name.
 fn resolve_staging(
     discarder: &mut FilesystemRecoveryStageDiscarder,
-    stage: RecoveryStage,
-    name: &str,
+    (stage, name): (RecoveryStage, &str),
     bytes: &[u8],
     policy: CatalogRestartPolicy,
+    evidence: CompleteStageEvidence,
 ) -> Result<(), FilesystemCompactionRecoveryError> {
     let admitted = admitted_stage(stage, bytes)?;
     let assessment = assess_recovery_stage(&admitted, policy.segment_read())
@@ -233,7 +254,14 @@ fn resolve_staging(
             state: RecoverySegmentStage::Complete(segment),
             ..
         } => {
-            require_derivable_segment(discarder, segment, policy)?;
+            match evidence {
+                CompleteStageEvidence::Derivable => {
+                    require_derivable_segment(discarder, segment, policy)?;
+                }
+                CompleteStageEvidence::Unpublished => {
+                    require_unpublished_segment(discarder, segment, policy)?;
+                }
+            }
             true
         }
         RecoveryStageAssessment::Segment {
@@ -294,6 +322,31 @@ fn require_derivable_segment(
             return Err(refused(
                 "derivable segment",
                 io::Error::other("a staged record differs from the named record"),
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// A complete staged segment is unpublished when the current catalog names
+/// none of its records: an ingestion stage that never reached commit.
+fn require_unpublished_segment(
+    discarder: &FilesystemRecoveryStageDiscarder,
+    segment: &AdmittedSegment<'_>,
+    policy: CatalogRestartPolicy,
+) -> Result<(), FilesystemCompactionRecoveryError> {
+    let current =
+        catalog_restart_loader::load_from_directory(root_directory(discarder), HEAD, policy)
+            .map_err(|source| refused("load current catalog", source))?;
+    let snapshot = current
+        .snapshot()
+        .map_err(|source| refused("admit current catalog", source))?;
+    for record in segment.records() {
+        let record = record.map_err(|source| refused("reread staged record", source))?;
+        if snapshot.record(record.identity()).is_some() {
+            return Err(refused(
+                "unpublished segment",
+                io::Error::other("a staged record is already named"),
             ));
         }
     }

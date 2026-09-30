@@ -5,6 +5,7 @@ use std::collections::BTreeMap;
 use crate::{ChunkId, ReferenceStore};
 
 use super::IngestionError;
+use super::ingestion::ChunkSink;
 use super::ingestion_error::IngestionAllocation;
 
 pub(super) struct ReferenceChunkStaging<'a> {
@@ -26,11 +27,7 @@ impl<'a> ReferenceChunkStaging<'a> {
         (self.chunks, self.pending_bytes)
     }
 
-    pub(super) fn stage_chunk(
-        &mut self,
-        identity: ChunkId,
-        bytes: &[u8],
-    ) -> Result<(), IngestionError> {
+    fn stage_chunk_inner(&mut self, identity: ChunkId, bytes: &[u8]) -> Result<(), IngestionError> {
         if let Some(existing) = self.store.chunks.get(&identity) {
             return compare_existing(identity, existing, bytes);
         }
@@ -45,6 +42,14 @@ impl<'a> ReferenceChunkStaging<'a> {
             .ok_or_else(|| capacity_error(self.store))?;
         self.chunks.insert(identity, owned.into_boxed_slice());
         Ok(())
+    }
+}
+
+impl ChunkSink for ReferenceChunkStaging<'_> {
+    type Error = IngestionError;
+
+    fn stage_chunk(&mut self, identity: ChunkId, bytes: &[u8]) -> Result<(), IngestionError> {
+        self.stage_chunk_inner(identity, bytes)
     }
 }
 
