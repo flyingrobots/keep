@@ -95,9 +95,11 @@ stages, replaced protocol directories, and every namespace or capacity
 violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 
 Not implemented: retention publication recovery and `KEEP-CRASH-036..052`
-process-death evidence, partial-prefix migration recovery and
-`KEEP-CRASH-053..073`, the reader fence, model-based transition evidence, and
-garbage collection. Issue #19 owns the first four and issue #21 the last.
+process-death evidence, the `KEEP-CRASH-053..073` process-death matrix for
+migration recovery (in-process recovery of every prefix is implemented), the
+reader fence, model-based transition evidence, and garbage collection. The
+retention items are issue #19, the migration matrix is #108, and collection
+is #21.
 Reopen compares only the restart-stable root coordinates, device and inode,
 against the intent; see
 [root identity across restart](recovery.md#root-identity-across-restart). A

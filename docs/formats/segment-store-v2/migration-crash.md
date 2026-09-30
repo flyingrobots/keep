@@ -104,7 +104,11 @@ prefix, marker, receipt, and cleanup state without depending on a clock,
 filesystem iteration order, or file existence alone.
 
 `StoreMigrationPhase::ALL` freezes the 21 boundaries above in exact order.
-Fresh writer-locked filesystem execution now implements that exact order and
-has deterministic in-process storage-fault and corruption laws. The
-before/during/after process-death matrix and restart classifier remain
-unimplemented; this page does not yet claim crash recovery.
+Fresh writer-locked filesystem execution implements that exact order and has
+deterministic in-process storage-fault and corruption laws. The restart
+classifier and resuming storage are implemented and proven in-process for
+every prefix of the 21 phases (see
+[partial migration recovery](migration-recovery.md)). The before, during, and
+after process-death matrix remains
+([#108](https://github.com/flyingrobots/keep/issues/108)); until it runs,
+this page claims in-process recovery, not process-death recovery.

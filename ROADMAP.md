@@ -95,7 +95,7 @@ names; use those in code, tests, and commits.
 
 - [x] [F-15 Retention roots, release, and GC liveness model](#f-15-retention-roots-release-and-gc-liveness-model) — Done (ADR-0009)
 - [x] [F-16 Version-2 format records and codecs](#f-16-version-2-format-records-and-codecs) — Done
-- [ ] [F-17 One-way migration from version 1 to version 2](#f-17-one-way-migration-from-version-1-to-version-2) — Partial (#97 done on this branch; recovery is #108)
+- [ ] [F-17 One-way migration from version 1 to version 2](#f-17-one-way-migration-from-version-1-to-version-2) — Partial (#97 and in-process recovery done on this branch; the crash matrix is #108)
 - [ ] [F-18 Retention publication](#f-18-retention-publication) — Partial; recovery in review (PR #99)
 - [ ] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — In review (PR #99)
 - [ ] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — In review (PR #99)
@@ -747,10 +747,11 @@ Direct version-2 initialization is undefined. There is no downgrade.
   - **Documentation:** `recovery.md`, `requirements.md`, `migration-crash.md`,
     v2 corpus README, CHANGELOG.
   - **Dependencies:** blocks T-17.2 and T-17.3.
-- [ ] T-17.2 Partial-prefix migration recovery (`KEEP-MIGRATION-004`; the
-  storage-independent planner and its laws landed on this branch; the
-  residue observer, resuming storage, and crash matrix remain in #108, the
-  residual #19 item 7).
+- [x] T-17.2 Partial-prefix migration recovery (`KEEP-MIGRATION-004`) —
+  planner, residue observer, resuming storage, and
+  `FilesystemStoreMigrationAuthority::reopen_for_recovery`, proven
+  in-process for every prefix; the process-death matrix is T-17.3 (#108).
+  Original task fields:
   - **Requirements:** the seven-row recovery table in
     `migration-recovery.md` becomes executable: no artifact admits v1;
     intent stage only finalizes or discards the pre-effect stage; durable

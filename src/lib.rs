@@ -163,8 +163,9 @@ pub use adapters::{
 };
 pub use adapters::{
     MIGRATION_NAMESPACE_PREFIX, StoreMigrationEffect, StoreMigrationFixedStage,
-    StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryPlan, StoreMigrationResidue,
-    plan_store_migration_recovery,
+    StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError, StoreMigrationRecoveryPlan,
+    StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,
+    plan_store_migration_recovery, recover_store_migration, resume_store_migration,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

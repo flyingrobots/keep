@@ -3,7 +3,9 @@
 use std::io;
 
 use super::{FilesystemMigrationInventoryError, StoreMigrationIntentDigest};
-use crate::adapters::{CatalogDecodeError, CatalogRestartError, PublicationHeadDecodeError};
+use crate::adapters::{
+    CatalogDecodeError, CatalogRestartError, PublicationHeadDecodeError, WriterLockAcquireError,
+};
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
 /// Published version-1 artifact observed while establishing migration authority.
@@ -39,6 +41,16 @@ pub enum StoreRootIdentityCoordinate {
 /// Failure to observe or revalidate exact filesystem migration authority.
 #[derive(Debug)]
 pub enum FilesystemMigrationAuthorityError {
+    /// The production platform refused the store root.
+    Platform {
+        /// Preserved platform source.
+        source: io::Error,
+    },
+    /// The existing writer lock could not be acquired.
+    WriterLock {
+        /// Preserved lock refusal.
+        source: WriterLockAcquireError,
+    },
     /// Complete immutable-pool inventory could not be admitted.
     Inventory {
         /// Preserved inventory refusal.

@@ -78,8 +78,21 @@ Every other residue is a typed `StoreMigrationRecoveryAmbiguity`. The
 persisted intent is compared on every coordinate but the mount identity, so
 a rebooted root does not reject its own intent.
 
-The planner reads no storage. An observer that produces the residue and a
-storage that executes the plan by reopening each stage by device and inode
-identity are not implemented; until they are, an interrupted migration still
-waits for a human
+The planner reads no storage. `recover_store_migration` drives it: a
+`StoreMigrationRecoveryStorage` observes the residue, the plan is taken
+against the intent the version-1 store derives today, the exact stage and
+canonical handles the resume point needs are adopted by reopening them by
+device and inode identity, an incomplete pre-effect stage is removed if the
+plan says so, and `resume_store_migration` runs every later phase with the
+persisted intent, never the freshly derived one.
+`FilesystemStoreMigrationAuthority::reopen_for_recovery` is the filesystem
+form. It acquires the writer lock over a root carrying any lawful residue
+without minting a version-1 platform admission, so the version-1 publisher
+can never run against a partly migrated root.
+
+Every forward prefix of zero through twenty-one phases, and each incomplete
+pre-effect stage, recovers in-process to exactly one complete migration with
+every version-1 byte intact; a corrupt durable intent refuses before any
+mutation. The before, during, and after process-death matrix for
+`KEEP-CRASH-053..073` remains
 ([#108](https://github.com/flyingrobots/keep/issues/108)).

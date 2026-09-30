@@ -10,17 +10,25 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
-- Storage-independent migration recovery planning.
-  `plan_store_migration_recovery` maps one observed `StoreMigrationResidue`
-  (the presence and exact bytes of every fixed migration name) and the
-  intent the version-1 store derives today onto the one lawful
-  `StoreMigrationRecoveryPlan` from the recovery table: admit version 1,
-  discard one incomplete pre-effect stage and resume, resume at the earliest
-  forward phase the residue cannot prove complete, or complete. Every other
-  residue is a typed `StoreMigrationRecoveryAmbiguity`. The persisted intent
-  is compared on every coordinate but the mount identity. The residue
-  observer, the resuming filesystem storage, and `KEEP-CRASH-053..073`
-  remain open in #108; `KEEP-MIGRATION-004` moves to In progress.
+- Partial-prefix migration recovery. `plan_store_migration_recovery` maps
+  one observed `StoreMigrationResidue` (the presence and exact bytes of every
+  fixed migration name) and the intent the version-1 store derives today
+  onto the one lawful `StoreMigrationRecoveryPlan` from the recovery table:
+  admit version 1, discard one incomplete pre-effect stage and resume,
+  resume at the earliest forward phase the residue cannot prove complete, or
+  complete; every other residue is a typed `StoreMigrationRecoveryAmbiguity`.
+  `recover_store_migration` drives a `StoreMigrationRecoveryStorage` through
+  observe, plan, adopt, discard, and `resume_store_migration`, publishing
+  the persisted intent rather than the freshly derived one.
+  `FilesystemStoreMigrationAuthority::reopen_for_recovery` acquires the
+  writer lock over a root carrying any lawful residue without minting a
+  version-1 platform admission, adopts exact stages and canonical records by
+  device and inode identity, and removes only an incomplete pre-effect
+  stage. Every prefix of zero through twenty-one phases and a truncated stage
+  recover in-process to one complete migration with every version-1 byte
+  intact; a corrupt durable intent refuses before any mutation.
+  `KEEP-MIGRATION-001` and `-004` move to Implemented; the
+  `KEEP-CRASH-053..073` process-death matrix remains open in #108.
 - Explicit-depth verification. `VerificationDepth` is one ordered
   enumeration from `Framing` to `RetentionClosure`; `ReferenceStore::verify`
   and `verify_admitted_layout` establish exactly the requested depth and

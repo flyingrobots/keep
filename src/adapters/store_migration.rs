@@ -44,6 +44,10 @@ mod filesystem_migration_fixed_artifact;
 mod filesystem_migration_namespace;
 mod filesystem_migration_namespace_directory;
 mod filesystem_migration_reader_fence;
+mod filesystem_migration_recovery;
+#[cfg(test)]
+mod filesystem_migration_recovery_tests;
+mod filesystem_migration_residue;
 mod filesystem_migration_storage;
 #[cfg(test)]
 mod filesystem_migration_storage_tests;
@@ -85,9 +89,12 @@ mod migration_receipt_initial_state;
 mod migration_record_bytes;
 mod migration_recovery_ambiguity;
 mod migration_recovery_ambiguity_display;
+mod migration_recovery_execution;
 mod migration_recovery_plan;
 mod migration_recovery_planner;
 mod migration_recovery_residue;
+mod migration_recovery_storage;
+mod migration_resumption;
 mod migration_storage;
 mod migration_synchronization_mask;
 mod store_identifier;
@@ -131,9 +138,14 @@ pub use migration_phase::StoreMigrationPhase;
 pub use migration_receipt_decode_error::StoreMigrationReceiptDecodeError;
 pub(super) use migration_receipt_format::ENCODED_LENGTH as MIGRATION_RECEIPT_LENGTH;
 pub use migration_recovery_ambiguity::{StoreMigrationEffect, StoreMigrationRecoveryAmbiguity};
+pub use migration_recovery_execution::{
+    StoreMigrationRecoveryError, StoreMigrationRecoveryReceipt, recover_store_migration,
+};
 pub use migration_recovery_plan::{StoreMigrationFixedStage, StoreMigrationRecoveryPlan};
 pub use migration_recovery_planner::plan_store_migration_recovery;
 pub use migration_recovery_residue::{MIGRATION_NAMESPACE_PREFIX, StoreMigrationResidue};
+pub use migration_recovery_storage::StoreMigrationRecoveryStorage;
+pub use migration_resumption::resume_store_migration;
 pub use migration_storage::StoreMigrationStorage;
 pub use migration_synchronization_mask::MigrationSynchronizationMask;
 pub use store_identifier::StoreIdentifier;

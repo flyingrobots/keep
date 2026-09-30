@@ -69,20 +69,20 @@ Keep is required to refuse all three, before mutating anything.
 
 ## What it does not do yet
 
-Version 2 writes correctly from a clean start and, if it finds the residue of
-an interrupted publication or migration, refuses rather than guesses. On
-`main`, nothing yet recovers that residue and readers have no fence, so
-**an interrupted version-2 publication or migration waits for a human.**
-Retention recovery and the reader fence are in review in
-[PR #99](https://github.com/flyingrobots/keep/pull/99); migration recovery
-is [#108](https://github.com/flyingrobots/keep/issues/108). A version-1
-store stays admitted until its owner migrates it; migrate only if you accept
-that wait.
+Version 2 writes correctly from a clean start. An interrupted migration
+recovers: `FilesystemStoreMigrationAuthority::reopen_for_recovery` and
+`recover_store_migration` resume any prefix of the twenty-one phases, proven
+in-process for every prefix; the process-death matrix for those phases is
+still open in [#108](https://github.com/flyingrobots/keep/issues/108). An
+interrupted retention publication is refused rather than guessed at, and
+readers have no fence, so **an interrupted version-2 publication waits for a
+human** until [PR #99](https://github.com/flyingrobots/keep/pull/99) merges.
+A version-1 store stays admitted until its owner migrates it.
 
 | Gap | Tracked |
 | --- | --- |
 | Restart recovery for retention publication | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
-| Restart recovery for migration | [#108](https://github.com/flyingrobots/keep/issues/108) |
+| Process-death evidence for migration recovery | [#108](https://github.com/flyingrobots/keep/issues/108) |
 | Reader fence binding one consistent catalog + retention snapshot | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
 | Durable authenticated reads bound to a fenced snapshot | [#109](https://github.com/flyingrobots/keep/issues/109) |
 | Verification reports at durable depths and a replayable receipt | [#20](https://github.com/flyingrobots/keep/issues/20) |
