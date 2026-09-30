@@ -173,6 +173,58 @@ recovery/dispositions/<artifact-identity-digest-64-lower-hex>.receipt
 The version-2 maximum is 65,536 disposition receipts. A future successor must
 migrate the namespace before raising the ceiling.
 
+## Planning
+
+`plan_gc(&GcLivenessSnapshot, GcLimits)` is the pure, deterministic
+comparison ADR-0009 requires between one immutable liveness snapshot and one
+bounded physical inventory. It reads nothing and writes nothing.
+`observe_gc_liveness` assembles the snapshot from a fenced
+`FilesystemRetentionSnapshot`: it re-admits the fenced catalog, projects every
+retained root's verified closure onto the segments that hold its records,
+reads and admits every entry of the segment pool within the
+`CatalogRestartPolicy` byte bound, and walks the catalog predecessor chain to
+find segments a durably published successor superseded. No
+`RecoveryDispositionReceipt` codec exists yet, so nothing is reported
+disposed.
+
+The plan classifies every inventoried segment exactly once, in this order:
+
+<!-- markdownlint-disable MD013 -->
+
+| Classification | Meaning | Candidate |
+| --- | --- | --- |
+| `live` | the current catalog names it and at least one retained closure reaches it | no |
+| `named-unreachable` | the current catalog names it and no retained closure reaches it; only a compaction successor can release it | no |
+| `recovery-protected` | no catalog in the chain names it and no disposition retires it: an orphan of an interrupted publication | no |
+| `unreachable-superseded` | a predecessor catalog named it and the current catalog omits it | yes |
+| `unreachable-disposed` | a durable disposition receipt retired it | yes |
+
+<!-- markdownlint-enable MD013 -->
+
+A superseded or disposed segment absent from the inventory is reported as
+already retired. Any contradiction refuses the whole plan as a typed
+`GcPlanAmbiguity`: a named segment absent from the inventory, a closure
+member the catalog does not name or the inventory lacks, or a superseded or
+disposed segment the current catalog still names. More candidates than
+`GcLimits` admit refuse rather than truncate. Reader protection is not a
+planning classification: execution takes writer authority and the exclusive
+reader lock and re-proves every coordinate the plan names before acting.
+
+The plan for the frozen version-2 store is
+[`gc-plan.tsv`](../../../conformance/segment-store/v2/gc-plan.tsv); the
+planner laws in `src/adapters/gc/planner_tests.rs` cover every
+classification, every ambiguity, the limit, the golden plan, and a
+512-universe model in which the live set is always exactly the union of the
+retained closures and no live or named segment is ever a candidate.
+
+> **Warning.** Everything below this line describes execution, which
+> unlinks immutable segments. Execution is not implemented. When it is, it
+> must hold writer authority and the exclusive reader lock, write and
+> synchronize `gc/intent` before the first unlink, act only on a plan whose
+> coordinates it has re-proven against the reopened store, and be verified
+> afterwards by a recovery report. `plan_gc` is the dry run: it changes
+> nothing on disk.
+
 ## State and recovery
 
 GC admits these states:
@@ -202,7 +254,7 @@ synchronizes `recovery`. Until that completes, the artifact remains
 recovery-protected.
 
 The intent and receipt grammars have golden fixtures, parsers, corruption
-matrices, and a seeded fuzz target. The disposition grammar's fixture and
-parser, and every crash point, model, benchmark, execution, and recovery
-law, are **Planned in #21**. Issue #19 must refuse their physical presence
-without mutating it.
+matrices, and a seeded fuzz target; the planner has its golden plan and model
+law. The disposition grammar's fixture and parser, and every crash point,
+benchmark, execution, and recovery law, are **Planned in #21**. Namespace
+admission must refuse their physical presence without mutating it.

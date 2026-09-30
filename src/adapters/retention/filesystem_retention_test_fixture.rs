@@ -30,7 +30,7 @@ use crate::{
 };
 
 /// Frozen canonical generation-one root.
-pub(super) const ROOT_HEX: &str =
+pub(in crate::adapters) const ROOT_HEX: &str =
     include_str!("../../../conformance/segment-store/v2/one-anchor-root.hex");
 /// Frozen canonical generation-one manifest.
 pub(super) const MANIFEST_HEX: &str =
@@ -56,7 +56,7 @@ pub(super) const CATALOG_NAME: &str =
 /// The fixture publishes the exact bundle version-1 corpus, executes the
 /// complete forward migration, releases writer authority, then reopens the
 /// admitted root for retention publication.
-pub(super) fn open_authority(
+pub(in crate::adapters) fn open_authority(
     name: &str,
 ) -> Result<(TestDirectory, FilesystemRetentionPublicationAuthority), Box<dyn Error>> {
     let sandbox = migrated_store(name)?;
@@ -66,7 +66,7 @@ pub(super) fn open_authority(
 
 /// Reopens a migrated store for retention publication under the test
 /// catalog policy.
-pub(super) fn reopen_authority(
+pub(in crate::adapters) fn reopen_authority(
     root: &Path,
 ) -> Result<FilesystemRetentionPublicationAuthority, Box<dyn Error>> {
     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(root)?;
@@ -75,7 +75,7 @@ pub(super) fn reopen_authority(
 
 /// The catalog policy tests re-verify closure members under: maximum
 /// grammar limits and one mebibyte of retained segment bytes.
-pub(super) fn catalog_policy() -> Result<CatalogRestartPolicy, Box<dyn Error>> {
+pub(in crate::adapters) fn catalog_policy() -> Result<CatalogRestartPolicy, Box<dyn Error>> {
     Ok(CatalogRestartPolicy::new(
         maximum_policy(),
         CatalogRestartByteLimit::new(1_048_576)?,
@@ -83,7 +83,7 @@ pub(super) fn catalog_policy() -> Result<CatalogRestartPolicy, Box<dyn Error>> {
 }
 
 /// Decodes one LF-terminated lowercase hexadecimal conformance fixture.
-pub(super) fn fixture(hex: &str) -> Result<Vec<u8>, Box<dyn Error>> {
+pub(in crate::adapters) fn fixture(hex: &str) -> Result<Vec<u8>, Box<dyn Error>> {
     decode_hex(hex.strip_suffix('\n').ok_or("fixture must end in one LF")?).map_err(Into::into)
 }
 
@@ -104,7 +104,7 @@ pub(super) fn with_snapshot<T>(
 }
 
 /// Prepares the frozen generation-one root as an initial `Publish` transition.
-pub(super) fn initial_preparation(
+pub(in crate::adapters) fn initial_preparation(
     root_bytes: &[u8],
 ) -> Result<RetentionPublicationPreparation<'_>, Box<dyn Error>> {
     let candidate = AdmittedRetentionRoot::decode(root_bytes)?;
@@ -254,7 +254,7 @@ fn hex(bytes: &[u8; 32]) -> String {
 }
 
 /// Builds one completely migrated version-2 store with writer authority released.
-pub(super) fn migrated_store(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
+pub(in crate::adapters) fn migrated_store(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
     let sandbox = TestDirectory::create(name)?;
     let admission = FilesystemPlatformAdmission::initialize_unchecked_for_tests(sandbox.path())?;
     write_version_one(&sandbox)?;

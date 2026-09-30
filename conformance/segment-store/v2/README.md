@@ -15,6 +15,7 @@ migration, retention transition, or garbage collector exists.
 | `migration-source.tsv` | Exact version-1 and derived migration coordinates |
 | `artifacts.tsv` | Golden artifact lengths, digests, checksums, and filenames |
 | `transitions.tsv` | One stable crash identifier per migration boundary, `KEEP-CRASH-053` to `-073` |
+| `gc-plan.tsv` | The deterministic GC plan for the frozen version-2 store: every segment's classification |
 | `format-marker.hex` | Canonical 96-byte `FORMAT` record |
 | `migration-intent.hex` | Canonical 256-byte migration intent |
 | `migration-receipt.hex` | Canonical 256-byte migration receipt |

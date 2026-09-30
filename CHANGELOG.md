@@ -10,6 +10,24 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Deterministic GC planning. `GcLivenessSnapshot` is one immutable liveness
+  snapshot plus one bounded physical inventory: the fenced catalog's
+  generation and digest, the retention state, every segment the catalog
+  names, every retained root's verified closure projected onto segments,
+  every pool segment with its length, and the segments a predecessor
+  catalog named that the current catalog omits. `plan_gc` classifies every
+  inventoried segment exactly once (`live`, `named-unreachable`,
+  `recovery-protected`, `unreachable-superseded`, `unreachable-disposed`),
+  reports already-retired segments, refuses every contradiction as a typed
+  `GcPlanAmbiguity`, and refuses rather than truncates above `GcLimits`.
+  `observe_gc_liveness` assembles the snapshot from a
+  `FilesystemRetentionSnapshot`, re-admitting every pool segment and walking
+  the catalog chain; a corrupt or stray pool entry refuses observation. The
+  golden plan for the frozen version-2 store is
+  `conformance/segment-store/v2/gc-plan.tsv`; a 512-universe model proves the
+  live set is exactly the union of retained closures and no live or named
+  segment is ever a candidate. Execution is not implemented; nothing is
+  unlinked.
 - Closure-member re-verification under filesystem authority.
   `FilesystemRetentionPublicationAuthority::open` now takes a
   `CatalogRestartPolicy`, and current-state verification loads this store's

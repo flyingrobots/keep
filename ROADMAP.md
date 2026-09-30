@@ -100,7 +100,7 @@ names; use those in code, tests, and commits.
 - [x] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — Done on this branch (merged from PR #99)
 - [x] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — Done on this branch (merged from PR #99)
 - [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Planned (#20)
-- [ ] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Planned (#21)
+- [ ] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Partial (#21; codecs and the deterministic planner done on this branch)
 - [ ] [F-23 Durable authenticated reads and refusal receipts](#f-23-durable-authenticated-reads-and-refusal-receipts) — Planned (#109)
 - [ ] [F-24 Bounded production ingestion through the durable store](#f-24-bounded-production-ingestion-through-the-durable-store) — Planned (#82, #72)
 
@@ -1144,10 +1144,11 @@ quarantines, or rewrites physical state.
 
 ### F-22 Garbage collection, compaction, and recovery dispositions
 
-**Status:** Planned (#21, P1, M4). Grammars are frozen and their presence
-refuses (`KEEP-GC-001`, `-002`). The intent and receipt codecs landed on
-this branch (T-22.1); the disposition codec waits on an enumeration
-decision (T-22.1a).
+**Status:** Partial (#21, P1, M4). Grammars are frozen and their presence
+refuses (`KEEP-GC-001`, `-002`). The intent and receipt codecs (T-22.1) and
+the deterministic planner (T-22.2) landed on this branch; the disposition
+codec waits on an enumeration decision (T-22.1a); compaction, execution,
+and orphan disposition remain.
 
 Plan GC from an immutable liveness snapshot; classify every segment as
 live, unreachable, corrupt, ambiguous, recovery-protected,
@@ -1216,7 +1217,11 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
   - **Complexity:** M.
   - **Documentation:** `gc.md` Status; corpus README.
   - **Dependencies:** none.
-- [ ] T-22.2 Deterministic `GcPlan` from a liveness snapshot.
+- [x] T-22.2 Deterministic `GcPlan` from a liveness snapshot —
+  `plan_gc`, `GcLivenessSnapshot`, `observe_gc_liveness`, and
+  `GcSegmentClassification` in `src/adapters/gc/`; golden
+  `conformance/segment-store/v2/gc-plan.tsv`; the 512-universe model law.
+  Original task fields:
   - **Requirements:** input is one immutable snapshot (F-19): manifest
     generation and digest, complete namespace map, every anchor and
     closure, every profile coordinate, catalog generation and digest,

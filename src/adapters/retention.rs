@@ -57,7 +57,7 @@ mod filesystem_retention_storage_tests;
 #[cfg(test)]
 mod filesystem_retention_successor_tests;
 #[cfg(test)]
-mod filesystem_retention_test_fixture;
+pub(super) mod filesystem_retention_test_fixture;
 #[cfg(test)]
 mod filesystem_version_two_admission_tests;
 mod head_decode_error;
@@ -130,6 +130,7 @@ pub use canonical_root::CanonicalRetentionRoot;
 pub use checksummed_head::ChecksummedRetentionHead;
 pub use closure_error::RetentionClosureVerificationError;
 pub use closure_verifier::verify_retention_closure;
+pub(in crate::adapters) use closure_verifier::verify_retention_closure_members;
 pub use filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
 pub use filesystem_retention_authority_error::{
     FilesystemRetentionAuthorityError, RetentionAuthorityDirectory,

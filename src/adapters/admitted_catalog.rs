@@ -1,8 +1,11 @@
 //! Catalog whose logical records are bound to admitted segment bytes.
 
+use std::collections::BTreeMap;
+
 use super::{
-    AdmittedSegmentRecord, CatalogRecordBinding, CatalogSuccessor, CatalogTransitionError,
-    ChecksummedCatalog, SegmentRecordIdentity, catalog_transition,
+    AdmittedSegmentRecord, CatalogDecodeError, CatalogRecordBinding, CatalogSuccessor,
+    CatalogTransitionError, ChecksummedCatalog, SegmentDigest, SegmentRecordIdentity,
+    catalog_transition,
 };
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
@@ -58,6 +61,21 @@ impl<'catalog, 'records> AdmittedCatalog<'catalog, 'records> {
             .get(index)
             .copied()
             .map(CatalogRecordBinding::record)
+    }
+
+    /// Maps every logical identity to the physical segment that holds it.
+    ///
+    /// Physical GC planning needs the projection from records to their
+    /// containers; no other reader does, so it stays crate-private.
+    pub(crate) fn record_segments(
+        &self,
+    ) -> Result<BTreeMap<SegmentRecordIdentity, SegmentDigest>, CatalogDecodeError> {
+        let mut segments = BTreeMap::new();
+        for entry in self.catalog.entries()? {
+            let entry = entry?;
+            segments.insert(entry.identity(), entry.segment_digest());
+        }
+        Ok(segments)
     }
 
     /// Admits a fully verified candidate as this snapshot's exact successor.

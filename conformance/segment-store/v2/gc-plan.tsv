@@ -1,0 +1,3 @@
+keep.segment-store-v2.gc-plan/v1
+segment_digest_hex	segment_length	classification	retained_roots
+221f6745cd8a5221c9a87c3707593608479282b54a4a74d0e753fd76f70e8db2	701	live	1

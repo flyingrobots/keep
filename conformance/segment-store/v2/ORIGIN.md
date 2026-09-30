@@ -11,6 +11,12 @@ The corpus was constructed on 2026-07-29 with:
 `docs/formats/segment-store-v2/migration-recovery.md`; the crash matrix in
 `xtask` is its executable check.
 
+`gc-plan.tsv` was added on 2026-09-30 by running `plan_gc` over the frozen
+store (the one-zero bundle catalog at generation one, retained by the
+one-anchor root under the generation-one manifest) and transcribing the
+classification of its one segment; `src/adapters/gc/planner_tests.rs`
+recomputes it from the fixtures on every run.
+
 ## Independent inputs
 
 The oracle imports exact bytes only from these previously accepted fixtures:

@@ -140,11 +140,15 @@ pub use adapters::{
 pub use adapters::{
     AdmittedGcRetirementIntent, AdmittedGcRetirementReceipt, CanonicalGcRetirementIntent,
     CanonicalGcRetirementReceipt, CatalogSuccessorProofDigest, DispositionSetDigest, GcCandidate,
-    GcCandidateSetDigest, GcRetirementIntent, GcRetirementIntentCoordinates,
+    GcCandidateSetDigest, GcLimits, GcLimitsError, GcLivenessCoordinates,
+    GcLivenessObservationError, GcLivenessSnapshot, GcLivenessSnapshotError, GcPlan,
+    GcPlanAmbiguity, GcPlanError, GcPlannedCandidate, GcPlannedSegment, GcRetainedClosure,
+    GcRetentionState, GcRetirementIntent, GcRetirementIntentCoordinates,
     GcRetirementIntentDecodeError, GcRetirementIntentDigest, GcRetirementIntentEncodeError,
-    GcRetirementIntentError, GcRetirementReceipt, GcRetirementReceiptDecodeError, PoolStateDigest,
-    ReaderLockCoordinate, ReaderLockIdentity, SegmentPoolIdentityDigest,
-    VerificationEvidenceDigest,
+    GcRetirementIntentError, GcRetirementReceipt, GcRetirementReceiptDecodeError,
+    GcSegmentClassification, GcUnreachableEvidence, PoolStateDigest, ReaderLockCoordinate,
+    ReaderLockIdentity, SegmentPoolIdentityDigest, VerificationEvidenceDigest, observe_gc_liveness,
+    plan_gc,
 };
 pub use adapters::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
