@@ -21,3 +21,17 @@ KEEP-CRASH-070	migration	link-receipt	durable-receipt-stage	durable-receipt-stag
 KEEP-CRASH-071	migration	sync-root-after-receipt	linked-receipt	linked-receipt	durable-receipt	resume-root-sync
 KEEP-CRASH-072	migration	remove-receipt-stage	durable-receipt	durable-receipt-with-or-without-stage	complete-migration	admit-complete-migration
 KEEP-CRASH-073	migration	sync-root-after-receipt-cleanup	complete-migration	complete-migration	durable-complete-migration	admit-complete-migration
+KEEP-CRASH-074	gc	write-intent-stage	complete-retirement-or-idle	absent-or-incomplete-intent-stage	complete-intent-stage	discard-incomplete-stage-or-resume-stage-sync
+KEEP-CRASH-075	gc	sync-intent-stage	complete-intent-stage	complete-intent-stage	durable-intent-stage	resume-stage-sync
+KEEP-CRASH-076	gc	link-intent	durable-intent-stage	durable-intent-stage-or-linked-intent	linked-intent	verify-no-clobber-link-and-resume-gc-sync
+KEEP-CRASH-077	gc	sync-gc-after-intent	linked-intent	linked-intent	durable-intent	resume-gc-sync
+KEEP-CRASH-078	gc	remove-intent-stage	durable-intent	durable-intent-with-or-without-stage	durable-intent-alone	resume-cleanup-sync
+KEEP-CRASH-079	gc	sync-gc-after-intent-cleanup	durable-intent-alone	durable-intent-alone	active-retirement	resume-cleanup-sync
+KEEP-CRASH-080	gc	unlink-candidate	active-or-partial-retirement	candidate-present-or-absent	canonical-absent-prefix-extended	verify-prefix-and-resume-at-first-present-candidate
+KEEP-CRASH-081	gc	sync-segment-pool	canonical-absent-prefix-extended	canonical-absent-prefix-extended	durable-absent-prefix	resume-pool-sync
+KEEP-CRASH-082	gc	write-receipt-stage	completion-pending	absent-or-incomplete-receipt-stage	complete-receipt-stage	discard-incomplete-stage-or-resume-stage-sync
+KEEP-CRASH-083	gc	sync-receipt-stage	complete-receipt-stage	complete-receipt-stage	durable-receipt-stage	resume-stage-sync
+KEEP-CRASH-084	gc	replace-receipt	durable-receipt-stage	durable-receipt-stage-or-replaced-receipt	receipt-transition	verify-exact-receipt-and-resume-gc-sync
+KEEP-CRASH-085	gc	sync-gc-after-receipt	receipt-transition	receipt-transition	durable-receipt-transition	resume-gc-sync
+KEEP-CRASH-086	gc	remove-intent	durable-receipt-transition	receipt-with-or-without-intent	complete-retirement	admit-complete-retirement
+KEEP-CRASH-087	gc	sync-gc-after-intent-removal	complete-retirement	complete-retirement	durable-complete-retirement	admit-complete-retirement

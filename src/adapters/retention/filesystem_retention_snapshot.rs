@@ -30,7 +30,7 @@ const HEAD_NAME: &str = "HEAD";
 /// demand and verified against the manifest's digest before they are returned.
 #[must_use]
 pub struct FilesystemRetentionSnapshot {
-    _fence: ReaderFence,
+    _fence: Option<ReaderFence>,
     roots: Dir,
     catalog: FilesystemCatalogSnapshot,
     retention: Option<ObservedRetentionState>,
@@ -93,13 +93,44 @@ impl FilesystemRetentionSnapshot {
         policy: CatalogRestartPolicy,
         limit: ReaderAttemptLimit,
     ) -> Result<Self, Error> {
+        Self::load_with(store_root, policy, limit, true)
+    }
+
+    /// Admits the root as version two and double-collects one consistent
+    /// view without acquiring the reader fence, for a caller that already
+    /// holds the fence exclusively under writer authority.
+    ///
+    /// The view protects nothing by itself: the caller's exclusive fence is
+    /// what excludes collection, and the caller's writer authority is what
+    /// excludes publication, for as long as both are held.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::load`], without the fence refusal.
+    pub(in crate::adapters) fn load_under_writer_authority(
+        store_root: &Path,
+        policy: CatalogRestartPolicy,
+        limit: ReaderAttemptLimit,
+    ) -> Result<Self, Error> {
+        Self::load_with(store_root, policy, limit, false)
+    }
+
+    fn load_with(
+        store_root: &Path,
+        policy: CatalogRestartPolicy,
+        limit: ReaderAttemptLimit,
+        fenced: bool,
+    ) -> Result<Self, Error> {
         let root = Dir::open_ambient_dir(store_root, cap_std::ambient_authority())
             .map_err(|source| Error::Admission { source })?;
         filesystem_initialization_namespace::admit_version_two(&root)
             .map_err(|source| Error::Admission { source })?;
         let _bound = filesystem_version_two_records::admit(&root)
             .map_err(|source| Error::Admission { source })?;
-        let fence = ReaderFence::acquire(&root).map_err(|source| Error::Fence { source })?;
+        let fence = fenced
+            .then(|| ReaderFence::acquire(&root))
+            .transpose()
+            .map_err(|source| Error::Fence { source })?;
         let retention = root
             .open_dir_nofollow(pool_name::RETENTION)
             .map_err(|source| Error::Admission { source })?;

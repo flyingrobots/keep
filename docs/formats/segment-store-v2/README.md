@@ -50,6 +50,8 @@ The following pages form one protocol:
   ingress proof and its exact refusal evidence.
 - [GC and disposition records](gc.md) owns the canonical planned intent,
   completion, and recovery-disposition byte grammars.
+- [GC execution and recovery](gc-execution.md) owns the retirement phases,
+  the residue state table, and `KEEP-CRASH-074` through `087`.
 - [Migration and recovery](recovery.md) owns the exact root namespace,
   version marker, reader fence, migration records, GC reservation,
   recovery-disposition reservation, and restart behavior.
@@ -103,7 +105,9 @@ transition sequence agrees with a deterministic namespace-to-anchor-set model.
 Migration recovery is proven in-process for every prefix and by the
 `KEEP-CRASH-053..073` process-death matrix, which kills a real writer at each
 of its 68 boundary coordinates and recovers the restarted root.
-Not implemented: garbage collection, issue #21.
+GC retirement is proven in-process for every prefix and by the
+`KEEP-CRASH-074..087` process-death matrix; identity-preserving compaction
+is not implemented, issue #21.
 Reopen compares only the restart-stable root coordinates, device and inode,
 against the intent; see
 [root identity across restart](recovery.md#root-identity-across-restart). A

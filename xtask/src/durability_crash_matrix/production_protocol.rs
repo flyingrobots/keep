@@ -2,6 +2,8 @@
 
 mod control;
 pub(super) mod fixture;
+pub(super) mod gc;
+mod gc_storage;
 pub(super) mod initialization;
 mod initialization_storage;
 mod migration;
@@ -50,6 +52,9 @@ pub(super) fn run(
         }
         DurabilityCrashSequence::Migration => {
             migration::run(&store_root, &mut control)?;
+        }
+        DurabilityCrashSequence::Gc => {
+            gc::run(&store_root, &mut control)?;
         }
     }
     Err(DurabilityCrashMatrixError::PointSequenceMismatch {

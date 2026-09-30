@@ -1,13 +1,53 @@
 //! This boundary module owns GC retirement receipt decoding order.
 
 use super::GcRetirementReceiptDecodeError as Error;
+use super::receipt::GcRetirementReceiptFields;
 use super::receipt_bytes::{
     read_array, read_u16, read_u32, read_u64, require_length, wrong_length,
 };
 use super::{
-    AdmittedGcRetirementIntent, AdmittedGcRetirementReceipt, GcRetirementReceipt, PoolStateDigest,
-    ReaderLockCoordinate, receipt_format as format,
+    AdmittedGcRetirementIntent, AdmittedGcRetirementReceipt, GcCandidateSetDigest,
+    GcRetirementIntentDigest, GcRetirementReceipt, PoolStateDigest, ReaderLockCoordinate,
+    ReaderLockIdentity, receipt_format as format,
 };
+use crate::{
+    CatalogDigest, CatalogGeneration, GcGeneration, LivenessGeneration, RetentionManifestDigest,
+};
+
+/// Decodes one receipt's framing, checksum, and every field without an
+/// intent to bind it to: the prior retirement's receipt a new execution
+/// succeeds, or the completion a fresh restart reports.
+pub(super) fn decode_unbound(encoded: &[u8]) -> Result<GcRetirementReceipt, Error> {
+    require_length(encoded)?;
+    validate_fixed_fields(encoded)?;
+    verify_checksum(encoded)?;
+    let generation = GcGeneration::new(read_u64(encoded, 24)?)
+        .map_err(|_source| Error::ZeroGeneration { offset: 24 })?;
+    let liveness_generation = LivenessGeneration::new(read_u64(encoded, 128)?)
+        .map_err(|_source| Error::ZeroGeneration { offset: 128 })?;
+    let catalog_generation = CatalogGeneration::new(read_u64(encoded, 168)?)
+        .map_err(|_source| Error::ZeroGeneration { offset: 168 })?;
+    Ok(GcRetirementReceipt::from_fields(
+        GcRetirementReceiptFields {
+            generation,
+            intent_digest: GcRetirementIntentDigest::from_hash(read_array(encoded, 32)?),
+            retired_candidate_set_digest: GcCandidateSetDigest::from_verified(read_array(
+                encoded, 64,
+            )?),
+            pool_state_digest: PoolStateDigest::new(read_array(encoded, 96)?),
+            liveness_generation,
+            manifest_digest: RetentionManifestDigest::from_hash(read_array(encoded, 136)?),
+            catalog_generation,
+            catalog_digest: CatalogDigest::from_validated(read_array(encoded, 176)?),
+            reader_lock: ReaderLockIdentity::new(
+                read_u64(encoded, 208)?,
+                read_u64(encoded, 216)?,
+                read_u64(encoded, 224)?,
+            ),
+            synchronization_count: read_u64(encoded, 232)?,
+        },
+    ))
+}
 
 pub(super) fn decode<'encoded>(
     encoded: &'encoded [u8],

@@ -36,6 +36,21 @@ reader-lock coordinates `4`, `5`, `6`; its decision-evidence digest is the
 segment's record checksum at 177, fixture-only evidence like the GC intent's
 candidate evidence.
 
+## GC derivation registration
+
+On 2026-09-30 `definition.tsv` gained three rows: the
+`keep.gc-catalog-successor-proof/v2\0`, `keep.gc-segment-pool/v2\0`, and
+`keep.gc-disposition-set/v2\0` domains under which GC execution derives the
+intent's proof, pool-identity, and disposition-set digests. As with the
+disposition registration, the format-definition digest changed and the
+format marker, migration intent, migration receipt, store identifier, and
+their `artifacts.tsv` and `migration-source.tsv` rows were rematerialized
+through the same temporary, removed write path; every other fixture is
+byte-identical. The GC intent fixture keeps its fixture-only proof, pool,
+and disposition-set digests. `transitions.tsv` gained rows `KEEP-CRASH-074`
+through `-087` by transcribing `GcExecutionPhase::ALL` and the state table in
+`docs/formats/segment-store-v2/gc-execution.md`.
+
 ## Independent inputs
 
 The oracle imports exact bytes only from these previously accepted fixtures:
@@ -82,7 +97,7 @@ The format-definition digest was checked independently with:
 Exact output:
 
 ```text
-6cbc1c75f6efab18c7c50ae281edef77a8b0c9ba19f618b28b18483d08462c92
+a4a010cee5da8aa3ba153c5034f436b92742c6c1f7cf6b43d890ad5fd5b5cf89
 ```
 
 ## Materialization boundary

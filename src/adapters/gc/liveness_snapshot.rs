@@ -3,7 +3,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 
-use super::{GcLivenessCoordinates, GcRetainedClosure};
+use super::{GcLivenessCoordinates, GcRetainedClosure, VerificationEvidenceDigest};
 use crate::RetentionNamespaceDigest;
 use crate::adapters::SegmentDigest;
 
@@ -21,6 +21,8 @@ pub struct GcLivenessSnapshot {
     retained: Vec<GcRetainedClosure>,
     superseded: BTreeSet<SegmentDigest>,
     disposed: BTreeSet<SegmentDigest>,
+    evidence: BTreeMap<SegmentDigest, VerificationEvidenceDigest>,
+    disposition_checksums: BTreeSet<[u8; 32]>,
 }
 
 /// A snapshot that could not be assembled without contradiction.
@@ -63,6 +65,8 @@ impl GcLivenessSnapshot {
             retained: Vec::new(),
             superseded: BTreeSet::new(),
             disposed: BTreeSet::new(),
+            evidence: BTreeMap::new(),
+            disposition_checksums: BTreeSet::new(),
         }
     }
 
@@ -109,14 +113,42 @@ impl GcLivenessSnapshot {
 
     /// Records that a predecessor catalog in the pool's chain named `segment`
     /// and the current catalog no longer does: the segment was superseded by
-    /// a durably published catalog successor.
-    pub fn supersede_segment(&mut self, segment: SegmentDigest) {
+    /// a durably published catalog successor. `evidence` is the digest of
+    /// that predecessor catalog, the durable record that released it.
+    pub fn supersede_segment(
+        &mut self,
+        segment: SegmentDigest,
+        evidence: VerificationEvidenceDigest,
+    ) {
         self.superseded.insert(segment);
+        self.evidence.entry(segment).or_insert(evidence);
     }
 
     /// Records that a durable `RecoveryDispositionReceipt` retired `segment`.
-    pub fn dispose_segment(&mut self, segment: SegmentDigest) {
+    /// `evidence` is that receipt's checksum, the durable record that
+    /// released it; the checksum also enters the admitted disposition set.
+    pub fn dispose_segment(
+        &mut self,
+        segment: SegmentDigest,
+        evidence: VerificationEvidenceDigest,
+    ) {
         self.disposed.insert(segment);
+        self.evidence.entry(segment).or_insert(evidence);
+        self.disposition_checksums.insert(*evidence.as_bytes());
+    }
+
+    /// Returns the digest of the durable record that released `segment`, if
+    /// any.
+    #[must_use]
+    pub fn release_evidence(&self, segment: SegmentDigest) -> Option<VerificationEvidenceDigest> {
+        self.evidence.get(&segment).copied()
+    }
+
+    /// Returns the checksums of every exact disposition receipt admitted, in
+    /// canonical order.
+    #[must_use]
+    pub const fn disposition_checksums(&self) -> &BTreeSet<[u8; 32]> {
+        &self.disposition_checksums
     }
 
     /// Returns the coordinates the snapshot binds.

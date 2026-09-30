@@ -22,6 +22,9 @@ use crate::{CatalogGeneration, LivenessGeneration, RetentionManifestDigest};
 pub enum RetentionCurrentStateRefusal {
     /// A retained `root.next`, `manifest.next`, or `head.next` exists.
     RetainedStage,
+    /// A durable `gc/intent` exists: a retirement is in progress and must be
+    /// recovered before any retention transition.
+    GcIntentRetained,
     /// `retention/HEAD` is absent while a pool holds artifacts.
     HeadAbsentWithArtifacts,
     /// `retention/HEAD` is absent but a current generation was expected.
@@ -192,6 +195,7 @@ impl RetentionCurrentStateRefusal {
     const fn message(&self) -> &'static str {
         match self {
             Self::RetainedStage => "retained retention stage requires recovery before publication",
+            Self::GcIntentRetained => "a durable GC intent requires GC recovery before publication",
             Self::HeadAbsentWithArtifacts => {
                 "retention head is absent while retention pools hold artifacts; recovery is \
              required"

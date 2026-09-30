@@ -17,11 +17,13 @@ pub enum DurabilityCrashSequence {
     Retention,
     /// One-way version-1 to version-2 store migration.
     Migration,
+    /// Version-two GC retirement, `KEEP-CRASH-074` through `087`.
+    Gc,
 }
 
 impl DurabilityCrashSequence {
     /// Every sequence in stable protocol order.
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::Segment,
         Self::Catalog,
         Self::Head,
@@ -29,6 +31,7 @@ impl DurabilityCrashSequence {
         Self::Initialization,
         Self::Retention,
         Self::Migration,
+        Self::Gc,
     ];
 
     /// Returns the stable identifier used by the crash-matrix command line.
@@ -42,6 +45,7 @@ impl DurabilityCrashSequence {
             Self::Initialization => "initialization",
             Self::Retention => "retention",
             Self::Migration => "migration",
+            Self::Gc => "gc",
         }
     }
 
@@ -204,11 +208,39 @@ pub enum DurabilityCrashPoint {
     MigrationRemoveReceiptStage,
     /// Synchronize the store root after receipt-stage cleanup.
     MigrationSynchronizeRootAfterReceiptCleanup,
+    /// GC intent stage write.
+    GcWriteIntentStage,
+    /// GC intent stage synchronization.
+    GcSynchronizeIntentStage,
+    /// GC intent canonical link.
+    GcLinkIntent,
+    /// `gc` synchronization after the intent link.
+    GcSynchronizeGcAfterIntent,
+    /// GC intent stage removal.
+    GcRemoveIntentStage,
+    /// `gc` synchronization after intent-stage cleanup.
+    GcSynchronizeGcAfterIntentCleanup,
+    /// Verified unlink of one retirement candidate.
+    GcUnlinkCandidate,
+    /// Segment-pool synchronization after one unlink.
+    GcSynchronizeSegmentPool,
+    /// GC receipt stage write.
+    GcWriteReceiptStage,
+    /// GC receipt stage synchronization.
+    GcSynchronizeReceiptStage,
+    /// GC receipt atomic replacement.
+    GcReplaceReceipt,
+    /// `gc` synchronization after receipt replacement.
+    GcSynchronizeGcAfterReceipt,
+    /// Completed GC intent removal.
+    GcRemoveIntent,
+    /// `gc` synchronization after intent removal.
+    GcSynchronizeGcAfterIntentRemoval,
 }
 
 impl DurabilityCrashPoint {
     /// Every crash boundary in stable protocol order.
-    pub const ALL: [Self; 73] = [
+    pub const ALL: [Self; 87] = [
         Self::CreateSegmentStage,
         Self::WriteSegmentHeader,
         Self::AppendSegmentRecord,
@@ -282,6 +314,38 @@ impl DurabilityCrashPoint {
         Self::MigrationSynchronizeRootAfterReceipt,
         Self::MigrationRemoveReceiptStage,
         Self::MigrationSynchronizeRootAfterReceiptCleanup,
+        Self::GcWriteIntentStage,
+        Self::GcSynchronizeIntentStage,
+        Self::GcLinkIntent,
+        Self::GcSynchronizeGcAfterIntent,
+        Self::GcRemoveIntentStage,
+        Self::GcSynchronizeGcAfterIntentCleanup,
+        Self::GcUnlinkCandidate,
+        Self::GcSynchronizeSegmentPool,
+        Self::GcWriteReceiptStage,
+        Self::GcSynchronizeReceiptStage,
+        Self::GcReplaceReceipt,
+        Self::GcSynchronizeGcAfterReceipt,
+        Self::GcRemoveIntent,
+        Self::GcSynchronizeGcAfterIntentRemoval,
+    ];
+
+    /// The GC retirement boundaries in `GcExecutionPhase::ALL` order.
+    pub const GC: [Self; 14] = [
+        Self::GcWriteIntentStage,
+        Self::GcSynchronizeIntentStage,
+        Self::GcLinkIntent,
+        Self::GcSynchronizeGcAfterIntent,
+        Self::GcRemoveIntentStage,
+        Self::GcSynchronizeGcAfterIntentCleanup,
+        Self::GcUnlinkCandidate,
+        Self::GcSynchronizeSegmentPool,
+        Self::GcWriteReceiptStage,
+        Self::GcSynchronizeReceiptStage,
+        Self::GcReplaceReceipt,
+        Self::GcSynchronizeGcAfterReceipt,
+        Self::GcRemoveIntent,
+        Self::GcSynchronizeGcAfterIntentRemoval,
     ];
 
     /// The migration boundaries in `StoreMigrationPhase::ALL` order.
@@ -320,88 +384,6 @@ impl DurabilityCrashPoint {
         Self::ALL
             .into_iter()
             .find(|point| point.identifier() == identifier)
-    }
-
-    /// Returns the durable protocol sequence containing this boundary.
-    #[must_use]
-    pub const fn sequence(self) -> DurabilityCrashSequence {
-        match self {
-            Self::CreateSegmentStage
-            | Self::WriteSegmentHeader
-            | Self::AppendSegmentRecord
-            | Self::FlushSegmentRecordPrefix
-            | Self::SynchronizeSegmentRecordPrefix
-            | Self::AppendSegmentSeal
-            | Self::FlushSealedSegment
-            | Self::SynchronizeSealedSegment
-            | Self::LinkSegment
-            | Self::SynchronizeSegmentPool
-            | Self::RemoveSegmentStage
-            | Self::SynchronizeStagingAfterSegment => DurabilityCrashSequence::Segment,
-            Self::CreateCatalogStage
-            | Self::WriteCatalog
-            | Self::FlushCatalog
-            | Self::SynchronizeCatalog
-            | Self::LinkCatalog
-            | Self::SynchronizeCatalogPool
-            | Self::RemoveCatalogStage
-            | Self::SynchronizeStagingAfterCatalog => DurabilityCrashSequence::Catalog,
-            Self::CreateHeadStage
-            | Self::WriteHead
-            | Self::FlushHead
-            | Self::SynchronizeHead
-            | Self::ReplaceHead
-            | Self::SynchronizeRootAfterHead => DurabilityCrashSequence::Head,
-            Self::RemoveRecoveryStage
-            | Self::SynchronizeStagingAfterRecovery
-            | Self::RemoveRecoveryHead
-            | Self::SynchronizeRootAfterRecovery => DurabilityCrashSequence::RecoveryDiscard,
-            Self::OpenAndLockWriterFile
-            | Self::CreateStagingDirectory
-            | Self::CreateSegmentPoolDirectory
-            | Self::CreateCatalogPoolDirectory
-            | Self::SynchronizeRootAfterInitialization => DurabilityCrashSequence::Initialization,
-            Self::WriteRootStage
-            | Self::SynchronizeRootStage
-            | Self::AdmitRootNamespace
-            | Self::SynchronizeRootsAfterNamespace
-            | Self::LinkRoot
-            | Self::SynchronizeRootNamespace
-            | Self::WriteManifestStage
-            | Self::SynchronizeManifestStage
-            | Self::LinkManifest
-            | Self::SynchronizeManifestPool
-            | Self::WriteHeadStage
-            | Self::SynchronizeHeadStage
-            | Self::ReplaceRetentionHead
-            | Self::SynchronizeRetentionNamespace
-            | Self::RemoveRootStage
-            | Self::RemoveManifestStage
-            | Self::SynchronizeRetentionCleanup => DurabilityCrashSequence::Retention,
-            Self::MigrationWriteIntentStage
-            | Self::MigrationSynchronizeIntentStage
-            | Self::MigrationLinkIntent
-            | Self::MigrationSynchronizeRootAfterIntent
-            | Self::MigrationRemoveIntentStage
-            | Self::MigrationSynchronizeRootAfterIntentCleanup
-            | Self::MigrationAdmitReaderFence
-            | Self::MigrationAdmitNamespacePrefix
-            | Self::MigrationSynchronizeRootAfterNamespace
-            | Self::MigrationWriteMarkerStage
-            | Self::MigrationSynchronizeMarkerStage
-            | Self::MigrationLinkMarker
-            | Self::MigrationSynchronizeRootAfterMarker
-            | Self::MigrationRemoveMarkerStage
-            | Self::MigrationSynchronizeRootAfterMarkerCleanup
-            | Self::MigrationWriteReceiptStage
-            | Self::MigrationSynchronizeReceiptStage
-            | Self::MigrationLinkReceipt
-            | Self::MigrationSynchronizeRootAfterReceipt
-            | Self::MigrationRemoveReceiptStage
-            | Self::MigrationSynchronizeRootAfterReceiptCleanup => {
-                DurabilityCrashSequence::Migration
-            }
-        }
     }
 
     /// Reports whether tests may select a repeated occurrence.

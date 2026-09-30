@@ -14,6 +14,7 @@ use cap_std::fs::Dir;
 
 use super::{
     AdmittedRecoveryDispositionReceipt, RecoveryArtifactKind, RecoveryDispositionDecision,
+    VerificationEvidenceDigest,
 };
 use super::{
     GcLivenessCoordinates, GcLivenessObservationError as Error, GcLivenessSnapshot,
@@ -88,8 +89,8 @@ pub fn observe_gc_liveness(
     let catalogs = root
         .open_dir_nofollow(CATALOGS)
         .map_err(|source| Error::pool("open catalog pool", source))?;
-    for segment in superseded_segments(&catalogs, &catalog, &named)? {
-        snapshot.supersede_segment(segment);
+    for (segment, evidence) in superseded_segments(&catalogs, &catalog, &named)? {
+        snapshot.supersede_segment(segment, evidence);
     }
     let recovery = root
         .open_dir_nofollow(RECOVERY)
@@ -97,8 +98,8 @@ pub fn observe_gc_liveness(
     let dispositions = recovery
         .open_dir_nofollow(DISPOSITIONS)
         .map_err(|source| Error::pool("open disposition pool", source))?;
-    for segment in disposed_segments(&dispositions, snapshot.coordinates())? {
-        snapshot.dispose_segment(segment);
+    for (segment, evidence) in disposed_segments(&dispositions, snapshot.coordinates())? {
+        snapshot.dispose_segment(segment, evidence);
     }
     Ok(snapshot)
 }
@@ -111,8 +112,8 @@ pub fn observe_gc_liveness(
 fn disposed_segments(
     dispositions: &Dir,
     coordinates: GcLivenessCoordinates,
-) -> Result<BTreeSet<SegmentDigest>, Error> {
-    let mut disposed = BTreeSet::new();
+) -> Result<BTreeMap<SegmentDigest, VerificationEvidenceDigest>, Error> {
+    let mut disposed = BTreeMap::new();
     for entry in dispositions
         .entries()
         .map_err(|source| Error::pool("list dispositions", source))?
@@ -156,7 +157,11 @@ fn disposed_segments(
             && receipt.coordinates().catalog_digest == coordinates.catalog_digest()
             && receipt.coordinates().retention == coordinates.retention();
         if exact {
-            disposed.insert(identity);
+            let checksum: [u8; 32] = bytes
+                .get(RECEIPT_LENGTH.saturating_sub(32)..RECEIPT_LENGTH)
+                .and_then(|slice| slice.try_into().ok())
+                .ok_or(Error::DispositionEntryName)?;
+            disposed.insert(identity, VerificationEvidenceDigest::new(checksum));
         }
     }
     Ok(disposed)
@@ -227,8 +232,8 @@ fn superseded_segments(
     catalogs: &Dir,
     current: &CatalogSnapshot<'_, '_, '_>,
     named: &BTreeSet<SegmentDigest>,
-) -> Result<BTreeSet<SegmentDigest>, Error> {
-    let mut superseded = BTreeSet::new();
+) -> Result<BTreeMap<SegmentDigest, VerificationEvidenceDigest>, Error> {
+    let mut superseded = BTreeMap::new();
     let mut generation = current.generation();
     let mut next = current.previous_catalog_digest();
     while let Some(digest) = next {
@@ -248,7 +253,11 @@ fn superseded_segments(
                 generation,
                 source: Box::new(source),
             })?;
-        superseded.extend(segments.difference(named).copied());
+        for segment in segments.difference(named) {
+            superseded
+                .entry(*segment)
+                .or_insert_with(|| VerificationEvidenceDigest::new(*digest.as_bytes()));
+        }
         next = catalog.previous_catalog_digest();
     }
     Ok(superseded)

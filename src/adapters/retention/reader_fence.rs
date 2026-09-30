@@ -42,7 +42,7 @@ impl ReaderFence {
     /// Any reader holding the shared fence refuses the acquisition with
     /// [`io::ErrorKind::WouldBlock`]; the caller reports that readers are
     /// active rather than waiting on them.
-    pub(super) fn acquire_exclusive(root: &Dir) -> io::Result<Self> {
+    pub(in crate::adapters) fn acquire_exclusive(root: &Dir) -> io::Result<Self> {
         let file = filesystem_exact_record::open_read(root, READER_LOCK)?;
         verify(root, &file)?;
         flock(&file, FlockOperation::NonBlockingLockExclusive)?;
@@ -51,7 +51,7 @@ impl ReaderFence {
     }
 
     /// Returns the locked file's device and inode identity.
-    pub(super) fn identity(&self) -> io::Result<(u64, u64)> {
+    pub(in crate::adapters) fn identity(&self) -> io::Result<(u64, u64)> {
         self.file.metadata().map(|metadata| identity(&metadata))
     }
 }

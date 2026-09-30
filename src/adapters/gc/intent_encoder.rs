@@ -46,6 +46,17 @@ pub(super) fn encode(
     ))
 }
 
+/// The registered candidate-set digest over `candidates` in their given
+/// order, without allocating the full record.
+pub(super) fn candidate_set_digest(candidates: &[GcCandidate]) -> GcCandidateSetDigest {
+    let mut bytes = Vec::new();
+    for candidate in candidates {
+        write_candidate(&mut bytes, candidate);
+    }
+    let count = u32::try_from(candidates.len()).unwrap_or(u32::MAX);
+    GcCandidateSetDigest::from_verified(format::candidate_set_digest(count, &bytes))
+}
+
 fn write_candidate(output: &mut Vec<u8>, candidate: &GcCandidate) {
     output.extend_from_slice(candidate.segment_digest().as_bytes());
     output.extend_from_slice(&candidate.segment_length().to_be_bytes());

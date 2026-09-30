@@ -1145,9 +1145,10 @@ quarantines, or rewrites physical state.
 ### F-22 Garbage collection, compaction, and recovery dispositions
 
 **Status:** Partial (#21, P1, M4). All three codecs (T-22.1, T-22.1a;
-`KEEP-GC-001` Implemented), the deterministic planner (T-22.2), and explicit
-orphan disposition (T-22.5) landed on this branch; GC intents and receipts
-still refuse on disk; compaction and execution remain.
+`KEEP-GC-001` Implemented), the deterministic planner (T-22.2), explicit
+orphan disposition (T-22.5), and retirement with recovery and its
+process-death matrix (T-22.4) landed on this branch; identity-preserving
+compaction (T-22.3) remains, so `KEEP-GC-002` stays In progress.
 
 Plan GC from an immutable liveness snapshot; classify every segment as
 live, unreachable, corrupt, ambiguous, recovery-protected,
@@ -1289,7 +1290,16 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
   - **Documentation:** `gc.md` compaction section; ADR-0002 compaction
     example cross-linked.
   - **Dependencies:** T-22.2.
-- [ ] T-22.4 GC execution, retirement, and recovery (`KEEP-GC-002`).
+- [x] T-22.4 GC execution, retirement, and recovery —
+  `FilesystemGcAuthority::{prepare, execute, recover}`, the 14-phase
+  `GcExecutionPhase` protocol over the `GcExecutionStorage` port,
+  `GcResidue` and `plan_gc_recovery`, the registered proof, pool, and
+  disposition-set derivations, `filesystem_gc_tests` (every prefix, both
+  truncated stages, readers, stale plan, exclusion), and the
+  `KEEP-CRASH-074..087` matrix (`--sequence gc`, 42 cases). `KEEP-GC-002`
+  stays In progress until compaction (T-22.3); the 65,536-candidate stress
+  run and the disposition-phase process-death matrix promised by T-22.5 are
+  still owed under #21. Original task fields:
   - **Requirements:** writer authority then exclusive `reader.lock`;
     intent written, flushed, synced before any unlink; canonical order;
     per-unlink directory sync; receipt after all absent; a retained intent
@@ -1325,8 +1335,8 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
   phases, port, and executor in `src/adapters/retention/disposition_*.rs`,
   `filesystem_retention_disposition_tests` (retire, finalize, order,
   readers, every residue, admission) and the exact-receipt GC law; the
-  process-death matrix for the disposition phases joins the GC sequence in
-  T-22.4. Original task fields:
+  process-death matrix for the disposition phases is still owed under #21
+  (T-22.4 shipped the retirement matrix only). Original task fields:
   - **Requirements:** a finalize-or-retire decision for a recovery-protected
     orphan is durable as `recovery/dispositions/<digest>.receipt` via the
     fixed-stage protocol; retirement proves the artifact is named by no

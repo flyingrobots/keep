@@ -32,6 +32,8 @@ mod filesystem_retention_current;
 #[cfg(test)]
 mod filesystem_retention_current_tests;
 mod filesystem_retention_disposition;
+mod filesystem_retention_disposition_evidence;
+mod filesystem_retention_disposition_storage;
 #[cfg(test)]
 mod filesystem_retention_disposition_tests;
 #[cfg(test)]
@@ -159,6 +161,7 @@ pub use filesystem_retention_recovery_error::FilesystemRetentionRecoveryError;
 pub use filesystem_retention_refusal::RetentionCurrentStateRefusal;
 pub use filesystem_retention_snapshot::FilesystemRetentionSnapshot;
 pub use filesystem_retention_snapshot_error::FilesystemRetentionSnapshotError;
+pub(in crate::adapters) use filesystem_retention_stage::FilesystemRetentionStage;
 pub use head_decode_error::RetentionHeadDecodeError;
 pub use manifest_decode_error::RetentionManifestDecodeError;
 pub use manifest_encode_error::RetentionManifestEncodeError;

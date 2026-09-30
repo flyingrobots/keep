@@ -14,7 +14,7 @@ migration, retention transition, or garbage collector exists.
 | `inventory.tsv` | Canonical one-segment, one-catalog migration inventory |
 | `migration-source.tsv` | Exact version-1 and derived migration coordinates |
 | `artifacts.tsv` | Golden artifact lengths, digests, checksums, and filenames |
-| `transitions.tsv` | One stable crash identifier per migration boundary, `KEEP-CRASH-053` to `-073` |
+| `transitions.tsv` | One stable crash identifier per migration and GC boundary, `KEEP-CRASH-053` to `-087` |
 | `gc-plan.tsv` | The deterministic GC plan for the frozen version-2 store: every segment's classification |
 | `format-marker.hex` | Canonical 96-byte `FORMAT` record |
 | `migration-intent.hex` | Canonical 256-byte migration intent |
@@ -45,11 +45,12 @@ It hashes the exact `retention-profile.tsv` bytes under the registered profile
 domain.
 
 The format-definition digest is
-`6cbc1c75f6efab18c7c50ae281edef77a8b0c9ba19f618b28b18483d08462c92`.
+`a4a010cee5da8aa3ba153c5034f436b92742c6c1f7cf6b43d890ad5fd5b5cf89`.
 It hashes the exact `definition.tsv` bytes under the registered format domain.
-The definition binds the profile digest, every named domain, magic, version,
-field order, record width, format limit, migration synchronization mask, and
-the registered recovery-disposition enumerations.
+The definition binds the profile digest, every named domain (including the
+GC catalog-successor-proof, segment-pool, and disposition-set derivations),
+magic, version, field order, record width, format limit, migration
+synchronization mask, and the registered recovery-disposition enumerations.
 
 The migration fixture preserves the version-1 one-zero segment and generation-1
 catalog. Its canonical two-entry inventory digest is
@@ -65,12 +66,14 @@ one-zero `BlobId` and `LayoutId` values from the existing layout corpus.
 
 ## Transition protocol
 
-`transitions.tsv` mirrors the version-1 table: one row per migration
+`transitions.tsv` mirrors the version-1 table: one row per migration and GC
 durability operation with its pre-state, interrupted-state classification,
-post-state, and recovery posture. `KEEP-CRASH-053`, `-062`, and `-068` are
-the only rows whose interruption may leave an incomplete pre-effect stage and
-therefore the only rows that plan a discard; `-072` and `-073` admit the
-complete migration.
+post-state, and recovery posture. `KEEP-CRASH-053`, `-062`, `-068`, `-074`,
+and `-082` are the only rows whose interruption may leave an incomplete
+pre-effect stage and therefore the only rows that plan a discard; `-072` and
+`-073` admit the complete migration, `-086` and `-087` the complete
+retirement. `cargo xtask durability-crash-matrix --sequence gc` executes the
+42 GC cases the same way over one disposed orphan.
 
 The `cargo xtask durability-crash-matrix --sequence migration` harness
 executes 68 canonical process-death cases from this table: 21 boundaries at

@@ -34,7 +34,7 @@ pub(super) fn run(
 
 /// Initializes, populates, and migrates the bundle store, then reopens it as
 /// version two and returns retention authority over it.
-fn migrated_authority(
+pub(super) fn migrated_authority(
     store_root: &Path,
 ) -> Result<FilesystemRetentionPublicationAuthority, DurabilityCrashMatrixError> {
     let lock = initialization::initialized_lock(store_root)?;

@@ -80,6 +80,20 @@ impl DurabilityCrashPoint {
             Self::MigrationSynchronizeRootAfterReceipt => "KEEP-CRASH-071",
             Self::MigrationRemoveReceiptStage => "KEEP-CRASH-072",
             Self::MigrationSynchronizeRootAfterReceiptCleanup => "KEEP-CRASH-073",
+            Self::GcWriteIntentStage => "KEEP-CRASH-074",
+            Self::GcSynchronizeIntentStage => "KEEP-CRASH-075",
+            Self::GcLinkIntent => "KEEP-CRASH-076",
+            Self::GcSynchronizeGcAfterIntent => "KEEP-CRASH-077",
+            Self::GcRemoveIntentStage => "KEEP-CRASH-078",
+            Self::GcSynchronizeGcAfterIntentCleanup => "KEEP-CRASH-079",
+            Self::GcUnlinkCandidate => "KEEP-CRASH-080",
+            Self::GcSynchronizeSegmentPool => "KEEP-CRASH-081",
+            Self::GcWriteReceiptStage => "KEEP-CRASH-082",
+            Self::GcSynchronizeReceiptStage => "KEEP-CRASH-083",
+            Self::GcReplaceReceipt => "KEEP-CRASH-084",
+            Self::GcSynchronizeGcAfterReceipt => "KEEP-CRASH-085",
+            Self::GcRemoveIntent => "KEEP-CRASH-086",
+            Self::GcSynchronizeGcAfterIntentRemoval => "KEEP-CRASH-087",
         }
     }
 }

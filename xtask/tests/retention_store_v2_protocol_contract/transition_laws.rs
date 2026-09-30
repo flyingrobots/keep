@@ -1,6 +1,6 @@
-//! Stable migration crash-transition ledger laws.
+//! Stable migration and GC crash-transition ledger laws.
 
-use keep::StoreMigrationPhase;
+use keep::{GcExecutionPhase, StoreMigrationPhase};
 
 const TRANSITIONS: &str = include_str!("../../../conformance/segment-store/v2/transitions.tsv");
 
@@ -29,6 +29,24 @@ const OPERATIONS: [&str; 21] = [
     "sync-root-after-receipt-cleanup",
 ];
 
+/// The GC `operation` column in `GcExecutionPhase::ALL` order.
+const GC_OPERATIONS: [&str; 14] = [
+    "write-intent-stage",
+    "sync-intent-stage",
+    "link-intent",
+    "sync-gc-after-intent",
+    "remove-intent-stage",
+    "sync-gc-after-intent-cleanup",
+    "unlink-candidate",
+    "sync-segment-pool",
+    "write-receipt-stage",
+    "sync-receipt-stage",
+    "replace-receipt",
+    "sync-gc-after-receipt",
+    "remove-intent",
+    "sync-gc-after-intent-removal",
+];
+
 #[test]
 fn migration_transition_ledger_is_complete_and_stable() -> Result<(), String> {
     assert!(TRANSITIONS.starts_with(
@@ -37,6 +55,10 @@ fn migration_transition_ledger_is_complete_and_stable() -> Result<(), String> {
          post_state\trecovery_posture\n"
     ));
     assert_eq!(OPERATIONS.len(), StoreMigrationPhase::ALL.len());
+    assert_eq!(GC_OPERATIONS.len(), GcExecutionPhase::ALL.len());
+    for (operation, phase) in GC_OPERATIONS.iter().zip(GcExecutionPhase::ALL) {
+        assert_eq!(*operation, phase.operation());
+    }
 
     let mut row_count = 0usize;
     for (offset, row) in TRANSITIONS.lines().skip(2).enumerate() {
@@ -46,8 +68,16 @@ fn migration_transition_ledger_is_complete_and_stable() -> Result<(), String> {
         let expected_id = format!("KEEP-CRASH-{ordinal:03}");
         let fields: Vec<_> = row.split('\t').collect();
         assert_eq!(fields.first(), Some(&expected_id.as_str()));
-        assert_eq!(fields.get(1), Some(&"migration"), "{expected_id}");
-        assert_eq!(fields.get(2), OPERATIONS.get(offset), "{expected_id}");
+        let (phase, operation) = if offset < OPERATIONS.len() {
+            ("migration", OPERATIONS.get(offset))
+        } else {
+            (
+                "gc",
+                GC_OPERATIONS.get(offset.saturating_sub(OPERATIONS.len())),
+            )
+        };
+        assert_eq!(fields.get(1), Some(&phase), "{expected_id}");
+        assert_eq!(fields.get(2), operation, "{expected_id}");
         assert_eq!(
             fields.len(),
             7,
@@ -61,15 +91,18 @@ fn migration_transition_ledger_is_complete_and_stable() -> Result<(), String> {
             .checked_add(1)
             .ok_or("transition count overflow")?;
     }
-    assert_eq!(row_count, 21);
+    assert_eq!(row_count, 35);
 
     // Every stage write may leave an incomplete pre-effect stage, and only
-    // those rows may plan a discard; the last two rows admit completion.
+    // those rows may plan a discard; the last two rows of each sequence
+    // admit completion.
     for (ordinal, row) in TRANSITIONS.lines().skip(2).enumerate() {
         let discards = row.contains("discard-incomplete-stage");
-        assert_eq!(discards, matches!(ordinal, 0 | 9 | 15), "{row}");
+        assert_eq!(discards, matches!(ordinal, 0 | 9 | 15 | 21 | 29), "{row}");
         let completes = row.ends_with("admit-complete-migration");
-        assert_eq!(completes, ordinal >= 19, "{row}");
+        assert_eq!(completes, matches!(ordinal, 19 | 20), "{row}");
+        let retires = row.ends_with("admit-complete-retirement");
+        assert_eq!(retires, ordinal >= 33, "{row}");
     }
     assert!(
         TRANSITIONS.contains("directory-prefix-length-zero-to-six"),

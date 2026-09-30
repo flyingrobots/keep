@@ -5,7 +5,7 @@
 use std::collections::BTreeSet;
 use std::error::Error;
 
-use super::{closure, coordinates, segment};
+use super::{closure, coordinates, evidence, segment};
 use crate::adapters::SegmentDigest;
 use crate::adapters::gc::{
     GcLimits, GcLivenessSnapshot, GcPlannedCandidate, GcSegmentClassification, plan_gc,
@@ -58,11 +58,11 @@ fn universe(random: &mut XorShift) -> Result<Universe, Box<dyn Error>> {
                 named.insert(digest);
             }
             2 => {
-                snapshot.supersede_segment(digest);
+                snapshot.supersede_segment(digest, evidence(0x77));
                 released.insert(digest);
             }
             3 => {
-                snapshot.dispose_segment(digest);
+                snapshot.dispose_segment(digest, evidence(0x88));
                 released.insert(digest);
             }
             _ => {}

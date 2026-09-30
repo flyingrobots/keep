@@ -68,6 +68,18 @@ fn parse_name(name: &str) -> Result<SegmentDigest, Error> {
     Ok(SegmentDigest::from_validated(bytes))
 }
 
+/// Reads and admits one named pool entry, requiring it to hash to
+/// `expected`; execution calls this before unlinking a candidate.
+pub(super) fn admit_entry(
+    segments: &Dir,
+    name: &str,
+    expected: SegmentDigest,
+    length: u64,
+    policy: SegmentReadPolicy,
+) -> Result<(), Error> {
+    admit(segments, name, expected, length, policy)
+}
+
 fn admit(
     segments: &Dir,
     name: &str,

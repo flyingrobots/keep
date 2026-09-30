@@ -31,12 +31,18 @@ fn every_crash_point_has_three_ordered_positions_and_one_during_case_per_occurre
     }
 
     assert_eq!(cases, expected);
-    // 73 boundaries at three positions, plus five extra namespace-prefix
+    // 87 boundaries at three positions, plus five extra namespace-prefix
     // lengths for `KEEP-CRASH-060`.
-    assert_eq!(cases.len(), 224);
+    assert_eq!(cases.len(), 266);
     let migration: Vec<_> =
         DurabilityCrashCase::in_sequence(DurabilityCrashSequence::Migration).collect();
     assert_eq!(migration.len(), 68);
+    let gc: Vec<_> = DurabilityCrashCase::in_sequence(DurabilityCrashSequence::Gc).collect();
+    assert_eq!(gc.len(), 42);
+    assert!(
+        gc.iter()
+            .all(|case| case.point().sequence() == DurabilityCrashSequence::Gc)
+    );
     assert!(
         migration
             .iter()

@@ -5,9 +5,12 @@ domain.format-definition	keep.segment-store-definition/v2\0
 domain.format-marker	keep.store-format-marker/v2\0
 domain.format-marker-checksum	keep.segment-store-marker-checksum/v2\0
 domain.gc-candidate-set	keep.gc-candidate-set/v2\0
+domain.gc-catalog-successor-proof	keep.gc-catalog-successor-proof/v2\0
+domain.gc-disposition-set	keep.gc-disposition-set/v2\0
 domain.gc-intent	keep.gc-retirement-intent/v2\0
 domain.gc-intent-checksum	keep.gc-retirement-intent-checksum/v2\0
 domain.gc-receipt-checksum	keep.gc-retirement-receipt-checksum/v2\0
+domain.gc-segment-pool	keep.gc-segment-pool/v2\0
 domain.initial-gc-state	keep.initial-gc-state/v2\0
 domain.initial-retention-state	keep.initial-retention-state/v2\0
 domain.migration-intent	keep.store-migration-intent/v2\0

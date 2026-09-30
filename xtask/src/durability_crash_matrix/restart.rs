@@ -1,6 +1,7 @@
 //! This module owns independent post-process-death store verification.
 
 mod expectation;
+mod gc;
 mod migration;
 mod migration_expectation;
 mod retention;
@@ -25,6 +26,9 @@ pub(super) fn verify(
     }
     if case.point().sequence() == DurabilityCrashSequence::Migration {
         return migration::verify(store_root, case);
+    }
+    if case.point().sequence() == DurabilityCrashSequence::Gc {
+        return gc::verify(store_root, case);
     }
     let expected = ExpectedStoreState::for_case(case)?;
     let observed_paths = inventory(store_root)?;

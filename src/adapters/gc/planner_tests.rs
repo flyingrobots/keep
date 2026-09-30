@@ -39,6 +39,10 @@ pub(super) fn segment(seed: u8) -> SegmentDigest {
     SegmentDigest::from_validated([seed; 32])
 }
 
+pub(super) fn evidence(seed: u8) -> super::VerificationEvidenceDigest {
+    super::VerificationEvidenceDigest::new([seed; 32])
+}
+
 pub(super) fn namespace(seed: u8) -> RetentionNamespaceDigest {
     RetentionNamespaceDigest::from_hash([seed; 32])
 }
@@ -138,10 +142,10 @@ fn an_unnamed_segment_without_release_evidence_is_recovery_protected() -> Result
 fn superseded_and_disposed_unnamed_segments_are_the_only_candidates() -> Result<(), Box<dyn Error>>
 {
     let mut snapshot = snapshot(&[1], &[5, 6, 7])?;
-    snapshot.supersede_segment(segment(5));
-    snapshot.dispose_segment(segment(6));
-    snapshot.supersede_segment(segment(7));
-    snapshot.dispose_segment(segment(7));
+    snapshot.supersede_segment(segment(5), evidence(0x77));
+    snapshot.dispose_segment(segment(6), evidence(0x88));
+    snapshot.supersede_segment(segment(7), evidence(0x77));
+    snapshot.dispose_segment(segment(7), evidence(0x88));
 
     let plan = plan_gc(&snapshot, GcLimits::MAXIMUM)?;
 
@@ -180,8 +184,8 @@ fn superseded_and_disposed_unnamed_segments_are_the_only_candidates() -> Result<
 fn superseded_or_disposed_segments_absent_from_the_inventory_are_already_retired()
 -> Result<(), Box<dyn Error>> {
     let mut snapshot = snapshot(&[1], &[])?;
-    snapshot.supersede_segment(segment(8));
-    snapshot.dispose_segment(segment(9));
+    snapshot.supersede_segment(segment(8), evidence(0x77));
+    snapshot.dispose_segment(segment(9), evidence(0x88));
 
     let plan = plan_gc(&snapshot, GcLimits::MAXIMUM)?;
 
@@ -234,7 +238,7 @@ fn every_contradiction_refuses_the_plan() -> Result<(), Box<dyn Error>> {
     );
 
     let mut superseded_named = snapshot(&[1], &[])?;
-    superseded_named.supersede_segment(segment(1));
+    superseded_named.supersede_segment(segment(1), evidence(0x77));
     assert_eq!(
         plan_gc(&superseded_named, GcLimits::MAXIMUM),
         Err(GcPlanError::Ambiguous(
@@ -245,7 +249,7 @@ fn every_contradiction_refuses_the_plan() -> Result<(), Box<dyn Error>> {
     );
 
     let mut disposed_named = snapshot(&[1], &[])?;
-    disposed_named.dispose_segment(segment(1));
+    disposed_named.dispose_segment(segment(1), evidence(0x88));
     assert_eq!(
         plan_gc(&disposed_named, GcLimits::MAXIMUM),
         Err(GcPlanError::Ambiguous(
@@ -260,8 +264,8 @@ fn every_contradiction_refuses_the_plan() -> Result<(), Box<dyn Error>> {
 #[test]
 fn the_candidate_limit_refuses_rather_than_truncates() -> Result<(), Box<dyn Error>> {
     let mut snapshot = snapshot(&[], &[5, 6])?;
-    snapshot.supersede_segment(segment(5));
-    snapshot.supersede_segment(segment(6));
+    snapshot.supersede_segment(segment(5), evidence(0x77));
+    snapshot.supersede_segment(segment(6), evidence(0x77));
 
     assert_eq!(
         plan_gc(&snapshot, GcLimits::new(1)?),

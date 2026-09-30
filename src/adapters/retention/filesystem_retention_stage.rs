@@ -15,7 +15,7 @@ use crate::adapters::filesystem_exact_record::{
 /// for its whole lifetime. Every transition reverifies both the handle and the
 /// named entry, so a replaced or byte-equal substituted file refuses instead of
 /// being admitted.
-pub(super) struct FilesystemRetentionStage {
+pub(in crate::adapters) struct FilesystemRetentionStage {
     name: &'static str,
     expected: Box<[u8]>,
     identity: EntryIdentity,
@@ -24,7 +24,11 @@ pub(super) struct FilesystemRetentionStage {
 
 impl FilesystemRetentionStage {
     /// Exclusively creates the named stage and writes its complete bytes.
-    pub(super) fn create(root: &Dir, name: &'static str, expected: &[u8]) -> io::Result<Self> {
+    pub(in crate::adapters) fn create(
+        root: &Dir,
+        name: &'static str,
+        expected: &[u8],
+    ) -> io::Result<Self> {
         let mut file = filesystem_catalog_artifact::create_exclusive(root, name)?;
         let identity = EntryIdentity::of_file(&file)?;
         file.write_all(expected)?;
@@ -42,7 +46,11 @@ impl FilesystemRetentionStage {
     /// The handle and the named entry are verified against `expected` and
     /// bound to the entry's identity, so every later transition refuses a
     /// substituted or replaced stage exactly as a freshly created one would.
-    pub(super) fn reopen(root: &Dir, name: &'static str, expected: &[u8]) -> io::Result<Self> {
+    pub(in crate::adapters) fn reopen(
+        root: &Dir,
+        name: &'static str,
+        expected: &[u8],
+    ) -> io::Result<Self> {
         let file = exact_record::open_read(root, name)?;
         let identity = EntryIdentity::of_file(&file)?;
         verify_named_record(root, name, expected, identity)?;
@@ -55,14 +63,14 @@ impl FilesystemRetentionStage {
     }
 
     /// Synchronizes the complete stage and reverifies its exact bytes.
-    pub(super) fn synchronize(&self, root: &Dir) -> io::Result<()> {
+    pub(in crate::adapters) fn synchronize(&self, root: &Dir) -> io::Result<()> {
         self.require_handle()?;
         self.file.sync_all()?;
         self.verify_stage(root)
     }
 
     /// Links the verified stage into `target` under `name` without replacement.
-    pub(super) fn link(&self, root: &Dir, target: &Dir, name: &str) -> io::Result<()> {
+    pub(in crate::adapters) fn link(&self, root: &Dir, target: &Dir, name: &str) -> io::Result<()> {
         self.verify_stage(root)?;
         exact_record::link_without_replacement(root, self.name, target, name)?;
         self.verify_stage(root)?;
@@ -70,7 +78,12 @@ impl FilesystemRetentionStage {
     }
 
     /// Removes only the retained stage after confirming its linked target.
-    pub(super) fn remove(self, root: &Dir, target: &Dir, name: &str) -> io::Result<()> {
+    pub(in crate::adapters) fn remove(
+        self,
+        root: &Dir,
+        target: &Dir,
+        name: &str,
+    ) -> io::Result<()> {
         verify_named_record(target, name, &self.expected, self.identity)?;
         root.remove_file(self.name)?;
         exact_record::require_absent(root, self.name).map_err(retention_error)?;
@@ -78,7 +91,7 @@ impl FilesystemRetentionStage {
     }
 
     /// Renames the verified stage onto `name`, replacing it atomically.
-    pub(super) fn replace(self, root: &Dir, name: &str) -> io::Result<()> {
+    pub(in crate::adapters) fn replace(self, root: &Dir, name: &str) -> io::Result<()> {
         self.verify_stage(root)?;
         root.rename(self.name, root, name)?;
         exact_record::require_absent(root, self.name).map_err(retention_error)?;

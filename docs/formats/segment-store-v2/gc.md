@@ -4,23 +4,21 @@ This page owns the canonical planned `GcRetirementIntent`,
 `GcRetirementReceipt`, and `RecoveryDispositionReceipt` byte grammars for
 `keep.segment-store/v2`.
 
-Issue #21 owns their implementation. They are specified now so version 2 has
-one exact root grammar, but their presence remains unsupported mandatory state
-until every **Planned in #21** requirement becomes executable evidence.
-
-Implemented: all three codecs. `GcRetirementIntent` admits a canonical
-candidate set over its coordinates; `CanonicalGcRetirementIntent` and
-`AdmittedGcRetirementIntent` reproduce and admit the frozen
-`one-candidate-gc-intent.hex`; `CanonicalGcRetirementReceipt` and
-`AdmittedGcRetirementReceipt` bind a receipt to its admitted intent. The
-receipt's synchronization count is exactly one per candidate: the
-pool-directory synchronization that follows each unlink.
-`CanonicalRecoveryDispositionReceipt` and
+Implemented: all three codecs, the planner, explicit disposition, and
+retirement. `GcRetirementIntent` admits a canonical candidate set over its
+coordinates; `CanonicalGcRetirementIntent` and `AdmittedGcRetirementIntent`
+reproduce and admit the frozen `one-candidate-gc-intent.hex`;
+`CanonicalGcRetirementReceipt` and `AdmittedGcRetirementReceipt` bind a
+receipt to its admitted intent, and `decode_unbound` reads one without an
+intent. `CanonicalRecoveryDispositionReceipt` and
 `AdmittedRecoveryDispositionReceipt` reproduce and admit the frozen
-`one-orphan-retire-disposition.hex` over the artifact-kind, decision, and
-classification enumerations registered in `definition.tsv`. Namespace
-admission still refuses every one of these records on disk: no execution,
-retirement, or disposition protocol writes them yet.
+`one-orphan-retire-disposition.hex` over the enumerations registered in
+`definition.tsv`. The protocol that writes `gc/intent` and `gc/receipt`, its
+recovery, and its process-death matrix are owned by
+[GC execution and recovery](gc-execution.md); explicit disposition by
+[recovery](recovery.md#explicit-disposition-of-protected-orphans). Namespace
+admission admits exactly those records as regular files and nothing else in
+`gc`. Identity-preserving compaction remains **Planned in #21**.
 
 ## Common rules
 
@@ -206,10 +204,10 @@ bounded physical inventory. It reads nothing and writes nothing.
 `FilesystemRetentionSnapshot`: it re-admits the fenced catalog, projects every
 retained root's verified closure onto the segments that hold its records,
 reads and admits every entry of the segment pool within the
-`CatalogRestartPolicy` byte bound, and walks the catalog predecessor chain to
-find segments a durably published successor superseded. No
-`RecoveryDispositionReceipt` codec exists yet, so nothing is reported
-disposed.
+`CatalogRestartPolicy` byte bound, walks the catalog predecessor chain to
+find segments a durably published successor superseded, and admits every
+exact disposition receipt. Each released segment carries the digest of the
+record that released it: the predecessor catalog or the receipt.
 
 The plan classifies every inventoried segment exactly once, in this order:
 
@@ -241,35 +239,14 @@ classification, every ambiguity, the limit, the golden plan, and a
 512-universe model in which the live set is always exactly the union of the
 retained closures and no live or named segment is ever a candidate.
 
-> **Warning.** Everything below this line describes execution, which
-> unlinks immutable segments. Execution is not implemented. When it is, it
-> must hold writer authority and the exclusive reader lock, write and
-> synchronize `gc/intent` before the first unlink, act only on a plan whose
-> coordinates it has re-proven against the reopened store, and be verified
-> afterwards by a recovery report. `plan_gc` is the dry run: it changes
-> nothing on disk.
+> **Warning.** Execution unlinks immutable segments. It is specified and
+> proven on [GC execution and recovery](gc-execution.md): writer authority,
+> the exclusive reader lock, a durable intent before the first unlink, a
+> re-proven plan, and a recovery report afterwards. Recovery admits one
+> canonical absent candidate prefix and treats every other residue as
+> unrecoverable ambiguity. `plan_gc` is the dry run.
 
-## State and recovery
-
-GC admits these states:
-
-<!-- markdownlint-disable MD013 -->
-
-| State | Evidence | Recovery |
-| --- | --- | --- |
-| idle | no `gc/intent` or `gc/receipt` | no retirement authority |
-| active | exact intent, every candidate present | begin execution |
-| partial | exact intent, one canonical absent candidate prefix | continue at first present candidate |
-| completion pending | exact intent, every candidate absent | publish receipt |
-| receipt transition | exact intent and exact receipt | synchronize receipt, remove intent, synchronize `gc` |
-| complete | exact receipt only | return exact completion |
-
-<!-- markdownlint-enable MD013 -->
-
-An absent candidate outside the canonical absent candidate prefix, substituted
-candidate, changed pool, stale coordinate, conflicting receipt, malformed
-record, or unexplained absence is unrecoverable ambiguity. Recovery never
-guesses which deletion occurred.
+## Disposition transition
 
 A disposition transition writes and synchronizes
 `recovery/disposition.next`, verifies and links the immutable receipt without
@@ -277,8 +254,7 @@ replacement, synchronizes `recovery/dispositions`, removes the stage, and
 synchronizes `recovery`. Until that completes, the artifact remains
 recovery-protected.
 
-The intent and receipt grammars have golden fixtures, parsers, corruption
-matrices, and a seeded fuzz target; the planner has its golden plan and model
-law. The disposition grammar's fixture and parser, and every crash point,
-benchmark, execution, and recovery law, are **Planned in #21**. Namespace
-admission must refuse their physical presence without mutating it.
+All three grammars have golden fixtures, parsers, corruption matrices, and a
+seeded fuzz target; the planner has its golden plan and model law; retirement
+and disposition have their in-process prefix laws and the process-death
+matrix. Compaction and its benchmark evidence are **Planned in #21**.

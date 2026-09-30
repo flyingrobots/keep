@@ -41,6 +41,11 @@ pub enum GcRetirementReceiptDecodeError {
     },
     /// The reserved bytes were nonzero.
     NonZeroReserved,
+    /// A generation field was zero when decoded without an intent.
+    ZeroGeneration {
+        /// Offset of the zero field.
+        offset: usize,
+    },
     /// The checksum did not match the exact prefix.
     ChecksumMismatch {
         /// Computed canonical checksum.
@@ -135,6 +140,9 @@ impl fmt::Display for GcRetirementReceiptDecodeError {
                 write!(formatter, "unsupported GC receipt flags {observed:#010x}")
             }
             Self::NonZeroReserved => formatter.write_str("GC receipt reserved bytes are nonzero"),
+            Self::ZeroGeneration { offset } => {
+                write!(formatter, "GC receipt generation at {offset} is zero")
+            }
             Self::ChecksumMismatch { .. } => formatter.write_str("GC receipt checksum mismatch"),
             Self::GenerationMismatch { expected, observed } => write!(
                 formatter,

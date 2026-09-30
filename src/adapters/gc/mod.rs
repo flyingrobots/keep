@@ -3,8 +3,9 @@
 //! This module owns the semantic GC retirement intent and receipt, their
 //! canonical encoders, and their admitting decoders, and the deterministic
 //! planner that classifies one physical inventory against one immutable
-//! liveness snapshot. It does not own GC execution, reader fencing,
-//! or recovery.
+//! liveness snapshot, the fixed-phase execution protocol over a storage
+//! port, and the recovery planner over the residue an interrupted execution
+//! leaves. It does not own filesystem effects or reader fencing.
 
 mod admitted_disposition;
 mod admitted_intent;
@@ -20,6 +21,15 @@ mod disposition_encoder;
 mod disposition_enums;
 mod disposition_format;
 mod evidence_digests;
+mod execution;
+mod execution_phase;
+mod execution_storage;
+mod filesystem_gc_authority;
+mod filesystem_gc_error;
+mod filesystem_gc_residue;
+mod filesystem_gc_storage;
+#[cfg(test)]
+mod filesystem_gc_tests;
 mod intent;
 mod intent_candidate_decoder;
 mod intent_coordinates;
@@ -53,7 +63,10 @@ mod receipt_decoder;
 mod receipt_encoder;
 mod receipt_format;
 mod record_digests;
+mod recovery_plan;
+mod recovery_residue;
 mod retained_closure;
+mod retirement_intent;
 mod segment_classification;
 mod segment_pool_inventory;
 
@@ -76,6 +89,12 @@ pub use evidence_digests::{
     DecisionEvidenceDigest, DispositionSetDigest, ObservedHeadChecksum, PoolStateDigest,
     SegmentPoolIdentityDigest, VerificationEvidenceDigest,
 };
+pub use execution::{GcExecutionError, GcExecutionReceipt, execute_gc, resume_gc_execution};
+pub use execution_phase::{GcExecutionPhase, GcExecutionPoint};
+pub use execution_storage::GcExecutionStorage;
+pub use filesystem_gc_authority::{FilesystemGcAuthority, GcRecoveryReport, PreparedGcExecution};
+pub use filesystem_gc_error::FilesystemGcError;
+pub(in crate::adapters) use filesystem_gc_residue::GC_ENTRY_NAMES;
 pub use intent::GcRetirementIntent;
 pub use intent_coordinates::GcRetirementIntentCoordinates;
 pub use intent_decode_error::{GcRetirementIntentDecodeError, GcRetirementIntentEncodeError};
@@ -92,5 +111,14 @@ pub use reader_lock_identity::{ReaderLockCoordinate, ReaderLockIdentity};
 pub use receipt::GcRetirementReceipt;
 pub use receipt_decode_error::GcRetirementReceiptDecodeError;
 pub use record_digests::{GcCandidateSetDigest, GcRetirementIntentDigest};
+pub use recovery_plan::{
+    GcFixedStage, GcRecoveryAmbiguity, GcRecoveryPlan, is_complete as is_gc_complete,
+    plan_gc_recovery,
+};
+pub use recovery_residue::GcResidue;
 pub use retained_closure::GcRetainedClosure;
+pub use retirement_intent::{
+    GcIntentDerivationError, GcIntentEvidence, catalog_successor_proof, derive_gc_intent,
+    disposition_set_digest, post_retirement_pool_state, segment_pool_identity,
+};
 pub use segment_classification::{GcSegmentClassification, GcUnreachableEvidence};

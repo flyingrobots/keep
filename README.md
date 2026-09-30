@@ -52,11 +52,12 @@ Keep is required to refuse all three, before mutating anything.
   through an ordered protocol whose every step is a named crash point.
   Platform admission is Linux ext4, non-casefolded, one writer.
 - **Proven restart recovery.** The crash matrix kills real writer processes
-  at 224 before/during/after coordinates (`KEEP-CRASH-001`–`073`) and
+  at 266 before/during/after coordinates (`KEEP-CRASH-001`–`087`) and
   verifies the store lands in exactly one documented lawful state each time,
-  for version-1 publication, version-2 retention publication, and the
-  one-way migration; every interrupted migration recovers to one complete
-  migration with every version-1 byte intact.
+  for version-1 publication, version-2 retention publication, the one-way
+  migration, and GC retirement; every interrupted migration recovers to one
+  complete migration with every version-1 byte intact, and no crash prefix
+  of a retirement loses a live segment.
 - **Version-2 retention and migration, forward path.** Explicit retention
   roots, deterministic closure verification, a one-way 21-phase migration,
   and a 17-phase retention publication — all with production filesystem
@@ -90,7 +91,7 @@ a publication. A version-1 store stays admitted until its owner migrates it.
 | --- | --- |
 | Durable authenticated reads bound to a fenced snapshot | [#109](https://github.com/flyingrobots/keep/issues/109) |
 | Verification reports at durable depths and a replayable receipt | [#20](https://github.com/flyingrobots/keep/issues/20) |
-| Garbage collection and identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |
+| Identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |
 | Bounded production ingestion through the durable store | [#82](https://github.com/flyingrobots/keep/issues/82) |
 | Encrypted representations | [#86](https://github.com/flyingrobots/keep/issues/86) |
 

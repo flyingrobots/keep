@@ -75,11 +75,9 @@ before opening catalog `HEAD` or `retention/HEAD`. The returned `ReaderFence`
 owns that lock for the complete snapshot lifetime. Close, drop, or process
 death releases only the kernel lock and never deletes the persistent file.
 
-GC acquires the store writer authority and then an exclusive `reader.lock`, in
-that fixed order. New readers wait and existing readers drain before GC
-revalidation or physical deletion. Catalog and retention publication may
-proceed beside readers because they publish immutable successors and delete no
-published segment.
+GC takes writer authority and then `reader.lock` exclusively, refusing
+without waiting while readers hold it. Catalog and retention publication
+proceed beside readers because they publish immutable successors.
 
 ## Migration records
 
@@ -205,9 +203,8 @@ recovery instead. Direct version-2 initialization is undefined.
 The exact offsets and fixtures are requirement `KEEP-MIGRATION-002`. The fresh
 writer emits only those canonical records; success is not restart evidence.
 A migrated store is admitted for forward publication, and an interrupted
-migration resumes from any prefix through
-[partial migration recovery](migration-recovery.md), proven both in-process
-and by the `KEEP-MIGRATION-007` process-death matrix.
+migration resumes from any prefix through [partial migration
+recovery](migration-recovery.md), proven in-process and by `KEEP-MIGRATION-007`.
 
 ## Retention publication recovery
 
@@ -268,45 +265,36 @@ classification above and its effects, and the crash matrix kills a real
 writer before, during, and after every point and requires restart to recover
 to the documented state.
 
-Each point requires before, during, and after process-death evidence. Restart
-must establish exact catalog visibility, retention head, namespace generation,
-orphan classification, stage disposition, and recovery report.
+Restart must establish exact catalog visibility, retention head, namespace
+generation, orphan classification, stage disposition, and recovery report.
 
 ## Explicit disposition of protected orphans
 
 A complete stage that recovery linked into its pool but that no head ever
 committed is a recovery-protected orphan: publication refuses with
-`RetainedStage` until a person or an explicit policy decides. The decision is
-`FilesystemRetentionPublicationAuthority::dispose`, which takes writer
-authority, runs recovery, refuses while any reader holds the fence, acquires
-the fence exclusively, and records a `RecoveryDispositionReceipt` through the
-fixed-stage protocol: write and synchronize `recovery/disposition.next`, link
-it without replacement to `recovery/dispositions/<artifact-digest>.receipt`,
-synchronize `recovery/dispositions`, remove the stage, and synchronize
-`recovery`. Only then is the retained retention stage removed and `retention`
-synchronized. Process death anywhere leaves either a recoverable stage or a
-durable decision; the next `dispose` with the same request resumes from that
-residue, and a residue naming another decision is a typed ambiguity.
+`RetainedStage` until a person or an explicit policy decides.
+`FilesystemRetentionPublicationAuthority::dispose` takes writer authority,
+runs recovery, refuses while any reader holds the fence, acquires the fence
+exclusively, and records a `RecoveryDispositionReceipt` through the
+fixed-stage protocol (`recovery/disposition.next`, link without replacement
+to `recovery/dispositions/<artifact-digest>.receipt`, synchronize, remove the
+stage, synchronize `recovery`); only then is the retained retention stage
+removed and `retention` synchronized. Process death anywhere leaves a
+recoverable stage or a durable decision; the next `dispose` with the same
+request resumes from it, and a residue naming another decision is a typed
+ambiguity.
 
 > **Warning.** Disposition changes what the store will keep. `Retire` unlinks
-> the orphan's immutable pool entry after the receipt is durable, because an
-> absent retention head admits no pool artifact and no collector exists for
-> the retention pools; the bytes are gone and only the receipt records why.
-> `Finalize` keeps the pool entry as a durable immutable artifact a
-> byte-identical publication may reuse, and is refused while no retention head
-> is published, since there is nothing to finalize into. Both require writer
-> authority and the exclusive reader fence, both remove the retained stage so
-> publication may proceed, and a manifest stage must be disposed before the
-> root stage it names. The dry run is `plan_recovery_disposition` over the
-> recovery plan; verify the result with `recover`, which reports `Clean`.
+> the orphan's immutable pool entry after the receipt is durable; the bytes
+> are gone and only the receipt records why. `Finalize` keeps the entry as a
+> durable artifact a byte-identical publication may reuse and is refused
+> while no retention head is published. A manifest stage must be disposed
+> before the root it names. The dry run is `plan_recovery_disposition`;
+> verify the result with `recover`, which reports `Clean`.
 
 Every receipt is admitted by namespace census as a regular file under its
 canonical name. GC planning admits only the exact receipt: a `segment`
-artifact retired under exactly the coordinates of the snapshot being planned
-releases that segment; a receipt decided under other coordinates is stale and
-keeps its material protected.
-
-`GcRetirementIntent` and `GcRetirementReceipt` are owned by the
-[GC specification](gc.md). Their codecs exist; until issue #21 implements the
-protocol that writes them, any such artifact on disk is unsupported and
-refuses.
+artifact retired under exactly the planned snapshot's coordinates is
+released; any other receipt is stale. `GcRetirementIntent` and
+`GcRetirementReceipt` are owned by [GC](gc.md) and written by
+[GC execution](gc-execution.md).

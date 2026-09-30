@@ -118,8 +118,9 @@ pub(super) fn admit_version_two(directory: &Dir) -> io::Result<()> {
 /// Admits the nested version-2 protocol directories the migration writer left.
 ///
 /// `retention` must carry both immutable pools (its head and stages belong to
-/// retention publication); `gc` must be empty until GC execution writes its
-/// records; `recovery` holds `dispositions` and at most a retained
+/// retention publication); `gc` holds at most the regular files GC execution
+/// writes (`intent.next`, `intent`, `receipt.next`, `receipt`), which GC
+/// recovery classifies; `recovery` holds `dispositions` and at most a retained
 /// `disposition.next` stage, and `dispositions` holds only regular files
 /// named `<artifact-digest>.receipt`. Migration leaves the same shape with
 /// empty pools, so a root that drifted after migration refuses here rather
@@ -129,7 +130,8 @@ fn admit_version_two_protocol_directories(directory: &Dir) -> io::Result<()> {
     admit_required_directory(&retention, ROOTS_NAME)?;
     admit_required_directory(&retention, MANIFESTS_NAME)?;
     let gc = directory.open_dir_nofollow(GC_NAME)?;
-    admit_membership(&gc, &[])?;
+    admit_membership(&gc, &crate::adapters::gc::GC_ENTRY_NAMES)?;
+    admit_regular_entries(&gc)?;
     let recovery = directory.open_dir_nofollow(RECOVERY_NAME)?;
     admit_required_directory(&recovery, DISPOSITIONS_NAME)?;
     admit_optional_file(&recovery, DISPOSITION_STAGE_NAME)?;
@@ -147,6 +149,17 @@ fn admit_disposition_receipts(dispositions: &Dir) -> io::Result<()> {
         if !entry.file_type()?.is_file()
             || !crate::adapters::retention::is_disposition_name(&entry.file_name())
         {
+            return Err(ambiguous_namespace());
+        }
+    }
+    Ok(())
+}
+
+/// Every present entry must be a regular file; the names were admitted by
+/// membership.
+fn admit_regular_entries(directory: &Dir) -> io::Result<()> {
+    for entry in directory.entries()? {
+        if !entry?.file_type()?.is_file() {
             return Err(ambiguous_namespace());
         }
     }

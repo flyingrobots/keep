@@ -1,34 +1,34 @@
-//! This module owns filesystem execution of one explicit disposition under
-//! writer authority and the exclusive reader fence.
+//! This module owns filesystem planning and resumption of one explicit
+//! disposition under writer authority and the exclusive reader fence; the
+//! phase effects live in `filesystem_retention_disposition_storage`.
 
 use std::error::Error;
 use std::fmt;
-use std::io::{self, Read};
+use std::io;
 
 use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
 
 use super::filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
 use super::filesystem_retention_current::{self, read_exact_optional};
+use super::filesystem_retention_disposition_evidence::{
+    discard_stage, disposed_artifact, entry_with_suffix, pool_identity, read_bounded, receipt_for,
+};
 use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_recovery::RetentionRecoveryContext;
 use super::filesystem_retention_recovery_observation::RetentionRecoveryObservation;
 use super::filesystem_retention_stage::{FilesystemRetentionStage, invalid_data};
 use super::{
-    AdmittedRetentionManifest, AdmittedRetentionRoot, FilesystemRetentionRecoveryError,
-    ReaderFence, RecoveryDispositionError, RecoveryDispositionPhase, RecoveryDispositionPlan,
-    RecoveryDispositionRefusal, RecoveryDispositionRequest, RecoveryDispositionStorage,
-    RecoveryDispositionTarget, RetentionRecoveryStorage, plan_recovery_disposition,
+    FilesystemRetentionRecoveryError, ReaderFence, RecoveryDispositionError,
+    RecoveryDispositionPhase, RecoveryDispositionPlan, RecoveryDispositionRefusal,
+    RecoveryDispositionRequest, RecoveryDispositionTarget, plan_recovery_disposition,
     plan_retention_recovery, resume_recovery_disposition,
 };
-use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
-use crate::adapters::filesystem_exact_record as exact_record;
 use crate::adapters::{
     AdmittedRecoveryDispositionReceipt, ArtifactIdentityDigest,
-    CanonicalRecoveryDispositionReceipt, ChecksummedPublicationHead, DecisionEvidenceDigest,
-    GcRetentionState, ObservedHeadChecksum, ReaderLockIdentity, RecoveryArtifactKind,
-    RecoveryClassification, RecoveryDispositionArtifact, RecoveryDispositionCoordinates,
-    RecoveryDispositionDecision, RecoveryDispositionReceipt, filesystem_platform_profile,
+    CanonicalRecoveryDispositionReceipt, ChecksummedPublicationHead, GcRetentionState,
+    ObservedHeadChecksum, ReaderLockIdentity, RecoveryArtifactKind, RecoveryDispositionCoordinates,
+    RecoveryDispositionDecision, filesystem_platform_profile,
 };
 
 const HEAD_NAME: &str = "HEAD";
@@ -108,15 +108,13 @@ impl Error for FilesystemRetentionDispositionError {
 }
 
 /// Where a disposed artifact lives in its immutable pool.
-enum PoolEntry {
+pub(super) enum PoolEntry {
     Root { namespace: String, name: String },
     Manifest { name: String },
 }
 
 /// A located immutable pool entry with its complete bytes.
-type LocatedEntry = (PoolEntry, Box<[u8]>);
-/// A directory entry name with its complete bytes.
-type NamedEntry = (String, Box<[u8]>);
+pub(super) type LocatedEntry = (PoolEntry, Box<[u8]>);
 
 /// What a planned disposition binds before its context opens.
 struct DispositionInputs {
@@ -128,15 +126,15 @@ struct DispositionInputs {
 
 /// Everything one disposition run holds between phases.
 pub(super) struct DispositionContext {
-    target: RecoveryDispositionTarget,
-    decision: RecoveryDispositionDecision,
-    receipt: CanonicalRecoveryDispositionReceipt,
-    artifact: Box<[u8]>,
-    pool: PoolEntry,
-    name: String,
-    recovery: Dir,
-    dispositions: Dir,
-    stage: Option<FilesystemRetentionStage>,
+    pub(super) target: RecoveryDispositionTarget,
+    pub(super) decision: RecoveryDispositionDecision,
+    pub(super) receipt: CanonicalRecoveryDispositionReceipt,
+    pub(super) artifact: Box<[u8]>,
+    pub(super) pool: PoolEntry,
+    pub(super) name: String,
+    pub(super) recovery: Dir,
+    pub(super) dispositions: Dir,
+    pub(super) stage: Option<FilesystemRetentionStage>,
     _fence: ReaderFence,
 }
 
@@ -421,7 +419,7 @@ fn resume_phase(
     }
 }
 
-const fn observe(source: io::Error) -> FilesystemRetentionDispositionError {
+pub(super) const fn observe(source: io::Error) -> FilesystemRetentionDispositionError {
     FilesystemRetentionDispositionError::Observe { source }
 }
 
@@ -435,255 +433,6 @@ fn acquire_fence(root: &Dir) -> Result<ReaderFence, FilesystemRetentionDispositi
     })
 }
 
-/// The retained stage's exact bytes and the pool entry recovery linked them to.
-fn disposed_artifact(
-    observation: &RetentionRecoveryObservation,
-    target: RecoveryDispositionTarget,
-) -> io::Result<(Box<[u8]>, PoolEntry)> {
-    match target {
-        RecoveryDispositionTarget::Root => {
-            let bytes = observation
-                .root()
-                .ok_or_else(|| invalid_data("disposition target root stage vanished"))?
-                .bytes
-                .clone();
-            let root = AdmittedRetentionRoot::decode(&bytes).map_err(invalid_data_from)?;
-            let pool = PoolEntry::Root {
-                namespace: pool_name::namespace(root.root().namespace().digest()),
-                name: pool_name::root(root.root().generation(), root.digest()),
-            };
-            Ok((bytes, pool))
-        }
-        RecoveryDispositionTarget::Manifest => {
-            let bytes = observation
-                .manifest()
-                .ok_or_else(|| invalid_data("disposition target manifest stage vanished"))?
-                .bytes
-                .clone();
-            let manifest = AdmittedRetentionManifest::decode(&bytes).map_err(invalid_data_from)?;
-            let pool = PoolEntry::Manifest {
-                name: pool_name::manifest(manifest.manifest().generation(), manifest.digest()),
-            };
-            Ok((bytes, pool))
-        }
-    }
-}
-
-/// The artifact's pool-name digest: the identity the receipt is filed under.
-fn pool_identity(
-    pool: &PoolEntry,
-    artifact: &[u8],
-) -> Result<(RecoveryArtifactKind, ArtifactIdentityDigest), FilesystemRetentionDispositionError> {
-    match pool {
-        PoolEntry::Root { .. } => {
-            let root = AdmittedRetentionRoot::decode(artifact)
-                .map_err(|source| observe(invalid_data_from(source)))?;
-            Ok((
-                RecoveryArtifactKind::RetentionRoot,
-                ArtifactIdentityDigest::new(*root.digest().as_bytes()),
-            ))
-        }
-        PoolEntry::Manifest { .. } => {
-            let manifest = AdmittedRetentionManifest::decode(artifact)
-                .map_err(|source| observe(invalid_data_from(source)))?;
-            Ok((
-                RecoveryArtifactKind::RetentionManifest,
-                ArtifactIdentityDigest::new(*manifest.digest().as_bytes()),
-            ))
-        }
-    }
-}
-
-fn receipt_for(
-    artifact: &[u8],
-    (kind, identity): (RecoveryArtifactKind, ArtifactIdentityDigest),
-    decision: RecoveryDispositionDecision,
-    coordinates: RecoveryDispositionCoordinates,
-) -> io::Result<CanonicalRecoveryDispositionReceipt> {
-    let disposed = RecoveryDispositionArtifact {
-        kind,
-        classification: RecoveryClassification::CompleteOrphan,
-        length: u64::try_from(artifact.len()).map_err(invalid_data_from)?,
-        identity_digest: identity,
-        content_digest: CanonicalRecoveryDispositionReceipt::artifact_content_digest(artifact),
-    };
-    let evidence = DecisionEvidenceDigest::new(trailing_checksum(artifact)?);
-    Ok(CanonicalRecoveryDispositionReceipt::from_receipt(
-        &RecoveryDispositionReceipt::new(disposed, decision, coordinates, evidence),
-    ))
-}
-
-/// The artifact record's trailing checksum: the evidence the decision was
-/// made over.
-fn trailing_checksum(bytes: &[u8]) -> io::Result<[u8; 32]> {
-    let start = bytes
-        .len()
-        .checked_sub(32)
-        .ok_or_else(|| invalid_data("artifact is shorter than its checksum"))?;
-    bytes
-        .get(start..)
-        .and_then(|slice| slice.try_into().ok())
-        .ok_or_else(|| invalid_data("artifact checksum slot"))
-}
-
-fn invalid_data_from(error: impl Error + Send + Sync + 'static) -> io::Error {
+pub(super) fn invalid_data_from(error: impl Error + Send + Sync + 'static) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, error)
-}
-
-/// Reads `recovery/disposition.next` up to one byte past the receipt length.
-fn read_bounded(recovery: &Dir, name: &str) -> io::Result<Option<Vec<u8>>> {
-    let mut file = match exact_record::open_read(recovery, name) {
-        Ok(file) => file,
-        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(source) => return Err(source),
-    };
-    if !file.metadata()?.is_file() {
-        return Err(invalid_data("disposition stage is not a regular file"));
-    }
-    let mut bytes = Vec::new();
-    let limit = u64::try_from(RECEIPT_LENGTH)
-        .map_err(invalid_data_from)?
-        .saturating_add(1);
-    file.by_ref().take(limit).read_to_end(&mut bytes)?;
-    Ok(Some(bytes))
-}
-
-/// The first regular entry of `directory` whose name ends with `suffix`,
-/// with its complete bytes.
-fn entry_with_suffix(directory: &Dir, suffix: &str) -> io::Result<Option<NamedEntry>> {
-    for entry in directory.entries()? {
-        let name = entry?.file_name().to_string_lossy().into_owned();
-        if !name.ends_with(suffix) {
-            continue;
-        }
-        let metadata = directory.symlink_metadata(&name)?;
-        if !metadata.is_file() {
-            return Err(invalid_data("retention pool entry is not a regular file"));
-        }
-        let length = usize::try_from(metadata.len()).map_err(invalid_data_from)?;
-        let bytes = read_exact_optional(directory, &name, length)?
-            .ok_or_else(|| invalid_data("retention pool entry vanished"))?;
-        return Ok(Some((name, bytes)));
-    }
-    Ok(None)
-}
-
-fn discard_stage(recovery: &Dir) -> io::Result<()> {
-    recovery.remove_file(pool_name::DISPOSITION_STAGE)?;
-    exact_record::require_absent(recovery, pool_name::DISPOSITION_STAGE)
-        .map_err(|_source| invalid_data("discarded disposition stage remained visible"))?;
-    synchronize_directory(recovery)
-}
-
-fn no_disposition() -> io::Error {
-    invalid_data("no disposition is in progress")
-}
-
-/// Removes `name` from `directory` after proving it still holds `expected`.
-fn unlink_verified(directory: &Dir, name: &str, expected: &[u8]) -> io::Result<()> {
-    let observed = read_exact_optional(directory, name, expected.len())?
-        .ok_or_else(|| invalid_data("retired pool entry is already absent"))?;
-    if observed.as_ref() != expected {
-        return Err(invalid_data(
-            "retired pool entry bytes disagree with the receipt",
-        ));
-    }
-    directory.remove_file(name)?;
-    exact_record::require_absent(directory, name)
-        .map_err(|_source| invalid_data("retired pool entry remained visible"))
-}
-
-impl RecoveryDispositionStorage for FilesystemRetentionPublicationAuthority {
-    fn write_disposition_stage(&mut self) -> io::Result<()> {
-        let context = self.disposition.as_mut().ok_or_else(no_disposition)?;
-        context.stage = Some(FilesystemRetentionStage::create(
-            &context.recovery,
-            pool_name::DISPOSITION_STAGE,
-            context.receipt.encoded(),
-        )?);
-        Ok(())
-    }
-
-    fn synchronize_disposition_stage(&mut self) -> io::Result<()> {
-        let context = self.disposition.as_mut().ok_or_else(no_disposition)?;
-        if context.stage.is_none() {
-            context.stage = Some(FilesystemRetentionStage::reopen(
-                &context.recovery,
-                pool_name::DISPOSITION_STAGE,
-                context.receipt.encoded(),
-            )?);
-        }
-        let stage = context.stage.as_ref().ok_or_else(no_disposition)?;
-        stage.synchronize(&context.recovery)
-    }
-
-    fn link_disposition_receipt(&mut self) -> io::Result<()> {
-        let context = self.disposition.as_ref().ok_or_else(no_disposition)?;
-        let stage = context.stage.as_ref().ok_or_else(no_disposition)?;
-        stage.link(&context.recovery, &context.dispositions, &context.name)
-    }
-
-    fn synchronize_dispositions(&mut self) -> io::Result<()> {
-        let context = self.disposition.as_ref().ok_or_else(no_disposition)?;
-        synchronize_directory(&context.dispositions)
-    }
-
-    fn remove_disposition_stage(&mut self) -> io::Result<()> {
-        let context = self.disposition.as_mut().ok_or_else(no_disposition)?;
-        if context.stage.is_none() {
-            context.stage = Some(FilesystemRetentionStage::reopen(
-                &context.recovery,
-                pool_name::DISPOSITION_STAGE,
-                context.receipt.encoded(),
-            )?);
-        }
-        let stage = context.stage.take().ok_or_else(no_disposition)?;
-        stage.remove(&context.recovery, &context.dispositions, &context.name)
-    }
-
-    fn synchronize_recovery(&mut self) -> io::Result<()> {
-        let context = self.disposition.as_ref().ok_or_else(no_disposition)?;
-        synchronize_directory(&context.recovery)
-    }
-
-    fn remove_retained_stage(&mut self) -> io::Result<()> {
-        let target = self.disposition.as_ref().ok_or_else(no_disposition)?.target;
-        match target {
-            RecoveryDispositionTarget::Root => RetentionRecoveryStorage::remove_root_stage(self),
-            RecoveryDispositionTarget::Manifest => {
-                RetentionRecoveryStorage::remove_manifest_stage(self)
-            }
-        }
-    }
-
-    fn synchronize_retention_after_disposition(&mut self) -> io::Result<()> {
-        synchronize_directory(&self.retention)
-    }
-
-    fn remove_pool_entry(&mut self) -> io::Result<()> {
-        let context = self.disposition.as_ref().ok_or_else(no_disposition)?;
-        match &context.pool {
-            PoolEntry::Root { namespace, name } => {
-                let directory = self.roots.open_dir_nofollow(namespace)?;
-                unlink_verified(&directory, name, &context.artifact)?;
-                synchronize_directory(&directory)?;
-                if directory.entries()?.next().is_none() {
-                    drop(directory);
-                    self.roots.remove_dir(namespace)?;
-                }
-                Ok(())
-            }
-            PoolEntry::Manifest { name } => {
-                unlink_verified(&self.manifests, name, &context.artifact)
-            }
-        }
-    }
-
-    fn synchronize_pool(&mut self) -> io::Result<()> {
-        let context = self.disposition.as_ref().ok_or_else(no_disposition)?;
-        match context.pool {
-            PoolEntry::Root { .. } => synchronize_directory(&self.roots),
-            PoolEntry::Manifest { .. } => synchronize_directory(&self.manifests),
-        }
-    }
 }

@@ -10,6 +10,34 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- GC execution, retirement, and recovery. `FilesystemGcAuthority` retires
+  the released segments a `GcPlan` names: `prepare` refuses over any
+  residue but idle or complete, refuses an empty plan, acquires the reader
+  fence exclusively without waiting (`ReadersActive`), re-observes liveness
+  under it and requires the reopened store to plan identically
+  (`PlanStale`), and derives the one canonical intent (generation succeeding
+  the prior receipt's, per-candidate release evidence, and the newly
+  registered `keep.gc-catalog-successor-proof/v2`, `keep.gc-segment-pool/v2`,
+  and `keep.gc-disposition-set/v2` derivations). `execute_gc` then drives
+  the 14 fixed phases through `GcExecutionStorage`: intent stage, sync,
+  link, sync, cleanup, sync; per candidate a verified unlink and pool sync;
+  receipt stage over the exact remaining pool, sync, atomic replacement of
+  `gc/receipt`, sync; intent removal, sync. `GcResidue` and
+  `plan_gc_recovery` classify every residue into idle, complete, a
+  discardable truncated stage, or the exact resumption point, and refuse
+  everything else as `GcRecoveryAmbiguity`; `recover` acts on it. A durable
+  `gc/intent` makes retention publication refuse `GcIntentRetained` and
+  another retirement refuse `RecoveryRequired`. Namespace admission admits
+  exactly the four GC records as regular files. Proven by
+  `filesystem_gc_tests` (every interrupted prefix and both truncated stages
+  recover to the same complete state without losing the live segment) and
+  by the `KEEP-CRASH-074..087` process-death matrix,
+  `cargo xtask durability-crash-matrix --sequence gc`, 42 killed-writer
+  cases with the ledger rows in `transitions.tsv`. Registering the three
+  derivation domains changed the format-definition digest, so the marker,
+  migration intent and receipt, and store identifier fixtures were
+  rematerialized through the corpus oracle. Specified on
+  `docs/formats/segment-store-v2/gc-execution.md`.
 - Explicit disposition of recovery-protected retention orphans.
   `FilesystemRetentionPublicationAuthority::dispose` records a
   finalize-or-retire decision over a linked, retained `root.next` or

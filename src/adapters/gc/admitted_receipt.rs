@@ -31,6 +31,23 @@ impl<'encoded> AdmittedGcRetirementReceipt<'encoded> {
         receipt_decoder::decode(encoded, intent)
     }
 
+    /// Decodes one receipt's framing, checksum, and fields without an intent
+    /// to bind it to.
+    ///
+    /// The result proves nothing about which intent the receipt completed;
+    /// it is the prior retirement's receipt a new execution succeeds, or the
+    /// completion a restart reports over an idle `gc`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GcRetirementReceiptDecodeError`] for invalid framing,
+    /// integrity, or a zero generation.
+    pub fn decode_unbound(
+        encoded: &[u8],
+    ) -> Result<GcRetirementReceipt, GcRetirementReceiptDecodeError> {
+        receipt_decoder::decode_unbound(encoded)
+    }
+
     /// Returns the exact borrowed canonical bytes.
     #[must_use]
     pub const fn encoded(&self) -> &'encoded [u8] {

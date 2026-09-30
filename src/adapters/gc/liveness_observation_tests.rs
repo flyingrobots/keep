@@ -15,12 +15,12 @@ use crate::adapters::test_support::decode_hex;
 use crate::adapters::{FilesystemRetentionSnapshot, ReaderAttemptLimit};
 use crate::execute_retention_publication;
 
-const ORPHAN_SEGMENT_HEX: &str =
+pub(super) const ORPHAN_SEGMENT_HEX: &str =
     include_str!("../../../conformance/segment-store/v1/one-zero-segment.hex");
-const ORPHAN_SEGMENT_NAME: &str =
+pub(super) const ORPHAN_SEGMENT_NAME: &str =
     "b7542dced2ab770894a14d1d04b066e3a899942602c5986d35ba6df6c1a35cfc.seg";
 
-fn published_store(
+pub(super) fn published_store(
     name: &str,
 ) -> Result<crate::adapters::filesystem_test_sandbox::TestDirectory, Box<dyn Error>> {
     let sandbox = migrated_store(name)?;
@@ -32,7 +32,7 @@ fn published_store(
     Ok(sandbox)
 }
 
-fn observe(root: &Path) -> Result<super::GcLivenessSnapshot, Box<dyn Error>> {
+pub(super) fn observe(root: &Path) -> Result<super::GcLivenessSnapshot, Box<dyn Error>> {
     let view =
         FilesystemRetentionSnapshot::load(root, catalog_policy()?, ReaderAttemptLimit::DEFAULT)?;
     observe_gc_liveness(root, &view, catalog_policy()?).map_err(Into::into)
@@ -149,7 +149,7 @@ fn a_pool_entry_not_named_by_a_digest_refuses_observation() -> Result<(), Box<dy
 
 /// Builds a canonical segment-retire receipt over the given coordinates for
 /// the orphan pool segment.
-fn segment_receipt(
+pub(super) fn segment_receipt(
     coordinates: super::GcLivenessCoordinates,
     catalog_digest: crate::CatalogDigest,
 ) -> Result<Vec<u8>, Box<dyn Error>> {
@@ -190,7 +190,7 @@ fn segment_receipt(
         .to_vec())
 }
 
-fn disposition_path(root: &Path) -> std::path::PathBuf {
+pub(super) fn disposition_path(root: &Path) -> std::path::PathBuf {
     root.join("recovery").join("dispositions").join(format!(
         "{}.receipt",
         ORPHAN_SEGMENT_NAME.trim_end_matches(".seg")

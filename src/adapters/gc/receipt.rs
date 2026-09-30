@@ -29,7 +29,37 @@ pub struct GcRetirementReceipt {
     synchronization_count: u64,
 }
 
+/// Every field of one receipt read without an intent to bind it to.
+#[derive(Clone, Copy)]
+pub(super) struct GcRetirementReceiptFields {
+    pub(super) generation: GcGeneration,
+    pub(super) intent_digest: GcRetirementIntentDigest,
+    pub(super) retired_candidate_set_digest: GcCandidateSetDigest,
+    pub(super) pool_state_digest: PoolStateDigest,
+    pub(super) liveness_generation: LivenessGeneration,
+    pub(super) manifest_digest: RetentionManifestDigest,
+    pub(super) catalog_generation: CatalogGeneration,
+    pub(super) catalog_digest: CatalogDigest,
+    pub(super) reader_lock: ReaderLockIdentity,
+    pub(super) synchronization_count: u64,
+}
+
 impl GcRetirementReceipt {
+    pub(super) const fn from_fields(fields: GcRetirementReceiptFields) -> Self {
+        Self {
+            generation: fields.generation,
+            intent_digest: fields.intent_digest,
+            retired_candidate_set_digest: fields.retired_candidate_set_digest,
+            pool_state_digest: fields.pool_state_digest,
+            liveness_generation: fields.liveness_generation,
+            manifest_digest: fields.manifest_digest,
+            catalog_generation: fields.catalog_generation,
+            catalog_digest: fields.catalog_digest,
+            reader_lock: fields.reader_lock,
+            synchronization_count: fields.synchronization_count,
+        }
+    }
+
     pub(super) fn for_intent(
         intent_digest: GcRetirementIntentDigest,
         retired_candidate_set_digest: GcCandidateSetDigest,
