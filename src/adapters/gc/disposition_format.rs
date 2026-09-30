@@ -10,6 +10,11 @@ pub(super) const HEADER_RESERVED_OFFSET: usize = 30;
 pub(super) const TRAILER_RESERVED_OFFSET: usize = 280;
 pub(super) const TRAILER_RESERVED_LENGTH: usize = 8;
 const CHECKSUM_DOMAIN: &[u8] = b"keep.recovery-disposition-receipt-checksum/v2\0";
+/// The manifest-digest slot a receipt carries beside liveness generation
+/// zero: the canonical empty retention state.
+pub(super) fn empty_retention_digest() -> [u8; 32] {
+    *crate::adapters::store_migration::initial_retention_digest().as_bytes()
+}
 const ARTIFACT_DOMAIN: &[u8] = b"keep.recovery-disposition-artifact/v2\0";
 
 pub(super) fn checksum(preimage: &[u8]) -> [u8; 32] {

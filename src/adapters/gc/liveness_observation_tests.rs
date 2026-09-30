@@ -146,3 +146,114 @@ fn a_pool_entry_not_named_by_a_digest_refuses_observation() -> Result<(), Box<dy
     sandbox.remove()?;
     Ok(())
 }
+
+/// Builds a canonical segment-retire receipt over the given coordinates for
+/// the orphan pool segment.
+fn segment_receipt(
+    coordinates: super::GcLivenessCoordinates,
+    catalog_digest: crate::CatalogDigest,
+) -> Result<Vec<u8>, Box<dyn Error>> {
+    use crate::adapters::{
+        ArtifactIdentityDigest, CanonicalRecoveryDispositionReceipt, DecisionEvidenceDigest,
+        ObservedHeadChecksum, ReaderLockIdentity, RecoveryArtifactKind, RecoveryClassification,
+        RecoveryDispositionArtifact, RecoveryDispositionCoordinates, RecoveryDispositionDecision,
+        RecoveryDispositionReceipt,
+    };
+    let orphan = decode_hex(ORPHAN_SEGMENT_HEX.trim())?;
+    let identity = <[u8; 32]>::try_from(decode_hex(
+        ORPHAN_SEGMENT_NAME
+            .strip_suffix(".seg")
+            .ok_or("orphan name")?,
+    )?)
+    .map_err(|_| "identity")?;
+    let receipt = RecoveryDispositionReceipt::new(
+        RecoveryDispositionArtifact {
+            kind: RecoveryArtifactKind::Segment,
+            classification: RecoveryClassification::CompleteOrphan,
+            length: u64::try_from(orphan.len())?,
+            identity_digest: ArtifactIdentityDigest::new(identity),
+            content_digest: CanonicalRecoveryDispositionReceipt::artifact_content_digest(&orphan),
+        },
+        RecoveryDispositionDecision::Retire,
+        RecoveryDispositionCoordinates {
+            publication_generation: coordinates.catalog_generation(),
+            publication_checksum: ObservedHeadChecksum::new([0; 32]),
+            catalog_generation: coordinates.catalog_generation(),
+            catalog_digest,
+            retention: coordinates.retention(),
+            reader_lock: ReaderLockIdentity::new(1, 2, 3),
+        },
+        DecisionEvidenceDigest::new([0; 32]),
+    );
+    Ok(CanonicalRecoveryDispositionReceipt::from_receipt(&receipt)
+        .encoded()
+        .to_vec())
+}
+
+fn disposition_path(root: &Path) -> std::path::PathBuf {
+    root.join("recovery").join("dispositions").join(format!(
+        "{}.receipt",
+        ORPHAN_SEGMENT_NAME.trim_end_matches(".seg")
+    ))
+}
+
+#[test]
+fn an_exact_retire_receipt_makes_the_orphan_collectible_and_a_stale_one_does_not()
+-> Result<(), Box<dyn Error>> {
+    let sandbox = published_store("gc-liveness-disposed")?;
+    let orphan = decode_hex(ORPHAN_SEGMENT_HEX.trim())?;
+    fs::write(
+        sandbox.path().join("segments").join(ORPHAN_SEGMENT_NAME),
+        &orphan,
+    )?;
+    let coordinates = observe(sandbox.path())?.coordinates();
+
+    // A receipt decided under another catalog digest is stale: protected.
+    let stale = segment_receipt(
+        coordinates,
+        crate::CatalogDigest::from_validated([0x55; 32]),
+    )?;
+    fs::write(disposition_path(sandbox.path()), &stale)?;
+    let plan = plan_gc(&observe(sandbox.path())?, GcLimits::MAXIMUM)?;
+    assert_eq!(plan.candidate_count(), 0);
+    assert_eq!(
+        plan.segments()
+            .values()
+            .filter(|planned| {
+                planned.classification() == GcSegmentClassification::RecoveryProtected
+            })
+            .count(),
+        1
+    );
+
+    // The exact receipt releases it.
+    let exact = segment_receipt(coordinates, coordinates.catalog_digest())?;
+    fs::write(disposition_path(sandbox.path()), &exact)?;
+    let plan = plan_gc(&observe(sandbox.path())?, GcLimits::MAXIMUM)?;
+    assert_eq!(plan.candidate_count(), 1);
+    let candidate = plan.candidates().next().ok_or("candidate")?;
+    assert_eq!(
+        plan.classification(candidate.segment()),
+        Some(GcSegmentClassification::Unreachable(
+            super::GcUnreachableEvidence::Disposed
+        ))
+    );
+
+    // A receipt that does not decode refuses the whole observation.
+    let mut corrupt = exact;
+    let last = corrupt.last_mut().ok_or("receipt")?;
+    *last ^= 1;
+    fs::write(disposition_path(sandbox.path()), &corrupt)?;
+    let error = observe(sandbox.path())
+        .err()
+        .ok_or("a corrupt disposition receipt was observed")?;
+    let error = error
+        .downcast::<GcLivenessObservationError>()
+        .map_err(|_error| "observation refused with the wrong error type")?;
+    assert!(matches!(
+        *error,
+        GcLivenessObservationError::Disposition { .. }
+    ));
+    sandbox.remove()?;
+    Ok(())
+}

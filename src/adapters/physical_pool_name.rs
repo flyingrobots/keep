@@ -8,6 +8,11 @@ pub(super) fn segment(digest: SegmentDigest) -> String {
     format!("{}.seg", DigestHex(digest.as_bytes()))
 }
 
+/// The canonical `recovery/dispositions` entry name for one artifact.
+pub(super) fn disposition(identity: &[u8; 32]) -> String {
+    format!("{}.receipt", DigestHex(identity))
+}
+
 pub(super) fn catalog(generation: CatalogGeneration, digest: CatalogDigest) -> String {
     format!(
         "{:016x}-{}.cat",

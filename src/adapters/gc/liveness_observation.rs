@@ -13,10 +13,15 @@ use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
 
 use super::{
+    AdmittedRecoveryDispositionReceipt, RecoveryArtifactKind, RecoveryDispositionDecision,
+};
+use super::{
     GcLivenessCoordinates, GcLivenessObservationError as Error, GcLivenessSnapshot,
     GcRetainedClosure, GcRetentionState,
 };
-use crate::adapters::retention::{AdmittedRetentionRoot, verify_retention_closure_members};
+use crate::adapters::retention::{
+    AdmittedRetentionRoot, is_disposition_name, verify_retention_closure_members,
+};
 use crate::adapters::{
     CatalogRestartArtifact, CatalogRestartPhase, CatalogRestartPolicy, CatalogSnapshot,
     ChecksummedCatalog, FilesystemRetentionSnapshot, SegmentDigest, SegmentRecordIdentity,
@@ -28,6 +33,9 @@ use super::segment_pool_inventory;
 
 const SEGMENTS: &str = "segments";
 const CATALOGS: &str = "catalogs";
+const RECOVERY: &str = "recovery";
+const DISPOSITIONS: &str = "dispositions";
+const RECEIPT_LENGTH: usize = 320;
 
 /// Assembles the liveness snapshot the fenced `view` of `store_root` admits.
 ///
@@ -83,7 +91,75 @@ pub fn observe_gc_liveness(
     for segment in superseded_segments(&catalogs, &catalog, &named)? {
         snapshot.supersede_segment(segment);
     }
+    let recovery = root
+        .open_dir_nofollow(RECOVERY)
+        .map_err(|source| Error::pool("open recovery directory", source))?;
+    let dispositions = recovery
+        .open_dir_nofollow(DISPOSITIONS)
+        .map_err(|source| Error::pool("open disposition pool", source))?;
+    for segment in disposed_segments(&dispositions, snapshot.coordinates())? {
+        snapshot.dispose_segment(segment);
+    }
     Ok(snapshot)
+}
+
+/// Reads every disposition receipt and admits only the exact ones: a
+/// `segment` artifact, a `retire` decision, an entry named by its own
+/// identity digest, and coordinates equal to this snapshot's. A receipt
+/// decided under other coordinates is stale and keeps its segment
+/// protected; a receipt that does not decode refuses the observation.
+fn disposed_segments(
+    dispositions: &Dir,
+    coordinates: GcLivenessCoordinates,
+) -> Result<BTreeSet<SegmentDigest>, Error> {
+    let mut disposed = BTreeSet::new();
+    for entry in dispositions
+        .entries()
+        .map_err(|source| Error::pool("list dispositions", source))?
+    {
+        let entry = entry.map_err(|source| Error::pool("read disposition entry", source))?;
+        let name = entry.file_name();
+        if !is_disposition_name(&name) {
+            return Err(Error::DispositionEntryName);
+        }
+        let name = name.to_string_lossy().into_owned();
+        let bytes = catalog_restart_io::open_regular(
+            dispositions,
+            &name,
+            CatalogRestartArtifact::Catalog,
+            CatalogRestartPhase::OpenCatalog,
+        )
+        .and_then(|(file, length)| {
+            catalog_restart_io::read_exact(
+                file,
+                CatalogRestartArtifact::Catalog,
+                CatalogRestartPhase::ReadCatalog,
+                length.min(
+                    u64::try_from(RECEIPT_LENGTH)
+                        .unwrap_or(u64::MAX)
+                        .saturating_add(1),
+                ),
+            )
+        })
+        .map_err(|source| Error::Catalog { source })?;
+        let admitted = AdmittedRecoveryDispositionReceipt::decode(&bytes)
+            .map_err(|source| Error::Disposition { source })?;
+        let receipt = admitted.receipt();
+        let artifact = receipt.artifact();
+        let identity = SegmentDigest::from_validated(*artifact.identity_digest.as_bytes());
+        if name != physical_pool_name::disposition(artifact.identity_digest.as_bytes()) {
+            return Err(Error::DispositionEntryName);
+        }
+        let exact = artifact.kind == RecoveryArtifactKind::Segment
+            && receipt.decision() == RecoveryDispositionDecision::Retire
+            && receipt.coordinates().catalog_generation == coordinates.catalog_generation()
+            && receipt.coordinates().catalog_digest == coordinates.catalog_digest()
+            && receipt.coordinates().retention == coordinates.retention();
+        if exact {
+            disposed.insert(identity);
+        }
+    }
+    Ok(disposed)
 }
 
 fn retention_state(view: &FilesystemRetentionSnapshot) -> GcRetentionState {

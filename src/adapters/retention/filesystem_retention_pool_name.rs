@@ -18,6 +18,10 @@ pub(super) const HEAD: &str = "HEAD";
 pub(super) const ROOT_STAGE: &str = "root.next";
 pub(super) const MANIFEST_STAGE: &str = "manifest.next";
 pub(super) const HEAD_STAGE: &str = "head.next";
+pub(super) const RECOVERY: &str = "recovery";
+pub(super) const DISPOSITIONS: &str = "dispositions";
+pub(super) const DISPOSITION_STAGE: &str = "disposition.next";
+pub(super) const DISPOSITION_SUFFIX: &str = ".receipt";
 pub(super) const ROOT_SUFFIX: &str = ".root";
 pub(super) const MANIFEST_SUFFIX: &str = ".manifest";
 const DIGEST_HEX: usize = 64;
@@ -41,6 +45,19 @@ pub(super) fn manifest(generation: LivenessGeneration, digest: RetentionManifest
         generation.get(),
         DigestHex(digest.as_bytes())
     )
+}
+
+/// The canonical `recovery/dispositions` entry name for one artifact.
+pub(super) fn disposition(identity: &[u8; 32]) -> String {
+    format!("{}{DISPOSITION_SUFFIX}", DigestHex(identity))
+}
+
+/// Whether `name` is a canonical `<artifact-digest>.receipt` entry name.
+pub(in crate::adapters) fn is_disposition_name(name: &OsStr) -> bool {
+    name.to_str().is_some_and(|text| {
+        text.strip_suffix(DISPOSITION_SUFFIX)
+            .is_some_and(|stem| is_lower_hex(OsStr::new(stem), DIGEST_HEX))
+    })
 }
 
 /// Whether `name` is a 64-lowercase-hex namespace directory name.

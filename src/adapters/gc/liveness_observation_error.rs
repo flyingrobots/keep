@@ -94,6 +94,14 @@ pub enum GcLivenessObservationError {
         /// The expected generation.
         generation: CatalogGeneration,
     },
+    /// A `recovery/dispositions` entry is not named by a lowercase artifact
+    /// digest with the `.receipt` suffix, or its name is not its own identity.
+    DispositionEntryName,
+    /// A disposition receipt did not decode.
+    Disposition {
+        /// The exact decode refusal.
+        source: crate::adapters::RecoveryDispositionDecodeError,
+    },
     /// The snapshot could not be assembled without contradiction.
     Snapshot {
         /// The exact contradiction.
@@ -151,6 +159,10 @@ impl fmt::Display for GcLivenessObservationError {
                 "predecessor catalog generation {} carries other coordinates",
                 generation.get()
             ),
+            Self::DispositionEntryName => {
+                formatter.write_str("disposition entry is not named by its artifact digest")
+            }
+            Self::Disposition { .. } => formatter.write_str("disposition receipt did not decode"),
             Self::Snapshot { .. } => formatter.write_str("liveness snapshot contradicts itself"),
         }
     }
@@ -168,7 +180,9 @@ impl Error for GcLivenessObservationError {
             Self::Pool { source, .. } => Some(source),
             Self::SegmentAdmission { source, .. } => Some(source.as_ref()),
             Self::Snapshot { source } => Some(source),
+            Self::Disposition { source } => Some(source),
             Self::RetainedRootAbsent { .. }
+            | Self::DispositionEntryName
             | Self::ClosureMemberUnindexed { .. }
             | Self::PoolEntryName
             | Self::PoolEntryKind { .. }

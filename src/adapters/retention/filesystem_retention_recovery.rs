@@ -40,7 +40,10 @@ pub(super) struct RetentionRecoveryContext {
 }
 
 impl RetentionRecoveryContext {
-    fn reopen(retention: &Dir, observation: &RetentionRecoveryObservation) -> io::Result<Self> {
+    pub(super) fn reopen(
+        retention: &Dir,
+        observation: &RetentionRecoveryObservation,
+    ) -> io::Result<Self> {
         let root = observation
             .root()
             .map(|stage| -> io::Result<RecoveredStage> {

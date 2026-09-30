@@ -4,10 +4,10 @@
 use super::RecoveryDispositionDecodeError as Error;
 use super::{
     AdmittedRecoveryDispositionReceipt, ArtifactContentDigest, ArtifactIdentityDigest,
-    DecisionEvidenceDigest, ObservedHeadChecksum, ReaderLockIdentity, RecoveryArtifactKind,
-    RecoveryClassification, RecoveryDispositionArtifact, RecoveryDispositionCoordinates,
-    RecoveryDispositionDecision, RecoveryDispositionField, RecoveryDispositionReceipt,
-    disposition_format as format,
+    DecisionEvidenceDigest, GcRetentionState, ObservedHeadChecksum, ReaderLockIdentity,
+    RecoveryArtifactKind, RecoveryClassification, RecoveryDispositionArtifact,
+    RecoveryDispositionCoordinates, RecoveryDispositionDecision, RecoveryDispositionField,
+    RecoveryDispositionReceipt, disposition_format as format,
 };
 use crate::{CatalogDigest, CatalogGeneration, LivenessGeneration, RetentionManifestDigest};
 
@@ -45,9 +45,7 @@ pub(super) fn decode(encoded: &[u8]) -> Result<AdmittedRecoveryDispositionReceip
         publication_checksum: ObservedHeadChecksum::new(read_array(encoded, 112)?),
         catalog_generation: catalog_generation(encoded, 144)?,
         catalog_digest: CatalogDigest::from_validated(read_array(encoded, 152)?),
-        liveness_generation: LivenessGeneration::new(read_u64(encoded, 184)?)
-            .map_err(|_source| Error::ZeroGeneration { offset: 184 })?,
-        manifest_digest: RetentionManifestDigest::from_hash(read_array(encoded, 192)?),
+        retention: retention_state(encoded)?,
         reader_lock: ReaderLockIdentity::new(
             read_u64(encoded, 224)?,
             read_u64(encoded, 232)?,
@@ -116,6 +114,21 @@ fn registered<T>(
 ) -> Result<T, Error> {
     let observed = read_u16(encoded, offset)?;
     admit(observed).ok_or(Error::UnregisteredCode { field, observed })
+}
+
+/// Liveness generation zero names the canonical empty retention state and
+/// must carry its digest; any positive generation names a published head.
+fn retention_state(encoded: &[u8]) -> Result<GcRetentionState, Error> {
+    let generation = read_u64(encoded, 184)?;
+    let digest: [u8; 32] = read_array(encoded, 192)?;
+    match LivenessGeneration::new(generation) {
+        Ok(generation) => Ok(GcRetentionState::Published {
+            generation,
+            manifest_digest: RetentionManifestDigest::from_hash(digest),
+        }),
+        Err(_zero) if digest == format::empty_retention_digest() => Ok(GcRetentionState::Empty),
+        Err(_zero) => Err(Error::EmptyRetentionDigestMismatch { observed: digest }),
+    }
 }
 
 fn catalog_generation(encoded: &[u8], offset: usize) -> Result<CatalogGeneration, Error> {

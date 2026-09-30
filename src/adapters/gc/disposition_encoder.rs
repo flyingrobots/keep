@@ -44,9 +44,20 @@ fn write_preimage(output: &mut [u8], receipt: &RecoveryDispositionReceipt) {
     let (catalog_digest, output) = output.split_at_mut(32);
     catalog_digest.copy_from_slice(coordinates.catalog_digest.as_bytes());
     let (liveness, output) = output.split_at_mut(8);
-    liveness.copy_from_slice(&coordinates.liveness_generation.get().to_be_bytes());
     let (manifest, output) = output.split_at_mut(32);
-    manifest.copy_from_slice(coordinates.manifest_digest.as_bytes());
+    match coordinates.retention {
+        super::GcRetentionState::Empty => {
+            liveness.copy_from_slice(&0_u64.to_be_bytes());
+            manifest.copy_from_slice(&super::disposition_format::empty_retention_digest());
+        }
+        super::GcRetentionState::Published {
+            generation,
+            manifest_digest,
+        } => {
+            liveness.copy_from_slice(&generation.get().to_be_bytes());
+            manifest.copy_from_slice(manifest_digest.as_bytes());
+        }
+    }
     let (device, output) = output.split_at_mut(8);
     device.copy_from_slice(&coordinates.reader_lock.device().to_be_bytes());
     let (mount, output) = output.split_at_mut(8);

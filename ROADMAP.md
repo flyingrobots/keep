@@ -96,11 +96,11 @@ names; use those in code, tests, and commits.
 - [x] [F-15 Retention roots, release, and GC liveness model](#f-15-retention-roots-release-and-gc-liveness-model) — Done (ADR-0009)
 - [x] [F-16 Version-2 format records and codecs](#f-16-version-2-format-records-and-codecs) — Done
 - [ ] [F-17 One-way migration from version 1 to version 2](#f-17-one-way-migration-from-version-1-to-version-2) — Partial (#97, in-process recovery, and the `KEEP-CRASH-053`–`073` matrix done on this branch; `KEEP-MIGRATION-005` and `-008` residue remains)
-- [ ] [F-18 Retention publication](#f-18-retention-publication) — Partial; recovery, the `KEEP-CRASH-036`–`052` matrix, and member re-verification done on this branch; orphan disposition (F-22) remains
+- [x] [F-18 Retention publication](#f-18-retention-publication) — Done on this branch (recovery, the `KEEP-CRASH-036`–`052` matrix, member re-verification, and orphan disposition)
 - [x] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — Done on this branch (merged from PR #99)
 - [x] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — Done on this branch (merged from PR #99)
 - [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Planned (#20)
-- [ ] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Partial (#21; all three codecs and the deterministic planner done on this branch)
+- [ ] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Partial (#21; codecs, planner, and orphan disposition done on this branch; compaction and execution remain)
 - [ ] [F-23 Durable authenticated reads and refusal receipts](#f-23-durable-authenticated-reads-and-refusal-receipts) — Planned (#109)
 - [ ] [F-24 Bounded production ingestion through the durable store](#f-24-bounded-production-ingestion-through-the-durable-store) — Planned (#82, #72)
 
@@ -840,10 +840,10 @@ Direct version-2 initialization is undefined. There is no downgrade.
 
 ### F-18 Retention publication
 
-**Status:** Partial. Forward publication is Done (issue #19, PR #78).
-Recovery and the `KEEP-CRASH-036` to `-052` matrix are Done on this branch
-(merged from PR #99), as is closure-member re-verification under authority
-(T-18.3). Explicit disposition of complete orphans waits for F-22.
+**Status:** Done on this branch. Forward publication (issue #19, PR #78),
+recovery and the `KEEP-CRASH-036` to `-052` matrix (merged from PR #99),
+closure-member re-verification (T-18.3), and explicit disposition of
+complete orphans (T-22.5) are all in.
 
 A retain or release names a namespace, an expected state (absent or an
 exact `RootGeneration`), a complete anchor set, and the realization
@@ -1144,10 +1144,10 @@ quarantines, or rewrites physical state.
 
 ### F-22 Garbage collection, compaction, and recovery dispositions
 
-**Status:** Partial (#21, P1, M4). Grammars are frozen and their presence
-refuses (`KEEP-GC-002`). All three codecs (T-22.1, T-22.1a;
-`KEEP-GC-001` Implemented) and the deterministic planner (T-22.2) landed on
-this branch; compaction, execution, and orphan disposition remain.
+**Status:** Partial (#21, P1, M4). All three codecs (T-22.1, T-22.1a;
+`KEEP-GC-001` Implemented), the deterministic planner (T-22.2), and explicit
+orphan disposition (T-22.5) landed on this branch; GC intents and receipts
+still refuse on disk; compaction and execution remain.
 
 Plan GC from an immutable liveness snapshot; classify every segment as
 live, unreachable, corrupt, ambiguous, recovery-protected,
@@ -1320,7 +1320,13 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
   - **Complexity:** XL across T-22.2 to T-22.5.
   - **Documentation:** `gc.md`, `recovery.md`, `requirements.md`, CHANGELOG.
   - **Dependencies:** T-22.1, T-22.2, F-19.
-- [ ] T-22.5 Explicit orphan disposition.
+- [x] T-22.5 Explicit orphan disposition —
+  `FilesystemRetentionPublicationAuthority::dispose`, the pure planner,
+  phases, port, and executor in `src/adapters/retention/disposition_*.rs`,
+  `filesystem_retention_disposition_tests` (retire, finalize, order,
+  readers, every residue, admission) and the exact-receipt GC law; the
+  process-death matrix for the disposition phases joins the GC sequence in
+  T-22.4. Original task fields:
   - **Requirements:** a finalize-or-retire decision for a recovery-protected
     orphan is durable as `recovery/dispositions/<digest>.receipt` via the
     fixed-stage protocol; retirement proves the artifact is named by no

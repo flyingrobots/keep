@@ -41,6 +41,7 @@ const RECOVERY_NAME: &str = "recovery";
 const ROOTS_NAME: &str = "roots";
 const MANIFESTS_NAME: &str = "manifests";
 const DISPOSITIONS_NAME: &str = "dispositions";
+const DISPOSITION_STAGE_NAME: &str = "disposition.next";
 const VERSION_TWO_NAMES: [&str; 12] = [
     LOCK_NAME,
     STAGING_NAME,
@@ -117,11 +118,12 @@ pub(super) fn admit_version_two(directory: &Dir) -> io::Result<()> {
 /// Admits the nested version-2 protocol directories the migration writer left.
 ///
 /// `retention` must carry both immutable pools (its head and stages belong to
-/// retention publication); `gc` must be empty until `KEEP-GC-001` implements
-/// its records; `recovery` must hold exactly an empty `dispositions`. This is
-/// the same membership `verify_prefix_directories` requires at the end of
-/// migration, so a root that drifted after migration refuses here rather than
-/// as a later pinning failure.
+/// retention publication); `gc` must be empty until GC execution writes its
+/// records; `recovery` holds `dispositions` and at most a retained
+/// `disposition.next` stage, and `dispositions` holds only regular files
+/// named `<artifact-digest>.receipt`. Migration leaves the same shape with
+/// empty pools, so a root that drifted after migration refuses here rather
+/// than as a later pinning failure.
 fn admit_version_two_protocol_directories(directory: &Dir) -> io::Result<()> {
     let retention = directory.open_dir_nofollow(RETENTION_NAME)?;
     admit_required_directory(&retention, ROOTS_NAME)?;
@@ -130,9 +132,25 @@ fn admit_version_two_protocol_directories(directory: &Dir) -> io::Result<()> {
     admit_membership(&gc, &[])?;
     let recovery = directory.open_dir_nofollow(RECOVERY_NAME)?;
     admit_required_directory(&recovery, DISPOSITIONS_NAME)?;
-    admit_membership(&recovery, &[DISPOSITIONS_NAME])?;
+    admit_optional_file(&recovery, DISPOSITION_STAGE_NAME)?;
+    admit_membership(&recovery, &[DISPOSITIONS_NAME, DISPOSITION_STAGE_NAME])?;
     let dispositions = recovery.open_dir_nofollow(DISPOSITIONS_NAME)?;
-    admit_membership(&dispositions, &[])
+    admit_disposition_receipts(&dispositions)
+}
+
+/// Every `recovery/dispositions` entry must be a regular file under a
+/// canonical `<artifact-digest>.receipt` name; the receipt bytes are admitted
+/// by whichever protocol consumes them.
+fn admit_disposition_receipts(dispositions: &Dir) -> io::Result<()> {
+    for entry in dispositions.entries()? {
+        let entry = entry?;
+        if !entry.file_type()?.is_file()
+            || !crate::adapters::retention::is_disposition_name(&entry.file_name())
+        {
+            return Err(ambiguous_namespace());
+        }
+    }
+    Ok(())
 }
 
 fn admit_optional_file(directory: &Dir, name: &str) -> io::Result<()> {

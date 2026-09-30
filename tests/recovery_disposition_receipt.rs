@@ -5,9 +5,10 @@ mod support;
 use std::io;
 
 use keep::{
-    AdmittedRecoveryDispositionReceipt, CanonicalRecoveryDispositionReceipt, RecoveryArtifactKind,
-    RecoveryClassification, RecoveryDispositionDecision, RecoveryDispositionDecodeError as Refusal,
-    RecoveryDispositionField as Field,
+    AdmittedRecoveryDispositionReceipt, CanonicalRecoveryDispositionReceipt, GcRetentionState,
+    RecoveryArtifactKind, RecoveryClassification, RecoveryDispositionDecision,
+    RecoveryDispositionDecodeError as Refusal, RecoveryDispositionField as Field,
+    RecoveryDispositionReceipt,
 };
 
 use crate::support::{domain_hash, flip, patch};
@@ -130,10 +131,10 @@ const MATRIX: &[Mutation] = &[
         refuses: |error| matches!(error, Refusal::ZeroGeneration { offset: 144 }),
     },
     Mutation {
-        field: "liveness generation",
+        field: "liveness generation zero beside a published manifest digest",
         reseal: true,
         mutate: |bytes| patch(bytes, 184, &0_u64.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::ZeroGeneration { offset: 184 }),
+        refuses: |error| matches!(error, Refusal::EmptyRetentionDigestMismatch { .. }),
     },
     Mutation {
         field: "trailer reserved",
@@ -191,7 +192,10 @@ fn frozen_disposition_decodes_and_reencodes_canonically() -> Result<(), Box<dyn 
     let coordinates = receipt.coordinates();
     assert_eq!(coordinates.publication_generation.get(), 2);
     assert_eq!(coordinates.catalog_generation.get(), 2);
-    assert_eq!(coordinates.liveness_generation.get(), 1);
+    assert!(matches!(
+        coordinates.retention,
+        GcRetentionState::Published { generation, .. } if generation.get() == 1
+    ));
     assert_eq!(
         (
             coordinates.reader_lock.device(),
@@ -298,6 +302,34 @@ fn every_structural_field_has_one_exact_first_refusal() -> Result<(), Box<dyn st
             mutation.field
         );
     }
+    Ok(())
+}
+
+#[test]
+fn liveness_zero_beside_the_empty_retention_digest_round_trips_as_empty_retention()
+-> Result<(), Box<dyn std::error::Error>> {
+    let bytes = fixture_bytes(DISPOSITION)?;
+    let receipt = *AdmittedRecoveryDispositionReceipt::decode(&bytes)?.receipt();
+    let mut coordinates = receipt.coordinates();
+    coordinates.retention = GcRetentionState::Empty;
+    let empty = RecoveryDispositionReceipt::new(
+        receipt.artifact(),
+        receipt.decision(),
+        coordinates,
+        receipt.evidence_digest(),
+    );
+
+    let canonical = CanonicalRecoveryDispositionReceipt::from_receipt(&empty);
+
+    assert_eq!(
+        canonical.encoded().get(184..192),
+        Some(0_u64.to_be_bytes().as_slice())
+    );
+    let admitted = AdmittedRecoveryDispositionReceipt::decode(canonical.encoded())?;
+    assert_eq!(
+        admitted.receipt().coordinates().retention,
+        GcRetentionState::Empty
+    );
     Ok(())
 }
 

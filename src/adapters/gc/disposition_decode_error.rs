@@ -69,6 +69,12 @@ pub enum RecoveryDispositionDecodeError {
         /// The record offset of the field.
         offset: usize,
     },
+    /// Liveness generation zero was paired with a digest other than the
+    /// canonical empty retention state.
+    EmptyRetentionDigestMismatch {
+        /// The observed manifest-digest slot.
+        observed: [u8; 32],
+    },
 }
 
 impl fmt::Display for RecoveryDispositionDecodeError {
@@ -104,6 +110,10 @@ impl fmt::Display for RecoveryDispositionDecodeError {
             Self::ZeroGeneration { offset } => write!(
                 formatter,
                 "recovery disposition generation at offset {offset} is zero"
+            ),
+            Self::EmptyRetentionDigestMismatch { .. } => formatter.write_str(
+                "recovery disposition names liveness generation zero without the empty \
+                 retention-state digest",
             ),
         }
     }

@@ -13,6 +13,9 @@ mod closure_error_display;
 mod closure_member;
 mod closure_profile_error;
 mod closure_verifier;
+mod disposition_execution;
+mod disposition_plan;
+mod disposition_storage;
 #[cfg(test)]
 mod filesystem_recovery_admission_tests;
 mod filesystem_retention_attempt;
@@ -28,6 +31,9 @@ mod filesystem_retention_catalog_tests;
 mod filesystem_retention_current;
 #[cfg(test)]
 mod filesystem_retention_current_tests;
+mod filesystem_retention_disposition;
+#[cfg(test)]
+mod filesystem_retention_disposition_tests;
 #[cfg(test)]
 mod filesystem_retention_expectation_tests;
 #[cfg(all(test, target_os = "linux"))]
@@ -131,11 +137,24 @@ pub use checksummed_head::ChecksummedRetentionHead;
 pub use closure_error::RetentionClosureVerificationError;
 pub use closure_verifier::verify_retention_closure;
 pub(in crate::adapters) use closure_verifier::verify_retention_closure_members;
+pub use disposition_execution::{
+    RecoveryDispositionError, RecoveryDispositionExecutionReceipt, execute_recovery_disposition,
+    resume_recovery_disposition,
+};
+pub use disposition_plan::{
+    RecoveryDispositionPhase, RecoveryDispositionPlan, RecoveryDispositionRefusal,
+    RecoveryDispositionRequest, RecoveryDispositionTarget, plan_recovery_disposition,
+};
+pub use disposition_storage::RecoveryDispositionStorage;
 pub use filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
 pub use filesystem_retention_authority_error::{
     FilesystemRetentionAuthorityError, RetentionAuthorityDirectory,
 };
 pub use filesystem_retention_current::ObservedRetentionState;
+pub use filesystem_retention_disposition::{
+    FilesystemRetentionDispositionError, RecoveryDispositionAmbiguity,
+};
+pub(in crate::adapters) use filesystem_retention_pool_name::is_disposition_name;
 pub use filesystem_retention_recovery_error::FilesystemRetentionRecoveryError;
 pub use filesystem_retention_refusal::RetentionCurrentStateRefusal;
 pub use filesystem_retention_snapshot::FilesystemRetentionSnapshot;

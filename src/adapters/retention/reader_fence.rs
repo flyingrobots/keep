@@ -19,7 +19,7 @@ const READER_LOCK: &str = "reader.lock";
 /// kernel lock; the persistent file is never deleted.
 #[must_use]
 pub struct ReaderFence {
-    _file: File,
+    file: File,
 }
 
 impl ReaderFence {
@@ -33,7 +33,26 @@ impl ReaderFence {
         verify(root, &file)?;
         flock(&file, FlockOperation::LockShared)?;
         verify(root, &file)?;
-        Ok(Self { _file: file })
+        Ok(Self { file })
+    }
+
+    /// Acquires the fence exclusively without waiting, for collection and
+    /// disposition under writer authority.
+    ///
+    /// Any reader holding the shared fence refuses the acquisition with
+    /// [`io::ErrorKind::WouldBlock`]; the caller reports that readers are
+    /// active rather than waiting on them.
+    pub(super) fn acquire_exclusive(root: &Dir) -> io::Result<Self> {
+        let file = filesystem_exact_record::open_read(root, READER_LOCK)?;
+        verify(root, &file)?;
+        flock(&file, FlockOperation::NonBlockingLockExclusive)?;
+        verify(root, &file)?;
+        Ok(Self { file })
+    }
+
+    /// Returns the locked file's device and inode identity.
+    pub(super) fn identity(&self) -> io::Result<(u64, u64)> {
+        self.file.metadata().map(|metadata| identity(&metadata))
     }
 }
 

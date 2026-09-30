@@ -10,6 +10,27 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Explicit disposition of recovery-protected retention orphans.
+  `FilesystemRetentionPublicationAuthority::dispose` records a
+  finalize-or-retire decision over a linked, retained `root.next` or
+  `manifest.next` under writer authority and the exclusive reader fence:
+  the `RecoveryDispositionReceipt` goes through the fixed-stage protocol
+  (`recovery/disposition.next`, link to
+  `recovery/dispositions/<digest>.receipt`, synchronize, remove, synchronize)
+  and is durable before the retained stage is removed, so publication that
+  refused `RetainedStage` proceeds. `Retire` also unlinks the pool entry and
+  an emptied namespace directory, because an absent head admits no pool
+  artifact; `Finalize` keeps the entry and needs a published head; a
+  manifest stage must be disposed before the root it names; a reader holding
+  the fence refuses without waiting; every residue an interrupted run leaves
+  resumes on the next call, and a residue naming another decision is a typed
+  ambiguity. `plan_recovery_disposition`, `RecoveryDispositionPhase`,
+  `RecoveryDispositionStorage`, and `resume_recovery_disposition` are the
+  pure planner, phases, port, and executor. Version-two admission now admits
+  canonical `.receipt` entries and a retained `disposition.next`; GC planning
+  admits only the exact `segment` receipt and treats a stale one as
+  protection. Liveness generation zero beside the initial retention-state
+  digest encodes a decision made under an absent retention head.
 - `RecoveryDispositionReceipt` codec and its registered enumerations.
   `definition.tsv` now registers the artifact kinds (`segment`, `catalog`,
   `retention-root`, `retention-manifest`, `retention-head`), decisions

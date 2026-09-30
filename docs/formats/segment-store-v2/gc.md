@@ -191,7 +191,11 @@ recovery/dispositions/<artifact-identity-digest-64-lower-hex>.receipt
 ```
 
 The version-2 maximum is 65,536 disposition receipts. A future successor must
-migrate the namespace before raising the ceiling.
+migrate the namespace before raising the ceiling. The protocol that writes a
+receipt for a recovery-protected retention orphan is
+[explicit disposition](recovery.md#explicit-disposition-of-protected-orphans);
+liveness generation zero beside the initial retention-state digest records a
+decision made while no retention head was published.
 
 ## Planning
 

@@ -88,6 +88,7 @@ mod migration_receipt_decoder;
 mod migration_receipt_encoder;
 mod migration_receipt_format;
 mod migration_receipt_initial_state;
+pub(in crate::adapters) use migration_receipt_initial_state::initial_retention_digest;
 mod migration_record_bytes;
 mod migration_recovery_ambiguity;
 mod migration_recovery_ambiguity_display;

@@ -74,10 +74,11 @@ Keep is required to refuse all three, before mutating anything.
 Version 2 writes correctly from a clean start, and the next publication
 recovers the residue of an interrupted one: a stage cut mid-write is
 discarded, a head already synchronized is finalized, and a byte-identical
-retry reports already committed. The one state that waits for a human is a
-complete orphan, a crash between the root link and the head finalization,
-which stays recovery-protected until explicit disposition lands with garbage
-collection (#21). The crash matrix proves that recovery by killing real
+retry reports already committed. A complete orphan, a crash between the root
+link and the head finalization, stays recovery-protected until a person or an
+explicit policy calls `dispose` with a finalize-or-retire decision, which
+records a durable receipt before it changes anything; nothing decides on
+their behalf. The crash matrix proves publication recovery by killing real
 writer processes at all 51 retention coordinates, and an interrupted
 migration the same way at all 68 migration coordinates:
 `FilesystemStoreMigrationAuthority::reopen_for_recovery` and

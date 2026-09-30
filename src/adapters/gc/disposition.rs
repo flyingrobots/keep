@@ -1,10 +1,11 @@
 //! This boundary module owns the semantic recovery-disposition receipt.
 
 use super::{
-    ArtifactContentDigest, ArtifactIdentityDigest, DecisionEvidenceDigest, ObservedHeadChecksum,
-    ReaderLockIdentity, RecoveryArtifactKind, RecoveryClassification, RecoveryDispositionDecision,
+    ArtifactContentDigest, ArtifactIdentityDigest, DecisionEvidenceDigest, GcRetentionState,
+    ObservedHeadChecksum, ReaderLockIdentity, RecoveryArtifactKind, RecoveryClassification,
+    RecoveryDispositionDecision,
 };
-use crate::{CatalogDigest, CatalogGeneration, LivenessGeneration, RetentionManifestDigest};
+use crate::{CatalogDigest, CatalogGeneration};
 
 /// The coordinates one disposition was decided under.
 ///
@@ -21,10 +22,9 @@ pub struct RecoveryDispositionCoordinates {
     pub catalog_generation: CatalogGeneration,
     /// The catalog digest observed.
     pub catalog_digest: CatalogDigest,
-    /// The liveness generation observed.
-    pub liveness_generation: LivenessGeneration,
-    /// The retention-manifest digest observed.
-    pub manifest_digest: RetentionManifestDigest,
+    /// The retention state observed: the published head's liveness
+    /// generation and manifest digest, or the canonical empty state.
+    pub retention: GcRetentionState,
     /// The exclusively locked `reader.lock`.
     pub reader_lock: ReaderLockIdentity,
 }

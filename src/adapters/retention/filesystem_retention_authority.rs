@@ -9,6 +9,7 @@ use super::filesystem_retention_authority_error::{
     FilesystemRetentionAuthorityError as Error, RetentionAuthorityDirectory as Directory,
 };
 use super::filesystem_retention_current::{self, ObservedRetentionState};
+use super::filesystem_retention_disposition::DispositionContext;
 use super::filesystem_retention_recovery::RetentionRecoveryContext;
 use crate::adapters::{CatalogRestartPolicy, FilesystemVersionTwoAdmission, FilesystemWriterLock};
 
@@ -35,6 +36,7 @@ pub struct FilesystemRetentionPublicationAuthority {
     pub(super) catalog_policy: CatalogRestartPolicy,
     pub(super) attempt: Option<PublicationAttempt>,
     pub(super) recovery: Option<RetentionRecoveryContext>,
+    pub(super) disposition: Option<DispositionContext>,
     _lock: FilesystemWriterLock,
 }
 
@@ -80,6 +82,7 @@ impl FilesystemRetentionPublicationAuthority {
             catalog_policy,
             attempt: None,
             recovery: None,
+            disposition: None,
             _lock: lock,
         })
     }

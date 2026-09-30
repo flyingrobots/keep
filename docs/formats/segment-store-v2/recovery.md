@@ -238,7 +238,7 @@ regular file, removes it, synchronizes `retention`, and returns a typed discard
 report. Any later effect, stale generation, mismatched digest, missing
 transitive member, reappeared stage, conflicting pool entry, or other
 corruption is a typed refusal. A complete valid orphan remains
-recovery-protected until explicit disposition.
+recovery-protected until [explicit disposition](#explicit-disposition-of-protected-orphans).
 
 The retention crash points are:
 
@@ -272,7 +272,41 @@ Each point requires before, during, and after process-death evidence. Restart
 must establish exact catalog visibility, retention head, namespace generation,
 orphan classification, stage disposition, and recovery report.
 
-`GcRetirementIntent`, `GcRetirementReceipt`, and
-`RecoveryDispositionReceipt` are owned by the [GC specification](gc.md).
-Their codecs exist; until issue #21 implements the protocols that write
-them, any such artifact on disk is unsupported and refuses.
+## Explicit disposition of protected orphans
+
+A complete stage that recovery linked into its pool but that no head ever
+committed is a recovery-protected orphan: publication refuses with
+`RetainedStage` until a person or an explicit policy decides. The decision is
+`FilesystemRetentionPublicationAuthority::dispose`, which takes writer
+authority, runs recovery, refuses while any reader holds the fence, acquires
+the fence exclusively, and records a `RecoveryDispositionReceipt` through the
+fixed-stage protocol: write and synchronize `recovery/disposition.next`, link
+it without replacement to `recovery/dispositions/<artifact-digest>.receipt`,
+synchronize `recovery/dispositions`, remove the stage, and synchronize
+`recovery`. Only then is the retained retention stage removed and `retention`
+synchronized. Process death anywhere leaves either a recoverable stage or a
+durable decision; the next `dispose` with the same request resumes from that
+residue, and a residue naming another decision is a typed ambiguity.
+
+> **Warning.** Disposition changes what the store will keep. `Retire` unlinks
+> the orphan's immutable pool entry after the receipt is durable, because an
+> absent retention head admits no pool artifact and no collector exists for
+> the retention pools; the bytes are gone and only the receipt records why.
+> `Finalize` keeps the pool entry as a durable immutable artifact a
+> byte-identical publication may reuse, and is refused while no retention head
+> is published, since there is nothing to finalize into. Both require writer
+> authority and the exclusive reader fence, both remove the retained stage so
+> publication may proceed, and a manifest stage must be disposed before the
+> root stage it names. The dry run is `plan_recovery_disposition` over the
+> recovery plan; verify the result with `recover`, which reports `Clean`.
+
+Every receipt is admitted by namespace census as a regular file under its
+canonical name. GC planning admits only the exact receipt: a `segment`
+artifact retired under exactly the coordinates of the snapshot being planned
+releases that segment; a receipt decided under other coordinates is stale and
+keeps its material protected.
+
+`GcRetirementIntent` and `GcRetirementReceipt` are owned by the
+[GC specification](gc.md). Their codecs exist; until issue #21 implements the
+protocol that writes them, any such artifact on disk is unsupported and
+refuses.
