@@ -252,6 +252,16 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Version-two reopen compares only the restart-stable root coordinates, the
+  device and the root inode, against the migration intent. The mount identity
+  the intent records is `statx.stx_mnt_id`, a mount instance that changes on
+  every unmount, remount, and reboot; comparing it on reopen made a correctly
+  remounted store refuse with `RootIdentityChanged { coordinate: Mount, .. }`
+  and would have made partial-prefix migration recovery reject the store's
+  own intent after a reboot. The migrating process still compares all three
+  coordinates against its own observation. The intent bytes are unchanged;
+  `recovery.md` states the rule and its `dev_t` limit, and `rationale.md`
+  records the rejected alternatives. Closes #97.
 - The living `keep.segment-store/v1` pages describe `main`: initialization,
   platform admission, explicit recovery, and the crash matrix are stated as
   implemented in issue #17 instead of owned by it; the publication page names

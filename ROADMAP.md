@@ -95,7 +95,7 @@ names; use those in code, tests, and commits.
 
 - [x] [F-15 Retention roots, release, and GC liveness model](#f-15-retention-roots-release-and-gc-liveness-model) — Done (ADR-0009)
 - [x] [F-16 Version-2 format records and codecs](#f-16-version-2-format-records-and-codecs) — Done
-- [ ] [F-17 One-way migration from version 1 to version 2](#f-17-one-way-migration-from-version-1-to-version-2) — Partial (#97 and residual #19)
+- [ ] [F-17 One-way migration from version 1 to version 2](#f-17-one-way-migration-from-version-1-to-version-2) — Partial (#97 done on this branch; residual #19)
 - [ ] [F-18 Retention publication](#f-18-retention-publication) — Partial; recovery in review (PR #99)
 - [ ] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — In review (PR #99)
 - [ ] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — In review (PR #99)
@@ -702,7 +702,11 @@ Direct version-2 initialization is undefined. There is no downgrade.
   `StoreMigrationPhase::ALL`, `FilesystemStoreMigrationAuthority`,
   `FilesystemStoreMigrationInventoryReader`;
   `FilesystemVersionTwoAdmission::reopen`.
-- [ ] T-17.1 Restart-stable root identity coordinate (#97).
+- [x] T-17.1 Restart-stable root identity coordinate (#97) — decided as
+  the `(device, file)` pair with the mount id as same-process evidence;
+  bytes unchanged; `recovery.md` "Root identity across restart",
+  `rationale.md`, and the remount law in
+  `filesystem_version_two_admission_tests`. Original task fields:
   - **Requirements:** the migration intent stops depending on
     `statx.stx_mnt_id`, which changes across unmount, remount, and reboot;
     either the intent format drops the mount coordinate (a format revision

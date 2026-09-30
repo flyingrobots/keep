@@ -97,8 +97,11 @@ violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 Not implemented: retention publication recovery and `KEEP-CRASH-036..052`
 process-death evidence, partial-prefix migration recovery and
 `KEEP-CRASH-053..073`, the reader fence, model-based transition evidence, and
-garbage collection. Issue #19 owns the first four and issue #21 the last;
-issue #97 owns the restart-stable root identity coordinate. A version-1 store
+garbage collection. Issue #19 owns the first four and issue #21 the last.
+Reopen compares only the restart-stable root coordinates, device and inode,
+against the intent; see
+[root identity across restart](recovery.md#root-identity-across-restart). A
+version-1 store
 remains admitted until its owner migrates it, and the
 [requirements ledger](requirements.md) is the authority on which requirements
 are proven.

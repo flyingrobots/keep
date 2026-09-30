@@ -59,9 +59,9 @@ Keep is required to refuse all three, before mutating anything.
   roots, deterministic closure verification, a one-way 21-phase migration,
   and a 17-phase retention publication — all with production filesystem
   writers, all preserving every version-1 byte. Reopening a migrated store
-  jointly admits its marker, intent, and receipt, binds the root's device,
-  mount, and inode identity to the intent, and pins the directories it
-  admitted. Publication binds this store's own catalog head and the catalog
+  jointly admits its marker, intent, and receipt, binds the root's
+  restart-stable device and inode identity to the intent (a remounted store
+  admits; a moved one refuses), and pins the directories it admitted. Publication binds this store's own catalog head and the catalog
   it selects, and refuses retained stages, superseded candidates, substituted
   files, replaced protocol directories, and every namespace or capacity
   violation before it writes anything. Each refusal is a typed value, not a
@@ -78,7 +78,6 @@ admitted until its owner migrates it; migrate only if you accept that wait.
 | Gap | Tracked |
 | --- | --- |
 | Restart recovery for retention publication and migration | [#19](https://github.com/flyingrobots/keep/issues/19) |
-| Restart-stable root identity coordinate in the migration intent | [#97](https://github.com/flyingrobots/keep/issues/97) |
 | Reader fence binding one consistent catalog + retention snapshot | [#19](https://github.com/flyingrobots/keep/issues/19) |
 | Precise verification reports at explicit depths | [#20](https://github.com/flyingrobots/keep/issues/20) |
 | Garbage collection and identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |

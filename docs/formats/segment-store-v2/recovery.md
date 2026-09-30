@@ -139,6 +139,36 @@ identity, caller identity, path, and time do not enter the identifier. The
 migration intent separately binds the physical root coordinates so in-place
 recovery refuses a substituted store.
 
+### Root identity across restart
+
+The three root coordinates the intent records do not have the same lifetime.
+`statx.stx_mnt_id` names a mount instance: it changes on every unmount,
+remount, and reboot, so a store that is merely remounted would refuse if any
+restart path compared it. The device and inode coordinates name the volume
+and the root directory and survive remounts on the admitted platform.
+
+The restart-stable root identity is therefore the pair `(device, file)`:
+
+- `FilesystemStoreMigrationAuthority` compares all three coordinates, but
+  only against the observation it made itself when it opened the root in the
+  same process; that comparison catches a root swapped underneath a running
+  migration and never crosses a restart.
+- `FilesystemVersionTwoAdmission::reopen`, and every recovery path that
+  compares a persisted intent against a reopened root, compare device and
+  file only and refuse with `RootIdentityChanged { coordinate: Device | File,
+  .. }`. A remounted store admits; a store copied to another device or
+  restored into a different directory refuses.
+
+The mount coordinate stays in the record as the migration-time observation.
+Its bytes are not authority for any later decision.
+
+Limit: `dev_t` is stable across reboots only while the block device keeps its
+major and minor numbers. A device-mapper or hot-plug renumbering makes a
+correct store refuse with `RootIdentityChanged { coordinate: Device, .. }`;
+version 2 defines no re-admission for that case, and a successor coordinate
+(the filesystem UUID) is the rationale's recorded alternative if it proves
+necessary.
+
 `migration.receipt` is exactly 256 bytes:
 
 <!-- markdownlint-disable MD013 -->
