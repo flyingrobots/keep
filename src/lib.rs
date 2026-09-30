@@ -161,6 +161,11 @@ pub use adapters::{
     VerifiedRetentionClosure, execute_retention_publication, plan_retention_transition,
     preflight_retention_transition, prepare_retention_publication, verify_retention_closure,
 };
+pub use adapters::{
+    MIGRATION_NAMESPACE_PREFIX, StoreMigrationEffect, StoreMigrationFixedStage,
+    StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryPlan, StoreMigrationResidue,
+    plan_store_migration_recovery,
+};
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
     ByteRange, ByteRangeError,

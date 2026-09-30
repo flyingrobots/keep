@@ -747,8 +747,10 @@ Direct version-2 initialization is undefined. There is no downgrade.
   - **Documentation:** `recovery.md`, `requirements.md`, `migration-crash.md`,
     v2 corpus README, CHANGELOG.
   - **Dependencies:** blocks T-17.2 and T-17.3.
-- [ ] T-17.2 Partial-prefix migration recovery (`KEEP-MIGRATION-004`,
-  #108, the residual #19 item 7).
+- [ ] T-17.2 Partial-prefix migration recovery (`KEEP-MIGRATION-004`; the
+  storage-independent planner and its laws landed on this branch; the
+  residue observer, resuming storage, and crash matrix remain in #108, the
+  residual #19 item 7).
   - **Requirements:** the seven-row recovery table in
     `migration-recovery.md` becomes executable: no artifact admits v1;
     intent stage only finalizes or discards the pre-effect stage; durable

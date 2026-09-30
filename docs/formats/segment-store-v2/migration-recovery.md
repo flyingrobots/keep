@@ -65,3 +65,21 @@ receipt, unknown entry, or changed root identity is unrecoverable ambiguity.
 
 Death before durable intent leaves v1 plus at most its non-authoritative stage.
 Death after durable intent leaves recovery-required v2 migration state.
+
+### Recovery planning
+
+`plan_store_migration_recovery` is the storage-independent form of the table.
+It takes the intent the version-1 store derives today and one
+`StoreMigrationResidue`, the observed presence and exact bytes of every fixed
+name, and returns the one `StoreMigrationRecoveryPlan` the row prescribes:
+admit version 1, discard one incomplete pre-effect stage and resume, resume
+at the earliest forward phase the residue cannot prove complete, or complete.
+Every other residue is a typed `StoreMigrationRecoveryAmbiguity`. The
+persisted intent is compared on every coordinate but the mount identity, so
+a rebooted root does not reject its own intent.
+
+The planner reads no storage. An observer that produces the residue and a
+storage that executes the plan by reopening each stage by device and inode
+identity are not implemented; until they are, an interrupted migration still
+waits for a human
+([#108](https://github.com/flyingrobots/keep/issues/108)).

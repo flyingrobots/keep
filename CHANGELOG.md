@@ -10,6 +10,17 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Storage-independent migration recovery planning.
+  `plan_store_migration_recovery` maps one observed `StoreMigrationResidue`
+  (the presence and exact bytes of every fixed migration name) and the
+  intent the version-1 store derives today onto the one lawful
+  `StoreMigrationRecoveryPlan` from the recovery table: admit version 1,
+  discard one incomplete pre-effect stage and resume, resume at the earliest
+  forward phase the residue cannot prove complete, or complete. Every other
+  residue is a typed `StoreMigrationRecoveryAmbiguity`. The persisted intent
+  is compared on every coordinate but the mount identity. The residue
+  observer, the resuming filesystem storage, and `KEEP-CRASH-053..073`
+  remain open in #108; `KEEP-MIGRATION-004` moves to In progress.
 - Explicit-depth verification. `VerificationDepth` is one ordered
   enumeration from `Framing` to `RetentionClosure`; `ReferenceStore::verify`
   and `verify_admitted_layout` establish exactly the requested depth and
