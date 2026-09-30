@@ -25,6 +25,7 @@ mod reconstruction_error_display;
 mod reconstruction_receipt;
 mod staged_blob;
 mod store;
+mod verification;
 
 pub use crate::profile::ProfileBoundary;
 pub use capacity::ReferenceStoreCapacity;

@@ -1005,7 +1005,8 @@ clocks, paths, environment, and caller identity out of the core.
 
 ### F-21 Precise verification reports and corruption refusal
 
-**Status:** Planned (#20, P1, M4). The most-cited open blocker: F-22,
+**Status:** Partial (#20, P1, M4); the vocabulary and the reference-store
+form landed on this branch (T-21.1). The most-cited open blocker: F-22,
 F-23, F-24, F-27, F-28, F-29, F-30, F-31, F-33, and F-34 all name it.
 
 Verify content and store structure at explicit, enumerated depths; report
@@ -1013,7 +1014,10 @@ exactly what was established and nothing more; refuse when evidence is
 missing, conflicting, or corrupt. Verification never repairs, substitutes,
 quarantines, or rewrites physical state.
 
-- [ ] T-21.1 Verification policy and report types.
+- [x] T-21.1 Verification policy and report types — `src/verification/`,
+  `ReferenceStore::verify`, `docs/invariants/verification/`,
+  `tests/verification_report.rs`; durable depths stay with T-21.3 and #20.
+  Original task fields:
   - **Requirements:** policy is an enum of depths, never a set of boolean
     flags: framing, checksum, chunk identity, layout identity, complete
     blob identity, catalog reachability, retention-root closure, and (once

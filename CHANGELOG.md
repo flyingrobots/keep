@@ -10,6 +10,19 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Explicit-depth verification. `VerificationDepth` is one ordered
+  enumeration from `Framing` to `RetentionClosure`; `ReferenceStore::verify`
+  and `verify_admitted_layout` establish exactly the requested depth and
+  return a `VerificationReport` with private fields and no way to deepen it,
+  or a `VerificationRefusal` that keeps `Missing`, `Corrupt`, `Ambiguous`,
+  and `Unsupported` distinct with exact expected and observed coordinates,
+  or an operational `VerificationFailure` that supports no content
+  conclusion. The reference view supports `ChunkIdentity` through
+  `CompleteBlobIdentity` in one chunk pass and refuses every other depth
+  instead of degrading; a lower-stage refusal is always reported first.
+  `docs/invariants/verification/` states the contract, the rationale, and
+  the `KEEP-VERIFY` ledger; durable depths and a replayable receipt remain
+  planned in #20.
 - Canonical codecs for the version-2 `GcRetirementIntent` and
   `GcRetirementReceipt` records. `GcRetirementIntent` admits a canonical,
   duplicate-free, digest-ordered candidate set of at most 65,536 segments

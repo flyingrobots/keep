@@ -54,6 +54,7 @@ mod layout;
 mod profile;
 mod reference;
 mod retention;
+mod verification;
 
 #[cfg(feature = "repository-tasks")]
 #[doc(hidden)]
@@ -188,4 +189,8 @@ pub use retention::{
     RetentionNamespaceDigest, RetentionNamespaceError, RetentionPolicy,
     RetentionProfileAdmissionError, RetentionRoot, RetentionRootDigest, RetentionRootError,
     RootGeneration, RootGenerationError,
+};
+pub use verification::{
+    CorruptionEvidence, MissingEvidence, VerificationDepth, VerificationError, VerificationFailure,
+    VerificationRefusal, VerificationReport, VerificationSubject,
 };
