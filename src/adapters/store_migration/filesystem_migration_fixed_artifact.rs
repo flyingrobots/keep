@@ -72,6 +72,7 @@ impl FilesystemMigrationFixedStage {
     /// Creates the stage exclusively and writes only `expected[..end]`,
     /// leaving an unsynchronized incomplete pre-effect stage behind. The
     /// handle is dropped: repository crash tasks kill the process next.
+    #[cfg(feature = "repository-tasks")]
     pub(super) fn create_prefix(
         root: &Dir,
         artifact: FilesystemMigrationFixedArtifact,

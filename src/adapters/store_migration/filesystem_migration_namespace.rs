@@ -115,6 +115,7 @@ pub(super) fn admit_namespace_prefix(root: &Dir) -> io::Result<()> {
 /// Admits only the first `count` prefix directories, in protocol order, and
 /// stops without the final verification. Repository crash tasks use this to
 /// leave a store at an exact directory-prefix length.
+#[cfg(feature = "repository-tasks")]
 pub(super) fn admit_namespace_prefix_partially(root: &Dir, count: usize) -> io::Result<()> {
     if count > PREFIX_DIRECTORY_COUNT {
         return Err(ambiguous("namespace prefix count exceeds the protocol"));
