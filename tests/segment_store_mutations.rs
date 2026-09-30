@@ -2,23 +2,28 @@
 //! each frozen mutation reaches exactly its named first refusal at its named
 //! verification stage, through the public decoders.
 
+#![expect(
+    missing_docs,
+    reason = "the ledger, fixture, recipe, and classification helpers are reached only from this test crate"
+)]
+
 pub mod support;
 
 #[path = "segment_store_mutations/classify.rs"]
-mod classify;
+pub mod classify;
 #[path = "segment_store_mutations/fixtures.rs"]
-mod fixtures;
+pub mod fixtures;
 #[path = "segment_store_mutations/ledger.rs"]
-mod ledger;
+pub mod ledger;
 #[path = "segment_store_mutations/recipes.rs"]
-mod recipes;
+pub mod recipes;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 
 use keep::VerificationDepth;
 
-use classify::classify;
+use classify::{Refusal, classify};
 use ledger::{Format, MutationCase, mutation_cases};
 
 const STAGES: [&str; 4] = ["framing", "checksum", "identity", "binding"];
@@ -43,6 +48,14 @@ const V2_RECORDS: [&str; 9] = [
     "gc-receipt",
     "disposition",
 ];
+
+/// Whether the observed refusal is the ledger's expected outcome at the
+/// expected stage.
+fn agrees(refusal: &Refusal, case: &MutationCase) -> bool {
+    let outcome_agrees = refusal.outcome == case.expected_outcome;
+    let stage_agrees = refusal.stage == case.stage;
+    outcome_agrees && stage_agrees
+}
 
 fn mutated(case: &MutationCase) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut bytes = case.mutated_bytes()?;
@@ -74,8 +87,7 @@ fn every_frozen_mutation_reaches_its_exact_first_refusal() -> Result<(), Box<dyn
         );
         let bytes = mutated(&case)?;
         match classify(case.format, case.record, &bytes) {
-            Ok(refusal)
-                if refusal.outcome == case.expected_outcome && refusal.stage == case.stage => {}
+            Ok(refusal) if agrees(&refusal, &case) => {}
             Ok(refusal) => differences.push(format!(
                 "{}: expected {} ({}), observed {} ({})",
                 case.case, case.expected_outcome, case.stage, refusal.outcome, refusal.stage

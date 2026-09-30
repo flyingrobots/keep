@@ -4,20 +4,20 @@
 use keep::{VerificationReceiptDecodeError as DecodeError, VerificationReceiptField as Field};
 
 /// One structural mutation and the exact first refusal it must reach.
-pub(crate) struct Mutation {
-    pub(crate) field: &'static str,
-    pub(crate) fixture: &'static str,
-    pub(crate) offset: usize,
-    pub(crate) value: &'static [u8],
-    pub(crate) reseal: bool,
-    pub(crate) refuses: fn(&DecodeError) -> bool,
+pub struct Mutation {
+    pub field: &'static str,
+    pub fixture: &'static str,
+    pub offset: usize,
+    pub value: &'static [u8],
+    pub reseal: bool,
+    pub refuses: fn(&DecodeError) -> bool,
 }
 
-pub(crate) const REPORT: &str = "reference-complete-blob-report.hex";
-pub(crate) const CORRUPT: &str = "durable-corrupt-chunk-refusal.hex";
-pub(crate) const UNSUPPORTED: &str = "reference-unsupported-framing-refusal.hex";
+pub const REPORT: &str = "reference-complete-blob-report.hex";
+pub const CORRUPT: &str = "durable-corrupt-chunk-refusal.hex";
+pub const UNSUPPORTED: &str = "reference-unsupported-framing-refusal.hex";
 
-pub(crate) const MATRIX: &[Mutation] = &[
+pub const MATRIX: &[Mutation] = &[
     Mutation {
         field: "magic",
         fixture: REPORT,

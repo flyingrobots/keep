@@ -36,7 +36,12 @@ fn u64_at(bytes: &[u8], offset: usize) -> Result<u64, io::Error> {
 
 /// Recomputes the seal checksum and the segment digest of one complete
 /// segment whose seal is its last 128 bytes.
-pub(crate) fn reseal_segment(bytes: &mut [u8]) -> Result<(), io::Error> {
+///
+/// # Errors
+///
+/// Returns a corpus error when an offset or length the ledger names falls
+/// outside the fixture.
+pub fn reseal_segment(bytes: &mut [u8]) -> Result<(), io::Error> {
     let seal_offset = bytes
         .len()
         .checked_sub(128)
@@ -54,7 +59,12 @@ pub(crate) fn reseal_segment(bytes: &mut [u8]) -> Result<(), io::Error> {
 
 /// Recomputes the first record's checksum (the record at byte 64) and then
 /// reseals the segment.
-pub(crate) fn rechecksum_first_record(bytes: &mut [u8]) -> Result<(), io::Error> {
+///
+/// # Errors
+///
+/// Returns a corpus error when an offset or length the ledger names falls
+/// outside the fixture.
+pub fn rechecksum_first_record(bytes: &mut [u8]) -> Result<(), io::Error> {
     let record_length = usize::try_from(u64_at(bytes, 96)?)
         .map_err(|_source| invalid_corpus("record length exceeds host width"))?;
     let end = 64_usize
@@ -69,7 +79,12 @@ pub(crate) fn rechecksum_first_record(bytes: &mut [u8]) -> Result<(), io::Error>
 }
 
 /// Recomputes a catalog's checksum and digest trailer.
-pub(crate) fn reseal_catalog(bytes: &mut [u8]) -> Result<(), io::Error> {
+///
+/// # Errors
+///
+/// Returns a corpus error when an offset or length the ledger names falls
+/// outside the fixture.
+pub fn reseal_catalog(bytes: &mut [u8]) -> Result<(), io::Error> {
     let digest_offset = bytes
         .len()
         .checked_sub(32)
@@ -84,14 +99,24 @@ pub(crate) fn reseal_catalog(bytes: &mut [u8]) -> Result<(), io::Error> {
 }
 
 /// Recomputes a publication head's checksum.
-pub(crate) fn reseal_publication_head(bytes: &mut [u8]) -> Result<(), io::Error> {
+///
+/// # Errors
+///
+/// Returns a corpus error when an offset or length the ledger names falls
+/// outside the fixture.
+pub fn reseal_publication_head(bytes: &mut [u8]) -> Result<(), io::Error> {
     let checksum = framed_blake3_v1(b"KEEP:CATHEAD:SUM\0", slice(bytes, 0, 96)?)?;
     patch(bytes, 96, &checksum)
 }
 
 /// Recomputes a fixed-width version-2 record's trailing checksum under
 /// `domain` over every byte before it.
-pub(crate) fn reseal_fixed_v2(bytes: &mut [u8], domain: &[u8]) -> Result<(), io::Error> {
+///
+/// # Errors
+///
+/// Returns a corpus error when an offset or length the ledger names falls
+/// outside the fixture.
+pub fn reseal_fixed_v2(bytes: &mut [u8], domain: &[u8]) -> Result<(), io::Error> {
     let checksum_offset = bytes
         .len()
         .checked_sub(32)
@@ -102,7 +127,12 @@ pub(crate) fn reseal_fixed_v2(bytes: &mut [u8], domain: &[u8]) -> Result<(), io:
 
 /// Recomputes a variable-length version-2 record's digest-then-checksum
 /// trailer.
-pub(crate) fn reseal_digested_v2(
+///
+/// # Errors
+///
+/// Returns a corpus error when an offset or length the ledger names falls
+/// outside the fixture.
+pub fn reseal_digested_v2(
     bytes: &mut [u8],
     digest_domain: &[u8],
     checksum_domain: &[u8],
@@ -139,15 +169,16 @@ fn u32_at(bytes: &[u8], offset: usize) -> Result<[u8; 4], io::Error> {
         .map_err(|_source| invalid_corpus("field width mismatch"))
 }
 
-/// Recomputes one `domain || count || body` set digest into `digest_offset`.
+/// Recomputes one `domain || count || body` set digest into the digest
+/// offset; `offsets` is `(count, digest)` and `body` is `(offset, length)`.
 fn reseal_set_digest(
     bytes: &mut [u8],
     domain: &[u8],
-    count_offset: usize,
-    digest_offset: usize,
-    body_offset: usize,
-    body_length: usize,
+    offsets: (usize, usize),
+    body: (usize, usize),
 ) -> Result<(), io::Error> {
+    let (count_offset, digest_offset) = offsets;
+    let (body_offset, body_length) = body;
     let count = u32_at(bytes, count_offset)?;
     let end = body_offset
         .checked_add(body_length)
@@ -176,7 +207,7 @@ fn body_length(bytes: &[u8], body_offset: usize) -> Result<usize, io::Error> {
 /// # Errors
 ///
 /// Returns a corpus error for an unknown record or a malformed span.
-pub(crate) fn recompute(record: &str, bytes: &mut [u8]) -> Result<(), io::Error> {
+pub fn recompute(record: &str, bytes: &mut [u8]) -> Result<(), io::Error> {
     match record {
         "retention-root" => {
             let namespace_length = u16_at(bytes, 40)?;
@@ -187,10 +218,8 @@ pub(crate) fn recompute(record: &str, bytes: &mut [u8]) -> Result<(), io::Error>
             reseal_set_digest(
                 bytes,
                 b"keep.retention-anchor-set/v2\0",
-                44,
-                148,
-                anchors,
-                length,
+                (44, 148),
+                (anchors, length),
             )?;
         }
         "retention-manifest" => {
@@ -198,15 +227,18 @@ pub(crate) fn recompute(record: &str, bytes: &mut [u8]) -> Result<(), io::Error>
             reseal_set_digest(
                 bytes,
                 b"keep.retention-manifest-entries/v2\0",
-                44,
-                80,
-                160,
-                length,
+                (44, 80),
+                (160, length),
             )?;
         }
         "gc-intent" => {
             let length = body_length(bytes, 320)?;
-            reseal_set_digest(bytes, b"keep.gc-candidate-set/v2\0", 44, 288, 320, length)?;
+            reseal_set_digest(
+                bytes,
+                b"keep.gc-candidate-set/v2\0",
+                (44, 288),
+                (320, length),
+            )?;
         }
         _ => {}
     }
@@ -218,7 +250,7 @@ pub(crate) fn recompute(record: &str, bytes: &mut [u8]) -> Result<(), io::Error>
 /// # Errors
 ///
 /// Returns a corpus error for an unknown record or a malformed span.
-pub(crate) fn recompute_trailer(record: &str, bytes: &mut [u8]) -> Result<(), io::Error> {
+pub fn recompute_trailer(record: &str, bytes: &mut [u8]) -> Result<(), io::Error> {
     match record {
         "segment-header" | "segment-seal" | "segment" => reseal_segment(bytes),
         "segment-record" => rechecksum_first_record(bytes),
@@ -253,7 +285,12 @@ pub(crate) fn recompute_trailer(record: &str, bytes: &mut [u8]) -> Result<(), io
 
 /// Recomputes only the outermost checksum, leaving an inner digest as
 /// mutated, so a digest field's own refusal is reachable.
-pub(crate) fn recompute_checksum_only(record: &str, bytes: &mut [u8]) -> Result<(), io::Error> {
+///
+/// # Errors
+///
+/// Returns a corpus error when an offset or length the ledger names falls
+/// outside the fixture.
+pub fn recompute_checksum_only(record: &str, bytes: &mut [u8]) -> Result<(), io::Error> {
     match record {
         "segment-seal" => {
             let seal_offset = bytes

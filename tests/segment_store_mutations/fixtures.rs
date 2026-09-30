@@ -76,7 +76,7 @@ const V2: [(&str, &str); 9] = [
 /// # Errors
 ///
 /// Returns a corpus error when the fixture is not frozen.
-pub(crate) fn fixture(format: Format, name: &str) -> Result<&'static str, io::Error> {
+pub fn fixture(format: Format, name: &str) -> Result<&'static str, io::Error> {
     let table: &[(&str, &str)] = match format {
         Format::V1 => &V1,
         Format::V2 => &V2,

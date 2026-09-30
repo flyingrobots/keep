@@ -3,12 +3,17 @@
 //! refusal projects and round-trips, every structural field has one exact
 //! first refusal, and a refusal never decodes as a report.
 
+#![expect(
+    missing_docs,
+    reason = "the oracle and matrix helpers are reached only from this test crate"
+)]
+
 pub mod support;
 
 #[path = "verification_receipt/matrix.rs"]
-mod matrix;
+pub mod matrix;
 #[path = "verification_receipt/oracle.rs"]
-mod oracle;
+pub mod oracle;
 
 use std::error::Error;
 use std::io::Cursor;

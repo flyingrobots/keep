@@ -9,25 +9,25 @@ const V2_MUTATIONS: &str = include_str!("../../conformance/segment-store/v2/muta
 
 /// The format a ledger row belongs to.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub(crate) enum Format {
+pub enum Format {
     V1,
     V2,
 }
 
 /// One parsed immutable mutation-ledger row.
-pub(crate) struct MutationCase {
-    pub(crate) format: Format,
-    pub(crate) case: &'static str,
-    pub(crate) record: &'static str,
-    pub(crate) base_fixture: &'static str,
-    pub(crate) operation: &'static str,
-    pub(crate) offset: usize,
-    pub(crate) span_length: usize,
-    pub(crate) parameter: &'static str,
-    pub(crate) checksum_posture: &'static str,
-    pub(crate) expected_outcome: &'static str,
-    pub(crate) stage: &'static str,
-    pub(crate) requirement: &'static str,
+pub struct MutationCase {
+    pub format: Format,
+    pub case: &'static str,
+    pub record: &'static str,
+    pub base_fixture: &'static str,
+    pub operation: &'static str,
+    pub offset: usize,
+    pub span_length: usize,
+    pub parameter: &'static str,
+    pub checksum_posture: &'static str,
+    pub expected_outcome: &'static str,
+    pub stage: &'static str,
+    pub requirement: &'static str,
 }
 
 /// Parses every row of both ledgers.
@@ -35,7 +35,7 @@ pub(crate) struct MutationCase {
 /// # Errors
 ///
 /// Returns a corpus error when a header, field, or integer is malformed.
-pub(crate) fn mutation_cases() -> Result<Vec<MutationCase>, io::Error> {
+pub fn mutation_cases() -> Result<Vec<MutationCase>, io::Error> {
     let mut cases = Vec::new();
     for (format, ledger, header) in [
         (Format::V1, V1_MUTATIONS, "keep.segment-store-mutations/v1"),
@@ -87,7 +87,7 @@ impl MutationCase {
     /// # Errors
     ///
     /// Returns a corpus error when the fixture is unknown or malformed.
-    pub(crate) fn base_bytes(&self) -> Result<Vec<u8>, io::Error> {
+    pub fn base_bytes(&self) -> Result<Vec<u8>, io::Error> {
         let hex = super::fixtures::fixture(self.format, self.base_fixture)?;
         decode_hex(hex.strip_suffix('\n').unwrap_or(hex))
     }
@@ -99,7 +99,7 @@ impl MutationCase {
     ///
     /// Returns a corpus error for an unknown operation, an out-of-bounds
     /// span, or a parameter of the wrong width.
-    pub(crate) fn mutated_bytes(&self) -> Result<Vec<u8>, io::Error> {
+    pub fn mutated_bytes(&self) -> Result<Vec<u8>, io::Error> {
         let mut bytes = self.base_bytes()?;
         match self.operation {
             "replace-v1" => {

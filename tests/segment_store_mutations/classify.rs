@@ -19,9 +19,9 @@ use crate::support::{decode_hex, invalid_corpus};
 
 /// One classified refusal.
 #[derive(Debug, Eq, PartialEq)]
-pub(crate) struct Refusal {
-    pub(crate) outcome: String,
-    pub(crate) stage: &'static str,
+pub struct Refusal {
+    pub outcome: String,
+    pub stage: &'static str,
 }
 
 const fn policy() -> SegmentReadPolicy {
@@ -95,39 +95,52 @@ fn stage_of(record: &str, variant_name: &str) -> &'static str {
         return "identity";
     }
     let binding = matches!(record, "catalog-binding" | "head-binding")
-        || matches!(
-            (record, variant_name),
-            ("format-marker", "definition-digest-mismatch")
-                | (
-                    "migration-intent",
-                    "definition-digest-mismatch" | "store-identifier-mismatch"
-                )
-                | (
-                    "migration-receipt",
-                    "intent-digest-mismatch" | "store-identifier-mismatch"
-                )
-                | ("migration-receipt", "format-marker-digest-mismatch")
-                | ("retention-root", "profile")
-                | ("gc-intent", "profile")
-                | ("gc-receipt", _)
-                | ("disposition", "empty-retention-digest-mismatch")
-        ) && !matches!(
-            variant_name,
-            "wrong-length"
-                | "invalid-magic"
-                | "unsupported-version"
-                | "invalid-record-length"
-                | "unsupported-flags"
-                | "non-zero-reserved"
-                | "zero-generation"
-        );
+        || (binding_variant(record, variant_name) && !framing_variant(variant_name));
     if binding { "binding" } else { "framing" }
 }
 
+/// Whether `variant_name` of `record` binds one record to another, one
+/// arm per record so no or-pattern needs nesting.
+fn binding_variant(record: &str, variant_name: &str) -> bool {
+    match record {
+        "format-marker" => variant_name == "definition-digest-mismatch",
+        "migration-intent" => matches!(
+            variant_name,
+            "definition-digest-mismatch" | "store-identifier-mismatch"
+        ),
+        "migration-receipt" => matches!(
+            variant_name,
+            "intent-digest-mismatch"
+                | "store-identifier-mismatch"
+                | "format-marker-digest-mismatch"
+        ),
+        "retention-root" | "gc-intent" => variant_name == "profile",
+        "gc-receipt" => true,
+        "disposition" => variant_name == "empty-retention-digest-mismatch",
+        _ => false,
+    }
+}
+
+/// Whether `variant_name` is a framing mutation, which stays framing even
+/// on a binding record.
+fn framing_variant(variant_name: &str) -> bool {
+    matches!(
+        variant_name,
+        "wrong-length"
+            | "invalid-magic"
+            | "unsupported-version"
+            | "invalid-record-length"
+            | "unsupported-flags"
+            | "non-zero-reserved"
+            | "zero-generation"
+    )
+}
+
 fn admitted(case: &str) -> io::Error {
-    invalid_corpus(match case.is_empty() {
-        true => "mutation was admitted",
-        false => "mutation was unexpectedly admitted",
+    invalid_corpus(if case.is_empty() {
+        "mutation was admitted"
+    } else {
+        "mutation was unexpectedly admitted"
     })
 }
 
@@ -137,7 +150,7 @@ fn admitted(case: &str) -> io::Error {
 ///
 /// Returns a corpus error when the record is unknown, a context fixture is
 /// malformed, or the mutation was admitted.
-pub(crate) fn classify(format: Format, record: &str, bytes: &[u8]) -> Result<Refusal, io::Error> {
+pub fn classify(format: Format, record: &str, bytes: &[u8]) -> Result<Refusal, io::Error> {
     match (format, record) {
         (Format::V1, "segment-header" | "segment-record" | "segment-seal" | "segment") => {
             let error = AdmittedSegment::decode(bytes, policy())

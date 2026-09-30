@@ -12,14 +12,14 @@ const V2_ARTIFACTS: &str = include_str!("../../conformance/segment-store/v2/arti
 const CHECKSUM_DOMAIN: &[u8] = b"keep.verification-receipt-checksum/v1\0";
 
 /// The canonical one-zero `BlobId` binary from the accepted layout corpus.
-pub(crate) const BLOB_ID: [u8; 59] = [
+pub const BLOB_ID: [u8; 59] = [
     0x4b, 0x45, 0x45, 0x50, 0x3a, 0x42, 0x4c, 0x4f, 0x42, 0x3a, 0x49, 0x44, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x1c, 0xfb, 0x8f, 0xa9, 0xe9,
     0x17, 0xab, 0xa1, 0x5a, 0x1f, 0x59, 0x20, 0x95, 0xf3, 0x77, 0xff, 0x18, 0x07, 0x55, 0xfe, 0x12,
     0x12, 0xb0, 0xd7, 0xd2, 0xec, 0x75, 0x0b, 0xd1, 0x28, 0xb6, 0x06,
 ];
 /// The canonical one-zero `LayoutId` binary from the accepted layout corpus.
-pub(crate) const LAYOUT_ID: [u8; 60] = [
+pub const LAYOUT_ID: [u8; 60] = [
     0x4b, 0x45, 0x45, 0x50, 0x3a, 0x4c, 0x41, 0x59, 0x4f, 0x55, 0x54, 0x3a, 0x49, 0x44, 0x00, 0x00,
     0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xdc, 0x88, 0x7d, 0xa2, 0x3f,
     0x1a, 0x74, 0x83, 0x35, 0x9a, 0x78, 0xfc, 0x9a, 0x7f, 0xde, 0x80, 0x03, 0x0e, 0xc2, 0xc4, 0x69,
@@ -27,10 +27,10 @@ pub(crate) const LAYOUT_ID: [u8; 60] = [
 ];
 
 /// One golden receipt with its fixture name.
-pub(crate) struct GoldenReceipt {
-    pub(crate) case: &'static str,
-    pub(crate) fixture: &'static str,
-    pub(crate) bytes: Vec<u8>,
+pub struct GoldenReceipt {
+    pub case: &'static str,
+    pub fixture: &'static str,
+    pub bytes: Vec<u8>,
 }
 
 /// The scalar fields of one receipt in wire order, before its slots.
@@ -49,14 +49,19 @@ struct Scalars {
 
 /// The durable coordinates the frozen version-2 store publishes: catalog
 /// generation two and the generation-one manifest.
-pub(crate) struct DurableCoordinates {
-    pub(crate) catalog_generation: u64,
-    pub(crate) catalog_digest: [u8; 32],
-    pub(crate) liveness_generation: u64,
-    pub(crate) manifest_digest: [u8; 32],
+pub struct DurableCoordinates {
+    pub catalog_generation: u64,
+    pub catalog_digest: [u8; 32],
+    pub liveness_generation: u64,
+    pub manifest_digest: [u8; 32],
 }
 
-pub(crate) fn durable_coordinates() -> Result<DurableCoordinates, io::Error> {
+/// The durable view coordinates the golden durable receipt names.
+///
+/// # Errors
+///
+/// Returns a corpus error when a fixture does not decode.
+pub fn durable_coordinates() -> Result<DurableCoordinates, io::Error> {
     let catalog = decode_hex(V1_CATALOG_GENERATION_TWO.trim_end())?;
     let catalog_digest: [u8; 32] = catalog
         .get(320..352)
@@ -81,15 +86,16 @@ pub(crate) fn durable_coordinates() -> Result<DurableCoordinates, io::Error> {
     })
 }
 
+/// `identities` is `[subject, layout, target]`; `counts` is
+/// `(evidence_index, chunks_verified)`.
 fn assemble(
     scalars: &Scalars,
-    subject: &[u8],
-    layout: &[u8],
-    target: &[u8],
+    identities: [&[u8]; 3],
     view: Option<&DurableCoordinates>,
-    evidence_index: u64,
-    chunks_verified: u64,
+    counts: (u64, u64),
 ) -> Result<Vec<u8>, io::Error> {
+    let [subject, layout, target] = identities;
+    let (evidence_index, chunks_verified) = counts;
     let mut bytes = Vec::with_capacity(384);
     bytes.extend_from_slice(b"KEEP:VERIFY:RCPT");
     bytes.extend_from_slice(&1_u16.to_be_bytes());
@@ -140,7 +146,11 @@ fn assemble(
 }
 
 /// Every golden receipt, in `artifacts.tsv` order.
-pub(crate) fn golden_receipts() -> Result<Vec<GoldenReceipt>, io::Error> {
+///
+/// # Errors
+///
+/// Returns a corpus error when a fixture or coordinate does not decode.
+pub fn golden_receipts() -> Result<Vec<GoldenReceipt>, io::Error> {
     let durable = durable_coordinates()?;
     Ok(vec![
         GoldenReceipt {
@@ -159,12 +169,9 @@ pub(crate) fn golden_receipts() -> Result<Vec<GoldenReceipt>, io::Error> {
                     supported_maximum: 0,
                     target_present: 1,
                 },
-                &BLOB_ID,
-                &LAYOUT_ID,
-                &BLOB_ID,
+                [&BLOB_ID, &LAYOUT_ID, &BLOB_ID],
                 None,
-                0,
-                1,
+                (0, 1),
             )?,
         },
         GoldenReceipt {
@@ -183,12 +190,9 @@ pub(crate) fn golden_receipts() -> Result<Vec<GoldenReceipt>, io::Error> {
                     supported_maximum: 0,
                     target_present: 0,
                 },
-                &LAYOUT_ID,
-                &LAYOUT_ID,
-                &[],
+                [&LAYOUT_ID, &LAYOUT_ID, &[]],
                 Some(&durable),
-                0,
-                0,
+                (0, 0),
             )?,
         },
         GoldenReceipt {
@@ -207,12 +211,9 @@ pub(crate) fn golden_receipts() -> Result<Vec<GoldenReceipt>, io::Error> {
                     supported_maximum: 5,
                     target_present: 0,
                 },
-                &BLOB_ID,
-                &[],
-                &[],
+                [&BLOB_ID, &[], &[]],
                 None,
-                0,
-                0,
+                (0, 0),
             )?,
         },
     ])
