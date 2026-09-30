@@ -156,6 +156,7 @@ mod loaded_segment;
 mod lower_hex;
 mod opened_reusable_segment;
 mod physical_pool_name;
+mod pipeline;
 mod publication_head_decode_error;
 mod publication_head_decode_error_display;
 mod publication_head_decoder;

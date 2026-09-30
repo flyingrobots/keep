@@ -33,8 +33,16 @@ pub struct DurableSnapshot {
 }
 
 /// The pinned catalog as a chunk source: every chunk record's exact payload.
-struct CatalogChunks<'snapshot, 'head, 'catalog, 'records> {
+pub(super) struct CatalogChunks<'snapshot, 'head, 'catalog, 'records> {
     catalog: &'snapshot CatalogSnapshot<'head, 'catalog, 'records>,
+}
+
+impl<'snapshot, 'head, 'catalog, 'records> CatalogChunks<'snapshot, 'head, 'catalog, 'records> {
+    pub(super) const fn new(
+        catalog: &'snapshot CatalogSnapshot<'head, 'catalog, 'records>,
+    ) -> Self {
+        Self { catalog }
+    }
 }
 
 impl ChunkSource for CatalogChunks<'_, '_, '_, '_> {
@@ -184,14 +192,14 @@ impl DurableSnapshot {
             .ok_or(DurableReadError::BlobMissing { requested: target })
     }
 
-    fn catalog(&self) -> Result<CatalogSnapshot<'_, '_, '_>, DurableReadError> {
+    pub(super) fn catalog(&self) -> Result<CatalogSnapshot<'_, '_, '_>, DurableReadError> {
         self.view
             .catalog()
             .snapshot()
             .map_err(|source| DurableReadError::View(Box::new(source)))
     }
 
-    fn layout(
+    pub(super) fn layout(
         &self,
         catalog: &CatalogSnapshot<'_, '_, '_>,
         layout_id: LayoutId,

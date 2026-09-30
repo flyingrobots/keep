@@ -99,10 +99,10 @@ names; use those in code, tests, and commits.
 - [x] [F-18 Retention publication](#f-18-retention-publication) — Done on this branch (recovery, the `KEEP-CRASH-036`–`052` matrix, member re-verification, and orphan disposition)
 - [x] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — Done on this branch (merged from PR #99)
 - [x] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — Done on this branch (merged from PR #99)
-- [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Partial (#20; report vocabulary, corruption ledgers, and durable receipts done on this branch; durable-view depths land with T-23.1)
+- [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Partial (#20; report vocabulary, corruption ledgers, and durable receipts done on this branch; durable verification views at `KEEP-VERIFY-006` depths still owed)
 - [x] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Done on this branch (#21; codecs, planner, disposition, retirement, and compaction; crash sequences for disposition and compaction, stress, benchmarks, and re-encoding still owed)
 - [x] [F-23 Durable authenticated reads and refusal receipts](#f-23-durable-authenticated-reads-and-refusal-receipts) — Done on this branch (#109; `DurableStore` reads and verification receipts)
-- [ ] [F-24 Bounded production ingestion through the durable store](#f-24-bounded-production-ingestion-through-the-durable-store) — Partial (#82, #72): T-24.1 and T-24.2 landed; T-24.3 open
+- [x] [F-24 Bounded production ingestion through the durable store](#f-24-bounded-production-ingestion-through-the-durable-store) — Done (#82, #72) with owed items named under T-24.2 and T-24.3
 
 ### Integration (M5)
 
@@ -1032,9 +1032,10 @@ clocks, paths, environment, and caller identity out of the core.
 
 **Status:** Partial (#20, P1, M4); the vocabulary and the reference-store
 form (T-21.1), the permanent corruption ledgers (T-21.2), and durable
-receipts (T-21.3) landed on this branch; durable views establishing
-`Framing` through `RetentionClosure` (`KEEP-VERIFY-006`) land with the
-durable read surface (T-23.1). The most-cited open blocker: F-22,
+receipts (T-21.3) landed on this branch; the durable read surface
+(T-23.1) landed without the durable verification views establishing
+`Framing` through `RetentionClosure` (`KEEP-VERIFY-006`), which remain
+owed here. The most-cited open blocker: F-22,
 F-23, F-24, F-27, F-28, F-29, F-30, F-31, F-33, and F-34 all name it.
 
 Verify content and store structure at explicit, enumerated depths; report
@@ -1461,10 +1462,10 @@ and no hidden whole-blob allocation.
 
 ### F-24 Bounded production ingestion through the durable store
 
-**Status:** Partial (#82, P1, M6). T-24.1 (the content-store port) and
-T-24.2 (`DurableWriter`) landed on this branch; T-24.3 (the streaming
-write-through pipeline, #72) is open, as are the owed items listed under
-T-24.2.
+**Status:** Done on this branch (#82, #72; P1). T-24.1 (the content-store
+port), T-24.2 (`DurableWriter`), and T-24.3 (the transfer pipeline)
+landed; the owed items are named under T-24.2 and T-24.3 and on their
+pages.
 
 One bounded production path from an unknown-length source through the
 registered CDC profile, chunk verification and deduplication, immutable
@@ -1562,7 +1563,24 @@ error precision.
     with the memory bound; CHANGELOG.
   - **Dependencies:** T-24.1, T-06.3, T-06.4, F-18, F-21 (representation
     verification depth), F-23.
-- [ ] T-24.3 Bounded streaming write-through pipeline (#72, P3).
+- [x] T-24.3 Bounded streaming write-through pipeline (#72, P3). Done
+  2026-09-30: `transfer_{layout,blob,range,layout_range}` over any
+  `ContentReads` view into a `TransferSink` under `TransferBounds`
+  (window and cancellation), `WriteSink` as the exactly-once sink,
+  `copy_layout` from a `TransferSource` (`ReferenceStore`,
+  `DurableSnapshot`) into any `ContentStaging` destination through a
+  verifying pull reader. Laws in `src/adapters/pipeline/tests.rs`,
+  `src/adapters/durable/transfer_tests.rs`, and
+  `tests/transfer_pipeline_memory.rs` (no allocation beyond the sink;
+  less allocation than a caller-owned copy loop); benchmark
+  `benches/transfer_pipeline.rs`; page
+  `docs/architecture/content-store/pipeline.md`. Still owed: a CPU
+  advantage over the caller-owned copy loop (the benchmark's medians are
+  within noise, so only "no worse" and "less allocation" are claimed),
+  the profile mismatch edge (one profile is registered), the Worldline
+  copy (with the durable Worldline run), and multi-threaded pipelines
+  (bounded-memory proof first).
+  Original task fields:
   - **Requirements:** a source adapter emitting verified range segments, a
     sink adapter applying an exactly-once write protocol, and a transfer
     adapter coordinating a bounded chunk window with receipts and

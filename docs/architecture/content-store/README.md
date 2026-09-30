@@ -48,6 +48,14 @@ death loses everything in it, and no port method claims otherwise. The
 with deduplication against the pinned catalog and publication through the
 catalog protocol; its receipt is `DurableIngestionReceipt`.
 
+## Moving bytes out and between
+
+The [transfer pipeline](pipeline.md) moves authenticated bytes from any
+`ContentReads` view into a `TransferSink` as verified segments under a
+window and a cancellation signal, and `copy_layout` moves a blob between
+any `TransferSource` and any `ContentStaging` destination without
+buffering it.
+
 ## The receipt law
 
 A non-durable receipt can never stand where a durable one is required. The

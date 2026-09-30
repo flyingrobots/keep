@@ -10,6 +10,25 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Bounded streaming write-through pipeline. `transfer_layout`,
+  `transfer_blob`, `transfer_range`, and `transfer_layout_range` move
+  authenticated bytes from any `ContentReads` view into a `TransferSink`
+  as `TransferSegment`s (the read core's own borrowed chunk slices,
+  applied exactly once in order) under `TransferBounds`: a
+  `TransferWindow` between acknowledgements and a `CancellationSignal`
+  (`NeverCancelled`, `AtomicBool`, or a shareable `CancellationFlag`)
+  consulted before every segment; cancellation returns
+  `TransferError::Cancelled { segments, bytes }`, never a receipt.
+  `WriteSink` is the exactly-once sink over any writer. `copy_layout`
+  copies one committed layout from a `TransferSource` (`ReferenceStore`,
+  `DurableSnapshot`) into any `ContentStaging` destination through a pull
+  reader that authenticates each chunk as it is served, with the
+  destination's `stage_expected` verifying the complete identity; the
+  blob is never held whole. `tests/transfer_pipeline_memory.rs` shows
+  read-to-write allocates nothing beyond the sink and copy-to-write
+  allocates less than a caller-owned copy loop;
+  `benches/transfer_pipeline.rs` times both against that loop. Page:
+  `docs/architecture/content-store/pipeline.md`.
 - Durable staged ingestion with deduplication. `DurableWriter::open`
   takes writer authority over a version-two root; `stage(source, limits)`
   reads the source once through the reference store's streaming core (now

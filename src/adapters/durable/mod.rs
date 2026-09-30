@@ -28,6 +28,9 @@ mod store;
 mod test_fixture;
 #[cfg(test)]
 mod tests;
+mod transfer_source;
+#[cfg(test)]
+mod transfer_tests;
 mod view;
 mod writer;
 mod writer_sink;

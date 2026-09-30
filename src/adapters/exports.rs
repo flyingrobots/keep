@@ -68,6 +68,7 @@ pub use super::layout_id_binary_error::LayoutIdBinaryParseError;
 pub use super::layout_id_text_error::LayoutIdTextParseError;
 pub use super::layout_record::CanonicalLayoutRecord;
 pub use super::opened_reusable_segment::OpenedReusableSegment;
+pub use super::pipeline::*;
 pub use super::publication_head_decode_error::PublicationHeadDecodeError;
 pub use super::recovery::*;
 #[cfg(feature = "repository-tasks")]

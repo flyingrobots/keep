@@ -190,6 +190,12 @@ pub use adapters::{
     prepare_retention_publication, resume_recovery_disposition, verify_retention_closure,
 };
 pub use adapters::{
+    CancellationFlag, CancellationSignal, CopyError, CopyReceipt, NeverCancelled, StreamConsumer,
+    TransferBounds, TransferError, TransferReceipt, TransferSegment, TransferSink, TransferSource,
+    TransferSourceError, TransferWindow, WriteSink, WriteSinkError, copy_layout, transfer_blob,
+    transfer_layout, transfer_layout_range, transfer_range,
+};
+pub use adapters::{
     CanonicalVerificationReceipt, ReceiptCorruption, ReceiptEvidenceKind, ReceiptMissing,
     ReceiptOutcomeKind, ReceiptRefusal, ReceiptRefusalClass, ReceiptSubjectKind, ReceiptViewKind,
     VERIFICATION_CONTRACT_VERSION, VerificationOutcome, VerificationReceipt,

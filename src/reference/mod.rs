@@ -5,6 +5,7 @@
 //! makes a retention, crash-recovery, or durability claim.
 
 mod capacity;
+mod chunk_reader;
 mod chunk_staging;
 mod chunk_verification;
 mod ingestion;
@@ -26,10 +27,16 @@ mod reconstruction_error_display;
 mod reconstruction_receipt;
 mod staged_blob;
 mod store;
+mod transfer_source;
 mod verification;
 
 pub use crate::profile::ProfileBoundary;
 pub use capacity::ReferenceStoreCapacity;
+#[expect(
+    clippy::redundant_pub_crate,
+    reason = "the pipeline and durable adapters reach the pull reader through this crate-private surface"
+)]
+pub(crate) use chunk_reader::ChunkReader;
 #[expect(
     clippy::redundant_pub_crate,
     reason = "the durable adapter reaches the shared read cores through this crate-private surface"
