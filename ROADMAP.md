@@ -83,7 +83,7 @@ names; use those in code, tests, and commits.
 ### Retention and version 2 (M4)
 
 - [x] [F-15 Retention roots, release, and GC liveness model](#f-15-retention-roots-release-and-gc-liveness-model) — Done (ADR-0009)
-- [x] [F-16 Version-2 format records and codecs](#f-16-version-2-format-records-and-codecs) — Done; mutation coverage in progress
+- [x] [F-16 Version-2 format records and codecs](#f-16-version-2-format-records-and-codecs) — Done
 - [ ] [F-17 One-way migration from version 1 to version 2](#f-17-one-way-migration-from-version-1-to-version-2) — Partial (#97 and residual #19)
 - [ ] [F-18 Retention publication](#f-18-retention-publication) — Partial; recovery in review (PR #99)
 - [ ] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — In review (PR #99)
@@ -603,8 +603,8 @@ raise the 4,096 namespace ceiling or reclaim tombstones.
 
 ### F-16 Version-2 format records and codecs
 
-**Status:** Done (issue #19, PR #78). `KEEP-RETENTION-003` mutation
-coverage is in progress.
+**Status:** Done (issue #19, PR #78; `KEEP-RETENTION-003` completed on
+this roadmap's branch).
 
 `keep.segment-store/v2` adds a 96-byte `FORMAT` marker, 256-byte migration
 intent and receipt, root-generation records (192-byte header, 119-byte
@@ -624,7 +624,10 @@ decoder that refuses every structural fault before admission.
 - [x] T-16.3 Marker, intent, and receipt codecs — `KEEP-MIGRATION-002`;
   `fuzz/fuzz_targets/migration_format.rs`.
 - [x] T-16.4 Seeded `retention_format` fuzz target.
-- [ ] T-16.5 Complete the corruption matrix (`KEEP-RETENTION-003`).
+- [x] T-16.5 Complete the corruption matrix (`KEEP-RETENTION-003`) —
+  `tests/retention_root_decoding/mutation_laws.rs`,
+  `tests/retention_manifest_codec/mutation_laws.rs`,
+  `tests/retention_head_codec/mutation_laws.rs`. Original task fields:
   - **Requirements:** every structural field of root, manifest, and head
     has a permanent mutation case with the exact typed refusal it must
     produce; no field is covered only by the fuzz target.

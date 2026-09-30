@@ -1,5 +1,7 @@
 //! Public semantic and canonical-codec laws for the retention head.
 
+#[path = "retention_head_codec/mutation_laws.rs"]
+mod mutation_laws;
 mod support;
 
 use std::io;
@@ -12,8 +14,9 @@ use keep::{
 
 const ONE_ROOT_MANIFEST: &str =
     include_str!("../conformance/segment-store/v2/one-root-manifest.hex");
-const ONE_ROOT_HEAD: &str = include_str!("../conformance/segment-store/v2/one-root-head.hex");
-const CHECKSUM_OFFSET: usize = 112;
+pub(crate) const ONE_ROOT_HEAD: &str =
+    include_str!("../conformance/segment-store/v2/one-root-head.hex");
+pub(crate) const CHECKSUM_OFFSET: usize = 112;
 
 #[test]
 fn one_root_head_has_one_semantic_and_canonical_representation()
@@ -165,7 +168,7 @@ fn complete_integrity_precedes_head_semantics() -> Result<(), Box<dyn std::error
     Ok(())
 }
 
-fn fixture_bytes(fixture: &str) -> Result<Vec<u8>, io::Error> {
+pub(crate) fn fixture_bytes(fixture: &str) -> Result<Vec<u8>, io::Error> {
     let encoded = fixture
         .strip_suffix('\n')
         .ok_or_else(|| io::Error::other("retention fixture lacks final newline"))?;

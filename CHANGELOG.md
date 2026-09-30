@@ -10,6 +10,16 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Field-by-field corruption matrices for the version-2 retention root,
+  manifest, and head decoders. Every header, body, and trailer field has one
+  sealed mutation whose digests and checksum are recomputed around it, so
+  each case pins the exact first refusal of that field alone; reframed
+  records prove the namespace length bounds, canonical anchor and entry
+  ordering, and the anchor and entry count ceilings after complete
+  integrity. `KEEP-RETENTION-003` is Implemented.
+- `ROADMAP.md` inventories every feature Keep has, is building, or intends,
+  with a checklist and a task breakdown per unfinished feature.
+
 - `FilesystemRetentionPublicationAuthority` executes the 17 ordered retention
   publication phases against a completely migrated version-2 root. It stages
   `root.next`, `manifest.next`, and `head.next` exclusively, verifies device
