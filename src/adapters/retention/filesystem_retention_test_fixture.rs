@@ -18,9 +18,10 @@ use crate::LayoutEntryLimit;
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
 use crate::adapters::test_support::decode_hex;
 use crate::adapters::{
-    AdmittedCatalog, AdmittedSegment, CatalogSnapshot, ChecksummedCatalog,
-    ChecksummedPublicationHead, FilesystemPlatformAdmission, FilesystemStoreMigrationAuthority,
-    FilesystemVersionTwoAdmission, SegmentReadPolicy, SegmentRecordLimit,
+    AdmittedCatalog, AdmittedSegment, CatalogRestartByteLimit, CatalogRestartPolicy,
+    CatalogSnapshot, ChecksummedCatalog, ChecksummedPublicationHead, FilesystemPlatformAdmission,
+    FilesystemStoreMigrationAuthority, FilesystemVersionTwoAdmission, SegmentReadPolicy,
+    SegmentRecordLimit,
 };
 use crate::{
     RetentionGenerationExpectation, RetentionNamespace, RetentionPolicy, RetentionRoot,
@@ -45,7 +46,8 @@ const CATALOG_HEX: &str =
 const CATALOG_HEAD_HEX: &str =
     include_str!("../../../conformance/segment-store/v1/one-zero-bundle-head.hex");
 
-const SEGMENT_NAME: &str = "221f6745cd8a5221c9a87c3707593608479282b54a4a74d0e753fd76f70e8db2.seg";
+pub(super) const SEGMENT_NAME: &str =
+    "221f6745cd8a5221c9a87c3707593608479282b54a4a74d0e753fd76f70e8db2.seg";
 pub(super) const CATALOG_NAME: &str =
     "0000000000000001-0b7cad1b6de663d34beacbc214db7497f2e36ab6b08dfbd5febbc8d06a418811.cat";
 
@@ -58,9 +60,26 @@ pub(super) fn open_authority(
     name: &str,
 ) -> Result<(TestDirectory, FilesystemRetentionPublicationAuthority), Box<dyn Error>> {
     let sandbox = migrated_store(name)?;
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
-    let authority = FilesystemRetentionPublicationAuthority::open(admission)?;
+    let authority = reopen_authority(sandbox.path())?;
     Ok((sandbox, authority))
+}
+
+/// Reopens a migrated store for retention publication under the test
+/// catalog policy.
+pub(super) fn reopen_authority(
+    root: &Path,
+) -> Result<FilesystemRetentionPublicationAuthority, Box<dyn Error>> {
+    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(root)?;
+    FilesystemRetentionPublicationAuthority::open(admission, catalog_policy()?).map_err(Into::into)
+}
+
+/// The catalog policy tests re-verify closure members under: maximum
+/// grammar limits and one mebibyte of retained segment bytes.
+pub(super) fn catalog_policy() -> Result<CatalogRestartPolicy, Box<dyn Error>> {
+    Ok(CatalogRestartPolicy::new(
+        maximum_policy(),
+        CatalogRestartByteLimit::new(1_048_576)?,
+    ))
 }
 
 /// Decodes one LF-terminated lowercase hexadecimal conformance fixture.

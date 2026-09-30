@@ -46,7 +46,37 @@ The inherited version-1 boundaries retain their typed errors:
 fully admitted catalog has no binding for the scheduled logical identity. It
 does not mean bytes were present but corrupt.
 
+## Re-verification under authority
+
+A preparation carries a closure verified against a `CatalogSnapshot` the
+caller supplied, which may have been read by another process, from another
+store, or before a pool entry changed. Filesystem publication therefore does
+not trust it. After binding this store's catalog head and the catalog it
+selects, current-state verification loads that catalog together with every
+segment it names, bounded by the authority's `CatalogRestartPolicy`, admits
+each record through the proof chain above, re-runs `verify_retention_closure`
+against the freshly admitted snapshot, and requires the same closure digest.
+
+Refusal keeps the original error. A member whose record framing, checksum,
+chunk identity, or layout payload refuses surfaces as
+`RetentionCurrentStateRefusal::ClosureMemberRefused` whose `source` is the
+`CatalogRestartError` that carries the `SegmentReadError` and, beneath it, the
+exact `SegmentRecordDecodeError` or `SegmentRecordAdmissionError`; a closure
+that no longer verifies surfaces as `ClosureReverificationRefused` with the
+`RetentionClosureVerificationError`; a closure that verifies to a different
+digest surfaces as `ClosureDigestChanged`. No layer replaces a typed error
+with a string, so a caller can walk `source()` from the publication error to
+the record that failed. Every refusal happens before any retention stage is
+written.
+
 ## Executable evidence
+
+- The [closure-member re-verification
+  laws](../../../src/adapters/retention/filesystem_retention_member_tests.rs)
+  corrupt a chunk payload, corrupt a layout payload, and remove a member
+  segment in a migrated store, then prove publication refuses with the exact
+  admission or restart error reachable through `source()` and leaves the
+  retention namespace untouched.
 
 - The [segment-record framing
   laws](../../../tests/segment_record/framing_laws.rs) cover checksum and

@@ -4,9 +4,9 @@ use std::error::Error;
 use std::fmt;
 use std::io;
 
+use super::{RetentionClosureVerificationError, RetentionRecoveryError, RetentionRecoveryRefusal};
 use super::{RetentionHeadDecodeError, RetentionManifestDecodeError};
-use super::{RetentionRecoveryError, RetentionRecoveryRefusal};
-use crate::adapters::{CatalogDecodeError, PublicationHeadDecodeError};
+use crate::adapters::{CatalogDecodeError, CatalogRestartError, PublicationHeadDecodeError};
 use crate::{CatalogGeneration, LivenessGeneration, RetentionManifestDigest};
 
 /// Exact reason filesystem current-state verification refused a transition.
@@ -71,6 +71,18 @@ pub enum RetentionCurrentStateRefusal {
     /// The catalog pool entry decodes to a generation or digest other than the
     /// one `HEAD` names.
     CatalogChanged,
+    /// A closure member re-read from this store's pools refused admission.
+    ClosureMemberRefused {
+        /// The exact load, decode, or admission refusal.
+        source: Box<CatalogRestartError>,
+    },
+    /// The closure re-verified under this authority refused.
+    ClosureReverificationRefused {
+        /// The exact closure refusal.
+        source: RetentionClosureVerificationError,
+    },
+    /// The closure re-verified under this authority has a different digest.
+    ClosureDigestChanged,
     /// The current liveness generation has no successor.
     LivenessExhausted,
     /// A byte-identical retry found that another successor is current.
@@ -243,6 +255,15 @@ impl RetentionCurrentStateRefusal {
                 "restart recovery refused the retained retention stages"
             }
             Self::RecoveryStepRefused { .. } => "a restart recovery step refused",
+            Self::ClosureMemberRefused { .. } => {
+                "a closure member re-read from this store's pools refused admission"
+            }
+            Self::ClosureReverificationRefused { .. } => {
+                "the closure re-verified under this authority refused"
+            }
+            Self::ClosureDigestChanged => {
+                "the closure re-verified under this authority has a different digest"
+            }
             Self::ProtocolDirectoryReplaced => {
                 "a retention protocol directory was replaced after admission"
             }
@@ -270,6 +291,8 @@ impl Error for RetentionCurrentStateRefusal {
             Self::CatalogRefused { source } => Some(source.as_ref()),
             Self::RecoveryRefused { source } => Some(source),
             Self::RecoveryStepRefused { source } => Some(source),
+            Self::ClosureMemberRefused { source } => Some(source.as_ref()),
+            Self::ClosureReverificationRefused { source } => Some(source),
             _ => None,
         }
     }

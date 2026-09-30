@@ -10,6 +10,16 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Closure-member re-verification under filesystem authority.
+  `FilesystemRetentionPublicationAuthority::open` now takes a
+  `CatalogRestartPolicy`, and current-state verification loads this store's
+  catalog and every segment it names within that bound, admits each record,
+  re-runs `verify_retention_closure`, and requires the preparation's closure
+  digest before any retention stage is written. A corrupt chunk or layout
+  member refuses as `RetentionCurrentStateRefusal::ClosureMemberRefused`
+  whose `source()` chain reaches the exact `SegmentRecordAdmissionError`; a
+  closure that no longer verifies is `ClosureReverificationRefused`; a
+  different digest is `ClosureDigestChanged`.
 - Migration process-death matrix. `cargo xtask durability-crash-matrix`
   now runs `KEEP-CRASH-053` through `-073`: 68 cases that publish the Golden
   File Worldline version-1 store in an isolated child, execute the production

@@ -53,6 +53,11 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
         }
         let observed = filesystem_retention_current::disposition(preparation, current.as_ref())?;
         filesystem_retention_catalog::require_current_catalog(&self.root, preparation)?;
+        filesystem_retention_catalog::reverify_closure_members(
+            &self.root,
+            self.catalog_policy,
+            preparation,
+        )?;
         match observed {
             ObservedDisposition::Publish => {
                 filesystem_retention_namespace::admit_expectation(

@@ -96,7 +96,7 @@ names; use those in code, tests, and commits.
 - [x] [F-15 Retention roots, release, and GC liveness model](#f-15-retention-roots-release-and-gc-liveness-model) — Done (ADR-0009)
 - [x] [F-16 Version-2 format records and codecs](#f-16-version-2-format-records-and-codecs) — Done
 - [ ] [F-17 One-way migration from version 1 to version 2](#f-17-one-way-migration-from-version-1-to-version-2) — Partial (#97, in-process recovery, and the `KEEP-CRASH-053`–`073` matrix done on this branch; `KEEP-MIGRATION-005` and `-008` residue remains)
-- [ ] [F-18 Retention publication](#f-18-retention-publication) — Partial; recovery and the `KEEP-CRASH-036`–`052` matrix merged from PR #99; T-18.3 and orphan disposition (F-22) remain
+- [ ] [F-18 Retention publication](#f-18-retention-publication) — Partial; recovery, the `KEEP-CRASH-036`–`052` matrix, and member re-verification done on this branch; orphan disposition (F-22) remains
 - [x] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — Done on this branch (merged from PR #99)
 - [x] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — Done on this branch (merged from PR #99)
 - [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Planned (#20)
@@ -842,8 +842,8 @@ Direct version-2 initialization is undefined. There is no downgrade.
 
 **Status:** Partial. Forward publication is Done (issue #19, PR #78).
 Recovery and the `KEEP-CRASH-036` to `-052` matrix are Done on this branch
-(merged from PR #99). Explicit disposition of complete orphans waits for
-F-22.
+(merged from PR #99), as is closure-member re-verification under authority
+(T-18.3). Explicit disposition of complete orphans waits for F-22.
 
 A retain or release names a namespace, an expected state (absent or an
 exact `RootGeneration`), a complete anchor set, and the realization
@@ -915,8 +915,12 @@ and every namespace or capacity violation before writing anything.
   - **Complexity:** L (delivered in PR #99).
   - **Documentation:** `recovery.md`, README gap table.
   - **Dependencies:** T-18.1.
-- [ ] T-18.3 Closure-member re-verification under filesystem authority
-  (`closure.md` Status; `KEEP-RETENTION-006` source-chain obligation).
+- [x] T-18.3 Closure-member re-verification under filesystem authority —
+  `reverify_closure_members` in `filesystem_retention_catalog.rs`, the
+  `ClosureMemberRefused`, `ClosureReverificationRefused`, and
+  `ClosureDigestChanged` refusals, and `filesystem_retention_member_tests`
+  downcasting through `source()` to the exact
+  `SegmentRecordAdmissionError`. Original task fields:
   - **Requirements:** when recovery or publication re-reads a
     closure-member segment under authority, the original decode or
     admission error travels as the `source` of the operation-level error;

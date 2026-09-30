@@ -60,7 +60,7 @@ pub(in crate::durability_crash_matrix) fn reopened_authority(
     let admission =
         FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(store_root)
             .map_err(|source| verification("reopen crash store as version two", source))?;
-    FilesystemRetentionPublicationAuthority::open(admission)
+    FilesystemRetentionPublicationAuthority::open(admission, initialization::restart_policy()?)
         .map_err(|source| verification("open crash retention authority", source))
 }
 

@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fs;
 
 use super::filesystem_retention_test_fixture::{
-    ROOT_HEX, fixture, initial_preparation, migrated_store, open_authority, refusal,
+    ROOT_HEX, catalog_policy, fixture, initial_preparation, migrated_store, open_authority, refusal,
 };
 use super::{
     FilesystemRetentionPublicationAuthority, RetentionCurrentStateRefusal,
@@ -219,7 +219,8 @@ fn a_protocol_directory_replaced_after_reopen_is_neither_opened_nor_published_in
     fs::create_dir_all(sandbox.path().join("retention").join("roots"))?;
     fs::create_dir(sandbox.path().join("retention").join("manifests"))?;
 
-    let mut authority = FilesystemRetentionPublicationAuthority::open(admission)?;
+    let mut authority =
+        FilesystemRetentionPublicationAuthority::open(admission, catalog_policy()?)?;
     let observed = authority
         .observe_current()?
         .ok_or("the admitted retention directory lost its published head")?;
