@@ -49,6 +49,7 @@ mod adapters;
 mod blob;
 mod catalog;
 mod chunk;
+mod gc;
 mod layout;
 mod profile;
 mod reference;
@@ -133,6 +134,15 @@ pub use adapters::{
     publish_catalog_generation, read_recovery_inventory,
 };
 pub use adapters::{
+    AdmittedGcRetirementIntent, AdmittedGcRetirementReceipt, CanonicalGcRetirementIntent,
+    CanonicalGcRetirementReceipt, CatalogSuccessorProofDigest, DispositionSetDigest, GcCandidate,
+    GcCandidateSetDigest, GcRetirementIntent, GcRetirementIntentCoordinates,
+    GcRetirementIntentDecodeError, GcRetirementIntentDigest, GcRetirementIntentEncodeError,
+    GcRetirementIntentError, GcRetirementReceipt, GcRetirementReceiptDecodeError, PoolStateDigest,
+    ReaderLockCoordinate, ReaderLockIdentity, SegmentPoolIdentityDigest,
+    VerificationEvidenceDigest,
+};
+pub use adapters::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
     CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
     FilesystemRetentionAuthorityError, FilesystemRetentionPublicationAuthority,
@@ -157,6 +167,7 @@ pub use catalog::{
 pub use chunk::{
     ChunkHashError, ChunkId, ChunkLength, ChunkOffset, ChunkSpan, ChunkingError, FastCdc,
 };
+pub use gc::{GcGeneration, GcGenerationError};
 pub use layout::{
     AdmittedLayout, LayoutEntry, LayoutEntryLimit, LayoutEntryLimitError, LayoutId,
     LayoutIdMismatch, LayoutRecordLength, LayoutValidationError, RangePlan, RangePlanError,

@@ -135,6 +135,7 @@ mod filesystem_version_two_record_refusal;
 mod filesystem_version_two_records;
 mod filesystem_writer_lock;
 mod framed_blake3;
+mod gc;
 mod layout_decode_error;
 mod layout_decode_error_display;
 mod layout_decode_policy;

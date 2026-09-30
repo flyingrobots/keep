@@ -20,6 +20,8 @@ migration, retention transition, or garbage collector exists.
 | `one-anchor-root.hex` | Generation-1 root with one nontext namespace |
 | `one-root-manifest.hex` | Generation-1 one-namespace manifest |
 | `one-root-head.hex` | Generation-1 retention head |
+| `one-candidate-gc-intent.hex` | Generation-1 GC retirement intent naming one candidate |
+| `one-candidate-gc-receipt.hex` | Generation-1 GC retirement receipt completing that intent |
 | `ORIGIN.md` | Construction provenance and verification boundary |
 
 Every text file uses UTF-8 or ASCII, LF line endings, and one final newline.
@@ -27,8 +29,9 @@ Every hex fixture is one lowercase hexadecimal line with one final newline.
 In `artifacts.tsv`, `bound_digest_hex` is the marker content digest for
 `format-marker`, the intent digest for `migration-intent`, the referenced
 intent digest for `migration-receipt`, the canonical record digest for
-`retention-root` and `retention-manifest`, and the referenced manifest digest
-for `retention-head`.
+`retention-root` and `retention-manifest`, the referenced manifest digest
+for `retention-head`, the intent digest for `gc-intent`, and the referenced
+intent digest for `gc-receipt`.
 
 ## Frozen identities
 
@@ -54,6 +57,16 @@ they bind in-place recovery but do not enter the logical store identifier.
 The retention fixture uses namespace bytes `00 2f ff`, proving the namespace is
 opaque and not a path or Unicode string. Its one anchor combines the canonical
 one-zero `BlobId` and `LayoutId` values from the existing layout corpus.
+
+The GC fixtures name the version-1 one-zero segment as their one candidate,
+with that segment's record checksum standing in for its verification-evidence
+digest; the generation-two catalog digest and head checksum stand in for the
+catalog-successor coordinates; the migration inventory digest is the
+segment-pool identity; the empty-segment digest is the post-retirement pool
+state; and the reader-lock coordinates are the fixture-only values `4`, `5`,
+and `6`. These are format evidence for the record grammars, not a consistent
+store: the catalog they name still lists the candidate, which a real planner
+would refuse.
 
 ## Verification
 

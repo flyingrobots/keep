@@ -65,3 +65,24 @@ Changing any fixture requires a deliberate specification change, an updated
 definition or profile digest when affected, fresh independent construction,
 and review of every dependent migration and retention coordinate. A fixture is
 never regenerated to make a production implementation pass.
+
+## GC record addition
+
+The GC retirement intent and receipt fixtures were added on 2026-09-30 with
+`rustc 1.98.1 (48a229cea 2026-09-01)` and `cargo 1.98.1`. They import exact
+bytes only from these previously accepted fixtures, at fixed offsets:
+
+- `conformance/segment-store/v1/one-zero-segment.hex` (segment digest at
+  273, record checksum at 177);
+- `conformance/segment-store/v1/one-zero-catalog-generation-two.hex`
+  (catalog digest at 320);
+- `conformance/segment-store/v1/one-zero-head-generation-two.hex` (head
+  checksum at 96);
+- `conformance/segment-store/v1/empty-segment.hex` (segment digest at 128);
+- the version-2 manifest digest, inventory digest, and profile digest the
+  oracle already constructs.
+
+The definition digest is unchanged: no definition row was added, because
+both grammars were already frozen in `definition.tsv`. The same temporary,
+removed write path materialized the two `.hex` files and the `artifacts.tsv`
+rows; the committed oracle is read-only and rejects drift.

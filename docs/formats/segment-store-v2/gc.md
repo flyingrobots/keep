@@ -8,6 +8,19 @@ Issue #21 owns their implementation. They are specified now so version 2 has
 one exact root grammar, but their presence remains unsupported mandatory state
 until every **Planned in #21** requirement becomes executable evidence.
 
+Implemented: the intent and receipt codecs. `GcRetirementIntent` admits a
+canonical candidate set over its coordinates; `CanonicalGcRetirementIntent`
+and `AdmittedGcRetirementIntent` reproduce and admit the frozen
+`one-candidate-gc-intent.hex`; `CanonicalGcRetirementReceipt` and
+`AdmittedGcRetirementReceipt` bind a receipt to its admitted intent. The
+receipt's synchronization count is exactly one per candidate: the
+pool-directory synchronization that follows each unlink. The
+`RecoveryDispositionReceipt` codec waits for its artifact-kind, decision, and
+classification enumerations to be registered in `definition.tsv`, which
+changes the definition digest and therefore every version-2 fixture; that is
+a specification decision, not an implementation gap. Namespace admission
+still refuses every one of these records on disk.
+
 ## Common rules
 
 All integers are unsigned and big-endian. Flags and reserved bytes are zero.
@@ -188,6 +201,8 @@ replacement, synchronizes `recovery/dispositions`, removes the stage, and
 synchronizes `recovery`. Until that completes, the artifact remains
 recovery-protected.
 
-These grammars, their golden fixtures, parsers, corruption matrices, crash
-points, model, benchmarks, and fuzz targets are **Planned in #21**. Issue #19
-must refuse their physical presence without mutating it.
+The intent and receipt grammars have golden fixtures, parsers, corruption
+matrices, and a seeded fuzz target. The disposition grammar's fixture and
+parser, and every crash point, model, benchmark, execution, and recovery
+law, are **Planned in #21**. Issue #19 must refuse their physical presence
+without mutating it.

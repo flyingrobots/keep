@@ -10,6 +10,23 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Canonical codecs for the version-2 `GcRetirementIntent` and
+  `GcRetirementReceipt` records. `GcRetirementIntent` admits a canonical,
+  duplicate-free, digest-ordered candidate set of at most 65,536 segments
+  over its liveness, catalog, profile, pool, disposition, and reader-lock
+  coordinates; `CanonicalGcRetirementIntent` and `AdmittedGcRetirementIntent`
+  encode and admit it with checksum-first, digest-second, candidate-set
+  third integrity; `CanonicalGcRetirementReceipt` and
+  `AdmittedGcRetirementReceipt` bind a receipt to its admitted intent
+  coordinate by coordinate, with a synchronization count of exactly one per
+  candidate. `GcGeneration` is the checked retirement generation. The
+  independent oracle constructs `one-candidate-gc-intent.hex` and
+  `one-candidate-gc-receipt.hex` from accepted version-1 and version-2
+  fixtures without touching the definition digest; the `gc_format` fuzz
+  target is seeded from them. Namespace admission still refuses every GC
+  record on disk. `KEEP-GC-001` moves to In progress; the
+  `RecoveryDispositionReceipt` codec waits for its enumerations to be
+  registered in `definition.tsv`.
 - Field-by-field corruption matrices for the version-2 retention root,
   manifest, and head decoders. Every header, body, and trailer field has one
   sealed mutation whose digests and checksum are recomputed around it, so

@@ -1116,7 +1116,9 @@ quarantines, or rewrites physical state.
 ### F-22 Garbage collection, compaction, and recovery dispositions
 
 **Status:** Planned (#21, P1, M4). Grammars are frozen and their presence
-refuses (`KEEP-GC-001`, `-002`).
+refuses (`KEEP-GC-001`, `-002`). The intent and receipt codecs landed on
+this branch (T-22.1); the disposition codec waits on an enumeration
+decision (T-22.1a).
 
 Plan GC from an immutable liveness snapshot; classify every segment as
 live, unreachable, corrupt, ambiguous, recovery-protected,
@@ -1130,7 +1132,37 @@ canonical order with a directory sync after every one; publish
 publication stays recovery-protected until an explicit finalize-or-retire
 disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
 
-- [ ] T-22.1 GC record codecs and namespace admission (`KEEP-GC-001`).
+- [x] T-22.1 GC intent and receipt codecs (`KEEP-GC-001`, in progress) —
+  `src/adapters/gc/`, `tests/gc_retirement_intent.rs`,
+  `tests/gc_retirement_receipt.rs`, `fuzz/fuzz_targets/gc_format.rs`,
+  fixtures `one-candidate-gc-intent.hex` and `one-candidate-gc-receipt.hex`.
+  Original task fields:
+- [ ] T-22.1a Register the disposition enumerations and ship its codec.
+  - **Requirements:** `gc.md` says the artifact kind, decision, and
+    classification fields are "registered" enumerations but names no
+    values; freezing them means adding rows to `definition.tsv`, which
+    changes the format-definition digest, the `FORMAT` marker bytes, the
+    migration receipt, and every version-2 fixture. Decide the values
+    (kinds: segment, catalog, root, manifest, head stage; decisions:
+    finalize, retire; classifications: the recovery classes of
+    `recovery.md`), regenerate the corpus through the oracle, and add the
+    codec with the same golden, mutation, and fuzz evidence as the intent.
+  - **Acceptance criteria:** `definition.tsv` rows for each enumeration; a
+    new definition digest recorded in `README.md` and `ORIGIN.md`;
+    `RecoveryDispositionReceipt` codec with a fixture; `KEEP-GC-001`
+    Implemented.
+  - **Scope:** in — the decision, the corpus regeneration, the codec.
+    Out — disposition execution (T-22.5).
+  - **User stories:** as T-22.1.
+  - **Interface:** `CanonicalRecoveryDispositionReceipt`,
+    `AdmittedRecoveryDispositionReceipt`.
+  - **Contract schema:** per `gc.md` with the enumerations filled in.
+  - **Test plan:** golden; mutation per field; unknown enumeration values
+    refuse; fuzz through `gc_format`.
+  - **Definition of done:** ledger row Implemented.
+  - **Complexity:** M (the corpus ripple is the work).
+  - **Documentation:** `gc.md`, corpus README and ORIGIN, CHANGELOG.
+  - **Dependencies:** an owner decision on the enumeration values.
   - **Requirements:** `GcRetirementIntent` (320-byte header, 72-byte
     candidates, at most 65,536, digest, checksum), `GcRetirementReceipt`
     (320 bytes), `RecoveryDispositionReceipt` (320 bytes) encode and decode

@@ -4,8 +4,8 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use super::super::{
-    FuzzSeedError, catalog_seeds, layout_seeds, migration_seeds, prepare, retention_seeds,
-    segment_seeds,
+    FuzzSeedError, catalog_seeds, gc_seeds, layout_seeds, migration_seeds, prepare,
+    retention_seeds, segment_seeds,
 };
 use crate::test_directory::TestDirectory;
 
@@ -47,8 +47,9 @@ fn seed_preparation_materializes_the_complete_deterministic_set()
     prepare(root)?;
     let corpus = root.join("fuzz/corpus");
     let first = seed_contents(&corpus)?;
-    assert_eq!(first.len(), 46);
+    assert_eq!(first.len(), 48);
     assert_eq!(target_seed_count(&first, "catalog_format/"), 6);
+    assert_eq!(target_seed_count(&first, "gc_format/"), 2);
     assert_eq!(target_seed_count(&first, "golden_protocol/"), 9);
     assert_eq!(target_seed_count(&first, "layout_record/"), 4);
     assert_eq!(target_seed_count(&first, "migration_format/"), 3);
@@ -131,7 +132,8 @@ fn copy_version_two_fixtures(source_root: &Path, root: &Path) -> Result<(), Fuzz
     })?;
     let fixtures = retention_seeds::FIXTURES
         .into_iter()
-        .chain(migration_seeds::FIXTURES);
+        .chain(migration_seeds::FIXTURES)
+        .chain(gc_seeds::FIXTURES);
     for (_selector, fixture) in fixtures {
         let source_path = source_root
             .join("conformance/segment-store/v2")

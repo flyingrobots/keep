@@ -45,7 +45,7 @@ case is not evidence.
 
 | ID | Requirement | Evidence | Status |
 | --- | --- | --- | --- |
-| `KEEP-GC-001` | Version 2 specifies exact bounded GC intent, receipt, and recovery-disposition grammars but refuses their presence until their parser and recovery protocol are implemented | namespace admission tests | Planned in #21 |
+| `KEEP-GC-001` | Version 2 specifies exact bounded GC intent, receipt, and recovery-disposition grammars but refuses their presence until their parser and recovery protocol are implemented | intent and receipt golden, canonical re-encoding, cross-record binding, and field-by-field corruption laws in `tests/gc_retirement_intent.rs`, `tests/gc_retirement_intent/mutation_laws.rs`, and `tests/gc_retirement_receipt.rs`; seeded `gc_format` fuzz target; the disposition-receipt codec waits for its registered enumerations to be frozen in `definition.tsv`; presence refusal in namespace admission tests | In progress in #21 |
 | `KEEP-GC-002` | GC intent, receipt, disposition, reader-fence, retirement, compaction, and recovery laws implement ADR-0009 without changing logical identity | golden-format, model-based, corruption, crash-injection, benchmark, and fuzz evidence | Planned in #21 |
 
 <!-- markdownlint-enable MD013 -->

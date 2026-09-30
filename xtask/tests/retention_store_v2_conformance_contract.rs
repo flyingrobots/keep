@@ -23,6 +23,8 @@ const REQUIRED_PATHS: &[&str] = &[
     "one-anchor-root.hex",
     "one-root-manifest.hex",
     "one-root-head.hex",
+    "one-candidate-gc-intent.hex",
+    "one-candidate-gc-receipt.hex",
 ];
 
 fn repository_root() -> Result<PathBuf, io::Error> {

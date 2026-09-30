@@ -3,6 +3,7 @@
 mod catalog_seeds;
 mod cdc_seeds;
 mod filesystem;
+mod gc_seeds;
 mod identity_seeds;
 mod layout_seeds;
 mod migration_seeds;
@@ -70,6 +71,7 @@ pub(super) fn prepare(repository_root: &Path) -> Result<(), FuzzSeedError> {
     let mut seeds = identity_seeds::seeds(&files)?;
     seeds.extend(catalog_seeds::seeds(&files)?);
     seeds.extend(cdc_seeds::seeds()?);
+    seeds.extend(gc_seeds::seeds(&files)?);
     seeds.extend(golden_protocol_seeds_from(&files)?);
     seeds.extend(layout_seeds::seeds(&files)?);
     seeds.extend(migration_seeds::seeds(&files)?);
