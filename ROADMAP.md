@@ -78,7 +78,7 @@ names; use those in code, tests, and commits.
 - [x] [F-11 Immutable segment format and verified I/O](#f-11-immutable-segment-format-and-verified-io) — Done
 - [x] [F-12 Catalog generations and writer-locked publication](#f-12-catalog-generations-and-writer-locked-publication) — Done
 - [x] [F-13 Store initialization, recovery, and the crash matrix](#f-13-store-initialization-recovery-and-the-crash-matrix) — Done
-- [ ] [F-14 Segment store v1 living documentation refresh](#f-14-segment-store-v1-living-documentation-refresh) — Planned (#69)
+- [x] [F-14 Segment store v1 living documentation refresh](#f-14-segment-store-v1-living-documentation-refresh) — Done on this branch (#69)
 
 ### Retention and version 2 (M4)
 
@@ -541,7 +541,9 @@ filesystem that violates the admitted atomicity contract. See F-41 T-41.2.
 
 ### F-14 Segment store v1 living documentation refresh
 
-**Status:** Planned (#69, P2, M4).
+**Status:** Done on this branch (#69, P2, M4); an absence law in
+`xtask/tests/segment_store_implementation_documentation.rs` keeps the stale
+phrases from returning.
 
 `docs/formats/segment-store-v1/README.md` and `publication.md` still say
 initialization, platform admission, and explicit recovery are future work
@@ -549,7 +551,7 @@ owned by #17, and that #16 "does not implement admission/recovery". Both
 issues are complete on `main`. The v1 pages understate shipped guarantees
 and hand version-2 migration a stale source boundary.
 
-- [ ] T-14.1 Reconcile every v1 page with `main`.
+- [x] T-14.1 Reconcile every v1 page with `main`. Original task fields:
   - **Requirements:** every living v1 page describes current behaviour;
     historical scope stays reachable through linked issues, ADRs, and Git
     history; every existing requirement identifier and test name remains

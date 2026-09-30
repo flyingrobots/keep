@@ -252,6 +252,14 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- The living `keep.segment-store/v1` pages describe `main`: initialization,
+  platform admission, explicit recovery, and the crash matrix are stated as
+  implemented in issue #17 instead of owned by it; the publication page names
+  `FilesystemPlatformAdmission::initialize` and `::reopen` as the production
+  admission producers; the recovery page states whole-byte classification as
+  the ledger's design rather than a gap; and the requirements prose routes
+  retention, collection, and power-loss simulation to their current owners.
+  A contract law refuses the stale phrases. Closes #69.
 - Documentation refreshed after the version-two merge: the README, the
   version-two overview status, the closure and recovery status lines, the
   reconstruction contract's retention note, and the requirements ledger state
