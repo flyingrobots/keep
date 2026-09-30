@@ -70,16 +70,22 @@ Keep is required to refuse all three, before mutating anything.
 ## What it does not do yet
 
 Version 2 writes correctly from a clean start and, if it finds the residue of
-an interrupted publication, refuses rather than guesses. Nothing yet recovers
-that residue, and readers have no fence, so **an interrupted version-2
-publication waits for a human until #19 lands.** A version-1 store stays
-admitted until its owner migrates it; migrate only if you accept that wait.
+an interrupted publication or migration, refuses rather than guesses. On
+`main`, nothing yet recovers that residue and readers have no fence, so
+**an interrupted version-2 publication or migration waits for a human.**
+Retention recovery and the reader fence are in review in
+[PR #99](https://github.com/flyingrobots/keep/pull/99); migration recovery
+is [#108](https://github.com/flyingrobots/keep/issues/108). A version-1
+store stays admitted until its owner migrates it; migrate only if you accept
+that wait.
 
 | Gap | Tracked |
 | --- | --- |
-| Restart recovery for retention publication and migration | [#19](https://github.com/flyingrobots/keep/issues/19) |
-| Reader fence binding one consistent catalog + retention snapshot | [#19](https://github.com/flyingrobots/keep/issues/19) |
-| Precise verification reports at explicit depths | [#20](https://github.com/flyingrobots/keep/issues/20) |
+| Restart recovery for retention publication | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
+| Restart recovery for migration | [#108](https://github.com/flyingrobots/keep/issues/108) |
+| Reader fence binding one consistent catalog + retention snapshot | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
+| Durable authenticated reads bound to a fenced snapshot | [#109](https://github.com/flyingrobots/keep/issues/109) |
+| Verification reports at durable depths and a replayable receipt | [#20](https://github.com/flyingrobots/keep/issues/20) |
 | Garbage collection and identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |
 | Bounded production ingestion through the durable store | [#82](https://github.com/flyingrobots/keep/issues/82) |
 | Encrypted representations | [#86](https://github.com/flyingrobots/keep/issues/86) |

@@ -282,6 +282,14 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Status pages describe `main` again: the README gap table routes retention
+  recovery and the reader fence to PR #99, migration recovery to #108, and
+  durable reads to #109 instead of the closed #19; the crate doc names what
+  is present and absent; `migration-inventory.md` no longer calls
+  verification-first migration storage in progress; and
+  `retention-publication.md` labels version-2 catalog publication as a gap
+  (a migrated store admits no catalog publisher until #82) instead of
+  describing it as behaviour.
 - Version-two reopen compares only the restart-stable root coordinates, the
   device and the root inode, against the migration intent. The mount identity
   the intent records is `statx.stx_mnt_id`, a mount instance that changes on

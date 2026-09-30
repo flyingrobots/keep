@@ -20,9 +20,14 @@ the current manifest and derives exact canonical successors.
 ordered durability phases, and returns the complete receipt only after cleanup;
 exact already-committed retry revalidates authority and performs no mutation.
 
-Version-2 catalog publication holds the same writer authority and proves every
-current retained closure against its candidate catalog before replacing the
-catalog `HEAD`.
+Version-2 catalog publication must hold the same writer authority and prove
+every current retained closure against its candidate catalog before replacing
+the catalog `HEAD`. No version-2 catalog publisher exists yet: the version-1
+publisher cannot consume `FilesystemVersionTwoAdmission`, and version-1
+admission refuses a migrated root (`KEEP-MIGRATION-008`), so a migrated store
+admits no catalog publication until the durable write path lands
+([#82](https://github.com/flyingrobots/keep/issues/82)). This is a labeled
+gap, not current behaviour.
 
 ## Generation transition
 

@@ -95,13 +95,13 @@ names; use those in code, tests, and commits.
 
 - [x] [F-15 Retention roots, release, and GC liveness model](#f-15-retention-roots-release-and-gc-liveness-model) — Done (ADR-0009)
 - [x] [F-16 Version-2 format records and codecs](#f-16-version-2-format-records-and-codecs) — Done
-- [ ] [F-17 One-way migration from version 1 to version 2](#f-17-one-way-migration-from-version-1-to-version-2) — Partial (#97 done on this branch; residual #19)
+- [ ] [F-17 One-way migration from version 1 to version 2](#f-17-one-way-migration-from-version-1-to-version-2) — Partial (#97 done on this branch; recovery is #108)
 - [ ] [F-18 Retention publication](#f-18-retention-publication) — Partial; recovery in review (PR #99)
 - [ ] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — In review (PR #99)
 - [ ] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — In review (PR #99)
 - [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Planned (#20)
 - [ ] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Planned (#21)
-- [ ] [F-23 Durable authenticated reads and refusal receipts](#f-23-durable-authenticated-reads-and-refusal-receipts) — Planned; no open Keep issue
+- [ ] [F-23 Durable authenticated reads and refusal receipts](#f-23-durable-authenticated-reads-and-refusal-receipts) — Planned (#109)
 - [ ] [F-24 Bounded production ingestion through the durable store](#f-24-bounded-production-ingestion-through-the-durable-store) — Planned (#82, #74, #72)
 
 ### Integration (M5)
@@ -128,7 +128,7 @@ names; use those in code, tests, and commits.
 ### Repository, process, and documentation
 
 - [x] [F-37 Repository verification tooling and CI gates](#f-37-repository-verification-tooling-and-ci-gates) — Done
-- [ ] [F-38 Documentation status drift](#f-38-documentation-status-drift) — Proposed; small
+- [ ] [F-38 Documentation status drift](#f-38-documentation-status-drift) — Done on this branch
 
 ### Proposed, without an owner
 
@@ -748,7 +748,7 @@ Direct version-2 initialization is undefined. There is no downgrade.
     v2 corpus README, CHANGELOG.
   - **Dependencies:** blocks T-17.2 and T-17.3.
 - [ ] T-17.2 Partial-prefix migration recovery (`KEEP-MIGRATION-004`,
-  residual #19 item 7).
+  #108, the residual #19 item 7).
   - **Requirements:** the seven-row recovery table in
     `migration-recovery.md` becomes executable: no artifact admits v1;
     intent stage only finalizes or discards the pre-effect stage; durable
@@ -1315,8 +1315,8 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
 
 ### F-23 Durable authenticated reads and refusal receipts
 
-**Status:** Planned. `KEEP-RECONSTRUCT-009` and `-010` cite #22 and #23,
-which are closed; no open Keep issue owns this. Open one.
+**Status:** Planned (#109). `KEEP-RECONSTRUCT-009` and `-010` cited the
+closed #22 and #23; #109 now owns them.
 
 The durable segment, catalog, publication, and recovery surfaces do not
 yet form one high-level `BlobId`-to-writer contract. A durable read must
@@ -2002,13 +2002,13 @@ check; a coverage threshold; a forbidden-terms check.
 
 ### F-38 Documentation status drift
 
-**Status:** Proposed. Small, and worth doing before the next release
-note.
+**Status:** Done on this branch (#108 and #109 opened for the gaps the README
+rows needed).
 
 Several living pages lag `main`. None changes behaviour; each misleads a
 reader about ownership.
 
-- [ ] T-38.1 Fix the README gap table.
+- [x] T-38.1 Fix the README gap table. Original task fields:
   - **Requirements:** the rows "Restart recovery for retention publication
     and migration" and "Reader fence" point at #19, which closed on
     2026-09-08 under a different title; retention recovery and the fence
@@ -2025,7 +2025,7 @@ reader about ownership.
   - **Test plan:** `cargo xtask documentation-integrity-check`.
   - **Definition of done:** merged. **Complexity:** S.
   - **Documentation:** README. **Dependencies:** none.
-- [ ] T-38.2 Correct the crate doc in `src/lib.rs`.
+- [x] T-38.2 Correct the crate doc in `src/lib.rs`. Original task fields:
   - **Requirements:** the sentence "Partial-prefix migration recovery,
     filesystem retention execution, immutable reader snapshots, and
     garbage collection remain intentionally absent" predates
@@ -2035,7 +2035,7 @@ reader about ownership.
   - **Scope, stories, interface, schema:** as T-38.1.
   - **Test plan:** `cargo test --doc`. **Definition of done:** merged.
   - **Complexity:** S. **Documentation:** rustdoc. **Dependencies:** none.
-- [ ] T-38.3 Reconcile v2 pages with each other.
+- [x] T-38.3 Reconcile v2 pages with each other. Original task fields:
   - **Requirements:** `migration-inventory.md` says verification-first
     storage "remains in progress" while `KEEP-MIGRATION-003` says
     Implemented; `retention-publication.md` describes v2 catalog

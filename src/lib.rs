@@ -37,10 +37,13 @@
 //! receipts bind an admitted intent and marker, registered empty-state digests,
 //! and the complete synchronization mask. Writer-locked filesystem authority
 //! now executes one fresh forward migration through exact fixed-record and
-//! namespace transitions while retaining version-1 immutable bytes.
-//! Partial-prefix migration recovery, filesystem retention execution,
-//! immutable reader snapshots, and garbage collection remain intentionally
-//! absent.
+//! namespace transitions while retaining version-1 immutable bytes, and
+//! forward retention publication executes under filesystem authority. The
+//! GC retirement intent and receipt codecs, and explicit-depth verification
+//! reports over the reference view, are available. Partial-prefix migration
+//! recovery, retention publication recovery, immutable reader snapshots,
+//! catalog publication on a migrated store, and garbage collection
+//! execution remain intentionally absent.
 
 #[cfg(test)]
 extern crate self as keep;
