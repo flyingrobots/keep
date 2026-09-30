@@ -40,6 +40,21 @@ impl FilesystemRecoveryNextHeadFinalizer {
             .map_err(Into::into)
     }
 
+    /// Opens a completely migrated version-two store for `head.next`
+    /// finalization.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::open`].
+    pub fn open_version_two(
+        store_root: &Path,
+        policy: CatalogRestartPolicy,
+    ) -> Result<Self, FilesystemRecoveryNextHeadFinalizationOpenError> {
+        FilesystemRecoveryStageDiscarder::open_version_two(store_root)
+            .map(|discarder| Self { discarder, policy })
+            .map_err(Into::into)
+    }
+
     #[cfg(test)]
     pub(super) fn open_unchecked_for_tests(
         store_root: &Path,

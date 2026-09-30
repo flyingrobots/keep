@@ -16,9 +16,10 @@ intent. `CanonicalRecoveryDispositionReceipt` and
 `definition.tsv`. The protocol that writes `gc/intent` and `gc/receipt`, its
 recovery, and its process-death matrix are owned by
 [GC execution and recovery](gc-execution.md); explicit disposition by
-[recovery](recovery.md#explicit-disposition-of-protected-orphans). Namespace
+[recovery](recovery.md#explicit-disposition-of-protected-orphans);
+identity-preserving compaction by [compaction](compaction.md). Namespace
 admission admits exactly those records as regular files and nothing else in
-`gc`. Identity-preserving compaction remains **Planned in #21**.
+`gc`. Re-encoding compaction remains **Planned in #21**.
 
 ## Common rules
 
@@ -257,4 +258,5 @@ recovery-protected.
 All three grammars have golden fixtures, parsers, corruption matrices, and a
 seeded fuzz target; the planner has its golden plan and model law; retirement
 and disposition have their in-process prefix laws and the process-death
-matrix. Compaction and its benchmark evidence are **Planned in #21**.
+matrix; compaction has its identity-stability and interruption laws.
+Compaction benchmarks are **Planned in #21**.

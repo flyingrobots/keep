@@ -138,7 +138,9 @@ pub use canonical_root::CanonicalRetentionRoot;
 pub use checksummed_head::ChecksummedRetentionHead;
 pub use closure_error::RetentionClosureVerificationError;
 pub use closure_verifier::verify_retention_closure;
-pub(in crate::adapters) use closure_verifier::verify_retention_closure_members;
+pub(in crate::adapters) use closure_verifier::{
+    RetentionClosureMembers, verify_retention_closure_members,
+};
 pub use disposition_execution::{
     RecoveryDispositionError, RecoveryDispositionExecutionReceipt, execute_recovery_disposition,
     resume_recovery_disposition,

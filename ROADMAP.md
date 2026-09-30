@@ -100,7 +100,7 @@ names; use those in code, tests, and commits.
 - [x] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — Done on this branch (merged from PR #99)
 - [x] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — Done on this branch (merged from PR #99)
 - [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Partial (#20; report vocabulary, corruption ledgers, and durable receipts done on this branch; durable-view depths land with T-23.1)
-- [ ] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Partial (#21; codecs, planner, and orphan disposition done on this branch; compaction and execution remain)
+- [x] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Done on this branch (#21; codecs, planner, disposition, retirement, and compaction; crash sequences for disposition and compaction, stress, benchmarks, and re-encoding still owed)
 - [ ] [F-23 Durable authenticated reads and refusal receipts](#f-23-durable-authenticated-reads-and-refusal-receipts) — Planned (#109)
 - [ ] [F-24 Bounded production ingestion through the durable store](#f-24-bounded-production-ingestion-through-the-durable-store) — Planned (#82, #72)
 
@@ -1164,11 +1164,13 @@ quarantines, or rewrites physical state.
 
 ### F-22 Garbage collection, compaction, and recovery dispositions
 
-**Status:** Partial (#21, P1, M4). All three codecs (T-22.1, T-22.1a;
-`KEEP-GC-001` Implemented), the deterministic planner (T-22.2), explicit
-orphan disposition (T-22.5), and retirement with recovery and its
-process-death matrix (T-22.4) landed on this branch; identity-preserving
-compaction (T-22.3) remains, so `KEEP-GC-002` stays In progress.
+**Status:** Done on this branch (#21, P1, M4). All three codecs (T-22.1,
+T-22.1a; `KEEP-GC-001` Implemented), the deterministic planner (T-22.2),
+explicit orphan disposition (T-22.5), retirement with recovery and its
+process-death matrix (T-22.4), and identity-preserving compaction (T-22.3;
+`KEEP-GC-002` Implemented) landed on this branch. Still owed under #21: the
+disposition-phase and compaction process-death sequences, the
+65,536-candidate stress run, compaction benchmarks, and re-encoding.
 
 Plan GC from an immutable liveness snapshot; classify every segment as
 live, unreachable, corrupt, ambiguous, recovery-protected,
@@ -1278,7 +1280,18 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
   - **Documentation:** `gc.md` planning section; a warning per
     Documentation Standards §5.4 on every page that describes execution.
   - **Dependencies:** F-19, F-21 (planning consumes verification depth).
-- [ ] T-22.3 Identity-preserving compaction.
+- [x] T-22.3 Identity-preserving compaction — `observe_compaction`,
+  `plan_compaction`, `FilesystemCompactionAuthority::{execute, execute_with}`,
+  `recover_compaction`, `docs/formats/segment-store-v2/compaction.md`, and
+  `src/adapters/compaction/filesystem_tests.rs` (exact plan, identity and
+  closure stability, GC retirement, refusals, a death before each of the 22
+  publication phases, idle recovery); the version-one recovery inventory
+  admits version-two roots and version-two admission admits a retained
+  `head.next`; `KEEP-GC-002` Implemented; Worldline
+  `keep.compaction.identity-stable/v1` required. Still owed under #21: a
+  compaction-specific process-death sequence (the boundaries are the
+  version-one publication boundaries), amplification and latency benchmarks,
+  and re-encoding compaction. Original task fields:
   - **Requirements:** copy live records into new immutable segments,
     verify them, publish a catalog successor naming the new locations,
     revalidate expected catalog and retention generations before acting,

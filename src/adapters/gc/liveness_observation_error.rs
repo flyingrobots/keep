@@ -110,7 +110,7 @@ pub enum GcLivenessObservationError {
 }
 
 impl GcLivenessObservationError {
-    pub(super) const fn pool(action: &'static str, source: io::Error) -> Self {
+    pub(in crate::adapters) const fn pool(action: &'static str, source: io::Error) -> Self {
         Self::Pool { action, source }
     }
 }

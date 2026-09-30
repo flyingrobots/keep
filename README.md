@@ -91,7 +91,6 @@ a publication. A version-1 store stays admitted until its owner migrates it.
 | --- | --- |
 | Durable authenticated reads bound to a fenced snapshot | [#109](https://github.com/flyingrobots/keep/issues/109) |
 | Verification reports at durable depths and a replayable receipt | [#20](https://github.com/flyingrobots/keep/issues/20) |
-| Identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |
 | Bounded production ingestion through the durable store | [#82](https://github.com/flyingrobots/keep/issues/82) |
 | Encrypted representations | [#86](https://github.com/flyingrobots/keep/issues/86) |
 

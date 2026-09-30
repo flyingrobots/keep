@@ -195,6 +195,12 @@ pub use adapters::{
     VerificationReceiptDecodeError, VerificationReceiptField, VerificationView,
 };
 pub use adapters::{
+    CompactionObservation, CompactionPlan, CompactionPublish, CompactionReceipt,
+    CompactionRecovery, CompactionRefusal, CompactionSegmentDisposition,
+    FilesystemCompactionAuthority, FilesystemCompactionError, FilesystemCompactionRecoveryError,
+    observe_compaction, plan_compaction, recover_compaction,
+};
+pub use adapters::{
     MIGRATION_NAMESPACE_PREFIX, StoreMigrationEffect, StoreMigrationFixedStage,
     StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError, StoreMigrationRecoveryPlan,
     StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,

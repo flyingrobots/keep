@@ -10,6 +10,27 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Identity-preserving compaction. `observe_compaction` reads every record
+  the catalog names, every record a retained closure reaches, and the pool;
+  `plan_compaction` is pure over it and gives every named segment one
+  disposition (`retained`, `compacted` with its live records to copy, or
+  `omitted`), refusing when no retention is published, nothing is
+  unreachable, a closure reaches an unnamed record, a named segment is
+  missing, or the copies exceed one segment. `FilesystemCompactionAuthority`
+  re-proves the plan under writer authority, copies the live records
+  byte-identically into one new sealed segment, publishes the successor
+  through the complete version-one catalog protocol on the version-two root
+  (`FilesystemCatalogPublisher::open_version_two`), and revalidates that
+  every superseded segment is now an `unreachable-superseded` GC candidate.
+  `recover_compaction` drives the version-one stage discard and `head.next`
+  finalization over a version-two root (the recovery inventory now admits
+  the version-two root entries as inert, and version-two admission admits an
+  optional `head.next`), discarding a complete staged segment or catalog
+  only after proving it derivable from `HEAD`. Proven by
+  `src/adapters/compaction/filesystem_tests.rs`, including a death before
+  each of the 22 publication phases; `KEEP-GC-002` is Implemented and the
+  Worldline capability `keep.compaction.identity-stable/v1` is `required`.
+  Specified on `docs/formats/segment-store-v2/compaction.md`.
 - Durable verification receipts. `keep.verification-receipt/v1` is a
   canonical, versioned, checksummed 384-byte record binding one
   verification's subject, admitted view (reference, or a durable

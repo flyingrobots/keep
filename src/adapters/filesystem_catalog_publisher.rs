@@ -4,6 +4,7 @@ use std::io;
 
 use cap_std::fs::{Dir, File};
 
+use super::FilesystemVersionTwoAdmission;
 use super::filesystem_publisher_authority::FilesystemPublisherAuthority;
 use super::{
     AdmittedSegment, CatalogRestartPolicy, ClosedSegment, FilesystemPlatformAdmission,
@@ -56,7 +57,25 @@ impl FilesystemCatalogPublisher {
         admission: FilesystemPlatformAdmission,
         policy: CatalogRestartPolicy,
     ) -> io::Result<Self> {
-        let lock = admission.into_lock();
+        Self::from_lock(admission.into_lock(), policy)
+    }
+
+    /// Pins the publication directories of a completely migrated version-two
+    /// root, for catalog successors such as compaction. The version-two
+    /// admission already proved the namespace, marker, intent, and receipt.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::open`].
+    pub fn open_version_two(
+        admission: FilesystemVersionTwoAdmission,
+        policy: CatalogRestartPolicy,
+    ) -> io::Result<Self> {
+        let (lock, _retention, _roots, _manifests) = admission.into_parts();
+        Self::from_lock(lock, policy)
+    }
+
+    fn from_lock(lock: FilesystemWriterLock, policy: CatalogRestartPolicy) -> io::Result<Self> {
         let pinned_root = lock.clone_directory()?;
         let root = sync_capable_directory::open(&pinned_root, ".")?;
         let staging = sync_capable_directory::open(&root, "staging")?;

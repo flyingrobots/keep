@@ -64,6 +64,7 @@ mod checksummed_catalog;
 mod checksummed_publication_head;
 mod checksummed_segment_record;
 mod closed_segment;
+mod compaction;
 mod decoded_catalog_entry;
 mod digest_hex;
 mod exports;

@@ -16,7 +16,7 @@ const DIGEST_HEX_LENGTH: usize = 64;
 /// returns the sorted `(digest, length)` inventory. Total bytes read stay
 /// within `byte_limit`; an unknown entry, a wrong kind, a name that is not a
 /// digest, or a segment whose bytes do not admit refuses the whole read.
-pub(super) fn read(
+pub(in crate::adapters) fn read(
     segments: &Dir,
     policy: SegmentReadPolicy,
     byte_limit: u64,

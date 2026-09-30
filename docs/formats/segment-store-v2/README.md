@@ -52,6 +52,8 @@ The following pages form one protocol:
   completion, and recovery-disposition byte grammars.
 - [GC execution and recovery](gc-execution.md) owns the retirement phases,
   the residue state table, and `KEEP-CRASH-074` through `087`.
+- [Identity-preserving compaction](compaction.md) owns the compaction plan,
+  the successor publication, and its recovery.
 - [Migration and recovery](recovery.md) owns the exact root namespace,
   version marker, reader fence, migration records, GC reservation,
   recovery-disposition reservation, and restart behavior.
@@ -120,7 +122,8 @@ Migration recovery is proven in-process for every prefix and by the
 of its 68 boundary coordinates and recovers the restarted root.
 GC retirement is proven in-process for every prefix and by the
 `KEEP-CRASH-074..087` process-death matrix; identity-preserving compaction
-is not implemented, issue #21.
+is proven by its identity-stability and interruption laws. Compaction
+benchmarks and re-encoding compaction are not implemented, issue #21.
 Reopen compares only the restart-stable root coordinates, device and inode,
 against the intent; see
 [root identity across restart](recovery.md#root-identity-across-restart). A

@@ -21,7 +21,8 @@ use super::{
     GcRetainedClosure, GcRetentionState,
 };
 use crate::adapters::retention::{
-    AdmittedRetentionRoot, is_disposition_name, verify_retention_closure_members,
+    AdmittedRetentionRoot, RetentionClosureMembers, is_disposition_name,
+    verify_retention_closure_members,
 };
 use crate::adapters::{
     CatalogRestartArtifact, CatalogRestartPhase, CatalogRestartPolicy, CatalogSnapshot,
@@ -177,11 +178,20 @@ fn retention_state(view: &FilesystemRetentionSnapshot) -> GcRetentionState {
         })
 }
 
-fn retain_closures(
+/// Decodes and verifies every retained root's closure against `catalog`,
+/// handing each to `visit` with its resolved member identities.
+///
+/// # Errors
+///
+/// Returns the exact retained-root, closure, or visitor refusal.
+pub(in crate::adapters) fn visit_retained_closures(
     view: &FilesystemRetentionSnapshot,
     catalog: &CatalogSnapshot<'_, '_, '_>,
-    record_segments: &BTreeMap<SegmentRecordIdentity, SegmentDigest>,
-    snapshot: &mut GcLivenessSnapshot,
+    mut visit: impl FnMut(
+        crate::RetentionNamespaceDigest,
+        &AdmittedRetentionRoot<'_>,
+        &RetentionClosureMembers,
+    ) -> Result<(), Error>,
 ) -> Result<(), Error> {
     let Some(manifest) = view.manifest() else {
         return Ok(());
@@ -205,6 +215,18 @@ fn retain_closures(
                 source: Box::new(source),
             }
         })?;
+        visit(namespace, &root, &members)?;
+    }
+    Ok(())
+}
+
+fn retain_closures(
+    view: &FilesystemRetentionSnapshot,
+    catalog: &CatalogSnapshot<'_, '_, '_>,
+    record_segments: &BTreeMap<SegmentRecordIdentity, SegmentDigest>,
+    snapshot: &mut GcLivenessSnapshot,
+) -> Result<(), Error> {
+    visit_retained_closures(view, catalog, |namespace, root, members| {
         let mut segments = BTreeSet::new();
         for identity in &members.identities {
             let segment = record_segments
@@ -220,9 +242,8 @@ fn retain_closures(
                 members.closure.digest(),
                 segments,
             ))
-            .map_err(|source| Error::Snapshot { source })?;
-    }
-    Ok(())
+            .map_err(|source| Error::Snapshot { source })
+    })
 }
 
 /// Walks the catalog chain from the current catalog's predecessor to

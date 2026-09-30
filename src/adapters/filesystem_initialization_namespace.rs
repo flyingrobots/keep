@@ -42,7 +42,8 @@ const ROOTS_NAME: &str = "roots";
 const MANIFESTS_NAME: &str = "manifests";
 const DISPOSITIONS_NAME: &str = "dispositions";
 const DISPOSITION_STAGE_NAME: &str = "disposition.next";
-const VERSION_TWO_NAMES: [&str; 12] = [
+const NEXT_HEAD_NAME: &str = "head.next";
+const VERSION_TWO_NAMES: [&str; 13] = [
     LOCK_NAME,
     STAGING_NAME,
     SEGMENTS_NAME,
@@ -55,6 +56,7 @@ const VERSION_TWO_NAMES: [&str; 12] = [
     RETENTION_NAME,
     GC_NAME,
     RECOVERY_NAME,
+    NEXT_HEAD_NAME,
 ];
 
 pub(super) fn admit(directory: &Dir) -> io::Result<()> {
@@ -111,6 +113,9 @@ pub(super) fn admit_version_two(directory: &Dir) -> io::Result<()> {
     admit_required_directory(directory, RETENTION_NAME)?;
     admit_required_directory(directory, GC_NAME)?;
     admit_required_directory(directory, RECOVERY_NAME)?;
+    // A retained `head.next` is a catalog successor's recovery-required
+    // residue: admitted here, refused by every publication until recovered.
+    admit_optional_file(directory, NEXT_HEAD_NAME)?;
     admit_membership(directory, &VERSION_TWO_NAMES)?;
     admit_version_two_protocol_directories(directory)
 }

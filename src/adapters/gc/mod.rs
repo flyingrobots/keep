@@ -101,6 +101,7 @@ pub use intent_decode_error::{GcRetirementIntentDecodeError, GcRetirementIntentE
 pub use intent_error::GcRetirementIntentError;
 pub use liveness_coordinates::{GcLivenessCoordinates, GcRetentionState};
 pub use liveness_observation::observe_gc_liveness;
+pub(in crate::adapters) use liveness_observation::visit_retained_closures;
 pub use liveness_observation_error::GcLivenessObservationError;
 pub use liveness_snapshot::{GcLivenessSnapshot, GcLivenessSnapshotError};
 pub use plan::{GcPlan, GcPlannedCandidate, GcPlannedSegment};
@@ -122,3 +123,4 @@ pub use retirement_intent::{
     disposition_set_digest, post_retirement_pool_state, segment_pool_identity,
 };
 pub use segment_classification::{GcSegmentClassification, GcUnreachableEvidence};
+pub(in crate::adapters) use segment_pool_inventory::read as read_segment_pool_inventory;

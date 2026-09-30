@@ -128,7 +128,11 @@ boundary retroactively. `keep.verification.precise-refusal/v1` became
 `conformance/segment-store/v1/mutations.tsv` and `v2/mutations.tsv`: every
 structural field of every durable record has a frozen mutation whose exact
 first refusal and verification stage `tests/segment_store_mutations.rs`
-reproduces through the public decoders.
+reproduces through the public decoders. `keep.compaction.identity-stable/v1`
+became `required` in M4 on the compaction laws in
+`src/adapters/compaction/filesystem_tests.rs`: every retained closure's root
+and members and every live record's bytes are unchanged across a compaction
+successor and its recovery from a death before any publication phase.
 
 ## Partition plans
 

@@ -67,17 +67,17 @@ recovery is absent; version-1 reopen and recovery both refuse a migrated root.
 
 ## Reader fence
 
-`reader.lock` is a persistent regular zero-length file. Its contents and
-existence alone prove nothing.
+`reader.lock` is a persistent regular zero-length file whose contents and
+existence alone prove nothing. Admission also admits an optional root
+`head.next`, the residue of an interrupted [compaction](compaction.md)
+successor, refused by every publication until recovered.
 
 A version-2 reader acquires a kernel-managed shared lock on `reader.lock`
-before opening catalog `HEAD` or `retention/HEAD`. The returned `ReaderFence`
-owns that lock for the complete snapshot lifetime. Close, drop, or process
-death releases only the kernel lock and never deletes the persistent file.
+before opening catalog `HEAD` or `retention/HEAD`; the `ReaderFence` owns it
+for the snapshot's lifetime; release or process death never deletes the file.
 
-GC takes writer authority and then `reader.lock` exclusively, refusing
-without waiting while readers hold it. Catalog and retention publication
-proceed beside readers because they publish immutable successors.
+GC takes writer authority and then `reader.lock` exclusively, refusing while
+readers hold it; publication proceeds beside readers (immutable successors).
 
 ## Migration records
 

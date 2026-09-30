@@ -31,7 +31,10 @@ root and three no-follow child directories, bounds each scan by the remaining
 global budget, preserves raw Linux name bytes, and verifies child-directory
 identity before and after inventory. `classify_recovery_names` requires the
 four initialized root entries, types each fixed name and immutable-pool
-coordinate, and refuses an unknown or conflicting name without artifact I/O.
+coordinate, admits the version-two root entries (`reader.lock`, `FORMAT`,
+`migration.intent`, `migration.receipt`, `retention`, `gc`, `recovery`) as
+inert so the same protocols recover a migrated root, and refuses any other
+unknown or conflicting name without artifact I/O.
 `fingerprint_recovery_stage` then reads a fixed stage through a zero-allocation
 bounded stream, refuses metadata or observed bytes above the name-selected
 maximum, and returns its exact observed length and

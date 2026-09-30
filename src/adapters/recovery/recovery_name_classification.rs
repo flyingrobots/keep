@@ -79,6 +79,8 @@ fn classify_root(name: &RecoveryEntryName) -> Result<RecoveryEntryRole, NameFail
         b"catalogs" => Ok(RecoveryEntryRole::CatalogPoolDirectory),
         b"HEAD" => Ok(RecoveryEntryRole::CurrentHead),
         b"head.next" => Ok(RecoveryEntryRole::NextHeadStage),
+        b"reader.lock" | b"FORMAT" | b"migration.intent" | b"migration.receipt" | b"retention"
+        | b"gc" | b"recovery" => Ok(RecoveryEntryRole::VersionTwoProtocol),
         _ => Err(NameFailure::Unexpected),
     }
 }
@@ -116,7 +118,8 @@ impl RequiredEntries {
             | RecoveryEntryRole::SegmentStage
             | RecoveryEntryRole::CatalogStage
             | RecoveryEntryRole::ImmutableSegment { .. }
-            | RecoveryEntryRole::ImmutableCatalog { .. } => {}
+            | RecoveryEntryRole::ImmutableCatalog { .. }
+            | RecoveryEntryRole::VersionTwoProtocol => {}
         }
     }
 

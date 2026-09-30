@@ -26,7 +26,7 @@ const CAPABILITY_CONTRACTS: [CapabilityContract; 16] = [
     CapabilityContract::future("keep.restart.lawful-recovery/v1", 3, &[17]),
     CapabilityContract::future("keep.retention.both-states/v1", 4, &[18, 19]),
     CapabilityContract::required("keep.verification.precise-refusal/v1", 4, &[20]),
-    CapabilityContract::future("keep.compaction.identity-stable/v1", 4, &[21]),
+    CapabilityContract::required("keep.compaction.identity-stable/v1", 4, &[21]),
     CapabilityContract::future("keep.echo.identity-agreement/v1", 5, &[22, 23]),
     CapabilityContract::future("keep.graft.golden-worldline/v1", 5, &[24]),
     CapabilityContract::future("keep.git-cas.import/v1", 5, &[25]),
