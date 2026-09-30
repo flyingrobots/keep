@@ -10,6 +10,23 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Permanent corruption ledgers over every durable structural field.
+  `conformance/segment-store/v1/mutations.tsv` (105 rows: segment header,
+  record header, record checksum, seal, whole segment, catalog header,
+  entry, trailer, catalog-to-segment binding, publication head, and
+  head-to-catalog binding) and `v2/mutations.tsv` (150 rows: `FORMAT`,
+  migration intent and receipt, retention root, manifest, and head, GC
+  intent and receipt, disposition receipt) freeze one byte mutation per
+  field with its exact first refusal as `<record>.<variant>`, the
+  verification stage it establishes (`framing`, `checksum`, `identity`,
+  `binding`), a checksum posture (preserve, or recompute inner set digests,
+  the trailer, or only the checksum, so the check behind a checksum is
+  reachable), and the requirement it evidences.
+  `tests/segment_store_mutations.rs` applies every row through the public
+  decoders and reports every differing row at once; `cargo xtask
+  conformance-check` (and `segment-store-mutations-check`) refuses a
+  malformed row before any external witness runs. The Golden File Worldline
+  capability `keep.verification.precise-refusal/v1` is now `required`.
 - GC execution, retirement, and recovery. `FilesystemGcAuthority` retires
   the released segments a `GcPlan` names: `prepare` refuses over any
   residue but idle or complete, refuses an empty plan, acquires the reader

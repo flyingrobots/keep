@@ -53,3 +53,16 @@ The following pages form one versioned protocol:
 No page is independently optional. A version-1 implementation conforms only
 when it satisfies the complete linked protocol and the
 [durable transition ledger](../../../conformance/segment-store/v1/transitions.tsv).
+
+## Mutation ledger
+
+Every structural field of the segment header, record header, record
+checksum, seal, catalog header, catalog entry, catalog trailer, and
+publication head has one frozen byte mutation in the
+[corruption ledger](../../../conformance/segment-store/v1/mutations.tsv),
+with the exact first refusal the public decoder reports and the
+verification stage it establishes: `framing` and `checksum` are
+`VerificationDepth::Framing` and `::Checksum`; `identity` is content that
+does not hash to its declared identity; `binding` is a contradiction between
+records. `tests/segment_store_mutations.rs` reproduces every row and
+`cargo xtask conformance-check` admits the ledger's shape.

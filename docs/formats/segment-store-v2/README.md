@@ -76,6 +76,19 @@ The version-1 [segment](../segment-store-v1/segment.md),
 grammars remain byte-for-byte authoritative. Version 2 does not reinterpret or
 re-encode them.
 
+## Mutation ledger
+
+Every structural field of `FORMAT`, the migration intent and receipt, the
+retention root, manifest, and head, the GC intent and receipt, and the
+disposition receipt has one frozen byte mutation in the
+[corruption ledger](../../../conformance/segment-store/v2/mutations.tsv),
+with the exact first refusal the public decoder reports and the
+verification stage it establishes (`framing`, `checksum`, `identity`, or
+`binding`). `tests/segment_store_mutations.rs` reproduces every row through
+the public decoders and `cargo xtask conformance-check` admits the ledger's
+shape; a decoder that refuses differently raises a specification question,
+never a regenerated row.
+
 ## Status
 
 The format contract is frozen by ADR-0009 and this specification.

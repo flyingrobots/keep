@@ -123,7 +123,12 @@ Capabilities record the first milestone in which an assertion may become
 `required`, together with its owning GitHub issues. A `declared-future` row is
 not a skipped or passing test. Promotion to `required` needs separate
 executable evidence at the named milestone; it does not enlarge M1's proof
-boundary retroactively.
+boundary retroactively. `keep.verification.precise-refusal/v1` became
+`required` in M4 on the strength of the segment-store mutation ledgers,
+`conformance/segment-store/v1/mutations.tsv` and `v2/mutations.tsv`: every
+structural field of every durable record has a frozen mutation whose exact
+first refusal and verification stage `tests/segment_store_mutations.rs`
+reproduces through the public decoders.
 
 ## Partition plans
 

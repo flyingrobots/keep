@@ -16,6 +16,7 @@ migration, retention transition, or garbage collector exists.
 | `artifacts.tsv` | Golden artifact lengths, digests, checksums, and filenames |
 | `transitions.tsv` | One stable crash identifier per migration and GC boundary, `KEEP-CRASH-053` to `-087` |
 | `gc-plan.tsv` | The deterministic GC plan for the frozen version-2 store: every segment's classification |
+| `mutations.tsv` | The corruption ledger: one frozen byte mutation per structural field of `FORMAT`, both migration records, the retention root, manifest, and head, both GC records, and the disposition receipt, with its exact first refusal, verification stage, and requirement |
 | `format-marker.hex` | Canonical 96-byte `FORMAT` record |
 | `migration-intent.hex` | Canonical 256-byte migration intent |
 | `migration-receipt.hex` | Canonical 256-byte migration receipt |
@@ -111,3 +112,19 @@ route this corpus separately.
 Passing this corpus is necessary but insufficient for issue #19. Production
 code still needs parser, corruption, property, model, crash, recovery,
 concurrency, fuzz, and public API evidence.
+
+## Mutation ledger
+
+`mutations.tsv` rows are `case`, `record`, `base_fixture`, `operation`
+(`replace-v1`, `xor-v1`, `truncate-v1`, `append-v1`, `delete-v1`), `offset`,
+`span_length`, `parameter` (lowercase hex or `-`), `checksum_posture`
+(`preserve-v1`; `recompute-v1` recomputes inner set digests and the trailer;
+`recompute-trailer-v1` recomputes only the record's digest and checksum;
+`recompute-checksum-v1` only its checksum), `expected_outcome` as
+`<record>.<variant>` of the public decoder's first refusal, `stage`
+(`framing`, `checksum`, `identity`, or `binding`, ordered like
+`VerificationDepth`), and `requirement`. `tests/segment_store_mutations.rs`
+applies every row through the public decoders and requires the exact outcome
+and stage; `cargo xtask conformance-check` refuses a malformed row. A ledger
+row is never regenerated to make a decoder pass: a differing first refusal is
+a specification question.

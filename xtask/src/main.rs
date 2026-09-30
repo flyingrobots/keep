@@ -132,6 +132,9 @@ fn run(mut arguments: impl Iterator<Item = OsString>) -> Result<(), TaskError> {
         "conformance-check" => {
             protocol_conformance::check(repository_root)?;
         }
+        "segment-store-mutations-check" => {
+            protocol_conformance::check_segment_store_mutations(repository_root)?;
+        }
         "documentation-integrity-check" => {
             documentation_integrity::check(repository_root)?;
         }

@@ -99,7 +99,7 @@ names; use those in code, tests, and commits.
 - [x] [F-18 Retention publication](#f-18-retention-publication) — Done on this branch (recovery, the `KEEP-CRASH-036`–`052` matrix, member re-verification, and orphan disposition)
 - [x] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — Done on this branch (merged from PR #99)
 - [x] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — Done on this branch (merged from PR #99)
-- [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Planned (#20)
+- [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Partial (#20; report vocabulary and corruption ledgers done on this branch; durable receipts remain)
 - [ ] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Partial (#21; codecs, planner, and orphan disposition done on this branch; compaction and execution remain)
 - [ ] [F-23 Durable authenticated reads and refusal receipts](#f-23-durable-authenticated-reads-and-refusal-receipts) — Planned (#109)
 - [ ] [F-24 Bounded production ingestion through the durable store](#f-24-bounded-production-ingestion-through-the-durable-store) — Planned (#82, #72)
@@ -1031,7 +1031,8 @@ clocks, paths, environment, and caller identity out of the core.
 ### F-21 Precise verification reports and corruption refusal
 
 **Status:** Partial (#20, P1, M4); the vocabulary and the reference-store
-form landed on this branch (T-21.1). The most-cited open blocker: F-22,
+form (T-21.1) and the permanent corruption ledgers (T-21.2) landed on this
+branch; durable receipts (T-21.3) remain. The most-cited open blocker: F-22,
 F-23, F-24, F-27, F-28, F-29, F-30, F-31, F-33, and F-34 all name it.
 
 Verify content and store structure at explicit, enumerated depths; report
@@ -1088,8 +1089,17 @@ quarantines, or rewrites physical state.
     consequence ("report the exact verification depth") satisfied.
   - **Dependencies:** none for the reference store; F-19 for
     snapshot-bound depths.
-- [ ] T-21.2 Permanent corruption matrix over every durable structural
-  field.
+- [x] T-21.2 Permanent corruption matrix over every durable structural
+  field — `conformance/segment-store/v1/mutations.tsv` (105 rows) and
+  `v2/mutations.tsv` (150 rows) with exact first refusal, verification
+  stage, and requirement per row; `tests/segment_store_mutations.rs`
+  reproduces every row through the public decoders; `cargo xtask
+  conformance-check` admits the ledgers' shape; the Worldline capability
+  `keep.verification.precise-refusal/v1` is `required`. Depth is asserted
+  as the ledger stage (`framing`/`checksum` are `VerificationDepth::Framing`
+  and `::Checksum`; `identity` and `binding` are content identity and
+  cross-record contradiction) because no durable `VerificationReport`
+  producer exists until T-23.1. Original task fields:
   - **Requirements:** every field of segment header, record header, record
     checksum, seal, catalog header, entry, trailer, publication head,
     `FORMAT`, intent, receipt, root, manifest, and retention head has a
