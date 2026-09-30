@@ -3,7 +3,10 @@
 use std::io::{ErrorKind, Read};
 
 use crate::layout::check_entry_limit;
-use crate::{AdmittedLayout, BlobHasher, BlobId, ChunkId, ChunkSpan, FastCdc, LayoutEntryLimit};
+use crate::{
+    AdmittedLayout, BlobHasher, BlobId, ChunkId, ChunkSpan, FastCdc, LayoutEntryLimit,
+    StagedByteLimit, StagingLimits,
+};
 
 use super::chunk_staging::ReferenceChunkStaging;
 use super::ingestion_error::IngestionAllocation;
@@ -74,8 +77,26 @@ impl ReferenceStore {
     where
         R: Read + ?Sized,
     {
+        self.stage_bounded(source, StagingLimits::entries(entry_limit))
+    }
+
+    /// As [`Self::stage`], additionally refusing before any byte beyond
+    /// `limits.byte_limit()` is materialized.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::stage`], plus [`IngestionError::ByteLimitExceeded`].
+    pub fn stage_bounded<R>(
+        &self,
+        source: &mut R,
+        limits: StagingLimits,
+    ) -> Result<StagedBlob, IngestionError>
+    where
+        R: Read + ?Sized,
+    {
+        let entry_limit = limits.entry_limit();
         let mut staging = ReferenceChunkStaging::new(self);
-        let (target, spans) = ingest_stream(source, &mut staging, entry_limit)?;
+        let (target, spans) = ingest_stream(source, &mut staging, limits)?;
         let layout = AdmittedLayout::from_spans(
             target,
             crate::RegisteredStorageProfile::FAST_CDC_64K_V1,
@@ -123,11 +144,12 @@ impl ReferenceStore {
 fn ingest_stream<R>(
     source: &mut R,
     staging: &mut ReferenceChunkStaging<'_>,
-    entry_limit: LayoutEntryLimit,
+    limits: StagingLimits,
 ) -> Result<(crate::BlobId, Vec<ChunkSpan>), IngestionError>
 where
     R: Read + ?Sized,
 {
+    let entry_limit = limits.entry_limit();
     let maximum = usize::try_from(FastCdc::MAXIMUM_CHUNK_LENGTH.get()).map_err(|_source| {
         IngestionError::StreamLengthOverflow {
             accepted: 0,
@@ -142,7 +164,7 @@ where
             requested: maximum,
             source,
         })?;
-    let mut state = StreamState::new(chunk_buffer, entry_limit);
+    let mut state = StreamState::new(chunk_buffer, entry_limit, limits.byte_limit());
     let mut read_buffer = [0_u8; READ_BUFFER_BYTES];
     loop {
         match source.read(&mut read_buffer) {
@@ -170,10 +192,15 @@ struct StreamState {
     spans: Vec<ChunkSpan>,
     accepted: u64,
     entry_limit: LayoutEntryLimit,
+    byte_limit: StagedByteLimit,
 }
 
 impl StreamState {
-    fn new(chunk_buffer: Vec<u8>, entry_limit: LayoutEntryLimit) -> Self {
+    fn new(
+        chunk_buffer: Vec<u8>,
+        entry_limit: LayoutEntryLimit,
+        byte_limit: StagedByteLimit,
+    ) -> Self {
         Self {
             detector: FastCdc::new(),
             blob_hasher: BlobHasher::new(),
@@ -181,6 +208,7 @@ impl StreamState {
             spans: Vec::new(),
             accepted: 0,
             entry_limit,
+            byte_limit,
         }
     }
 
@@ -189,6 +217,14 @@ impl StreamState {
         bytes: &[u8],
         staging: &mut ReferenceChunkStaging<'_>,
     ) -> Result<(), IngestionError> {
+        let next_accepted = checked_accepted(self.accepted, bytes.len())?;
+        if next_accepted > self.byte_limit.get() {
+            return Err(IngestionError::ByteLimitExceeded {
+                limit: self.byte_limit,
+                accepted: self.accepted,
+                incoming: bytes.len(),
+            });
+        }
         self.blob_hasher
             .update(bytes)
             .map_err(IngestionError::BlobHash)?;
@@ -196,7 +232,6 @@ impl StreamState {
         self.detector
             .feed(bytes, |span| emission.record(span))
             .map_err(IngestionError::Chunking)?;
-        let next_accepted = checked_accepted(self.accepted, bytes.len())?;
         match emission {
             FeedEmission::None => self.chunk_buffer.extend_from_slice(bytes),
             FeedEmission::One(span) => self.accept_boundary(bytes, span, staging)?,

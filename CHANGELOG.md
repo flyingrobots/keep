@@ -10,6 +10,22 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Backend-neutral content-store port. `ContentReads` (`contains_blob`,
+  `reconstruct`, `reconstruct_layout`, `read_range`, `read_layout_range`)
+  is implemented by `ReferenceStore` and `DurableSnapshot`, each with its
+  own receipt and error types; `ContentStaging::{stage, stage_expected}`
+  and `StagedContent::commit` are implemented by the non-durable reference
+  store, with the durable writer owed to T-24.2. `StagingLimits` pairs a
+  `LayoutEntryLimit` with a `StagedByteLimit`; `ReferenceStore::stage_bounded`
+  enforces the byte limit as each read is accepted and refuses with
+  `IngestionError::ByteLimitExceeded { limit, accepted, incoming }` before
+  any excess is materialized. Receipts stay distinct types per backend, so
+  a reference receipt cannot be passed where a durable one is required
+  (`compile_fail` doctest on `src/store/mod.rs`). Generic laws in
+  `src/store/port_laws.rs` run against both backends;
+  `tests/content_store_port.rs` runs the reference backend through the port
+  from outside the crate. The page is
+  `docs/architecture/content-store/README.md`.
 - Durable authenticated reads. `DurableStore::open(root, policy, limit)`
   names a migrated version-two store and `snapshot()` pins one consistent
   view under the shared reader fence, indexing every retained root's

@@ -163,7 +163,9 @@ the content means, who owns it, or whether deleting it is legally safe.
 Keep is `0.0.0` and unpublished; build from source. The in-memory
 [non-durable reference CAS](docs/architecture/reference-store/README.md) is
 executable evidence for the storage laws, not a durable backend — process
-death loses everything in it.
+death loses everything in it. Code written against the
+[content-store port](docs/architecture/content-store/README.md) runs on it
+in tests and on a durable snapshot in production.
 
 ```rust
 use std::io::Cursor;

@@ -9,6 +9,9 @@
 //! against. While a snapshot lives, collection cannot retire what it reads.
 
 mod error;
+mod port;
+#[cfg(test)]
+mod port_tests;
 mod receipt;
 mod snapshot;
 mod store;

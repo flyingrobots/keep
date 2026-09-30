@@ -57,6 +57,7 @@ mod layout;
 mod profile;
 mod reference;
 mod retention;
+mod store;
 mod verification;
 
 #[cfg(feature = "repository-tasks")]
@@ -241,6 +242,9 @@ pub use retention::{
     RetentionNamespaceDigest, RetentionNamespaceError, RetentionPolicy,
     RetentionProfileAdmissionError, RetentionRoot, RetentionRootDigest, RetentionRootError,
     RootGeneration, RootGenerationError,
+};
+pub use store::{
+    CommitReceipt, ContentReads, ContentStaging, StagedByteLimit, StagedContent, StagingLimits,
 };
 pub use verification::{
     CorruptionEvidence, MissingEvidence, VerificationDepth, VerificationError, VerificationFailure,

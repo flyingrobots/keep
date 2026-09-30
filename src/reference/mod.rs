@@ -10,6 +10,7 @@ mod chunk_verification;
 mod ingestion;
 mod ingestion_error;
 mod output_write;
+mod port;
 mod profile_verification;
 mod publish_error;
 mod published_blob;

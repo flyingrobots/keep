@@ -1470,7 +1470,17 @@ segment publication, catalog admission, and an exact receipt. It preserves
 change `BlobId`, `ChunkId`, `LayoutId`, publication order, recovery, or
 error precision.
 
-- [ ] T-24.1 Backend-neutral ingestion contract.
+- [x] T-24.1 Backend-neutral ingestion contract. Done 2026-09-30: the
+  `store` port module (`ContentReads`, `ContentStaging`, `StagedContent`,
+  `CommitReceipt`, `StagingLimits`, `StagedByteLimit`); `ReferenceStore`
+  implements both halves and `DurableSnapshot` the read half; distinct
+  receipt types give the compile-time law; generic laws run against both
+  backends in-crate plus `tests/content_store_port.rs` from outside; page
+  `docs/architecture/content-store/README.md`. Still owed: the durable
+  writer's `ContentStaging` implementation and the Worldline golden run
+  through the port land with T-24.2, which is the first durable backend a
+  staging can commit into.
+  Original task fields:
   - **Requirements:** a trait or port that `ReferenceStore` and the durable
     writer both satisfy where their durability claims overlap: stage,
     commit, receipt; staging admits count-and-byte limits; the reference
