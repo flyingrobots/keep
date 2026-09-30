@@ -8,7 +8,7 @@ use DurabilityCrashSequence::{
     Catalog, Gc, Head, Initialization, Migration, RecoveryDiscard, Retention, Segment,
 };
 
-fn expected() -> &'static [(DurabilityCrashPoint, &'static str, DurabilityCrashSequence)] {
+const fn expected() -> &'static [(DurabilityCrashPoint, &'static str, DurabilityCrashSequence)] {
     include!("durability_crash_point_contract/expected.rs")
 }
 
