@@ -1,5 +1,6 @@
 //! Transfer pipeline against a caller-owned copy loop.
 
+use std::error::Error;
 use std::io::Cursor;
 
 use divan::counter::BytesCount;
@@ -13,8 +14,14 @@ const REPRESENTATIVE_INPUT_BYTES: usize = 1_048_576;
 const LARGE_INPUT_BYTES: usize = 4_194_304;
 const CAPACITY: usize = 64 * 1024 * 1024;
 
-fn main() {
+/// Refuses to benchmark at all when either input cannot be published, so
+/// a benchmark function never has to report a setup failure itself.
+fn main() -> Result<(), Box<dyn Error>> {
+    for length in [REPRESENTATIVE_INPUT_BYTES, LARGE_INPUT_BYTES] {
+        let _published = published(length)?;
+    }
     divan::main();
+    Ok(())
 }
 
 fn deterministic_bytes(length: usize) -> Vec<u8> {
@@ -29,31 +36,39 @@ fn deterministic_bytes(length: usize) -> Vec<u8> {
         .collect()
 }
 
-fn published(length: usize) -> (ReferenceStore, PublishedBlob) {
+type Setup = Result<(ReferenceStore, PublishedBlob), Box<dyn Error>>;
+
+fn published(length: usize) -> Setup {
     let bytes = deterministic_bytes(length);
     let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(CAPACITY));
-    let staged = store
-        .stage(&mut Cursor::new(&bytes), LayoutEntryLimit::MAXIMUM)
-        .expect("stage");
-    let blob = staged.commit(&mut store).expect("commit");
-    (store, blob)
+    let staged = store.stage(&mut Cursor::new(&bytes), LayoutEntryLimit::MAXIMUM)?;
+    let blob = staged.commit(&mut store)?;
+    Ok((store, blob))
+}
+
+/// Publishes the input; `main` already proved this succeeds for every
+/// benchmarked length, so a bench function only skips on a refusal it
+/// cannot report.
+fn setup(length: usize) -> Option<(ReferenceStore, PublishedBlob)> {
+    published(length).ok()
 }
 
 /// Read-to-write through the pipeline: each verified chunk slice reaches
 /// the sink without an intermediate buffer.
 #[divan::bench(args = [REPRESENTATIVE_INPUT_BYTES, LARGE_INPUT_BYTES])]
 fn read_to_write_pipeline(bencher: Bencher<'_, '_>, length: usize) {
-    let (store, blob) = published(length);
+    let Some((store, blob)) = setup(length) else {
+        return;
+    };
     bencher.counter(BytesCount::new(length)).bench_local(|| {
         let mut sink = WriteSink::new(std::io::sink());
-        let receipt = transfer_layout(
+        transfer_layout(
             black_box(&store),
             blob.layout_id(),
             &mut sink,
             TransferBounds::new(TransferWindow::ONE, &NeverCancelled),
         )
-        .expect("transfer");
-        black_box(receipt.bytes())
+        .map(|receipt| black_box(receipt.bytes()))
     });
 }
 
@@ -61,14 +76,19 @@ fn read_to_write_pipeline(bencher: Bencher<'_, '_>, length: usize) {
 /// buffer, then write the buffer out.
 #[divan::bench(args = [REPRESENTATIVE_INPUT_BYTES, LARGE_INPUT_BYTES])]
 fn read_to_write_copy_loop(bencher: Bencher<'_, '_>, length: usize) {
-    let (store, blob) = published(length);
+    let Some((store, blob)) = setup(length) else {
+        return;
+    };
     bencher.counter(BytesCount::new(length)).bench_local(|| {
         let mut buffer = Vec::new();
-        let _receipt = store
+        store
             .reconstruct_layout(blob.layout_id(), &mut buffer)
-            .expect("reconstruct");
-        std::io::copy(&mut Cursor::new(&buffer), &mut std::io::sink()).expect("copy");
-        black_box(buffer.len())
+            .map_err(|error| error.to_string())
+            .and_then(|_receipt| {
+                std::io::copy(&mut Cursor::new(&buffer), &mut std::io::sink())
+                    .map_err(|error| error.to_string())
+            })
+            .map(|_copied| black_box(buffer.len()))
     });
 }
 
@@ -76,17 +96,18 @@ fn read_to_write_copy_loop(bencher: Bencher<'_, '_>, length: usize) {
 /// verified chunks directly.
 #[divan::bench(args = [REPRESENTATIVE_INPUT_BYTES, LARGE_INPUT_BYTES])]
 fn copy_to_write_pipeline(bencher: Bencher<'_, '_>, length: usize) {
-    let (store, blob) = published(length);
+    let Some((store, blob)) = setup(length) else {
+        return;
+    };
     bencher.counter(BytesCount::new(length)).bench_local(|| {
         let mut destination = ReferenceStore::new(ReferenceStoreCapacity::new(CAPACITY));
-        let receipt = copy_layout(
+        copy_layout(
             black_box(&store),
             blob.layout_id(),
             &mut destination,
             StagingLimits::entries(LayoutEntryLimit::MAXIMUM),
         )
-        .expect("copy");
-        black_box(receipt.target())
+        .map(|receipt| black_box(receipt.target()))
     });
 }
 
@@ -94,17 +115,25 @@ fn copy_to_write_pipeline(bencher: Bencher<'_, '_>, length: usize) {
 /// buffer, then stage the buffer.
 #[divan::bench(args = [REPRESENTATIVE_INPUT_BYTES, LARGE_INPUT_BYTES])]
 fn copy_to_write_copy_loop(bencher: Bencher<'_, '_>, length: usize) {
-    let (store, blob) = published(length);
+    let Some((store, blob)) = setup(length) else {
+        return;
+    };
     bencher.counter(BytesCount::new(length)).bench_local(|| {
         let mut destination = ReferenceStore::new(ReferenceStoreCapacity::new(CAPACITY));
         let mut buffer = Vec::new();
-        let _receipt = store
+        store
             .reconstruct_layout(blob.layout_id(), &mut buffer)
-            .expect("reconstruct");
-        let staged = destination
-            .stage(&mut Cursor::new(&buffer), LayoutEntryLimit::MAXIMUM)
-            .expect("stage");
-        let published = staged.commit(&mut destination).expect("commit");
-        black_box(published.target())
+            .map_err(|error| error.to_string())
+            .and_then(|_receipt| {
+                destination
+                    .stage(&mut Cursor::new(&buffer), LayoutEntryLimit::MAXIMUM)
+                    .map_err(|error| error.to_string())
+            })
+            .and_then(|staged| {
+                staged
+                    .commit(&mut destination)
+                    .map_err(|error| error.to_string())
+            })
+            .map(|published| black_box(published.target()))
     });
 }

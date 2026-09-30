@@ -42,8 +42,8 @@ where
     let expected_target = staged.target();
     let expected_layout = staged.layout_id();
     let receipt = staged.commit()?;
+    // The receipt is `Copy`, so reading its identities ends the store borrow.
     let (target, layout_id) = (receipt.target(), receipt.layout_id());
-    drop(receipt);
     assert_eq!(target, expected_target);
     assert_eq!(layout_id, expected_layout);
     let mut output = Vec::new();
