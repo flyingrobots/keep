@@ -96,9 +96,9 @@ names; use those in code, tests, and commits.
 - [x] [F-15 Retention roots, release, and GC liveness model](#f-15-retention-roots-release-and-gc-liveness-model) — Done (ADR-0009)
 - [x] [F-16 Version-2 format records and codecs](#f-16-version-2-format-records-and-codecs) — Done
 - [ ] [F-17 One-way migration from version 1 to version 2](#f-17-one-way-migration-from-version-1-to-version-2) — Partial (#97, in-process recovery, and the `KEEP-CRASH-053`–`073` matrix done on this branch; `KEEP-MIGRATION-005` and `-008` residue remains)
-- [ ] [F-18 Retention publication](#f-18-retention-publication) — Partial; recovery in review (PR #99)
-- [ ] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — In review (PR #99)
-- [ ] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — In review (PR #99)
+- [ ] [F-18 Retention publication](#f-18-retention-publication) — Partial; recovery and the `KEEP-CRASH-036`–`052` matrix merged from PR #99; T-18.3 and orphan disposition (F-22) remain
+- [x] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — Done on this branch (merged from PR #99)
+- [x] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — Done on this branch (merged from PR #99)
 - [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Planned (#20)
 - [ ] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Planned (#21)
 - [ ] [F-23 Durable authenticated reads and refusal receipts](#f-23-durable-authenticated-reads-and-refusal-receipts) — Planned (#109)
@@ -841,8 +841,9 @@ Direct version-2 initialization is undefined. There is no downgrade.
 ### F-18 Retention publication
 
 **Status:** Partial. Forward publication is Done (issue #19, PR #78).
-Recovery and the `KEEP-CRASH-036` to `-052` matrix are In review (PR #99).
-Explicit disposition of complete orphans waits for F-22.
+Recovery and the `KEEP-CRASH-036` to `-052` matrix are Done on this branch
+(merged from PR #99). Explicit disposition of complete orphans waits for
+F-22.
 
 A retain or release names a namespace, an expected state (absent or an
 exact `RootGeneration`), a complete anchor set, and the realization
@@ -860,7 +861,8 @@ and every namespace or capacity violation before writing anything.
   `KEEP-RETENTION-004`, `-005`, `-009`; `execute_retention_publication`,
   `RetentionPublicationPhase` (17), `FilesystemRetentionPublicationAuthority`,
   `RetentionCurrentStateRefusal`.
-- [ ] T-18.1 Retention publication recovery (`KEEP-RETENTION-007`; PR #99).
+- [x] T-18.1 Retention publication recovery (`KEEP-RETENTION-007`; merged
+  from PR #99).
   - **Requirements:** truncated stage with no later effect is discarded;
     complete root or manifest stage is linked into its pool and retained
     as a recovery-protected orphan, and publication refuses until
@@ -893,7 +895,8 @@ and every namespace or capacity violation before writing anything.
   - **Documentation:** `recovery.md` "Retention publication recovery"
     table marked implemented; CHANGELOG.
   - **Dependencies:** none. Blocks F-22 orphan disposition, F-43.
-- [ ] T-18.2 Retention crash matrix `KEEP-CRASH-036` to `-052` (PR #99).
+- [x] T-18.2 Retention crash matrix `KEEP-CRASH-036` to `-052` (merged
+  from PR #99).
   - **Requirements:** real process death before, during, and after each
     of the 17 phases (51 coordinates); restart recovers and the forward
     retry reports the predicted outcome; full matrix green in debug and
@@ -937,7 +940,7 @@ and every namespace or capacity violation before writing anything.
 
 ### F-19 Reader fence and immutable version-2 snapshots
 
-**Status:** In review (PR #99; `KEEP-RETENTION-008`).
+**Status:** Done on this branch (merged from PR #99; `KEEP-RETENTION-008`).
 
 `reader.lock` is a persistent, zero-length regular file whose existence
 and contents prove nothing. A version-2 reader acquires a kernel-managed
@@ -949,8 +952,8 @@ before and after, retrying within a bounded attempt limit. GC takes writer
 authority then the exclusive reader lock, in that order; publication never
 waits on readers because it deletes nothing.
 
-- [ ] T-19.1 `ReaderFence`, `collect_retention_view`,
-  `FilesystemRetentionSnapshot` (PR #99).
+- [x] T-19.1 `ReaderFence`, `collect_retention_view`,
+  `FilesystemRetentionSnapshot` (merged from PR #99).
   - **Requirements:** shared lock acquired before either head is opened;
     fence released on drop or process death without deleting `reader.lock`;
     double-collect compares catalog generation and digest plus retention
@@ -989,14 +992,15 @@ waits on readers because it deletes nothing.
 
 ### F-20 Model-based retention transition evidence
 
-**Status:** In review (PR #99; `KEEP-RETENTION-010`).
+**Status:** Done on this branch (merged from PR #99; `KEEP-RETENTION-010`).
 
 Every three-operation sequence of retain, release, and re-read across
 namespaces agrees with a deterministic namespace-to-anchor-set map
 observed through the fenced view, and a source-architecture contract keeps
 clocks, paths, environment, and caller identity out of the core.
 
-- [ ] T-20.1 125 three-operation sequences against the model (PR #99).
+- [x] T-20.1 125 three-operation sequences against the model (merged from
+  PR #99).
   - **Requirements:** the model is a `BTreeMap<RetentionNamespace,
     BTreeSet<RetentionAnchor>>` with generation counters; each sequence
     compares the fenced view with the model after every step; the source

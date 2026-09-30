@@ -94,14 +94,16 @@ head and the catalog it selects, and refuses superseded candidates, retained
 stages, replaced protocol directories, and every namespace or capacity
 violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 
+Retention publication recovery is implemented and proven both in-process for
+every crash prefix and by the crash matrix, which kills a real writer before,
+during, and after `KEEP-CRASH-036` through `052`.
+Readers bind one consistent catalog, retention head, and manifest view under a
+shared `ReaderFence` and verify selected roots on demand. Every three-operation
+transition sequence agrees with a deterministic namespace-to-anchor-set model.
 Migration recovery is proven in-process for every prefix and by the
 `KEEP-CRASH-053..073` process-death matrix, which kills a real writer at each
 of its 68 boundary coordinates and recovers the restarted root.
-
-Not implemented: retention publication recovery and `KEEP-CRASH-036..052`
-process-death evidence, the reader fence, model-based transition evidence,
-and garbage collection. The retention items are issue #19; collection is
-issue #21.
+Not implemented: garbage collection, issue #21.
 Reopen compares only the restart-stable root coordinates, device and inode,
 against the intent; see
 [root identity across restart](recovery.md#root-identity-across-restart). A

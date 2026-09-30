@@ -8,6 +8,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use super::RetentionPublicationStorage;
 use super::filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
 use super::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionRoot,
@@ -260,4 +261,50 @@ fn write_version_one(sandbox: &TestDirectory) -> Result<(), Box<dyn Error>> {
 
 const fn maximum_policy() -> SegmentReadPolicy {
     SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM)
+}
+
+type PublicationPhase<'a> =
+    &'a mut dyn FnMut(&mut FilesystemRetentionPublicationAuthority) -> io::Result<()>;
+
+/// The number of storage-port phases one publication executes.
+pub(super) const PUBLICATION_PHASE_COUNT: usize = 18;
+
+/// Executes publication phases 1 through `count` and stops, like a crash there.
+///
+/// Phase 1 is current-state verification; 2 through 18 are the storage-port
+/// phases in `RetentionPublicationPhase::ALL` order, so `count` selects the
+/// exact prefix a process death after that phase would leave behind.
+pub(super) fn drive_publication(
+    authority: &mut FilesystemRetentionPublicationAuthority,
+    preparation: &RetentionPublicationPreparation<'_>,
+    count: usize,
+) -> Result<(), Box<dyn Error>> {
+    let publication = preparation
+        .publication()
+        .ok_or("preparation carries no publication")?;
+    let root = preparation.candidate();
+    let phases: [PublicationPhase<'_>; PUBLICATION_PHASE_COUNT] = [
+        &mut |a| a.verify_current(preparation).map(|_| ()),
+        &mut |a| a.write_root_stage(root),
+        &mut |a| a.synchronize_root_stage(),
+        &mut |a| a.admit_root_namespace(root).map(|_| ()),
+        &mut |a| a.synchronize_roots_after_namespace(),
+        &mut |a| a.link_root(root),
+        &mut |a| a.synchronize_root_namespace(root),
+        &mut |a| a.write_manifest_stage(publication.manifest()),
+        &mut |a| a.synchronize_manifest_stage(),
+        &mut |a| a.link_manifest(publication.manifest()),
+        &mut |a| a.synchronize_manifest_pool(),
+        &mut |a| a.write_head_stage(publication.head()),
+        &mut |a| a.synchronize_head_stage(),
+        &mut |a| a.replace_head(),
+        &mut |a| a.synchronize_retention_namespace(),
+        &mut |a| a.remove_root_stage(),
+        &mut |a| a.remove_manifest_stage(),
+        &mut |a| a.synchronize_cleanup(),
+    ];
+    for phase in phases.into_iter().take(count) {
+        phase(authority)?;
+    }
+    Ok(())
 }

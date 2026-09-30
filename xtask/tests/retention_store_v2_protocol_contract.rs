@@ -149,7 +149,7 @@ fn requirement_ledger_names_planned_and_executable_evidence()
         "`KEEP-MIGRATION-001`",
         "`KEEP-MIGRATION-008`",
         "`KEEP-GC-001`",
-        "Planned in #19",
+        "In progress in #19",
         "Planned in #21",
         "golden-format",
         "model-based",

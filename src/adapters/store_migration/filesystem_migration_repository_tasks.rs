@@ -11,39 +11,16 @@ use std::path::Path;
 
 use cap_std::fs::Dir;
 
-use super::filesystem_migration_authority::MigrationNamespacePolicy;
 use super::filesystem_migration_authority_error::FilesystemMigrationAuthorityError as Error;
 use super::filesystem_migration_fixed_artifact::{
     FilesystemMigrationFixedArtifact as FixedArtifact, FilesystemMigrationFixedStage,
 };
 use super::{
-    FilesystemStoreMigrationAuthority, FilesystemStoreMigrationInventoryReader,
-    StoreMigrationFixedStage, filesystem_migration_namespace,
+    FilesystemStoreMigrationAuthority, StoreMigrationFixedStage, filesystem_migration_namespace,
 };
-use crate::adapters::{FilesystemPlatformAdmission, FilesystemWriterLock, SegmentReadPolicy};
+use crate::adapters::SegmentReadPolicy;
 
 impl FilesystemStoreMigrationAuthority {
-    /// Opens fresh migration authority over a store built without platform
-    /// admission, for repository process-death tasks.
-    ///
-    /// # Errors
-    ///
-    /// Returns the same admission and pool failures as [`Self::open`].
-    #[doc(hidden)]
-    pub fn open_unchecked_for_repository_tasks(
-        lock: FilesystemWriterLock,
-        policy: SegmentReadPolicy,
-    ) -> Result<Self, Error> {
-        let admission = FilesystemPlatformAdmission::unchecked_for_repository_tasks(lock)
-            .map_err(|source| Error::Platform { source })?;
-        let inventory = FilesystemStoreMigrationInventoryReader::open(admission, policy)
-            .map_err(|source| Error::Inventory { source })?;
-        Ok(Self::with_policy(
-            inventory,
-            MigrationNamespacePolicy::Published,
-        ))
-    }
-
     /// Reacquires recovery authority without platform admission, for
     /// repository process-death tasks; otherwise exactly
     /// [`Self::reopen_for_recovery`].

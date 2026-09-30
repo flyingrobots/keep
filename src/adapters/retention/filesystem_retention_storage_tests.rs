@@ -77,6 +77,10 @@ fn retained_stage_refuses_publication_before_recovery() -> Result<(), Box<dyn Er
         return Err("retained stage refused outside current-state verification".into());
     };
     assert_eq!(source.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        super::filesystem_retention_test_fixture::refusal(&source),
+        Some(super::RetentionCurrentStateRefusal::RecoveryRefused { .. })
+    ));
     assert!(!head_path(sandbox.path()).exists());
     Ok(())
 }
@@ -148,25 +152,50 @@ fn migrated_witness(root: &Path) -> io::Result<Vec<(PathBuf, Vec<u8>)>> {
 }
 
 #[test]
-fn retained_manifest_stage_refuses_publication_before_recovery() -> Result<(), Box<dyn Error>> {
-    let (sandbox, mut authority) =
-        open_authority("filesystem-retention-recovery-required-manifest")?;
+fn a_complete_orphan_root_stage_refuses_publication_until_disposition() -> Result<(), Box<dyn Error>>
+{
+    let (sandbox, mut authority) = open_authority("filesystem-retention-recovery-required-orphan")?;
     let root_bytes = fixture(ROOT_HEX)?;
     let preparation = initial_preparation(&root_bytes)?;
     fs::write(
-        sandbox.path().join("retention").join("manifest.next"),
-        b"partial bytes left by a failed write",
+        sandbox.path().join("retention").join("root.next"),
+        &root_bytes,
     )?;
-    let before = retention_witness(sandbox.path())?;
 
     let error = execute_retention_publication(&mut authority, &preparation)
         .err()
-        .ok_or("retained manifest stage was unexpectedly published over")?;
+        .ok_or("a complete orphan root stage was unexpectedly published over")?;
 
     let RetentionPublicationError::CurrentVerification { source } = error else {
-        return Err("retained stage refused outside current-state verification".into());
+        return Err("protected orphan refused outside current-state verification".into());
     };
-    assert_eq!(source.kind(), io::ErrorKind::InvalidData);
-    assert_eq!(retention_witness(sandbox.path())?, before);
+    assert!(matches!(
+        super::filesystem_retention_test_fixture::refusal(&source),
+        Some(super::RetentionCurrentStateRefusal::RetainedStage)
+    ));
+    assert!(sandbox.path().join("retention").join("root.next").is_file());
+    assert_eq!(
+        fs::read(root_pool_path(sandbox.path(), preparation.candidate()))?,
+        root_bytes
+    );
+    Ok(())
+}
+
+#[test]
+fn a_truncated_stage_is_recovered_and_publication_proceeds() -> Result<(), Box<dyn Error>> {
+    let (sandbox, mut authority) = open_authority("filesystem-retention-recovered-stage")?;
+    let root_bytes = fixture(ROOT_HEX)?;
+    let preparation = initial_preparation(&root_bytes)?;
+    let stage = sandbox.path().join("retention").join("manifest.next");
+    fs::write(&stage, b"partial bytes left by a failed write")?;
+
+    let receipt = execute_retention_publication(&mut authority, &preparation)?;
+
+    assert_eq!(receipt.outcome(), RetentionPublicationOutcome::Published);
+    assert!(
+        !stage.exists(),
+        "the truncated stage must be discarded by recovery"
+    );
+    assert_eq!(fs::read(head_path(sandbox.path()))?, fixture(HEAD_HEX)?);
     Ok(())
 }

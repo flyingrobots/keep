@@ -51,11 +51,11 @@ Keep is required to refuse all three, before mutating anything.
   generation-versioned catalogs, and a fixed-width `HEAD` are published
   through an ordered protocol whose every step is a named crash point.
   Platform admission is Linux ext4, non-casefolded, one writer.
-- **Proven restart recovery for version 1 and for migration.** The crash
-  matrix kills real writer processes at 173 before/during/after coordinates
-  (`KEEP-CRASH-001`–`035` for version 1, `053`–`073` for the one-way
-  migration) and verifies the store lands in exactly one documented lawful
-  state each time; every interrupted migration recovers to one complete
+- **Proven restart recovery.** The crash matrix kills real writer processes
+  at 224 before/during/after coordinates (`KEEP-CRASH-001`–`073`) and
+  verifies the store lands in exactly one documented lawful state each time,
+  for version-1 publication, version-2 retention publication, and the
+  one-way migration; every interrupted migration recovers to one complete
   migration with every version-1 byte intact.
 - **Version-2 retention and migration, forward path.** Explicit retention
   roots, deterministic closure verification, a one-way 21-phase migration,
@@ -71,19 +71,22 @@ Keep is required to refuse all three, before mutating anything.
 
 ## What it does not do yet
 
-Version 2 writes correctly from a clean start. An interrupted migration
-recovers: `FilesystemStoreMigrationAuthority::reopen_for_recovery` and
-`recover_store_migration` resume any prefix of the twenty-one phases, proven
-in-process for every prefix and by killing a real writer at every boundary. An
-interrupted retention publication is refused rather than guessed at, and
-readers have no fence, so **an interrupted version-2 publication waits for a
-human** until [PR #99](https://github.com/flyingrobots/keep/pull/99) merges.
-A version-1 store stays admitted until its owner migrates it.
+Version 2 writes correctly from a clean start, and the next publication
+recovers the residue of an interrupted one: a stage cut mid-write is
+discarded, a head already synchronized is finalized, and a byte-identical
+retry reports already committed. The one state that waits for a human is a
+complete orphan, a crash between the root link and the head finalization,
+which stays recovery-protected until explicit disposition lands with garbage
+collection (#21). The crash matrix proves that recovery by killing real
+writer processes at all 51 retention coordinates, and an interrupted
+migration the same way at all 68 migration coordinates:
+`FilesystemStoreMigrationAuthority::reopen_for_recovery` and
+`recover_store_migration` resume any prefix of the twenty-one phases. Readers
+hold a shared fence and double-collect both heads, so a view never straddles
+a publication. A version-1 store stays admitted until its owner migrates it.
 
 | Gap | Tracked |
 | --- | --- |
-| Restart recovery for retention publication | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
-| Reader fence binding one consistent catalog + retention snapshot | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
 | Durable authenticated reads bound to a fenced snapshot | [#109](https://github.com/flyingrobots/keep/issues/109) |
 | Verification reports at durable depths and a replayable receipt | [#20](https://github.com/flyingrobots/keep/issues/20) |
 | Garbage collection and identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |

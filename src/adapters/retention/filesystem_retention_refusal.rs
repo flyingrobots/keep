@@ -5,6 +5,7 @@ use std::fmt;
 use std::io;
 
 use super::{RetentionHeadDecodeError, RetentionManifestDecodeError};
+use super::{RetentionRecoveryError, RetentionRecoveryRefusal};
 use crate::adapters::{CatalogDecodeError, PublicationHeadDecodeError};
 use crate::{CatalogGeneration, LivenessGeneration, RetentionManifestDigest};
 
@@ -122,6 +123,16 @@ pub enum RetentionCurrentStateRefusal {
     /// A protocol directory named at admission (`retention`, `roots`, or
     /// `manifests`) no longer names the pinned directory that was admitted.
     ProtocolDirectoryReplaced,
+    /// Restart recovery refused the retained stages as unrecoverable ambiguity.
+    RecoveryRefused {
+        /// The exact planning refusal.
+        source: RetentionRecoveryRefusal,
+    },
+    /// A restart recovery step refused; the completed prefix remains.
+    RecoveryStepRefused {
+        /// The refused step, the completed prefix, and the storage error.
+        source: RetentionRecoveryError,
+    },
     /// A record's kind or length disagreed with its declaration.
     RecordKindOrLength,
     /// A record carried bytes beyond its declared length.
@@ -228,6 +239,10 @@ impl RetentionCurrentStateRefusal {
             Self::RecordKindOrLength => "retention record kind or length disagreed",
             Self::RecordTrailingBytes => "retention record carried trailing bytes",
             Self::RecordLengthOverflow => "retention record length exceeded the addressable range",
+            Self::RecoveryRefused { .. } => {
+                "restart recovery refused the retained retention stages"
+            }
+            Self::RecoveryStepRefused { .. } => "a restart recovery step refused",
             Self::ProtocolDirectoryReplaced => {
                 "a retention protocol directory was replaced after admission"
             }
@@ -253,6 +268,8 @@ impl Error for RetentionCurrentStateRefusal {
             Self::ManifestRefused { source } => Some(source),
             Self::CatalogHeadRefused { source } => Some(source),
             Self::CatalogRefused { source } => Some(source.as_ref()),
+            Self::RecoveryRefused { source } => Some(source),
+            Self::RecoveryStepRefused { source } => Some(source),
             _ => None,
         }
     }
