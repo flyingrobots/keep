@@ -10,6 +10,19 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Reference-store staging memory contract. `ReferenceStore::STAGING_SCRATCH_LIMIT_BYTES`
+  names the fixed scratch one `stage` call holds beyond the new unique chunk
+  bytes it copies (the 8 KiB read buffer, one maximum-length chunk buffer,
+  and the detector's retained state). Peak staging memory is that scratch
+  plus the capacity the store has not yet materialized plus layout metadata
+  bounded by the entry limit, because the adapter refuses with
+  `CapacityExceeded` before copying a chunk that would cross the capacity.
+  `tests/streaming_cas_memory.rs` measures that ceiling for a source five
+  times the capacity, proves the refusal retains nothing, and proves fully
+  deduplicated staging stays at the scratch floor; the reference-store
+  rationale records why the in-memory adapter cannot stage a bounded window
+  of a larger blob without publishing a prefix or becoming the durable
+  ingestion adapter (#74).
 - Partial-prefix migration recovery. `plan_store_migration_recovery` maps
   one observed `StoreMigrationResidue` (the presence and exact bytes of every
   fixed migration name) and the intent the version-1 store derives today

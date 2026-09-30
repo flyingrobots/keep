@@ -78,7 +78,7 @@ names; use those in code, tests, and commits.
 - [x] [F-03 Identity layers and RepresentationId](#f-03-identity-layers-and-representationid) — Done as a model; representation codec reserved
 - [x] [F-04 Deterministic chunking and ChunkId](#f-04-deterministic-chunking-and-chunkid) — Done
 - [x] [F-05 Flat chunk layout v1 and LayoutId](#f-05-flat-chunk-layout-v1-and-layoutid) — Done
-- [x] [F-06 Reference store](#f-06-reference-store) — Done; one open defect (#74)
+- [x] [F-06 Reference store](#f-06-reference-store) — Done
 - [x] [F-07 Authenticated reconstruction and exact range reads](#f-07-authenticated-reconstruction-and-exact-range-reads) — Done for the reference store
 - [x] [F-08 Conformance corpora and the Golden File Worldline](#f-08-conformance-corpora-and-the-golden-file-worldline) — Done
 - [x] [F-09 Streaming CAS benchmark baseline](#f-09-streaming-cas-benchmark-baseline) — Done; thresholds unconfigured
@@ -102,7 +102,7 @@ names; use those in code, tests, and commits.
 - [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Planned (#20)
 - [ ] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Planned (#21)
 - [ ] [F-23 Durable authenticated reads and refusal receipts](#f-23-durable-authenticated-reads-and-refusal-receipts) — Planned (#109)
-- [ ] [F-24 Bounded production ingestion through the durable store](#f-24-bounded-production-ingestion-through-the-durable-store) — Planned (#82, #74, #72)
+- [ ] [F-24 Bounded production ingestion through the durable store](#f-24-bounded-production-ingestion-through-the-durable-store) — Planned (#82, #72)
 
 ### Integration (M5)
 
@@ -165,9 +165,9 @@ features are listed; finished prerequisites are implied.
 - F-22 (#21) needs F-19, F-21, and the remainder of F-18; it is needed by
   F-26, F-29, F-31, F-32, F-33.
 - F-23 needs F-19 and F-22 (a pinned view must survive collection).
-- F-24 (#82) needs F-18, F-21, and the F-06 defects #74 and #72.
+- F-24 (#82) needs F-18, F-21, and the F-06 defect #72.
 - F-26 (#24) needs F-22 and F-25.
-- F-28 implementation (#83) needs the F-28 ADR (#86), F-21, #74, #72.
+- F-28 implementation (#83) needs the F-28 ADR (#86), F-21, #72.
 - F-29 (#85) needs F-18, F-21, F-22; it is needed by F-30, F-31, F-32, F-33.
 - F-30 (#89) needs F-24 and F-29; F-31 (#92) needs F-30; F-32 (#90) needs
   F-31.
@@ -306,7 +306,7 @@ plan.
 
 ### F-06 Reference store
 
-**Status:** Done (issue #13). Two open defects, #71 and #74.
+**Status:** Done (issue #13). Defects #71 and #74 closed on this branch.
 
 `ReferenceStore` is the capacity-bounded, in-memory, non-durable adapter
 that proves the stage, commit, and reconstruct laws: `stage` chunks and
@@ -353,7 +353,12 @@ death loses everything in it; no API makes a durability claim.
   - **Documentation:** `docs/architecture/reference-store/rationale.md`
     paragraph on two verification passes rewritten.
   - **Dependencies:** none. Blocks nothing, but F-24 inherits the pattern.
-- [ ] T-06.4 Bounded-memory staging (#74, P1).
+- [x] T-06.4 Bounded-memory staging (#74, P1) — resolved by rationale plus
+  measured laws: `ReferenceStore::STAGING_SCRATCH_LIMIT_BYTES` names the
+  fixed scratch, `tests/streaming_cas_memory.rs` measures the ceiling and
+  the deduplicated floor, and the reference-store rationale records why a
+  staging window is unavailable to an in-memory adapter. Original task
+  fields:
   - **Requirements:** staging holds a bounded window of missing chunks, not
     every missing chunk for the whole blob; the bound is explicit, checked,
     and reported; `StagedBlob` semantics (invisible until commit) hold.
@@ -1377,7 +1382,7 @@ and no hidden whole-blob allocation.
 
 ### F-24 Bounded production ingestion through the durable store
 
-**Status:** Planned (#82, P1, M6). Needs #74 and #72 (F-06) and F-21.
+**Status:** Planned (#82, P1, M6). Needs #72 (F-06) and F-21.
 
 One bounded production path from an unknown-length source through the
 registered CDC profile, chunk verification and deduplication, immutable

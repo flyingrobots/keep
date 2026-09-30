@@ -15,11 +15,36 @@ macro_rules! read_buffer_bytes {
     };
 }
 
+macro_rules! maximum_chunk_bytes {
+    () => {
+        262_144
+    };
+}
+
 const READ_BUFFER_BYTES: usize = read_buffer_bytes!();
 // This bound makes more than one detector boundary per read impossible.
 const _: () = assert!(read_buffer_bytes!() <= FastCdc::MINIMUM_CHUNK_LENGTH.get());
+const MAXIMUM_CHUNK_BYTES: usize = maximum_chunk_bytes!();
+const _: () = assert!(maximum_chunk_bytes!() == FastCdc::MAXIMUM_CHUNK_LENGTH.get());
 
 impl ReferenceStore {
+    /// Fixed scratch memory that one [`ReferenceStore::stage`] call may hold
+    /// beyond the new unique chunk bytes it stages.
+    ///
+    /// The scratch is the 8 KiB read buffer, one buffer sized to
+    /// [`FastCdc::MAXIMUM_CHUNK_LENGTH`], and the detector's retained state.
+    /// It does not grow with the source length. Layout metadata proportional
+    /// to the caller's [`LayoutEntryLimit`] is accounted separately.
+    ///
+    /// Together with the capacity check this gives the staging memory
+    /// ceiling: peak adapter-owned memory never exceeds this scratch plus the
+    /// capacity not yet materialized by the store plus the layout metadata,
+    /// because the store refuses with [`IngestionError::CapacityExceeded`]
+    /// before copying a chunk that would cross the capacity.
+    pub const STAGING_SCRATCH_LIMIT_BYTES: usize = READ_BUFFER_BYTES
+        .saturating_add(MAXIMUM_CHUNK_BYTES)
+        .saturating_add(FastCdc::RETAINED_STATE_LIMIT_BYTES);
+
     /// Reads one logical stream into invisible, validated staged work.
     ///
     /// The streaming engine retains one fixed 8 KiB read buffer, one buffer
