@@ -152,6 +152,13 @@ test = false
 doc = false
 bench = false
 
+[[bin]]
+name = "verification_receipt"
+path = "fuzz_targets/verification_receipt.rs"
+test = false
+doc = false
+bench = false
+
 [workspace]
 members = ["."]
 resolver = "3"

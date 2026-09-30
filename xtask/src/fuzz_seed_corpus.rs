@@ -10,6 +10,7 @@ mod migration_seeds;
 mod retention_seeds;
 mod segment_seeds;
 mod segment_store_v2_fixture;
+mod verification_seeds;
 
 use std::error::Error;
 use std::fmt;
@@ -77,6 +78,7 @@ pub(super) fn prepare(repository_root: &Path) -> Result<(), FuzzSeedError> {
     seeds.extend(migration_seeds::seeds(&files)?);
     seeds.extend(retention_seeds::seeds(&files)?);
     seeds.extend(segment_seeds::seeds(&files)?);
+    seeds.extend(verification_seeds::seeds(&files)?);
     files.write_seeds(&seeds)
 }
 

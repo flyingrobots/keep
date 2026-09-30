@@ -189,6 +189,12 @@ pub use adapters::{
     prepare_retention_publication, resume_recovery_disposition, verify_retention_closure,
 };
 pub use adapters::{
+    CanonicalVerificationReceipt, ReceiptCorruption, ReceiptEvidenceKind, ReceiptMissing,
+    ReceiptOutcomeKind, ReceiptRefusal, ReceiptRefusalClass, ReceiptSubjectKind, ReceiptViewKind,
+    VERIFICATION_CONTRACT_VERSION, VerificationOutcome, VerificationReceipt,
+    VerificationReceiptDecodeError, VerificationReceiptField, VerificationView,
+};
+pub use adapters::{
     MIGRATION_NAMESPACE_PREFIX, StoreMigrationEffect, StoreMigrationFixedStage,
     StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError, StoreMigrationRecoveryPlan,
     StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,

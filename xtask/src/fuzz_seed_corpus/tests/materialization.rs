@@ -5,7 +5,7 @@ use std::path::Path;
 
 use super::super::{
     FuzzSeedError, catalog_seeds, gc_seeds, layout_seeds, migration_seeds, prepare,
-    retention_seeds, segment_seeds,
+    retention_seeds, segment_seeds, verification_seeds,
 };
 use crate::test_directory::TestDirectory;
 
@@ -43,11 +43,12 @@ fn seed_preparation_materializes_the_complete_deterministic_set()
     copy_segment_fixtures(source_root, root)?;
     copy_catalog_fixtures(source_root, root)?;
     copy_version_two_fixtures(source_root, root)?;
+    copy_verification_fixtures(source_root, root)?;
 
     prepare(root)?;
     let corpus = root.join("fuzz/corpus");
     let first = seed_contents(&corpus)?;
-    assert_eq!(first.len(), 49);
+    assert_eq!(first.len(), 52);
     assert_eq!(target_seed_count(&first, "catalog_format/"), 6);
     assert_eq!(target_seed_count(&first, "gc_format/"), 3);
     assert_eq!(target_seed_count(&first, "golden_protocol/"), 9);
@@ -55,6 +56,7 @@ fn seed_preparation_materializes_the_complete_deterministic_set()
     assert_eq!(target_seed_count(&first, "migration_format/"), 3);
     assert_eq!(target_seed_count(&first, "retention_format/"), 3);
     assert_eq!(target_seed_count(&first, "segment_format/"), 8);
+    assert_eq!(target_seed_count(&first, "verification_receipt/"), 3);
     prepare(root)?;
     assert_eq!(seed_contents(&corpus)?, first);
 
@@ -115,6 +117,25 @@ fn copy_catalog_fixtures(source_root: &Path, root: &Path) -> Result<(), FuzzSeed
         let destination = catalog_directory.join(fixture);
         fs::copy(&source_path, &destination)
             .map_err(|source| FuzzSeedError::io("copy test catalog", &destination, source))?;
+    }
+    Ok(())
+}
+
+fn copy_verification_fixtures(source_root: &Path, root: &Path) -> Result<(), FuzzSeedError> {
+    use std::fs;
+
+    let directory = root.join("conformance/verification-receipt/v1");
+    fs::create_dir_all(&directory).map_err(|source| {
+        FuzzSeedError::io("create test verification-receipt root", &directory, source)
+    })?;
+    for fixture in verification_seeds::FIXTURES {
+        let source_path = source_root
+            .join("conformance/verification-receipt/v1")
+            .join(fixture);
+        let destination = directory.join(fixture);
+        fs::copy(&source_path, &destination).map_err(|source| {
+            FuzzSeedError::io("copy test verification receipt", &destination, source)
+        })?;
     }
     Ok(())
 }

@@ -10,6 +10,24 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Durable verification receipts. `keep.verification-receipt/v1` is a
+  canonical, versioned, checksummed 384-byte record binding one
+  verification's subject, admitted view (reference, or a durable
+  snapshot's catalog generation and digest and liveness generation and
+  manifest digest), the depth established or stage refused, the refusal
+  classification and evidence kind and index, the exact layout and target
+  where the outcome binds them, and the verification contract version.
+  `VerificationReceipt::{from_report, from_refusal}` project the ephemeral
+  report or refusal; `CanonicalVerificationReceipt::{encode, decode}` are
+  the codec, and `decode` admits framing, contract, checksum, every
+  registered code, every identity slot, and every semantic law, then
+  requires canonical bytes. The corpus in `conformance/verification-receipt/v1/`
+  is built by a handwritten oracle from the accepted layout and segment-store
+  fixtures; `tests/verification_receipt.rs` proves the golden round trip,
+  cross-process admission, every reference-store outcome round-tripping, a
+  field-complete corruption matrix, and that a refusal never decodes as a
+  report; the `verification_receipt` fuzz target is seeded from the corpus.
+  `KEEP-VERIFY-007` is Implemented.
 - Permanent corruption ledgers over every durable structural field.
   `conformance/segment-store/v1/mutations.tsv` (105 rows: segment header,
   record header, record checksum, seal, whole segment, catalog header,

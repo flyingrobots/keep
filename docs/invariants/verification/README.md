@@ -91,9 +91,20 @@ view allocates no other adapter-owned memory.
 
 No reference-store path produces `Ambiguous`.
 
+## Receipts
+
+`VerificationReceipt::from_report` and `from_refusal` project a report or
+refusal onto a `VerificationView` (the reference store, or one durable
+snapshot's catalog and retention coordinates), keeping the subject, depth or
+stage, classification, evidence kind and index, and the exact layout and
+target, and dropping the expected and observed identities.
+`CanonicalVerificationReceipt::{encode, decode}` is the durable, replayable
+384-byte form specified on
+[the format page](../../formats/verification-receipt-v1/README.md); a
+receipt written by one process is admitted by another exactly as meant.
+
 ## Nonclaims
 
 A report contains no plaintext, key material, or path. It is an ephemeral
-statement about one operation against one view; a durable, replayable form
-is the refusal-receipt work in
-[the reconstruction ledger](../authenticated-reconstruction/requirements.md).
+statement about one operation against one view; its receipt is the durable
+form and proves no more than the report did.

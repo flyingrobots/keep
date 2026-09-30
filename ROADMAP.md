@@ -99,7 +99,7 @@ names; use those in code, tests, and commits.
 - [x] [F-18 Retention publication](#f-18-retention-publication) — Done on this branch (recovery, the `KEEP-CRASH-036`–`052` matrix, member re-verification, and orphan disposition)
 - [x] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — Done on this branch (merged from PR #99)
 - [x] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — Done on this branch (merged from PR #99)
-- [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Partial (#20; report vocabulary and corruption ledgers done on this branch; durable receipts remain)
+- [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Partial (#20; report vocabulary, corruption ledgers, and durable receipts done on this branch; durable-view depths land with T-23.1)
 - [ ] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Partial (#21; codecs, planner, and orphan disposition done on this branch; compaction and execution remain)
 - [ ] [F-23 Durable authenticated reads and refusal receipts](#f-23-durable-authenticated-reads-and-refusal-receipts) — Planned (#109)
 - [ ] [F-24 Bounded production ingestion through the durable store](#f-24-bounded-production-ingestion-through-the-durable-store) — Planned (#82, #72)
@@ -1031,8 +1031,10 @@ clocks, paths, environment, and caller identity out of the core.
 ### F-21 Precise verification reports and corruption refusal
 
 **Status:** Partial (#20, P1, M4); the vocabulary and the reference-store
-form (T-21.1) and the permanent corruption ledgers (T-21.2) landed on this
-branch; durable receipts (T-21.3) remain. The most-cited open blocker: F-22,
+form (T-21.1), the permanent corruption ledgers (T-21.2), and durable
+receipts (T-21.3) landed on this branch; durable views establishing
+`Framing` through `RetentionClosure` (`KEEP-VERIFY-006`) land with the
+durable read surface (T-23.1). The most-cited open blocker: F-22,
 F-23, F-24, F-27, F-28, F-29, F-30, F-31, F-33, and F-34 all name it.
 
 Verify content and store structure at explicit, enumerated depths; report
@@ -1121,7 +1123,15 @@ quarantines, or rewrites physical state.
   - **Complexity:** M.
   - **Documentation:** each format README "Mutation ledger".
   - **Dependencies:** T-21.1.
-- [ ] T-21.3 Durable refusal and verification receipts.
+- [x] T-21.3 Durable refusal and verification receipts —
+  `keep.verification-receipt/v1` (`docs/formats/verification-receipt-v1/`),
+  `VerificationReceipt`, `VerificationView`, and
+  `CanonicalVerificationReceipt::{encode, decode}`, the corpus in
+  `conformance/verification-receipt/v1/`, `tests/verification_receipt.rs`,
+  and the `verification_receipt` fuzz target; `KEEP-VERIFY-007`
+  Implemented. The receipt keeps a refusal's classification, evidence kind,
+  index, and layout and drops the expected and observed identities, so it
+  stays fixed-width. Original task fields:
   - **Requirements:** a canonical, versioned, checksummed report record
     binding `BlobId`, admitted view (catalog generation and digest,
     liveness generation and manifest digest), exact `LayoutId` if present,

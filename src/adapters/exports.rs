@@ -103,5 +103,6 @@ pub use super::store_initialization_phase::StoreInitializationPhase;
 pub use super::store_initialization_receipt::StoreInitializationReceipt;
 pub use super::store_initialization_storage::StoreInitializationStorage;
 pub use super::store_migration::*;
+pub use super::verification_receipt::*;
 pub use super::writer_lock_acquire_error::WriterLockAcquireError;
 pub use super::writer_lock_acquire_phase::WriterLockAcquirePhase;

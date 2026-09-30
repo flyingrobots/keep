@@ -231,6 +231,7 @@ mod sync_capable_directory;
 #[cfg(test)]
 #[path = "../../tests/support/mod.rs"]
 mod test_support;
+mod verification_receipt;
 mod writer_lock_acquire_error;
 mod writer_lock_acquire_phase;
 
