@@ -93,7 +93,7 @@ impl FilesystemCompactionAuthority {
     ///
     /// # Errors
     ///
-    /// Returns [`FilesystemCompactionError::Observe`] when the publication
+    /// Returns [`FilesystemCompactionError::Observe`](super::FilesystemCompactionError::Observe) when the publication
     /// directories cannot be pinned.
     pub fn open(
         admission: FilesystemVersionTwoAdmission,
@@ -113,7 +113,7 @@ impl FilesystemCompactionAuthority {
     ///
     /// # Errors
     ///
-    /// Returns [`FilesystemCompactionError`] at the exact refusal; a
+    /// Returns [`FilesystemCompactionError`](super::FilesystemCompactionError) at the exact refusal; a
     /// publication refusal leaves the completed phases' residue for
     /// [`recover_compaction`](super::recover_compaction).
     pub fn execute(&mut self, plan: &CompactionPlan) -> Result<CompactionReceipt, Error> {

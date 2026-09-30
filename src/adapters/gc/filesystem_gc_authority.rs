@@ -129,7 +129,7 @@ impl FilesystemGcAuthority {
     ///
     /// # Errors
     ///
-    /// Returns [`FilesystemGcError`] at the exact observation, ambiguity,
+    /// Returns [`FilesystemGcError`](super::FilesystemGcError) at the exact observation, ambiguity,
     /// fence, or phase refusal.
     pub fn recover(&mut self) -> Result<GcRecoveryReport, Error> {
         self.context = None;
@@ -178,7 +178,7 @@ impl FilesystemGcAuthority {
     ///
     /// # Errors
     ///
-    /// Returns [`FilesystemGcError`] when `gc` holds residue, readers hold
+    /// Returns [`FilesystemGcError`](super::FilesystemGcError) when `gc` holds residue, readers hold
     /// the fence, the plan names nothing, the re-observed store plans
     /// differently, or the intent refuses.
     pub fn prepare(&mut self, plan: &GcPlan) -> Result<PreparedGcExecution, Error> {
