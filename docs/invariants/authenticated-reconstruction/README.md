@@ -150,9 +150,11 @@ complete success receipt. Keep does not claim that an unsuccessful call left
 an arbitrary `Write` untouched.
 
 The current `ReferenceStore` verifies the complete realization before its
-first output write, then reverifies each immutable chunk immediately before
-emission. This prevents known unauthenticated content from being emitted; it
-does not make the caller's sink atomic.
+first output write, hashing each chunk once, then emits each verified
+immutable chunk by identity; its view cannot change under `&self`. This
+prevents known unauthenticated content from being emitted; it does not make
+the caller's sink atomic. A durable view whose bytes can change between
+verification and emission must reverify or pin what it verified.
 
 ## Decisions, refusals, and operation failures
 

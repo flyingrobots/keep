@@ -78,7 +78,7 @@ names; use those in code, tests, and commits.
 - [x] [F-03 Identity layers and RepresentationId](#f-03-identity-layers-and-representationid) — Done as a model; representation codec reserved
 - [x] [F-04 Deterministic chunking and ChunkId](#f-04-deterministic-chunking-and-chunkid) — Done
 - [x] [F-05 Flat chunk layout v1 and LayoutId](#f-05-flat-chunk-layout-v1-and-layoutid) — Done
-- [x] [F-06 Reference store](#f-06-reference-store) — Done; two open defects
+- [x] [F-06 Reference store](#f-06-reference-store) — Done; one open defect (#74)
 - [x] [F-07 Authenticated reconstruction and exact range reads](#f-07-authenticated-reconstruction-and-exact-range-reads) — Done for the reference store
 - [x] [F-08 Conformance corpora and the Golden File Worldline](#f-08-conformance-corpora-and-the-golden-file-worldline) — Done
 - [x] [F-09 Streaming CAS benchmark baseline](#f-09-streaming-cas-benchmark-baseline) — Done; thresholds unconfigured
@@ -318,7 +318,11 @@ death loses everything in it; no API makes a durability claim.
   `tests/streaming_cas/`, 216 exhaustive three-step model sequences.
 - [x] T-06.2 Chunk deduplication keyed by `ChunkId` as a storage fact, not
   retention — `docs/architecture/reference-store/README.md`.
-- [ ] T-06.3 Single-pass authenticated emit (#71, P2).
+- [x] T-06.3 Single-pass authenticated emit (#71) — the verification pass
+  hashes each chunk once; emission fetches verified chunks by identity;
+  `every_chunk_is_hashed_exactly_once_per_reconstruction` and
+  `a_range_read_hashes_each_selected_chunk_exactly_once`. Original task
+  fields:
   - **Requirements:** each selected chunk is hashed exactly once per
     `reconstruct` or `read_range` call; the complete `BlobId`, range
     accounting, and profile-boundary verification stay intact; the failure

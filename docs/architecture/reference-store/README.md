@@ -71,8 +71,8 @@ backend must define a separate explicit recovery protocol.
 
 ## Reconstruction
 
-Whole-blob reconstruction performs two passes over immutable in-memory chunks.
-Before output it:
+Whole-blob reconstruction hashes each immutable in-memory chunk exactly once,
+then emits the verified chunks by identity. Before output it:
 
 1. verifies every stored chunk against its named `ChunkId`;
 2. replays `fastcdc-64k-v1` and compares every boundary with the layout; and

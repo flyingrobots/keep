@@ -691,6 +691,13 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- `ReferenceStore` reconstruction and range reads hash each selected chunk
+  exactly once. The verification pass still runs to completion before the
+  first output write; the emission pass now fetches each verified immutable
+  chunk by identity instead of hashing it again, because the in-memory view
+  cannot change under `&self`. Every "refuses before output" law is
+  unchanged; a test-only hash counter pins one hash per chunk. Closes #71.
+
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 

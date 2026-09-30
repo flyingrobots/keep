@@ -43,11 +43,14 @@ Repair belongs to a future explicit recovery protocol with its own evidence.
 Writing a verified prefix before discovering a later missing chunk, false
 profile boundary, or full-blob mismatch would expose bytes from an
 unauthenticated claim. Reconstruction first verifies the entire plan without
-output. It then reverifies each chunk immediately before writing because the
-output pass is a separate traversal.
+output, hashing each chunk exactly once. It then emits each verified chunk by
+identity without hashing it again: the in-memory view cannot change under
+`&self`, so a second hash would prove nothing the first did not.
 
-This costs two chunk-verification passes. Correct refusal and a simple audit
-story outweigh throughput until measured evidence justifies another design.
+Rejected: reverifying on emission (issue #71). It doubled the CPU of every
+full and large-range read for an adapter whose chunks are immutable for the
+duration of the call. A durable adapter, whose bytes can change between
+passes, must reverify on emission or pin what it verified.
 
 ## Why range reads authenticate selected chunks only
 
@@ -106,8 +109,9 @@ association refuses before output.
   for durable application data.
 - Staging memory can grow with unique content only up to explicit capacity.
 - Layout metadata remains bounded but can be large at the protocol maximum.
-- Reconstruction performs two verification passes before reporting success.
-- Exact range reads perform two verification passes over only the selected
-  chunks and deliberately make no complete-blob verification claim.
+- Reconstruction hashes each chunk once, before its first output write, and
+  emits verified chunks by identity.
+- Exact range reads hash only the selected chunks, once each, and
+  deliberately make no complete-blob verification claim.
 - Durable storage must implement a different adapter with documented
   publication order, crash states, recovery behavior, and synchronization.
