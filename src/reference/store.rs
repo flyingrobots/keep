@@ -120,3 +120,14 @@ impl ReferenceStore {
         self.chunks.get(&identity).map(Box::as_ref)
     }
 }
+
+impl super::chunk_verification::ChunkSource for ReferenceStore {
+    fn chunk(&self, identity: ChunkId) -> Option<&[u8]> {
+        Self::chunk(self, identity)
+    }
+
+    #[cfg(test)]
+    fn note_chunk_hash(&self, identity: ChunkId) {
+        self.observed_chunk_hashes.borrow_mut().push(identity);
+    }
+}

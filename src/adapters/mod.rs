@@ -67,6 +67,7 @@ mod closed_segment;
 mod compaction;
 mod decoded_catalog_entry;
 mod digest_hex;
+mod durable;
 mod exports;
 mod filesystem_catalog_artifact;
 mod filesystem_catalog_catalog;

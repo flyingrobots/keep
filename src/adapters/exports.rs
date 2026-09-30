@@ -37,6 +37,7 @@ pub use super::checksummed_publication_head::ChecksummedPublicationHead;
 pub use super::checksummed_segment_record::ChecksummedSegmentRecord;
 pub use super::closed_segment::ClosedSegment;
 pub use super::compaction::*;
+pub use super::durable::*;
 pub use super::filesystem_catalog_publication_error::FilesystemCatalogPublicationError;
 pub use super::filesystem_catalog_publisher::FilesystemCatalogPublisher;
 pub use super::filesystem_catalog_snapshot::FilesystemCatalogSnapshot;

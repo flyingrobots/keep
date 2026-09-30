@@ -185,6 +185,27 @@ assert_eq!(output, b"exact bytes, or nothing");
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
+A migrated version-two store reads the same way through `DurableStore`, with
+every read pinned to one fenced snapshot and every receipt naming the view.
+Production admission is Linux ext4; this example is not run on other hosts.
+
+```rust,no_run
+use keep::{CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, LayoutEntryLimit,
+    ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit};
+
+let policy = CatalogRestartPolicy::new(
+    SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
+    CatalogRestartByteLimit::new(1 << 30)?,
+);
+let store = DurableStore::open(std::path::Path::new("/var/lib/keep/store"), policy, ReaderAttemptLimit::DEFAULT);
+let snapshot = store.snapshot()?; // shared reader fence held until dropped
+# let blob_id = "keep:blob:v1:blake3-256:1:1cfb8fa9e917aba15a1f592095f377ff180755fe1212b0d7d2ec750bd128b606".parse()?;
+let mut output = Vec::new();
+let receipt = snapshot.reconstruct(blob_id, &mut output)?;
+println!("generation {}", receipt.view().catalog_generation().get());
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
 Run the full gate suite the way CI does:
 
 ```bash

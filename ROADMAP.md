@@ -101,7 +101,7 @@ names; use those in code, tests, and commits.
 - [x] [F-20 Model-based retention transition evidence](#f-20-model-based-retention-transition-evidence) — Done on this branch (merged from PR #99)
 - [ ] [F-21 Precise verification reports and corruption refusal](#f-21-precise-verification-reports-and-corruption-refusal) — Partial (#20; report vocabulary, corruption ledgers, and durable receipts done on this branch; durable-view depths land with T-23.1)
 - [x] [F-22 Garbage collection, compaction, and recovery dispositions](#f-22-garbage-collection-compaction-and-recovery-dispositions) — Done on this branch (#21; codecs, planner, disposition, retirement, and compaction; crash sequences for disposition and compaction, stress, benchmarks, and re-encoding still owed)
-- [ ] [F-23 Durable authenticated reads and refusal receipts](#f-23-durable-authenticated-reads-and-refusal-receipts) — Planned (#109)
+- [x] [F-23 Durable authenticated reads and refusal receipts](#f-23-durable-authenticated-reads-and-refusal-receipts) — Done on this branch (#109; `DurableStore` reads and verification receipts)
 - [ ] [F-24 Bounded production ingestion through the durable store](#f-24-bounded-production-ingestion-through-the-durable-store) — Planned (#82, #72)
 
 ### Integration (M5)
@@ -1397,8 +1397,9 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
 
 ### F-23 Durable authenticated reads and refusal receipts
 
-**Status:** Planned (#109). `KEEP-RECONSTRUCT-009` and `-010` cited the
-closed #22 and #23; #109 now owns them.
+**Status:** Partial (#109, P1, M4). The durable read surface (T-23.1)
+landed on this branch; `KEEP-RECONSTRUCT-009` and `-010` are Implemented.
+Durable refusal receipts are `CanonicalVerificationReceipt` (T-21.3).
 
 The durable segment, catalog, publication, and recovery surfaces do not
 yet form one high-level `BlobId`-to-writer contract. A durable read must
@@ -1408,7 +1409,15 @@ immutable records, preserve the view while successors publish, and return
 a receipt naming the view, with refusal distinct from operational failure
 and no hidden whole-blob allocation.
 
-- [ ] T-23.1 `DurableStore` read surface over a fenced snapshot.
+- [x] T-23.1 `DurableStore` read surface over a fenced snapshot —
+  `DurableStore`, `DurableSnapshot`, `DurableView`, the durable receipts,
+  the crate-private `ChunkSource` shared by the reference and durable read
+  cores, `docs/architecture/durable-store/README.md`, and
+  `src/adapters/durable/tests.rs`; `KEEP-RECONSTRUCT-009` and `-010`
+  Implemented. The Worldline's storage steps still run against the
+  reference store: a durable run needs the durable writer (T-24.2) to ingest
+  its states and is owed with it, as is a `keep cat` adapter (F-42).
+  Original task fields:
   - **Requirements:** `reconstruct`, `reconstruct_layout`, `read_range`
     with the same laws as `ReferenceStore` but bound to a
     `FilesystemRetentionSnapshot`; receipts gain the view coordinates;

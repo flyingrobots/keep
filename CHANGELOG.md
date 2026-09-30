@@ -10,6 +10,22 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Durable authenticated reads. `DurableStore::open(root, policy, limit)`
+  names a migrated version-two store and `snapshot()` pins one consistent
+  view under the shared reader fence, indexing every retained root's
+  anchors. `DurableSnapshot::{contains_blob, reconstruct, reconstruct_layout,
+  read_range, read_layout_range}` run the reference store's reconstruction
+  and range cores (now generic over a crate-private `ChunkSource`) against
+  the pinned catalog, resolving blobs through the retained anchors and
+  layouts and chunks through the catalog's records, and return receipts
+  bound to the `DurableView` (catalog generation and digest, retention
+  generation and manifest digest). A snapshot cannot be dropped mid-read,
+  keeps its generation while a successor publishes, and blocks collection
+  (`ReadersActive`) until dropped. `DurableReadError::View` is the one
+  operational failure; every other refusal is evidence against the pinned
+  view. `KEEP-RECONSTRUCT-009` and `-010` are Implemented on
+  `src/adapters/durable/tests.rs`; the page is
+  `docs/architecture/durable-store/README.md`.
 - Identity-preserving compaction. `observe_compaction` reads every record
   the catalog names, every record a retained closure reaches, and the pool;
   `plan_compaction` is pure over it and gives every named segment one

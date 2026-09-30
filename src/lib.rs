@@ -201,6 +201,10 @@ pub use adapters::{
     observe_compaction, plan_compaction, recover_compaction,
 };
 pub use adapters::{
+    DurableOutcome, DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt,
+    DurableSnapshot, DurableStore, DurableStoreError, DurableView,
+};
+pub use adapters::{
     MIGRATION_NAMESPACE_PREFIX, StoreMigrationEffect, StoreMigrationFixedStage,
     StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError, StoreMigrationRecoveryPlan,
     StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,

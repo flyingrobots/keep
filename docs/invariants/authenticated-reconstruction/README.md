@@ -208,7 +208,7 @@ range and explicitly carry the narrower range proof posture.
 
 ## Durable reconstruction requirement
 
-A future operation claiming durable logical reconstruction must additionally:
+A durable logical reconstruction must additionally:
 
 - bind reads to one admitted immutable snapshot or catalog generation;
 - prevent required supporting evidence from being garbage-collected, deleted,
@@ -220,12 +220,14 @@ A future operation claiming durable logical reconstruction must additionally:
 - separate evidenced refusal from operational failure;
 - preserve the output-visibility rule above.
 
-The current durable segment, catalog, publication, and recovery surfaces do
-not yet form this consolidated high-level `BlobId`-to-writer contract.
-Retention publication now records verified closures as generation-checked
-roots, but nothing collects or fences yet, so no current surface protects or
-releases the evidence closure this operation requires. These lower-level surfaces must not be
-described as an implemented durable logical reconstruction API.
+[`DurableStore`](../../architecture/durable-store/README.md) implements this
+contract: a `DurableSnapshot` pins one admitted version-two view under the
+shared reader fence, which GC refuses to cross while the snapshot lives;
+blobs resolve through the retained roots' anchors, layouts and chunks
+through the pinned catalog; the shared reconstruction and range cores
+authenticate every emitted byte; and each receipt names the view's catalog
+and retention coordinates. `DurableReadError::View` is its one operational
+failure; every other refusal is evidence against the complete pinned view.
 
 ## Current public evidence
 
@@ -247,6 +249,8 @@ Evidence anchors:
 - [range-read refusal laws](../../../tests/range_read_failures.rs)
 - [reconstruction receipt](../../../src/reference/reconstruction_receipt.rs)
 - [range-read receipt](../../../src/reference/range_read_receipt.rs)
+- [durable store reads](../../architecture/durable-store/README.md) and their
+  [laws](../../../src/adapters/durable/tests.rs)
 
 ## Consumer rule
 
