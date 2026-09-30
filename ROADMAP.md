@@ -43,6 +43,17 @@ User stories take four perspectives:
 - **Agent**: an autonomous coding or operations agent acting through the API
   or an MCP server without a human in the loop.
 
+Three sibling projects sit above Keep and shape what it must provide:
+[Echo](https://github.com/flyingrobots/echo) owns causal history and
+consumes Keep through the authenticated reconstruction contract (F-25);
+[Graft](https://github.com/flyingrobots/graft) owns workspace policy
+(F-26); and [warp-drive](https://github.com/flyingrobots/warp-drive) is a
+POSIX-shaped FUSE membrane over Echo where every read is a projection from a
+coordinate and every write is an intent against an explicit basis. Keep
+stays the physical ground truth beneath all three: exact bytes named by
+identity, or a refusal. Where a feature below is really a membrane concern,
+it says so and names warp-drive as the likely home.
+
 Keep's core exposes no command-line interface by design
 (`docs/Rust Standards.md` §5.2). Where a task lists an interface, it names
 the Rust API and the operation an out-of-core CLI or MCP adapter would
@@ -127,11 +138,19 @@ names; use those in code, tests, and commits.
 - [ ] [F-42 Operator surfaces](#f-42-operator-surfaces) — Proposed (CLI and MCP adapters)
 - [ ] [F-43 Public release and API stability](#f-43-public-release-and-api-stability) — Proposed
 - [ ] [F-44 Multi-writer, replication, and remote tiers](#f-44-multi-writer-replication-and-remote-tiers) — Out of scope
+- [ ] [F-47 Hardware-accelerated identity and chunking](#f-47-hardware-accelerated-identity-and-chunking) — Proposed
+- [ ] [F-48 Layout-level structural diff](#f-48-layout-level-structural-diff) — Proposed
+- [ ] [F-49 Compact retention inclusion proofs](#f-49-compact-retention-inclusion-proofs) — Proposed; needs a format successor
 
 ### Assurance beyond empirical testing
 
 - [ ] [F-45 Formal verification of the durable protocols](#f-45-formal-verification-of-the-durable-protocols) — Proposed
 - [ ] [F-46 Condition coverage and mutation analysis](#f-46-condition-coverage-and-mutation-analysis) — Proposed
+
+### Moonshots
+
+- [ ] [F-50 Untrusted chunk transport](#f-50-untrusted-chunk-transport) — Proposed; needs the F-44 decision
+- [ ] [F-51 Kernel-bypass ingestion adapter](#f-51-kernel-bypass-ingestion-adapter) — Proposed; Linux only
 
 ## Dependency map
 
@@ -158,6 +177,14 @@ features are listed; finished prerequisites are implied.
 - F-42 needs F-23 and F-24 before an adapter has a durable path to wrap.
 - F-43 needs every Planned feature in M4, plus F-24 and F-28, before a
   format-compatibility policy can be promised.
+- F-47 needs the conformance corpora (F-08) as its oracle and T-09.2 for the
+  before-and-after numbers; it changes no identity.
+- F-48 needs only F-05 today; its durable form needs F-23.
+- F-49 needs a retention format successor (a Merkle anchor set) and F-19.
+- F-50 needs F-24, F-44's decision record, and F-49 for cross-store
+  retention claims.
+- F-51 needs T-24.2 and a decision on the unsafe boundary (ADR-0006 is the
+  precedent).
 
 ## Features
 
@@ -1826,7 +1853,13 @@ policy; one conformance suite runs against every runtime adapter.
 ### F-35 Read-only FUSE projection
 
 **Status:** Planned (#66 ADR, P3). No mount is exposed until F-19 and
-F-22 land.
+F-22 land. The POSIX membrane above Keep is warp-drive's job; the ADR here
+should decide whether Keep ships any mount at all or only the snapshot and
+read surfaces (F-19, F-23) that warp-drive projects. One namespace the ADR
+must weigh: a time machine, `generations/<liveness generation>/...`, where
+every historical retention generation is a read-only directory backed by
+authenticated on-the-fly reconstruction. Keep can supply the fenced
+snapshot per generation; the directory shape is the membrane's.
 
 Expose an admitted durable snapshot as a read-only filesystem while
 preserving the core law: a namespace of identity-addressed files or named
@@ -1863,7 +1896,13 @@ no writable, rename, truncate, link, or repair operation.
 
 ### F-36 Transactional write-enabled projection
 
-**Status:** Planned (#73, P2). Extends F-35.
+**Status:** Planned (#73, P2). Extends F-35. warp-drive is the likely
+home: its writes are already intents against an explicit basis, which is
+this feature's transaction boundary. The Keep-side contract it needs is
+an ephemeral staging port: an agent stages hundreds of file changes into a
+scratch segment, runs its tests against the projected view, and either
+commits to a successor generation with one atomic head replacement or
+discards the stage without touching the published store.
 
 A write-capable projection for copy and migration workflows that preserves
 authenticated source identity, records mutation intents as first-class
@@ -2044,12 +2083,21 @@ plan or needs bounded plan streaming.
 - [ ] T-40.2 Hierarchical layout codec.
   - **Requirements:** a new codec (codec 1 has no extension point) with
     its own depth, fanout, cycle, aggregate, and allocation laws; range
-    planning across levels; closure accounting extended.
+    planning across levels; closure accounting extended. The motivation is
+    concrete: a 100 GiB blob under `fastcdc-64k-v1` is about 1.6 million
+    chunk identities in one flat record of about 70 MiB, so every range
+    read admits the whole plan before it can select one chunk. A
+    fixed-arity tree of layout records gives logarithmic seeks, lets a
+    range read admit only the subtree it touches, and makes the
+    layout-level diff in F-48 skip identical subtrees by digest.
   - **Acceptance criteria:** golden and mutation corpora; the 256 GiB
-    ceiling lifted to a stated new bound.
+    ceiling lifted to a stated new bound; a range read of one chunk in a
+    maximal blob admits at most depth-many layout records.
   - **Scope:** in — codec 2. Out — changing codec 1.
-  - **User stories:** Human — a store holds a 1 TiB image. API user —
-    reads are unchanged. MCP user — none. Agent — none.
+  - **User stories:** Human — a store holds a 1 TiB model checkpoint. API
+    user — reads are unchanged; range reads on huge blobs stop paying for
+    the whole plan. MCP user — none. Agent — an agent diffing two
+    checkpoints touches only the subtrees that changed.
   - **Interface:** none new.
   - **Contract schema:** layout codec 2 record.
   - **Test plan:** golden; edges — depth exactly at bound; fuzz — decoder.
@@ -2407,3 +2455,211 @@ a mutation subset as expected gates; neither runs today.
     "expected" to "enforced".
   - **Dependencies:** none; T-46.1 first, since mutation results tell you
     which uncovered conditions matter.
+
+### F-47 Hardware-accelerated identity and chunking
+
+**Status:** Proposed. `blake3` is admitted with only the `pure` and `std`
+features so that no unsafe code sits under Keep's own
+`#![forbid(unsafe_code)]`; the gear-table FastCDC detector is scalar by
+design (ADR-0003 admits vectorized implementations only if they reproduce
+every scalar vector).
+
+- [ ] T-47.1 Optional accelerated adapter behind a feature flag.
+  - **Requirements:** an `accelerated` Cargo feature that enables BLAKE3's
+    SIMD backends (NEON, AVX2, AVX-512) and, separately, a vectorized
+    boundary detector; the canonical output is byte-identical: every
+    `BlobId`, `ChunkId`, and boundary in every conformance corpus
+    reproduces exactly under both builds; the unsafe surface lives in the
+    dependency, never in Keep, and the dependency review in
+    `docs/dependencies/` names every enabled feature and its audited
+    version; the pure build stays the default and the one CI proves the
+    corpora against first.
+  - **Acceptance criteria:** `cargo xtask conformance-check` and
+    `golden-file-worldline-check` pass under both feature sets on the
+    designated runner; the benchmark reports ingest throughput for both,
+    with the accelerated build measured, not assumed; a mismatch between
+    builds on any vector is a refusal to admit the feature.
+  - **Scope:** in — feature flag, dependency review, corpus runs under both
+    builds, benchmark rows. Out — changing any identity or profile; a
+    Keep-owned SIMD implementation.
+  - **User stories:** Human — an operator enables the flag and ingest
+    runs several times faster with identical identities. API user — no
+    API change. MCP user — none. Agent — an agent ingesting large corpora
+    picks the accelerated build once its receipts match the pure build.
+  - **Interface:** Cargo feature `accelerated`.
+  - **Contract schema:** none.
+  - **Test plan:** golden — every corpus under both builds; property —
+    partition invariance under the vectorized detector; benchmark — both
+    builds, same corpus, same runner.
+  - **Definition of done:** feature documented in the README engineering
+    standard with the identity-equivalence law named.
+  - **Complexity:** M.
+  - **Documentation:** dependency review; ADR-0003 consequence satisfied.
+  - **Dependencies:** F-08, T-09.2.
+
+### F-48 Layout-level structural diff
+
+**Status:** Proposed. Everything it needs already exists: two admitted
+flat layouts are ordered `ChunkId` sequences with logical offsets, so the
+difference between two blobs is a sequence alignment over identities that
+never reads a payload byte.
+
+- [ ] T-48.1 `diff_layouts` over admitted layouts.
+  - **Requirements:** input is two `AdmittedLayout` values; output is an
+    ordered list of hunks (`Same { offset_a, offset_b, length }`,
+    `Insert`, `Delete`, `Replace`) in logical bytes, derived from a
+    longest-common-subsequence or Myers alignment over `ChunkId` with
+    checked arithmetic and a documented bound on entry count; identical
+    layouts produce one `Same` hunk; the result proves only chunk-identity
+    equality, never byte equality of unequal chunks (a `Replace` says the
+    chunks differ, not how).
+  - **Acceptance criteria:** the Golden File Worldline's state A and B
+    diff to exactly the early-insertion hunk the CDC profile predicts;
+    property tests over random edits agree with a byte-level diff of the
+    reconstructed blobs at chunk granularity; no payload read occurs
+    (instrumented).
+  - **Scope:** in — a `layout::diff` core module and the reference-store
+    entry point. Out — byte-level diffs inside a chunk; rendering; a
+    durable form until F-23 lands.
+  - **User stories:** Human — a maintainer sees which regions of a 2 GiB
+    file changed in under a millisecond. API user —
+    `store.diff(blob_a, blob_b)` returns hunks from the catalog alone. MCP
+    user — a "diff blobs" tool returns hunks without streaming either
+    blob. Agent — an agent inspects a repository's edit footprint across
+    generations without reading payloads.
+  - **Interface:** `diff_layouts(&AdmittedLayout, &AdmittedLayout) ->
+    Result<LayoutDiff, LayoutDiffError>`; adapters `keep diff <a> <b>` and
+    MCP `keep.diff`.
+  - **Contract schema:** in-memory `LayoutDiff`; a canonical text form for
+    the CLI.
+  - **Test plan:** golden — Worldline A and B; edges — empty against
+    nonempty, identical, fully disjoint, one-chunk blobs; property —
+    random insert, delete, replace edits; stress — two maximal plans
+    within the documented bound.
+  - **Definition of done:** merged with the Worldline law.
+  - **Complexity:** S for flat layouts; M once F-40 T-40.2 adds subtree
+    skipping.
+  - **Documentation:** reference-store README section.
+  - **Dependencies:** F-05; F-23 for the durable entry point.
+
+### F-49 Compact retention inclusion proofs
+
+**Status:** Proposed. Needs a retention format successor, so it is not a
+version-2 feature.
+
+Today a root's anchor set is committed by one flat digest over up to
+65,536 anchors, so proving that one `BlobId` is retained under liveness
+generation N means shipping the whole anchor set (up to 7.8 MiB) plus the
+manifest and head. A Merkle anchor set would make the proof logarithmic:
+a few hundred bytes of sibling digests, the root record header, the
+manifest entry, and the head.
+
+- [ ] T-49.1 Format successor with a Merkle anchor-set digest.
+  - **Requirements:** the anchor-set digest becomes the root of a
+    fixed-arity Merkle tree over the sorted anchors, with domain-separated
+    leaf and node hashing; the root record, manifest, and head bytes stay
+    otherwise identical; a proof is a canonical record binding the anchor,
+    its sibling path, the root generation and digest, the manifest
+    generation and digest, and the head checksum; verification needs no
+    store access.
+  - **Acceptance criteria:** golden proof fixtures; a verifier under
+    `conformance/` that imports no production code; a tampered sibling,
+    a proof against the wrong generation, and a proof for an absent
+    anchor each refuse with a typed value; the closure verifier still
+    admits the new root bytes.
+  - **Scope:** in — the successor specification, the new anchor-set digest,
+    proof record, verifier, migration from the flat digest. Out — proving
+    anything about application meaning; proving bytes exist on disk (the
+    proof says "retained under this generation", exactly what the head
+    says).
+  - **User stories:** Human — an auditor verifies that a release artifact
+    was retained at generation N from a 1 KiB receipt. API user —
+    `retain` returns the proof alongside the receipt. MCP user — a
+    "prove retention" tool returns the proof bytes. Agent — one agent
+    hands another a proof instead of a store path.
+  - **Interface:** `prove_retention(snapshot, namespace, anchor)`,
+    `verify_retention_proof(bytes)`.
+  - **Contract schema:** proof record in a new format page; the successor
+    root record in a `segment-store-v3` or a v2 revision, per the ADR.
+  - **Test plan:** golden; edges — one-anchor set, maximal set, first and
+    last leaf; known failures — every tamper case; fuzz — proof decoder.
+  - **Definition of done:** ADR Accepted; proof verifier in conformance.
+  - **Complexity:** L.
+  - **Documentation:** ADR; format page; ADR-0009 consequence.
+  - **Dependencies:** F-19 (the proof names a fenced view), F-43 T-43.1
+    (successor policy).
+
+### F-50 Untrusted chunk transport
+
+**Status:** Proposed; a moonshot. Blocked on the F-44 decision record.
+
+Because every chunk is self-authenticating (`ChunkId` is a hash of the
+bytes), a chunk can be fetched from any peer, cache, or neighbouring agent
+and admitted only after Keep re-hashes it. A corrupt or malicious peer
+cannot get bytes into the store; at worst it wastes bandwidth. That makes a
+zero-trust chunk swarm for build farms and multi-agent clusters a
+transport problem, not a trust problem.
+
+- [ ] T-50.1 Inbound chunk admission port and one transport adapter.
+  - **Requirements:** a port that accepts `(ChunkId, bytes)` from an
+    untrusted source and admits only on exact identity, with a bounded
+    in-flight window and a per-source refusal budget; a "want list"
+    derived from a layout minus the local catalog; one reference
+    transport (HTTP or gRPC over a LAN) in an adapter crate; no peer ever
+    influences identity, layout, retention, or publication order.
+  - **Acceptance criteria:** a peer returning wrong bytes for a `ChunkId`
+    is refused before staging and counted against its budget; a full
+    blob assembled from two peers reconstructs to its `BlobId`; the
+    transport adapter imports no Keep internals beyond the port.
+  - **Scope:** in — the port, the want-list derivation, one adapter. Out
+    — peer discovery, incentives, encryption on the wire (use the
+    transport's), and any multi-writer semantics (F-44).
+  - **User stories:** Human — a build farm warms every worker from its
+    neighbours. API user — `fetch_missing(layout, peers)`. MCP user —
+    none. Agent — an agent pulls dependencies from a sibling agent's
+    cache without trusting it.
+  - **Interface:** trait `ChunkSource`; `fetch_missing`.
+  - **Contract schema:** wire format for want lists and chunk frames,
+    versioned.
+  - **Test plan:** golden — wire fixtures; adversarial — wrong bytes,
+    truncated bytes, oversized bytes, duplicate delivery; concurrency —
+    two sources racing on one chunk; stress — the in-flight window at its
+    bound.
+  - **Definition of done:** adapter crate merged behind the port.
+  - **Complexity:** XL.
+  - **Documentation:** ADR for the trust model; adapter README.
+  - **Dependencies:** F-24, F-44 decision; F-49 for retention claims that
+    cross stores.
+
+### F-51 Kernel-bypass ingestion adapter
+
+**Status:** Proposed; a moonshot. Linux only.
+
+A specialized adapter that streams bytes from a socket or block device
+through the chunk detector into an immutable segment with as few user-space
+copies as the identity computation allows: `io_uring` for submission,
+`splice(2)` or `copy_file_range(2)` for chunk bodies that are already on
+disk. Hashing still has to see every byte, so "zero-copy" means one pass
+for identity and no second copy for storage.
+
+- [ ] T-51.1 Feasibility and unsafe-boundary decision.
+  - **Requirements:** measure the copies the T-24.2 path makes today;
+    decide whether an `io_uring` adapter can live in a separate crate with
+    an explained unsafe allowance (ADR-0006 is the precedent for a single
+    admitted unsafe boundary) or through a safe wrapper crate with its own
+    dependency review; state what the adapter cannot change: identity,
+    chunk boundaries, publication order, crash points.
+  - **Acceptance criteria:** a rationale note with the measured baseline
+    and the decision; if pursued, the adapter passes the same crash
+    matrix as the ordinary writer.
+  - **Scope:** in — the decision and measurement. Out — any adapter
+    before T-24.2 exists.
+  - **User stories:** Human — an operator ingests from a 100 GbE socket
+    at line rate. Others — no API change.
+  - **Interface:** none until decided.
+  - **Contract schema:** none.
+  - **Test plan:** benchmark before and after; crash matrix.
+  - **Definition of done:** rationale merged.
+  - **Complexity:** M for the decision; XL for the adapter.
+  - **Documentation:** rationale; dependency review.
+  - **Dependencies:** T-24.2, T-41.3.
