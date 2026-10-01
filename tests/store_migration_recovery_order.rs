@@ -60,3 +60,28 @@ fn a_marker_stage_cannot_survive_receipt_publication() -> Result<(), Box<dyn Err
     ));
     Ok(())
 }
+
+#[test]
+fn a_receipt_only_later_effect_is_reported_as_receipt() -> Result<(), Box<dyn Error>> {
+    let intent = support::decode_hex(
+        include_str!("../conformance/segment-store/v2/migration-intent.hex").trim(),
+    )?;
+    let receipt = support::decode_hex(
+        include_str!("../conformance/segment-store/v2/migration-receipt.hex").trim(),
+    )?;
+    let expected = AdmittedStoreMigrationIntent::decode(&intent)?;
+    let residue = StoreMigrationResidue {
+        intent: Some(intent.clone()),
+        intent_stage: Some(intent.clone()),
+        receipt: Some(receipt),
+        ..StoreMigrationResidue::VERSION_ONE
+    };
+    assert!(matches!(
+        plan_store_migration_recovery(&expected, &residue),
+        Err(StoreMigrationRecoveryAmbiguity::StageAfterEffect {
+            stage: StoreMigrationFixedStage::Intent,
+            effect: StoreMigrationEffect::Receipt,
+        })
+    ));
+    Ok(())
+}

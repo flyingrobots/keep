@@ -16,6 +16,9 @@ after its public API and format compatibility policies are established.
 - Recovery jointly verifies retained stages and canonical records during
   adoption, refusing substituted canonical inodes before forward execution.
 
+- Late-stage refusals report receipt effects as receipts when no marker
+  artifact exists.
+
 - Migration recovery planning, bounded filesystem residue admission, explicit
   truncated-stage discard, and receipts listing resumed phases. The production
   crash matrix now includes 68 migration process-death cases (Refs #108).

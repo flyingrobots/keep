@@ -40,8 +40,10 @@ pub fn plan_store_migration_recovery(
     if let Some(stage) = residue.intent_stage.as_deref() {
         let later = if residue.has_namespace_effect() {
             Some(Effect::Namespace)
-        } else if residue.has_marker_or_receipt_effect() {
+        } else if residue.marker_stage.is_some() || residue.marker.is_some() {
             Some(Effect::Marker)
+        } else if residue.has_receipt_effect() {
+            Some(Effect::Receipt)
         } else {
             None
         };
