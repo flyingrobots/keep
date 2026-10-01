@@ -163,7 +163,6 @@ pub use migration_recovery_plan::{StoreMigrationFixedStage, StoreMigrationRecove
 pub use migration_recovery_planner::plan_store_migration_recovery;
 pub use migration_recovery_residue::{MIGRATION_NAMESPACE_PREFIX, StoreMigrationResidue};
 pub use migration_recovery_storage::StoreMigrationRecoveryStorage;
-pub use migration_resumption::resume_store_migration;
 pub use migration_storage::StoreMigrationStorage;
 pub use migration_synchronization_mask::MigrationSynchronizationMask;
 pub use store_identifier::StoreIdentifier;

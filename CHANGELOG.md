@@ -624,6 +624,9 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Migration resumption is internal to verified recovery admission; external
+  callers cannot bypass current authority verification and residue adoption.
+
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 

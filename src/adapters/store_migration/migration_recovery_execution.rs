@@ -5,11 +5,12 @@ use std::error::Error;
 use std::fmt;
 use std::io;
 
+use super::migration_resumption::resume_store_migration;
 use super::{
     AdmittedStoreMigrationIntent, CanonicalStoreMigrationIntent, CanonicalStoreMigrationReceipt,
     StoreMigrationError, StoreMigrationFixedStage, StoreMigrationRecoveryAmbiguity,
     StoreMigrationRecoveryPlan, StoreMigrationRecoveryStorage, StoreMigrationResidue,
-    plan_store_migration_recovery, resume_store_migration,
+    plan_store_migration_recovery,
 };
 
 /// What one recovery found and did.
@@ -115,6 +116,12 @@ pub enum StoreMigrationRecoveryError {
 /// # Errors
 ///
 /// Returns [`StoreMigrationRecoveryError`] at the exact boundary that refused.
+///
+/// Resumption is internal: external callers cannot bypass recovery admission.
+///
+/// ```compile_fail
+/// use keep::resume_store_migration;
+/// ```
 pub fn recover_store_migration(
     storage: &mut impl StoreMigrationRecoveryStorage,
     expected: &CanonicalStoreMigrationIntent,

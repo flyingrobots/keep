@@ -6,6 +6,10 @@ truncated-stage removal, and all forward writes. Nested directory membership
 is checked before adoption so a planner-visible prefix cannot hide foreign
 entries that would otherwise fail only after creating the next stage.
 
+The phase-resumption helper is private to recovery. Exposing it would let
+callers manufacture a completion receipt without current-state verification,
+residue planning, or adoption. The public recovery entry point owns that order.
+
 A retained intent stage and a later namespace effect cannot arise from the
 ordered protocol: stage removal precedes namespace admission. The analogous
 marker-stage/receipt combination also refuses. Treating either as a harmless

@@ -39,7 +39,7 @@ impl<'a> MigrationRecords<'a> {
 ///
 /// Returns [`StoreMigrationError::Storage`] naming the exact phase that
 /// refused. Failure returns no receipt.
-pub fn resume_store_migration(
+pub(super) fn resume_store_migration(
     storage: &mut impl StoreMigrationStorage,
     intent: &CanonicalStoreMigrationIntent,
     from: StoreMigrationPhase,
