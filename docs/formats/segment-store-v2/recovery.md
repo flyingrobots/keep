@@ -62,8 +62,9 @@ corpus `definition.tsv` bytes. The format-marker digest is BLAKE3-256 of
 `CanonicalStoreMigrationIntent` retains typed intent coordinates; `CanonicalStoreMigrationReceipt` binds completion; admitted record types verify both.
 `StoreMigrationStorage` names all 21 durability capabilities; `execute_store_migration` verifies current authority first and returns only after final synchronization.
 `FilesystemStoreMigrationInventoryReader` inventories version-1 bytes under
-retained writer authority. The fresh writer executes once; partial-prefix
-recovery is absent; version-1 reopen and recovery both refuse a migrated root.
+retained writer authority. The fresh writer executes once; separate migration
+recovery plans and executes the lawful remaining suffix after process death.
+Version-1 reopen and version-1 recovery both refuse a migrated root.
 
 ## Reader fence
 
