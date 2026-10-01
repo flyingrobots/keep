@@ -104,3 +104,33 @@ fn identifiers_and_positions_round_trip_without_aliases() {
     }
     assert_eq!(DurabilityCrashPosition::from_identifier("between"), None);
 }
+
+#[test]
+fn namespace_occurrences_are_admitted_only_within_the_protocol_fixed_range()
+-> Result<(), Box<dyn Error>> {
+    let point = DurabilityCrashPoint::MigrationAdmitNamespacePrefix;
+    for position in DurabilityCrashPosition::ALL {
+        let exclusive_limit = if position == DurabilityCrashPosition::During {
+            6
+        } else {
+            1
+        };
+        for ordinal in 0..exclusive_limit {
+            let occurrence = DurabilityCrashOccurrence::new(ordinal);
+            let case = DurabilityCrashCase::new(point, position, Some(occurrence))?;
+            assert_eq!(case.occurrence(), Some(occurrence));
+        }
+        for ordinal in [exclusive_limit, u32::MAX] {
+            let observed = DurabilityCrashOccurrence::new(ordinal);
+            assert_eq!(
+                DurabilityCrashCase::new(point, position, Some(observed)),
+                Err(DurabilityCrashCaseError::OccurrenceOutOfRange {
+                    point,
+                    observed,
+                    exclusive_limit,
+                })
+            );
+        }
+    }
+    Ok(())
+}

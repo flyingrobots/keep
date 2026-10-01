@@ -624,6 +624,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Crash-case admission refuses out-of-range migration namespace occurrences
+  before child execution; variable segment-record occurrences remain valid.
 - Receipt-only migration residue before a complete namespace reports
   `ReceiptBeforeMarker`, preserving the exact missing-prerequisite boundary.
 - Migration residue observation rejects non-regular entries with the typed

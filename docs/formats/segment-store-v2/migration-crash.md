@@ -103,6 +103,11 @@ prefix length. Restart must classify exact stages, canonical targets, namespace
 prefix, marker, receipt, and cleanup state without depending on a clock,
 filesystem iteration order, or file existence alone.
 
+Namespace occurrence coordinates are zero-based: `during` accepts zero
+through five, while `before` and `after` accept only zero. Invalid coordinates
+refuse at crash-case admission before a child starts. Segment record
+occurrences remain dependent on the write's record count.
+
 `StoreMigrationPhase::ALL` freezes the 21 boundaries above in exact order.
 The production recovery planner and filesystem adapter execute the lawful
 remaining suffix. `cargo xtask durability-crash-matrix --sequence migration`
