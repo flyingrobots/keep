@@ -212,6 +212,12 @@ transitive member, reappeared stage, conflicting pool entry, or other
 corruption is a typed refusal. A complete valid orphan remains
 recovery-protected until explicit disposition.
 
+This retention protocol requires pinning the incomplete regular file. The
+separate [migration discard path](migration-crash.md#fixed-stage-law)
+revalidates the current entry's regular kind and incomplete length before
+removal without retaining an incomplete-stage handle. These are distinct
+protocol boundaries; retention recovery awaits integration from PR #99.
+
 The retention crash points are:
 
 | Identifier | Boundary |

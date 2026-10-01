@@ -24,15 +24,17 @@ For each pair, migration:
 
 The verified stage is linked without replacement. The canonical target is
 immutable. Recovery never truncates, replaces, or repairs it. An exact stage
-with an absent target resumes at stage synchronization. Exact stage and target bytes resume
-at the required synchronization or cleanup. Different bytes, a substituted
-inode, a link, or a wrong file kind refuse.
+with an absent target resumes at stage synchronization. Exact stage and target
+bytes resume at the required synchronization or cleanup. Different bytes, a
+substituted inode, a link, or a wrong file kind refuse.
 
 A pre-effect incomplete stage may be removed only when its canonical target and
 every later-ordered migration effect are absent and every earlier effect admits
-exactly. Recovery revalidates the incomplete regular stage, removes it, synchronizes the store root, and
-returns a typed discard report. Any later effect makes incomplete or corrupt
-stage bytes unrecoverable ambiguity.
+exactly. Migration recovery revalidates the present stage's regular kind and
+strictly incomplete length immediately before removal, removes it, synchronizes
+the store root, and returns a typed discard report. It does not retain an
+incomplete-stage handle. Any later effect makes incomplete or corrupt stage
+bytes unrecoverable ambiguity.
 
 The fixed stage is not authority. `migration.intent` becomes migration
 authority only after its canonical link and store-root synchronization.
