@@ -2,7 +2,7 @@
 //! stage's selection input, the identities it established, and the
 //! generation it was verified against.
 
-use std::io::Read;
+use std::io;
 
 use super::DurableIngestionError as Error;
 use super::ingestion_receipt::{DurableIngestionReceipt, IngestionAccounting};
@@ -110,7 +110,7 @@ impl<'writer> DurableStagedBlob<'writer> {
                 accounting,
             ));
         };
-        let new_bytes = read_stage(writer)?;
+        let new_bytes = read_stage(writer, &closed)?;
         let policy = writer.policy.segment_read();
         let new_segment = AdmittedSegment::decode(&new_bytes, policy)
             .map_err(|source| Error::Segment(Box::new(source)))?;
@@ -153,11 +153,18 @@ impl<'writer> DurableStagedBlob<'writer> {
     }
 }
 
-fn read_stage(writer: &DurableWriter) -> Result<Vec<u8>, Error> {
-    let mut file = exact_record::open_read(&writer.publisher.staging, CURRENT_SEGMENT)
-        .map_err(|source| Error::ReadStage { source })?;
-    let mut bytes = Vec::new();
-    file.read_to_end(&mut bytes)
-        .map_err(|source| Error::ReadStage { source })?;
-    Ok(bytes)
+fn read_stage(writer: &DurableWriter, closed: &ClosedSelection) -> Result<Vec<u8>, Error> {
+    let length = usize::try_from(closed.segment_length()).map_err(|source| Error::ReadStage {
+        source: io::Error::new(io::ErrorKind::InvalidData, source),
+    })?;
+    exact_record::read_exact_regular(&writer.publisher.staging, CURRENT_SEGMENT, length).map_err(
+        |source| Error::ReadStage {
+            source: match source {
+                exact_record::ExactRecordError::Io(source) => source,
+                refused @ exact_record::ExactRecordError::Refused(_) => {
+                    io::Error::new(io::ErrorKind::InvalidData, refused)
+                }
+            },
+        },
+    )
 }

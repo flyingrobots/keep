@@ -228,7 +228,10 @@ impl FilesystemRetentionSnapshot {
             Err(ExactRecordError::Io(source)) => return Err(Error::Root { source }),
             Err(ExactRecordError::Refused(refusal)) => {
                 return Err(Error::Root {
-                    source: invalid_string(format!("selected root refused: {refusal}")),
+                    source: io::Error::new(
+                        io::ErrorKind::InvalidData,
+                        ExactRecordError::Refused(refusal),
+                    ),
                 });
             }
         };
@@ -247,9 +250,5 @@ impl FilesystemRetentionSnapshot {
 }
 
 fn invalid(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
-}
-
-fn invalid_string(message: String) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
 }

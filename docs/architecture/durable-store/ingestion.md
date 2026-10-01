@@ -40,7 +40,8 @@ complete source does not hash to `expected`, naming both identities.
 
 `DurableStagedBlob::commit(self)` re-admits the current catalog, refuses
 with `CatalogMoved` if it is not the generation the staging was verified
-against, reads the sealed stage back, admits it as a segment, binds it to
+against, bounds the stage read by the length recorded when it was sealed,
+refuses a changed length before payload allocation, admits it as a segment, binds it to
 the closed stage's record count, length, and digest, encodes the successor
 catalog naming every current segment and the new one, and runs
 `publish_catalog_generation`: the same twenty-six version-one crash

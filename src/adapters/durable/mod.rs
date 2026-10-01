@@ -14,6 +14,8 @@
 //! catalog successor through the version-one protocol.
 
 mod error;
+#[cfg(test)]
+mod ingestion_bound_tests;
 mod ingestion_error;
 mod ingestion_receipt;
 mod port;
@@ -21,6 +23,8 @@ mod port;
 mod port_tests;
 mod receipt;
 mod recovery;
+#[cfg(test)]
+mod refusal_source_tests;
 mod snapshot;
 mod staged;
 mod store;

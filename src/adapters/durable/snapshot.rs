@@ -229,7 +229,7 @@ fn anchors(
         let refused = |source: io::Error| DurableStoreError::RetainedRoot { namespace, source };
         let bytes = view
             .retained_root(namespace)
-            .map_err(|source| refused(io::Error::other(source.to_string())))?
+            .map_err(|source| refused(io::Error::other(source)))?
             .ok_or_else(|| refused(io::Error::other("the selected root is absent")))?;
         let root = AdmittedRetentionRoot::decode(&bytes)
             .map_err(|source| refused(io::Error::new(io::ErrorKind::InvalidData, source)))?;

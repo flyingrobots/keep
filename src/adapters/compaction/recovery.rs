@@ -402,6 +402,6 @@ fn discard_derivable(
         .remove_file(name)
         .map_err(|source| refused("discard stage", source))?;
     exact_record::require_absent(staging, name)
-        .map_err(|source| refused("discard stage", io::Error::other(source.to_string())))?;
+        .map_err(|source| refused("discard stage", io::Error::other(source)))?;
     synchronize_directory(staging).map_err(|source| refused("synchronize staging", source))
 }

@@ -24,6 +24,12 @@ pub(super) struct ClosedSelection {
     authority: FilesystemPublisherAuthority,
 }
 
+impl ClosedSelection {
+    pub(super) const fn segment_length(&self) -> u64 {
+        self.closed.segment_length()
+    }
+}
+
 pub(super) const CURRENT_CATALOG: &str = "current.cat";
 pub(super) const HEAD: &str = "HEAD";
 pub(super) const NEXT_HEAD: &str = "head.next";

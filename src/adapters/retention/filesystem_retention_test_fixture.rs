@@ -200,7 +200,10 @@ pub(super) fn head_path(root: &Path) -> PathBuf {
     root.join("retention").join("HEAD")
 }
 
-pub(super) fn root_pool_path(root: &Path, candidate: &AdmittedRetentionRoot<'_>) -> PathBuf {
+pub(in crate::adapters) fn root_pool_path(
+    root: &Path,
+    candidate: &AdmittedRetentionRoot<'_>,
+) -> PathBuf {
     root.join("retention")
         .join("roots")
         .join(hex(candidate.root().namespace().digest().as_bytes()))
