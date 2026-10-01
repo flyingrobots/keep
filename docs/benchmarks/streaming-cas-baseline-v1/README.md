@@ -16,6 +16,14 @@ The reference evidence artifact measures source commit
 This single-host result is a methodology and baseline witness, not a marketing
 claim, portability claim, optimization mandate, or correctness proof.
 
+The corrected single-pass authentication accounting is witnessed by
+[c0f3ca2-aarch64-apple-darwin.tsv](../../../benchmark/baselines/c0f3ca2-aarch64-apple-darwin.tsv),
+captured from clean source commit
+`c0f3ca21a349acd8ea43b8dc73fe453ee2bd212e` on the local
+`audit/roadmap-benchmark-source` branch with Rust 1.96.0. Its host differs
+from the historical baseline; timings do not establish a CPU speedup between
+these artifacts.
+
 ## Run the baseline
 
 From the repository root:
@@ -100,7 +108,7 @@ is a typed nondeterminism failure.
 
 Verification has no disabled state. Ingest authenticates chunk and complete
 blob identity. Range reads authenticate every selected complete chunk before
-and during output. Whole reconstruction authenticates chunks, profile
+output. Whole reconstruction authenticates chunks, profile
 boundaries, and the complete named blob.
 
 ## Chunking-profile comparison
@@ -149,10 +157,12 @@ denominator separately and never use floating-point serialization. A zero
 denominator means the operation materialized no bytes; consumers must retain
 that exact state instead of inventing infinity, zero, or a substitute value.
 
-Whole-blob verification reads each complete chunk twice: once before output
-and once while emitting authenticated bytes. Its expected read amplification
-is therefore exactly `2 / 1`. Range-read amplification includes every complete
-selected chunk in both passes, not only returned slices.
+Whole-blob verification authenticates each complete chunk once before output.
+Its expected authenticated read amplification is exactly `1 / 1`.
+Range-read amplification includes every complete selected chunk once, not only
+returned slices. Emission borrows already verified immutable bytes and does not
+add another authentication pass. The historical `c529c07` baseline predates
+this change and records the earlier two-hash behavior.
 
 ## Regression threshold policy
 

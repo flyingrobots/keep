@@ -92,15 +92,15 @@ the minimal-overlap capability and turn a range API into disguised whole-blob
 I/O.
 
 Range reads therefore plan from admitted metadata, authenticate every complete
-overlapping chunk before output, then reauthenticate each chunk immediately
-before slicing and emission. Their receipt names the requested range and
+overlapping chunk before output, then fetch each verified immutable chunk
+by identity for slicing and emission. Their receipt names the requested range and
 explicitly does not claim complete-blob identity, unrequested chunks, or
 storage-profile boundaries. Callers choose whole-blob reconstruction when they
 need those stronger claims.
 
 Preverification ensures a later selected chunk cannot fail after an earlier
-range byte has been emitted. Reverification protects the separate output pass
-without buffering selected chunks or the requested result.
+range byte has been emitted. The immutable in-memory view protects the separate
+output pass without a second hash or buffering selected chunks or the result.
 
 ## Why caller-supplied ranges require a committed layout
 
