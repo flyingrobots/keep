@@ -10,6 +10,10 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Migration recovery planning, bounded filesystem residue admission, explicit
+  truncated-stage discard, and receipts listing resumed phases. The production
+  crash matrix now includes 68 migration process-death cases (Refs #108).
+
 - `FilesystemRetentionPublicationAuthority` executes the 17 ordered retention
   publication phases against a completely migrated version-2 root. It stages
   `root.next`, `manifest.next`, and `head.next` exclusively, verifies device

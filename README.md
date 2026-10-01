@@ -77,7 +77,7 @@ admitted until its owner migrates it; migrate only if you accept that wait.
 
 | Gap | Tracked |
 | --- | --- |
-| Restart recovery for retention publication and migration | [#19](https://github.com/flyingrobots/keep/issues/19) |
+| Retention publication restart recovery and broader migration corruption coverage | [#19](https://github.com/flyingrobots/keep/issues/19) |
 | Restart-stable root identity coordinate in the migration intent | [#97](https://github.com/flyingrobots/keep/issues/97) |
 | Reader fence binding one consistent catalog + retention snapshot | [#19](https://github.com/flyingrobots/keep/issues/19) |
 | Precise verification reports at explicit depths | [#20](https://github.com/flyingrobots/keep/issues/20) |

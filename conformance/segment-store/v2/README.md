@@ -14,6 +14,7 @@ migration, retention transition, or garbage collector exists.
 | `inventory.tsv` | Canonical one-segment, one-catalog migration inventory |
 | `migration-source.tsv` | Exact version-1 and derived migration coordinates |
 | `artifacts.tsv` | Golden artifact lengths, digests, checksums, and filenames |
+| `transitions.tsv` | One stable crash identifier per migration boundary, `KEEP-CRASH-053` to `-073` |
 | `format-marker.hex` | Canonical 96-byte `FORMAT` record |
 | `migration-intent.hex` | Canonical 256-byte migration intent |
 | `migration-receipt.hex` | Canonical 256-byte migration receipt |
@@ -54,6 +55,24 @@ they bind in-place recovery but do not enter the logical store identifier.
 The retention fixture uses namespace bytes `00 2f ff`, proving the namespace is
 opaque and not a path or Unicode string. Its one anchor combines the canonical
 one-zero `BlobId` and `LayoutId` values from the existing layout corpus.
+
+## Transition protocol
+
+`transitions.tsv` mirrors the version-1 table: one row per migration
+durability operation with its pre-state, interrupted-state classification,
+post-state, and recovery posture. `KEEP-CRASH-053`, `-062`, and `-068` are
+the only rows whose interruption may leave an incomplete pre-effect stage and
+therefore the only rows that plan a discard; `-072` and `-073` admit the
+complete migration.
+
+The `cargo xtask durability-crash-matrix --sequence migration` harness
+executes 68 canonical process-death cases from this table: 21 boundaries at
+three positions plus one `during` case per admitted directory-prefix length
+for `KEEP-CRASH-060`. It kills an isolated writer process group, compares the
+restarted root against an independent expected-state model, requires the
+production planner to report the predicted recovery plan, and requires the
+recovered store to be one complete migration with every version-1 byte
+intact. Host power loss remains outside its claim.
 
 ## Verification
 

@@ -24,13 +24,13 @@ For each pair, migration:
 
 The verified stage is linked without replacement. The canonical target is
 immutable. Recovery never truncates, replaces, or repairs it. An exact stage
-with an absent target resumes at the link. Exact stage and target bytes resume
+with an absent target resumes at stage synchronization. Exact stage and target bytes resume
 at the required synchronization or cleanup. Different bytes, a substituted
 inode, a link, or a wrong file kind refuse.
 
 A pre-effect incomplete stage may be removed only when its canonical target and
 every later-ordered migration effect are absent and every earlier effect admits
-exactly. Recovery pins the stage, removes it, synchronizes the store root, and
+exactly. Recovery revalidates the incomplete regular stage, removes it, synchronizes the store root, and
 returns a typed discard report. Any later effect makes incomplete or corrupt
 stage bytes unrecoverable ambiguity.
 
@@ -104,7 +104,12 @@ prefix, marker, receipt, and cleanup state without depending on a clock,
 filesystem iteration order, or file existence alone.
 
 `StoreMigrationPhase::ALL` freezes the 21 boundaries above in exact order.
-Fresh writer-locked filesystem execution now implements that exact order and
-has deterministic in-process storage-fault and corruption laws. The
-before/during/after process-death matrix and restart classifier remain
-unimplemented; this page does not yet claim crash recovery.
+The production recovery planner and filesystem adapter execute the lawful
+remaining suffix. `cargo xtask durability-crash-matrix --sequence migration`
+runs 68 process-death cases: before/during/after each boundary, with all six
+directory-prefix occurrences at `KEEP-CRASH-060`. The existing CI matrix
+runs these cases in debug and release builds.
+
+These cases establish recovery after process death; they do not simulate power
+loss. Broader restart corruption and compatibility/fuzz coverage remain tracked
+by #111 and #112.

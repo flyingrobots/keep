@@ -174,9 +174,11 @@ recovery instead. Direct version-2 initialization is undefined.
 
 The exact offsets and fixtures are requirement `KEEP-MIGRATION-002`. The fresh
 writer emits only those canonical records; success is not restart evidence.
-A migrated store is admitted for forward publication, but partial-prefix
-recovery and `KEEP-MIGRATION-007` process-death evidence remain absent, so an
-interrupted migration waits for recovery instead of continuing.
+A migrated store is admitted for forward publication. Partial-prefix recovery
+now plans and executes the lawful remaining migration suffix under writer
+authority; the 68-case migration process-death matrix supplies restart evidence.
+Broader hostile restart and compatibility coverage remain tracked in #111 and
+issue #112.
 
 ## Retention publication recovery
 

@@ -95,9 +95,11 @@ stages, replaced protocol directories, and every namespace or capacity
 violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 
 Not implemented: retention publication recovery and `KEEP-CRASH-036..052`
-process-death evidence, partial-prefix migration recovery and
-`KEEP-CRASH-053..073`, the reader fence, model-based transition evidence, and
-garbage collection. Issue #19 owns the first four and issue #21 the last;
+process-death evidence, the reader fence, model-based transition evidence, and
+garbage collection. Partial-prefix migration recovery and the 68-case
+`KEEP-CRASH-053..073` process-death matrix are implemented. Broader migration
+restart corruption and compatibility coverage remain in #111 and #112.
+Issue #19 owns retention recovery and issue #21 owns garbage collection;
 issue #97 owns the restart-stable root identity coordinate. A version-1 store
 remains admitted until its owner migrates it, and the
 [requirements ledger](requirements.md) is the authority on which requirements

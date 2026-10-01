@@ -65,3 +65,24 @@ receipt, unknown entry, or changed root identity is unrecoverable ambiguity.
 
 Death before durable intent leaves v1 plus at most its non-authoritative stage.
 Death after durable intent leaves recovery-required v2 migration state.
+
+## Executable recovery boundary
+
+`FilesystemStoreMigrationAuthority::reopen_for_recovery` reacquires writer
+authority without granting version-1 publication admission.
+`recover_store_migration` observes bounded residue and applies
+`plan_store_migration_recovery` before adopting records or discarding stages.
+Nested directory membership is checked before mutating recovery. An intent
+stage surviving namespace creation, or a marker stage surviving receipt
+publication, is refused as `StageAfterEffect`.
+
+The receipt names the admitted plan and lists the executed forward phases
+through `executed_phases()`. The plan records the earliest unproven boundary;
+it does not infer which synchronization calls completed before process death.
+Restart compares device and inode identity; mount identity is same-process
+evidence. Recovery continues with persisted intent bytes.
+
+The filesystem laws cover every forward prefix, every strict byte-prefix
+truncation of all three stages, unchanged version-1 bytes, and refusal before
+mutation for corrupt intent and unexpected nested residue. The complete
+restart corruption matrix remains tracked separately in #111.
