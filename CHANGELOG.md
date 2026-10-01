@@ -624,6 +624,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- The independent migration restart model propagates missing occurrence,
+  arithmetic, and extent-conversion failures instead of normalizing them.
 - Crash-case admission refuses out-of-range migration namespace occurrences
   before child execution; variable segment-record occurrences remain valid.
 - Receipt-only migration residue before a complete namespace reports
