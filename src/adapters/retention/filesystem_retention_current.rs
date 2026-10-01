@@ -11,12 +11,24 @@ use super::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, ChecksummedRetentionHead,
     RetentionCurrentStateRefusal, RetentionPublicationPreparation, RetentionTransitionDisposition,
 };
-use crate::adapters::filesystem_exact_record::{
-    self as exact_record, ExactRecordError, ExactRecordRefusal,
-};
+use crate::adapters::filesystem_exact_record::{self as exact_record, ExactRecordError};
 use crate::{RetentionGenerationExpectation, RetentionHead, RetentionManifest};
 
 const HEAD_LENGTH: usize = super::head_decoder::ENCODED_LENGTH;
+
+fn namespace_read_failure(
+    namespace: crate::RetentionNamespaceDigest,
+    source: io::Error,
+) -> io::Error {
+    let kind = match source.kind() {
+        io::ErrorKind::NotFound => io::ErrorKind::InvalidData,
+        kind => kind,
+    };
+    io::Error::new(
+        kind,
+        RetentionCurrentStateRefusal::NamespaceRead { namespace, source },
+    )
+}
 
 /// One published retention head and the manifest it selects, bytes and values.
 ///
@@ -207,7 +219,7 @@ pub(super) fn verify_committed(
     }
     let directory = roots
         .open_dir_nofollow(pool_name::namespace(namespace))
-        .map_err(|_source| RetentionCurrentStateRefusal::CommittedNamespaceUnavailable.into_io())?;
+        .map_err(|source| namespace_read_failure(namespace, source))?;
     let name = pool_name::root(candidate.root().generation(), candidate.digest());
     let observed = read_exact_optional(&directory, &name, candidate.encoded().len())?
         .ok_or_else(|| RetentionCurrentStateRefusal::CommittedRootAbsent.into_io())?;
@@ -241,7 +253,7 @@ pub(super) fn verify_predecessor(
     }
     let directory = roots
         .open_dir_nofollow(pool_name::namespace(namespace))
-        .map_err(|_source| RetentionCurrentStateRefusal::CommittedNamespaceUnavailable.into_io())?;
+        .map_err(|source| namespace_read_failure(namespace, source))?;
     let name = pool_name::root(entry.root_generation(), entry.root_digest());
     let length = match directory.symlink_metadata(&name) {
         Ok(metadata) => usize::try_from(metadata.len())
@@ -256,8 +268,9 @@ pub(super) fn verify_predecessor(
     }
     let bytes = read_exact_optional(&directory, &name, length)?
         .ok_or_else(|| RetentionCurrentStateRefusal::PredecessorRootAbsent.into_io())?;
-    let predecessor = AdmittedRetentionRoot::decode(&bytes)
-        .map_err(|_source| RetentionCurrentStateRefusal::PredecessorRootChanged.into_io())?;
+    let predecessor = AdmittedRetentionRoot::decode(&bytes).map_err(|source| {
+        RetentionCurrentStateRefusal::PredecessorRootRefused { source }.into_io()
+    })?;
     if predecessor.digest() == entry.root_digest()
         && predecessor.root().generation() == entry.root_generation()
     {
@@ -285,27 +298,13 @@ fn require_initial_publication(
     }
 }
 
-/// Reads one optional exact record, mapping shared refusals onto this protocol's.
+/// Reads one optional exact record without erasing shared refusals or OS errors.
 pub(super) fn read_exact_optional(
     directory: &Dir,
     name: &str,
     length: usize,
 ) -> io::Result<Option<Box<[u8]>>> {
-    match exact_record::read_exact_optional(directory, name, length) {
-        Ok(bytes) => Ok(bytes.map(Vec::into_boxed_slice)),
-        Err(ExactRecordError::Io(source)) => Err(source),
-        Err(ExactRecordError::Refused(refusal)) => Err(match refusal {
-            ExactRecordRefusal::LengthOverflow => {
-                RetentionCurrentStateRefusal::RecordLengthOverflow
-            }
-            ExactRecordRefusal::TrailingBytes => RetentionCurrentStateRefusal::RecordTrailingBytes,
-            ExactRecordRefusal::KindOrLength
-            | ExactRecordRefusal::KindLengthOrIdentity
-            | ExactRecordRefusal::Bytes
-            | ExactRecordRefusal::RemainedVisible => {
-                RetentionCurrentStateRefusal::RecordKindOrLength
-            }
-        }
-        .into_io()),
-    }
+    exact_record::read_exact_optional(directory, name, length)
+        .map(|bytes| bytes.map(Vec::into_boxed_slice))
+        .map_err(ExactRecordError::into_io)
 }

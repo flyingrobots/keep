@@ -157,9 +157,9 @@ impl FilesystemGcAuthority {
                 } else {
                     residue.intent.as_deref()
                 };
-                let admitted = AdmittedGcRetirementIntent::decode(
-                    bytes.ok_or_else(|| observe(residue::invalid("GC intent vanished")))?,
-                )
+                let admitted = AdmittedGcRetirementIntent::decode(bytes.ok_or_else(|| {
+                    observe(residue::invalid(super::FilesystemGcRefusal::IntentAbsent))
+                })?)
                 .map_err(|source| observe(residue::invalid_from(source)))?;
                 let intent = CanonicalGcRetirementIntent::from_intent(admitted.intent())
                     .map_err(Error::Encode)?;
@@ -291,7 +291,8 @@ impl FilesystemGcAuthority {
 }
 
 fn prior_generation(receipt: Option<&[u8]>) -> Result<GcGeneration, Error> {
-    let bytes = receipt.ok_or_else(|| observe(residue::invalid("GC receipt vanished")))?;
+    let bytes = receipt
+        .ok_or_else(|| observe(residue::invalid(super::FilesystemGcRefusal::ReceiptAbsent)))?;
     AdmittedGcRetirementReceipt::decode_unbound(bytes)
         .map(|receipt| receipt.generation())
         .map_err(|source| observe(residue::invalid_from(source)))

@@ -331,12 +331,14 @@ impl FilesystemRetentionPublicationAuthority {
         fence: &ReaderFence,
     ) -> io::Result<RecoveryDispositionCoordinates> {
         let head_bytes = read_exact_optional(&self.root, HEAD_NAME, HEAD_LENGTH)?
-            .ok_or_else(|| invalid_data("publication head is absent"))?;
+            .ok_or_else(|| invalid_data(super::FilesystemRetentionStageRefusal::HeadAbsent))?;
         let head = ChecksummedPublicationHead::decode(&head_bytes).map_err(invalid_data_from)?;
         let checksum: [u8; 32] = head_bytes
             .get(HEAD_CHECKSUM_OFFSET..HEAD_LENGTH)
             .and_then(|slice| slice.try_into().ok())
-            .ok_or_else(|| invalid_data("publication head checksum slot"))?;
+            .ok_or_else(|| {
+                invalid_data(super::FilesystemRetentionStageRefusal::HeadChecksumSlot)
+            })?;
         let retention = filesystem_retention_current::observe(&self.retention, &self.manifests)?
             .map_or(GcRetentionState::Empty, |current| {
                 GcRetentionState::Published {

@@ -26,6 +26,7 @@ mod execution_phase;
 mod execution_storage;
 mod filesystem_gc_authority;
 mod filesystem_gc_error;
+mod filesystem_gc_refusal;
 mod filesystem_gc_residue;
 mod filesystem_gc_storage;
 #[cfg(test)]
@@ -94,6 +95,7 @@ pub use execution_phase::{GcExecutionPhase, GcExecutionPoint};
 pub use execution_storage::GcExecutionStorage;
 pub use filesystem_gc_authority::{FilesystemGcAuthority, GcRecoveryReport, PreparedGcExecution};
 pub use filesystem_gc_error::FilesystemGcError;
+pub use filesystem_gc_refusal::FilesystemGcRefusal;
 pub(in crate::adapters) use filesystem_gc_residue::GC_ENTRY_NAMES;
 pub use intent::GcRetirementIntent;
 pub use intent_coordinates::GcRetirementIntentCoordinates;

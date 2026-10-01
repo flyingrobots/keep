@@ -988,6 +988,12 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Preserve typed refusal payloads and original operational sources across
+  retention, migration, GC, compaction, filesystem admission, and streaming
+  transfer boundaries. Refusals retain exact selected-root, reader-fence,
+  platform, and recovery coordinates; corrupt predecessor roots retain their
+  decoder source. ADR-0010 records the additive diagnostic API changes.
+
 - `ReferenceStore` reconstruction and range reads hash each selected chunk
   exactly once. The verification pass still runs to completion before the
   first output write; the emission pass now fetches each verified immutable

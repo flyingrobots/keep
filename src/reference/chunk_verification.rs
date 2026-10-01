@@ -1,5 +1,8 @@
 //! Exact reference-store chunk lookup and authentication.
 
+use std::error::Error;
+use std::fmt;
+
 use crate::{ChunkHashError, ChunkId, LayoutEntry, LayoutId};
 
 /// One admitted view's exact chunk lookup: the reference store's in-memory
@@ -68,6 +71,41 @@ pub(super) enum ChunkVerificationError {
         expected: ChunkId,
         observed: ChunkId,
     },
+}
+
+impl fmt::Display for ChunkVerificationError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Missing {
+                index, requested, ..
+            } => {
+                write!(formatter, "chunk {index} is absent: {requested:?}")
+            }
+            Self::Hash { index, source, .. } => {
+                write!(formatter, "chunk {index} hashing refused: {source}")
+            }
+            Self::IdentityMismatch {
+                index,
+                expected,
+                observed,
+                ..
+            } => {
+                write!(
+                    formatter,
+                    "chunk {index} identity differs: expected {expected:?}, observed {observed:?}"
+                )
+            }
+        }
+    }
+}
+
+impl Error for ChunkVerificationError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Hash { source, .. } => Some(source),
+            Self::Missing { .. } | Self::IdentityMismatch { .. } => None,
+        }
+    }
 }
 
 /// Fetches an already-authenticated immutable chunk for emission.

@@ -15,7 +15,7 @@ use crate::adapters::physical_pool_name;
 use crate::adapters::retention::FilesystemRetentionStage;
 
 fn no_retirement() -> io::Error {
-    invalid("no GC retirement is in progress")
+    invalid(super::FilesystemGcRefusal::NoRetirement)
 }
 
 impl FilesystemGcAuthority {
@@ -46,7 +46,9 @@ impl FilesystemGcAuthority {
             match self.segments.symlink_metadata(&name) {
                 Err(source) if source.kind() == io::ErrorKind::NotFound => {}
                 Err(source) => return Err(source),
-                Ok(_present) => return Err(invalid("a GC candidate is still present")),
+                Ok(_present) => {
+                    return Err(invalid(super::FilesystemGcRefusal::CandidateStillPresent));
+                }
             }
         }
         let inventory = segment_pool_inventory::read(
@@ -144,13 +146,11 @@ impl GcExecutionStorage for FilesystemGcAuthority {
             .candidates()
             .get(index)
             .copied()
-            .ok_or_else(|| invalid("GC candidate index out of range"))?;
+            .ok_or_else(|| invalid(super::FilesystemGcRefusal::CandidateIndex))?;
         let name = physical_pool_name::segment(candidate.segment_digest());
         let metadata = self.segments.symlink_metadata(&name)?;
         if !metadata.is_file() || metadata.len() != candidate.segment_length() {
-            return Err(invalid(
-                "GC candidate kind or length disagrees with the intent",
-            ));
+            return Err(invalid(super::FilesystemGcRefusal::CandidateKindOrLength));
         }
         segment_pool_inventory::admit_entry(
             &self.segments,
@@ -161,8 +161,7 @@ impl GcExecutionStorage for FilesystemGcAuthority {
         )
         .map_err(|source| io::Error::new(io::ErrorKind::InvalidData, source))?;
         self.segments.remove_file(&name)?;
-        exact_record::require_absent(&self.segments, &name)
-            .map_err(|_source| invalid("unlinked GC candidate remained visible"))
+        exact_record::require_absent(&self.segments, &name).map_err(ExactRecordError::into_io)
     }
 
     fn synchronize_segment_pool(&mut self, _index: usize) -> io::Result<()> {
@@ -205,13 +204,14 @@ impl GcExecutionStorage for FilesystemGcAuthority {
         let context = self.context.as_ref().ok_or_else(no_retirement)?;
         let bytes = match exact_record::read_exact_optional(&self.gc, RECEIPT, 320) {
             Ok(Some(bytes)) => bytes,
-            Ok(None) => return Err(invalid("GC receipt is absent before intent removal")),
-            Err(ExactRecordError::Io(source)) => return Err(source),
-            Err(ExactRecordError::Refused(refusal)) => {
-                return Err(io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    refusal.to_string(),
+            Ok(None) => {
+                return Err(invalid(
+                    super::FilesystemGcRefusal::ReceiptAbsentBeforeIntentRemoval,
                 ));
+            }
+            Err(ExactRecordError::Io(source)) => return Err(source),
+            Err(error @ ExactRecordError::Refused(_)) => {
+                return Err(error.into_io());
             }
         };
         let intent = AdmittedGcRetirementIntent::decode(context.intent.encoded())
@@ -226,8 +226,7 @@ impl GcExecutionStorage for FilesystemGcAuthority {
             self.context()?.receipt = Some(receipt);
         }
         self.gc.remove_file(INTENT)?;
-        exact_record::require_absent(&self.gc, INTENT)
-            .map_err(|_source| invalid("removed GC intent remained visible"))
+        exact_record::require_absent(&self.gc, INTENT).map_err(ExactRecordError::into_io)
     }
 
     fn synchronize_gc_after_intent_removal(&mut self) -> io::Result<()> {

@@ -174,7 +174,10 @@ fn verify_current_identity(
         WriterLockAcquirePhase::VerifyFileIdentity,
         io::Error::new(
             io::ErrorKind::InvalidData,
-            "writer.lock changed identity during acquisition",
+            super::FilesystemOperationRefusal::IdentityChanged {
+                expected: (expected.device, expected.inode),
+                observed: (observed.device, observed.inode),
+            },
         ),
     ))
 }
