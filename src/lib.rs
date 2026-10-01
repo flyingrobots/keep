@@ -41,9 +41,15 @@
 //! forward retention publication executes under filesystem authority. The
 //! GC retirement intent and receipt codecs, and explicit-depth verification
 //! reports over the reference view, are available. Partial-prefix migration
-//! recovery, retention publication recovery, immutable reader snapshots,
-//! catalog publication on a migrated store, and garbage collection
-//! execution remain intentionally absent.
+//! recovery, retention publication recovery, fenced immutable reader snapshots,
+//! catalog publication on a migrated store, explicit orphan disposition,
+//! garbage collection, and identity-preserving compaction are implemented.
+//! `DurableSnapshot` returns authenticated whole-object and exact-range reads
+//! bound to its pinned view. `DurableWriter` stages and commits through the
+//! content-store port; bounded transfer adapters preserve those read laws.
+//! Durable verification reports at every depth, ingestion segment rollover,
+//! and dedicated ingestion, disposition, and compaction process-death sequences
+//! remain incomplete; the requirement ledgers and roadmap identify the gaps.
 
 #[cfg(test)]
 extern crate self as keep;

@@ -55,3 +55,34 @@ fn living_v1_pages_no_longer_assign_shipped_recovery_to_a_future_issue() {
         );
     }
 }
+
+#[test]
+fn living_v2_pages_and_crate_docs_agree_with_the_shipped_recovery_boundary() {
+    for (document, stale_claim) in [
+        (
+            include_str!("../../src/lib.rs"),
+            "execution remain intentionally absent",
+        ),
+        (
+            include_str!("../../docs/formats/segment-store-v2/README.md"),
+            "planned in issue #19",
+        ),
+        (
+            include_str!("../../docs/formats/segment-store-v2/retention.md"),
+            "collection remain absent",
+        ),
+        (
+            include_str!("../../docs/formats/segment-store-v2/closure-corruption.md"),
+            "future\nretention publication adapter",
+        ),
+        (
+            include_str!("../../docs/formats/segment-store-v2/retention-publication.md"),
+            "No version-2 catalog publisher exists yet",
+        ),
+    ] {
+        assert!(
+            !document.contains(stale_claim),
+            "shipped behavior described as missing: {stale_claim}"
+        );
+    }
+}

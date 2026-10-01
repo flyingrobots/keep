@@ -93,7 +93,9 @@ written.
   seeds owned by the [Rust seed-corpus
   task](../../../xtask/src/fuzz_seed_corpus/segment_seeds.rs).
 
-These proofs establish ingress safety. They do not prove that a future
-retention publication adapter preserves the original source chain when it maps
-these failures into an operation-level error; that obligation remains with
-`KEEP-RETENTION-006`.
+These proofs establish ingress safety. The filesystem retention authority
+also re-verifies every closure member before publication and preserves the
+original admission error through its operation-level refusal.
+`filesystem_retention_member_tests` downcasts that source to the exact
+`SegmentRecordAdmissionError`; this is executable evidence for
+`KEEP-RETENTION-005`.
