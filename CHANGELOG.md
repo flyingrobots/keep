@@ -624,6 +624,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Receipt-only migration residue before a complete namespace reports
+  `ReceiptBeforeMarker`, preserving the exact missing-prerequisite boundary.
 - Migration residue observation rejects non-regular entries with the typed
   kind refusal before opening them, retaining the post-open kind recheck.
 - Migration resumption is internal to verified recovery admission; external

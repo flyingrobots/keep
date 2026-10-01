@@ -123,8 +123,11 @@ fn plan_namespace(
         .namespace_extent()
         .map_err(|(absent, present)| Ambiguity::NamespaceOutOfOrder { absent, present })?;
     if extent < 7 {
-        if residue.has_marker_or_receipt_effect() {
+        if residue.marker_stage.is_some() || residue.marker.is_some() {
             return Err(Ambiguity::MarkerBeforeNamespace);
+        }
+        if residue.has_receipt_effect() {
+            return Err(Ambiguity::ReceiptBeforeMarker);
         }
         return Ok(Plan::Resume {
             resume: if extent == 0 {
