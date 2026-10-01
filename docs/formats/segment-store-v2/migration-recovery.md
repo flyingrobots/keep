@@ -76,6 +76,10 @@ Nested directory membership is checked before mutating recovery. An intent
 stage surviving namespace creation, or a marker stage surviving receipt
 publication, is refused as `StageAfterEffect`.
 
+When both a stage and its canonical target exist, adoption verifies they share
+the same device and inode as well as exact bytes before any forward phase,
+including directory synchronization.
+
 The receipt retains the exact observed namespace prefix and bound intent
 digest, names the admitted plan, and lists the executed forward phases
 through `executed_phases()`. The plan records the earliest unproven boundary;

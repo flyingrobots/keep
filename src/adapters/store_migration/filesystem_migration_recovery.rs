@@ -162,6 +162,9 @@ fn adopt_artifact(
             return Err(invalid(Refusal::MultipleExactStages));
         }
         let reopened = FilesystemMigrationFixedStage::reopen_stage(root, artifact, expected)?;
+        if canonical.is_some() {
+            reopened.verify_linked(root)?;
+        }
         authority.fixed_stage = Some(reopened);
         return Ok(());
     }
