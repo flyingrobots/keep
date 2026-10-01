@@ -6,6 +6,7 @@
 
 use super::StoreMigrationStageDecodeError as DecodeError;
 use super::migration_recovery_ambiguity::StoreMigrationEffect as Effect;
+use super::migration_recovery_residue::NAMESPACE_NAME_COUNT;
 use super::{
     AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, AdmittedStoreMigrationReceipt,
     FORMAT_MARKER_LENGTH, MIGRATION_INTENT_LENGTH, MIGRATION_RECEIPT_LENGTH,
@@ -122,7 +123,7 @@ fn plan_namespace(
     let extent = residue
         .namespace_extent()
         .map_err(|(absent, present)| Ambiguity::NamespaceOutOfOrder { absent, present })?;
-    if extent < 7 {
+    if extent < NAMESPACE_NAME_COUNT {
         if residue.marker_stage.is_some() || residue.marker.is_some() {
             return Err(Ambiguity::MarkerBeforeNamespace);
         }

@@ -12,6 +12,8 @@ pub const MIGRATION_NAMESPACE_PREFIX: [&str; 6] = [
     "recovery/dispositions",
 ];
 
+pub(super) const NAMESPACE_NAME_COUNT: usize = MIGRATION_NAMESPACE_PREFIX.len() + 1;
+
 /// Everything a migration may have left behind, as one observation.
 ///
 /// An observer reads each fixed name without following links and refuses a
@@ -29,7 +31,7 @@ pub struct StoreMigrationResidue {
     /// Whether the persistent `reader.lock` exists.
     pub reader_fence: bool,
     /// Presence of each directory in [`MIGRATION_NAMESPACE_PREFIX`] order.
-    pub namespace_prefix: [bool; 6],
+    pub namespace_prefix: [bool; MIGRATION_NAMESPACE_PREFIX.len()],
     /// Bytes of `FORMAT.next`, when present.
     pub marker_stage: Option<Vec<u8>>,
     /// Bytes of `FORMAT`, when present.
@@ -46,7 +48,7 @@ impl StoreMigrationResidue {
         intent_stage: None,
         intent: None,
         reader_fence: false,
-        namespace_prefix: [false; 6],
+        namespace_prefix: [false; MIGRATION_NAMESPACE_PREFIX.len()],
         marker_stage: None,
         marker: None,
         receipt_stage: None,
@@ -91,6 +93,6 @@ impl StoreMigrationResidue {
                 _ => {}
             }
         }
-        Ok(first_absent.unwrap_or(7))
+        Ok(first_absent.unwrap_or(NAMESPACE_NAME_COUNT))
     }
 }

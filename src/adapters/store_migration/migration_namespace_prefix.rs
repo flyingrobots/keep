@@ -1,16 +1,6 @@
 //! This module owns a validated observation of the migration namespace prefix.
 
-use super::{StoreMigrationRecoveryAmbiguity, StoreMigrationResidue};
-
-const NAMES: [&str; 7] = [
-    "reader.lock",
-    "retention",
-    "retention/roots",
-    "retention/manifests",
-    "gc",
-    "recovery",
-    "recovery/dispositions",
-];
+use super::{MIGRATION_NAMESPACE_PREFIX, StoreMigrationRecoveryAmbiguity, StoreMigrationResidue};
 
 /// The exact contiguous namespace prefix observed before recovery writes.
 ///
@@ -50,6 +40,8 @@ impl StoreMigrationNamespacePrefix {
     ///
     /// Iteration allocates nothing and performs no I/O.
     pub fn names(self) -> impl Iterator<Item = &'static str> {
-        NAMES.into_iter().take(self.extent)
+        std::iter::once("reader.lock")
+            .chain(MIGRATION_NAMESPACE_PREFIX)
+            .take(self.extent)
     }
 }
