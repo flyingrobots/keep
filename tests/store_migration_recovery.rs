@@ -164,7 +164,9 @@ fn a_durable_intent_resumes_after_its_cleanup_and_binds_restart_stable_coordinat
     }
     assert!(matches!(
         plan_store_migration_recovery(&expected, &corrupt),
-        Err(Ambiguity::IntentUndecodable { .. })
+        Err(Ambiguity::IntentUndecodable {
+            source: keep::StoreMigrationIntentDecodeError::ChecksumMismatch { .. }
+        })
     ));
     Ok(())
 }
@@ -397,7 +399,9 @@ fn the_receipt_completes_the_migration_only_when_exact_and_alone() -> Result<(),
     };
     assert!(matches!(
         plan_store_migration_recovery(&expected, &conflicting),
-        Err(Ambiguity::ReceiptUndecodable { .. })
+        Err(Ambiguity::ReceiptUndecodable {
+            source: keep::StoreMigrationReceiptDecodeError::ChecksumMismatch { .. }
+        })
     ));
     Ok(())
 }

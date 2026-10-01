@@ -9,9 +9,9 @@ use super::filesystem_migration_test_fixture::{maximum_policy, open_authority};
 use super::migration_resumption::{MigrationRecords, execute_phase};
 use super::{
     AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, AdmittedStoreMigrationReceipt,
-    FilesystemStoreMigrationAuthority, StoreMigrationFixedStage, StoreMigrationPhase,
-    StoreMigrationRecoveryError, StoreMigrationRecoveryPlan, StoreMigrationStorage,
-    recover_store_migration,
+    FilesystemStoreMigrationAuthority, StoreMigrationFixedStage, StoreMigrationIntentDecodeError,
+    StoreMigrationPhase, StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError,
+    StoreMigrationRecoveryPlan, StoreMigrationStorage, recover_store_migration,
 };
 
 /// Runs the first `count` forward phases in-process, drops the writer, and
@@ -145,7 +145,11 @@ fn a_corrupt_durable_intent_refuses_recovery_before_any_mutation() -> Result<(),
 
     assert!(matches!(
         error,
-        StoreMigrationRecoveryError::Ambiguity { .. }
+        StoreMigrationRecoveryError::Ambiguity {
+            source: StoreMigrationRecoveryAmbiguity::IntentUndecodable {
+                source: StoreMigrationIntentDecodeError::ChecksumMismatch { .. }
+            }
+        }
     ));
     assert_eq!(fs::read_dir(sandbox.path())?.count(), before);
     assert!(!sandbox.path().join("reader.lock").exists());
