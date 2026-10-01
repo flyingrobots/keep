@@ -22,6 +22,18 @@ counts the complete selected chunks once, including bytes outside the requested
 slice. The historical artifact retains its original double-pass counters and
 must not be treated as a baseline for the corrected implementation.
 
+The single-pass implementation has clean, source-bound optimized evidence at
+commit `30ffe90e53c01a24d8931244a7f76eaecd0da8a4`, using Rust 1.96.0 on
+`aarch64-apple-darwin`:
+
+- [30ffe90-aarch64-apple-darwin.tsv](../../../benchmark/baselines/30ffe90-aarch64-apple-darwin.tsv)
+
+This run records 100 samples after five warmups for all 13 scenarios and
+five profiles. The new Apple M5 Pro host differs from the historical Apple
+M1 Pro host, so timings do not establish a before/after speedup. Deterministic
+hash-count regressions establish the reduced authentication work. Performance
+thresholds remain unconfigured.
+
 ## Run the baseline
 
 From the repository root:
