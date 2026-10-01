@@ -16,6 +16,12 @@ The reference evidence artifact measures source commit
 This single-host result is a methodology and baseline witness, not a marketing
 claim, portability claim, optimization mandate, or correctness proof.
 
+That artifact predates the single chunk-authentication pass in #71. Current
+whole-blob accounting counts each logical chunk byte once; range accounting
+counts the complete selected chunks once, including bytes outside the requested
+slice. The historical artifact retains its original double-pass counters and
+must not be treated as a baseline for the corrected implementation.
+
 ## Run the baseline
 
 From the repository root:

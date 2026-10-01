@@ -62,10 +62,7 @@ fn scenario_metrics_preserve_reuse_and_verification_meaning() -> Result<(), Box<
     assert!(random.authenticated_chunk_bytes_read() >= random.output_bytes_written());
     assert_eq!(
         verification.authenticated_chunk_bytes_read(),
-        verification
-            .logical_bytes()
-            .checked_mul(2)
-            .ok_or("verification read overflow")?
+        verification.logical_bytes()
     );
     assert_eq!(partitioned.source_bytes_read(), partitioned.logical_bytes());
     Ok(())
@@ -76,4 +73,42 @@ fn timed_range_execution_contains_no_accounting_plans() {
     assert!(!TIMED_RANGE_SOURCE.contains("authenticated_range_bytes"));
     assert!(!TIMED_RANGE_SOURCE.contains("selected_entry_count"));
     assert!(!TIMED_RANGE_SOURCE.contains("plan_range"));
+}
+
+#[test]
+fn range_accounting_counts_complete_selected_chunks_once() -> Result<(), Box<dyn Error>> {
+    use keep::{ByteLength, ByteOffset, ByteRange};
+
+    let corpus = BenchmarkCorpus::generate()?;
+    let scenario = Scenario::SequentialRangeReads;
+    let (store, target, layout) =
+        crate::scenario_ingest::published_store(corpus.large_binary(), scenario)?;
+    let length = target.logical_length().get();
+    let requests = [
+        ByteRange::new(ByteOffset::new(0), ByteLength::new(1))?,
+        ByteRange::new(ByteOffset::new(0), ByteLength::new(length))?,
+        ByteRange::new(ByteOffset::new(length), ByteLength::new(0))?,
+    ];
+    let ranges = crate::scenario_range_metrics::prepare(scenario, &layout, &requests)?;
+    let observation = crate::scenario_read::run_ranges(scenario, &store, target, &ranges)?;
+    let first_chunk_length = u64::from(
+        layout
+            .entries()
+            .first()
+            .ok_or("first chunk missing")?
+            .chunk_id()
+            .length()
+            .get(),
+    );
+    assert_eq!(
+        observation.authenticated_chunk_bytes_read(),
+        length
+            .checked_add(first_chunk_length)
+            .ok_or("accounting overflow")?
+    );
+    assert_eq!(
+        observation.output_bytes_written(),
+        length.checked_add(1).ok_or("output overflow")?
+    );
+    Ok(())
 }

@@ -157,3 +157,19 @@ fn source_slice(source: &[u8], requested: ByteRange) -> Result<&[u8], Box<dyn Er
         .get(start..end)
         .ok_or_else(|| io::Error::other("fixture range is unavailable").into())
 }
+
+/// Issue #71: a range read hashes each selected chunk exactly once.
+#[test]
+fn a_range_read_hashes_each_selected_chunk_exactly_once() -> Result<(), Box<dyn Error>> {
+    let (store, source, layout_id, _index, entry) = range_fixture()?;
+    let selected = entry.chunk_id();
+    store.observed_chunk_hashes.borrow_mut().clear();
+    let requested = one_byte_inside(entry)?;
+    let mut output = Vec::new();
+
+    let _receipt = store.read_layout_range(layout_id, requested, &mut output)?;
+
+    assert_eq!(output, source_slice(&source, requested)?);
+    assert_eq!(store.observed_chunk_hashes.borrow().as_slice(), [selected]);
+    Ok(())
+}

@@ -606,6 +606,11 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Reference reconstruction and range reads authenticate each selected chunk
+  once, then emit its immutable stored bytes after all required checks pass.
+  Benchmark authenticated-byte counters now count one verification pass.
+  Hash-count and exact range-accounting regressions cover issue #71.
+
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 

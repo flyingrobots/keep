@@ -79,7 +79,7 @@ fn authenticated_bytes(layout: &AdmittedLayout, plan: RangePlan) -> Result<u64, 
                 target: "planned-range-entries",
                 available: layout.entries().len(),
             })?;
-    let once = entries.iter().try_fold(0_u64, |total, entry| {
+    entries.iter().try_fold(0_u64, |total, entry| {
         let incoming = u64::from(entry.chunk_id().length().get());
         total
             .checked_add(incoming)
@@ -88,10 +88,5 @@ fn authenticated_bytes(layout: &AdmittedLayout, plan: RangePlan) -> Result<u64, 
                 current: total,
                 incoming,
             })
-    })?;
-    once.checked_mul(2).ok_or(ScenarioError::MetricOverflow {
-        metric: "authenticated-range-bytes",
-        current: once,
-        incoming: once,
     })
 }
