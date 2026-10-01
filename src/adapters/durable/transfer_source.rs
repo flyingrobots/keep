@@ -6,6 +6,8 @@ use crate::LayoutId;
 use crate::adapters::{StreamConsumer, TransferSource, TransferSourceError};
 use crate::reference::ChunkReader;
 
+impl crate::store::SealedTransferSource for DurableSnapshot {}
+
 impl TransferSource for DurableSnapshot {
     fn stream_layout(
         &self,

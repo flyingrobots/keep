@@ -3,7 +3,9 @@
 use super::ReferenceStore;
 use super::chunk_reader::ChunkReader;
 use crate::LayoutId;
-use crate::adapters::{StreamConsumer, TransferSource, TransferSourceError};
+use crate::store::{StreamConsumer, TransferSource, TransferSourceError};
+
+impl crate::store::SealedTransferSource for ReferenceStore {}
 
 impl TransferSource for ReferenceStore {
     fn stream_layout(

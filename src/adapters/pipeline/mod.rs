@@ -19,18 +19,17 @@ mod copy;
 mod error;
 mod receipt;
 mod sink;
-mod source;
 #[cfg(test)]
 mod tests;
 mod transfer;
 mod window;
 
+pub use crate::store::{StreamConsumer, TransferSource, TransferSourceError};
 pub use cancellation::{CancellationFlag, CancellationSignal, NeverCancelled};
 pub use copy::{CopyError, CopyReceipt, copy_layout};
 pub use error::TransferError;
 pub use receipt::TransferReceipt;
 pub use sink::{TransferSegment, TransferSink, WriteSink, WriteSinkError};
-pub use source::{StreamConsumer, TransferSource, TransferSourceError};
 pub use transfer::{
     TransferBounds, transfer_blob, transfer_layout, transfer_layout_range, transfer_range,
 };

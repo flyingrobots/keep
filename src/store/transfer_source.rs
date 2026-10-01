@@ -1,4 +1,4 @@
-//! This boundary module owns the pull side: a source that streams one
+//! This port module owns the pull side: a source that streams one
 //! layout's chunks, authenticated as they are served, into a consumer.
 
 use std::error::Error;
@@ -7,11 +7,8 @@ use std::io::Read;
 
 use crate::{BlobId, ChunkId, LayoutId};
 
-mod sealed {
+pub(super) mod sealed {
     pub trait Sealed {}
-
-    impl Sealed for crate::ReferenceStore {}
-    impl Sealed for crate::adapters::DurableSnapshot {}
 }
 
 /// The consumer of one streamed layout: the blob it identifies and a

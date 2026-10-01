@@ -27,7 +27,14 @@ mod reads;
 #[cfg(test)]
 mod reference_port_tests;
 mod staging;
+mod transfer_source;
 
 pub use limits::{StagedByteLimit, StagingLimits};
 pub use reads::ContentReads;
 pub use staging::{CommitReceipt, ContentStaging, StagedContent};
+#[expect(
+    clippy::redundant_pub_crate,
+    reason = "adapter sealing is reachable only through this crate-private port re-export"
+)]
+pub(crate) use transfer_source::sealed::Sealed as SealedTransferSource;
+pub use transfer_source::{StreamConsumer, TransferSource, TransferSourceError};

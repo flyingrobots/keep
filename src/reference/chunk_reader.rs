@@ -5,7 +5,7 @@
 use std::io::{self, Read};
 
 use super::chunk_verification::{ChunkSource, ChunkVerificationError, verified_chunk};
-use crate::adapters::TransferSourceError;
+use crate::store::TransferSourceError;
 use crate::{AdmittedLayout, LayoutId};
 
 /// Serves one layout's bytes in order, one verified chunk at a time.
