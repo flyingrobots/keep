@@ -19,6 +19,9 @@ after its public API and format compatibility policies are established.
 - Late-stage refusals report receipt effects as receipts when no marker
   artifact exists.
 
+- Migration recovery revalidates current writer authority before observing
+  residue, preventing stale expected intents from admitting a corrupt store.
+
 - Migration recovery planning, bounded filesystem residue admission, explicit
   truncated-stage discard, and receipts listing resumed phases. The production
   crash matrix now includes 68 migration process-death cases (Refs #108).

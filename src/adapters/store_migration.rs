@@ -50,6 +50,8 @@ pub use filesystem_migration_recovery_refusal::{
     FilesystemMigrationRecoveryRefusal, FilesystemMigrationResidueKind,
 };
 #[cfg(test)]
+mod filesystem_migration_current_recovery_tests;
+#[cfg(test)]
 mod filesystem_migration_pair_admission_tests;
 #[cfg(test)]
 mod filesystem_migration_receipt_evidence_tests;

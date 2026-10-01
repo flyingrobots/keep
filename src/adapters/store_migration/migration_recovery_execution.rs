@@ -68,6 +68,11 @@ impl StoreMigrationRecoveryReceipt {
 /// Failure to recover one interrupted migration.
 #[derive(Debug)]
 pub enum StoreMigrationRecoveryError {
+    /// Current writer authority no longer reproduces the caller's expected intent.
+    CurrentVerification {
+        /// Preserved current-state refusal or operational failure.
+        source: io::Error,
+    },
     /// The residue could not be observed.
     Observation {
         /// Preserved storage failure.
@@ -99,7 +104,8 @@ pub enum StoreMigrationRecoveryError {
 
 /// Recovers one interrupted migration under writer authority.
 ///
-/// The residue is observed once, planned against `expected` (the intent the
+/// Current writer authority first revalidates `expected`. The residue is then
+/// observed once and planned against `expected` (the intent the
 /// version-1 store derives today, compared on every restart-stable
 /// coordinate), and either admitted as version 1, reported complete, or
 /// driven through the remaining forward phases with the persisted intent,
@@ -113,6 +119,9 @@ pub fn recover_store_migration(
     storage: &mut impl StoreMigrationRecoveryStorage,
     expected: &CanonicalStoreMigrationIntent,
 ) -> Result<StoreMigrationRecoveryReceipt, StoreMigrationRecoveryError> {
+    storage
+        .verify_current(expected)
+        .map_err(|source| StoreMigrationRecoveryError::CurrentVerification { source })?;
     let residue = storage
         .observe_residue()
         .map_err(|source| StoreMigrationRecoveryError::Observation { source })?;
@@ -189,6 +198,9 @@ fn persisted_intent(
 impl fmt::Display for StoreMigrationRecoveryError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::CurrentVerification { .. } => {
+                formatter.write_str("current migration authority verification failed")
+            }
             Self::Observation { .. } => formatter.write_str("migration residue observation failed"),
             Self::Ambiguity { source } => {
                 write!(formatter, "migration residue is ambiguous: {source}")
@@ -205,7 +217,8 @@ impl fmt::Display for StoreMigrationRecoveryError {
 impl Error for StoreMigrationRecoveryError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::Observation { source }
+            Self::CurrentVerification { source }
+            | Self::Observation { source }
             | Self::Adoption { source }
             | Self::Discard { source, .. } => Some(source),
             Self::Ambiguity { source } => Some(source),

@@ -70,7 +70,8 @@ Death after durable intent leaves recovery-required v2 migration state.
 
 `FilesystemStoreMigrationAuthority::reopen_for_recovery` reacquires writer
 authority without granting version-1 publication admission.
-`recover_store_migration` observes bounded residue and applies
+`recover_store_migration` revalidates the caller's freshly derived current
+intent, then observes bounded residue and applies
 `plan_store_migration_recovery` before adopting records or discarding stages.
 Nested directory membership is checked before mutating recovery. An intent
 stage surviving namespace creation, or a marker stage surviving receipt
