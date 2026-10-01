@@ -18,6 +18,10 @@ pub(crate) fn patch(bytes: &mut [u8], offset: usize, value: &[u8]) -> io::Result
 }
 
 /// Hashes the fixture's named domain and canonical preimage independently.
+///
+/// The caller supplies the exact registered, NUL-terminated domain. Its
+/// terminator separates the fixed domain from the preimage; this helper hashes
+/// their bytes unchanged and adds no length prefix or delimiter.
 pub(crate) fn domain_hash(domain: &[u8], preimage: &[u8]) -> [u8; 32] {
     let mut hasher = blake3::Hasher::new();
     hasher.update(domain);
