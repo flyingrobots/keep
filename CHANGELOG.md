@@ -606,6 +606,11 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Living version-1 format pages describe implemented initialization,
+  platform admission, publication, restart, recovery, and process-death
+  evidence rather than completed issue-era plans (#69). Historical issue
+  references and existing requirement/test anchors remain available.
+
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
