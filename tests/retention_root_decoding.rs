@@ -1,5 +1,7 @@
 //! Public decoding and integrity laws for version-2 retention roots.
 
+#[path = "retention_root_decoding/mutation_laws.rs"]
+mod mutation_laws;
 mod support;
 
 use std::io;
@@ -7,10 +9,10 @@ use std::io;
 use keep::{AdmittedRetentionRoot, RetentionRootDecodeError};
 
 const ONE_ANCHOR_ROOT: &str = include_str!("../conformance/segment-store/v2/one-anchor-root.hex");
-const ANCHOR_SET_DIGEST_OFFSET: usize = 148;
+pub(crate) const ANCHOR_SET_DIGEST_OFFSET: usize = 148;
 const ANCHOR_SET_DIGEST_END: usize = 180;
-const ANCHOR_BODY_OFFSET: usize = 195;
-const ROOT_DIGEST_OFFSET: usize = 314;
+pub(crate) const ANCHOR_BODY_OFFSET: usize = 195;
+pub(crate) const ROOT_DIGEST_OFFSET: usize = 314;
 const CHECKSUM_OFFSET: usize = 346;
 
 #[test]
@@ -144,7 +146,7 @@ fn anchor_set_integrity_precedes_nested_identity_admission()
     Ok(())
 }
 
-fn fixture_bytes() -> Result<Vec<u8>, io::Error> {
+pub(crate) fn fixture_bytes() -> Result<Vec<u8>, io::Error> {
     let encoded = ONE_ANCHOR_ROOT
         .strip_suffix('\n')
         .ok_or_else(|| io::Error::other("retention root fixture lacks final newline"))?;

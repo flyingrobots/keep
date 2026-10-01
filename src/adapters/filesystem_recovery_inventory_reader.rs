@@ -71,7 +71,20 @@ impl FilesystemRecoveryInventoryReader {
     }
 
     pub(super) fn from_root(root: Dir) -> Result<Self, RecoveryInventoryError> {
-        filesystem_initialization_namespace::admit_recoverable(&root).map_err(|source| {
+        Self::from_root_with(root, filesystem_initialization_namespace::admit_recoverable)
+    }
+
+    /// Pins a completely migrated version-two root: the version-two namespace
+    /// is admitted and its extra root entries are inert to recovery.
+    pub(super) fn from_root_version_two(root: Dir) -> Result<Self, RecoveryInventoryError> {
+        Self::from_root_with(root, filesystem_initialization_namespace::admit_version_two)
+    }
+
+    fn from_root_with(
+        root: Dir,
+        admit: fn(&Dir) -> std::io::Result<()>,
+    ) -> Result<Self, RecoveryInventoryError> {
+        admit(&root).map_err(|source| {
             RecoveryInventoryError::io(
                 RecoveryNamespace::Root,
                 RecoveryInventoryOperation::OpenNamespace,

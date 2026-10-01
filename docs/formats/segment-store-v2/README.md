@@ -8,9 +8,9 @@ namespaces.
 
 ADR-0009 owns the cross-cutting retention and liveness decision. These pages
 own its durable representation. The one-way migration, version-two reopen, and
-forward retention publication are implemented with executable evidence;
-recovery of retained retention stages, reader fencing, and collection remain
-planned in issue #19, and the [requirements ledger](requirements.md) records
+forward retention publication, partial-prefix recovery, reader fencing,
+explicit disposition, GC retirement, and compaction are implemented with
+executable evidence. The [requirements ledger](requirements.md) records
 exactly which requirements are proven. A version-1 store remains admitted until
 its owner migrates it.
 
@@ -29,8 +29,9 @@ Version 2 retains every version-1 physical law and adds these:
   and canonical digest;
 - root closure is derived from a verified catalog, never from paths, caller
   claims, recent access, or application identity;
-- catalog publication preserves every current retained closure before
-  replacing the catalog head;
+- durable ingestion preserves current catalog records, and compaction verifies
+  retained closures before replacing the catalog head; the general low-level
+  publication gate is a [known gap](retention-publication.md#closure-admission);
 - readers acquire the version-2 reader fence before opening the catalog head;
   and
 - ambiguous, corrupt, missing, excessive, or unsupported evidence refuses
@@ -48,8 +49,12 @@ The following pages form one protocol:
   resource accounting, authenticated reconstruction, and closure evidence.
 - [Closure corruption boundary](closure-corruption.md) owns the admitted-record
   ingress proof and its exact refusal evidence.
-- [GC and disposition records](gc.md) owns the canonical planned intent,
+- [GC and disposition records](gc.md) owns the canonical intent,
   completion, and recovery-disposition byte grammars.
+- [GC execution and recovery](gc-execution.md) owns the retirement phases,
+  the residue state table, and `KEEP-CRASH-074` through `087`.
+- [Identity-preserving compaction](compaction.md) owns the compaction plan,
+  the successor publication, and its recovery.
 - [Migration and recovery](recovery.md) owns the exact root namespace,
   version marker, reader fence, migration records, GC reservation,
   recovery-disposition reservation, and restart behavior.
@@ -74,6 +79,19 @@ The version-1 [segment](../segment-store-v1/segment.md),
 grammars remain byte-for-byte authoritative. Version 2 does not reinterpret or
 re-encode them.
 
+## Mutation ledger
+
+Every structural field of `FORMAT`, the migration intent and receipt, the
+retention root, manifest, and head, the GC intent and receipt, and the
+disposition receipt has one frozen byte mutation in the
+[corruption ledger](../../../conformance/segment-store/v2/mutations.tsv),
+with the exact first refusal the public decoder reports and the
+verification stage it establishes (`framing`, `checksum`, `identity`, or
+`binding`). `tests/segment_store_mutations.rs` reproduces every row through
+the public decoders and `cargo xtask conformance-check` admits the ledger's
+shape; a decoder that refuses differently raises a specification question,
+never a regenerated row.
+
 ## Status
 
 The format contract is frozen by ADR-0009 and this specification.
@@ -86,7 +104,7 @@ one pinned catalog, preflight, preparation, and the 17-phase publication port;
 fresh writer-locked filesystem migration through all 21 phases, refusing a
 version-one store that still holds a retained stage;
 `FilesystemVersionTwoAdmission::reopen`, which jointly admits the marker,
-intent, and receipt, binds the root's device, mount, and inode identity to the
+intent, and receipt, binds the root's restart-stable device and inode identity to the
 intent, and pins the retention directories it admitted; and
 `FilesystemRetentionPublicationAuthority`, which publishes initial and
 successor generations against the observed head, binds this store's catalog
@@ -94,11 +112,23 @@ head and the catalog it selects, and refuses superseded candidates, retained
 stages, replaced protocol directories, and every namespace or capacity
 violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 
-Not implemented: retention publication recovery and `KEEP-CRASH-036..052`
-process-death evidence, partial-prefix migration recovery and
-`KEEP-CRASH-053..073`, the reader fence, model-based transition evidence, and
-garbage collection. Issue #19 owns the first four and issue #21 the last;
-issue #97 owns the restart-stable root identity coordinate. A version-1 store
+Retention publication recovery is implemented and proven both in-process for
+every crash prefix and by the crash matrix, which kills a real writer before,
+during, and after `KEEP-CRASH-036` through `052`.
+Readers bind one consistent catalog, retention head, and manifest view under a
+shared `ReaderFence` and verify selected roots on demand. Every three-operation
+transition sequence agrees with a deterministic namespace-to-anchor-set model.
+Migration recovery is proven in-process for every prefix and by the
+`KEEP-CRASH-053..073` process-death matrix, which kills a real writer at each
+of its 68 boundary coordinates and recovers the restarted root.
+GC retirement is proven in-process for every prefix and by the
+`KEEP-CRASH-074..087` process-death matrix; identity-preserving compaction
+is proven by its identity-stability and interruption laws. Compaction
+benchmarks and re-encoding compaction are not implemented, issue #21.
+Reopen compares only the restart-stable root coordinates, device and inode,
+against the intent; see
+[root identity across restart](recovery.md#root-identity-across-restart). A
+version-1 store
 remains admitted until its owner migrates it, and the
 [requirements ledger](requirements.md) is the authority on which requirements
 are proven.

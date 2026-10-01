@@ -2,24 +2,29 @@
 
 use std::io::Write;
 
-use crate::{
-    AdmittedLayout, ByteLength, ByteRange, ChunkId, LayoutEntry, LayoutId, RangePlan,
-    ReferenceStore,
-};
+use crate::{AdmittedLayout, ByteLength, ByteRange, ChunkId, LayoutEntry, LayoutId, RangePlan};
 
-use super::chunk_verification::verified_chunk;
+use super::chunk_verification::{ChunkSource, emitted_chunk, verified_chunk};
 use super::output_write::write_all;
 use super::range_read_error_mapping::{range_chunk_error, range_output_error};
 use super::{RangeReadError, RangeReadReceipt};
 
-pub(super) fn read_admitted<W>(
-    store: &ReferenceStore,
+/// Authenticates only the chunks overlapping `requested` against `store`,
+/// then emits exactly the requested bytes: the one range core every view
+/// shares.
+#[expect(
+    clippy::redundant_pub_crate,
+    reason = "reached from the durable adapter only through the crate-private re-export"
+)]
+pub(crate) fn read_admitted<S, W>(
+    store: &S,
     layout_id: LayoutId,
     layout: &AdmittedLayout,
     requested: ByteRange,
     output: &mut W,
 ) -> Result<RangeReadReceipt, RangeReadError>
 where
+    S: ChunkSource + ?Sized,
     W: Write + ?Sized,
 {
     let plan = layout
@@ -42,8 +47,8 @@ where
     ))
 }
 
-fn verify_selected(
-    store: &ReferenceStore,
+fn verify_selected<S: ChunkSource + ?Sized>(
+    store: &S,
     layout_id: LayoutId,
     layout: &AdmittedLayout,
     plan: RangePlan,
@@ -55,20 +60,21 @@ fn verify_selected(
     Ok(())
 }
 
-fn emit_selected<W>(
-    store: &ReferenceStore,
+fn emit_selected<S, W>(
+    store: &S,
     layout_id: LayoutId,
     layout: &AdmittedLayout,
     plan: RangePlan,
     output: &mut W,
 ) -> Result<ByteLength, RangeReadError>
 where
+    S: ChunkSource + ?Sized,
     W: Write + ?Sized,
 {
     let (first, entries) = selected_entries(layout, plan)?;
     let mut written = 0_u64;
     for (index, entry) in (first..plan.end_entry()).zip(entries.iter().copied()) {
-        let bytes = verified_chunk(store, layout_id, index, entry).map_err(range_chunk_error)?;
+        let bytes = emitted_chunk(store, layout_id, index, entry).map_err(range_chunk_error)?;
         let selected = selected_chunk_slice(layout_id, index, entry, plan.requested(), bytes)?;
         write_all(output, selected, &mut written)
             .map_err(|error| range_output_error(layout_id, error))?;

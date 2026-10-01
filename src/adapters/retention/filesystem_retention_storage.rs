@@ -14,8 +14,9 @@ use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_stage::FilesystemRetentionStage;
 use super::{
     AdmittedRetentionRoot, CanonicalRetentionHead, CanonicalRetentionManifest,
-    RetentionCurrentStateRefusal, RetentionNamespaceAdmission, RetentionPublicationPreparation,
-    RetentionPublicationStorage, RetentionTransitionDisposition,
+    FilesystemRetentionRecoveryError, RetentionCurrentStateRefusal, RetentionNamespaceAdmission,
+    RetentionPublicationPreparation, RetentionPublicationStorage, RetentionRecoveryOutcome,
+    RetentionTransitionDisposition,
 };
 use crate::RetentionGenerationExpectation;
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
@@ -28,7 +29,23 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
     ) -> io::Result<RetentionTransitionDisposition> {
         self.attempt = None;
         require_pinned_directories(&self.root, &self.retention, &self.roots, &self.manifests)?;
+        let recovery = self.recover().map_err(|error| match error {
+            FilesystemRetentionRecoveryError::Observe { source } => source,
+            FilesystemRetentionRecoveryError::Plan { source } => {
+                RetentionCurrentStateRefusal::RecoveryRefused { source }.into_io()
+            }
+            FilesystemRetentionRecoveryError::Execute { source } => {
+                RetentionCurrentStateRefusal::RecoveryStepRefused { source }.into_io()
+            }
+        })?;
+        if matches!(
+            recovery.outcome(),
+            RetentionRecoveryOutcome::Protected { .. }
+        ) {
+            return Err(RetentionCurrentStateRefusal::RetainedStage.into_io());
+        }
         require_no_retained_stage(&self.retention)?;
+        require_no_gc_intent(&self.root)?;
         let census =
             filesystem_retention_namespace::admit(&self.retention, &self.roots, &self.manifests)?;
         let current = filesystem_retention_current::observe(&self.retention, &self.manifests)?;
@@ -37,6 +54,11 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
         }
         let observed = filesystem_retention_current::disposition(preparation, current.as_ref())?;
         filesystem_retention_catalog::require_current_catalog(&self.root, preparation)?;
+        filesystem_retention_catalog::reverify_closure_members(
+            &self.root,
+            self.catalog_policy,
+            preparation,
+        )?;
         match observed {
             ObservedDisposition::Publish => {
                 filesystem_retention_namespace::admit_expectation(
@@ -261,6 +283,17 @@ fn require_pinned_directories(
         }
     }
     Ok(())
+}
+
+/// A durable `gc/intent` excludes retention transitions until GC recovery
+/// resolves it: the intent bound the liveness generation it retires under.
+fn require_no_gc_intent(root: &Dir) -> io::Result<()> {
+    let gc = root.open_dir_nofollow("gc")?;
+    match gc.symlink_metadata("intent") {
+        Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(()),
+        Ok(_) => Err(RetentionCurrentStateRefusal::GcIntentRetained.into_io()),
+        Err(source) => Err(source),
+    }
 }
 
 fn require_no_retained_stage(retention: &Dir) -> io::Result<()> {

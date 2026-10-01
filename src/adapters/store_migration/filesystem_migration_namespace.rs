@@ -94,14 +94,15 @@ pub(super) fn admit_reader_fence(root: &Dir) -> io::Result<()> {
     verify_reader_root(root)
 }
 
+/// The number of directories the namespace prefix admits, in order.
+pub(super) const PREFIX_DIRECTORY_COUNT: usize = 6;
+
 pub(super) fn admit_namespace_prefix(root: &Dir) -> io::Result<()> {
     preflight_prefix(root)?;
-    let retention = PinnedMigrationDirectory::admit(root, RETENTION)?;
-    let roots = PinnedMigrationDirectory::admit(retention.directory(), ROOTS)?;
-    let manifests = PinnedMigrationDirectory::admit(retention.directory(), MANIFESTS)?;
-    let gc = PinnedMigrationDirectory::admit(root, GC)?;
-    let recovery = PinnedMigrationDirectory::admit(root, RECOVERY)?;
-    let dispositions = PinnedMigrationDirectory::admit(recovery.directory(), DISPOSITIONS)?;
+    let prefix = admit_directories(root, PREFIX_DIRECTORY_COUNT)?;
+    let (retention, roots, manifests, gc, recovery, dispositions) = prefix
+        .complete()
+        .ok_or_else(|| ambiguous("namespace prefix admission stopped short"))?;
     roots.verify(retention.directory())?;
     manifests.verify(retention.directory())?;
     dispositions.verify(recovery.directory())?;
@@ -109,6 +110,77 @@ pub(super) fn admit_namespace_prefix(root: &Dir) -> io::Result<()> {
     gc.verify(root)?;
     recovery.verify(root)?;
     verify_namespace_prefix(root)
+}
+
+/// Admits only the first `count` prefix directories, in protocol order, and
+/// stops without the final verification. Repository crash tasks use this to
+/// leave a store at an exact directory-prefix length.
+#[cfg(feature = "repository-tasks")]
+pub(super) fn admit_namespace_prefix_partially(root: &Dir, count: usize) -> io::Result<()> {
+    if count > PREFIX_DIRECTORY_COUNT {
+        return Err(ambiguous("namespace prefix count exceeds the protocol"));
+    }
+    preflight_prefix(root)?;
+    admit_directories(root, count).map(|_prefix| ())
+}
+
+/// The prefix directories admitted so far, each pinned by its handle.
+#[derive(Default)]
+struct AdmittedPrefix {
+    retention: Option<PinnedMigrationDirectory>,
+    roots: Option<PinnedMigrationDirectory>,
+    manifests: Option<PinnedMigrationDirectory>,
+    gc: Option<PinnedMigrationDirectory>,
+    recovery: Option<PinnedMigrationDirectory>,
+    dispositions: Option<PinnedMigrationDirectory>,
+}
+
+type CompletePrefix<'a> = (
+    &'a PinnedMigrationDirectory,
+    &'a PinnedMigrationDirectory,
+    &'a PinnedMigrationDirectory,
+    &'a PinnedMigrationDirectory,
+    &'a PinnedMigrationDirectory,
+    &'a PinnedMigrationDirectory,
+);
+
+impl AdmittedPrefix {
+    fn complete(&self) -> Option<CompletePrefix<'_>> {
+        Some((
+            self.retention.as_ref()?,
+            self.roots.as_ref()?,
+            self.manifests.as_ref()?,
+            self.gc.as_ref()?,
+            self.recovery.as_ref()?,
+            self.dispositions.as_ref()?,
+        ))
+    }
+}
+
+/// Admits the first `count` prefix directories in the normative order:
+/// `retention`, `retention/roots`, `retention/manifests`, `gc`, `recovery`,
+/// `recovery/dispositions`. Each admission synchronizes its parent.
+fn admit_directories(root: &Dir, count: usize) -> io::Result<AdmittedPrefix> {
+    let mut prefix = AdmittedPrefix::default();
+    for ordinal in 0..count {
+        match ordinal {
+            0 => prefix.retention = Some(PinnedMigrationDirectory::admit(root, RETENTION)?),
+            1 => prefix.roots = Some(admit_child(prefix.retention.as_ref(), ROOTS)?),
+            2 => prefix.manifests = Some(admit_child(prefix.retention.as_ref(), MANIFESTS)?),
+            3 => prefix.gc = Some(PinnedMigrationDirectory::admit(root, GC)?),
+            4 => prefix.recovery = Some(PinnedMigrationDirectory::admit(root, RECOVERY)?),
+            _ => prefix.dispositions = Some(admit_child(prefix.recovery.as_ref(), DISPOSITIONS)?),
+        }
+    }
+    Ok(prefix)
+}
+
+fn admit_child(
+    parent: Option<&PinnedMigrationDirectory>,
+    name: &'static str,
+) -> io::Result<PinnedMigrationDirectory> {
+    let parent = parent.ok_or_else(|| ambiguous("namespace prefix parent was not admitted"))?;
+    PinnedMigrationDirectory::admit(parent.directory(), name)
 }
 
 pub(super) fn verify_intent_root(root: &Dir) -> io::Result<()> {

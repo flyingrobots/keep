@@ -104,7 +104,27 @@ prefix, marker, receipt, and cleanup state without depending on a clock,
 filesystem iteration order, or file existence alone.
 
 `StoreMigrationPhase::ALL` freezes the 21 boundaries above in exact order.
-Fresh writer-locked filesystem execution now implements that exact order and
-has deterministic in-process storage-fault and corruption laws. The
-before/during/after process-death matrix and restart classifier remain
-unimplemented; this page does not yet claim crash recovery.
+Fresh writer-locked filesystem execution implements that exact order and has
+deterministic in-process storage-fault and corruption laws. The restart
+classifier and resuming storage are implemented and proven in-process for
+every prefix of the 21 phases (see
+[partial migration recovery](migration-recovery.md)).
+
+The before, during, and after process-death matrix runs as
+`cargo xtask durability-crash-matrix --sequence migration`. For each of the
+68 cases (21 boundaries at three positions, plus one `during` case per
+admitted directory-prefix length for `KEEP-CRASH-060`) an isolated child
+process publishes the Golden File Worldline version-1 store, executes the
+production migration protocol with the selected boundary gated, and is killed
+by its process group. The parent then compares the exact root inventory
+against an independent expected-state model, reopens the root for recovery
+the way a restarted writer would, requires the production planner to report
+the plan the
+[recovery table](migration-recovery.md#partial-migration-recovery) predicts,
+runs that recovery (or the forward retry after an untouched version-1 store
+admits), and requires one complete migration with every version-1 byte intact
+and a second recovery that reports `Complete`. The
+[transitions ledger](../../../conformance/segment-store/v2/transitions.tsv)
+records each boundary's pre-state, interrupted class, post-state, and recovery
+posture. The matrix proves application process death; host power loss
+remains outside its claim.

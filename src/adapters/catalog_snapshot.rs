@@ -1,7 +1,10 @@
 //! Immutable reader snapshot pinned by one head and admitted catalog.
 
+use std::collections::BTreeMap;
+
 use super::{
-    AdmittedCatalog, AdmittedSegmentRecord, ChecksummedPublicationHead, SegmentRecordIdentity,
+    AdmittedCatalog, AdmittedSegmentRecord, CatalogDecodeError, ChecksummedPublicationHead,
+    SegmentDigest, SegmentRecordIdentity,
 };
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
@@ -50,6 +53,13 @@ impl<'head, 'catalog, 'records> CatalogSnapshot<'head, 'catalog, 'records> {
         identity: SegmentRecordIdentity,
     ) -> Option<AdmittedSegmentRecord<'records>> {
         self.catalog.record(identity)
+    }
+
+    /// Maps every logical identity to the physical segment that holds it.
+    pub(crate) fn record_segments(
+        &self,
+    ) -> Result<BTreeMap<SegmentRecordIdentity, SegmentDigest>, CatalogDecodeError> {
+        self.catalog.record_segments()
     }
 
     pub(super) const fn new(

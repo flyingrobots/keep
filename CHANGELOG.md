@@ -8,8 +8,364 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+### Roadmap audit corrections
+
+- Preserve typed failure sources through durable and compaction I/O boundaries.
+- Bound sealed-stage admission by its recorded length before reading it.
+- Count selected chunks once in authenticated-read benchmark accounting.
+- Move transfer-source ports into the store boundary so dependencies point
+  inward, while preserving public exports.
+- Correct stale implementation claims in crate and version-two format docs.
+
 ### Added
 
+- Roadmap-audit regression laws for preserving typed durable refusal sources,
+  refusing externally enlarged sealed stages before allocation, and retention
+  release/restore model sequences.
+- Bounded streaming write-through pipeline. `transfer_layout`,
+  `transfer_blob`, `transfer_range`, and `transfer_layout_range` move
+  authenticated bytes from any `ContentReads` view into a `TransferSink`
+  as `TransferSegment`s (the read core's own borrowed chunk slices,
+  applied exactly once in order) under `TransferBounds`: a
+  `TransferWindow` between acknowledgements and a `CancellationSignal`
+  (`NeverCancelled`, `AtomicBool`, or a shareable `CancellationFlag`)
+  consulted before every segment; cancellation returns
+  `TransferError::Cancelled { segments, bytes }`, never a receipt.
+  `WriteSink` is the exactly-once sink over any writer. `copy_layout`
+  copies one committed layout from a `TransferSource` (`ReferenceStore`,
+  `DurableSnapshot`) into any `ContentStaging` destination through a pull
+  reader that authenticates each chunk as it is served, with the
+  destination's `stage_expected` verifying the complete identity; the
+  blob is never held whole. `tests/transfer_pipeline_memory.rs` shows
+  read-to-write allocates nothing beyond the sink and copy-to-write
+  allocates less than a caller-owned copy loop;
+  `benches/transfer_pipeline.rs` times both against that loop. Page:
+  `docs/architecture/content-store/pipeline.md`.
+- Durable staged ingestion with deduplication. `DurableWriter::open`
+  takes writer authority over a version-two root; `stage(source, limits)`
+  reads the source once through the reference store's streaming core (now
+  generic over a crate-private `ChunkSink`), verifies every chunk the
+  pinned catalog already holds byte for byte and reuses it, and appends
+  every other chunk to `staging/current.seg` as it is produced, creating
+  the stage on the first new chunk; the layout record follows unless the
+  catalog holds it. `DurableStagedBlob::commit(self)` publishes the sealed
+  segment and a catalog successor through `publish_catalog_generation`, or
+  nothing when the catalog already held everything.
+  `DurableIngestionReceipt` binds profile, blob, layout, segment digest,
+  catalog coordinates, and `IngestionAccounting` (logical, physical new,
+  physical reused bytes and chunk counts). `recover_durable_ingestion`
+  runs the recovery protocol with ingestion's complete-stage evidence: a
+  sealed stage the catalog names nothing of is discarded. The writer
+  implements `ContentStaging`; the port's staging now borrows its store
+  (`Staged<'store>`) and `StagedContent::commit(self)` takes no store,
+  with `ReferenceStagedContent` binding a `StagedBlob` to its reference
+  store. Page: `docs/architecture/durable-store/ingestion.md`.
+- Backend-neutral content-store port. `ContentReads` (`contains_blob`,
+  `reconstruct`, `reconstruct_layout`, `read_range`, `read_layout_range`)
+  is implemented by `ReferenceStore` and `DurableSnapshot`, each with its
+  own receipt and error types; `ContentStaging::{stage, stage_expected}`
+  and `StagedContent::commit` are implemented by the non-durable reference
+  store, with the durable writer owed to T-24.2. `StagingLimits` pairs a
+  `LayoutEntryLimit` with a `StagedByteLimit`; `ReferenceStore::stage_bounded`
+  enforces the byte limit as each read is accepted and refuses with
+  `IngestionError::ByteLimitExceeded { limit, accepted, incoming }` before
+  any excess is materialized. Receipts stay distinct types per backend, so
+  a reference receipt cannot be passed where a durable one is required
+  (`compile_fail` doctest on `src/store/mod.rs`). Generic laws in
+  `src/store/port_laws.rs` run against both backends;
+  `tests/content_store_port.rs` runs the reference backend through the port
+  from outside the crate. The page is
+  `docs/architecture/content-store/README.md`.
+- Durable authenticated reads. `DurableStore::open(root, policy, limit)`
+  names a migrated version-two store and `snapshot()` pins one consistent
+  view under the shared reader fence, indexing every retained root's
+  anchors. `DurableSnapshot::{contains_blob, reconstruct, reconstruct_layout,
+  read_range, read_layout_range}` run the reference store's reconstruction
+  and range cores (now generic over a crate-private `ChunkSource`) against
+  the pinned catalog, resolving blobs through the retained anchors and
+  layouts and chunks through the catalog's records, and return receipts
+  bound to the `DurableView` (catalog generation and digest, retention
+  generation and manifest digest). A snapshot cannot be dropped mid-read,
+  keeps its generation while a successor publishes, and blocks collection
+  (`ReadersActive`) until dropped. `DurableReadError::View` is the one
+  operational failure; every other refusal is evidence against the pinned
+  view. `KEEP-RECONSTRUCT-009` and `-010` are Implemented on
+  `src/adapters/durable/tests.rs`; the page is
+  `docs/architecture/durable-store/README.md`.
+- Identity-preserving compaction. `observe_compaction` reads every record
+  the catalog names, every record a retained closure reaches, and the pool;
+  `plan_compaction` is pure over it and gives every named segment one
+  disposition (`retained`, `compacted` with its live records to copy, or
+  `omitted`), refusing when no retention is published, nothing is
+  unreachable, a closure reaches an unnamed record, a named segment is
+  missing, or the copies exceed one segment. `FilesystemCompactionAuthority`
+  re-proves the plan under writer authority, copies the live records
+  byte-identically into one new sealed segment, publishes the successor
+  through the complete version-one catalog protocol on the version-two root
+  (`FilesystemCatalogPublisher::open_version_two`), and revalidates that
+  every superseded segment is now an `unreachable-superseded` GC candidate.
+  `recover_compaction` drives the version-one stage discard and `head.next`
+  finalization over a version-two root (the recovery inventory now admits
+  the version-two root entries as inert, and version-two admission admits an
+  optional `head.next`), discarding a complete staged segment or catalog
+  only after proving it derivable from `HEAD`. Proven by
+  `src/adapters/compaction/filesystem_tests.rs`, including a death before
+  each of the 22 publication phases; `KEEP-GC-002` is Implemented and the
+  Worldline capability `keep.compaction.identity-stable/v1` is `required`.
+  Specified on `docs/formats/segment-store-v2/compaction.md`.
+- Durable verification receipts. `keep.verification-receipt/v1` is a
+  canonical, versioned, checksummed 384-byte record binding one
+  verification's subject, admitted view (reference, or a durable
+  snapshot's catalog generation and digest and liveness generation and
+  manifest digest), the depth established or stage refused, the refusal
+  classification and evidence kind and index, the exact layout and target
+  where the outcome binds them, and the verification contract version.
+  `VerificationReceipt::{from_report, from_refusal}` project the ephemeral
+  report or refusal; `CanonicalVerificationReceipt::{encode, decode}` are
+  the codec, and `decode` admits framing, contract, checksum, every
+  registered code, every identity slot, and every semantic law, then
+  requires canonical bytes. The corpus in `conformance/verification-receipt/v1/`
+  is built by a handwritten oracle from the accepted layout and segment-store
+  fixtures; `tests/verification_receipt.rs` proves the golden round trip,
+  cross-process admission, every reference-store outcome round-tripping, a
+  field-complete corruption matrix, and that a refusal never decodes as a
+  report; the `verification_receipt` fuzz target is seeded from the corpus.
+  `KEEP-VERIFY-007` is Implemented.
+- Permanent corruption ledgers over every durable structural field.
+  `conformance/segment-store/v1/mutations.tsv` (105 rows: segment header,
+  record header, record checksum, seal, whole segment, catalog header,
+  entry, trailer, catalog-to-segment binding, publication head, and
+  head-to-catalog binding) and `v2/mutations.tsv` (150 rows: `FORMAT`,
+  migration intent and receipt, retention root, manifest, and head, GC
+  intent and receipt, disposition receipt) freeze one byte mutation per
+  field with its exact first refusal as `<record>.<variant>`, the
+  verification stage it establishes (`framing`, `checksum`, `identity`,
+  `binding`), a checksum posture (preserve, or recompute inner set digests,
+  the trailer, or only the checksum, so the check behind a checksum is
+  reachable), and the requirement it evidences.
+  `tests/segment_store_mutations.rs` applies every row through the public
+  decoders and reports every differing row at once; `cargo xtask
+  conformance-check` (and `segment-store-mutations-check`) refuses a
+  malformed row before any external witness runs. The Golden File Worldline
+  capability `keep.verification.precise-refusal/v1` is now `required`.
+- GC execution, retirement, and recovery. `FilesystemGcAuthority` retires
+  the released segments a `GcPlan` names: `prepare` refuses over any
+  residue but idle or complete, refuses an empty plan, acquires the reader
+  fence exclusively without waiting (`ReadersActive`), re-observes liveness
+  under it and requires the reopened store to plan identically
+  (`PlanStale`), and derives the one canonical intent (generation succeeding
+  the prior receipt's, per-candidate release evidence, and the newly
+  registered `keep.gc-catalog-successor-proof/v2`, `keep.gc-segment-pool/v2`,
+  and `keep.gc-disposition-set/v2` derivations). `execute_gc` then drives
+  the 14 fixed phases through `GcExecutionStorage`: intent stage, sync,
+  link, sync, cleanup, sync; per candidate a verified unlink and pool sync;
+  receipt stage over the exact remaining pool, sync, atomic replacement of
+  `gc/receipt`, sync; intent removal, sync. `GcResidue` and
+  `plan_gc_recovery` classify every residue into idle, complete, a
+  discardable truncated stage, or the exact resumption point, and refuse
+  everything else as `GcRecoveryAmbiguity`; `recover` acts on it. A durable
+  `gc/intent` makes retention publication refuse `GcIntentRetained` and
+  another retirement refuse `RecoveryRequired`. Namespace admission admits
+  exactly the four GC records as regular files. Proven by
+  `filesystem_gc_tests` (every interrupted prefix and both truncated stages
+  recover to the same complete state without losing the live segment) and
+  by the `KEEP-CRASH-074..087` process-death matrix,
+  `cargo xtask durability-crash-matrix --sequence gc`, 42 killed-writer
+  cases with the ledger rows in `transitions.tsv`. Registering the three
+  derivation domains changed the format-definition digest, so the marker,
+  migration intent and receipt, and store identifier fixtures were
+  rematerialized through the corpus oracle. Specified on
+  `docs/formats/segment-store-v2/gc-execution.md`.
+- Explicit disposition of recovery-protected retention orphans.
+  `FilesystemRetentionPublicationAuthority::dispose` records a
+  finalize-or-retire decision over a linked, retained `root.next` or
+  `manifest.next` under writer authority and the exclusive reader fence:
+  the `RecoveryDispositionReceipt` goes through the fixed-stage protocol
+  (`recovery/disposition.next`, link to
+  `recovery/dispositions/<digest>.receipt`, synchronize, remove, synchronize)
+  and is durable before the retained stage is removed, so publication that
+  refused `RetainedStage` proceeds. `Retire` also unlinks the pool entry and
+  an emptied namespace directory, because an absent head admits no pool
+  artifact; `Finalize` keeps the entry and needs a published head; a
+  manifest stage must be disposed before the root it names; a reader holding
+  the fence refuses without waiting; every residue an interrupted run leaves
+  resumes on the next call, and a residue naming another decision is a typed
+  ambiguity. `plan_recovery_disposition`, `RecoveryDispositionPhase`,
+  `RecoveryDispositionStorage`, and `resume_recovery_disposition` are the
+  pure planner, phases, port, and executor. Version-two admission now admits
+  canonical `.receipt` entries and a retained `disposition.next`; GC planning
+  admits only the exact `segment` receipt and treats a stale one as
+  protection. Liveness generation zero beside the initial retention-state
+  digest encodes a decision made under an absent retention head.
+- `RecoveryDispositionReceipt` codec and its registered enumerations.
+  `definition.tsv` now registers the artifact kinds (`segment`, `catalog`,
+  `retention-root`, `retention-manifest`, `retention-head`), decisions
+  (`finalize`, `retire`), classifications (`complete-orphan`,
+  `complete-stage`, `stale-generation`), and the
+  `keep.recovery-disposition-artifact/v2` domain; the format-definition
+  digest, the format marker, the migration intent and receipt, and the
+  derived store identifier were rematerialized through the corpus oracle.
+  `CanonicalRecoveryDispositionReceipt` and
+  `AdmittedRecoveryDispositionReceipt` encode and admit the frozen
+  `one-orphan-retire-disposition.hex`; every unregistered code and zero
+  generation refuses; the `gc_format` fuzz target covers all three GC
+  records. `KEEP-GC-001` moves to Implemented. Namespace admission still
+  refuses every GC record on disk.
+- Deterministic GC planning. `GcLivenessSnapshot` is one immutable liveness
+  snapshot plus one bounded physical inventory: the fenced catalog's
+  generation and digest, the retention state, every segment the catalog
+  names, every retained root's verified closure projected onto segments,
+  every pool segment with its length, and the segments a predecessor
+  catalog named that the current catalog omits. `plan_gc` classifies every
+  inventoried segment exactly once (`live`, `named-unreachable`,
+  `recovery-protected`, `unreachable-superseded`, `unreachable-disposed`),
+  reports already-retired segments, refuses every contradiction as a typed
+  `GcPlanAmbiguity`, and refuses rather than truncates above `GcLimits`.
+  `observe_gc_liveness` assembles the snapshot from a
+  `FilesystemRetentionSnapshot`, re-admitting every pool segment and walking
+  the catalog chain; a corrupt or stray pool entry refuses observation. The
+  golden plan for the frozen version-2 store is
+  `conformance/segment-store/v2/gc-plan.tsv`; a 512-universe model proves the
+  live set is exactly the union of retained closures and no live or named
+  segment is ever a candidate. Execution is not implemented; nothing is
+  unlinked.
+- Closure-member re-verification under filesystem authority.
+  `FilesystemRetentionPublicationAuthority::open` now takes a
+  `CatalogRestartPolicy`, and current-state verification loads this store's
+  catalog and every segment it names within that bound, admits each record,
+  re-runs `verify_retention_closure`, and requires the preparation's closure
+  digest before any retention stage is written. A corrupt chunk or layout
+  member refuses as `RetentionCurrentStateRefusal::ClosureMemberRefused`
+  whose `source()` chain reaches the exact `SegmentRecordAdmissionError`; a
+  closure that no longer verifies is `ClosureReverificationRefused`; a
+  different digest is `ClosureDigestChanged`.
+- Migration process-death matrix. `cargo xtask durability-crash-matrix`
+  now runs `KEEP-CRASH-053` through `-073`: 68 cases that publish the Golden
+  File Worldline version-1 store in an isolated child, execute the production
+  21-phase migration with one boundary gated, kill the child's process group
+  before, during, or after it (one `during` case per admitted
+  directory-prefix length for `KEEP-CRASH-060`), then compare the restarted
+  root against an independent expected-state model, require
+  `recover_store_migration` to report the recovery plan the table predicts,
+  run it (or the forward retry after an untouched version-1 store admits), and
+  require one complete migration with every version-1 byte intact and a
+  second recovery that reports `Complete`. `--sequence <name>` selects one
+  protocol sequence and `--case` accepts an occurrence. The ledger is
+  `conformance/segment-store/v2/transitions.tsv`; `KEEP-MIGRATION-007` moves
+  to Implemented (#108).
+- Reference-store staging memory contract. `ReferenceStore::STAGING_SCRATCH_LIMIT_BYTES`
+  names the fixed scratch one `stage` call holds beyond the new unique chunk
+  bytes it copies (the 8 KiB read buffer, one maximum-length chunk buffer,
+  and the detector's retained state). Peak staging memory is that scratch
+  plus the capacity the store has not yet materialized plus layout metadata
+  bounded by the entry limit, because the adapter refuses with
+  `CapacityExceeded` before copying a chunk that would cross the capacity.
+  `tests/streaming_cas_memory.rs` measures that ceiling for a source five
+  times the capacity, proves the refusal retains nothing, and proves fully
+  deduplicated staging stays at the scratch floor; the reference-store
+  rationale records why the in-memory adapter cannot stage a bounded window
+  of a larger blob without publishing a prefix or becoming the durable
+  ingestion adapter (#74).
+- Partial-prefix migration recovery. `plan_store_migration_recovery` maps
+  one observed `StoreMigrationResidue` (the presence and exact bytes of every
+  fixed migration name) and the intent the version-1 store derives today
+  onto the one lawful `StoreMigrationRecoveryPlan` from the recovery table:
+  admit version 1, discard one incomplete pre-effect stage and resume,
+  resume at the earliest forward phase the residue cannot prove complete, or
+  complete; every other residue is a typed `StoreMigrationRecoveryAmbiguity`.
+  `recover_store_migration` drives a `StoreMigrationRecoveryStorage` through
+  observe, plan, adopt, discard, and `resume_store_migration`, publishing
+  the persisted intent rather than the freshly derived one.
+  `FilesystemStoreMigrationAuthority::reopen_for_recovery` acquires the
+  writer lock over a root carrying any lawful residue without minting a
+  version-1 platform admission, adopts exact stages and canonical records by
+  device and inode identity, and removes only an incomplete pre-effect
+  stage. Every prefix of zero through twenty-one phases and a truncated stage
+  recover in-process to one complete migration with every version-1 byte
+  intact; a corrupt durable intent refuses before any mutation.
+  `KEEP-MIGRATION-001` and `-004` move to Implemented.
+- Explicit-depth verification. `VerificationDepth` is one ordered
+  enumeration from `Framing` to `RetentionClosure`; `ReferenceStore::verify`
+  and `verify_admitted_layout` establish exactly the requested depth and
+  return a `VerificationReport` with private fields and no way to deepen it,
+  or a `VerificationRefusal` that keeps `Missing`, `Corrupt`, `Ambiguous`,
+  and `Unsupported` distinct with exact expected and observed coordinates,
+  or an operational `VerificationFailure` that supports no content
+  conclusion. The reference view supports `ChunkIdentity` through
+  `CompleteBlobIdentity` in one chunk pass and refuses every other depth
+  instead of degrading; a lower-stage refusal is always reported first.
+  `docs/invariants/verification/` states the contract, the rationale, and
+  the `KEEP-VERIFY` ledger; durable depths and a replayable receipt remain
+  planned in #20.
+- Canonical codecs for the version-2 `GcRetirementIntent` and
+  `GcRetirementReceipt` records. `GcRetirementIntent` admits a canonical,
+  duplicate-free, digest-ordered candidate set of at most 65,536 segments
+  over its liveness, catalog, profile, pool, disposition, and reader-lock
+  coordinates; `CanonicalGcRetirementIntent` and `AdmittedGcRetirementIntent`
+  encode and admit it with checksum-first, digest-second, candidate-set
+  third integrity; `CanonicalGcRetirementReceipt` and
+  `AdmittedGcRetirementReceipt` bind a receipt to its admitted intent
+  coordinate by coordinate, with a synchronization count of exactly one per
+  candidate. `GcGeneration` is the checked retirement generation. The
+  independent oracle constructs `one-candidate-gc-intent.hex` and
+  `one-candidate-gc-receipt.hex` from accepted version-1 and version-2
+  fixtures without touching the definition digest; the `gc_format` fuzz
+  target is seeded from them. Namespace admission still refuses every GC
+  record on disk. `KEEP-GC-001` moves to In progress; the
+  `RecoveryDispositionReceipt` codec waits for its enumerations to be
+  registered in `definition.tsv`.
+- Field-by-field corruption matrices for the version-2 retention root,
+  manifest, and head decoders. Every header, body, and trailer field has one
+  sealed mutation whose digests and checksum are recomputed around it, so
+  each case pins the exact first refusal of that field alone; reframed
+  records prove the namespace length bounds, canonical anchor and entry
+  ordering, and the anchor and entry count ceilings after complete
+  integrity. `KEEP-RETENTION-003` is Implemented.
+- `ROADMAP.md` inventories every feature Keep has, is building, or intends,
+  with a checklist and a task breakdown per unfinished feature.
+- Model-based retention evidence: every three-operation sequence over initial
+  publications of two namespaces, a successor, a byte-identical retry, and a
+  stale initial (125 sequences, each in a fresh migrated store) agrees with a
+  deterministic namespace-to-(generation, anchor-set) map and liveness after
+  every step, observed through the fenced reader view; a source contract
+  keeps clocks, paths, environment, and identity out of the retention core.
+- `FilesystemRetentionSnapshot` is the version-two reader view: it admits the
+  root as version two, acquires a shared `ReaderFence` on `reader.lock`,
+  double-collects the catalog and retention heads around loading through
+  `collect_retention_view` (bounded by `ReaderAttemptLimit`, refusing an
+  exhausted limit or an absent catalog), binds the catalog snapshot, the
+  retention head, and its manifest, and verifies each selected root against
+  the manifest on demand while the fence is held.
+- Storage-independent retention recovery planning: `assess_root_stage`,
+  `assess_manifest_stage`, and `assess_head_stage` classify each fixed stage
+  as absent, complete, truncated, or corrupt through the decoders' own
+  truncation laws; `plan_retention_recovery` turns that evidence, the observed
+  current state, and pool-entry observations into an ordered
+  `RetentionRecoveryPlan` (discard a pre-effect truncated stage, link and
+  protect complete orphans, finalize a complete head over linked stages, clean
+  up stages the published head already names) or a typed
+  `RetentionRecoveryRefusal`. `RetentionRecoveryStorage` names one blocking
+  capability per step and `execute_retention_recovery` runs a plan in order,
+  stopping at the first refused step with the completed prefix named in
+  `RetentionRecoveryError`. `FilesystemRetentionPublicationAuthority::recover`
+  observes the stages within their format bounds, reopens complete stages
+  bound to their identity, and executes the plan under the retained writer
+  lock, so a crash after the head stage is synchronized finalizes on restart
+  and a byte-identical retry is already committed. Laws drive every
+  publication prefix from 0 through 18 phases, truncate each stage mid-write,
+  and replay successor prefixes over a published generation; each recovers to
+  its documented state, recovery is idempotent, and the forward retry reports
+  the predicted outcome. Publication runs that recovery as its first step, so
+  an interrupted publication no longer waits for a human unless it left a
+  complete orphan; `RecoveryRefused` and `RecoveryStepRefused` carry
+  recovery's own errors through `RetentionCurrentStateRefusal`. The crash
+  matrix gains `KEEP-CRASH-036` through `052`: a child migrates a golden
+  bundle store, publishes retention generation one, and is killed before,
+  during, or after each of the seventeen phases; restart reopens the store,
+  runs recovery, and requires the documented steps, outcome, and forward
+  retry. `FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks`
+  and `FilesystemStoreMigrationAuthority::open_unchecked_for_repository_tasks`
+  give repository tools the same bypass version one already had.
 - `FilesystemRetentionPublicationAuthority` executes the 17 ordered retention
   publication phases against a completely migrated version-2 root. It stages
   `root.next`, `manifest.next`, and `head.next` exclusively, verifies device
@@ -242,6 +598,32 @@ after its public API and format compatibility policies are established.
 
 ### Changed
 
+- Status pages describe `main` again: the README gap table routes retention
+  recovery and the reader fence to PR #99, migration recovery to #108, and
+  durable reads to #109 instead of the closed #19; the crate doc names what
+  is present and absent; `migration-inventory.md` no longer calls
+  verification-first migration storage in progress; and
+  `retention-publication.md` labels version-2 catalog publication as a gap
+  (a migrated store admits no catalog publisher until #82) instead of
+  describing it as behaviour.
+- Version-two reopen compares only the restart-stable root coordinates, the
+  device and the root inode, against the migration intent. The mount identity
+  the intent records is `statx.stx_mnt_id`, a mount instance that changes on
+  every unmount, remount, and reboot; comparing it on reopen made a correctly
+  remounted store refuse with `RootIdentityChanged { coordinate: Mount, .. }`
+  and would have made partial-prefix migration recovery reject the store's
+  own intent after a reboot. The migrating process still compares all three
+  coordinates against its own observation. The intent bytes are unchanged;
+  `recovery.md` states the rule and its `dev_t` limit, and `rationale.md`
+  records the rejected alternatives. Closes #97.
+- The living `keep.segment-store/v1` pages describe `main`: initialization,
+  platform admission, explicit recovery, and the crash matrix are stated as
+  implemented in issue #17 instead of owned by it; the publication page names
+  `FilesystemPlatformAdmission::initialize` and `::reopen` as the production
+  admission producers; the recovery page states whole-byte classification as
+  the ledger's design rather than a gap; and the requirements prose routes
+  retention, collection, and power-loss simulation to their current owners.
+  A contract law refuses the stale phrases. Closes #69.
 - Documentation refreshed after the version-two merge: the README, the
   version-two overview status, the closure and recovery status lines, the
   reconstruction contract's retention note, and the requirements ledger state
@@ -605,6 +987,13 @@ after its public API and format compatibility policies are established.
   no stability contract; this is not a format change.
 
 ### Fixed
+
+- `ReferenceStore` reconstruction and range reads hash each selected chunk
+  exactly once. The verification pass still runs to completion before the
+  first output write; the emission pass now fetches each verified immutable
+  chunk by identity instead of hashing it again, because the in-memory view
+  cannot change under `&self`. Every "refuses before output" law is
+  unchanged; a test-only hash counter pins one hash per chunk. Closes #71.
 
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.

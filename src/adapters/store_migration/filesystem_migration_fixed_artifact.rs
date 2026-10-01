@@ -18,7 +18,7 @@ pub(super) enum FilesystemMigrationFixedArtifact {
 }
 
 impl FilesystemMigrationFixedArtifact {
-    const fn stage_name(self) -> &'static str {
+    pub(super) const fn stage_name(self) -> &'static str {
         match self {
             Self::Intent => "migration.intent.next",
             Self::Marker => "FORMAT.next",
@@ -26,7 +26,7 @@ impl FilesystemMigrationFixedArtifact {
         }
     }
 
-    const fn canonical_name(self) -> &'static str {
+    pub(super) const fn canonical_name(self) -> &'static str {
         match self {
             Self::Intent => "migration.intent",
             Self::Marker => "FORMAT",
@@ -34,7 +34,7 @@ impl FilesystemMigrationFixedArtifact {
         }
     }
 
-    const fn encoded_length(self) -> usize {
+    pub(super) const fn encoded_length(self) -> usize {
         match self {
             Self::Intent => migration_intent_format::ENCODED_LENGTH,
             Self::Marker => format_marker_decoder::ENCODED_LENGTH,
@@ -67,6 +67,26 @@ impl FilesystemMigrationFixedStage {
             identity,
             file,
         })
+    }
+
+    /// Creates the stage exclusively and writes only `expected[..end]`,
+    /// leaving an unsynchronized incomplete pre-effect stage behind. The
+    /// handle is dropped: repository crash tasks kill the process next.
+    #[cfg(feature = "repository-tasks")]
+    pub(super) fn create_prefix(
+        root: &Dir,
+        artifact: FilesystemMigrationFixedArtifact,
+        expected: &[u8],
+        end: usize,
+    ) -> io::Result<()> {
+        require_length(artifact, expected)?;
+        let prefix = expected
+            .get(..end)
+            .filter(|prefix| prefix.len() < expected.len())
+            .ok_or_else(|| invalid_data("migration stage prefix is not strict"))?;
+        let mut file = filesystem_catalog_artifact::create_exclusive(root, artifact.stage_name())?;
+        file.write_all(prefix)?;
+        file.flush()
     }
 
     pub(super) fn synchronize(&self, root: &Dir) -> io::Result<()> {
@@ -195,4 +215,43 @@ fn require_length(artifact: FilesystemMigrationFixedArtifact, expected: &[u8]) -
 
 fn invalid_data(message: &'static str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
+}
+
+impl FilesystemMigrationFixedStage {
+    /// Reopens an existing exact stage by identity for a resumed migration.
+    pub(super) fn reopen_stage(
+        root: &Dir,
+        artifact: FilesystemMigrationFixedArtifact,
+        expected: &[u8],
+    ) -> io::Result<Self> {
+        Self::reopen(root, artifact, artifact.stage_name(), expected)
+    }
+
+    /// Reopens an existing exact canonical record by identity, as the
+    /// published handle a resumed migration verifies against.
+    pub(super) fn reopen_canonical(
+        root: &Dir,
+        artifact: FilesystemMigrationFixedArtifact,
+        expected: &[u8],
+    ) -> io::Result<Self> {
+        Self::reopen(root, artifact, artifact.canonical_name(), expected)
+    }
+
+    fn reopen(
+        root: &Dir,
+        artifact: FilesystemMigrationFixedArtifact,
+        name: &str,
+        expected: &[u8],
+    ) -> io::Result<Self> {
+        require_length(artifact, expected)?;
+        let file = exact_record::open_regular(root, name)?;
+        let identity = EntryIdentity::of_file(&file)?;
+        verify_named_record(root, name, expected, identity)?;
+        Ok(Self {
+            artifact,
+            expected: Box::from(expected),
+            identity,
+            file,
+        })
+    }
 }

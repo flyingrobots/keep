@@ -4,8 +4,9 @@ use std::error::Error;
 use std::fmt;
 use std::io;
 
+use super::{RetentionClosureVerificationError, RetentionRecoveryError, RetentionRecoveryRefusal};
 use super::{RetentionHeadDecodeError, RetentionManifestDecodeError};
-use crate::adapters::{CatalogDecodeError, PublicationHeadDecodeError};
+use crate::adapters::{CatalogDecodeError, CatalogRestartError, PublicationHeadDecodeError};
 use crate::{CatalogGeneration, LivenessGeneration, RetentionManifestDigest};
 
 /// Exact reason filesystem current-state verification refused a transition.
@@ -21,6 +22,9 @@ use crate::{CatalogGeneration, LivenessGeneration, RetentionManifestDigest};
 pub enum RetentionCurrentStateRefusal {
     /// A retained `root.next`, `manifest.next`, or `head.next` exists.
     RetainedStage,
+    /// A durable `gc/intent` exists: a retirement is in progress and must be
+    /// recovered before any retention transition.
+    GcIntentRetained,
     /// `retention/HEAD` is absent while a pool holds artifacts.
     HeadAbsentWithArtifacts,
     /// `retention/HEAD` is absent but a current generation was expected.
@@ -70,6 +74,18 @@ pub enum RetentionCurrentStateRefusal {
     /// The catalog pool entry decodes to a generation or digest other than the
     /// one `HEAD` names.
     CatalogChanged,
+    /// A closure member re-read from this store's pools refused admission.
+    ClosureMemberRefused {
+        /// The exact load, decode, or admission refusal.
+        source: Box<CatalogRestartError>,
+    },
+    /// The closure re-verified under this authority refused.
+    ClosureReverificationRefused {
+        /// The exact closure refusal.
+        source: RetentionClosureVerificationError,
+    },
+    /// The closure re-verified under this authority has a different digest.
+    ClosureDigestChanged,
     /// The current liveness generation has no successor.
     LivenessExhausted,
     /// A byte-identical retry found that another successor is current.
@@ -122,6 +138,16 @@ pub enum RetentionCurrentStateRefusal {
     /// A protocol directory named at admission (`retention`, `roots`, or
     /// `manifests`) no longer names the pinned directory that was admitted.
     ProtocolDirectoryReplaced,
+    /// Restart recovery refused the retained stages as unrecoverable ambiguity.
+    RecoveryRefused {
+        /// The exact planning refusal.
+        source: RetentionRecoveryRefusal,
+    },
+    /// A restart recovery step refused; the completed prefix remains.
+    RecoveryStepRefused {
+        /// The refused step, the completed prefix, and the storage error.
+        source: RetentionRecoveryError,
+    },
     /// A record's kind or length disagreed with its declaration.
     RecordKindOrLength,
     /// A record carried bytes beyond its declared length.
@@ -169,6 +195,7 @@ impl RetentionCurrentStateRefusal {
     const fn message(&self) -> &'static str {
         match self {
             Self::RetainedStage => "retained retention stage requires recovery before publication",
+            Self::GcIntentRetained => "a durable GC intent requires GC recovery before publication",
             Self::HeadAbsentWithArtifacts => {
                 "retention head is absent while retention pools hold artifacts; recovery is \
              required"
@@ -228,6 +255,19 @@ impl RetentionCurrentStateRefusal {
             Self::RecordKindOrLength => "retention record kind or length disagreed",
             Self::RecordTrailingBytes => "retention record carried trailing bytes",
             Self::RecordLengthOverflow => "retention record length exceeded the addressable range",
+            Self::RecoveryRefused { .. } => {
+                "restart recovery refused the retained retention stages"
+            }
+            Self::RecoveryStepRefused { .. } => "a restart recovery step refused",
+            Self::ClosureMemberRefused { .. } => {
+                "a closure member re-read from this store's pools refused admission"
+            }
+            Self::ClosureReverificationRefused { .. } => {
+                "the closure re-verified under this authority refused"
+            }
+            Self::ClosureDigestChanged => {
+                "the closure re-verified under this authority has a different digest"
+            }
             Self::ProtocolDirectoryReplaced => {
                 "a retention protocol directory was replaced after admission"
             }
@@ -253,6 +293,10 @@ impl Error for RetentionCurrentStateRefusal {
             Self::ManifestRefused { source } => Some(source),
             Self::CatalogHeadRefused { source } => Some(source),
             Self::CatalogRefused { source } => Some(source.as_ref()),
+            Self::RecoveryRefused { source } => Some(source),
+            Self::RecoveryStepRefused { source } => Some(source),
+            Self::ClosureMemberRefused { source } => Some(source.as_ref()),
+            Self::ClosureReverificationRefused { source } => Some(source),
             _ => None,
         }
     }

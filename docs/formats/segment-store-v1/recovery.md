@@ -31,7 +31,10 @@ root and three no-follow child directories, bounds each scan by the remaining
 global budget, preserves raw Linux name bytes, and verifies child-directory
 identity before and after inventory. `classify_recovery_names` requires the
 four initialized root entries, types each fixed name and immutable-pool
-coordinate, and refuses an unknown or conflicting name without artifact I/O.
+coordinate, admits the version-two root entries (`reader.lock`, `FORMAT`,
+`migration.intent`, `migration.receipt`, `retention`, `gc`, `recovery`) as
+inert so the same protocols recover a migrated root, and refuses any other
+unknown or conflicting name without artifact I/O.
 `fingerprint_recovery_stage` then reads a fixed stage through a zero-allocation
 bounded stream, refuses metadata or observed bytes above the name-selected
 maximum, and returns its exact observed length and
@@ -55,9 +58,11 @@ exact truncation only when every available segment- or record-header framing
 byte remains canonical. It preserves proven partial-framing and
 complete-looking corruption as typed refusals. Catalog- and
 next-head-stage classifiers apply the same available-fixed-framing rule before
-distinguishing exact truncation from complete canonical bytes. Transitive
-publication-view admission and filesystem-streaming semantic classification
-remain unimplemented.
+distinguishing exact truncation from complete canonical bytes. Every
+classifier consumes complete, protocol-bounded stage bytes that the inventory
+reader materializes after fingerprinting; the ledger's classification rows
+(`KEEP-RECOVERY-010`, `KEEP-RECOVERY-011`) are whole-byte by design, and no
+classifier streams from a filesystem handle.
 `admit_recovery_stage_bytes` first requires the canonical-name stage, exact
 length, and recomputed stage fingerprint to match prior observation evidence;
 only `assess_recovery_stage` may dispatch those admitted bytes to a semantic

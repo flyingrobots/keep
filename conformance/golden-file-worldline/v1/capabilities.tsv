@@ -11,8 +11,8 @@ keep.range.minimal-overlap/v1	required	M2	11	only chunks overlapping an exact re
 keep.segment.verified-read/v1	declared-future	M3	14,15	sealed segment reads authenticate framing and content
 keep.restart.lawful-recovery/v1	declared-future	M3	17	restart recovery reaches one documented lawful state
 keep.retention.both-states/v1	declared-future	M4	18,19	retention evidence keeps both worldline states live
-keep.verification.precise-refusal/v1	declared-future	M4	20	corruption produces precise verification refusal
-keep.compaction.identity-stable/v1	declared-future	M4	21	compaction cannot move logical BlobId
+keep.verification.precise-refusal/v1	required	M4	20	corruption produces precise verification refusal
+keep.compaction.identity-stable/v1	required	M4	21	compaction cannot move logical BlobId
 keep.echo.identity-agreement/v1	declared-future	M5	22,23	Echo and Keep agree on the exact logical identity boundary
 keep.graft.golden-worldline/v1	declared-future	M5	24	Graft executes the Golden File Worldline through Keep
 keep.git-cas.import/v1	declared-future	M5	25	imported git-cas material retains explicit identity posture

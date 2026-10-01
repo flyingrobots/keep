@@ -37,6 +37,8 @@ mod durability_crash_point;
 #[cfg(feature = "repository-tasks")]
 mod durability_crash_point_identity;
 #[cfg(feature = "repository-tasks")]
+mod durability_crash_point_sequence;
+#[cfg(feature = "repository-tasks")]
 mod durability_crash_position;
 
 #[cfg(test)]

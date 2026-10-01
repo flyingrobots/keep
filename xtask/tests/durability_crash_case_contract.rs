@@ -6,40 +6,53 @@ use std::error::Error;
 
 use xtask::{
     DurabilityCrashCase, DurabilityCrashCaseError, DurabilityCrashOccurrence, DurabilityCrashPoint,
-    DurabilityCrashPosition,
+    DurabilityCrashPosition, DurabilityCrashSequence,
 };
 
 #[test]
-fn every_crash_point_has_exactly_three_ordered_process_death_cases() -> Result<(), Box<dyn Error>> {
+fn every_crash_point_has_three_ordered_positions_and_one_during_case_per_occurrence()
+-> Result<(), Box<dyn Error>> {
     let cases: Vec<_> = DurabilityCrashCase::all().collect();
-    let expected = DurabilityCrashPoint::ALL
-        .len()
-        .checked_mul(DurabilityCrashPosition::ALL.len())
-        .ok_or("crash-matrix case count overflow")?;
-
-    assert_eq!(cases.len(), expected);
-    for (point_index, point) in DurabilityCrashPoint::ALL.into_iter().enumerate() {
-        for (position_index, position) in DurabilityCrashPosition::ALL.into_iter().enumerate() {
-            let index = point_index
-                .checked_mul(DurabilityCrashPosition::ALL.len())
-                .and_then(|base| base.checked_add(position_index))
-                .ok_or("crash-matrix index overflow")?;
-            let case = cases.get(index).ok_or("missing canonical crash case")?;
-            assert_eq!(case.point(), point);
-            assert_eq!(case.position(), position);
-            assert_eq!(
-                case.occurrence(),
-                point
+    let mut expected = Vec::new();
+    for point in DurabilityCrashPoint::ALL {
+        for position in DurabilityCrashPosition::ALL {
+            let occurrences = if position == DurabilityCrashPosition::During {
+                point.during_occurrences()
+            } else {
+                1
+            };
+            for ordinal in 0..occurrences {
+                let occurrence = point
                     .occurrence_counted()
-                    .then_some(DurabilityCrashOccurrence::FIRST)
-            );
+                    .then_some(DurabilityCrashOccurrence::new(ordinal));
+                expected.push(DurabilityCrashCase::new(point, position, occurrence)?);
+            }
         }
     }
+
+    assert_eq!(cases, expected);
+    // 87 boundaries at three positions, plus five extra namespace-prefix
+    // lengths for `KEEP-CRASH-060`.
+    assert_eq!(cases.len(), 266);
+    let migration: Vec<_> =
+        DurabilityCrashCase::in_sequence(DurabilityCrashSequence::Migration).collect();
+    assert_eq!(migration.len(), 68);
+    let gc: Vec<_> = DurabilityCrashCase::in_sequence(DurabilityCrashSequence::Gc).collect();
+    assert_eq!(gc.len(), 42);
+    assert!(
+        gc.iter()
+            .all(|case| case.point().sequence() == DurabilityCrashSequence::Gc)
+    );
+    assert!(
+        migration
+            .iter()
+            .all(|case| case.point().sequence() == DurabilityCrashSequence::Migration)
+    );
     Ok(())
 }
 
 #[test]
-fn occurrence_coordinates_exist_only_for_record_append() -> Result<(), Box<dyn Error>> {
+fn occurrence_coordinates_exist_only_for_counted_boundaries() -> Result<(), Box<dyn Error>> {
     let occurrence = DurabilityCrashOccurrence::new(7);
 
     let counted = DurabilityCrashCase::new(

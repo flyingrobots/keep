@@ -1,6 +1,6 @@
 //! This module owns deterministic verification of one retained-root closure.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::profile::StorageProfileVerifier;
 use crate::{
@@ -31,11 +31,33 @@ pub fn verify_retention_closure(
     root: &RetentionRoot,
     catalog: &CatalogSnapshot<'_, '_, '_>,
 ) -> Result<VerifiedRetentionClosure, RetentionClosureVerificationError> {
+    verify_retention_closure_members(root, catalog).map(|members| members.closure)
+}
+
+/// One verified closure together with every record identity it resolved.
+///
+/// The identity set is the closure's logical membership; physical GC planning
+/// projects it onto segments through the catalog.
+pub(in crate::adapters) struct RetentionClosureMembers {
+    pub(in crate::adapters) closure: VerifiedRetentionClosure,
+    pub(in crate::adapters) identities: BTreeSet<SegmentRecordIdentity>,
+}
+
+/// Verifies every anchor exactly as [`verify_retention_closure`] does and
+/// also reports the resolved member identities.
+pub(in crate::adapters) fn verify_retention_closure_members(
+    root: &RetentionRoot,
+    catalog: &CatalogSnapshot<'_, '_, '_>,
+) -> Result<RetentionClosureMembers, RetentionClosureVerificationError> {
     let mut verifier = ClosureVerifier::new(root, catalog);
     for anchor in root.anchors().iter().copied() {
         verifier.verify_anchor(anchor)?;
     }
-    Ok(verifier.finish())
+    let identities = verifier.records.keys().copied().collect();
+    Ok(RetentionClosureMembers {
+        closure: verifier.finish(),
+        identities,
+    })
 }
 
 struct ClosureVerifier<'snapshot, 'head, 'catalog, 'records> {

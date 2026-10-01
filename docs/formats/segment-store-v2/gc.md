@@ -4,9 +4,22 @@ This page owns the canonical planned `GcRetirementIntent`,
 `GcRetirementReceipt`, and `RecoveryDispositionReceipt` byte grammars for
 `keep.segment-store/v2`.
 
-Issue #21 owns their implementation. They are specified now so version 2 has
-one exact root grammar, but their presence remains unsupported mandatory state
-until every **Planned in #21** requirement becomes executable evidence.
+Implemented: all three codecs, the planner, explicit disposition, and
+retirement. `GcRetirementIntent` admits a canonical candidate set over its
+coordinates; `CanonicalGcRetirementIntent` and `AdmittedGcRetirementIntent`
+reproduce and admit the frozen `one-candidate-gc-intent.hex`;
+`CanonicalGcRetirementReceipt` and `AdmittedGcRetirementReceipt` bind a
+receipt to its admitted intent, and `decode_unbound` reads one without an
+intent. `CanonicalRecoveryDispositionReceipt` and
+`AdmittedRecoveryDispositionReceipt` reproduce and admit the frozen
+`one-orphan-retire-disposition.hex` over the enumerations registered in
+`definition.tsv`. The protocol that writes `gc/intent` and `gc/receipt`, its
+recovery, and its process-death matrix are owned by
+[GC execution and recovery](gc-execution.md); explicit disposition by
+[recovery](recovery.md#explicit-disposition-of-protected-orphans);
+identity-preserving compaction by [compaction](compaction.md). Namespace
+admission admits exactly those records as regular files and nothing else in
+`gc`. Re-encoding compaction remains **Planned in #21**.
 
 ## Common rules
 
@@ -149,7 +162,26 @@ The checksum domain is `keep.gc-retirement-receipt-checksum/v2\0`.
 <!-- markdownlint-enable MD013 -->
 
 The checksum domain is `keep.recovery-disposition-receipt-checksum/v2\0`.
-Unknown artifact kinds, decisions, or classifications refuse.
+The artifact content digest is BLAKE3-256 of the artifact's exact bytes under
+`keep.recovery-disposition-artifact/v2\0`; the artifact identity digest is
+the artifact's pool-name digest. The three enumerations are registered in
+`definition.tsv` and any other code refuses:
+
+<!-- markdownlint-disable MD013 -->
+
+| Field | Registered values |
+| --- | --- |
+| artifact kind | `segment:1`, `catalog:2`, `retention-root:3`, `retention-manifest:4`, `retention-head:5` |
+| decision | `finalize:1`, `retire:2` |
+| classification | `complete-orphan:1`, `complete-stage:2`, `stale-generation:3` |
+
+<!-- markdownlint-enable MD013 -->
+
+A `complete-orphan` is a complete, verified artifact linked into its pool
+that no head, catalog, or manifest names; a `complete-stage` is a complete,
+verified fixed stage not yet linked; a `stale-generation` is a complete
+artifact whose generation a later publication superseded before it became
+visible. Every generation field must be positive.
 
 The pool coordinate is:
 
@@ -158,29 +190,64 @@ recovery/dispositions/<artifact-identity-digest-64-lower-hex>.receipt
 ```
 
 The version-2 maximum is 65,536 disposition receipts. A future successor must
-migrate the namespace before raising the ceiling.
+migrate the namespace before raising the ceiling. The protocol that writes a
+receipt for a recovery-protected retention orphan is
+[explicit disposition](recovery.md#explicit-disposition-of-protected-orphans);
+liveness generation zero beside the initial retention-state digest records a
+decision made while no retention head was published.
 
-## State and recovery
+## Planning
 
-GC admits these states:
+`plan_gc(&GcLivenessSnapshot, GcLimits)` is the pure, deterministic
+comparison ADR-0009 requires between one immutable liveness snapshot and one
+bounded physical inventory. It reads nothing and writes nothing.
+`observe_gc_liveness` assembles the snapshot from a fenced
+`FilesystemRetentionSnapshot`: it re-admits the fenced catalog, projects every
+retained root's verified closure onto the segments that hold its records,
+reads and admits every entry of the segment pool within the
+`CatalogRestartPolicy` byte bound, walks the catalog predecessor chain to
+find segments a durably published successor superseded, and admits every
+exact disposition receipt. Each released segment carries the digest of the
+record that released it: the predecessor catalog or the receipt.
+
+The plan classifies every inventoried segment exactly once, in this order:
 
 <!-- markdownlint-disable MD013 -->
 
-| State | Evidence | Recovery |
+| Classification | Meaning | Candidate |
 | --- | --- | --- |
-| idle | no `gc/intent` or `gc/receipt` | no retirement authority |
-| active | exact intent, every candidate present | begin execution |
-| partial | exact intent, one canonical absent candidate prefix | continue at first present candidate |
-| completion pending | exact intent, every candidate absent | publish receipt |
-| receipt transition | exact intent and exact receipt | synchronize receipt, remove intent, synchronize `gc` |
-| complete | exact receipt only | return exact completion |
+| `live` | the current catalog names it and at least one retained closure reaches it | no |
+| `named-unreachable` | the current catalog names it and no retained closure reaches it; only a compaction successor can release it | no |
+| `recovery-protected` | no catalog in the chain names it and no disposition retires it: an orphan of an interrupted publication | no |
+| `unreachable-superseded` | a predecessor catalog named it and the current catalog omits it | yes |
+| `unreachable-disposed` | a durable disposition receipt retired it | yes |
 
 <!-- markdownlint-enable MD013 -->
 
-An absent candidate outside the canonical absent candidate prefix, substituted
-candidate, changed pool, stale coordinate, conflicting receipt, malformed
-record, or unexplained absence is unrecoverable ambiguity. Recovery never
-guesses which deletion occurred.
+A superseded or disposed segment absent from the inventory is reported as
+already retired. Any contradiction refuses the whole plan as a typed
+`GcPlanAmbiguity`: a named segment absent from the inventory, a closure
+member the catalog does not name or the inventory lacks, or a superseded or
+disposed segment the current catalog still names. More candidates than
+`GcLimits` admit refuse rather than truncate. Reader protection is not a
+planning classification: execution takes writer authority and the exclusive
+reader lock and re-proves every coordinate the plan names before acting.
+
+The plan for the frozen version-2 store is
+[`gc-plan.tsv`](../../../conformance/segment-store/v2/gc-plan.tsv); the
+planner laws in `src/adapters/gc/planner_tests.rs` cover every
+classification, every ambiguity, the limit, the golden plan, and a
+512-universe model in which the live set is always exactly the union of the
+retained closures and no live or named segment is ever a candidate.
+
+> **Warning.** Execution unlinks immutable segments. It is specified and
+> proven on [GC execution and recovery](gc-execution.md): writer authority,
+> the exclusive reader lock, a durable intent before the first unlink, a
+> re-proven plan, and a recovery report afterwards. Recovery admits one
+> canonical absent candidate prefix and treats every other residue as
+> unrecoverable ambiguity. `plan_gc` is the dry run.
+
+## Disposition transition
 
 A disposition transition writes and synchronizes
 `recovery/disposition.next`, verifies and links the immutable receipt without
@@ -188,6 +255,8 @@ replacement, synchronizes `recovery/dispositions`, removes the stage, and
 synchronizes `recovery`. Until that completes, the artifact remains
 recovery-protected.
 
-These grammars, their golden fixtures, parsers, corruption matrices, crash
-points, model, benchmarks, and fuzz targets are **Planned in #21**. Issue #19
-must refuse their physical presence without mutating it.
+All three grammars have golden fixtures, parsers, corruption matrices, and a
+seeded fuzz target; the planner has its golden plan and model law; retirement
+and disposition have their in-process prefix laws and the process-death
+matrix; compaction has its identity-stability and interruption laws.
+Compaction benchmarks are **Planned in #21**.

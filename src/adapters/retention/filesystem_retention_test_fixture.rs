@@ -8,6 +8,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use super::RetentionPublicationStorage;
 use super::filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
 use super::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionRoot,
@@ -17,9 +18,10 @@ use crate::LayoutEntryLimit;
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
 use crate::adapters::test_support::decode_hex;
 use crate::adapters::{
-    AdmittedCatalog, AdmittedSegment, CatalogSnapshot, ChecksummedCatalog,
-    ChecksummedPublicationHead, FilesystemPlatformAdmission, FilesystemStoreMigrationAuthority,
-    FilesystemVersionTwoAdmission, SegmentReadPolicy, SegmentRecordLimit,
+    AdmittedCatalog, AdmittedSegment, CatalogRestartByteLimit, CatalogRestartPolicy,
+    CatalogSnapshot, ChecksummedCatalog, ChecksummedPublicationHead, FilesystemPlatformAdmission,
+    FilesystemStoreMigrationAuthority, FilesystemVersionTwoAdmission, SegmentReadPolicy,
+    SegmentRecordLimit,
 };
 use crate::{
     RetentionGenerationExpectation, RetentionNamespace, RetentionPolicy, RetentionRoot,
@@ -28,7 +30,7 @@ use crate::{
 };
 
 /// Frozen canonical generation-one root.
-pub(super) const ROOT_HEX: &str =
+pub(in crate::adapters) const ROOT_HEX: &str =
     include_str!("../../../conformance/segment-store/v2/one-anchor-root.hex");
 /// Frozen canonical generation-one manifest.
 pub(super) const MANIFEST_HEX: &str =
@@ -44,7 +46,8 @@ const CATALOG_HEX: &str =
 const CATALOG_HEAD_HEX: &str =
     include_str!("../../../conformance/segment-store/v1/one-zero-bundle-head.hex");
 
-const SEGMENT_NAME: &str = "221f6745cd8a5221c9a87c3707593608479282b54a4a74d0e753fd76f70e8db2.seg";
+pub(super) const SEGMENT_NAME: &str =
+    "221f6745cd8a5221c9a87c3707593608479282b54a4a74d0e753fd76f70e8db2.seg";
 pub(super) const CATALOG_NAME: &str =
     "0000000000000001-0b7cad1b6de663d34beacbc214db7497f2e36ab6b08dfbd5febbc8d06a418811.cat";
 
@@ -53,17 +56,34 @@ pub(super) const CATALOG_NAME: &str =
 /// The fixture publishes the exact bundle version-1 corpus, executes the
 /// complete forward migration, releases writer authority, then reopens the
 /// admitted root for retention publication.
-pub(super) fn open_authority(
+pub(in crate::adapters) fn open_authority(
     name: &str,
 ) -> Result<(TestDirectory, FilesystemRetentionPublicationAuthority), Box<dyn Error>> {
     let sandbox = migrated_store(name)?;
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
-    let authority = FilesystemRetentionPublicationAuthority::open(admission)?;
+    let authority = reopen_authority(sandbox.path())?;
     Ok((sandbox, authority))
 }
 
+/// Reopens a migrated store for retention publication under the test
+/// catalog policy.
+pub(in crate::adapters) fn reopen_authority(
+    root: &Path,
+) -> Result<FilesystemRetentionPublicationAuthority, Box<dyn Error>> {
+    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(root)?;
+    FilesystemRetentionPublicationAuthority::open(admission, catalog_policy()?).map_err(Into::into)
+}
+
+/// The catalog policy tests re-verify closure members under: maximum
+/// grammar limits and one mebibyte of retained segment bytes.
+pub(in crate::adapters) fn catalog_policy() -> Result<CatalogRestartPolicy, Box<dyn Error>> {
+    Ok(CatalogRestartPolicy::new(
+        maximum_policy(),
+        CatalogRestartByteLimit::new(1_048_576)?,
+    ))
+}
+
 /// Decodes one LF-terminated lowercase hexadecimal conformance fixture.
-pub(super) fn fixture(hex: &str) -> Result<Vec<u8>, Box<dyn Error>> {
+pub(in crate::adapters) fn fixture(hex: &str) -> Result<Vec<u8>, Box<dyn Error>> {
     decode_hex(hex.strip_suffix('\n').ok_or("fixture must end in one LF")?).map_err(Into::into)
 }
 
@@ -84,7 +104,7 @@ pub(super) fn with_snapshot<T>(
 }
 
 /// Prepares the frozen generation-one root as an initial `Publish` transition.
-pub(super) fn initial_preparation(
+pub(in crate::adapters) fn initial_preparation(
     root_bytes: &[u8],
 ) -> Result<RetentionPublicationPreparation<'_>, Box<dyn Error>> {
     let candidate = AdmittedRetentionRoot::decode(root_bytes)?;
@@ -180,7 +200,10 @@ pub(super) fn head_path(root: &Path) -> PathBuf {
     root.join("retention").join("HEAD")
 }
 
-pub(super) fn root_pool_path(root: &Path, candidate: &AdmittedRetentionRoot<'_>) -> PathBuf {
+pub(in crate::adapters) fn root_pool_path(
+    root: &Path,
+    candidate: &AdmittedRetentionRoot<'_>,
+) -> PathBuf {
     root.join("retention")
         .join("roots")
         .join(hex(candidate.root().namespace().digest().as_bytes()))
@@ -234,7 +257,7 @@ fn hex(bytes: &[u8; 32]) -> String {
 }
 
 /// Builds one completely migrated version-2 store with writer authority released.
-pub(super) fn migrated_store(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
+pub(in crate::adapters) fn migrated_store(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
     let sandbox = TestDirectory::create(name)?;
     let admission = FilesystemPlatformAdmission::initialize_unchecked_for_tests(sandbox.path())?;
     write_version_one(&sandbox)?;
@@ -260,4 +283,50 @@ fn write_version_one(sandbox: &TestDirectory) -> Result<(), Box<dyn Error>> {
 
 const fn maximum_policy() -> SegmentReadPolicy {
     SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM)
+}
+
+type PublicationPhase<'a> =
+    &'a mut dyn FnMut(&mut FilesystemRetentionPublicationAuthority) -> io::Result<()>;
+
+/// The number of storage-port phases one publication executes.
+pub(super) const PUBLICATION_PHASE_COUNT: usize = 18;
+
+/// Executes publication phases 1 through `count` and stops, like a crash there.
+///
+/// Phase 1 is current-state verification; 2 through 18 are the storage-port
+/// phases in `RetentionPublicationPhase::ALL` order, so `count` selects the
+/// exact prefix a process death after that phase would leave behind.
+pub(super) fn drive_publication(
+    authority: &mut FilesystemRetentionPublicationAuthority,
+    preparation: &RetentionPublicationPreparation<'_>,
+    count: usize,
+) -> Result<(), Box<dyn Error>> {
+    let publication = preparation
+        .publication()
+        .ok_or("preparation carries no publication")?;
+    let root = preparation.candidate();
+    let phases: [PublicationPhase<'_>; PUBLICATION_PHASE_COUNT] = [
+        &mut |a| a.verify_current(preparation).map(|_| ()),
+        &mut |a| a.write_root_stage(root),
+        &mut |a| a.synchronize_root_stage(),
+        &mut |a| a.admit_root_namespace(root).map(|_| ()),
+        &mut |a| a.synchronize_roots_after_namespace(),
+        &mut |a| a.link_root(root),
+        &mut |a| a.synchronize_root_namespace(root),
+        &mut |a| a.write_manifest_stage(publication.manifest()),
+        &mut |a| a.synchronize_manifest_stage(),
+        &mut |a| a.link_manifest(publication.manifest()),
+        &mut |a| a.synchronize_manifest_pool(),
+        &mut |a| a.write_head_stage(publication.head()),
+        &mut |a| a.synchronize_head_stage(),
+        &mut |a| a.replace_head(),
+        &mut |a| a.synchronize_retention_namespace(),
+        &mut |a| a.remove_root_stage(),
+        &mut |a| a.remove_manifest_stage(),
+        &mut |a| a.synchronize_cleanup(),
+    ];
+    for phase in phases.into_iter().take(count) {
+        phase(authority)?;
+    }
+    Ok(())
 }

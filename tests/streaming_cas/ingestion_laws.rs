@@ -66,6 +66,25 @@ fn identical_chunks_are_deduplicated_without_a_retention_claim() -> Result<(), B
 }
 
 #[test]
+fn staging_admits_a_source_exactly_at_capacity() -> Result<(), Box<dyn Error>> {
+    let source = b"every byte of the configured capacity";
+    let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(source.len()));
+    let mut reader = Cursor::new(source);
+
+    let staged = store.stage(&mut reader, LayoutEntryLimit::MAXIMUM)?;
+
+    assert_eq!(staged.pending_materialized_bytes(), source.len());
+    let published = staged.commit(&mut store)?;
+    assert!(store.contains_blob(published.target()));
+    assert!(matches!(
+        store.stage(&mut Cursor::new(b"x"), LayoutEntryLimit::MAXIMUM),
+        Err(IngestionError::CapacityExceeded { capacity, attempted })
+            if capacity == source.len() && attempted == source.len().saturating_add(1)
+    ));
+    Ok(())
+}
+
+#[test]
 fn capacity_refusal_publishes_nothing() -> Result<(), Box<dyn Error>> {
     let source = b"one byte beyond the configured capacity";
     let target = BlobId::hash_bytes(source)?;

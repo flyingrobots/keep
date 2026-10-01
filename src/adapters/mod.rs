@@ -64,8 +64,10 @@ mod checksummed_catalog;
 mod checksummed_publication_head;
 mod checksummed_segment_record;
 mod closed_segment;
+mod compaction;
 mod decoded_catalog_entry;
 mod digest_hex;
+mod durable;
 mod exports;
 mod filesystem_catalog_artifact;
 mod filesystem_catalog_catalog;
@@ -135,6 +137,7 @@ mod filesystem_version_two_record_refusal;
 mod filesystem_version_two_records;
 mod filesystem_writer_lock;
 mod framed_blake3;
+mod gc;
 mod layout_decode_error;
 mod layout_decode_error_display;
 mod layout_decode_policy;
@@ -153,6 +156,7 @@ mod loaded_segment;
 mod lower_hex;
 mod opened_reusable_segment;
 mod physical_pool_name;
+mod pipeline;
 mod publication_head_decode_error;
 mod publication_head_decode_error_display;
 mod publication_head_decoder;
@@ -230,6 +234,7 @@ mod sync_capable_directory;
 #[cfg(test)]
 #[path = "../../tests/support/mod.rs"]
 mod test_support;
+mod verification_receipt;
 mod writer_lock_acquire_error;
 mod writer_lock_acquire_phase;
 

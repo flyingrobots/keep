@@ -1,8 +1,10 @@
 //! Canonically framed, checksum- and digest-verified borrowed catalog.
 
+use std::collections::BTreeSet;
+
 use super::{
     AdmittedCatalog, AdmittedSegment, CatalogAdmissionError, CatalogDecodeError, CatalogEntries,
-    catalog_admission, catalog_decoder,
+    SegmentDigest, catalog_admission, catalog_decoder,
 };
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
@@ -120,6 +122,17 @@ impl<'a> ChecksummedCatalog<'a> {
 
     pub(super) fn entries(self) -> Result<CatalogEntries<'a>, CatalogDecodeError> {
         CatalogEntries::new(self.encoded, self.metadata.entry_count)
+    }
+
+    /// Collects every physical segment this catalog names, without admitting
+    /// the segments themselves. GC planning uses it to walk the predecessor
+    /// chain; nothing else needs a catalog's containers without its records.
+    pub(crate) fn segment_digests(self) -> Result<BTreeSet<SegmentDigest>, CatalogDecodeError> {
+        let mut digests = BTreeSet::new();
+        for entry in self.entries()? {
+            digests.insert(entry?.segment_digest());
+        }
+        Ok(digests)
     }
 
     pub(super) const fn from_verified_parts(

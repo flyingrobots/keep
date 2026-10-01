@@ -51,17 +51,20 @@ Keep is required to refuse all three, before mutating anything.
   generation-versioned catalogs, and a fixed-width `HEAD` are published
   through an ordered protocol whose every step is a named crash point.
   Platform admission is Linux ext4, non-casefolded, one writer.
-- **Proven restart recovery for version 1.** The crash matrix kills real
-  writer processes at 105 before/during/after coordinates
-  (`KEEP-CRASH-001`–`035`) and verifies the store lands in exactly one
-  documented lawful state each time.
+- **Proven restart recovery.** The crash matrix kills real writer processes
+  at 266 before/during/after coordinates (`KEEP-CRASH-001`–`087`) and
+  verifies the store lands in exactly one documented lawful state each time,
+  for version-1 publication, version-2 retention publication, the one-way
+  migration, and GC retirement; every interrupted migration recovers to one
+  complete migration with every version-1 byte intact, and no crash prefix
+  of a retirement loses a live segment.
 - **Version-2 retention and migration, forward path.** Explicit retention
   roots, deterministic closure verification, a one-way 21-phase migration,
   and a 17-phase retention publication — all with production filesystem
   writers, all preserving every version-1 byte. Reopening a migrated store
-  jointly admits its marker, intent, and receipt, binds the root's device,
-  mount, and inode identity to the intent, and pins the directories it
-  admitted. Publication binds this store's own catalog head and the catalog
+  jointly admits its marker, intent, and receipt, binds the root's
+  restart-stable device and inode identity to the intent (a remounted store
+  admits; a moved one refuses), and pins the directories it admitted. Publication binds this store's own catalog head and the catalog
   it selects, and refuses retained stages, superseded candidates, substituted
   files, replaced protocol directories, and every namespace or capacity
   violation before it writes anything. Each refusal is a typed value, not a
@@ -69,20 +72,25 @@ Keep is required to refuse all three, before mutating anything.
 
 ## What it does not do yet
 
-Version 2 writes correctly from a clean start and, if it finds the residue of
-an interrupted publication, refuses rather than guesses. Nothing yet recovers
-that residue, and readers have no fence, so **an interrupted version-2
-publication waits for a human until #19 lands.** A version-1 store stays
-admitted until its owner migrates it; migrate only if you accept that wait.
+Version 2 writes correctly from a clean start, and the next publication
+recovers the residue of an interrupted one: a stage cut mid-write is
+discarded, a head already synchronized is finalized, and a byte-identical
+retry reports already committed. A complete orphan, a crash between the root
+link and the head finalization, stays recovery-protected until a person or an
+explicit policy calls `dispose` with a finalize-or-retire decision, which
+records a durable receipt before it changes anything; nothing decides on
+their behalf. The crash matrix proves publication recovery by killing real
+writer processes at all 51 retention coordinates, and an interrupted
+migration the same way at all 68 migration coordinates:
+`FilesystemStoreMigrationAuthority::reopen_for_recovery` and
+`recover_store_migration` resume any prefix of the twenty-one phases. Readers
+hold a shared fence and double-collect both heads, so a view never straddles
+a publication. A version-1 store stays admitted until its owner migrates it.
 
 | Gap | Tracked |
 | --- | --- |
-| Restart recovery for retention publication and migration | [#19](https://github.com/flyingrobots/keep/issues/19) |
-| Restart-stable root identity coordinate in the migration intent | [#97](https://github.com/flyingrobots/keep/issues/97) |
-| Reader fence binding one consistent catalog + retention snapshot | [#19](https://github.com/flyingrobots/keep/issues/19) |
-| Precise verification reports at explicit depths | [#20](https://github.com/flyingrobots/keep/issues/20) |
-| Garbage collection and identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |
-| Bounded production ingestion through the durable store | [#82](https://github.com/flyingrobots/keep/issues/82) |
+| Durable authenticated reads bound to a fenced snapshot | [#109](https://github.com/flyingrobots/keep/issues/109) |
+| Verification reports at durable depths and a replayable receipt | [#20](https://github.com/flyingrobots/keep/issues/20) |
 | Encrypted representations | [#86](https://github.com/flyingrobots/keep/issues/86) |
 
 Keep also does not claim secure deletion. Releasing a retention root
@@ -154,7 +162,9 @@ the content means, who owns it, or whether deleting it is legally safe.
 Keep is `0.0.0` and unpublished; build from source. The in-memory
 [non-durable reference CAS](docs/architecture/reference-store/README.md) is
 executable evidence for the storage laws, not a durable backend — process
-death loses everything in it.
+death loses everything in it. Code written against the
+[content-store port](docs/architecture/content-store/README.md) runs on it
+in tests and on a durable snapshot in production.
 
 ```rust
 use std::io::Cursor;
@@ -173,6 +183,42 @@ let published = staged.commit(&mut store)?;
 let mut output = Vec::new();
 store.reconstruct(published.target(), &mut output)?;
 assert_eq!(output, b"exact bytes, or nothing");
+# Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+A migrated version-two store writes and reads the same way on disk:
+`DurableWriter` stages a source in one bounded pass, reusing every chunk the
+catalog already holds, and commits it through the catalog protocol;
+`DurableStore` reads with every read pinned to one fenced snapshot and every
+receipt naming the view. Production admission is Linux ext4; this example is
+not run on other hosts.
+
+```rust,no_run
+use std::path::Path;
+use keep::{CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, DurableWriter,
+    FilesystemVersionTwoAdmission, LayoutEntryLimit, ReaderAttemptLimit, SegmentReadPolicy,
+    SegmentRecordLimit, StagingLimits};
+
+let root = Path::new("/var/lib/keep/store");
+let policy = CatalogRestartPolicy::new(
+    SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
+    CatalogRestartByteLimit::new(1 << 30)?,
+);
+
+// Write: one pass, chunks the catalog already holds are reused by exact bytes.
+let mut writer = DurableWriter::open(FilesystemVersionTwoAdmission::reopen(root)?, root, policy)?;
+let mut source = std::fs::File::open("build/artifact.tar")?;
+let receipt = writer.stage(&mut source, StagingLimits::entries(LayoutEntryLimit::MAXIMUM))?.commit()?;
+println!("{} new, {} reused", receipt.accounting().physical_new_bytes(),
+    receipt.accounting().physical_reused_bytes());
+drop(writer);
+
+// Read: the committed layout is readable at once; by identity once anchored.
+let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT);
+let snapshot = store.snapshot()?; // shared reader fence held until dropped
+let mut output = Vec::new();
+let read = snapshot.reconstruct_layout(receipt.layout_id(), &mut output)?;
+println!("generation {}", read.view().catalog_generation().get());
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 

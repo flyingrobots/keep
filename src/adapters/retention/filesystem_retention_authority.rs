@@ -9,7 +9,9 @@ use super::filesystem_retention_authority_error::{
     FilesystemRetentionAuthorityError as Error, RetentionAuthorityDirectory as Directory,
 };
 use super::filesystem_retention_current::{self, ObservedRetentionState};
-use crate::adapters::{FilesystemVersionTwoAdmission, FilesystemWriterLock};
+use super::filesystem_retention_disposition::DispositionContext;
+use super::filesystem_retention_recovery::RetentionRecoveryContext;
+use crate::adapters::{CatalogRestartPolicy, FilesystemVersionTwoAdmission, FilesystemWriterLock};
 
 /// Exclusive authority to publish retention transitions on one pinned root.
 ///
@@ -31,7 +33,10 @@ pub struct FilesystemRetentionPublicationAuthority {
     pub(super) retention: Dir,
     pub(super) roots: Dir,
     pub(super) manifests: Dir,
+    pub(super) catalog_policy: CatalogRestartPolicy,
     pub(super) attempt: Option<PublicationAttempt>,
+    pub(super) recovery: Option<RetentionRecoveryContext>,
+    pub(super) disposition: Option<DispositionContext>,
     _lock: FilesystemWriterLock,
 }
 
@@ -43,10 +48,14 @@ impl FilesystemRetentionPublicationAuthority {
     /// system refuses it:
     ///
     /// ```compile_fail
-    /// fn publish(admission: keep::FilesystemPlatformAdmission) {
-    ///     let _ = keep::FilesystemRetentionPublicationAuthority::open(admission);
+    /// fn publish(admission: keep::FilesystemPlatformAdmission, policy: keep::CatalogRestartPolicy) {
+    ///     let _ = keep::FilesystemRetentionPublicationAuthority::open(admission, policy);
     /// }
     /// ```
+    ///
+    /// `catalog_policy` bounds the one read of this store's catalog and every
+    /// segment it names that current-state verification performs to re-verify
+    /// the candidate's closure members under this authority.
     ///
     /// This synchronous constructor opens pinned directory capabilities but
     /// materializes no record bodies and performs no protocol mutation.
@@ -56,7 +65,10 @@ impl FilesystemRetentionPublicationAuthority {
     /// Returns [`FilesystemRetentionAuthorityError`](super::FilesystemRetentionAuthorityError)
     /// when the root capability cannot be cloned. The retention namespace and
     /// both immutable pools arrive already pinned by admission.
-    pub fn open(admission: FilesystemVersionTwoAdmission) -> Result<Self, Error> {
+    pub fn open(
+        admission: FilesystemVersionTwoAdmission,
+        catalog_policy: CatalogRestartPolicy,
+    ) -> Result<Self, Error> {
         let (lock, retention, roots, manifests) = admission.into_parts();
         let root = lock.clone_directory().map_err(|source| Error::Directory {
             directory: Directory::Root,
@@ -67,7 +79,10 @@ impl FilesystemRetentionPublicationAuthority {
             retention,
             roots,
             manifests,
+            catalog_policy,
             attempt: None,
+            recovery: None,
+            disposition: None,
             _lock: lock,
         })
     }

@@ -8,6 +8,8 @@ mod closure_contract_laws;
 mod migration_contract_laws;
 #[path = "retention_store_v2_protocol_contract/parser_fuzz_laws.rs"]
 mod parser_fuzz_laws;
+#[path = "retention_store_v2_protocol_contract/transition_laws.rs"]
+mod transition_laws;
 
 use std::fs;
 use std::io;
@@ -147,7 +149,7 @@ fn requirement_ledger_names_planned_and_executable_evidence()
         "`KEEP-MIGRATION-001`",
         "`KEEP-MIGRATION-008`",
         "`KEEP-GC-001`",
-        "Planned in #19",
+        "In progress in #19",
         "Planned in #21",
         "golden-format",
         "model-based",

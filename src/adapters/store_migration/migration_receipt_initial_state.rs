@@ -59,7 +59,7 @@ pub(super) fn read_empty_disposition_digest(
     }
 }
 
-pub(super) fn initial_retention_digest() -> InitialRetentionStateDigest {
+pub(in crate::adapters) fn initial_retention_digest() -> InitialRetentionStateDigest {
     InitialRetentionStateDigest::from_hash(digest(INITIAL_RETENTION_DOMAIN))
 }
 
@@ -67,7 +67,7 @@ pub(super) fn initial_gc_digest() -> InitialGcStateDigest {
     InitialGcStateDigest::from_hash(digest(INITIAL_GC_DOMAIN))
 }
 
-pub(super) fn empty_disposition_digest() -> EmptyDispositionSetDigest {
+pub(in crate::adapters) fn empty_disposition_digest() -> EmptyDispositionSetDigest {
     EmptyDispositionSetDigest::from_hash(digest(EMPTY_DISPOSITION_DOMAIN))
 }
 

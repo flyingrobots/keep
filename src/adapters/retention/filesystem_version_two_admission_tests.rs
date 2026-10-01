@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fs;
 
 use super::filesystem_retention_test_fixture::{
-    ROOT_HEX, fixture, initial_preparation, migrated_store, open_authority, refusal,
+    ROOT_HEX, catalog_policy, fixture, initial_preparation, migrated_store, open_authority, refusal,
 };
 use super::{
     FilesystemRetentionPublicationAuthority, RetentionCurrentStateRefusal,
@@ -123,11 +123,18 @@ fn production_version_two_reopen_admits_an_exact_migrated_store() -> Result<(), 
     Ok(())
 }
 
+/// A remount changes `statx.stx_mnt_id` but neither the device nor the root
+/// inode; reopen must admit that store. A different inode on the same device
+/// or a different device is a relocated or restored store and refuses.
 #[test]
-fn reopened_root_identity_must_match_the_intent_coordinates() {
-    let bound = BoundRootIdentity::new(1, 2, 3);
+fn reopen_admits_a_remounted_root_and_refuses_a_moved_one() {
+    let bound = BoundRootIdentity::new(1, 3);
 
     assert!(require_root_identity(bound, FilesystemRootIdentity::new(1, 2, 3)).is_ok());
+    assert!(
+        require_root_identity(bound, FilesystemRootIdentity::new(1, 7, 3)).is_ok(),
+        "a remounted root (same device and inode, new mount id) must reopen"
+    );
     assert!(matches!(
         require_root_identity(bound, FilesystemRootIdentity::new(1, 2, 4)),
         Err(FilesystemPlatformAdmissionError::RootIdentityChanged {
@@ -140,14 +147,8 @@ fn reopened_root_identity_must_match_the_intent_coordinates() {
         require_root_identity(bound, FilesystemRootIdentity::new(9, 2, 3)),
         Err(FilesystemPlatformAdmissionError::RootIdentityChanged {
             coordinate: StoreRootIdentityCoordinate::Device,
-            ..
-        })
-    ));
-    assert!(matches!(
-        require_root_identity(bound, FilesystemRootIdentity::new(1, 7, 3)),
-        Err(FilesystemPlatformAdmissionError::RootIdentityChanged {
-            coordinate: StoreRootIdentityCoordinate::Mount,
-            ..
+            expected: 1,
+            observed: 9,
         })
     ));
 }
@@ -218,7 +219,8 @@ fn a_protocol_directory_replaced_after_reopen_is_neither_opened_nor_published_in
     fs::create_dir_all(sandbox.path().join("retention").join("roots"))?;
     fs::create_dir(sandbox.path().join("retention").join("manifests"))?;
 
-    let mut authority = FilesystemRetentionPublicationAuthority::open(admission)?;
+    let mut authority =
+        FilesystemRetentionPublicationAuthority::open(admission, catalog_policy()?)?;
     let observed = authority
         .observe_current()?
         .ok_or("the admitted retention directory lost its published head")?;

@@ -1,21 +1,37 @@
 //! Exact reference-store chunk lookup and authentication.
 
-use crate::{ChunkHashError, ChunkId, LayoutEntry, LayoutId, ReferenceStore};
+use crate::{ChunkHashError, ChunkId, LayoutEntry, LayoutId};
 
-pub(super) fn verified_chunk(
-    store: &ReferenceStore,
+/// One admitted view's exact chunk lookup: the reference store's in-memory
+/// map, or a durable snapshot's fenced catalog. Every read core hashes what
+/// the source returns before trusting it.
+#[expect(
+    clippy::redundant_pub_crate,
+    reason = "reached from the durable adapter only through the crate-private re-export"
+)]
+pub(crate) trait ChunkSource {
+    /// The exact bytes stored under `identity`, if the view holds them.
+    fn chunk(&self, identity: ChunkId) -> Option<&[u8]>;
+
+    /// Records that `identity` was hashed, for laws over the hashing pass.
+    fn note_chunk_hash(&self, identity: ChunkId) {
+        let _ = identity;
+    }
+}
+
+pub(super) fn verified_chunk<S: ChunkSource + ?Sized>(
+    store: &S,
     layout_id: LayoutId,
     index: usize,
     entry: LayoutEntry,
 ) -> Result<&[u8], ChunkVerificationError> {
     let expected = entry.chunk_id();
-    let bytes = store
-        .chunk(expected)
-        .ok_or(ChunkVerificationError::Missing {
-            layout: layout_id,
-            index,
-            requested: expected,
-        })?;
+    let bytes = ChunkSource::chunk(store, expected).ok_or(ChunkVerificationError::Missing {
+        layout: layout_id,
+        index,
+        requested: expected,
+    })?;
+    store.note_chunk_hash(expected);
     let observed = ChunkId::hash_bytes(bytes).map_err(|source| ChunkVerificationError::Hash {
         layout: layout_id,
         index,
@@ -52,4 +68,25 @@ pub(super) enum ChunkVerificationError {
         expected: ChunkId,
         observed: ChunkId,
     },
+}
+
+/// Fetches an already-authenticated immutable chunk for emission.
+///
+/// The verification pass hashed every selected chunk before the first byte
+/// was written, and the in-memory view cannot change under `&self`, so the
+/// emission pass looks the chunk up by identity and hashes nothing. A chunk
+/// that vanished between the passes is impossible here; the arm exists so a
+/// durable adapter that reuses this shape cannot forget it.
+pub(super) fn emitted_chunk<S: ChunkSource + ?Sized>(
+    store: &S,
+    layout_id: LayoutId,
+    index: usize,
+    entry: LayoutEntry,
+) -> Result<&[u8], ChunkVerificationError> {
+    let expected = entry.chunk_id();
+    ChunkSource::chunk(store, expected).ok_or(ChunkVerificationError::Missing {
+        layout: layout_id,
+        index,
+        requested: expected,
+    })
 }

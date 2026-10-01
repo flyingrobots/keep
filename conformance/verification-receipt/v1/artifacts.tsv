@@ -1,0 +1,5 @@
+keep.verification-receipt.artifacts/v1
+case	kind	byte_length	checksum_hex	fixture
+reference-complete-blob-report	report	384	9f2af8d04f0c3f57a5759536858022c510913dba12de13dd1c8b8d35f6bb4b7f	reference-complete-blob-report.hex
+durable-corrupt-chunk-refusal	refusal	384	c99dd1f264e3928d20a1d77a374bb076fcce854adb0f0c6d9df44b345f0c4fd1	durable-corrupt-chunk-refusal.hex
+reference-unsupported-framing-refusal	refusal	384	feba95e3a7447ef5b25a2ec112f42e79ccea7bd1935c0b0eef990499a9ba1d53	reference-unsupported-framing-refusal.hex

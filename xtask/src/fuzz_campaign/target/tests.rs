@@ -28,12 +28,14 @@ fn checked_in_harness_set_is_exact_and_sorted() -> Result<(), Box<dyn Error>> {
             "blob_id_text",
             "catalog_format",
             "fast_cdc",
+            "gc_format",
             "golden_protocol",
             "layout_record",
             "migration_format",
             "repository_json",
             "retention_format",
             "segment_format",
+            "verification_receipt",
         ]
     );
     Ok(())

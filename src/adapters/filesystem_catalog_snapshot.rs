@@ -120,6 +120,11 @@ impl FilesystemCatalogSnapshot {
         Ok(snapshot)
     }
 
+    /// The retained immutable segment bytes, in catalog order.
+    pub(super) fn loaded_segments(&self) -> &[LoadedSegment] {
+        &self.segments
+    }
+
     pub(super) fn head_bytes(&self) -> &[u8] {
         &self.head_bytes
     }

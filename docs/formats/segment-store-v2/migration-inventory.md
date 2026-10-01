@@ -61,6 +61,6 @@ once. `FilesystemStoreMigrationAuthority` combines that digest with an
 identity-stable fixed-width `HEAD`, its selected admitted catalog, the exact
 version-1 root namespace, and the admitted physical root coordinates. Its
 `verify_current` operation repeats the complete observation and refuses any
-different canonical intent before mutation. Filesystem migration storage that
+different canonical intent before mutation. Filesystem migration storage
 invokes this verification immediately before its first namespace mutation
-remains in progress.
+(`KEEP-MIGRATION-003`).

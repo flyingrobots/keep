@@ -6,6 +6,7 @@
     reason = "shared fixtures are crate-visible across binary integration-test modules"
 )]
 
+pub(crate) mod byte_patches;
 pub(crate) mod byte_readers;
 pub(crate) mod byte_writers;
 
@@ -13,6 +14,7 @@ use std::io;
 
 use keep::{ChunkSpan, FastCdc};
 
+pub(crate) use byte_patches::{counted_domain_hash, domain_hash, flip, patch, read_u16, read_u32};
 pub(crate) use byte_readers::{FailingReader, LyingReader, PartitionReader};
 pub(crate) use byte_writers::{
     FailingWriter, LyingWriter, PartitionWriter, PrefixThenFailWriter, ZeroWriter,

@@ -3,12 +3,14 @@
 mod catalog_seeds;
 mod cdc_seeds;
 mod filesystem;
+mod gc_seeds;
 mod identity_seeds;
 mod layout_seeds;
 mod migration_seeds;
 mod retention_seeds;
 mod segment_seeds;
 mod segment_store_v2_fixture;
+mod verification_seeds;
 
 use std::error::Error;
 use std::fmt;
@@ -70,11 +72,13 @@ pub(super) fn prepare(repository_root: &Path) -> Result<(), FuzzSeedError> {
     let mut seeds = identity_seeds::seeds(&files)?;
     seeds.extend(catalog_seeds::seeds(&files)?);
     seeds.extend(cdc_seeds::seeds()?);
+    seeds.extend(gc_seeds::seeds(&files)?);
     seeds.extend(golden_protocol_seeds_from(&files)?);
     seeds.extend(layout_seeds::seeds(&files)?);
     seeds.extend(migration_seeds::seeds(&files)?);
     seeds.extend(retention_seeds::seeds(&files)?);
     seeds.extend(segment_seeds::seeds(&files)?);
+    seeds.extend(verification_seeds::seeds(&files)?);
     files.write_seeds(&seeds)
 }
 

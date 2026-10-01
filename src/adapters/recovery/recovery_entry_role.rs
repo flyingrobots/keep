@@ -34,6 +34,10 @@ pub enum RecoveryEntryRole {
         /// Physical catalog digest parsed from the name.
         digest: CatalogDigest,
     },
+    /// A version-two protocol entry at the root (`reader.lock`, `FORMAT`,
+    /// `migration.intent`, `migration.receipt`, `retention`, `gc`, or
+    /// `recovery`), inert to every version-one recovery protocol.
+    VersionTwoProtocol,
 }
 
 impl RecoveryEntryRole {

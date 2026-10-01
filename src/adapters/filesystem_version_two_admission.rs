@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use cap_fs_ext::DirExt;
-#[cfg(test)]
+#[cfg(any(test, feature = "repository-tasks"))]
 use cap_std::ambient_authority;
 use cap_std::fs::Dir;
 
@@ -64,6 +64,25 @@ impl FilesystemVersionTwoAdmission {
     }
 
     /// Releases the writer lock and the three pinned retention capabilities.
+    /// Reopens a migrated root without platform admission for repository tasks.
+    ///
+    /// The crash matrix and other repository tools run on hosts outside the
+    /// admitted Linux profile; every namespace, record, and identity law still
+    /// applies. Production callers use [`Self::reopen`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FilesystemPlatformAdmissionError`] exactly as [`Self::reopen`]
+    /// does for every boundary after platform admission.
+    #[cfg(feature = "repository-tasks")]
+    pub fn reopen_unchecked_for_repository_tasks(
+        store_root: &Path,
+    ) -> Result<Self, FilesystemPlatformAdmissionError> {
+        let root = Dir::open_ambient_dir(store_root, ambient_authority())
+            .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
+        Self::admit(root)
+    }
+
     pub(super) fn into_parts(self) -> (FilesystemWriterLock, Dir, Dir, Dir) {
         (self.lock, self.retention, self.roots, self.manifests)
     }
@@ -102,10 +121,12 @@ fn pin(parent: &Dir, name: &str) -> Result<Dir, FilesystemPlatformAdmissionError
 
 /// Requires the reopened root to be the physical root the migration intent bound.
 ///
-/// Device, mount, and file coordinates are compared exactly, as the migration
-/// authority compares them before mutation. A relocated or restored store
-/// refuses rather than receiving retention authority over a root whose intent
-/// describes a different volume.
+/// Only the restart-stable coordinates are compared: the root's device and its
+/// inode. The mount identity the intent also records is a same-process
+/// observation (`statx.stx_mnt_id` changes across unmount, remount, and
+/// reboot), so a legitimately remounted store admits, while a relocated or
+/// restored store refuses rather than receiving retention authority over a
+/// root whose intent describes a different volume or inode.
 pub(super) fn require_root_identity(
     bound: BoundRootIdentity,
     observed: FilesystemRootIdentity,
@@ -115,11 +136,6 @@ pub(super) fn require_root_identity(
             StoreRootIdentityCoordinate::Device,
             bound.device(),
             observed.device(),
-        ),
-        (
-            StoreRootIdentityCoordinate::Mount,
-            bound.mount(),
-            observed.mount(),
         ),
         (
             StoreRootIdentityCoordinate::File,

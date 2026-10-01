@@ -30,6 +30,10 @@ divan = { version = "=0.1.21", default-features = false }
 name = "streaming_cdc"
 harness = false
 
+[[bench]]
+name = "transfer_pipeline"
+harness = false
+
 [workspace]
 members = [".", "benchmark", "repository-process-spawn", "xtask"]
 resolver = "3"

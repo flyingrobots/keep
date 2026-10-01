@@ -67,19 +67,17 @@ recovery is absent; version-1 reopen and recovery both refuse a migrated root.
 
 ## Reader fence
 
-`reader.lock` is a persistent regular zero-length file. Its contents and
-existence alone prove nothing.
+`reader.lock` is a persistent regular zero-length file whose contents and
+existence alone prove nothing. Admission also admits an optional root
+`head.next`, the residue of an interrupted [compaction](compaction.md)
+successor, refused by every publication until recovered.
 
 A version-2 reader acquires a kernel-managed shared lock on `reader.lock`
-before opening catalog `HEAD` or `retention/HEAD`. The returned `ReaderFence`
-owns that lock for the complete snapshot lifetime. Close, drop, or process
-death releases only the kernel lock and never deletes the persistent file.
+before opening catalog `HEAD` or `retention/HEAD`; the `ReaderFence` owns it
+for the snapshot's lifetime; release or process death never deletes the file.
 
-GC acquires the store writer authority and then an exclusive `reader.lock`, in
-that fixed order. New readers wait and existing readers drain before GC
-revalidation or physical deletion. Catalog and retention publication may
-proceed beside readers because they publish immutable successors and delete no
-published segment.
+GC takes writer authority and then `reader.lock` exclusively, refusing while
+readers hold it; publication proceeds beside readers (immutable successors).
 
 ## Migration records
 
@@ -139,6 +137,36 @@ identity, caller identity, path, and time do not enter the identifier. The
 migration intent separately binds the physical root coordinates so in-place
 recovery refuses a substituted store.
 
+### Root identity across restart
+
+The three root coordinates the intent records do not have the same lifetime.
+`statx.stx_mnt_id` names a mount instance: it changes on every unmount,
+remount, and reboot, so a store that is merely remounted would refuse if any
+restart path compared it. The device and inode coordinates name the volume
+and the root directory and survive remounts on the admitted platform.
+
+The restart-stable root identity is therefore the pair `(device, file)`:
+
+- `FilesystemStoreMigrationAuthority` compares all three coordinates, but
+  only against the observation it made itself when it opened the root in the
+  same process; that comparison catches a root swapped underneath a running
+  migration and never crosses a restart.
+- `FilesystemVersionTwoAdmission::reopen`, and every recovery path that
+  compares a persisted intent against a reopened root, compare device and
+  file only and refuse with `RootIdentityChanged { coordinate: Device | File,
+  .. }`. A remounted store admits; a store copied to another device or
+  restored into a different directory refuses.
+
+The mount coordinate stays in the record as the migration-time observation.
+Its bytes are not authority for any later decision.
+
+Limit: `dev_t` is stable across reboots only while the block device keeps its
+major and minor numbers. A device-mapper or hot-plug renumbering makes a
+correct store refuse with `RootIdentityChanged { coordinate: Device, .. }`;
+version 2 defines no re-admission for that case, and a successor coordinate
+(the filesystem UUID) is the rationale's recorded alternative if it proves
+necessary.
+
 `migration.receipt` is exactly 256 bytes:
 
 <!-- markdownlint-disable MD013 -->
@@ -174,9 +202,9 @@ recovery instead. Direct version-2 initialization is undefined.
 
 The exact offsets and fixtures are requirement `KEEP-MIGRATION-002`. The fresh
 writer emits only those canonical records; success is not restart evidence.
-A migrated store is admitted for forward publication, but partial-prefix
-recovery and `KEEP-MIGRATION-007` process-death evidence remain absent, so an
-interrupted migration waits for recovery instead of continuing.
+A migrated store is admitted for forward publication, and an interrupted
+migration resumes from any prefix through [partial migration
+recovery](migration-recovery.md), proven in-process and by `KEEP-MIGRATION-007`.
 
 ## Retention publication recovery
 
@@ -207,7 +235,7 @@ regular file, removes it, synchronizes `retention`, and returns a typed discard
 report. Any later effect, stale generation, mismatched digest, missing
 transitive member, reappeared stage, conflicting pool entry, or other
 corruption is a typed refusal. A complete valid orphan remains
-recovery-protected until explicit disposition.
+recovery-protected until [explicit disposition](#explicit-disposition-of-protected-orphans).
 
 The retention crash points are:
 
@@ -232,12 +260,41 @@ The retention crash points are:
 | `KEEP-CRASH-052` | retention cleanup synchronization |
 
 `RetentionPublicationPhase::ALL` freezes this exact order as a typed public
-vocabulary. Storage execution and process-death evidence remain unimplemented.
+vocabulary. `FilesystemRetentionPublicationAuthority::recover` implements the
+classification above and its effects, and the crash matrix kills a real
+writer before, during, and after every point and requires restart to recover
+to the documented state.
 
-Each point requires before, during, and after process-death evidence. Restart
-must establish exact catalog visibility, retention head, namespace generation,
-orphan classification, stage disposition, and recovery report.
+Restart must establish exact catalog visibility, retention head, namespace
+generation, orphan classification, stage disposition, and recovery report.
 
-`GcRetirementIntent`, `GcRetirementReceipt`, and
-`RecoveryDispositionReceipt` are owned by the [GC specification](gc.md). Until
-issue #21 implements them, any such artifact is unsupported and refuses.
+## Explicit disposition of protected orphans
+
+A complete stage that recovery linked into its pool but that no head ever
+committed is a recovery-protected orphan: publication refuses with
+`RetainedStage` until a person or an explicit policy decides.
+`FilesystemRetentionPublicationAuthority::dispose` takes writer authority,
+runs recovery, refuses while any reader holds the fence, acquires the fence
+exclusively, and records a `RecoveryDispositionReceipt` through the
+fixed-stage protocol (`recovery/disposition.next`, link without replacement
+to `recovery/dispositions/<artifact-digest>.receipt`, synchronize, remove the
+stage, synchronize `recovery`); only then is the retained retention stage
+removed and `retention` synchronized. Process death anywhere leaves a
+recoverable stage or a durable decision; the next `dispose` with the same
+request resumes from it, and a residue naming another decision is a typed
+ambiguity.
+
+> **Warning.** Disposition changes what the store will keep. `Retire` unlinks
+> the orphan's immutable pool entry after the receipt is durable; the bytes
+> are gone and only the receipt records why. `Finalize` keeps the entry as a
+> durable artifact a byte-identical publication may reuse and is refused
+> while no retention head is published. A manifest stage must be disposed
+> before the root it names. The dry run is `plan_recovery_disposition`;
+> verify the result with `recover`, which reports `Clean`.
+
+Every receipt is admitted by namespace census as a regular file under its
+canonical name. GC planning admits only the exact receipt: a `segment`
+artifact retired under exactly the planned snapshot's coordinates is
+released; any other receipt is stale. `GcRetirementIntent` and
+`GcRetirementReceipt` are owned by [GC](gc.md) and written by
+[GC execution](gc-execution.md).

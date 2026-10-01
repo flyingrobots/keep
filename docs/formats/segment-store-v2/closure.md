@@ -2,9 +2,8 @@
 
 - Status: Normative version-2 protocol; storage-independent verifier
   implemented; publication binds this store's catalog head and the catalog it
-  selects to the verified closure; member re-verification under filesystem
-  authority is planned in issue
-  [#19](https://github.com/flyingrobots/keep/issues/19)
+  selects to the verified closure and re-verifies every closure member from
+  this store's own pools under filesystem authority before writing anything
 - Format coordinate: `keep.segment-store/v2`
 - Requirement: [`KEEP-RETENTION-005`](requirements.md#retention-transitions)
 - Decision record:

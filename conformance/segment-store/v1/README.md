@@ -41,6 +41,14 @@ oracles for issues #16 and #17.
 - `transitions.tsv` assigns one stable crash-point identifier to every
   version-1 durable transition and records its pre-state, interrupted-state
   classification, post-state, and recovery posture.
+- `mutations.tsv` is the corruption ledger: one frozen byte mutation per
+  structural field of the segment header, record header, record checksum,
+  seal, catalog header, catalog entry, catalog trailer, and publication head,
+  each with its exact first refusal (`<record>.<variant>`), the verification
+  stage that refusal establishes (`framing`, `checksum`, `identity`, or
+  `binding`), and the requirement it evidences.
+  `tests/segment_store_mutations.rs` applies every row through the public
+  decoders; `cargo xtask conformance-check` refuses a malformed row.
 - `ORIGIN.md` records construction and review provenance.
 
 Hexadecimal fixture files contain one lowercase hexadecimal encoding of the

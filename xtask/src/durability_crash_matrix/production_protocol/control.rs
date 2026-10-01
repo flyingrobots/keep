@@ -3,7 +3,9 @@
 use std::io::{self, Read, Write};
 use std::os::unix::net::UnixStream;
 
-use xtask::{DurabilityCrashCase, DurabilityCrashPoint, DurabilityCrashPosition};
+use xtask::{
+    DurabilityCrashCase, DurabilityCrashOccurrence, DurabilityCrashPoint, DurabilityCrashPosition,
+};
 
 const READY: u8 = b'r';
 
@@ -53,6 +55,10 @@ impl CrashControl {
 
     pub(super) fn position(&self, point: DurabilityCrashPoint) -> Option<DurabilityCrashPosition> {
         (self.case.point() == point).then(|| self.case.position())
+    }
+
+    pub(super) const fn occurrence(&self) -> Option<DurabilityCrashOccurrence> {
+        self.case.occurrence()
     }
 
     pub(super) fn await_process_death(&mut self) -> io::Result<()> {

@@ -37,10 +37,19 @@
 //! receipts bind an admitted intent and marker, registered empty-state digests,
 //! and the complete synchronization mask. Writer-locked filesystem authority
 //! now executes one fresh forward migration through exact fixed-record and
-//! namespace transitions while retaining version-1 immutable bytes.
-//! Partial-prefix migration recovery, filesystem retention execution,
-//! immutable reader snapshots, and garbage collection remain intentionally
-//! absent.
+//! namespace transitions while retaining version-1 immutable bytes, and
+//! forward retention publication executes under filesystem authority. The
+//! GC retirement intent and receipt codecs, and explicit-depth verification
+//! reports over the reference view, are available. Partial-prefix migration
+//! recovery, retention publication recovery, fenced immutable reader snapshots,
+//! catalog publication on a migrated store, explicit orphan disposition,
+//! garbage collection, and identity-preserving compaction are implemented.
+//! `DurableSnapshot` returns authenticated whole-object and exact-range reads
+//! bound to its pinned view. `DurableWriter` stages and commits through the
+//! content-store port; bounded transfer adapters preserve those read laws.
+//! Durable verification reports at every depth, ingestion segment rollover,
+//! and dedicated ingestion, disposition, and compaction process-death sequences
+//! remain incomplete; the requirement ledgers and roadmap identify the gaps.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -49,10 +58,13 @@ mod adapters;
 mod blob;
 mod catalog;
 mod chunk;
+mod gc;
 mod layout;
 mod profile;
 mod reference;
 mod retention;
+mod store;
+mod verification;
 
 #[cfg(feature = "repository-tasks")]
 #[doc(hidden)]
@@ -133,19 +145,85 @@ pub use adapters::{
     publish_catalog_generation, read_recovery_inventory,
 };
 pub use adapters::{
+    AdmittedGcRetirementIntent, AdmittedGcRetirementReceipt, AdmittedRecoveryDispositionReceipt,
+    ArtifactContentDigest, ArtifactIdentityDigest, CanonicalGcRetirementIntent,
+    CanonicalGcRetirementReceipt, CanonicalRecoveryDispositionReceipt, CatalogSuccessorProofDigest,
+    DecisionEvidenceDigest, DispositionSetDigest, FilesystemGcAuthority, FilesystemGcError,
+    GcCandidate, GcCandidateSetDigest, GcExecutionError, GcExecutionPhase, GcExecutionPoint,
+    GcExecutionReceipt, GcExecutionStorage, GcFixedStage, GcIntentDerivationError,
+    GcIntentEvidence, GcLimits, GcLimitsError, GcLivenessCoordinates, GcLivenessObservationError,
+    GcLivenessSnapshot, GcLivenessSnapshotError, GcPlan, GcPlanAmbiguity, GcPlanError,
+    GcPlannedCandidate, GcPlannedSegment, GcRecoveryAmbiguity, GcRecoveryPlan, GcRecoveryReport,
+    GcResidue, GcRetainedClosure, GcRetentionState, GcRetirementIntent,
+    GcRetirementIntentCoordinates, GcRetirementIntentDecodeError, GcRetirementIntentDigest,
+    GcRetirementIntentEncodeError, GcRetirementIntentError, GcRetirementReceipt,
+    GcRetirementReceiptDecodeError, GcSegmentClassification, GcUnreachableEvidence,
+    ObservedHeadChecksum, PoolStateDigest, PreparedGcExecution, ReaderLockCoordinate,
+    ReaderLockIdentity, RecoveryArtifactKind, RecoveryClassification, RecoveryDispositionArtifact,
+    RecoveryDispositionCoordinates, RecoveryDispositionDecision, RecoveryDispositionDecodeError,
+    RecoveryDispositionField, RecoveryDispositionReceipt, SegmentPoolIdentityDigest,
+    VerificationEvidenceDigest, catalog_successor_proof, derive_gc_intent, disposition_set_digest,
+    execute_gc, is_gc_complete, observe_gc_liveness, plan_gc, plan_gc_recovery,
+    post_retirement_pool_state, resume_gc_execution, segment_pool_identity,
+};
+pub use adapters::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
     CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
-    FilesystemRetentionAuthorityError, FilesystemRetentionPublicationAuthority,
-    ObservedRetentionState, PreparedRetentionPublication, RetentionAuthorityDirectory,
-    RetentionClosureVerificationError, RetentionCurrentStateRefusal, RetentionHeadDecodeError,
-    RetentionManifestDecodeError, RetentionManifestEncodeError, RetentionNamespaceAdmission,
+    FilesystemRetentionAuthorityError, FilesystemRetentionDispositionError,
+    FilesystemRetentionPublicationAuthority, FilesystemRetentionRecoveryError,
+    FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError, ObservedRetentionState,
+    PreparedRetentionPublication, ReaderAttemptLimit, ReaderFence, RecoveryDispositionAmbiguity,
+    RecoveryDispositionError, RecoveryDispositionExecutionReceipt, RecoveryDispositionPhase,
+    RecoveryDispositionPlan, RecoveryDispositionRefusal, RecoveryDispositionRequest,
+    RecoveryDispositionStorage, RecoveryDispositionTarget, RetentionAuthorityDirectory,
+    RetentionClosureVerificationError, RetentionCurrentStateRefusal, RetentionFixedStage,
+    RetentionHeadDecodeError, RetentionHeadStageAssessment, RetentionManifestDecodeError,
+    RetentionManifestEncodeError, RetentionManifestStageAssessment, RetentionNamespaceAdmission,
+    RetentionPool, RetentionPoolEntryObservation, RetentionPoolObservations,
     RetentionPublicationError, RetentionPublicationOutcome, RetentionPublicationPhase,
     RetentionPublicationPreparation, RetentionPublicationPreparationError,
-    RetentionPublicationReceipt, RetentionPublicationStorage, RetentionRootDecodeError,
-    RetentionRootEncodeError, RetentionTransitionDisposition, RetentionTransitionError,
-    RetentionTransitionPreflight, RetentionTransitionPreflightError, RetentionTransitionReadiness,
-    VerifiedRetentionClosure, execute_retention_publication, plan_retention_transition,
-    preflight_retention_transition, prepare_retention_publication, verify_retention_closure,
+    RetentionPublicationReceipt, RetentionPublicationStorage, RetentionRecoveryError,
+    RetentionRecoveryEvidence, RetentionRecoveryOutcome, RetentionRecoveryPlan,
+    RetentionRecoveryReceipt, RetentionRecoveryRefusal, RetentionRecoveryStep,
+    RetentionRecoveryStorage, RetentionRootDecodeError, RetentionRootEncodeError,
+    RetentionRootStageAssessment, RetentionStageAssessment, RetentionStageAssessments,
+    RetentionTransitionDisposition, RetentionTransitionError, RetentionTransitionPreflight,
+    RetentionTransitionPreflightError, RetentionTransitionReadiness, RetentionViewCoordinates,
+    RetentionViewError, RetentionViewSource, VerifiedRetentionClosure, assess_head_stage,
+    assess_manifest_stage, assess_root_stage, collect_retention_view, execute_recovery_disposition,
+    execute_retention_publication, execute_retention_recovery, plan_recovery_disposition,
+    plan_retention_recovery, plan_retention_transition, preflight_retention_transition,
+    prepare_retention_publication, resume_recovery_disposition, verify_retention_closure,
+};
+pub use adapters::{
+    CancellationFlag, CancellationSignal, CopyError, CopyReceipt, NeverCancelled, StreamConsumer,
+    TransferBounds, TransferError, TransferReceipt, TransferSegment, TransferSink, TransferSource,
+    TransferSourceError, TransferWindow, WriteSink, WriteSinkError, copy_layout, transfer_blob,
+    transfer_layout, transfer_layout_range, transfer_range,
+};
+pub use adapters::{
+    CanonicalVerificationReceipt, ReceiptCorruption, ReceiptEvidenceKind, ReceiptMissing,
+    ReceiptOutcomeKind, ReceiptRefusal, ReceiptRefusalClass, ReceiptSubjectKind, ReceiptViewKind,
+    VERIFICATION_CONTRACT_VERSION, VerificationOutcome, VerificationReceipt,
+    VerificationReceiptDecodeError, VerificationReceiptField, VerificationView,
+};
+pub use adapters::{
+    CompactionObservation, CompactionPlan, CompactionPublish, CompactionReceipt,
+    CompactionRecovery, CompactionRefusal, CompactionSegmentDisposition,
+    FilesystemCompactionAuthority, FilesystemCompactionError, FilesystemCompactionRecoveryError,
+    observe_compaction, plan_compaction, recover_compaction,
+};
+pub use adapters::{
+    DurableIngestionError, DurableIngestionReceipt, DurableOutcome, DurableRangeReadReceipt,
+    DurableReadError, DurableReconstructionReceipt, DurableSnapshot, DurableStagedBlob,
+    DurableStore, DurableStoreError, DurableView, DurableWriter, IngestionAccounting,
+    recover_durable_ingestion,
+};
+pub use adapters::{
+    MIGRATION_NAMESPACE_PREFIX, StoreMigrationEffect, StoreMigrationFixedStage,
+    StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError, StoreMigrationRecoveryPlan,
+    StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,
+    plan_store_migration_recovery, recover_store_migration, resume_store_migration,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
@@ -157,6 +235,7 @@ pub use catalog::{
 pub use chunk::{
     ChunkHashError, ChunkId, ChunkLength, ChunkOffset, ChunkSpan, ChunkingError, FastCdc,
 };
+pub use gc::{GcGeneration, GcGenerationError};
 pub use layout::{
     AdmittedLayout, LayoutEntry, LayoutEntryLimit, LayoutEntryLimitError, LayoutId,
     LayoutIdMismatch, LayoutRecordLength, LayoutValidationError, RangePlan, RangePlanError,
@@ -164,8 +243,8 @@ pub use layout::{
 pub use profile::{RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId};
 pub use reference::{
     IngestionAllocation, IngestionError, ProfileBoundary, PublishError, PublishedBlob,
-    RangeReadError, RangeReadReceipt, ReconstructionError, ReconstructionReceipt, ReferenceStore,
-    ReferenceStoreCapacity, StagedBlob,
+    RangeReadError, RangeReadReceipt, ReconstructionError, ReconstructionReceipt,
+    ReferenceStagedContent, ReferenceStore, ReferenceStoreCapacity, StagedBlob,
 };
 pub use retention::{
     LivenessGeneration, LivenessGenerationError, RegisteredRetentionProfile, RetentionAnchor,
@@ -177,4 +256,11 @@ pub use retention::{
     RetentionNamespaceDigest, RetentionNamespaceError, RetentionPolicy,
     RetentionProfileAdmissionError, RetentionRoot, RetentionRootDigest, RetentionRootError,
     RootGeneration, RootGenerationError,
+};
+pub use store::{
+    CommitReceipt, ContentReads, ContentStaging, StagedByteLimit, StagedContent, StagingLimits,
+};
+pub use verification::{
+    CorruptionEvidence, MissingEvidence, VerificationDepth, VerificationError, VerificationFailure,
+    VerificationRefusal, VerificationReport, VerificationSubject,
 };

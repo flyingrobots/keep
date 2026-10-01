@@ -10,7 +10,10 @@ use super::{PublishError, PublishedBlob, ReferenceStore};
 ///
 /// This value explicitly owns every target chunk that was absent from the
 /// store used during staging. Its memory may therefore grow with logical blob
-/// length, bounded by the store capacity checked during staging. Committing to
+/// length, bounded by the store capacity checked during staging: staging
+/// refuses before copying a chunk that would cross the capacity, so the
+/// pending bytes reported by [`StagedBlob::pending_materialized_bytes`] never
+/// exceed the capacity the store had not yet materialized. Committing to
 /// another store succeeds only when that destination already owns every
 /// deduplicated chunk not carried by this value. This materialization belongs
 /// to the deliberately in-memory reference adapter, not to the streaming

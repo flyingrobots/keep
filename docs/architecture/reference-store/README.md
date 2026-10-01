@@ -51,6 +51,27 @@ store used during staging. Those bytes may grow with blob length up to
 `ReferenceStoreCapacity`. The API and type documentation expose that
 materialization; input beyond the configured capacity refuses.
 
+### Bounded memory
+
+Staging memory has an explicit, checked ceiling and floor:
+
+- **Ceiling.** Peak adapter-owned memory during one `stage` call never
+  exceeds `ReferenceStore::STAGING_SCRATCH_LIMIT_BYTES` (the 8 KiB read
+  buffer, one maximum-length chunk buffer, and the detector's retained state)
+  plus the capacity the store has not yet materialized plus layout metadata
+  proportional to the entry limit. The adapter checks committed bytes plus
+  pending bytes plus the incoming chunk against the capacity *before* copying
+  the chunk, so a refusal reports `CapacityExceeded { capacity, attempted }`
+  with `attempted` at most one maximum chunk beyond the capacity, and pending
+  bytes never cross it. A refusal retains nothing.
+- **Floor.** A source whose every chunk the store already owns stages with
+  zero pending bytes and allocates only the scratch and layout metadata; no
+  chunk is copied to be compared.
+
+The ceiling is a refusal, not a window. The [rationale](rationale.md#why-staging-materializes-up-to-capacity)
+records why this in-memory adapter cannot stage a bounded window of a larger
+blob without either publishing a prefix or becoming a durable adapter.
+
 ## Publication
 
 Staged work is invisible and `#[must_use]`. `StagedBlob::commit` is the only
@@ -71,14 +92,14 @@ backend must define a separate explicit recovery protocol.
 
 ## Reconstruction
 
-Whole-blob reconstruction performs two passes over immutable in-memory chunks.
-Before output it:
+Whole-blob reconstruction hashes each immutable in-memory chunk exactly once,
+then emits the verified chunks by identity. Before output it:
 
 1. verifies every stored chunk against its named `ChunkId`;
 2. replays `fastcdc-64k-v1` and compares every boundary with the layout; and
 3. verifies the complete byte sequence against the target `BlobId`.
 
-Only after all three checks succeed does it reverify and emit each chunk. Short
+Only after all three checks succeed does it emit each verified chunk. Short
 writes are completed, interruptions are retried, and broken writer counts are
 typed refusals. The committed-layout path allocates no adapter-owned heap
 memory; any allocation by the supplied writer belongs to that writer.
@@ -105,7 +126,7 @@ planning, receipt coordinates, and chunk lookup use only the committed layout.
 None of the range APIs materializes the complete blob.
 
 Before any output, a range read authenticates every selected complete chunk
-against its `ChunkId`. During the output pass it reauthenticates each chunk,
+against its `ChunkId`. During the output pass it fetches each verified chunk,
 slices only the overlap, completes short writes, retries interruptions, and
 uses checked output accounting. Invalid layouts, out-of-bounds coordinates,
 missing or mismatched selected chunks, broken writers, and output failures are
@@ -123,7 +144,8 @@ remain non-durable before, during, and after the operation.
 ## Evidence
 
 - `tests/streaming_cas/ingestion_laws.rs` covers staging, deduplication,
-  capacity, short reads, interruptions, and streaming entry-cap refusal.
+  capacity (exactly at, and one byte over), short reads, interruptions, and
+  streaming entry-cap refusal.
 - `tests/streaming_cas/reconstruction_laws.rs` covers exact authenticated
   output, full-blob mismatch, and missing chunks.
 - `tests/streaming_cas/refusal_laws.rs` covers malformed records, frozen false
@@ -138,7 +160,9 @@ remain non-durable before, during, and after the operation.
 - `src/reference/range_read_tests.rs` proves prefix and suffix chunks are not
   loaded and selected-chunk corruption refuses before output.
 - `tests/streaming_cas_memory.rs` proves committed-layout reconstruction and
-  range reads allocate no adapter-owned heap memory.
+  range reads allocate no adapter-owned heap memory, that staging a source
+  five times the capacity refuses under the memory ceiling and retains
+  nothing, and that fully deduplicated staging stays at the scratch floor.
 - `tests/golden_file_worldline/storage_assertions.rs` executes the Golden File
   Worldline through the public API.
 

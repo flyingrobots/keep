@@ -27,6 +27,38 @@ reports the number and bytes of chunks absent from the store used during
 staging. Commit rechecks that another destination already owns any required
 chunks omitted by that deduplication.
 
+## Why staging materializes up to capacity
+
+Issue #74 asked for a bounded-memory staging path that does not retain the
+complete missing-chunk set of a blob, or an explicit rationale for why that
+materialization is unavoidable. For this adapter it is unavoidable, and the
+bound is enforced as a refusal.
+
+The store is process memory. A staged chunk has exactly two possible homes:
+the invisible `StagedBlob` or the visible store map. Moving a chunk from the
+first to the second before the complete `BlobId` and admitted layout exist
+would publish a prefix, which the stage-before-commit rule below forbids.
+Holding it anywhere else, a spill file or a durable segment, is the durable
+staged-ingestion adapter (issue #82), not this one. So every new unique chunk
+of a blob must be owned by its `StagedBlob` until the one synchronous commit,
+and the only honest bound is the store's own capacity.
+
+That bound is explicit and checked. The adapter compares committed bytes plus
+pending bytes plus the incoming chunk against `ReferenceStoreCapacity` before
+it copies the chunk, so pending bytes never cross the capacity and a refusal
+retains nothing. `ReferenceStore::STAGING_SCRATCH_LIMIT_BYTES` names the fixed
+scratch the streaming engine holds beyond those bytes. Peak staging memory is
+therefore capacity not yet materialized, plus that scratch, plus layout
+metadata bounded by the entry limit; `tests/streaming_cas_memory.rs` measures
+both the ceiling and the deduplicated floor.
+
+Rejected: a staging window that commits full chunks as it fills. It would
+make a chunk visible under no admitted layout and no verified `BlobId`, and a
+later source failure would leave orphaned chunks that only a garbage
+collector could reclaim. Rejected: spilling the window to disk. That adapter
+needs publication order, crash states, and recovery evidence, which is the
+durable ingestion feature, not a defect fix in the reference adapter.
+
 ## Why stage before commit
 
 Reading, chunking, hashing, allocation, and canonical layout calculation can
@@ -43,11 +75,14 @@ Repair belongs to a future explicit recovery protocol with its own evidence.
 Writing a verified prefix before discovering a later missing chunk, false
 profile boundary, or full-blob mismatch would expose bytes from an
 unauthenticated claim. Reconstruction first verifies the entire plan without
-output. It then reverifies each chunk immediately before writing because the
-output pass is a separate traversal.
+output, hashing each chunk exactly once. It then emits each verified chunk by
+identity without hashing it again: the in-memory view cannot change under
+`&self`, so a second hash would prove nothing the first did not.
 
-This costs two chunk-verification passes. Correct refusal and a simple audit
-story outweigh throughput until measured evidence justifies another design.
+Rejected: reverifying on emission (issue #71). It doubled the CPU of every
+full and large-range read for an adapter whose chunks are immutable for the
+duration of the call. A durable adapter, whose bytes can change between
+passes, must reverify on emission or pin what it verified.
 
 ## Why range reads authenticate selected chunks only
 
@@ -57,15 +92,15 @@ the minimal-overlap capability and turn a range API into disguised whole-blob
 I/O.
 
 Range reads therefore plan from admitted metadata, authenticate every complete
-overlapping chunk before output, then reauthenticate each chunk immediately
-before slicing and emission. Their receipt names the requested range and
+overlapping chunk before output, then fetch each verified immutable chunk
+by identity for slicing and emission. Their receipt names the requested range and
 explicitly does not claim complete-blob identity, unrequested chunks, or
 storage-profile boundaries. Callers choose whole-blob reconstruction when they
 need those stronger claims.
 
 Preverification ensures a later selected chunk cannot fail after an earlier
-range byte has been emitted. Reverification protects the separate output pass
-without buffering selected chunks or the requested result.
+range byte has been emitted. The immutable in-memory view protects the separate
+output pass without a second hash or buffering selected chunks or the result.
 
 ## Why caller-supplied ranges require a committed layout
 
@@ -104,10 +139,13 @@ association refuses before output.
 
 - The adapter is deterministic and straightforward to model, but unsuitable
   for durable application data.
-- Staging memory can grow with unique content only up to explicit capacity.
+- Staging memory can grow with unique content only up to explicit capacity;
+  the peak is measured against `STAGING_SCRATCH_LIMIT_BYTES` plus that
+  capacity, and a refusal retains nothing.
 - Layout metadata remains bounded but can be large at the protocol maximum.
-- Reconstruction performs two verification passes before reporting success.
-- Exact range reads perform two verification passes over only the selected
-  chunks and deliberately make no complete-blob verification claim.
+- Reconstruction hashes each chunk once, before its first output write, and
+  emits verified chunks by identity.
+- Exact range reads hash only the selected chunks, once each, and
+  deliberately make no complete-blob verification claim.
 - Durable storage must implement a different adapter with documented
   publication order, crash states, recovery behavior, and synchronization.

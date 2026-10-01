@@ -40,11 +40,42 @@ impl FilesystemRecoveryStageDiscarder {
         Self::from_root(root)
     }
 
+    /// Opens a completely migrated version-two store for explicit stage
+    /// discard: the same protocol over the same fixed stage names, with the
+    /// version-two root entries admitted as inert.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::open`].
+    pub fn open_version_two(
+        store_root: &Path,
+    ) -> Result<Self, FilesystemRecoveryStageDiscardOpenError> {
+        let root = filesystem_platform_profile::open_version_two(store_root)
+            .map_err(|source| FilesystemRecoveryStageDiscardOpenError::Platform { source })?;
+        Self::from_root_with(root, true)
+    }
+
     #[cfg(test)]
     pub(super) fn open_unchecked_for_tests(
         store_root: &Path,
     ) -> Result<Self, FilesystemRecoveryStageDiscardOpenError> {
         Self::open_unchecked(store_root)
+    }
+
+    #[cfg(test)]
+    pub(super) fn open_unchecked_version_two_for_tests(
+        store_root: &Path,
+    ) -> Result<Self, FilesystemRecoveryStageDiscardOpenError> {
+        let root = Dir::open_ambient_dir(store_root, ambient_authority()).map_err(|source| {
+            FilesystemRecoveryStageDiscardOpenError::Namespace {
+                source: RecoveryInventoryError::io(
+                    RecoveryNamespace::Root,
+                    RecoveryInventoryOperation::OpenNamespace,
+                    source,
+                ),
+            }
+        })?;
+        Self::from_root_with(root, true)
     }
 
     /// Opens repository crash-test storage without the production platform
@@ -76,13 +107,24 @@ impl FilesystemRecoveryStageDiscarder {
     }
 
     fn from_root(root: Dir) -> Result<Self, FilesystemRecoveryStageDiscardOpenError> {
+        Self::from_root_with(root, false)
+    }
+
+    fn from_root_with(
+        root: Dir,
+        version_two: bool,
+    ) -> Result<Self, FilesystemRecoveryStageDiscardOpenError> {
         let authority = FilesystemWriterLock::try_acquire_in(root)
             .map_err(|source| FilesystemRecoveryStageDiscardOpenError::WriterLock { source })?;
         let inventory_root = authority
             .clone_directory()
             .map_err(|source| FilesystemRecoveryStageDiscardOpenError::CloneRoot { source })?;
-        let inventory = FilesystemRecoveryInventoryReader::from_root(inventory_root)
-            .map_err(|source| FilesystemRecoveryStageDiscardOpenError::Namespace { source })?;
+        let inventory = if version_two {
+            FilesystemRecoveryInventoryReader::from_root_version_two(inventory_root)
+        } else {
+            FilesystemRecoveryInventoryReader::from_root(inventory_root)
+        }
+        .map_err(|source| FilesystemRecoveryStageDiscardOpenError::Namespace { source })?;
         Ok(Self {
             inventory,
             _authority: authority,
