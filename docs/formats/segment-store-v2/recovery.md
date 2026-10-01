@@ -139,6 +139,44 @@ identity, caller identity, path, and time do not enter the identifier. The
 migration intent separately binds the physical root coordinates so in-place
 recovery refuses a substituted store.
 
+### Root identity across restart
+
+The three root coordinates the intent records do not have the same lifetime.
+`statx.stx_mnt_id` names a mount instance: it can change when a filesystem
+is unmounted and mounted again or after a reboot. A restart path must not
+require the historical mount identifier. The device and inode coordinates
+name the volume and the root directory and survive remounts on the admitted
+platform.
+
+The Linux [statx reference](https://man7.org/linux/man-pages/man2/statx.2.html)
+defines the mount identifier separately from device and inode coordinates.
+The lifetime distinction above is the reason Keep does not use it as restart
+authority.
+
+The restart-stable root identity is therefore the pair `(device, file)`:
+
+- `FilesystemStoreMigrationAuthority` compares all three coordinates, but
+  only against the observation it made itself when it opened the root in the
+  same process; that comparison catches a root swapped underneath a running
+  migration and never crosses a restart.
+- `FilesystemVersionTwoAdmission::reopen` compares device and
+  file only and refuse with `RootIdentityChanged { coordinate: Device | File,
+  .. }`. A remounted store admits; a store copied to another device or
+  restored into a different directory refuses.
+
+Future partial-prefix recovery must use the same restart comparison;
+this decision does not implement that recovery engine.
+
+The mount coordinate stays in the record as the migration-time observation.
+It remains evidence for same-process migration checks, not restart authority.
+
+Limit: `dev_t` is stable across reboots only while the block device keeps its
+major and minor numbers. A device-mapper or hot-plug renumbering makes a
+correct store refuse with `RootIdentityChanged { coordinate: Device, .. }`;
+version 2 defines no re-admission for that case, and a successor coordinate
+(the filesystem UUID) is the rationale's recorded alternative if it proves
+necessary.
+
 `migration.receipt` is exactly 256 bytes:
 
 <!-- markdownlint-disable MD013 -->

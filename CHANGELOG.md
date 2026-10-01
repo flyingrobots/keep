@@ -606,6 +606,11 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Version-two reopen compares persisted device and inode coordinates while
+  retaining mount identity as same-process migration evidence (#97).
+  Simulated-remount reopen and exact moved-root refusals are regression-tested;
+  migration record bytes and the forward publication protocol are unchanged.
+
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
