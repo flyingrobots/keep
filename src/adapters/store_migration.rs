@@ -50,6 +50,8 @@ pub use filesystem_migration_recovery_refusal::{
     FilesystemMigrationRecoveryRefusal, FilesystemMigrationResidueKind,
 };
 #[cfg(test)]
+mod filesystem_migration_receipt_evidence_tests;
+#[cfg(test)]
 mod filesystem_migration_recovery_tests;
 #[cfg(test)]
 mod filesystem_migration_recovery_truncation_tests;
@@ -97,10 +99,12 @@ mod migration_receipt_initial_state;
 mod migration_record_bytes;
 mod migration_stage_decode_error;
 pub use migration_stage_decode_error::StoreMigrationStageDecodeError;
+mod migration_namespace_prefix;
 mod migration_recovery_ambiguity;
 mod migration_recovery_ambiguity_display;
 mod migration_recovery_execution;
 mod migration_recovery_plan;
+pub use migration_namespace_prefix::StoreMigrationNamespacePrefix;
 mod migration_recovery_planner;
 mod migration_recovery_residue;
 mod migration_recovery_storage;

@@ -76,7 +76,8 @@ Nested directory membership is checked before mutating recovery. An intent
 stage surviving namespace creation, or a marker stage surviving receipt
 publication, is refused as `StageAfterEffect`.
 
-The receipt names the admitted plan and lists the executed forward phases
+The receipt retains the exact observed namespace prefix and bound intent
+digest, names the admitted plan, and lists the executed forward phases
 through `executed_phases()`. The plan records the earliest unproven boundary;
 it does not infer which synchronization calls completed before process death.
 Restart compares device and inode identity; mount identity is same-process

@@ -10,6 +10,9 @@ after its public API and format compatibility policies are established.
 
 ### Added
 
+- Recovery receipts retain the exact observed namespace prefix and bound
+  migration intent digest, including observations of completed migration.
+
 - Migration recovery planning, bounded filesystem residue admission, explicit
   truncated-stage discard, and receipts listing resumed phases. The production
   crash matrix now includes 68 migration process-death cases (Refs #108).

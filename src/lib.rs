@@ -150,10 +150,11 @@ pub use adapters::{
 };
 pub use adapters::{
     FilesystemMigrationRecoveryRefusal, FilesystemMigrationResidueKind, MIGRATION_NAMESPACE_PREFIX,
-    StoreMigrationEffect, StoreMigrationFixedStage, StoreMigrationRecoveryAmbiguity,
-    StoreMigrationRecoveryError, StoreMigrationRecoveryPlan, StoreMigrationRecoveryReceipt,
-    StoreMigrationRecoveryStorage, StoreMigrationResidue, StoreMigrationStageDecodeError,
-    plan_store_migration_recovery, recover_store_migration, resume_store_migration,
+    StoreMigrationEffect, StoreMigrationFixedStage, StoreMigrationNamespacePrefix,
+    StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError, StoreMigrationRecoveryPlan,
+    StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,
+    StoreMigrationStageDecodeError, plan_store_migration_recovery, recover_store_migration,
+    resume_store_migration,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

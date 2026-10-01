@@ -17,6 +17,8 @@ use super::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StoreMigrationRecoveryReceipt {
     plan: StoreMigrationRecoveryPlan,
+    observed_prefix: super::StoreMigrationNamespacePrefix,
+    intent_digest: Option<super::StoreMigrationIntentDigest>,
     published: Option<CanonicalStoreMigrationReceipt>,
 }
 
@@ -24,6 +26,20 @@ impl StoreMigrationRecoveryReceipt {
     /// Returns the plan the residue admitted.
     pub const fn plan(&self) -> StoreMigrationRecoveryPlan {
         self.plan
+    }
+
+    /// Returns the exact namespace prefix observed before any recovery writes.
+    pub const fn observed_namespace_prefix(&self) -> super::StoreMigrationNamespacePrefix {
+        self.observed_prefix
+    }
+
+    /// Returns the intent bound by this recovery, including complete observations.
+    ///
+    /// An untouched version-one observation has no migration intent. Resumed
+    /// recovery binds persisted intent bytes, or the newly published intent
+    /// after discarding an incomplete pre-effect stage.
+    pub const fn intent_digest(&self) -> Option<super::StoreMigrationIntentDigest> {
+        self.intent_digest
     }
 
     /// Returns the migration receipt this recovery published, when it ran
@@ -108,15 +124,21 @@ pub fn recover_store_migration(
         })?;
     let plan = plan_store_migration_recovery(&expected_admitted, &residue)
         .map_err(|source| StoreMigrationRecoveryError::Ambiguity { source })?;
+    let observed_prefix = super::StoreMigrationNamespacePrefix::observe(&residue)
+        .map_err(|source| StoreMigrationRecoveryError::Ambiguity { source })?;
+    let persisted = persisted_intent(&residue, expected)?;
+    let intent_digest =
+        (plan != StoreMigrationRecoveryPlan::VersionOne).then(|| persisted.digest());
     let resume = match plan {
         StoreMigrationRecoveryPlan::VersionOne | StoreMigrationRecoveryPlan::Complete => {
             return Ok(StoreMigrationRecoveryReceipt {
                 plan,
+                observed_prefix,
+                intent_digest,
                 published: None,
             });
         }
         StoreMigrationRecoveryPlan::DiscardStage { stage, resume } => {
-            let persisted = persisted_intent(&residue, expected)?;
             storage
                 .adopt_residue(&residue, &persisted)
                 .map_err(|source| StoreMigrationRecoveryError::Adoption { source })?;
@@ -126,18 +148,18 @@ pub fn recover_store_migration(
             resume
         }
         StoreMigrationRecoveryPlan::Resume { resume } => {
-            let persisted = persisted_intent(&residue, expected)?;
             storage
                 .adopt_residue(&residue, &persisted)
                 .map_err(|source| StoreMigrationRecoveryError::Adoption { source })?;
             resume
         }
     };
-    let persisted = persisted_intent(&residue, expected)?;
     let published = resume_store_migration(storage, &persisted, resume)
         .map_err(|source| StoreMigrationRecoveryError::Resumption { source })?;
     Ok(StoreMigrationRecoveryReceipt {
         plan,
+        observed_prefix,
+        intent_digest,
         published: Some(published),
     })
 }
