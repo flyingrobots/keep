@@ -15,11 +15,19 @@ ordered protocol: stage removal precedes namespace admission. The analogous
 marker-stage/receipt combination also refuses. Treating either as a harmless
 cleanup would erase evidence of an ambiguous write history.
 
-Resume the earliest unproven synchronization and use persisted intent bytes.
-Device/inode coordinates survive restart; mount identity remains a fence for
-one live authority and is not a persisted restart identity. No format bytes
-change. Sealed version-1 objects remain untouched. A completed observation
-performs no migration writes and does not grant retention publication authority.
+Current authority first verifies the caller's freshly derived expected intent,
+including its live mount identity, against the presently pinned root and
+version-1 evidence. Planning compares a persisted intent with that expected
+intent on restart-stable coordinates; a changed device or inode returns
+`IntentDiffers`, while a new mount coordinate alone does not.
+
+Resume the earliest unproven synchronization with the surviving exact intent's
+persisted bytes. If only an incomplete pre-effect intent stage exists, discard
+uses the freshly verified expected intent because no complete intent survived.
+Mount identity remains a fence for one live authority, not a persisted restart
+identity. No format bytes change. Sealed version-1 objects remain untouched.
+A completed observation performs no migration writes and does not grant
+retention publication authority.
 
 The 68-case subprocess matrix tests process death, not physical power loss.
 Exhaustive strict-stage truncations and forward-prefix laws supplement it;
