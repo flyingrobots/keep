@@ -22,6 +22,8 @@ after its public API and format compatibility policies are established.
 - Migration recovery revalidates current writer authority before observing
   residue, preventing stale expected intents from admitting a corrupt store.
 
+- README recovery and reader-fence gaps point to their current open owners.
+
 - Migration recovery planning, bounded filesystem residue admission, explicit
   truncated-stage discard, and receipts listing resumed phases. The production
   crash matrix now includes 68 migration process-death cases (Refs #108).

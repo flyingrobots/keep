@@ -72,14 +72,15 @@ Keep is required to refuse all three, before mutating anything.
 Version 2 writes correctly from a clean start and, if it finds the residue of
 an interrupted publication, refuses rather than guesses. Nothing yet recovers
 that residue, and readers have no fence, so **an interrupted version-2
-publication waits for a human until #19 lands.** A version-1 store stays
-admitted until its owner migrates it; migrate only if you accept that wait.
+publication waits for explicit recovery from PR #99 to be integrated.** A
+version-1 store stays admitted until its owner migrates it; migrate only if
+you accept that wait.
 
 | Gap | Tracked |
 | --- | --- |
-| Retention publication restart recovery and broader migration corruption coverage | [#19](https://github.com/flyingrobots/keep/issues/19) |
+| Retention publication restart recovery and broader migration corruption coverage | [PR #99](https://github.com/flyingrobots/keep/pull/99), [#111](https://github.com/flyingrobots/keep/issues/111) |
 | Restart-stable root identity coordinate in the migration intent | [#97](https://github.com/flyingrobots/keep/issues/97) |
-| Reader fence binding one consistent catalog + retention snapshot | [#19](https://github.com/flyingrobots/keep/issues/19) |
+| Reader fence binding one consistent catalog + retention snapshot | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
 | Precise verification reports at explicit depths | [#20](https://github.com/flyingrobots/keep/issues/20) |
 | Garbage collection and identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |
 | Bounded production ingestion through the durable store | [#82](https://github.com/flyingrobots/keep/issues/82) |
