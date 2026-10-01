@@ -10,8 +10,16 @@ use xtask::{DurabilityCrashPoint, DurabilityCrashPosition};
 
 use super::control::{CrashControl, DuringTiming};
 
-// Canonical record types own fixed-width arrays of at least 96 bytes. Halving
-// their width leaves a nonempty strict prefix without duplicating format sizes.
+#[cfg(test)]
+#[path = "migration_stage_prefix_laws.rs"]
+mod stage_prefix_laws;
+
+// The fixture law below admits all three records and requires these fixed
+// interruption offsets to remain nonempty strict prefixes of their encodings.
+const INTENT_INTERRUPTION: usize = 128;
+const MARKER_INTERRUPTION: usize = 48;
+const RECEIPT_INTERRUPTION: usize = 128;
+
 pub(super) struct CrashMigrationStorage<'control> {
     inner: FilesystemStoreMigrationAuthority,
     control: &'control mut CrashControl,
@@ -41,7 +49,7 @@ impl StoreMigrationStorage for CrashMigrationStorage<'_> {
                 inner.write_fixed_stage_prefix_for_repository_tasks(
                     StoreMigrationFixedStage::Intent,
                     intent.encoded(),
-                    intent.encoded().len() / 2,
+                    INTENT_INTERRUPTION,
                 )
             },
         )
@@ -149,7 +157,7 @@ impl StoreMigrationStorage for CrashMigrationStorage<'_> {
                 inner.write_fixed_stage_prefix_for_repository_tasks(
                     StoreMigrationFixedStage::Marker,
                     marker.encoded(),
-                    marker.encoded().len() / 2,
+                    MARKER_INTERRUPTION,
                 )
             },
         )
@@ -215,7 +223,7 @@ impl StoreMigrationStorage for CrashMigrationStorage<'_> {
                 inner.write_fixed_stage_prefix_for_repository_tasks(
                     StoreMigrationFixedStage::Receipt,
                     receipt.encoded(),
-                    receipt.encoded().len() / 2,
+                    RECEIPT_INTERRUPTION,
                 )
             },
         )
