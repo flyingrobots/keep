@@ -2,6 +2,13 @@
 
 Keep is foundational storage infrastructure. Optimize for correctness, recoverability, auditability, and maintainability before performance or convenience.
 
+## End-of-turn commits
+
+Stage and commit the work completed during each turn before the final response.
+Use focused commits with issue references and preserve unrelated user changes.
+If a required check fails or a commit cannot be made, preserve the work and
+report the blocker explicitly. Do not push unless the user requests it.
+
 ## Core Law
 
 For a given content identity, Keep must return exactly the bytes named by that identity—or refuse.

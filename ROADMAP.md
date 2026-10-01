@@ -10,6 +10,10 @@ and
 [`authenticated-reconstruction/requirements.md`](docs/invariants/authenticated-reconstruction/requirements.md).
 Where this page and a ledger disagree, the ledger wins.
 
+The [2026-09-30 completed-task audit](docs/audits/completed-roadmap-2026-09-30.md)
+records corrective work and known acceptance or definition-of-done gaps.
+Entries with those gaps have been reopened; the full audit is not certified.
+
 Snapshot: `main` at `f49cff7`, 2026-09-30. Twenty issues open, thirty-two
 closed, one non-dependency pull request open (#99).
 
@@ -106,7 +110,7 @@ names; use those in code, tests, and commits.
 
 ### Integration (M5)
 
-- [x] [F-25 Echo adapter and transaction boundary](#f-25-echo-adapter-and-transaction-boundary) — Done in the Echo repository
+- [x] [F-25 Echo adapter and transaction boundary](#f-25-echo-adapter-and-transaction-boundary) — Partially implemented in the Echo repository
 - [ ] [F-26 Graft Golden File Worldline end to end](#f-26-graft-golden-file-worldline-end-to-end) — Planned (#24)
 - [ ] [F-27 git-cas import posture](#f-27-git-cas-import-posture) — Planned (#25)
 
@@ -202,7 +206,7 @@ application policy.
 - [x] T-01.1 State the law and its limits — `README.md`,
   `docs/adr/0001-exact-logical-byte-identity.md`,
   `docs/invariants/authenticated-reconstruction/README.md`.
-- [x] T-01.2 Make every refusal a typed value, never a string — every
+- [ ] T-01.2 Make every refusal a typed value, never a string — every
   boundary error enum carries `expected` and `observed` fields and a
   preserved `source`; `unwrap_used`, `expect_used`, and `panic` are denied
   workspace-wide.
@@ -587,7 +591,7 @@ owned by #17, and that #16 "does not implement admission/recovery". Both
 issues are complete on `main`. The v1 pages understate shipped guarantees
 and hand version-2 migration a stale source boundary.
 
-- [x] T-14.1 Reconcile every v1 page with `main`. Original task fields:
+- [ ] T-14.1 Reconcile every v1 page with `main`. Original task fields:
   - **Requirements:** every living v1 page describes current behaviour;
     historical scope stays reachable through linked issues, ADRs, and Git
     history; every existing requirement identifier and test name remains
@@ -654,7 +658,7 @@ decoder that refuses every structural fault before admission.
 
 - [x] T-16.1 Freeze the definition and corpus —
   `conformance/segment-store/v2/definition.tsv`; format-definition digest
-  `32381f1a…3427`.
+  `a4a010ce…cf89`.
 - [x] T-16.2 Retention values and codecs — `KEEP-RETENTION-001`, `-002`;
   `RetentionNamespace`, `RootGeneration`, `LivenessGeneration`,
   `RetentionAnchor`, `CanonicalRetentionRoot`, `CanonicalRetentionManifest`,
@@ -712,7 +716,7 @@ Direct version-2 initialization is undefined. There is no downgrade.
   `StoreMigrationPhase::ALL`, `FilesystemStoreMigrationAuthority`,
   `FilesystemStoreMigrationInventoryReader`;
   `FilesystemVersionTwoAdmission::reopen`.
-- [x] T-17.1 Restart-stable root identity coordinate (#97) — decided as
+- [ ] T-17.1 Restart-stable root identity coordinate (#97) — decided as
   the `(device, file)` pair with the mount id as same-process evidence;
   bytes unchanged; `recovery.md` "Root identity across restart",
   `rationale.md`, and the remount law in
@@ -757,7 +761,7 @@ Direct version-2 initialization is undefined. There is no downgrade.
   - **Documentation:** `recovery.md`, `requirements.md`, `migration-crash.md`,
     v2 corpus README, CHANGELOG.
   - **Dependencies:** blocks T-17.2 and T-17.3.
-- [x] T-17.2 Partial-prefix migration recovery (`KEEP-MIGRATION-004`) —
+- [ ] T-17.2 Partial-prefix migration recovery (`KEEP-MIGRATION-004`) —
   planner, residue observer, resuming storage, and
   `FilesystemStoreMigrationAuthority::reopen_for_recovery`, proven
   in-process for every prefix; the process-death matrix is T-17.3 (#108).
@@ -804,7 +808,7 @@ Direct version-2 initialization is undefined. There is no downgrade.
   - **Documentation:** `migration-recovery.md` Status, `recovery.md`,
     `requirements.md`, CHANGELOG.
   - **Dependencies:** needs T-17.1. Blocks T-17.3, F-43.
-- [x] T-17.3 Migration crash matrix `KEEP-CRASH-053` to `-073`
+- [ ] T-17.3 Migration crash matrix `KEEP-CRASH-053` to `-073`
   (`KEEP-MIGRATION-007`) — `cargo xtask durability-crash-matrix --sequence
   migration` runs 68 killed-writer cases against an independent
   expected-state model and the predicted recovery plan;
@@ -861,7 +865,7 @@ and every namespace or capacity violation before writing anything.
   `KEEP-RETENTION-004`, `-005`, `-009`; `execute_retention_publication`,
   `RetentionPublicationPhase` (17), `FilesystemRetentionPublicationAuthority`,
   `RetentionCurrentStateRefusal`.
-- [x] T-18.1 Retention publication recovery (`KEEP-RETENTION-007`; merged
+- [ ] T-18.1 Retention publication recovery (`KEEP-RETENTION-007`; merged
   from PR #99).
   - **Requirements:** truncated stage with no later effect is discarded;
     complete root or manifest stage is linked into its pool and retained
@@ -895,7 +899,7 @@ and every namespace or capacity violation before writing anything.
   - **Documentation:** `recovery.md` "Retention publication recovery"
     table marked implemented; CHANGELOG.
   - **Dependencies:** none. Blocks F-22 orphan disposition, F-43.
-- [x] T-18.2 Retention crash matrix `KEEP-CRASH-036` to `-052` (merged
+- [ ] T-18.2 Retention crash matrix `KEEP-CRASH-036` to `-052` (merged
   from PR #99).
   - **Requirements:** real process death before, during, and after each
     of the 17 phases (51 coordinates); restart recovers and the forward
@@ -956,7 +960,7 @@ before and after, retrying within a bounded attempt limit. GC takes writer
 authority then the exclusive reader lock, in that order; publication never
 waits on readers because it deletes nothing.
 
-- [x] T-19.1 `ReaderFence`, `collect_retention_view`,
+- [ ] T-19.1 `ReaderFence`, `collect_retention_view`,
   `FilesystemRetentionSnapshot` (merged from PR #99).
   - **Requirements:** shared lock acquired before either head is opened;
     fence released on drop or process death without deleting `reader.lock`;
@@ -1003,7 +1007,7 @@ namespaces agrees with a deterministic namespace-to-anchor-set map
 observed through the fenced view, and a source-architecture contract keeps
 clocks, paths, environment, and caller identity out of the core.
 
-- [x] T-20.1 125 three-operation sequences against the model (merged from
+- [ ] T-20.1 343 three-operation sequences against the model (merged from
   PR #99).
   - **Requirements:** the model is a `BTreeMap<RetentionNamespace,
     BTreeSet<RetentionAnchor>>` with generation counters; each sequence
@@ -1043,7 +1047,7 @@ exactly what was established and nothing more; refuse when evidence is
 missing, conflicting, or corrupt. Verification never repairs, substitutes,
 quarantines, or rewrites physical state.
 
-- [x] T-21.1 Verification policy and report types — `src/verification/`,
+- [ ] T-21.1 Verification policy and report types — `src/verification/`,
   `ReferenceStore::verify`, `docs/invariants/verification/`,
   `tests/verification_report.rs`; durable depths stay with T-21.3 and #20.
   Original task fields:
@@ -1092,7 +1096,7 @@ quarantines, or rewrites physical state.
     consequence ("report the exact verification depth") satisfied.
   - **Dependencies:** none for the reference store; F-19 for
     snapshot-bound depths.
-- [x] T-21.2 Permanent corruption matrix over every durable structural
+- [ ] T-21.2 Permanent corruption matrix over every durable structural
   field — `conformance/segment-store/v1/mutations.tsv` (105 rows) and
   `v2/mutations.tsv` (150 rows) with exact first refusal, verification
   stage, and requirement per row; `tests/segment_store_mutations.rs`
@@ -1281,7 +1285,7 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
   - **Documentation:** `gc.md` planning section; a warning per
     Documentation Standards §5.4 on every page that describes execution.
   - **Dependencies:** F-19, F-21 (planning consumes verification depth).
-- [x] T-22.3 Identity-preserving compaction — `observe_compaction`,
+- [ ] T-22.3 Identity-preserving compaction — `observe_compaction`,
   `plan_compaction`, `FilesystemCompactionAuthority::{execute, execute_with}`,
   `recover_compaction`, `docs/formats/segment-store-v2/compaction.md`, and
   `src/adapters/compaction/filesystem_tests.rs` (exact plan, identity and
@@ -1324,7 +1328,7 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
   - **Documentation:** `gc.md` compaction section; ADR-0002 compaction
     example cross-linked.
   - **Dependencies:** T-22.2.
-- [x] T-22.4 GC execution, retirement, and recovery —
+- [ ] T-22.4 GC execution, retirement, and recovery —
   `FilesystemGcAuthority::{prepare, execute, recover}`, the 14-phase
   `GcExecutionPhase` protocol over the `GcExecutionStorage` port,
   `GcResidue` and `plan_gc_recovery`, the registered proof, pool, and
@@ -1364,7 +1368,7 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
   - **Complexity:** XL across T-22.2 to T-22.5.
   - **Documentation:** `gc.md`, `recovery.md`, `requirements.md`, CHANGELOG.
   - **Dependencies:** T-22.1, T-22.2, F-19.
-- [x] T-22.5 Explicit orphan disposition —
+- [ ] T-22.5 Explicit orphan disposition —
   `FilesystemRetentionPublicationAuthority::dispose`, the pure planner,
   phases, port, and executor in `src/adapters/retention/disposition_*.rs`,
   `filesystem_retention_disposition_tests` (retire, finalize, order,
@@ -1410,7 +1414,7 @@ immutable records, preserve the view while successors publish, and return
 a receipt naming the view, with refusal distinct from operational failure
 and no hidden whole-blob allocation.
 
-- [x] T-23.1 `DurableStore` read surface over a fenced snapshot —
+- [ ] T-23.1 `DurableStore` read surface over a fenced snapshot —
   `DurableStore`, `DurableSnapshot`, `DurableView`, the durable receipts,
   the crate-private `ChunkSource` shared by the reference and durable read
   cores, `docs/architecture/durable-store/README.md`, and
@@ -1474,7 +1478,7 @@ segment publication, catalog admission, and an exact receipt. It preserves
 change `BlobId`, `ChunkId`, `LayoutId`, publication order, recovery, or
 error precision.
 
-- [x] T-24.1 Backend-neutral ingestion contract. Done 2026-09-30: the
+- [ ] T-24.1 Backend-neutral ingestion contract. Done 2026-09-30: the
   `store` port module (`ContentReads`, `ContentStaging`, `StagedContent`,
   `CommitReceipt`, `StagingLimits`, `StagedByteLimit`); `ReferenceStore`
   implements both halves and `DurableSnapshot` the read half; distinct
@@ -1506,7 +1510,7 @@ error precision.
   - **Complexity:** M.
   - **Documentation:** `docs/architecture/` port page.
   - **Dependencies:** T-06.4.
-- [x] T-24.2 Durable staged ingestion with deduplication. Done 2026-09-30:
+- [ ] T-24.2 Durable staged ingestion with deduplication. Done 2026-09-30:
   `DurableWriter::{open, stage, stage_expected}`,
   `DurableStagedBlob::commit`, `DurableIngestionReceipt` with
   `IngestionAccounting`, `DurableIngestionError`,
@@ -1563,7 +1567,7 @@ error precision.
     with the memory bound; CHANGELOG.
   - **Dependencies:** T-24.1, T-06.3, T-06.4, F-18, F-21 (representation
     verification depth), F-23.
-- [x] T-24.3 Bounded streaming write-through pipeline (#72, P3). Done
+- [ ] T-24.3 Bounded streaming write-through pipeline (#72, P3). Done
   2026-09-30: `transfer_{layout,blob,range,layout_range}` over any
   `ContentReads` view into a `TransferSink` under `TransferBounds`
   (window and cancellation), `WriteSink` as the exactly-once sink,
@@ -1608,7 +1612,7 @@ error precision.
 
 ### F-25 Echo adapter and transaction boundary
 
-**Status:** Done in the Echo repository (issues #22 and #23 closed
+**Status:** Partially implemented in the Echo repository (issues #22 and #23 closed
 2026-08-15; work tracked as flyingrobots/echo#721 and #722). Keep's side
 is the authenticated reconstruction contract (F-07) and the no-Echo-types
 law (`KEEP-STORE-016`).
@@ -1619,7 +1623,7 @@ No subprocess or Node sidecar sits in the storage path.
 
 - [x] T-25.1 Contract: success, evidenced refusal, operational failure —
   PR #77; `docs/invariants/authenticated-reconstruction/`.
-- [x] T-25.2 Adapter and cutover — echo#722 (outside this repository).
+- [ ] T-25.2 Adapter and cutover — echo#722 (outside this repository).
 
 Residual Keep obligations from #22 and #23 live in F-23 (durable refusal
 receipts, pinned durable reads) because those issues closed before #20

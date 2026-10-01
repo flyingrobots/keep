@@ -8,8 +8,20 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+### Roadmap audit corrections
+
+- Preserve typed failure sources through durable and compaction I/O boundaries.
+- Bound sealed-stage admission by its recorded length before reading it.
+- Count selected chunks once in authenticated-read benchmark accounting.
+- Move transfer-source ports into the store boundary so dependencies point
+  inward, while preserving public exports.
+- Correct stale implementation claims in crate and version-two format docs.
+
 ### Added
 
+- Roadmap-audit regression laws for preserving typed durable refusal sources,
+  refusing externally enlarged sealed stages before allocation, and retention
+  release/restore model sequences.
 - Bounded streaming write-through pipeline. `transfer_layout`,
   `transfer_blob`, `transfer_range`, and `transfer_layout_range` move
   authenticated bytes from any `ContentReads` view into a `TransferSink`
