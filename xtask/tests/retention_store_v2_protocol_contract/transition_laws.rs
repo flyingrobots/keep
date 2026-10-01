@@ -1,10 +1,13 @@
-//! Stable migration crash-transition ledger laws.
+//! This module owns canonical migration transition-ledger admission laws.
 
 use keep::StoreMigrationPhase;
 
 const TRANSITIONS: &str = include_str!("../../../conformance/segment-store/v2/transitions.tsv");
+const HEADER: &str = "keep.segment-store.transitions/v2\n\
+    crash_id\tphase\toperation\tpre_state\tinterrupted_class\t\
+    post_state\trecovery_posture\n";
 
-/// The `operation` column in `StoreMigrationPhase::ALL` order.
+/// The operation column in `StoreMigrationPhase::ALL` order.
 const OPERATIONS: [&str; 21] = [
     "write-intent-stage",
     "sync-intent-stage",
@@ -29,51 +32,135 @@ const OPERATIONS: [&str; 21] = [
     "sync-root-after-receipt-cleanup",
 ];
 
+#[derive(Debug, Eq, PartialEq)]
+enum LedgerRefusal {
+    Encoding,
+    Header,
+    RowCount { observed: usize },
+    Fields { row: usize },
+    Coordinate { row: usize },
+    Posture { row: usize },
+    NamespaceExtent,
+}
+
 #[test]
-fn migration_transition_ledger_is_complete_and_stable() -> Result<(), String> {
-    assert!(TRANSITIONS.starts_with(
-        "keep.segment-store.transitions/v2\n\
-         crash_id\tphase\toperation\tpre_state\tinterrupted_class\t\
-         post_state\trecovery_posture\n"
-    ));
+fn migration_transition_coordinates_are_complete_and_ordered() {
     assert_eq!(OPERATIONS.len(), StoreMigrationPhase::ALL.len());
+    assert_eq!(admit(TRANSITIONS), Ok(()));
+}
 
-    let mut row_count = 0usize;
-    for (offset, row) in TRANSITIONS.lines().skip(2).enumerate() {
-        let ordinal = offset
-            .checked_add(53)
-            .ok_or("transition ordinal overflow")?;
-        let expected_id = format!("KEEP-CRASH-{ordinal:03}");
-        let fields: Vec<_> = row.split('\t').collect();
-        assert_eq!(fields.first(), Some(&expected_id.as_str()));
-        assert_eq!(fields.get(1), Some(&"migration"), "{expected_id}");
-        assert_eq!(fields.get(2), OPERATIONS.get(offset), "{expected_id}");
-        assert_eq!(
-            fields.len(),
-            7,
-            "transition {expected_id} must have seven fields"
-        );
-        assert!(
-            fields.iter().all(|field| !field.is_empty()),
-            "transition {expected_id} has an empty field"
-        );
-        row_count = row_count
-            .checked_add(1)
-            .ok_or("transition count overflow")?;
-    }
-    assert_eq!(row_count, 21);
-
-    // Every stage write may leave an incomplete pre-effect stage, and only
-    // those rows may plan a discard; the last two rows admit completion.
-    for (ordinal, row) in TRANSITIONS.lines().skip(2).enumerate() {
-        let discards = row.contains("discard-incomplete-stage");
-        assert_eq!(discards, matches!(ordinal, 0 | 9 | 15), "{row}");
-        let completes = row.ends_with("admit-complete-migration");
-        assert_eq!(completes, ordinal >= 19, "{row}");
-    }
-    assert!(
-        TRANSITIONS.contains("directory-prefix-length-zero-to-six"),
-        "KEEP-CRASH-060 must name one case per admitted prefix length"
-    );
+#[test]
+fn transition_encoding_rejects_crlf_and_missing_final_newline() -> Result<(), String> {
+    let crlf = TRANSITIONS.replacen("resume-stage-sync\n", "resume-stage-sync\r\n", 1);
+    assert_eq!(admit(&crlf), Err(LedgerRefusal::Encoding));
+    let unterminated = TRANSITIONS
+        .strip_suffix('\n')
+        .ok_or("fixture has no newline")?;
+    assert_eq!(admit(unterminated), Err(LedgerRefusal::Encoding));
     Ok(())
+}
+
+#[test]
+fn discard_posture_cannot_be_hidden_in_another_column() {
+    let misplaced = TRANSITIONS.replacen(
+        "admitted-version-one-store\tabsent-or-incomplete-intent-stage\t\
+         complete-intent-stage\tdiscard-incomplete-stage-or-resume-stage-sync",
+        "discard-incomplete-stage\tabsent-or-incomplete-intent-stage\t\
+         complete-intent-stage\tresume-stage-sync",
+        1,
+    );
+    assert_ne!(misplaced, TRANSITIONS);
+    assert_eq!(admit(&misplaced), Err(LedgerRefusal::Posture { row: 0 }));
+}
+
+#[test]
+fn completion_posture_requires_its_exact_field_value() {
+    let altered = TRANSITIONS.replacen(
+        "\tadmit-complete-migration\n",
+        "\tunknown-admit-complete-migration\n",
+        1,
+    );
+    assert_eq!(admit(&altered), Err(LedgerRefusal::Posture { row: 19 }));
+}
+
+#[test]
+fn extra_transition_rows_refuse_before_row_admission() {
+    let extra = format!("{TRANSITIONS}foreign\n");
+    assert_eq!(admit(&extra), Err(LedgerRefusal::RowCount { observed: 22 }));
+}
+
+fn admit(document: &str) -> Result<(), LedgerRefusal> {
+    if !document.is_ascii() || document.contains('\r') || !document.ends_with('\n') {
+        return Err(LedgerRefusal::Encoding);
+    }
+    if !document.starts_with(HEADER) {
+        return Err(LedgerRefusal::Header);
+    }
+    let rows: Vec<_> = document.lines().skip(2).collect();
+    if rows.len() != OPERATIONS.len() {
+        return Err(LedgerRefusal::RowCount {
+            observed: rows.len(),
+        });
+    }
+    for (offset, row) in rows.iter().enumerate() {
+        admit_row(offset, row)?;
+    }
+    Ok(())
+}
+
+fn admit_row(offset: usize, row: &str) -> Result<(), LedgerRefusal> {
+    let fields: Vec<_> = row.split('\t').collect();
+    let [id, phase, operation, pre, interrupted, post, posture]: [&str; 7] = fields
+        .try_into()
+        .map_err(|_| LedgerRefusal::Fields { row: offset })?;
+    if [id, phase, operation, pre, interrupted, post, posture]
+        .into_iter()
+        .any(str::is_empty)
+    {
+        return Err(LedgerRefusal::Fields { row: offset });
+    }
+    let ordinal = offset
+        .checked_add(53)
+        .ok_or(LedgerRefusal::Coordinate { row: offset })?;
+    if id != format!("KEEP-CRASH-{ordinal:03}")
+        || phase != "migration"
+        || Some(&operation) != OPERATIONS.get(offset)
+    {
+        return Err(LedgerRefusal::Coordinate { row: offset });
+    }
+    if Some(posture) != expected_posture(operation) {
+        return Err(LedgerRefusal::Posture { row: offset });
+    }
+    if id == "KEEP-CRASH-060" && interrupted != "directory-prefix-length-zero-to-six" {
+        return Err(LedgerRefusal::NamespaceExtent);
+    }
+    Ok(())
+}
+
+fn expected_posture(operation: &str) -> Option<&'static str> {
+    match operation {
+        "write-intent-stage" | "write-marker-stage" | "write-receipt-stage" => {
+            Some("discard-incomplete-stage-or-resume-stage-sync")
+        }
+        "sync-intent-stage" | "sync-marker-stage" | "sync-receipt-stage" => {
+            Some("resume-stage-sync")
+        }
+        "link-intent" | "link-marker" | "link-receipt" => {
+            Some("verify-no-clobber-link-and-resume-root-sync")
+        }
+        "sync-root-after-intent"
+        | "sync-root-after-marker"
+        | "sync-root-after-receipt"
+        | "sync-root-after-namespace" => Some("resume-root-sync"),
+        "remove-intent-stage"
+        | "remove-marker-stage"
+        | "sync-root-after-intent-cleanup"
+        | "sync-root-after-marker-cleanup" => Some("resume-cleanup-sync"),
+        "admit-reader-fence" => Some("resume-namespace-prefix"),
+        "admit-namespace-prefix" => Some("resume-namespace-prefix-or-root-sync"),
+        "remove-receipt-stage" | "sync-root-after-receipt-cleanup" => {
+            Some("admit-complete-migration")
+        }
+        _ => None,
+    }
 }

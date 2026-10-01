@@ -624,6 +624,9 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- The migration transition-ledger guard rejects noncanonical line endings,
+  extra rows, misplaced discard claims, and counterfeit completion postures.
+  Recovery posture and namespace interruption checks use their exact columns.
 - The independent migration restart model propagates missing occurrence,
   arithmetic, and extent-conversion failures instead of normalizing them.
 - Crash-case admission refuses out-of-range migration namespace occurrences
