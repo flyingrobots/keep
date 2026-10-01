@@ -230,6 +230,14 @@ pub(super) fn read_bounded_optional(
     name: &str,
     bound: usize,
 ) -> Result<Option<Vec<u8>>, ExactRecordError> {
+    match directory.symlink_metadata(name) {
+        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(source) => return Err(source.into()),
+        Ok(metadata) if !metadata.is_file() => {
+            return Err(ExactRecordRefusal::KindOrLength.into());
+        }
+        Ok(_) => {}
+    }
     let file = match open_read(directory, name) {
         Ok(file) => file,
         Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),

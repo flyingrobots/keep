@@ -624,6 +624,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Migration residue observation rejects non-regular entries with the typed
+  kind refusal before opening them, retaining the post-open kind recheck.
 - Migration resumption is internal to verified recovery admission; external
   callers cannot bypass current authority verification and residue adoption.
 
