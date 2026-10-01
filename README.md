@@ -66,13 +66,19 @@ Keep is required to refuse all three, before mutating anything.
   files, replaced protocol directories, and every namespace or capacity
   violation before it writes anything. Each refusal is a typed value, not a
   string.
+- **Migration restart recovery.** Recovery verifies current authority,
+  classifies the observed prefix, and resumes the persisted migration intent
+  through the remaining phases. Its crash matrix kills real writer processes
+  at 68 before/during/after coordinates (`KEEP-CRASH-053`–`073`), preserving
+  every version-1 byte. Broader hostile restart combinations remain in #111.
 
 ## What it does not do yet
 
-Version 2 writes correctly from a clean start and, if it finds the residue of
-an interrupted publication, refuses rather than guesses. Nothing yet recovers
-that residue, and readers have no fence, so **an interrupted version-2
-publication waits for explicit recovery from PR #99 to be integrated.** A
+Version-2 retention publication writes from a clean start and refuses the
+residue of an interrupted retention publication. Retention publication recovery
+and the reader snapshot fence await integration from PR #99, so **an
+interrupted retention publication waits for explicit recovery.** Migration
+restart recovery is implemented and does not grant retention authority. A
 version-1 store stays admitted until its owner migrates it; migrate only if
 you accept that wait.
 
