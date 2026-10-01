@@ -66,7 +66,7 @@ therefore the only rows that plan a discard; `-072` and `-073` admit the
 complete migration.
 
 The `cargo xtask durability-crash-matrix --sequence migration` harness
-executes 68 canonical process-death cases from this table: 21 boundaries at
+executes 68 canonical process-death cases at the same 21 boundaries: each at
 three positions plus one `during` case per admitted directory-prefix length
 for `KEEP-CRASH-060`. It kills an isolated writer process group, compares the
 restarted root against an independent expected-state model, requires the
@@ -81,6 +81,8 @@ Run:
 ```bash
 cargo test --manifest-path xtask/Cargo.toml \
   --test retention_store_v2_format_oracle
+cargo test --manifest-path xtask/Cargo.toml \
+  --test retention_store_v2_protocol_contract transition_laws
 ```
 
 The test-only oracle constructs every record from handwritten offsets and
@@ -88,6 +90,12 @@ domain preimages, compares exact fixture bytes and tables, and imports no
 production version-2 codec. The repository protocol and documentation gates
 route this corpus separately.
 
-Passing this corpus is necessary but insufficient for issue #19. Production
-code still needs parser, corruption, property, model, crash, recovery,
+`transition_laws.rs` checks the handwritten transition ledger's committed
+shape, operation order, and recovery-posture claims. The format oracle does
+not construct or compare `transitions.tsv`; the crash matrix checks runtime
+behavior without reading its bytes.
+
+Passing this corpus is necessary but insufficient for migration recovery
+(#108), restart corruption (#111), or compatibility and fuzz coverage (#112).
+Production code still needs parser, corruption, property, model, crash, recovery,
 concurrency, fuzz, and public API evidence.
