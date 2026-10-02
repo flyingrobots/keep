@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery rejects every available contradictory byte of an interrupted registered-profile identity, version or digest and preserves the root stage (#99).
+
 - Recovery preserves interrupted roots with invalid complete realization-profile or closure-policy groups, returning the exact domain refusal before stage discard (#99).
 
 - Recovery preserves interrupted roots and manifests whose complete generation/predecessor fields contradict initial or successor history (#99).

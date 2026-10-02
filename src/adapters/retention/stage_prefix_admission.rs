@@ -1,5 +1,6 @@
 //! This module owns admission of available retention stage fields.
 
+use super::stage_fixed_field_admission::admit;
 use super::{RetentionHeadDecodeError, RetentionManifestDecodeError, RetentionRootDecodeError};
 
 pub(super) fn root(encoded: &[u8]) -> Result<(), RetentionRootDecodeError> {
@@ -100,23 +101,6 @@ pub(super) fn head(encoded: &[u8]) -> Result<(), RetentionHeadDecodeError> {
                 observed,
             },
         )?;
-    }
-    Ok(())
-}
-
-fn admit<E>(
-    encoded: &[u8],
-    fields: &[(usize, &[u8])],
-    mismatch: impl Fn(usize, u8, u8) -> E,
-) -> Result<(), E> {
-    for &(start, canonical) in fields {
-        for (&expected, (offset, &observed)) in
-            canonical.iter().zip(encoded.iter().enumerate().skip(start))
-        {
-            if expected != observed {
-                return Err(mismatch(offset, expected, observed));
-            }
-        }
     }
     Ok(())
 }
