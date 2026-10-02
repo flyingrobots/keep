@@ -59,7 +59,8 @@ pub(super) fn open_authority(
     name: &str,
 ) -> Result<(TestDirectory, FilesystemRetentionPublicationAuthority), Box<dyn Error>> {
     let sandbox = migrated_store(name)?;
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+    let admission =
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
     let authority = FilesystemRetentionPublicationAuthority::open(admission)?;
     Ok((sandbox, authority))
 }

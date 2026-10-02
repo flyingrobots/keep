@@ -28,9 +28,10 @@ fn version_two_reopen_refuses_a_corrupt_format_marker() -> Result<(), Box<dyn Er
         .ok_or("format marker shorter than 41 bytes")? ^= 0x01;
     fs::write(&marker, &bytes)?;
 
-    let error = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())
-        .err()
-        .ok_or("corrupt format marker was unexpectedly admitted")?;
+    let error =
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())
+            .err()
+            .ok_or("corrupt format marker was unexpectedly admitted")?;
 
     let FilesystemPlatformAdmissionError::MigrationRecord { source } = error else {
         return Err("corrupt format marker refused outside record admission".into());
@@ -52,9 +53,10 @@ fn version_two_reopen_refuses_an_oversized_format_marker() -> Result<(), Box<dyn
     bytes.push(0);
     fs::write(&marker, &bytes)?;
 
-    let error = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())
-        .err()
-        .ok_or("oversized format marker was unexpectedly admitted")?;
+    let error =
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())
+            .err()
+            .ok_or("oversized format marker was unexpectedly admitted")?;
 
     assert!(matches!(
         error,
@@ -70,9 +72,10 @@ fn version_two_reopen_refuses_a_receipt_that_disagrees_with_its_intent()
     let intent = fs::read(sandbox.path().join("migration.intent"))?;
     fs::write(sandbox.path().join("migration.receipt"), &intent)?;
 
-    let error = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())
-        .err()
-        .ok_or("receipt disagreeing with its intent was unexpectedly admitted")?;
+    let error =
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())
+            .err()
+            .ok_or("receipt disagreeing with its intent was unexpectedly admitted")?;
 
     assert!(matches!(
         error,
@@ -85,7 +88,8 @@ fn version_two_reopen_refuses_a_receipt_that_disagrees_with_its_intent()
 fn version_two_reopen_admits_exact_migration_records() -> Result<(), Box<dyn Error>> {
     let sandbox = migrated_store("version-two-admission-exact")?;
 
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+    let admission =
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
 
     drop(admission);
     Ok(())
@@ -160,9 +164,10 @@ fn refuses_namespace(
     let sandbox = migrated_store(name)?;
     mutate(sandbox.path())?;
 
-    let error = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())
-        .err()
-        .ok_or_else(|| format!("{name}: version-two root was unexpectedly admitted"))?;
+    let error =
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())
+            .err()
+            .ok_or_else(|| format!("{name}: version-two root was unexpectedly admitted"))?;
 
     assert!(
         matches!(error, FilesystemPlatformAdmissionError::Namespace { .. }),
@@ -211,7 +216,8 @@ fn a_protocol_directory_replaced_after_reopen_is_neither_opened_nor_published_in
     let preparation = initial_preparation(&root_bytes)?;
     let _published = execute_retention_publication(&mut first, &preparation)?;
     drop(first);
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+    let admission =
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
     fs::rename(
         sandbox.path().join("retention"),
         sandbox.path().join("retention.moved"),
