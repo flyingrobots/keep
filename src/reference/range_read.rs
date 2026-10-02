@@ -13,8 +13,9 @@ impl ReferenceStore {
     /// The lowest canonical committed [`LayoutId`] is chosen deterministically
     /// when more than one layout names the blob. Only chunks overlapping
     /// `requested` are loaded. Every selected complete chunk is authenticated
-    /// before any output, then reauthenticated immediately before its
-    /// overlapping bytes are emitted.
+    /// once before any output. Emission then fetches each verified immutable
+    /// chunk by identity and writes only its overlapping bytes without hashing
+    /// it again; the in-memory view cannot change under `&self`.
     ///
     /// The receipt proves the requested bytes came from authenticated chunks
     /// under an admitted layout. It does not prove the complete blob identity,

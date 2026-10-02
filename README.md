@@ -59,31 +59,36 @@ Keep is required to refuse all three, before mutating anything.
   roots, deterministic closure verification, a one-way 21-phase migration,
   and a 17-phase retention publication — all with production filesystem
   writers, all preserving every version-1 byte. Reopening a migrated store
-  jointly admits its marker, intent, and receipt, binds the root's device,
-  mount, and inode identity to the intent, and pins the directories it
-  admitted. Publication binds this store's own catalog head and the catalog
-  it selects, and refuses retained stages, superseded candidates, substituted
+  jointly admits its marker, intent, and receipt, binds the root's device and
+  inode identity to the intent, and pins the directories it admitted. Mount
+  identity remains a check within the live migration process. Publication
+  binds this store's own catalog head and the catalog it selects, and refuses
+  retained stages, superseded candidates, substituted
   files, replaced protocol directories, and every namespace or capacity
   violation before it writes anything. Each refusal is a typed value, not a
   string.
+- **Migration restart recovery.** Recovery verifies current authority,
+  classifies the observed prefix, and resumes an exact persisted migration
+  intent through the remaining phases. An incomplete pre-effect intent stage
+  is discarded and rebuilt from freshly verified current intent. Its crash
+  matrix kills real writer processes
+  at 68 before/during/after coordinates (`KEEP-CRASH-053`–`073`), preserving
+  every version-1 byte. Broader hostile restart combinations remain in #111.
 
 ## What it does not do yet
 
-Version 2 writes correctly from a clean start, and the next publication
-recovers the residue of an interrupted one: a stage cut mid-write is
-discarded, a head already synchronized is finalized, and a byte-identical
-retry reports already committed. The one state that waits for a human is a
-complete orphan, a crash between the root link and the head finalization,
-which stays recovery-protected until explicit disposition lands with garbage
-collection (#21). The crash matrix proves that recovery by killing real
-writer processes at all 51 retention coordinates. Readers hold a shared
-fence and double-collect both heads, so a view never straddles a
-publication. A version-1 store stays admitted until its owner migrates it.
+Version-2 retention recovery, fenced reader snapshots and model-based
+transitions are implemented in this branch but still require the correctness
+corrections and independent acceptance review tracked in PR #99. Complete
+orphans remain recovery-protected until explicit disposition lands with
+garbage collection (#21). Migration restart recovery is implemented and does
+not grant retention authority. A version-1 store stays admitted until its
+owner migrates it.
 
 | Gap | Tracked |
 | --- | --- |
-| Restart recovery for retention publication and migration | [#19](https://github.com/flyingrobots/keep/issues/19) |
-| Restart-stable root identity coordinate in the migration intent | [#97](https://github.com/flyingrobots/keep/issues/97) |
+| Retention publication restart recovery and broader migration corruption coverage | [PR #99](https://github.com/flyingrobots/keep/pull/99), [#111](https://github.com/flyingrobots/keep/issues/111) |
+| Reader fence binding one consistent catalog + retention snapshot | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
 | Precise verification reports at explicit depths | [#20](https://github.com/flyingrobots/keep/issues/20) |
 | Garbage collection and identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |
 | Bounded production ingestion through the durable store | [#82](https://github.com/flyingrobots/keep/issues/82) |

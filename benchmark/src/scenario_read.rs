@@ -50,18 +50,10 @@ pub(super) fn run_verification(
                 source: Box::new(source),
             })?;
     let logical_bytes = receipt.bytes_written().get();
-    let authenticated_chunk_bytes_read =
-        logical_bytes
-            .checked_mul(2)
-            .ok_or(ScenarioError::MetricOverflow {
-                metric: "authenticated-chunk-bytes-read",
-                current: logical_bytes,
-                incoming: logical_bytes,
-            })?;
     let mut observation = ScenarioObservation::new(scenario, VerificationPosture::CompleteBlob);
     observation.add(WorkCounters {
         logical_bytes,
-        authenticated_chunk_bytes_read,
+        authenticated_chunk_bytes_read: logical_bytes,
         output_bytes_written: output.bytes_written(),
         chunk_instances: to_u64(layout.entries().len(), "chunk-instances")?,
         operation_count: 1,

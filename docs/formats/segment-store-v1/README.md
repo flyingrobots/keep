@@ -7,8 +7,10 @@ visibility, and recovery as one contract.
 ADR-0005 records the cross-cutting decision. These pages are a protocol
 commitment. Segment writing and verified reading are implemented in issue #15.
 Catalog generation, writer-locked publication, and immutable restart snapshots
-are implemented in issue #16. Store initialization and complete executable
-crash and recovery evidence remain owned by issue #17.
+are implemented in issue #16. Store initialization, platform admission,
+explicit recovery, and the 105-case process-death crash matrix are implemented
+in issue #17. Every page below describes the behaviour of `main`; the
+[requirements ledger](requirements.md) names the test behind each claim.
 
 ## Core law
 

@@ -47,11 +47,11 @@ retention, or garbage collection.
 | `KEEP-SEGMENT-002` | Staged and sealed writer states are distinct, consuming types | `tests/segment_writer.rs` | Implemented in #15 |
 | `KEEP-SEGMENT-003` | Short, interrupted, zero-progress, invalid-count, storage, permission, flush, and synchronization failures retain exact phases and offsets | `tests/segment_writer/write_contract_laws.rs`, `tests/segment_writer/refusal_laws.rs`, `tests/segment_writer/durability_laws.rs` | Implemented in #15 |
 | `KEEP-SEGMENT-004` | Complete-segment admission verifies bounds, framing, checksums, logical identities, duplicate refusal, terminal state, and physical digest before exposure | `tests/segment.rs`, `tests/segment/identity_laws.rs`, `tests/segment/framing_laws.rs` | Implemented in #15 |
-| `KEEP-SEGMENT-005` | The public sealed receipt exposes no mutable stage handle | `src/adapters/sealed_segment.rs` | Implemented in #15 |
+| `KEEP-SEGMENT-005` | The public sealed receipt exposes no mutable stage handle | `src/adapters/sealed_segment.rs` | Production API implemented in #15; repository-task escape tracked in #146 |
 | `KEEP-SEGMENT-006` | Malformed, unsupported, partial, conflicting, and corrupt input returns boundary-typed errors | `tests/segment_header/mutation_laws.rs`, `tests/segment_record_header/framing_laws.rs`, `tests/segment_seal/framing_laws.rs`, `tests/segment/identity_laws.rs` | Implemented in #15 |
 | `KEEP-SEGMENT-007` | Record, nested-layout, segment-length, and temporary identity-index allocation remain explicitly bounded | `tests/segment_memory.rs`, `tests/segment_record_memory.rs`, `tests/segment_seal_memory.rs` | Implemented in #15 |
-| `KEEP-SEGMENT-008` | Filesystem staging uses exclusive fixed-name creation and never enumerates storage as a content index | `tests/segment_filesystem_stage.rs`, `src/adapters/filesystem_segment_stage.rs` | Implemented in #15 |
-| `KEEP-SEGMENT-009` | Every implemented write and durability phase has deterministic fault injection, while dropped unsealed stages preserve recovery evidence | `tests/segment_writer/`, `tests/segment_filesystem_stage.rs` | Implemented in #15 |
+| `KEEP-SEGMENT-008` | Filesystem staging uses exclusive fixed-name creation and never enumerates storage as a content index | `src/adapters/filesystem_segment_stage_tests.rs`, `src/adapters/filesystem_segment_stage.rs` | Implemented in #15 |
+| `KEEP-SEGMENT-009` | Every implemented write and durability phase has deterministic fault injection, while dropped unsealed stages preserve recovery evidence | `tests/segment_writer/`, `src/adapters/filesystem_segment_stage_tests.rs` | Implemented in #15 |
 | `KEEP-SEGMENT-010` | Every public segment-format parser boundary is fuzzed from canonical deterministic seeds | `fuzz/fuzz_targets/segment_format.rs`, `xtask/src/fuzz_seed_corpus/segment_seeds.rs` | Implemented in #15 |
 
 <!-- markdownlint-enable MD013 -->
@@ -62,7 +62,8 @@ Issue #16 implements catalog-generation admission, writer-locked filesystem
 publication mechanics, and immutable reader snapshots. Production publisher
 construction requires `FilesystemPlatformAdmission`, whose platform-checked
 producer is implemented as the initialization slice of issue #17. Explicit
-recovery remains separate work.
+recovery is implemented in issue #17; its evidence is the recovery table
+below.
 
 <!-- markdownlint-disable MD013 -->
 
@@ -70,12 +71,12 @@ recovery remains separate work.
 | --- | --- | --- | --- | --- |
 | `KEEP-CATALOG-001` | `CatalogGeneration` admits positive values and refuses overflow when deriving a successor | Checked scalar model | `tests/catalog_generation.rs` | Implemented in #16 |
 | `KEEP-CATALOG-002` | Catalog and publication-head codecs reproduce every frozen version-1 artifact and refuse noncanonical bytes; catalog checksum and digest admission precede entry semantics | Independent golden corpus and mutation precedence oracle | `tests/catalog.rs`, `tests/catalog/integrity_laws.rs`, `tests/publication_head.rs` | Implemented in #16 |
-| `KEEP-CATALOG-003` | Catalog entries are sorted by logical identity and duplicate keys are refused independently of input order | Ordered reference map | `tests/catalog_ordering.rs` | Implemented in #16 |
+| `KEEP-CATALOG-003` | Catalog entries are sorted by logical identity and duplicate keys are refused independently of input order | Ordered reference map | `tests/catalog.rs`, `tests/catalog/ordering_laws.rs` | Implemented in #16 |
 | `KEEP-CATALOG-004` | Every catalog location equals a verified top-level record span in the exact named segment; construction and admission require every supplied segment to be referenced, and admission scans each referenced segment once | Bounded grouped lookup plan and golden artifacts | `tests/catalog_encoding.rs`, `tests/catalog_locations.rs` | Implemented in #16 |
 | `KEEP-CATALOG-005` | Publication admits only the exact expected successor and reports expected and observed generation and digest on staleness | Generation transition model | `tests/catalog_transition.rs` | Implemented in #16 |
 | `KEEP-CATALOG-006` | A reader retains one complete catalog generation and never combines it with a concurrent head | Immutable snapshot model | `tests/catalog_snapshot.rs` | Implemented in #16 |
 | `KEEP-CATALOG-007` | Retained kernel locks on the pinned store root and persistent writer file exclude a second cooperative writer even if the directory entry is replaced; neither lock is deleted on release, and lock ownership alone cannot construct a publisher without platform admission | Multi-handle lock model, replacement fixture, and construction architecture law | `tests/catalog_writer_lock.rs`, `tests/catalog_filesystem_publication/directory_laws.rs` | Implemented in #16; replacement-hardened in #17 |
-| `KEEP-CATALOG-008` | Segment, catalog, and head publication follows the documented synchronization order; retained fixed-name recovery state refuses before mutation; an absent head requires empty immutable pools; retry of an already-current candidate performs no publication mutation and re-synchronizes the root | Fault-recording port and filesystem fixtures | `tests/catalog_publication.rs`, `tests/catalog_filesystem_publication.rs` | Implemented in #16 |
+| `KEEP-CATALOG-008` | Segment, catalog, and head publication follows the documented synchronization order; retained fixed-name recovery state refuses before mutation; an absent head requires empty immutable pools; retry of an already-current candidate performs no publication mutation and re-synchronizes the root | Fault-recording port and filesystem fixtures | `tests/catalog_publication.rs`, `src/adapters/filesystem_catalog_publisher_tests.rs` | Implemented in #16 |
 | `KEEP-CATALOG-009` | Restart loading refuses corrupt, unsupported, noncanonical, dangling, and conflicting catalog state | Corruption matrix | `tests/catalog_restart.rs` | Implemented in #16 |
 | `KEEP-CATALOG-010` | Model-based transitions and lookups agree with a deterministic `BTreeMap` catalog | Boring reference catalog | `tests/catalog_model.rs` | Implemented in #16 |
 | `KEEP-CATALOG-011` | Every public catalog and publication-head parser boundary is fuzzed from canonical deterministic seeds | Canonical generation-1, generation-2, and bundle artifacts | `fuzz/fuzz_targets/catalog_format.rs`, `xtask/src/fuzz_seed_corpus/catalog_seeds.rs` | Implemented in #16 |
@@ -103,7 +104,12 @@ may now authorize a transition-checked finalization through a semantic storage
 port, and the filesystem finalizer binds that transition to pinned
 writer-authorized storage. These slices now include reusable-stage continuation
 and the complete process-death crash matrix. Retention, compaction, garbage
-collection, and host-power-loss simulation remain outside issue #17.
+collection, and host-power-loss simulation remain outside version 1:
+retention belongs to
+[`keep.segment-store/v2`](../segment-store-v2/README.md), compaction and
+garbage collection are tracked in issue #21. The process-death matrix does
+not establish host-power-loss behavior; that requires separate filesystem and
+device fault evidence.
 
 <!-- markdownlint-disable MD013 -->
 
@@ -185,8 +191,9 @@ segment corpus and adds parser fuzzing and corruption evidence. Issue #16
 matches the catalog and publication-head corpus, executes the documented
 publication order through a real filesystem adapter, reconstructs exact
 immutable restart snapshots, and adds deterministic transition-model and
-seeded parser-fuzz evidence. Crash-injection and explicit recovery remain
-owned by issue #17.
+seeded parser-fuzz evidence. Issue #17 adds initialization, platform
+admission, explicit recovery, and the 105-case process-death crash matrix
+(`KEEP-RECOVERY-001`–`KEEP-RECOVERY-021`).
 
 The format-local tradeoffs are recorded in the
 [colocated rationale](rationale.md).

@@ -1,0 +1,23 @@
+keep.segment-store.transitions/v2
+crash_id	phase	operation	pre_state	interrupted_class	post_state	recovery_posture
+KEEP-CRASH-053	migration	write-intent-stage	admitted-version-one-store	absent-or-incomplete-intent-stage	complete-intent-stage	discard-incomplete-stage-or-resume-stage-sync
+KEEP-CRASH-054	migration	sync-intent-stage	complete-intent-stage	complete-intent-stage	durable-intent-stage	resume-stage-sync
+KEEP-CRASH-055	migration	link-intent	durable-intent-stage	durable-intent-stage-or-linked-intent	linked-intent	verify-no-clobber-link-and-resume-root-sync
+KEEP-CRASH-056	migration	sync-root-after-intent	linked-intent	linked-intent	durable-intent	resume-root-sync
+KEEP-CRASH-057	migration	remove-intent-stage	durable-intent	durable-intent-with-or-without-stage	durable-intent-alone	resume-cleanup-sync
+KEEP-CRASH-058	migration	sync-root-after-intent-cleanup	durable-intent-alone	durable-intent-alone	intent-cleanup-synchronized	resume-cleanup-sync
+KEEP-CRASH-059	migration	admit-reader-fence	intent-cleanup-synchronized	intent-with-or-without-reader-fence	reader-fence-admitted	resume-namespace-prefix
+KEEP-CRASH-060	migration	admit-namespace-prefix	reader-fence-admitted	directory-prefix-length-zero-to-six	namespace-prefix-admitted	resume-namespace-prefix-or-root-sync
+KEEP-CRASH-061	migration	sync-root-after-namespace	namespace-prefix-admitted	namespace-prefix-admitted	durable-namespace-prefix	resume-root-sync
+KEEP-CRASH-062	migration	write-marker-stage	durable-namespace-prefix	absent-or-incomplete-marker-stage	complete-marker-stage	discard-incomplete-stage-or-resume-stage-sync
+KEEP-CRASH-063	migration	sync-marker-stage	complete-marker-stage	complete-marker-stage	durable-marker-stage	resume-stage-sync
+KEEP-CRASH-064	migration	link-marker	durable-marker-stage	durable-marker-stage-or-linked-marker	linked-marker	verify-no-clobber-link-and-resume-root-sync
+KEEP-CRASH-065	migration	sync-root-after-marker	linked-marker	linked-marker	durable-marker	resume-root-sync
+KEEP-CRASH-066	migration	remove-marker-stage	durable-marker	durable-marker-with-or-without-stage	durable-marker-alone	resume-cleanup-sync
+KEEP-CRASH-067	migration	sync-root-after-marker-cleanup	durable-marker-alone	durable-marker-alone	marker-cleanup-synchronized	resume-cleanup-sync
+KEEP-CRASH-068	migration	write-receipt-stage	marker-cleanup-synchronized	absent-or-incomplete-receipt-stage	complete-receipt-stage	discard-incomplete-stage-or-resume-stage-sync
+KEEP-CRASH-069	migration	sync-receipt-stage	complete-receipt-stage	complete-receipt-stage	durable-receipt-stage	resume-stage-sync
+KEEP-CRASH-070	migration	link-receipt	durable-receipt-stage	durable-receipt-stage-or-linked-receipt	linked-receipt	verify-no-clobber-link-and-resume-root-sync
+KEEP-CRASH-071	migration	sync-root-after-receipt	linked-receipt	linked-receipt	durable-receipt	resume-root-sync
+KEEP-CRASH-072	migration	remove-receipt-stage	durable-receipt	durable-receipt-with-or-without-stage	complete-migration	admit-complete-migration
+KEEP-CRASH-073	migration	sync-root-after-receipt-cleanup	complete-migration	complete-migration	durable-complete-migration	admit-complete-migration

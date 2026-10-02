@@ -96,3 +96,24 @@ would mutate the exact version-2 root grammar. Accepting placeholder bytes was
 also rejected. Version 2 reserves the names, while their presence remains an
 unsupported mandatory state until issue #21 supplies complete byte, parser,
 crash, recovery, corruption, and fuzz evidence.
+
+## Compare restart-stable root coordinates on reopen
+
+The migration intent records the root's device, mount, and inode identity.
+Only the first and last survive a remount: `statx.stx_mnt_id` is a mount
+instance, not a volume. Comparing it on reopen made a correctly remounted
+store refuse and would have made partial-prefix migration recovery reject
+the store's own intent after a reboot.
+
+Reopen therefore compares device and inode only, and future restart recovery
+must apply the same rule. Meanwhile,
+the migrating process still compares all three against its own observation.
+The intent bytes are unchanged.
+
+Rejected: removing the mount field. The definition digest covers the intent
+layout, so the change would re-derive the format marker, the receipt, and
+every version-2 fixture for no gain in restart safety. Rejected: the
+filesystem UUID as the device coordinate in this change. That would require
+separate platform admission, compatibility, and format decisions. Device
+renumbering remains a refusal; this change does not introduce re-admission or
+silently substitute a different identity coordinate.

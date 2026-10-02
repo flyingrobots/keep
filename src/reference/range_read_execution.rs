@@ -7,7 +7,7 @@ use crate::{
     ReferenceStore,
 };
 
-use super::chunk_verification::verified_chunk;
+use super::chunk_verification::{emitted_chunk, verified_chunk};
 use super::output_write::write_all;
 use super::range_read_error_mapping::{range_chunk_error, range_output_error};
 use super::{RangeReadError, RangeReadReceipt};
@@ -68,7 +68,7 @@ where
     let (first, entries) = selected_entries(layout, plan)?;
     let mut written = 0_u64;
     for (index, entry) in (first..plan.end_entry()).zip(entries.iter().copied()) {
-        let bytes = verified_chunk(store, layout_id, index, entry).map_err(range_chunk_error)?;
+        let bytes = emitted_chunk(store, layout_id, index, entry).map_err(range_chunk_error)?;
         let selected = selected_chunk_slice(layout_id, index, entry, plan.requested(), bytes)?;
         write_all(output, selected, &mut written)
             .map_err(|error| range_output_error(layout_id, error))?;

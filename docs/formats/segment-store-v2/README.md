@@ -8,11 +8,12 @@ namespaces.
 
 ADR-0009 owns the cross-cutting retention and liveness decision. These pages
 own its durable representation. The one-way migration, version-two reopen, and
-forward retention publication are implemented with executable evidence;
-recovery of retained retention stages, reader fencing, and collection remain
-planned in issue #19, and the [requirements ledger](requirements.md) records
-exactly which requirements are proven. A version-1 store remains admitted until
-its owner migrates it.
+forward retention publication, partial-prefix migration recovery, and the
+68-case migration process-death matrix are implemented with executable
+evidence. Retention recovery and reader fencing await integration from PR #99;
+collection remains planned in #21. The [requirements ledger](requirements.md)
+records exactly which requirements are proven. A version-1 store remains
+admitted until its owner migrates it.
 
 ## Core laws
 
@@ -86,23 +87,24 @@ one pinned catalog, preflight, preparation, and the 17-phase publication port;
 fresh writer-locked filesystem migration through all 21 phases, refusing a
 version-one store that still holds a retained stage;
 `FilesystemVersionTwoAdmission::reopen`, which jointly admits the marker,
-intent, and receipt, binds the root's device, mount, and inode identity to the
-intent, and pins the retention directories it admitted; and
+intent, and receipt, binds the root's restart-stable device and inode identity
+to the intent, and pins the retention directories it admitted; and
 `FilesystemRetentionPublicationAuthority`, which publishes initial and
 successor generations against the observed head, binds this store's catalog
 head and the catalog it selects, and refuses superseded candidates, retained
 stages, replaced protocol directories, and every namespace or capacity
 violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 
-Retention publication recovery is implemented and proven both in-process for
-every crash prefix and by the crash matrix, which kills a real writer before,
-during, and after `KEEP-CRASH-036` through `052`.
-Readers bind one consistent catalog, retention head, and manifest view under a
-shared `ReaderFence` and verify selected roots on demand. Every three-operation
-transition sequence agrees with a deterministic namespace-to-anchor-set model.
-Not implemented: partial-prefix migration recovery and `KEEP-CRASH-053..073`,
-and garbage collection. Issue #19 owns the first four and issue #21 the last;
-issue #97 owns the restart-stable root identity coordinate. A version-1 store
+Retention publication recovery, fenced reader snapshots and model-based
+transition evidence are implemented in this branch. Their correctness
+corrections and independent acceptance remain tracked in PR #99.
+Partial-prefix migration recovery and the 68-case `KEEP-CRASH-053..073`
+process-death matrix are implemented. Broader migration restart corruption
+and compatibility coverage remain in #111 and #112; issue #21 owns garbage
+collection. Reopen compares only the restart-stable root coordinates, device
+and inode, against the intent; see
+[root identity across restart](recovery.md#root-identity-across-restart). A
+version-1 store
 remains admitted until its owner migrates it, and the
 [requirements ledger](requirements.md) is the authority on which requirements
 are proven.

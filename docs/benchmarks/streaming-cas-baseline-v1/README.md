@@ -16,6 +16,24 @@ The reference evidence artifact measures source commit
 This single-host result is a methodology and baseline witness, not a marketing
 claim, portability claim, optimization mandate, or correctness proof.
 
+That artifact predates the single chunk-authentication pass in #71. Current
+whole-blob accounting counts each logical chunk byte once; range accounting
+counts the complete selected chunks once, including bytes outside the requested
+slice. The historical artifact retains its original double-pass counters and
+must not be treated as a baseline for the corrected implementation.
+
+The single-pass implementation has clean, source-bound optimized evidence at
+commit `30ffe90e53c01a24d8931244a7f76eaecd0da8a4`, using Rust 1.96.0 on
+`aarch64-apple-darwin`:
+
+- [30ffe90-aarch64-apple-darwin.tsv](../../../benchmark/baselines/30ffe90-aarch64-apple-darwin.tsv)
+
+This run records 100 samples after five warmups for all 13 scenarios and
+five profiles. The new Apple M5 Pro host differs from the historical Apple
+M1 Pro host, so timings do not establish a before/after speedup. Deterministic
+hash-count regressions establish the reduced authentication work. Performance
+thresholds remain unconfigured.
+
 ## Run the baseline
 
 From the repository root:
@@ -99,9 +117,10 @@ Every timed sample must return exactly the same semantic counters. Any change
 is a typed nondeterminism failure.
 
 Verification has no disabled state. Ingest authenticates chunk and complete
-blob identity. Range reads authenticate every selected complete chunk before
-and during output. Whole reconstruction authenticates chunks, profile
-boundaries, and the complete named blob.
+blob identity. Range reads authenticate every selected complete chunk once
+before output, then emit verified immutable chunks by identity. Whole
+reconstruction authenticates chunks, profile boundaries, and the complete
+named blob.
 
 ## Chunking-profile comparison
 
@@ -149,10 +168,12 @@ denominator separately and never use floating-point serialization. A zero
 denominator means the operation materialized no bytes; consumers must retain
 that exact state instead of inventing infinity, zero, or a substitute value.
 
-Whole-blob verification reads each complete chunk twice: once before output
-and once while emitting authenticated bytes. Its expected read amplification
-is therefore exactly `2 / 1`. Range-read amplification includes every complete
-selected chunk in both passes, not only returned slices.
+Current whole-blob verification authenticates each complete chunk once,
+before output, so authenticated-byte read amplification is exactly `1 / 1`.
+Range-read amplification counts every complete selected chunk once, including
+bytes outside returned slices. Emission fetches verified immutable chunks
+without another authentication pass. Historical two-pass artifacts retain
+their original `2 / 1` whole-blob counters and double-pass range counters.
 
 ## Regression threshold policy
 

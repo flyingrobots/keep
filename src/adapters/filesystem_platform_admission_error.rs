@@ -31,6 +31,9 @@ pub enum FilesystemPlatformAdmissionError {
         source: io::Error,
     },
     /// The reopened root's physical identity is not the one the migration intent bound.
+    ///
+    /// Reopen compares the restart-stable device and file coordinates only; a
+    /// remounted store admits, so this variant never names `Mount`.
     RootIdentityChanged {
         /// The coordinate that disagreed.
         coordinate: StoreRootIdentityCoordinate,

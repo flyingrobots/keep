@@ -38,6 +38,7 @@ const HEAD_LENGTH: u64 = 128;
 #[must_use]
 pub struct FilesystemStoreMigrationAuthority {
     inventory: FilesystemStoreMigrationInventoryReader,
+    pub(super) namespace: MigrationNamespacePolicy,
     pub(super) fixed_stage: Option<FilesystemMigrationFixedStage>,
     pub(super) published_intent: Option<FilesystemMigrationFixedStage>,
     pub(super) published_marker: Option<FilesystemMigrationFixedStage>,
@@ -61,13 +62,24 @@ impl FilesystemStoreMigrationAuthority {
     ) -> Result<Self, Error> {
         let inventory = FilesystemStoreMigrationInventoryReader::open(admission, policy)
             .map_err(|source| Error::Inventory { source })?;
-        Ok(Self {
+        Ok(Self::with_policy(
             inventory,
+            MigrationNamespacePolicy::Published,
+        ))
+    }
+
+    pub(super) const fn with_policy(
+        inventory: FilesystemStoreMigrationInventoryReader,
+        namespace: MigrationNamespacePolicy,
+    ) -> Self {
+        Self {
+            inventory,
+            namespace,
             fixed_stage: None,
             published_intent: None,
             published_marker: None,
             published_receipt: None,
-        })
+        }
     }
 
     /// Pins a root for migration without platform admission for repository tasks.
@@ -156,8 +168,15 @@ impl FilesystemStoreMigrationAuthority {
     /// Recovery must complete before the intent is observed.
     fn verify_namespace(&self) -> Result<(), Error> {
         let root = self.inventory.root();
-        filesystem_initialization_namespace::admit_published(root)
-            .map_err(|source| Error::Namespace { source })?;
+        match self.namespace {
+            MigrationNamespacePolicy::Published => {
+                filesystem_initialization_namespace::admit_published(root)
+            }
+            MigrationNamespacePolicy::Migrating => {
+                filesystem_initialization_namespace::admit_migrating(root)
+            }
+        }
+        .map_err(|source| Error::Namespace { source })?;
         let staging = root
             .open_dir_nofollow(STAGING_NAME)
             .map_err(|source| Error::Namespace { source })?;
@@ -225,4 +244,13 @@ impl FilesystemStoreMigrationAuthority {
     pub(super) const fn root(&self) -> &cap_std::fs::Dir {
         self.inventory.root()
     }
+}
+
+/// Which root namespaces an authority admits when it observes.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum MigrationNamespacePolicy {
+    /// Exactly the published version-1 namespace: a fresh migration.
+    Published,
+    /// The published version-1 namespace plus any migration residue: recovery.
+    Migrating,
 }

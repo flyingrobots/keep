@@ -27,6 +27,28 @@ reports the number and bytes of chunks absent from the store used during
 staging. Commit rechecks that another destination already owns any required
 chunks omitted by that deduplication.
 
+## Why staging materializes up to capacity
+
+Issue #74 permits an explicit rationale for unavoidable materialization.
+The reference store owns process memory. Keeping new chunks invisible until
+the entire stream has an admitted layout and verified blob identity requires
+the staged value to own those chunks; moving them into the visible store
+earlier would publish a prefix. A separate unpublished spill store could avoid
+that heap cost, but it would be a new storage adapter with its own failure,
+publication, cleanup, and recovery protocol.
+
+The existing adapter checks committed plus pending plus incoming payload bytes
+against capacity before copying. Stream buffers/state are fixed, and map and
+layout metadata are bounded by the entry limit. The public scratch allowance
+and allocation regressions make those separate resource terms explicit.
+Neither a large capacity nor bounded payload bytes proves low process RSS.
+
+A streaming publication window was rejected because a later source or identity
+failure must leave no visible prefix. A filesystem spill was rejected here
+because maintaining the in-memory adapter's current API does not establish
+safe durable publication or recovery. Those requirements belong to a separate
+durable ingestion implementation, not an implicit reference-store fallback.
+
 ## Why stage before commit
 
 Reading, chunking, hashing, allocation, and canonical layout calculation can
@@ -43,11 +65,14 @@ Repair belongs to a future explicit recovery protocol with its own evidence.
 Writing a verified prefix before discovering a later missing chunk, false
 profile boundary, or full-blob mismatch would expose bytes from an
 unauthenticated claim. Reconstruction first verifies the entire plan without
-output. It then reverifies each chunk immediately before writing because the
-output pass is a separate traversal.
+output, hashing each chunk exactly once. It then emits each verified chunk by
+identity without hashing it again: the in-memory view cannot change under
+`&self`, so a second hash would prove nothing the first did not.
 
-This costs two chunk-verification passes. Correct refusal and a simple audit
-story outweigh throughput until measured evidence justifies another design.
+Rejected: reverifying on emission (issue #71). It doubled chunk-hash work for
+full and large-range reads for an adapter whose chunks are immutable for the
+duration of the call. A durable adapter, whose bytes can change between
+passes, must reverify on emission or pin what it verified.
 
 ## Why range reads authenticate selected chunks only
 
@@ -57,15 +82,15 @@ the minimal-overlap capability and turn a range API into disguised whole-blob
 I/O.
 
 Range reads therefore plan from admitted metadata, authenticate every complete
-overlapping chunk before output, then reauthenticate each chunk immediately
-before slicing and emission. Their receipt names the requested range and
+overlapping chunk before output, then fetch each verified immutable chunk
+by identity for slicing and emission. Their receipt names the requested range and
 explicitly does not claim complete-blob identity, unrequested chunks, or
 storage-profile boundaries. Callers choose whole-blob reconstruction when they
 need those stronger claims.
 
 Preverification ensures a later selected chunk cannot fail after an earlier
-range byte has been emitted. Reverification protects the separate output pass
-without buffering selected chunks or the requested result.
+range byte has been emitted. The immutable in-memory view protects the separate
+output pass without a second hash or buffering selected chunks or the result.
 
 ## Why caller-supplied ranges require a committed layout
 
@@ -106,8 +131,9 @@ association refuses before output.
   for durable application data.
 - Staging memory can grow with unique content only up to explicit capacity.
 - Layout metadata remains bounded but can be large at the protocol maximum.
-- Reconstruction performs two verification passes before reporting success.
-- Exact range reads perform two verification passes over only the selected
-  chunks and deliberately make no complete-blob verification claim.
+- Reconstruction hashes each chunk once, before its first output write, and
+  emits verified chunks by identity.
+- Exact range reads hash only the selected chunks, once each, and
+  deliberately make no complete-blob verification claim.
 - Durable storage must implement a different adapter with documented
   publication order, crash states, recovery behavior, and synchronization.

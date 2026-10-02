@@ -69,6 +69,11 @@ impl ExpectedStoreState {
                     point: case.point(),
                 })
             }
+            DurabilityCrashSequence::Migration => {
+                Err(DurabilityCrashMatrixError::PointSequenceMismatch {
+                    point: case.point(),
+                })
+            }
         }
     }
 

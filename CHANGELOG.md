@@ -53,6 +53,24 @@ after its public API and format compatibility policies are established.
   retry. `FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks`
   and `FilesystemStoreMigrationAuthority::open_unchecked_for_repository_tasks`
   give repository tools the same bypass version one already had.
+- Recovery receipts retain the exact observed namespace prefix and bound
+  migration intent digest, including observations of completed migration.
+
+- Recovery jointly verifies retained stages and canonical records during
+  adoption, refusing substituted canonical inodes before forward execution.
+
+- Late-stage refusals report receipt effects as receipts when no marker
+  artifact exists.
+
+- Migration recovery revalidates current writer authority before observing
+  residue, preventing stale expected intents from admitting a corrupt store.
+
+- README recovery and reader-fence gaps point to their current open owners.
+
+- Migration recovery planning, bounded filesystem residue admission, explicit
+  truncated-stage discard, and receipts listing resumed phases. The production
+  crash matrix now includes 68 migration process-death cases (Refs #108).
+
 - `FilesystemRetentionPublicationAuthority` executes the 17 ordered retention
   publication phases against a completely migrated version-2 root. It stages
   `root.next`, `manifest.next`, and `head.next` exclusively, verifies device
@@ -648,6 +666,94 @@ after its public API and format compatibility policies are established.
   no stability contract; this is not a format change.
 
 ### Fixed
+
+- The version-one catalog ledger names its executable ordering integration
+  target, duplicate-refusal module, and filesystem publication unit-test owner
+  instead of absent test files (#148).
+
+- Benchmark report admission refuses identical or conflicting repeated metadata
+  coordinates with a typed failure naming the coordinate (issue #142). Complete
+  canonical report admission remains in progress. Ordered metadata keys, exact
+  headers/catalogs, complete metric widths and canonical unsigned decimals now
+  refuse malformed reports while admitting the committed historical fixture.
+  Fixed measurement policies and consistent per-row sample counts are admitted
+  before publication. Ratios, throughput, percentile order and reused-chunk
+  bounds now refuse inconsistent evidence with typed expected/observed failures;
+  arithmetic and numeric parsing refuse without approximation. Byte/count
+  metrics admit only their portable unsigned 64-bit range; timing and throughput
+  retain unsigned 128-bit precision. Publication requires an immutable admitted
+  report; refusal preserves the prior artifact and retained recovery stage.
+  Direct parser admission enforces the same one-MiB input ceiling as subprocess
+  capture before decoding, and preserves UTF-8 error sources. A dedicated
+  I/O-free fuzz facade exercises the production parser with a deterministic
+  historical seed; seed preparation and campaign discovery include the target.
+
+- The benchmark workload catalog describes current range authentication once
+  before output, matching its single-pass metric definitions (#71).
+
+- Public reference range-read documentation describes its single pre-output
+  authentication and immutable emission without a second hash (#71).
+
+- Reference reconstruction and range reads authenticate each selected chunk
+  once, then emit its immutable stored bytes after all required checks pass.
+  Benchmark authenticated-byte counters now count one verification pass.
+  Hash-count and exact range-accounting regressions cover issue #71.
+
+- The version-one ledger discloses the pending repository-task sealed-stage
+  capability escape (#146) while preserving the immutability requirement (#69).
+
+- The version-one segment ledger points to the existing filesystem-stage
+  regression module for exclusive staging and dropped-stage evidence (#69).
+
+- The version-one recovery overview links its implemented transitive
+  candidate-view admission to the next-head boundary and requirement anchors (#69).
+
+- Version-one publication documentation assigns unchecked publisher
+  construction to the crash harness and fault injection to its decorators (#69).
+
+- Version-one crash documentation identifies its 105 cases as a subset of
+  the complete command, which also executes version-two migration cases (#69).
+
+- Version-one recovery documentation distinguishes streamed inventory
+  fingerprint evidence from caller-supplied classifier bytes and the segment
+  resumer's separate materialization (#69).
+
+- Living version-1 format pages describe implemented initialization,
+  platform admission, publication, restart, recovery, and process-death
+  evidence rather than completed issue-era plans (#69). Historical issue
+  references and existing requirement/test anchors remain available.
+
+- The migration transition-ledger guard rejects noncanonical line endings,
+  extra rows, misplaced discard claims, and counterfeit completion postures.
+  Recovery posture and namespace interruption checks use their exact columns.
+- The independent migration restart model propagates missing occurrence,
+  arithmetic, and extent-conversion failures instead of normalizing them.
+- Crash-case admission refuses out-of-range migration namespace occurrences
+  before child execution; variable segment-record occurrences remain valid.
+- Receipt-only migration residue before a complete namespace reports
+  `ReceiptBeforeMarker`, preserving the exact missing-prerequisite boundary.
+- Migration residue observation rejects non-regular entries with the typed
+  kind refusal before opening them, retaining the post-open kind recheck.
+- Migration resumption is internal to verified recovery admission; external
+  callers cannot bypass current authority verification and residue adoption.
+
+- Version-two reopen compares persisted device and inode coordinates while
+  retaining mount identity as same-process migration evidence (#97).
+  Simulated-remount reopen and exact moved-root refusals are regression-tested;
+  migration record bytes and the forward publication protocol are unchanged.
+
+- Reference staging exposes its fixed buffer/state allowance and measured
+  capacity, deduplication, and repeated-content allocation laws (#74).
+  Chunk payload limits and separately bounded metadata are documented without
+  claiming constant total memory or durability. Source-failure cleanup after
+  partial staging preserves committed content and releases staging heap.
+
+- Source-structure admission refuses the nine Rust source basenames prohibited
+  by AGENTS.md with a typed repository-relative filename diagnostic (#144).
+  Existing filesystem, Python and line-size checks remain in force.
+
+- Benchmark source-identity laws exercise real Git cleanliness independently
+  of ambient CPU-model availability; benchmark hardware admission stays strict.
 
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.

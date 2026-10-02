@@ -2,8 +2,10 @@
 
 mod control;
 pub(super) mod fixture;
-mod initialization;
+pub(super) mod initialization;
 mod initialization_storage;
+mod migration;
+mod migration_storage;
 mod publication;
 mod publication_storage;
 mod recovery;
@@ -46,6 +48,9 @@ pub(super) fn run(
         DurabilityCrashSequence::Retention => {
             retention::run(&store_root, &mut control)?;
         }
+        DurabilityCrashSequence::Migration => {
+            migration::run(&store_root, &mut control)?;
+        }
     }
     Err(DurabilityCrashMatrixError::PointSequenceMismatch {
         point: case.point(),
@@ -59,7 +64,7 @@ fn create_store_root(case_root: &Path) -> Result<PathBuf, DurabilityCrashMatrixE
     Ok(store_root)
 }
 
-pub(super) fn verification(
+pub(in crate::durability_crash_matrix) fn verification(
     phase: &'static str,
     source: impl Error + 'static,
 ) -> DurabilityCrashMatrixError {
