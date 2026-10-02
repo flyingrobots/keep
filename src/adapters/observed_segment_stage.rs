@@ -9,6 +9,7 @@ use super::{SealedSegment, SegmentStage, SegmentStageDurabilityEvent, SegmentSta
 /// Owns the stage until close or sealing. Construction allocates nothing; actual
 /// writes and durability operations block according to the supplied stage and
 /// observer. The supplied stage must satisfy [`SegmentStage`]'s ownership contract.
+#[must_use]
 pub struct ObservedSegmentStage<S, O> {
     stage: S,
     observer: O,
