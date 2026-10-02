@@ -36,7 +36,9 @@ A pre-effect incomplete stage may be removed only when every later-ordered effec
 
 A truncated manifest requires a complete root stage already linked to its immutable pool entry. A truncated head requires both complete root and manifest stages already linked to their immutable pool entries. Missing or incomplete earlier evidence refuses as `TruncatedStageWithoutEarlierEvidence`, naming both stages, before any scheduled discard or relinking. Existing corruption and conflicting-pool diagnostics retain precedence; cross-record and history admission still precede execution.
 
-This retention protocol requires pinning the incomplete regular file. The separate [migration discard path](migration-crash.md#fixed-stage-law) revalidates the current entry's regular kind and incomplete length before removal without retaining an incomplete-stage handle. These are distinct protocol boundaries; retention recovery awaits integration from PR #99.
+This retention protocol requires pinning the incomplete regular file. The separate [migration discard path](migration-crash.md#fixed-stage-law) revalidates the current entry's regular kind and incomplete length before removal without retaining an incomplete-stage handle. These are distinct protocol boundaries.
+
+Retention recovery is implemented in this branch, with correctness remediation and independent acceptance tracked in [PR #99](https://github.com/flyingrobots/keep/pull/99). Incomplete-stage pinning and failure handling after removal remain open implementation findings; the requirements above remain binding.
 
 The retention crash points are:
 

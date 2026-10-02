@@ -6,14 +6,7 @@ catalog, and publication-head byte while adding explicit retention state,
 reader fences, migration evidence, and reserved GC and recovery-disposition
 namespaces.
 
-ADR-0009 owns the cross-cutting retention and liveness decision. These pages
-own its durable representation. The one-way migration, version-two reopen, and
-forward retention publication, partial-prefix migration recovery, and the
-68-case migration process-death matrix are implemented with executable
-evidence. Retention recovery and reader fencing await integration from PR #99;
-collection remains planned in #21. The [requirements ledger](requirements.md)
-records exactly which requirements are proven. A version-1 store remains
-admitted until its owner migrates it.
+ADR-0009 owns the cross-cutting retention and liveness decision. These pages own its durable representation. The one-way migration, version-two reopen, forward retention publication, partial-prefix migration recovery, and the 68-case migration process-death matrix are implemented with executable evidence. Retention recovery and reader fencing are implemented in this branch; correctness remediation and independent acceptance remain tracked in PR #99. Collection remains planned in #21. The [requirements ledger](requirements.md) records requirements and their evidence status. A version-1 store remains admitted until its owner migrates it.
 
 ## Core laws
 
