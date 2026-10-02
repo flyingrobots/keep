@@ -624,6 +624,9 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- The version-one ledger discloses the pending repository-task sealed-stage
+  capability escape (#146) while preserving the immutability requirement (#69).
+
 - The version-one segment ledger points to the existing filesystem-stage
   regression module for exclusive staging and dropped-stage evidence (#69).
 
