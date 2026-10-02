@@ -34,10 +34,17 @@ of logical bytes times samples times one billion divided by wall duration;
 overflow and zero duration refuse. The frozen profile timed input is one MiB.
 The decoder preserves its original integer parse error through the error chain.
 
+Byte and count metrics use a portable unsigned 64-bit ceiling, including
+profile chunk counts whose producer representation is `usize`. Ratio counters
+share the width of the byte counters they repeat. Timing and throughput retain
+unsigned 128-bit precision. The maximum counter is admitted; a larger value
+refuses with the metric name, maximum and observed value before relationship
+checks. The ingress makes no narrowing or saturating conversion.
+
 Admission runs before artifact publication. A grammar refusal performs no
 filesystem mutation. Existing publication and recovery ordering are unchanged;
 these checks introduce no durable format version or public API change.
 
-Issue #142 remains open until numeric-width bounds, bounded
+Issue #142 remains open until bounded
 parser fuzzing, a validated publication input and prior-artifact preservation
 laws are complete. Structural admission alone does not prove those semantics.

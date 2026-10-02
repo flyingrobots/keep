@@ -140,7 +140,7 @@ fn historical_metric_relationships_are_admissible() -> Result<(), BenchmarkBasel
     Ok(())
 }
 
-fn mutate(report: &str, name: &str, column: &str, value: &str) -> String {
+pub(super) fn mutate(report: &str, name: &str, column: &str, value: &str) -> String {
     let mut output = String::new();
     let mut header = "";
     for row in report.lines() {

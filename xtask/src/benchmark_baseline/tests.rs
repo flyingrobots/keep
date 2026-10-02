@@ -268,24 +268,14 @@ fn malformed_report_rows_cannot_forge_diagnostic_lines() {
     );
 }
 
-#[test]
-fn noncanonical_or_overflowing_decimal_metrics_refuse_exactly() {
-    let environment = environment();
-    let valid = report(&environment, 13, 5);
-    let prefix = "scenario\tcold-ingest\tingest-chunk-and-blob-identity\t";
-    for observed in ["", "0100", "+100", "-100", "1.0"] {
-        let malformed = valid.replace(&format!("{prefix}100\t"), &format!("{prefix}{observed}\t"));
-        assert!(
-            matches!(artifact::validate(malformed.as_bytes(), &environment),
-            Err(BenchmarkBaselineError::InvalidReportRow {
-                expected: "canonical unsigned decimal", observed: actual,
-            }) if actual == observed)
-        );
-    }
-}
+#[path = "numeric_format_tests.rs"]
+mod numeric_format_tests;
 
 #[path = "metadata_policy_tests.rs"]
 mod metadata_policy_tests;
 
 #[path = "metric_relation_tests.rs"]
 mod metric_relation_tests;
+
+#[path = "counter_width_tests.rs"]
+mod counter_width_tests;

@@ -88,8 +88,14 @@ fn metrics(
             })?;
     }
     match (catalog, count) {
-        (MetricCatalog::Scenario, 28) => super::metric_relations::scenario(values),
-        (MetricCatalog::Profile, 15) => super::metric_relations::profile(values),
+        (MetricCatalog::Scenario, 28) => {
+            super::counter_widths::scenario(values)?;
+            super::metric_relations::scenario(values)
+        }
+        (MetricCatalog::Profile, 15) => {
+            super::counter_widths::profile(values)?;
+            super::metric_relations::profile(values)
+        }
         (MetricCatalog::Scenario | MetricCatalog::Profile, _) => {
             invalid("complete metric row", observed)
         }

@@ -614,7 +614,9 @@ after its public API and format compatibility policies are established.
   Fixed measurement policies and consistent per-row sample counts are admitted
   before publication. Ratios, throughput, percentile order and reused-chunk
   bounds now refuse inconsistent evidence with typed expected/observed failures;
-  arithmetic and numeric parsing refuse without approximation.
+  arithmetic and numeric parsing refuse without approximation. Byte/count
+  metrics admit only their portable unsigned 64-bit range; timing and throughput
+  retain unsigned 128-bit precision.
 
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
