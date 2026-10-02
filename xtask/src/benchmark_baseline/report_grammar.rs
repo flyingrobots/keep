@@ -53,7 +53,7 @@ fn metadata(lines: &mut Lines<'_>, key: &'static str) -> Result<(), BenchmarkBas
     if matches!(key, "logical-cpu-count" | "sample-count" | "warmup-count") {
         decimal(value)?;
     }
-    Ok(())
+    super::metadata_policy::admit(key, value)
 }
 
 fn metrics(
@@ -68,8 +68,12 @@ fn metrics(
     else {
         return invalid(prefix, observed);
     };
-    let mut count = 0_usize;
-    for value in values.split('\t') {
+    let mut fields = values.split('\t');
+    let sample_count = fields.next().unwrap_or_default();
+    decimal(sample_count)?;
+    super::metadata_policy::require(super::metadata_policy::SAMPLE_COUNT, sample_count)?;
+    let mut count = 1_usize;
+    for value in fields {
         decimal(value)?;
         count = count
             .checked_add(1)

@@ -611,6 +611,8 @@ after its public API and format compatibility policies are established.
   canonical report admission remains in progress. Ordered metadata keys, exact
   headers/catalogs, complete metric widths and canonical unsigned decimals now
   refuse malformed reports while admitting the committed historical fixture.
+  Fixed measurement policies and consistent per-row sample counts are admitted
+  before publication.
 
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.

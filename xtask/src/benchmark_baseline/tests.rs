@@ -290,3 +290,6 @@ fn noncanonical_or_overflowing_decimal_metrics_refuse_exactly() {
         );
     }
 }
+
+#[path = "metadata_policy_tests.rs"]
+mod metadata_policy_tests;
