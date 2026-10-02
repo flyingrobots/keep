@@ -91,7 +91,7 @@ violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 
 Retention publication recovery, fenced reader snapshots and model-based transition evidence are implemented in this branch.
 
-Their correctness corrections and independent acceptance remain tracked in PR #99, including the open incomplete-stage pinning and post-removal failure findings in the [retention recovery contract](retention-recovery.md).
+Their bounded landing and independent acceptance remain tracked in PR #99 and the [landing ledger](../../testing-evidence/retention-landing.md). Incomplete retention stages are preserved pending explicit disposition; automatic disposal is deferred. Execution-failure reporting remains part of the [retention recovery contract](retention-recovery.md).
 
 The `KEEP-CRASH-036..052` initial-publication process-death sequence includes independent recovered-reader checks; its [evidence receipt](../../testing-evidence/retention-crash-reader-oracle.md) records the assertions, calibration, and scope.
 

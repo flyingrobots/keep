@@ -189,22 +189,27 @@ fn a_complete_orphan_root_stage_refuses_publication_until_disposition() -> Resul
 }
 
 #[test]
-fn a_truncated_stage_is_recovered_and_publication_proceeds() -> Result<(), Box<dyn Error>> {
+fn a_truncated_stage_preserves_evidence_and_blocks_publication() -> Result<(), Box<dyn Error>> {
     let (sandbox, mut authority) = open_authority("filesystem-retention-recovered-stage")?;
     let root_bytes = fixture(ROOT_HEX)?;
     let preparation = initial_preparation(&root_bytes)?;
     let stage = sandbox.path().join("retention").join("root.next");
     let prefix = root_bytes.get(..35).ok_or("no root prefix")?;
-    // Only the first stage can be incomplete without protected earlier stages.
+    // Decision A preserves even a first-stage interruption for disposition.
     fs::write(&stage, prefix)?;
 
-    let receipt = execute_retention_publication(&mut authority, &preparation)?;
-
-    assert_eq!(receipt.outcome(), RetentionPublicationOutcome::Published);
+    let before = retention_witness(sandbox.path())?;
+    let error = execute_retention_publication(&mut authority, &preparation)
+        .err()
+        .ok_or("incomplete stage admitted publication")?;
     assert!(
-        !stage.exists(),
-        "the truncated stage must be discarded by recovery"
+        matches!(error, RetentionPublicationError::CurrentVerification { ref source } if matches!(source.get_ref().and_then(|cause| cause.downcast_ref::<super::RetentionCurrentStateRefusal>()), Some(super::RetentionCurrentStateRefusal::RecoveryRefused { source: super::RetentionRecoveryRefusal::IncompleteStageRequiresDisposition { stage: super::RetentionFixedStage::Root, expected: 192, observed: 35 } }))),
+        "publication must retain the disposition cause: {error:?}"
     );
-    assert_eq!(fs::read(head_path(sandbox.path()))?, fixture(HEAD_HEX)?);
+    assert_eq!(
+        retention_witness(sandbox.path())?,
+        before,
+        "blocked publication must preserve every retained byte"
+    );
     Ok(())
 }

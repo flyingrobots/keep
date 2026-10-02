@@ -8,6 +8,11 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Retention recovery now preserves incomplete stages and requires explicit disposition before any recovery mutation or publication retry; automatic incomplete-stage disposal is deferred by maintainer decision (#99).
+
+- Complete-stage cleanup now verifies the retained source as well as the pool target before unlink, detecting source substitution while retaining the opened evidence (#99).
+
+- Earlier retention prefix-validation entries describe historical diagnostic fixes. They do not claim that the current landing automatically discards incomplete stages or proves every prefix has a canonical completion (#99).
 - Recovery preserves interrupted initial roots, manifests and heads as corrupt evidence as soon as any available predecessor byte is nonzero, while retaining possible successor prefixes (#99).
 
 - Recovery rejects partial anchors when even their greatest canonical completion cannot follow the preceding anchor, preserving the exact offending stage (#99).

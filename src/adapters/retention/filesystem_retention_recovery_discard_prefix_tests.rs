@@ -1,4 +1,4 @@
-//! These laws own refusal of incomplete stages with impossible earlier evidence.
+//! These laws own incomplete-stage preservation even when earlier evidence is missing.
 
 use std::error::Error;
 use std::fs;
@@ -91,11 +91,11 @@ fn require_refusal(stage: RetentionFixedStage, missing: Missing) -> Result<(), B
     );
     assert!(
         matches!(result, Err(FilesystemRetentionRecoveryError::Plan {
-        source: RetentionRecoveryRefusal::TruncatedStageWithoutEarlierEvidence {
-            stage: observed, earlier_stage: earlier
+        source: RetentionRecoveryRefusal::IncompleteStageRequiresDisposition {
+            stage: observed, observed: 20, ..
         }
-    }) if observed == stage && earlier == earlier_stage),
-        "impossible {stage:?} prefix must name missing {earlier_stage:?}: {result:?}"
+    }) if observed == stage),
+        "incomplete {stage:?} requires disposition even without {earlier_stage:?}: {result:?}"
     );
     Ok(())
 }

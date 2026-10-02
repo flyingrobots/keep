@@ -7,6 +7,8 @@ use std::fmt;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum RetentionRecordRefusal {
+    /// Automatic disposition of incomplete stages is not supported.
+    IncompleteDispositionRequired,
     /// The expected byte length exceeds the filesystem's range.
     LengthOverflow,
     /// The entry is not a regular file of the expected length.
@@ -24,6 +26,9 @@ pub enum RetentionRecordRefusal {
 impl fmt::Display for RetentionRecordRefusal {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(match self {
+            Self::IncompleteDispositionRequired => {
+                "incomplete retention stage requires explicit disposition"
+            }
             Self::LengthOverflow => "retention record length exceeded the filesystem's range",
             Self::KindOrLength => "retention record kind or length disagreed",
             Self::KindLengthOrIdentity => "retention record kind, length, or identity disagreed",

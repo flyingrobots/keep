@@ -138,11 +138,12 @@ fn every_initial_publication_prefix_recovers_to_its_documented_state() -> Result
 }
 
 #[test]
-fn a_crash_during_each_stage_write_discards_only_that_stage() -> Result<(), Box<dyn Error>> {
-    for (phase, stage, discard) in [
-        (2, "root.next", Step::DiscardRootStage),
-        (8, "manifest.next", Step::DiscardManifestStage),
-        (12, "head.next", Step::DiscardHeadStage),
+fn a_crash_during_each_stage_write_requires_disposition_without_effects()
+-> Result<(), Box<dyn Error>> {
+    for (phase, stage, fixed) in [
+        (2, "root.next", super::RetentionFixedStage::Root),
+        (8, "manifest.next", super::RetentionFixedStage::Manifest),
+        (12, "head.next", super::RetentionFixedStage::Head),
     ] {
         let name = format!("filesystem-retention-recovery-during-{phase}");
         let (sandbox, mut authority) = open_authority(&name)?;
@@ -159,16 +160,17 @@ fn a_crash_during_each_stage_write_discards_only_that_stage() -> Result<(), Box<
         // manifest header 160, and the root header 192.
         let partial = complete.get(..100).ok_or("record shorter than 100 bytes")?;
         fs::write(sandbox.path().join("retention").join(stage), partial)?;
-        let (mut steps, outcome, _retry) = expected(phase - 1);
-        steps.insert(0, discard);
-
-        let receipt = authority
-            .recover()
-            .map_err(|error| format!("during {phase}: {error}"))?;
-
-        assert_eq!(receipt.executed(), steps, "during {phase}: steps");
-        assert_eq!(receipt.outcome(), outcome, "during {phase}: outcome");
-        assert!(!sandbox.path().join("retention").join(stage).exists());
+        let before = super::filesystem_retention_test_fixture::retention_witness(sandbox.path())?;
+        let result = authority.recover();
+        assert!(
+            matches!(result, Err(super::FilesystemRetentionRecoveryError::Plan { source: super::RetentionRecoveryRefusal::IncompleteStageRequiresDisposition { stage: actual, observed: 100, .. } }) if actual == fixed),
+            "during {phase}: typed disposition required: {result:?}"
+        );
+        assert_eq!(
+            super::filesystem_retention_test_fixture::retention_witness(sandbox.path())?,
+            before,
+            "during {phase}: no recovery mutation"
+        );
     }
     Ok(())
 }

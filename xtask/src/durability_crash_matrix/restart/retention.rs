@@ -41,6 +41,9 @@ pub(super) fn verify(
     store_root: &Path,
     case: DurabilityCrashCase,
 ) -> Result<(), DurabilityCrashMatrixError> {
+    if let Some(stage) = prefix(case).1 {
+        return super::retention_incomplete::verify(store_root, stage);
+    }
     let (steps, outcome, retry) = expected(case);
     let mut authority = reopened_authority(store_root)?;
     let receipt = authority
@@ -129,8 +132,8 @@ const fn atomic(point: DurabilityCrashPoint) -> bool {
 
 /// The documented recovery for the prefix a coordinate leaves behind.
 fn expected(case: DurabilityCrashCase) -> (Vec<Step>, Outcome, Retry) {
-    let (count, truncated) = prefix(case);
-    let (mut steps, outcome, retry) = match count {
+    let (count, _) = prefix(case);
+    let (steps, outcome, retry) = match count {
         0 | 1 => (vec![], Outcome::Clean, Retry::Published),
         2..=5 => (vec![Step::LinkRoot], PROTECTED_ROOT, Retry::Refused),
         6 | 7 => (vec![], PROTECTED_ROOT, Retry::Refused),
@@ -157,8 +160,5 @@ fn expected(case: DurabilityCrashCase) -> (Vec<Step>, Outcome, Retry) {
         ),
         _ => (vec![], Outcome::Clean, Retry::AlreadyCommitted),
     };
-    if let Some(discard) = truncated {
-        steps.insert(0, discard);
-    }
     (steps, outcome, retry)
 }

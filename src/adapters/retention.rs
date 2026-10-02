@@ -177,7 +177,6 @@ mod verified_closure;
 mod filesystem_retention_forward_error_tests;
 mod reader_attempt_limit;
 mod reader_fence;
-mod recovery_discard_prefix;
 mod recovery_evidence;
 mod recovery_execution;
 #[cfg(test)]
@@ -198,6 +197,7 @@ mod retention_record_refusal;
 mod retention_storage_error;
 #[cfg(test)]
 mod retention_storage_error_law_tests;
+mod retention_storage_progress;
 mod retention_view_collector;
 #[cfg(test)]
 mod retention_view_collector_tests;
@@ -258,6 +258,10 @@ pub use recovery_stage_assessment::{
 pub use recovery_storage::RetentionRecoveryStorage;
 pub use retention_record_refusal::RetentionRecordRefusal;
 pub use retention_storage_error::RetentionStorageError;
+pub use retention_storage_progress::{
+    RetentionEffectDurability, RetentionKnownEffect, RetentionNamespaceEffect,
+    RetentionStorageBoundary, RetentionStorageProgress,
+};
 pub use retention_view_collector::{
     RetentionViewCoordinates, RetentionViewError, RetentionViewSource, collect_retention_view,
 };

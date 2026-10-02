@@ -9,25 +9,25 @@ use super::RetentionStorageError;
 /// evidence would survive process death. Every capability is called at most
 /// once per plan, in plan order, and never after a refused capability.
 pub trait RetentionRecoveryStorage {
-    /// Removes a truncated `head.next` and synchronizes `retention`.
+    /// Reserved incomplete-head disposition capability; automatic disposal is deferred.
     ///
     /// # Errors
     ///
-    /// Returns the exact filesystem failure; the stage must remain when it fails.
+    /// Must refuse without mutation. The filesystem adapter returns `IncompleteDispositionRequired`.
     fn discard_head_stage(&mut self) -> Result<(), RetentionStorageError>;
 
-    /// Removes a truncated, never linked `manifest.next` and synchronizes `retention`.
+    /// Reserved incomplete-manifest disposition capability; automatic disposal is deferred.
     ///
     /// # Errors
     ///
-    /// Returns the exact filesystem failure; the stage must remain when it fails.
+    /// Must refuse without mutation. The filesystem adapter returns `IncompleteDispositionRequired`.
     fn discard_manifest_stage(&mut self) -> Result<(), RetentionStorageError>;
 
-    /// Removes a truncated, never linked `root.next` and synchronizes `retention`.
+    /// Reserved incomplete-root disposition capability; automatic disposal is deferred.
     ///
     /// # Errors
     ///
-    /// Returns the exact filesystem failure; the stage must remain when it fails.
+    /// Must refuse without mutation. The filesystem adapter returns `IncompleteDispositionRequired`.
     fn discard_root_stage(&mut self) -> Result<(), RetentionStorageError>;
 
     /// Admits the staged root's namespace directory, links the complete root

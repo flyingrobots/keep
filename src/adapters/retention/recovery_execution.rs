@@ -40,6 +40,13 @@ pub struct RetentionRecoveryError {
 }
 
 impl RetentionRecoveryError {
+    /// Effects reported by the failing capability, independently of preceding completed steps.
+    ///
+    /// `None` means that adapter did not report its effects; it does not mean no mutation.
+    #[must_use]
+    pub const fn progress(&self) -> Option<&super::RetentionStorageProgress> {
+        self.source.progress()
+    }
     /// The precise storage failure, without dynamic downcasting.
     #[must_use]
     pub const fn storage_error(&self) -> &RetentionStorageError {

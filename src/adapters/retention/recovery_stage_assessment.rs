@@ -7,13 +7,11 @@ use super::{
 
 /// One fixed retention stage as assessed from its exact bytes at restart.
 ///
-/// `Truncated` means the bytes end before the boundary the record's own
-/// framing declares, available fixed-field bytes are canonical, and any complete
-/// generation field is positive. This is the shape a crash during the stage
-/// write leaves behind. A short record with
-/// a noncanonical fixed-field byte is `Corrupt`, just as a complete-looking record
-/// that fails a checksum, digest, or semantic law is unrecoverable ambiguity,
-/// never an incomplete write.
+/// `Truncated` means decoding needs more bytes and the available checks found
+/// no contradiction. It does not prove that a canonical completion exists or
+/// authorize disposal. Recovery preserves these bytes for explicit disposition.
+/// Demonstrated fixed-field, checksum, digest or semantic contradictions remain
+/// `Corrupt` with their precise diagnostic.
 #[derive(Debug)]
 pub enum RetentionStageAssessment<Record, Error> {
     /// No entry exists under the stage name.
@@ -22,7 +20,7 @@ pub enum RetentionStageAssessment<Record, Error> {
     Complete(Record),
     /// The bytes end before the declared record boundary.
     Truncated {
-        /// The length the framing declares.
+        /// The next minimum length required by decoding; not a completion proof.
         expected: usize,
         /// The length that was present.
         observed: usize,

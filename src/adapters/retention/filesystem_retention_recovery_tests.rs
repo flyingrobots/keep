@@ -90,7 +90,7 @@ fn a_synchronized_head_stage_is_finalized_and_the_retry_is_already_committed()
 }
 
 #[test]
-fn a_truncated_root_stage_is_discarded() -> Result<(), Box<dyn Error>> {
+fn a_truncated_root_stage_is_preserved_for_disposition() -> Result<(), Box<dyn Error>> {
     let (sandbox, mut authority) = open_authority("filesystem-retention-recovery-truncated")?;
     let root_bytes = fixture(ROOT_HEX)?;
     let stage = sandbox.path().join("retention").join("root.next");
@@ -101,11 +101,24 @@ fn a_truncated_root_stage_is_discarded() -> Result<(), Box<dyn Error>> {
             .ok_or("root fixture shorter than 100 bytes")?,
     )?;
 
-    let receipt = authority.recover()?;
-
-    assert_eq!(receipt.executed(), [Step::DiscardRootStage]);
-    assert_eq!(receipt.outcome(), Outcome::Clean);
-    assert!(!stage.exists());
+    let result = authority.recover();
+    assert!(
+        matches!(
+            result,
+            Err(super::FilesystemRetentionRecoveryError::Plan {
+                source: super::RetentionRecoveryRefusal::IncompleteStageRequiresDisposition {
+                    stage: super::RetentionFixedStage::Root,
+                    expected: 192,
+                    observed: 100
+                }
+            })
+        ),
+        "incomplete root must require disposition: {result:?}"
+    );
+    assert_eq!(
+        fs::read(stage)?,
+        root_bytes.get(..100).ok_or("missing prefix")?
+    );
     Ok(())
 }
 

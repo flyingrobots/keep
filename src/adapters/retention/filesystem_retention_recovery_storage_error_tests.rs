@@ -168,3 +168,70 @@ fn substituted_cleanup_source_refuses_before_unlink() -> Result<(), Box<dyn Erro
     );
     Ok(())
 }
+
+// Size: medium. Oracle: failed directory synchronization cannot roll back an earlier unlink.
+// Real filesystem unlink, deterministic injected EIO before directory sync; not a power-loss test.
+// Delete only when stronger public recovery failure/restart laws subsume this exact effect boundary.
+#[test]
+fn cleanup_sync_failure_reports_removed_stage_and_preserved_pool() -> Result<(), Box<dyn Error>> {
+    use crate::adapters::retention::{
+        FilesystemRetentionRecoveryError, RetentionEffectDurability as Durability,
+        RetentionNamespaceEffect as Effect, RetentionStorageBoundary as Boundary,
+    };
+    let (sandbox, mut authority) = open_authority("cleanup-sync-failure")?;
+    let root = fixture(ROOT_HEX)?;
+    let preparation = initial_preparation(&root)?;
+    drive_publication(&mut authority, &preparation, 15)?;
+    authority.recovery_sync_failure = Some(Boundary::RetentionSynchronization);
+    let error = match authority.recover() {
+        Err(FilesystemRetentionRecoveryError::Execute { source }) => source,
+        result => return Err(format!("expected cleanup sync failure: {result:?}").into()),
+    };
+    assert_eq!(error.step(), RetentionRecoveryStep::RemoveRootStage);
+    assert!(
+        error.executed().is_empty(),
+        "no preceding step completed despite the failing capability's unlink"
+    );
+    let progress = error
+        .progress()
+        .ok_or("missing failing-capability effects after unlink")?;
+    assert_eq!(progress.boundary(), Boundary::RetentionSynchronization);
+    assert_eq!(
+        progress
+            .known_effects()
+            .iter()
+            .map(|effect| (effect.effect(), effect.durability()))
+            .collect::<Vec<_>>(),
+        [(Effect::StageRemoved, Durability::Unconfirmed)]
+    );
+    assert_eq!(progress.uncertain_effect(), None);
+    assert_eq!(
+        cause::<io::Error>(&error).and_then(io::Error::raw_os_error),
+        Some(rustix::io::Errno::IO.raw_os_error())
+    );
+    assert!(
+        !sandbox.path().join("retention/root.next").exists(),
+        "unlink already occurred"
+    );
+    let pool = crate::adapters::retention::filesystem_retention_test_fixture::root_pool_path(
+        sandbox.path(),
+        preparation.candidate(),
+    );
+    assert_eq!(
+        fs::read(pool)?,
+        root,
+        "exact pool evidence survives cleanup failure"
+    );
+    assert!(
+        sandbox.path().join("retention/manifest.next").exists(),
+        "later cleanup must not execute"
+    );
+    authority.recovery_sync_failure = None;
+    let retry = authority.recover()?;
+    assert_eq!(
+        retry.executed(),
+        [RetentionRecoveryStep::RemoveManifestStage],
+        "retry must freshly observe the completed unlink"
+    );
+    Ok(())
+}

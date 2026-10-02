@@ -81,7 +81,7 @@ Version-2 retention recovery, fenced reader snapshots and model-based transition
 
 The retention process-death sequence checks the recovered head generation and exact selected-root bytes before retry; its [evidence receipt](docs/testing-evidence/retention-crash-reader-oracle.md) bounds that claim to the declared initial-publication crash coordinates.
 
-Incomplete-stage pinning and failure handling after removal remain open retention recovery findings; the [recovery contract](docs/formats/segment-store-v2/retention-recovery.md) remains binding.
+Incomplete retention stages are preserved and block publication pending explicit disposition; automatic disposal is deferred. The [landing ledger](docs/testing-evidence/retention-landing.md) tracks execution-failure reporting and final acceptance under the [approved recovery contract](docs/formats/segment-store-v2/retention-recovery.md).
 
 Complete orphans remain recovery-protected until explicit disposition lands with garbage collection (#21).
 

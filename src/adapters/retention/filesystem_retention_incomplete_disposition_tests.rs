@@ -10,6 +10,75 @@ use super::{
 };
 use std::{error::Error, fs};
 
+// Size: medium. Oracle: reserved lower-level capabilities cannot bypass decision A.
+// Delete only when these public capabilities are removed or stronger bypass coverage replaces it.
+#[test]
+fn direct_discard_capabilities_refuse_without_mutation() -> Result<(), Box<dyn Error>> {
+    use super::{RetentionRecordRefusal, RetentionRecoveryStorage, RetentionStorageError};
+    let (sandbox, mut authority) = open_authority("direct-disposition-bypass")?;
+    for name in ["root.next", "manifest.next", "head.next"] {
+        fs::write(
+            sandbox.path().join("retention").join(name),
+            b"retained evidence",
+        )?;
+    }
+    let before = retention_witness(sandbox.path())?;
+    for result in [
+        authority.discard_root_stage(),
+        authority.discard_manifest_stage(),
+        authority.discard_head_stage(),
+    ] {
+        assert!(
+            matches!(
+                result,
+                Err(RetentionStorageError::Refused {
+                    source: RetentionRecordRefusal::IncompleteDispositionRequired
+                })
+            ),
+            "reserved discard must refuse explicitly: {result:?}"
+        );
+        assert_eq!(
+            retention_witness(sandbox.path())?,
+            before,
+            "reserved discard must preserve all bytes"
+        );
+    }
+    Ok(())
+}
+
+// Size: medium. Oracle: demonstrated checksum corruption remains distinct from incompleteness.
+// Delete only when stronger mixed-stage admission laws preserve the exact corruption diagnostic.
+#[test]
+fn known_corruption_precedes_incomplete_disposition() -> Result<(), Box<dyn Error>> {
+    let (sandbox, mut authority) = open_authority("mixed-incomplete-corrupt")?;
+    let root = fixture(ROOT_HEX)?;
+    let preparation = initial_preparation(&root)?;
+    let mut corrupt = root.clone();
+    *corrupt.last_mut().ok_or("empty root")? ^= 1;
+    fs::write(sandbox.path().join("retention/root.next"), corrupt)?;
+    fs::write(sandbox.path().join("retention/head.next"), b"")?;
+    let before = retention_witness(sandbox.path())?;
+    let result = authority.recover();
+    assert!(
+        matches!(result, Err(FilesystemRetentionRecoveryError::Plan { source: RetentionRecoveryRefusal::StageCorrupt { stage: Stage::Root, ref source } }) if matches!(source.downcast_ref::<super::RetentionRootDecodeError>(), Some(super::RetentionRootDecodeError::ChecksumMismatch { .. }))),
+        "known checksum corruption must remain precise: {result:?}"
+    );
+    let error = authority
+        .verify_current(&preparation)
+        .err()
+        .ok_or("corruption admitted")?;
+    assert!(
+        matches!(error.get_ref().and_then(|cause| cause.downcast_ref::<RetentionCurrentStateRefusal>()), Some(RetentionCurrentStateRefusal::RecoveryRefused { source: RetentionRecoveryRefusal::StageCorrupt { stage: Stage::Root, source } }) if matches!(source.downcast_ref::<super::RetentionRootDecodeError>(), Some(super::RetentionRootDecodeError::ChecksumMismatch { .. }))),
+        "publication preserves checksum cause: {error:?}"
+    );
+    assert_eq!(
+        retention_witness(sandbox.path())?,
+        before,
+        "mixed-stage refusals preserve evidence"
+    );
+    Ok(())
+}
+
 // Size: medium. Oracle: maintainer decision A forbids mutation before incomplete disposition.
 // Behavior change: former incomplete-stage cleanup successes now refuse; delete only if superseded.
 #[test]

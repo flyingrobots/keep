@@ -8,7 +8,7 @@ use cap_std::fs::Dir;
 
 use super::filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
 use super::filesystem_retention_pool_name as pool_name;
-use super::filesystem_retention_recovery_observation::{RetentionRecoveryObservation, StageBytes};
+use super::filesystem_retention_recovery_observation::RetentionRecoveryObservation;
 use super::filesystem_retention_stage::{FilesystemRetentionStage, invalid_data};
 use super::filesystem_retention_storage::require_pinned_directories;
 use super::{
@@ -18,7 +18,6 @@ use super::{
 };
 use crate::adapters::CatalogRestartPolicy;
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
-use crate::adapters::filesystem_exact_record::{self as exact_record, EntryIdentity};
 
 #[cfg(test)]
 #[path = "filesystem_retention_recovery_storage_error_tests.rs"]
@@ -32,11 +31,8 @@ pub(super) enum RecoveredStage {
         pool_name: String,
         namespace: Option<String>,
     },
-    /// A truncated stage identified for discard.
-    Truncated {
-        identity: EntryIdentity,
-        length: u64,
-    },
+    /// Incomplete evidence cannot authorize a filesystem mutation.
+    Incomplete,
 }
 
 /// The retained stages one recovery run operates on.
@@ -61,7 +57,7 @@ impl RetentionRecoveryContext {
                         pool_name: pool_name::root(admitted.root().generation(), admitted.digest()),
                         namespace: Some(pool_name::namespace(admitted.root().namespace().digest())),
                     }),
-                    _ => Ok(truncated(stage)),
+                    _ => Ok(RecoveredStage::Incomplete),
                 }
             })
             .transpose()?;
@@ -81,7 +77,7 @@ impl RetentionRecoveryContext {
                         ),
                         namespace: None,
                     }),
-                    _ => Ok(truncated(stage)),
+                    _ => Ok(RecoveredStage::Incomplete),
                 }
             })
             .transpose()?;
@@ -98,7 +94,7 @@ impl RetentionRecoveryContext {
                         pool_name: pool_name::HEAD.to_owned(),
                         namespace: None,
                     }),
-                    _ => Ok(truncated(stage)),
+                    _ => Ok(RecoveredStage::Incomplete),
                 }
             })
             .transpose()?;
@@ -110,18 +106,11 @@ impl RetentionRecoveryContext {
     }
 }
 
-fn truncated(stage: &StageBytes) -> RecoveredStage {
-    RecoveredStage::Truncated {
-        identity: stage.identity,
-        length: u64::try_from(stage.bytes.len()).unwrap_or(u64::MAX),
-    }
-}
-
 impl FilesystemRetentionPublicationAuthority {
     /// Recovers fixed retention stages with an explicit catalog loading policy.
     ///
     /// The synchronous call runs under the retained writer lock. A clean store
-    /// returns an empty receipt; a truncated pre-effect stage is discarded; a
+    /// returns an empty receipt; an incomplete stage requires disposition; a
     /// complete stage is linked and retained as a recovery-protected orphan;
     /// a complete head over linked stages is finalized. Any pending
     /// publication attempt is discarded first. Publication calls this itself
@@ -198,45 +187,23 @@ fn take_complete(
     }
 }
 
-fn discard_truncated(
-    retention: &Dir,
-    name: &str,
-    slot: &mut Option<RecoveredStage>,
-) -> Result<(), RetentionStorageError> {
-    let Some(RecoveredStage::Truncated { identity, length }) = slot.take() else {
-        return Err(invalid_data("recovery step expected a truncated stage").into());
-    };
-    let metadata = retention.symlink_metadata(name)?;
-    if !metadata.is_file() || metadata.len() != length || EntryIdentity::from(&metadata) != identity
-    {
-        return Err(RetentionStorageError::Refused {
-            source: super::RetentionRecordRefusal::KindLengthOrIdentity,
-        });
-    }
-    retention.remove_file(name)?;
-    exact_record::require_absent(retention, name)
-        .map_err(super::filesystem_retention_stage::retention_error)?;
-    synchronize_directory(retention).map_err(Into::into)
+const fn disposition_required() -> Result<(), RetentionStorageError> {
+    Err(RetentionStorageError::Refused {
+        source: super::RetentionRecordRefusal::IncompleteDispositionRequired,
+    })
 }
 
 impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
     fn discard_head_stage(&mut self) -> Result<(), RetentionStorageError> {
-        let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
-        discard_truncated(&self.retention, pool_name::HEAD_STAGE, &mut context.head)
+        disposition_required()
     }
 
     fn discard_manifest_stage(&mut self) -> Result<(), RetentionStorageError> {
-        let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
-        discard_truncated(
-            &self.retention,
-            pool_name::MANIFEST_STAGE,
-            &mut context.manifest,
-        )
+        disposition_required()
     }
 
     fn discard_root_stage(&mut self) -> Result<(), RetentionStorageError> {
-        let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
-        discard_truncated(&self.retention, pool_name::ROOT_STAGE, &mut context.root)
+        disposition_required()
     }
 
     fn link_root(&mut self) -> Result<(), RetentionStorageError> {
@@ -281,7 +248,10 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
         let (stage, _name, _namespace) = take_complete(&mut context.head)?;
         stage.synchronize(&self.retention)?;
         stage.replace(&self.retention, pool_name::HEAD)?;
-        synchronize_directory(&self.retention).map_err(Into::into)
+        self.synchronize_recovery_directory(
+            &self.retention,
+            super::RetentionStorageBoundary::RetentionSynchronization,
+        )
     }
 
     fn remove_root_stage(&mut self) -> Result<(), RetentionStorageError> {
@@ -290,13 +260,34 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
         let namespace = namespace.ok_or_else(|| invalid_data("root stage without a namespace"))?;
         let directory = self.roots.open_dir_nofollow(&namespace)?;
         stage.remove(&self.retention, &directory, &name)?;
-        synchronize_directory(&self.retention).map_err(Into::into)
+        self.synchronize_recovery_directory(
+            &self.retention,
+            super::RetentionStorageBoundary::RetentionSynchronization,
+        )
     }
 
     fn remove_manifest_stage(&mut self) -> Result<(), RetentionStorageError> {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
         let (stage, name, _namespace) = take_complete(&mut context.manifest)?;
         stage.remove(&self.retention, &self.manifests, &name)?;
-        synchronize_directory(&self.retention).map_err(Into::into)
+        self.synchronize_recovery_directory(
+            &self.retention,
+            super::RetentionStorageBoundary::RetentionSynchronization,
+        )
+    }
+}
+
+impl FilesystemRetentionPublicationAuthority {
+    fn synchronize_recovery_directory(
+        &self,
+        directory: &Dir,
+        boundary: super::RetentionStorageBoundary,
+    ) -> Result<(), RetentionStorageError> {
+        #[cfg(test)]
+        if self.recovery_sync_failure == Some(boundary) {
+            return Err(io::Error::from_raw_os_error(rustix::io::Errno::IO.raw_os_error()).into());
+        }
+        let _ = boundary;
+        synchronize_directory(directory).map_err(Into::into)
     }
 }

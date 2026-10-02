@@ -90,6 +90,7 @@ impl FilesystemRetentionStage {
         target: &Dir,
         name: &str,
     ) -> Result<(), RetentionStorageError> {
+        self.verify_stage(root)?;
         verify_named_record(target, name, &self.expected, self.identity)?;
         root.remove_file(self.name)?;
         exact_record::require_absent(root, self.name).map_err(retention_error)?;
