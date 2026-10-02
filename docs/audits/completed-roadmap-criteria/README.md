@@ -16,12 +16,15 @@ The [foundation verdicts](foundations.md),
 [reference-store and read verdicts](reference-store-and-reads.md), and
 [conformance-oracle verdicts](conformance-oracles.md), and
 [benchmark-baseline verdict](benchmark-baseline.md), and
-[architecture verdicts](architecture.md) cover the
-first 30 remaining checked tasks. Each separates acceptance and mainline
+[architecture verdicts](architecture.md), and
+[immutable-segment verdicts](immutable-segments.md) cover the
+first 33 remaining checked tasks. Each separates acceptance and mainline
 delivery and names inspected evidence and limits. T-06.3 has unresolved
 acceptance scope; T-06.3 and T-06.4 are not delivered on main. T-09.1's
 canonical report-admission gap is owned by issue #142. T-10.2
 misses forbidden-filename enforcement; issue #144 owns that correction.
+T-11.2 exposes writable stage authority after sealing; issue #146 owns that
+correction. T-11.3 has an outdated named evidence path, tracked under #69.
 
 Validation now uses separate Docker build directories per source clone.
 A shared target directory reused a stale test binary across clones; those
