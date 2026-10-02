@@ -683,6 +683,8 @@ after its public API and format compatibility policies are established.
 
 - Retention recovery refuses an interrupted root, manifest, or head stage when any available magic, version, fixed width, flag, or reserved byte contradicts the canonical format (#99). The typed `PrefixByteMismatch` names the actual byte and offset without inventing missing bytes; refusal preserves retained evidence. Canonical interrupted prefixes remain recoverable. Complete-record decoding and on-disk bytes are unchanged; the decode-error enums gain a diagnostic variant.
 
+- Subprocess test-support readiness admits a queued valid signal after sender exit, preventing a false process-group cleanup failure without retrying the test gate.
+
 - The version-one catalog ledger names its executable ordering integration
   target, duplicate-refusal module, and filesystem publication unit-test owner
   instead of absent test files (#148).
