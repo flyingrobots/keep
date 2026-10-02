@@ -7,7 +7,12 @@ use super::RetentionStorageError;
 /// Each capability owns its complete effect and the synchronization that makes
 /// it durable, so an implementation cannot report a step as done before its
 /// evidence would survive process death. Every capability is called at most
-/// once per plan, in plan order, and never after a refused capability.
+/// once per plan, in plan order, and never after a failed capability.
+///
+/// Failure is not rollback: report the failing boundary and known/uncertain
+/// namespace effects through `RetentionStorageError::Operation` when available.
+/// Missing progress is unreported effects, never proof of no mutation. A caller
+/// must obtain fresh observation before another attempt.
 pub trait RetentionRecoveryStorage {
     /// Reserved incomplete-head disposition capability; automatic disposal is deferred.
     ///

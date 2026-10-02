@@ -161,6 +161,18 @@ fn substituted_cleanup_source_refuses_before_unlink() -> Result<(), Box<dyn Erro
         error.executed().is_empty(),
         "no preceding recovery step completed"
     );
+    let progress = error
+        .progress()
+        .ok_or("source refusal omitted pre-effect status")?;
+    assert_eq!(
+        progress.boundary(),
+        crate::RetentionStorageBoundary::SourceVerification
+    );
+    assert!(
+        progress.known_effects().is_empty(),
+        "source guard precedes namespace effects"
+    );
+    assert_eq!(progress.uncertain_effect(), None);
     assert_eq!(
         retention_witness(sandbox.path())?,
         before,
@@ -226,12 +238,49 @@ fn cleanup_sync_failure_reports_removed_stage_and_preserved_pool() -> Result<(),
         sandbox.path().join("retention/manifest.next").exists(),
         "later cleanup must not execute"
     );
-    authority.recovery_sync_failure = None;
-    let retry = authority.recover()?;
+    drop(authority);
+    let admission =
+        crate::adapters::FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(
+            sandbox.path(),
+        )?;
+    let mut restarted =
+        crate::adapters::retention::FilesystemRetentionPublicationAuthority::open(admission)?;
+    let retry = restarted.recover()?;
     assert_eq!(
         retry.executed(),
         [RetentionRecoveryStep::RemoveManifestStage],
         "retry must freshly observe the completed unlink"
     );
+    Ok(())
+}
+
+// Size: medium. Oracle: an observed stage identity remains binding when execution reopens it.
+// Bug regression; delete only when stronger recovery observation-to-execution coverage subsumes it.
+#[test]
+fn substitution_before_reopening_refuses_without_rebinding_evidence() -> Result<(), Box<dyn Error>>
+{
+    let (sandbox, mut authority) = open_authority("recovery-observation-substitution")?;
+    let root = fixture(ROOT_HEX)?;
+    let preparation = initial_preparation(&root)?;
+    drive_publication(&mut authority, &preparation, 2)?;
+    let observation = RetentionRecoveryObservation::observe(
+        &authority.retention,
+        &authority.roots,
+        &authority.manifests,
+    )?;
+    let stage = sandbox.path().join("retention/root.next");
+    let replacement = stage.with_extension("replacement");
+    fs::copy(&stage, &replacement)?;
+    fs::rename(replacement, stage)?;
+    let before = retention_witness(sandbox.path())?;
+    let error = RetentionRecoveryContext::reopen(&authority.retention, &observation)
+        .err()
+        .ok_or("reopening silently rebound observed stage identity")?;
+    assert_eq!(
+        cause::<RetentionRecordRefusal>(&error),
+        Some(&RetentionRecordRefusal::KindLengthOrIdentity),
+        "observed substitution must preserve its identity diagnostic"
+    );
+    assert_eq!(retention_witness(sandbox.path())?, before);
     Ok(())
 }

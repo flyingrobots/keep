@@ -1,5 +1,7 @@
 # Retention recovery discard-prefix evidence
 
+Historical evidence at the recorded revisions. The [bounded landing contract](retention-landing.md) supersedes automatic incomplete-stage disposal and changes the corresponding success expectations; this receipt does not establish current disposal safety.
+
 Change kind: bug fix with a more precise refusal diagnostic for an already-refused case. Subject: Keep runtime recovery. Size: medium. Oracle: the ordered forward publication protocol requires complete linked earlier stages before any manifest or head write begins, and impossible-prefix refusal preserves retained bytes.
 
 Regression commit `0e5de49` introduced the typed refusal vocabulary and runtime laws without adding the planner guard. Its first parallel run had shared scratch-directory collisions; that run is not evidence for the affected cases. Commit `382abd3` gives each fault case its own stage-and-fault label. A separate copied tree carrying those isolated laws and the unfixed planner was observed RED at the intended assertions. A setup run with an unused new guard module was also excluded from RED evidence.

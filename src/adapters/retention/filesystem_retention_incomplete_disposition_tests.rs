@@ -31,9 +31,7 @@ fn direct_discard_capabilities_refuse_without_mutation() -> Result<(), Box<dyn E
         assert!(
             matches!(
                 result,
-                Err(RetentionStorageError::Refused {
-                    source: RetentionRecordRefusal::IncompleteDispositionRequired
-                })
+                Err(RetentionStorageError::Operation { ref source, .. }) if matches!(source.as_ref(), RetentionStorageError::Refused { source: RetentionRecordRefusal::IncompleteDispositionRequired })
             ),
             "reserved discard must refuse explicitly: {result:?}"
         );

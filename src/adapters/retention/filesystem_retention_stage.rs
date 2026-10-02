@@ -1,5 +1,9 @@
 //! This module owns exact variable-length retention stage publication.
 
+use super::{
+    RetentionEffectDurability as Durability, RetentionNamespaceEffect as Effect,
+    RetentionStorageBoundary as Boundary,
+};
 use super::{RetentionRecordRefusal, RetentionStorageError};
 use std::io::{self, Write};
 
@@ -9,6 +13,22 @@ use crate::adapters::filesystem_catalog_artifact;
 use crate::adapters::filesystem_exact_record::{
     self as exact_record, EntryIdentity, ExactRecordError, ExactRecordRefusal,
 };
+
+/// Whether a no-replacement link call created a namespace entry.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum RetentionLinkOutcome {
+    Created,
+    Existing,
+}
+
+impl RetentionLinkOutcome {
+    pub(super) fn report(self, error: RetentionStorageError) -> RetentionStorageError {
+        match self {
+            Self::Created => error.after(Effect::PoolLinkCreated, Durability::Unconfirmed),
+            Self::Existing => error,
+        }
+    }
+}
 
 /// One exclusively created, verified, and retained retention stage file.
 ///
@@ -45,15 +65,15 @@ impl FilesystemRetentionStage {
     /// Reopens a retained stage whose exact bytes restart already read.
     ///
     /// The handle and the named entry are verified against `expected` and
-    /// bound to the entry's identity, so every later transition refuses a
+    /// bound to the observed entry's identity, so every later transition refuses a
     /// substituted or replaced stage exactly as a freshly created one would.
     pub(super) fn reopen(
         root: &Dir,
         name: &'static str,
         expected: &[u8],
+        identity: EntryIdentity,
     ) -> Result<Self, RetentionStorageError> {
         let file = exact_record::open_read(root, name)?;
-        let identity = EntryIdentity::of_file(&file)?;
         verify_named_record(root, name, expected, identity)?;
         Ok(Self {
             name,
@@ -65,9 +85,13 @@ impl FilesystemRetentionStage {
 
     /// Synchronizes the complete stage and reverifies its exact bytes.
     pub(super) fn synchronize(&self, root: &Dir) -> Result<(), RetentionStorageError> {
-        self.require_handle()?;
-        self.file.sync_all()?;
         self.verify_stage(root)
+            .map_err(|error| error.at(Boundary::SourceVerification))?;
+        self.file.sync_all().map_err(|source| {
+            RetentionStorageError::from(source).at(Boundary::StageSynchronization)
+        })?;
+        self.verify_stage(root)
+            .map_err(|error| error.at(Boundary::SourceVerification))
     }
 
     /// Links the verified stage into `target` under `name` without replacement.
@@ -76,33 +100,74 @@ impl FilesystemRetentionStage {
         root: &Dir,
         target: &Dir,
         name: &str,
-    ) -> Result<(), RetentionStorageError> {
-        self.verify_stage(root)?;
-        exact_record::link_without_replacement(root, self.name, target, name)?;
-        self.verify_stage(root)?;
+    ) -> Result<RetentionLinkOutcome, RetentionStorageError> {
+        self.verify_stage(root)
+            .map_err(|error| error.at(Boundary::SourceVerification))?;
+        let outcome = match root.hard_link(self.name, target, name) {
+            Ok(()) => RetentionLinkOutcome::Created,
+            Err(source) if source.kind() == io::ErrorKind::AlreadyExists => {
+                RetentionLinkOutcome::Existing
+            }
+            Err(source) => {
+                return Err(RetentionStorageError::from(source)
+                    .at(Boundary::PoolLink)
+                    .uncertain(Effect::PoolLinkCreated));
+            }
+        };
+        self.verify_stage(root)
+            .map_err(|error| outcome.report(error.at(Boundary::SourceVerification)))?;
         verify_named_record(target, name, &self.expected, self.identity)
+            .map_err(|error| outcome.report(error.at(Boundary::PoolVerification)))?;
+        Ok(outcome)
     }
 
     /// Removes only the retained stage after confirming its linked target.
     pub(super) fn remove(
-        self,
+        &self,
         root: &Dir,
         target: &Dir,
         name: &str,
     ) -> Result<(), RetentionStorageError> {
-        self.verify_stage(root)?;
-        verify_named_record(target, name, &self.expected, self.identity)?;
-        root.remove_file(self.name)?;
-        exact_record::require_absent(root, self.name).map_err(retention_error)?;
+        self.verify_stage(root)
+            .map_err(|error| error.at(Boundary::SourceVerification))?;
         verify_named_record(target, name, &self.expected, self.identity)
+            .map_err(|error| error.at(Boundary::PoolVerification))?;
+        root.remove_file(self.name).map_err(|source| {
+            RetentionStorageError::from(source)
+                .at(Boundary::StageUnlink)
+                .uncertain(Effect::StageRemoved)
+        })?;
+        exact_record::require_absent(root, self.name).map_err(|error| {
+            retention_error(error)
+                .at(Boundary::StageAbsence)
+                .after(Effect::StageRemoved, Durability::Unconfirmed)
+        })?;
+        verify_named_record(target, name, &self.expected, self.identity).map_err(|error| {
+            error
+                .at(Boundary::PoolVerification)
+                .after(Effect::StageRemoved, Durability::Unconfirmed)
+        })
     }
 
     /// Renames the verified stage onto `name`, replacing it atomically.
-    pub(super) fn replace(self, root: &Dir, name: &str) -> Result<(), RetentionStorageError> {
-        self.verify_stage(root)?;
-        root.rename(self.name, root, name)?;
-        exact_record::require_absent(root, self.name).map_err(retention_error)?;
-        verify_named_record(root, name, &self.expected, self.identity)
+    pub(super) fn replace(&self, root: &Dir, name: &str) -> Result<(), RetentionStorageError> {
+        self.verify_stage(root)
+            .map_err(|error| error.at(Boundary::SourceVerification))?;
+        root.rename(self.name, root, name).map_err(|source| {
+            RetentionStorageError::from(source)
+                .at(Boundary::HeadRename)
+                .uncertain(Effect::HeadReplaced)
+        })?;
+        exact_record::require_absent(root, self.name).map_err(|error| {
+            retention_error(error)
+                .at(Boundary::StageAbsence)
+                .after(Effect::HeadReplaced, Durability::Unconfirmed)
+        })?;
+        verify_named_record(root, name, &self.expected, self.identity).map_err(|error| {
+            error
+                .at(Boundary::HeadVerification)
+                .after(Effect::HeadReplaced, Durability::Unconfirmed)
+        })
     }
 
     fn require_handle(&self) -> Result<(), RetentionStorageError> {

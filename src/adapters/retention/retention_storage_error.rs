@@ -4,7 +4,10 @@ use std::error::Error;
 use std::fmt;
 use std::io;
 
-use super::{RetentionRecordRefusal, RetentionStorageProgress};
+use super::{
+    RetentionEffectDurability, RetentionKnownEffect, RetentionNamespaceEffect,
+    RetentionRecordRefusal, RetentionStorageBoundary, RetentionStorageProgress,
+};
 
 /// An operational failure or exact-record refusal during retention storage.
 #[derive(Debug)]
@@ -13,7 +16,7 @@ pub enum RetentionStorageError {
     /// An operation stopped at a known boundary, possibly after namespace effects.
     Operation {
         /// The original typed storage cause, never stringified.
-        source: Box<RetentionStorageError>,
+        source: Box<Self>,
         /// Known effects and uncertainty within this failing capability.
         progress: RetentionStorageProgress,
     },
@@ -64,14 +67,53 @@ impl From<RetentionStorageError> for io::Error {
         match error {
             RetentionStorageError::Io { source } => source,
             refused @ (RetentionStorageError::Refused { .. }
-            | RetentionStorageError::Operation { .. }) => {
-                Self::new(io::ErrorKind::InvalidData, refused)
-            }
+            | RetentionStorageError::Operation { .. }) => Self::new(refused.io_kind(), refused),
         }
     }
 }
 
 impl RetentionStorageError {
+    fn io_kind(&self) -> io::ErrorKind {
+        match self {
+            Self::Io { source } => source.kind(),
+            Self::Refused { .. } => io::ErrorKind::InvalidData,
+            Self::Operation { source, .. } => source.io_kind(),
+        }
+    }
+
+    pub(super) fn at(self, boundary: RetentionStorageBoundary) -> Self {
+        match self {
+            Self::Operation { .. } => self,
+            source => Self::Operation {
+                source: Box::new(source),
+                progress: RetentionStorageProgress {
+                    boundary,
+                    known: Vec::new(),
+                    uncertain: None,
+                },
+            },
+        }
+    }
+
+    pub(super) fn after(
+        mut self,
+        effect: RetentionNamespaceEffect,
+        durability: RetentionEffectDurability,
+    ) -> Self {
+        if let Self::Operation { progress, .. } = &mut self {
+            progress
+                .known
+                .insert(0, RetentionKnownEffect { effect, durability });
+        }
+        self
+    }
+
+    pub(super) const fn uncertain(mut self, effect: RetentionNamespaceEffect) -> Self {
+        if let Self::Operation { progress, .. } = &mut self {
+            progress.uncertain = Some(effect);
+        }
+        self
+    }
     /// Progress within the failing capability, if its adapter reports it.
     ///
     /// `None` means unreported effects, not absence of effects. Callers must reobserve.

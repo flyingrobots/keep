@@ -1,5 +1,7 @@
 # Retention recovery discard prefix
 
+Historical decision: its automatic-discard policy is superseded by [bounded retention recovery landing](retention-bounded-recovery-landing.md). Current recovery preserves incomplete stages before effects; the older diagnostic and test evidence below does not authorize disposal.
+
 Status: Accepted
 
 The forward protocol begins a manifest write only after the complete root stage is linked, and begins a head write only after complete root and manifest stages are linked. Retained earlier stages are removed only after head replacement. An incomplete later stage with absent earlier evidence therefore cannot be treated as a routine interrupted write.

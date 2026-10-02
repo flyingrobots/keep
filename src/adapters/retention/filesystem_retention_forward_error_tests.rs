@@ -26,14 +26,19 @@ fn forward_stage_refusal_preserves_its_typed_record_cause() -> Result<(), Box<dy
         .err()
         .ok_or("changed forward stage was synchronized successfully")?;
 
+    let storage = error
+        .get_ref()
+        .and_then(|source| source.downcast_ref::<RetentionStorageError>())
+        .ok_or("forward failure omitted storage cause")?;
+    let RetentionStorageError::Operation { source, .. } = storage else {
+        return Err("forward stage failure omitted operation boundary".into());
+    };
     assert!(
         matches!(
-            error
-                .get_ref()
-                .and_then(|source| source.downcast_ref::<RetentionStorageError>()),
-            Some(RetentionStorageError::Refused {
+            source.as_ref(),
+            RetentionStorageError::Refused {
                 source: RetentionRecordRefusal::Bytes
-            })
+            }
         ),
         "forward I/O failure must retain the typed byte refusal: {error:?}"
     );

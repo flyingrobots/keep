@@ -1,6 +1,10 @@
 //! This module owns filesystem execution of retention recovery under authority.
 
 use super::RetentionStorageError;
+use super::{
+    RetentionEffectDurability as Durability, RetentionNamespaceEffect as Effect,
+    RetentionStorageBoundary as Boundary,
+};
 use std::io;
 
 use cap_fs_ext::DirExt;
@@ -19,6 +23,9 @@ use super::{
 use crate::adapters::CatalogRestartPolicy;
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
 
+#[cfg(test)]
+#[path = "filesystem_retention_recovery_effect_tests.rs"]
+mod effect_tests;
 #[cfg(test)]
 #[path = "filesystem_retention_recovery_storage_error_tests.rs"]
 mod storage_error_tests;
@@ -53,6 +60,7 @@ impl RetentionRecoveryContext {
                             retention,
                             pool_name::ROOT_STAGE,
                             &stage.bytes,
+                            stage.identity,
                         )?,
                         pool_name: pool_name::root(admitted.root().generation(), admitted.digest()),
                         namespace: Some(pool_name::namespace(admitted.root().namespace().digest())),
@@ -70,6 +78,7 @@ impl RetentionRecoveryContext {
                             retention,
                             pool_name::MANIFEST_STAGE,
                             &stage.bytes,
+                            stage.identity,
                         )?,
                         pool_name: pool_name::manifest(
                             admitted.manifest().generation(),
@@ -90,6 +99,7 @@ impl RetentionRecoveryContext {
                             retention,
                             pool_name::HEAD_STAGE,
                             &stage.bytes,
+                            stage.identity,
                         )?,
                         pool_name: pool_name::HEAD.to_owned(),
                         namespace: None,
@@ -127,7 +137,8 @@ impl FilesystemRetentionPublicationAuthority {
     /// # Errors
     ///
     /// Returns [`FilesystemRetentionRecoveryError`](super::FilesystemRetentionRecoveryError)
-    /// at the exact observation failure, planning refusal, or refused step.
+    /// at the exact observation failure, planning refusal, or failed execution boundary. Execution failure may have
+    /// namespace effects; inspect its progress and reobserve before retry.
     pub fn recover_with_catalog_policy(
         &mut self,
         policy: CatalogRestartPolicy,
@@ -166,13 +177,14 @@ impl FilesystemRetentionPublicationAuthority {
     }
 }
 
-fn no_recovery() -> io::Error {
-    invalid_data("no retention recovery is in progress")
+fn no_recovery() -> RetentionStorageError {
+    RetentionStorageError::from(invalid_data("no retention recovery is in progress"))
+        .at(Boundary::RecoveryContext)
 }
 
 fn take_complete(
     slot: &mut Option<RecoveredStage>,
-) -> io::Result<(FilesystemRetentionStage, String, Option<String>)> {
+) -> Result<(FilesystemRetentionStage, String, Option<String>), RetentionStorageError> {
     match slot.take() {
         Some(RecoveredStage::Complete {
             stage,
@@ -181,16 +193,20 @@ fn take_complete(
         }) => Ok((stage, pool_name, namespace)),
         Some(other) => {
             *slot = Some(other);
-            Err(invalid_data("recovery step expected a complete stage"))
+            Err(RetentionStorageError::from(invalid_data(
+                "recovery step expected a complete stage",
+            ))
+            .at(Boundary::RecoveryContext))
         }
-        None => Err(invalid_data("recovery step expected a retained stage")),
+        None => Err(no_recovery()),
     }
 }
 
-const fn disposition_required() -> Result<(), RetentionStorageError> {
+fn disposition_required() -> Result<(), RetentionStorageError> {
     Err(RetentionStorageError::Refused {
         source: super::RetentionRecordRefusal::IncompleteDispositionRequired,
-    })
+    }
+    .at(Boundary::RecoveryContext))
 }
 
 impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
@@ -214,18 +230,49 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
             namespace: Some(namespace),
         }) = context.root.as_ref()
         else {
-            return Err(invalid_data("link_root expected a complete root stage").into());
+            return Err(RetentionStorageError::from(invalid_data(
+                "link_root expected a complete root stage",
+            ))
+            .at(Boundary::RecoveryContext));
         };
         stage.synchronize(&self.retention)?;
-        match self.roots.create_dir(namespace) {
-            Ok(()) => {}
-            Err(source) if source.kind() == io::ErrorKind::AlreadyExists => {}
-            Err(source) => return Err(source.into()),
-        }
-        let directory = self.roots.open_dir_nofollow(namespace)?;
-        synchronize_directory(&self.roots)?;
-        stage.link(&self.retention, &directory, name)?;
-        synchronize_directory(&directory).map_err(Into::into)
+        let created = match self.roots.create_dir(namespace) {
+            Ok(()) => true,
+            Err(source) if source.kind() == io::ErrorKind::AlreadyExists => false,
+            Err(source) => {
+                return Err(RetentionStorageError::from(source)
+                    .at(Boundary::NamespaceCreation)
+                    .uncertain(Effect::NamespaceCreated));
+            }
+        };
+        let mut durability = Durability::Unconfirmed;
+        let result = (|| {
+            let directory = self.roots.open_dir_nofollow(namespace).map_err(|source| {
+                RetentionStorageError::from(source).at(Boundary::NamespaceOpen)
+            })?;
+            synchronize_recovery_directory(
+                &self.roots,
+                Boundary::RootsSynchronization,
+                #[cfg(test)]
+                self.recovery_sync_failure,
+            )?;
+            durability = Durability::Synchronized;
+            let link = stage.link(&self.retention, &directory, name)?;
+            synchronize_recovery_directory(
+                &directory,
+                Boundary::PoolSynchronization,
+                #[cfg(test)]
+                self.recovery_sync_failure,
+            )
+            .map_err(|error| link.report(error))
+        })();
+        result.map_err(|error| {
+            if created {
+                error.after(Effect::NamespaceCreated, durability)
+            } else {
+                error
+            }
+        })
     }
 
     fn link_manifest(&mut self) -> Result<(), RetentionStorageError> {
@@ -236,11 +283,20 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
             ..
         }) = context.manifest.as_ref()
         else {
-            return Err(invalid_data("link_manifest expected a complete manifest stage").into());
+            return Err(RetentionStorageError::from(invalid_data(
+                "link_manifest expected a complete manifest stage",
+            ))
+            .at(Boundary::RecoveryContext));
         };
         stage.synchronize(&self.retention)?;
-        stage.link(&self.retention, &self.manifests, name)?;
-        synchronize_directory(&self.manifests).map_err(Into::into)
+        let link = stage.link(&self.retention, &self.manifests, name)?;
+        synchronize_recovery_directory(
+            &self.manifests,
+            Boundary::PoolSynchronization,
+            #[cfg(test)]
+            self.recovery_sync_failure,
+        )
+        .map_err(|error| link.report(error))
     }
 
     fn finalize_head(&mut self) -> Result<(), RetentionStorageError> {
@@ -248,46 +304,62 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
         let (stage, _name, _namespace) = take_complete(&mut context.head)?;
         stage.synchronize(&self.retention)?;
         stage.replace(&self.retention, pool_name::HEAD)?;
-        self.synchronize_recovery_directory(
+        synchronize_recovery_directory(
             &self.retention,
             super::RetentionStorageBoundary::RetentionSynchronization,
+            #[cfg(test)]
+            self.recovery_sync_failure,
         )
+        .map_err(|error| error.after(Effect::HeadReplaced, Durability::Unconfirmed))
     }
 
     fn remove_root_stage(&mut self) -> Result<(), RetentionStorageError> {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
         let (stage, name, namespace) = take_complete(&mut context.root)?;
-        let namespace = namespace.ok_or_else(|| invalid_data("root stage without a namespace"))?;
-        let directory = self.roots.open_dir_nofollow(&namespace)?;
+        let namespace = namespace.ok_or_else(|| {
+            RetentionStorageError::from(invalid_data("root stage without a namespace"))
+                .at(Boundary::RecoveryContext)
+        })?;
+        let directory = self
+            .roots
+            .open_dir_nofollow(&namespace)
+            .map_err(|source| RetentionStorageError::from(source).at(Boundary::NamespaceOpen))?;
         stage.remove(&self.retention, &directory, &name)?;
-        self.synchronize_recovery_directory(
+        synchronize_recovery_directory(
             &self.retention,
             super::RetentionStorageBoundary::RetentionSynchronization,
+            #[cfg(test)]
+            self.recovery_sync_failure,
         )
+        .map_err(|error| error.after(Effect::StageRemoved, Durability::Unconfirmed))
     }
 
     fn remove_manifest_stage(&mut self) -> Result<(), RetentionStorageError> {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
         let (stage, name, _namespace) = take_complete(&mut context.manifest)?;
         stage.remove(&self.retention, &self.manifests, &name)?;
-        self.synchronize_recovery_directory(
+        synchronize_recovery_directory(
             &self.retention,
             super::RetentionStorageBoundary::RetentionSynchronization,
+            #[cfg(test)]
+            self.recovery_sync_failure,
         )
+        .map_err(|error| error.after(Effect::StageRemoved, Durability::Unconfirmed))
     }
 }
 
-impl FilesystemRetentionPublicationAuthority {
-    fn synchronize_recovery_directory(
-        &self,
-        directory: &Dir,
-        boundary: super::RetentionStorageBoundary,
-    ) -> Result<(), RetentionStorageError> {
-        #[cfg(test)]
-        if self.recovery_sync_failure == Some(boundary) {
-            return Err(io::Error::from_raw_os_error(rustix::io::Errno::IO.raw_os_error()).into());
-        }
-        let _ = boundary;
-        synchronize_directory(directory).map_err(Into::into)
+fn synchronize_recovery_directory(
+    directory: &Dir,
+    boundary: super::RetentionStorageBoundary,
+    #[cfg(test)] injected_failure: Option<Boundary>,
+) -> Result<(), RetentionStorageError> {
+    #[cfg(test)]
+    if injected_failure == Some(boundary) {
+        return Err(RetentionStorageError::from(io::Error::from_raw_os_error(
+            rustix::io::Errno::IO.raw_os_error(),
+        ))
+        .at(boundary));
     }
+    synchronize_directory(directory)
+        .map_err(|source| RetentionStorageError::from(source).at(boundary))
 }

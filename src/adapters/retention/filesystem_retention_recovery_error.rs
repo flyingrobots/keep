@@ -15,14 +15,14 @@ pub enum FilesystemRetentionRecoveryError {
         /// The exact filesystem or admission failure.
         source: io::Error,
     },
-    /// The observed stages are unrecoverable ambiguity.
+    /// The observed stages require disposition or contradict the recovery contract.
     Plan {
         /// The exact planning refusal.
         source: RetentionRecoveryRefusal,
     },
-    /// A recovery step refused; earlier steps' effects remain.
+    /// A recovery step failed, possibly after its own effects and earlier completed steps.
     Execute {
-        /// The refused step, the completed prefix, and the storage error.
+        /// The failed step, completed prefix, failing-capability progress and original cause.
         source: RetentionRecoveryError,
     },
 }
@@ -32,7 +32,7 @@ impl fmt::Display for FilesystemRetentionRecoveryError {
         formatter.write_str(match self {
             Self::Observe { .. } => "retention recovery could not observe the store",
             Self::Plan { .. } => "retention recovery refused the observed stages",
-            Self::Execute { .. } => "a retention recovery step refused",
+            Self::Execute { .. } => "a retention recovery step failed",
         })
     }
 }
