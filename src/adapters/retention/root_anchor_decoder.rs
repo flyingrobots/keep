@@ -50,14 +50,15 @@ pub(super) fn admit_prefix(
                 .checked_mul(ANCHOR_WIDTH)
                 .and_then(|offset| body_start.checked_add(offset))
                 .ok_or(RetentionRootDecodeError::LengthOverflow)?;
-            return super::root_anchor_prefix::admit(bytes, index, start);
+            super::root_anchor_prefix::admit(bytes, index, start)?;
+            return super::root_anchor_order_prefix::admit(bytes, index, previous);
         }
         previous = Some(admit_anchor(bytes, index, previous)?);
     }
     Ok(())
 }
 
-fn admit_anchor(
+pub(super) fn admit_anchor(
     bytes: &[u8],
     index: u32,
     previous: Option<RetentionAnchor>,

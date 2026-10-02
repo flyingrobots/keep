@@ -147,6 +147,7 @@ mod publication_preparation_error;
 mod publication_receipt;
 mod publication_storage;
 mod root_anchor_decoder;
+mod root_anchor_order_prefix;
 mod root_anchor_prefix;
 mod root_decode_error;
 mod root_decode_error_display;

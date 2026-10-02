@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery rejects partial anchors when even their greatest canonical completion cannot follow the preceding anchor, preserving the exact offending stage (#99).
+
 - Recovery preserves partial layout-length fields whose minimum possible completion exceeds the format ceiling, with an explicit prefix-bound diagnostic (#99).
 
 - Recovery preserves partial root anchors with contradictory embedded identity bytes or invalid complete layout-length fields, sharing the identity codecs' rules (#99).
