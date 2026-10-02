@@ -60,6 +60,7 @@ mod catalog_snapshot_error;
 mod catalog_successor;
 mod catalog_transition;
 mod catalog_transition_error;
+mod catalog_verification;
 mod checksummed_catalog;
 mod checksummed_publication_head;
 mod checksummed_segment_record;

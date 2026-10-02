@@ -38,7 +38,7 @@ These are inspected implementation boundaries, not new execution receipts.
 
 ## Closure ledger
 
-All obligations below remain open until implementation and evidence are attached.
+The initial catalog report slice now has [runtime and static/API evidence](../testing-evidence/durable-verification.md); every full-issue obligation below remains open until its entire exit condition is met.
 
 | Obligation | Required implementation boundary | Concrete exit condition |
 | --- | --- | --- |
