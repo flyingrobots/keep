@@ -7,7 +7,7 @@
 use std::error::Error;
 
 use super::filesystem_retention_test_fixture::{
-    ROOT_HEX, fixture, initial_preparation, open_authority,
+    HEAD_HEX, ROOT_HEX, fixture, initial_preparation, open_authority,
 };
 use crate::{
     AdmittedRetentionRoot, ByteLength, ByteOffset, ByteRange, CatalogRestartByteLimit,
@@ -52,6 +52,25 @@ fn durable_reconstruction_returns_golden_bytes_with_exact_view_coordinates()
     assert_eq!(receipt.receipt().layout_id(), anchor.layout_id());
     assert_eq!(receipt.receipt().bytes_written().get(), 1);
     assert_eq!(receipt.view().catalog_generation().get(), 1);
+    assert_eq!(
+        receipt.view().catalog_digest().as_bytes().as_slice(),
+        fixture("0b7cad1b6de663d34beacbc214db7497f2e36ab6b08dfbd5febbc8d06a418811\n")?,
+        "catalog coordinate must match the independently frozen bundle"
+    );
+    let golden_head = fixture(HEAD_HEX)?;
+    assert_eq!(
+        receipt
+            .view()
+            .retention()
+            .ok_or("retention coordinates absent")?
+            .manifest_digest()
+            .as_bytes()
+            .as_slice(),
+        golden_head
+            .get(40..72)
+            .ok_or("golden manifest digest absent")?,
+        "manifest coordinate must match the normative head field in the golden record"
+    );
     assert_eq!(
         receipt
             .view()

@@ -15,6 +15,25 @@ mod scenario_corpus;
 #[path = "storage_assertions.rs"]
 mod storage_assertions;
 
+#[cfg(target_os = "linux")]
+#[path = "durable_assertions.rs"]
+mod durable_assertions;
+#[cfg(target_os = "linux")]
+#[path = "durable_fixture.rs"]
+mod durable_fixture;
+#[cfg(target_os = "linux")]
+#[path = "durable_output_laws.rs"]
+mod durable_output_laws;
+#[cfg(target_os = "linux")]
+#[path = "durable_range_properties.rs"]
+mod durable_range_properties;
+#[cfg(target_os = "linux")]
+#[path = "durable_refusal_laws.rs"]
+mod durable_refusal_laws;
+#[cfg(target_os = "linux")]
+#[path = "../segment_filesystem_stage/sandbox.rs"]
+mod durable_sandbox;
+
 use std::error::Error;
 use std::io::ErrorKind;
 
