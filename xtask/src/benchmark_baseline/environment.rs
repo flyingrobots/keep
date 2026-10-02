@@ -4,21 +4,14 @@ use std::path::Path;
 use std::process::Command;
 
 use super::BenchmarkBaselineError;
-use super::host_environment::{self, CapturedHost};
+use super::host_environment;
 use super::process::{ProcessOutput, run};
 use super::tracked_source;
 
 const DIAGNOSTIC_LIMIT: usize = 65_536;
 const VALUE_LIMIT: usize = 4_096;
 
-#[derive(Eq, PartialEq)]
-pub(super) struct CapturedEnvironment {
-    pub(super) commit: String,
-    pub(super) tree: &'static str,
-    pub(super) rustc_version: String,
-    pub(super) target_triple: String,
-    pub(super) host: CapturedHost,
-}
+pub(super) use super::captured_environment::CapturedEnvironment;
 
 pub(super) fn capture(
     repository_root: &Path,

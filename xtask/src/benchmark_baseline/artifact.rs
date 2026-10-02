@@ -3,17 +3,27 @@
 use super::BenchmarkBaselineError;
 use super::environment::CapturedEnvironment;
 
-pub(super) fn validate(
-    bytes: &[u8],
+/// Immutable report bytes admitted against captured measurement coordinates.
+#[must_use]
+pub(super) struct AdmittedReport<'a> {
+    bytes: &'a [u8],
+}
+
+impl<'a> AdmittedReport<'a> {
+    pub(super) const fn bytes(&self) -> &'a [u8] {
+        self.bytes
+    }
+}
+
+pub(super) fn validate<'a>(
+    bytes: &'a [u8],
     environment: &CapturedEnvironment,
-) -> Result<(), BenchmarkBaselineError> {
-    let report =
-        std::str::from_utf8(bytes).map_err(|_source| BenchmarkBaselineError::ReportViolation {
-            reason: "report-is-not-utf8",
-        })?;
+) -> Result<AdmittedReport<'a>, BenchmarkBaselineError> {
+    let report = super::report_input::decode(bytes)?;
     if report.contains('\r') || !report.ends_with('\n') {
         return violation("report-line-framing");
     }
+    super::metadata_uniqueness::admit(report)?;
     let mut lines = report.lines();
     if lines.next() != Some("schema\tkeep.streaming-cas-baseline/v1") {
         return violation("report-schema");
@@ -86,7 +96,8 @@ pub(super) fn validate(
     {
         return violation("report-profile-count");
     }
-    Ok(())
+    super::report_grammar::admit(report)?;
+    Ok(AdmittedReport { bytes })
 }
 
 fn require_line(

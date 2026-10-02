@@ -115,3 +115,20 @@ for the finite periods declared in `campaign.env`. A confirmed crash, timeout,
 or out-of-memory input must be minimized and promoted into a committed
 deterministic regression test; an artifact or cache alone never closes the
 defect.
+
+## Benchmark report admission
+
+The `benchmark_report` target calls the production report parser through the
+`benchmark-report-fuzz` feature, with task execution and host capture disabled.
+Its coordinates are fixed to the committed historical baseline. Seed
+preparation materializes that complete canonical report under the derived,
+ignored corpus; no host measurement or new performance baseline is implied.
+The facade performs no filesystem, process, clock or network operations.
+
+The parser enforces a one-MiB input ceiling and preserves typed encoding,
+canonical row, metadata, counter-width and arithmetic refusals. Unit laws
+verify that the seed reaches admission and corrupted bytes refuse; these
+prevent an always-refusing facade from passing solely because it never panics.
+Run this target with the same pinned nightly and resource bounds as the other
+targets. Campaign success is bounded exploration evidence, not proof that all
+malformed reports have been enumerated.
