@@ -132,6 +132,12 @@ impl FilesystemRetentionPublicationAuthority {
             .map_err(|source| Error::Observe { source })?;
         self.attempt = None;
         self.recovery = None;
+        let _census = super::filesystem_retention_namespace::admit_recovery(
+            &self.retention,
+            &self.roots,
+            &self.manifests,
+        )
+        .map_err(|source| Error::Observe { source })?;
         let observation =
             RetentionRecoveryObservation::observe(&self.retention, &self.roots, &self.manifests)
                 .map_err(|source| Error::Observe { source })?;

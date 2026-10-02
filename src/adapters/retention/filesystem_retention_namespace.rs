@@ -11,6 +11,14 @@ use super::filesystem_retention_pool_name as pool_name;
 use crate::{RetentionGenerationExpectation, RetentionManifest};
 
 const CANONICAL_ENTRIES: [&str; 3] = [pool_name::HEAD, pool_name::ROOTS, pool_name::MANIFESTS];
+const RECOVERY_ENTRIES: [&str; 6] = [
+    pool_name::HEAD,
+    pool_name::ROOTS,
+    pool_name::MANIFESTS,
+    pool_name::ROOT_STAGE,
+    pool_name::MANIFEST_STAGE,
+    pool_name::HEAD_STAGE,
+];
 
 /// Bounded observation of the admitted retention namespace.
 #[must_use]
@@ -47,9 +55,30 @@ pub(super) fn admit(
     roots: &Dir,
     manifests: &Dir,
 ) -> io::Result<RetentionNamespaceCensus> {
+    admit_entries(retention, roots, manifests, &CANONICAL_ENTRIES)
+}
+
+/// Admits recovery namespace names and pool kinds before observing stages.
+///
+/// Only the three fixed stage names are additionally allowed. Their exact
+/// kinds, bytes, and bounds remain the recovery observer's responsibility.
+pub(super) fn admit_recovery(
+    retention: &Dir,
+    roots: &Dir,
+    manifests: &Dir,
+) -> io::Result<RetentionNamespaceCensus> {
+    admit_entries(retention, roots, manifests, &RECOVERY_ENTRIES)
+}
+
+fn admit_entries(
+    retention: &Dir,
+    roots: &Dir,
+    manifests: &Dir,
+    admitted_names: &[&str],
+) -> io::Result<RetentionNamespaceCensus> {
     for entry in retention.entries()? {
         let name = entry?.file_name();
-        if !CANONICAL_ENTRIES.iter().any(|canonical| name == *canonical) {
+        if !admitted_names.iter().any(|canonical| name == *canonical) {
             return Err(Refusal::UnknownRetentionEntry.into_io());
         }
     }

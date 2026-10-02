@@ -4,6 +4,8 @@ This page owns fixed retention stages, restart publication, and the retention pr
 
 Both publication-triggered and explicit recovery first verify that `retention`, `retention/roots`, and `retention/manifests` still name the directories writer admission pinned. A replaced directory refuses as `ProtocolDirectoryReplaced` before stage observation or mutation; explicit recovery preserves that refusal inside its `Observe` error boundary.
 
+Both entry points then admit every retention entry name and every root and manifest pool entry's canonical name and regular kind before observing stages or executing recovery. Recovery permits only the three fixed stage names in addition to the forward namespace; stage observation separately verifies their exact kinds, bounds, and bytes. An unknown retention entry, non-namespace root entry, or noncanonical pool entry refuses inside `Observe` with its existing typed namespace source and preserves every retained file's bytes.
+
 At restart, a fixed retention stage is classified from its exact framing and transitive evidence:
 
 The forward protocol guarantees that `root.next` is durable before a new namespace directory is created. A new digest-named directory is created exclusively, verified as the exact regular directory rather than a link, and followed by synchronization of `retention/roots` before the immutable root is linked. An existing exact directory is idempotent; any wrong kind, substituted namespace, or unexpected entry refuses. Directory existence alone never proves a retained root.

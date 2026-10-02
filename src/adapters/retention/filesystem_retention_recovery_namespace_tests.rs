@@ -12,6 +12,7 @@ use super::{
     FilesystemRetentionRecoveryError, RetentionCurrentStateRefusal, RetentionPublicationStorage,
 };
 
+#[derive(Clone, Copy)]
 enum EntryPoint {
     Recovery,
     Publication,
@@ -70,7 +71,7 @@ fn require_namespace_refusal(entry_point: EntryPoint) -> Result<(), Box<dyn Erro
                 }
             };
 
-            require_typed_refusal(&error, intruder)?;
+            require_typed_refusal(&error, intruder);
             assert_eq!(
                 retention_witness(sandbox.path())?,
                 before,
@@ -92,22 +93,29 @@ fn recovery_refusal(
     }
 }
 
-fn require_typed_refusal(error: &io::Error, intruder: &str) -> Result<(), Box<dyn Error>> {
-    assert_eq!(error.kind(), io::ErrorKind::InvalidData);
-    let matches = match (intruder, refusal(error)) {
-        ("foreign.dat", Some(RetentionCurrentStateRefusal::UnknownRetentionEntry))
-        | ("roots/not-a-digest", Some(RetentionCurrentStateRefusal::NonNamespaceEntry))
-        | (
+fn require_typed_refusal(error: &io::Error, intruder: &str) {
+    assert_eq!(
+        error.kind(),
+        io::ErrorKind::InvalidData,
+        "namespace refusal for {intruder} must retain the InvalidData kind"
+    );
+    let matches = matches!(
+        (intruder, refusal(error)),
+        (
+            "foreign.dat",
+            Some(RetentionCurrentStateRefusal::UnknownRetentionEntry)
+        ) | (
+            "roots/not-a-digest",
+            Some(RetentionCurrentStateRefusal::NonNamespaceEntry)
+        ) | (
             "manifests/bogus.manifest",
             Some(RetentionCurrentStateRefusal::NoncanonicalPoolEntry {
                 pool: "manifest pool",
             }),
-        ) => true,
-        _ => false,
-    };
+        )
+    );
     assert!(
         matches,
         "exact namespace refusal missing for {intruder}: {error:?}"
     );
-    Ok(())
 }
