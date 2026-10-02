@@ -117,4 +117,4 @@ No durable crash, benchmark execution, full-workspace or fuzz-campaign
 claim follows from these checks. The subsequent
 [reference-store audit](reference-store-and-reads.md) brings accounting to
 22 verdicts, followed by four [conformance verdicts](conformance-oracles.md).
-The other 38 and full accounting of 19 reopened tasks remain.
+The other 37 and full accounting of 19 reopened tasks remain.

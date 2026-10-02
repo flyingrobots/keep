@@ -108,4 +108,4 @@ The next four verdicts are in [flat layout](flat-layout.md). Fourteen of
 the 64 remaining checked entries had verdicts at that stage. The subsequent
 [reference-store audit](reference-store-and-reads.md) brings accounting to
 22 verdicts, followed by four [conformance verdicts](conformance-oracles.md).
-The other 38 and 19 reopened entries remain open.
+The other 37 and 19 reopened entries remain open.

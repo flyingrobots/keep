@@ -85,5 +85,5 @@ main-equivalent clone `7981988` with its dedicated target directory.
   integration laws also passed. Targets selecting zero tests are not counted.
 
 Twenty-six of 64 remaining checked tasks have verdicts. The two reference
-corrections retain their acceptance/delivery limitations; 38 other checked
+corrections retain their acceptance/delivery limitations; 37 other checked
 tasks and full accounting of 19 reopened entries remain. No checkbox changes.

@@ -14,10 +14,12 @@ The [foundation verdicts](foundations.md),
 [identity-layer and chunking verdicts](identity-layers-and-chunking.md), and
 [flat-layout verdicts](flat-layout.md), and
 [reference-store and read verdicts](reference-store-and-reads.md), and
-[conformance-oracle verdicts](conformance-oracles.md) cover the
-first 26 remaining checked tasks. Each separates acceptance and mainline
+[conformance-oracle verdicts](conformance-oracles.md), and
+[benchmark-baseline verdict](benchmark-baseline.md) cover the
+first 27 remaining checked tasks. Each separates acceptance and mainline
 delivery and names inspected evidence and limits. T-06.3 has unresolved
-acceptance scope; T-06.3 and T-06.4 are not delivered on main.
+acceptance scope; T-06.3 and T-06.4 are not delivered on main. T-09.1's
+canonical report-admission gap is owned by issue #142.
 
 Validation now uses separate Docker build directories per source clone.
 A shared target directory reused a stale test binary across clones; those
