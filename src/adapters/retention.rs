@@ -190,6 +190,7 @@ mod stage_fixed_field_admission;
 mod stage_generation_admission;
 mod stage_history_admission;
 mod stage_prefix_admission;
+mod stage_record_integrity;
 mod stage_root_policy_admission;
 pub use admitted_manifest::AdmittedRetentionManifest;
 pub use admitted_root::AdmittedRetentionRoot;

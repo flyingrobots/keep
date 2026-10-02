@@ -80,3 +80,32 @@ fn hash(domain: &[u8], bytes: &[u8]) -> [u8; 32] {
     hasher.update(bytes);
     *hasher.finalize().as_bytes()
 }
+
+/// Verifies only digest bytes whose entire preimage has arrived.
+pub(super) fn verify_prefix(
+    encoded: &[u8],
+    digest_offset: usize,
+    checksum_offset: usize,
+) -> Result<(), RetentionManifestDecodeError> {
+    for (offset, domain) in [
+        (
+            checksum_offset,
+            b"keep.retention-manifest-checksum/v2\0".as_slice(),
+        ),
+        (digest_offset, b"keep.retention-manifest/v2\0".as_slice()),
+    ] {
+        if let Some(preimage) = encoded.get(..offset) {
+            let expected = hash(domain, preimage);
+            super::stage_fixed_field_admission::admit(
+                encoded,
+                &[(offset, &expected)],
+                |offset, expected, observed| RetentionManifestDecodeError::PrefixByteMismatch {
+                    offset,
+                    expected,
+                    observed,
+                },
+            )?;
+        }
+    }
+    Ok(())
+}

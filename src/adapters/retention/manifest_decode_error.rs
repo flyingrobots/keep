@@ -21,7 +21,7 @@ pub enum RetentionManifestDecodeError {
         /// Observed byte length.
         observed: usize,
     },
-    /// An available byte contradicts a fixed field in an interrupted stage.
+    /// An available byte contradicts a fixed or computed integrity field in an interrupted stage.
     PrefixByteMismatch {
         /// Absolute byte offset in the observed stage.
         offset: usize,

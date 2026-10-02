@@ -34,7 +34,7 @@ pub(super) fn root(encoded: &[u8]) -> Result<(), RetentionRootDecodeError> {
     if encoded.len() >= 148 {
         super::stage_history_admission::root(encoded)?;
     }
-    Ok(())
+    super::stage_record_integrity::root(encoded)
 }
 
 pub(super) fn manifest(encoded: &[u8]) -> Result<(), RetentionManifestDecodeError> {
@@ -62,7 +62,7 @@ pub(super) fn manifest(encoded: &[u8]) -> Result<(), RetentionManifestDecodeErro
     if encoded.len() >= 80 {
         super::stage_history_admission::manifest(encoded)?;
     }
-    Ok(())
+    super::stage_record_integrity::manifest(encoded)
 }
 
 pub(super) fn head(encoded: &[u8]) -> Result<(), RetentionHeadDecodeError> {

@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery verifies available root and manifest digest and checksum bytes and complete body-set digests before discarding interrupted stages, preserving provably corrupt records (#99).
+
 - Recovery admits each closure-limit field as bytes arrive, preserving impossible partial bounds and invalid complete fields with precise typed diagnostics (#99).
 
 - Recovery rejects every available contradictory byte of an interrupted registered-profile identity, version or digest and preserves the root stage (#99).
