@@ -624,6 +624,10 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- The version-one catalog ledger names its executable ordering integration
+  target, duplicate-refusal module, and filesystem publication unit-test owner
+  instead of absent test files (#148).
+
 - Benchmark report admission refuses identical or conflicting repeated metadata
   coordinates with a typed failure naming the coordinate (issue #142). Complete
   canonical report admission remains in progress. Ordered metadata keys, exact
