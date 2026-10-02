@@ -33,7 +33,6 @@ fn migration_and_recovery_define_every_authority_boundary() -> Result<(), Box<dy
         "keep.store-format-marker/v2\\0",
         "deterministically derived store identifier",
         "absence of `retention/HEAD` is the canonical empty retention state",
-        "pre-effect incomplete stage",
         "keep.initial-retention-state/v2\\0",
         "keep.initial-gc-state/v2\\0",
         "keep.empty-disposition-set/v2\\0",
