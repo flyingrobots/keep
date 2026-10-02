@@ -27,6 +27,14 @@ T-11.2 exposes writable stage authority after sealing; issue #146 owns that
 correction. T-11.3 still lacks its originally named integration-test artifact;
 the living-documentation correction in #69 does not fulfill that requirement.
 
+The [catalog publication verdict](catalog-publication.md) adds T-12.2 at
+main `b50dbd4cb4cee286aea1aa0352152a232197dda1`: a public repository-task
+constructor bypasses production platform admission, reproduced independently
+and owned by #150. Thirty-four remaining checked tasks now have recorded
+verdicts; thirty other checked tasks and nineteen reopened entries still need
+full accounting. T-12.1 and T-12.3 are not declared complete by the limited
+catalog checks.
+
 ## Mainline delivery after the inspected snapshot
 
 PR #135 delivered the T-06.4 capacity-bounded reference-store memory contract
