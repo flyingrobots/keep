@@ -186,13 +186,9 @@ fn a_truncated_stage_is_recovered_and_publication_proceeds() -> Result<(), Box<d
     let (sandbox, mut authority) = open_authority("filesystem-retention-recovered-stage")?;
     let root_bytes = fixture(ROOT_HEX)?;
     let preparation = initial_preparation(&root_bytes)?;
-    let stage = sandbox.path().join("retention").join("manifest.next");
-    let manifest = preparation
-        .publication()
-        .ok_or("no publication")?
-        .manifest();
-    let prefix = manifest.encoded().get(..35).ok_or("no manifest prefix")?;
-    // Interrupted writes preserve a canonical prefix, not arbitrary short bytes.
+    let stage = sandbox.path().join("retention").join("root.next");
+    let prefix = root_bytes.get(..35).ok_or("no root prefix")?;
+    // Only the first stage can be incomplete without protected earlier stages.
     fs::write(&stage, prefix)?;
 
     let receipt = execute_retention_publication(&mut authority, &preparation)?;

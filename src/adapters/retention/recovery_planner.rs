@@ -28,6 +28,7 @@ type Current<'state> = Option<&'state ObservedRetentionState>;
 pub fn plan_retention_recovery(
     evidence: RetentionRecoveryEvidence<'_, '_>,
 ) -> Result<RetentionRecoveryPlan, Refusal> {
+    let discard_prefix = super::recovery_discard_prefix::admit(&evidence);
     let head_present = evidence.stages().head.is_present();
     let manifest_present = evidence.stages().manifest.is_present();
     let (current, stages, pools) = evidence.into_parts();
@@ -79,6 +80,7 @@ pub fn plan_retention_recovery(
             pool: RetentionPool::Manifests,
         });
     }
+    discard_prefix?;
     match (head, manifest, root) {
         (Some(head), Some(manifest), Some(root)) => finalize_head(
             current,

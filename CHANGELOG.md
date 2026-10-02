@@ -667,6 +667,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Retention recovery refuses truncated manifest or head stages whose earlier complete stage or immutable pool link is missing, preserving impossible-prefix evidence instead of deleting it (#99).
+
 - Retention recovery requires an uncommitted head's staged root to satisfy the same generation and predecessor rules as root-only and manifest-only recovery. Already committed cleanup remains admissible (#99).
 
 - Retention recovery reopens and authenticates the manifest-selected predecessor before publication effects, refusing missing, corrupt, or substituted roots while preserving retained evidence.

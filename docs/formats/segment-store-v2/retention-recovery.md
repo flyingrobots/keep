@@ -30,6 +30,8 @@ Recovery synchronizes each complete staged file and reverifies its exact bytes b
 
 A pre-effect incomplete stage may be removed only when every later-ordered effect is absent and all earlier evidence admits exactly. Recovery pins that regular file, removes it, synchronizes `retention`, and returns a typed discard report. Any later effect, stale generation, mismatched digest, missing transitive member, reappeared stage, conflicting pool entry, or other corruption is a typed refusal. A complete valid orphan remains recovery-protected until explicit disposition.
 
+A truncated manifest requires a complete root stage already linked to its immutable pool entry. A truncated head requires both complete root and manifest stages already linked to their immutable pool entries. Missing or incomplete earlier evidence refuses as `TruncatedStageWithoutEarlierEvidence`, naming both stages, before any scheduled discard or relinking. Existing corruption and conflicting-pool diagnostics retain precedence; cross-record and history admission still precede execution.
+
 This retention protocol requires pinning the incomplete regular file. The separate [migration discard path](migration-crash.md#fixed-stage-law) revalidates the current entry's regular kind and incomplete length before removal without retaining an incomplete-stage handle. These are distinct protocol boundaries; retention recovery awaits integration from PR #99.
 
 The retention crash points are:

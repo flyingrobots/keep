@@ -125,6 +125,7 @@ mod verified_closure;
 
 mod reader_attempt_limit;
 mod reader_fence;
+mod recovery_discard_prefix;
 mod recovery_evidence;
 mod recovery_execution;
 #[cfg(test)]
