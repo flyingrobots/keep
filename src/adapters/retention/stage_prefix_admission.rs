@@ -21,6 +21,11 @@ pub(super) fn root(encoded: &[u8]) -> Result<(), RetentionRootDecodeError> {
         },
     )?;
     super::stage_generation_admission::root(encoded)?;
+    if encoded.len() >= 42 {
+        let length = usize::from(super::root_field_decoder::read_u16(encoded, 40)?);
+        let _length = crate::RetentionNamespace::admit_length(length)
+            .map_err(|source| RetentionRootDecodeError::Namespace { source })?;
+    }
     if encoded.len() >= 48 {
         super::root_header_decoder::admit_prefix_length(encoded)?;
     }
