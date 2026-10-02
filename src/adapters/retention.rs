@@ -78,6 +78,8 @@ mod filesystem_retention_refusal;
 mod filesystem_retention_snapshot;
 mod filesystem_retention_snapshot_error;
 #[cfg(test)]
+mod filesystem_retention_snapshot_identity_tests;
+#[cfg(test)]
 mod filesystem_retention_snapshot_tests;
 mod filesystem_retention_stage;
 mod filesystem_retention_storage;
