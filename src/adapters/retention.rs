@@ -47,6 +47,8 @@ mod filesystem_retention_recovery_error;
 #[cfg(test)]
 mod filesystem_retention_recovery_head_binding_tests;
 #[cfg(test)]
+mod filesystem_retention_recovery_history_domain_tests;
+#[cfg(test)]
 mod filesystem_retention_recovery_history_tests;
 #[cfg(test)]
 mod filesystem_retention_recovery_identity_tests;

@@ -6,8 +6,9 @@ use std::path::Path;
 
 use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_test_fixture::{
-    ROOT_HEX, drive_publication, fixture, initial_preparation, manifest_pool_path, open_authority,
-    retention_witness, root_pool_path, successor_preparation, successor_root,
+    ROOT_HEX, drive_publication, fixture, initial_preparation, initial_root, manifest_pool_path,
+    new_namespace_preparation, open_authority, retention_witness, root_pool_path,
+    successor_preparation, successor_root,
 };
 use super::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
@@ -64,7 +65,7 @@ fn recovered_head_refuses_a_skipped_root_generation() -> Result<(), Box<dyn Erro
     Ok(())
 }
 
-fn install_history(
+pub(super) fn install_history(
     root: &Path,
     preparation: &RetentionPublicationPreparation<'_>,
     encoded: &CanonicalRetentionRoot,
@@ -119,5 +120,63 @@ fn install_history(
         root.join("retention/head.next"),
         CanonicalRetentionHead::from_head(&head).encoded(),
     )?;
+    Ok(())
+}
+
+// Size: medium. Oracle: the first publication starts at root generation one.
+// Delete only with this protocol or a stronger runtime boundary replacement.
+#[test]
+fn recovered_initial_head_refuses_noninitial_root_history() -> Result<(), Box<dyn Error>> {
+    let (sandbox, mut authority) = open_authority("recovery-noninitial-first-root")?;
+    let bytes = fixture(ROOT_HEX)?;
+    let initial = AdmittedRetentionRoot::decode(&bytes)?;
+    let preparation = initial_preparation(&bytes)?;
+    drive_publication(&mut authority, &preparation, 13)?;
+    let noninitial = successor_root(&initial)?;
+    install_history(sandbox.path(), &preparation, &noninitial)?;
+    require_history_refusal(sandbox.path(), &mut authority)
+}
+
+// Size: medium. Oracle: a newly inserted namespace starts at root generation one.
+// Delete only with this protocol or a stronger runtime boundary replacement.
+#[test]
+fn recovered_inserted_namespace_refuses_noninitial_root_history() -> Result<(), Box<dyn Error>> {
+    let (sandbox, mut authority) = open_authority("recovery-noninitial-inserted-root")?;
+    let bytes = fixture(ROOT_HEX)?;
+    let template = AdmittedRetentionRoot::decode(&bytes)?;
+    let _published = execute_retention_publication(&mut authority, &initial_preparation(&bytes)?)?;
+    let current = authority
+        .observe_current()?
+        .ok_or("missing current state")?;
+    let manifest = AdmittedRetentionManifest::decode(current.manifest_bytes())?;
+    let initial = initial_root(b"new-namespace", &template)?;
+    let candidate = AdmittedRetentionRoot::decode(initial.encoded())?;
+    let preparation = new_namespace_preparation(&manifest, initial.encoded())?;
+    drive_publication(&mut authority, &preparation, 13)?;
+    let noninitial = successor_root(&candidate)?;
+    install_history(sandbox.path(), &preparation, &noninitial)?;
+    require_history_refusal(sandbox.path(), &mut authority)
+}
+
+fn require_history_refusal(
+    root: &Path,
+    authority: &mut super::filesystem_retention_authority::FilesystemRetentionPublicationAuthority,
+) -> Result<(), Box<dyn Error>> {
+    let before = retention_witness(root)?;
+    let result = authority.recover();
+    assert_eq!(
+        retention_witness(root)?,
+        before,
+        "noninitial namespace history must preserve every retained byte: {result:?}"
+    );
+    assert!(
+        matches!(
+            result,
+            Err(FilesystemRetentionRecoveryError::Plan {
+                source: RetentionRecoveryRefusal::RootNotSuccessor
+            })
+        ),
+        "noninitial namespace history must refuse before head publication: {result:?}"
+    );
     Ok(())
 }
