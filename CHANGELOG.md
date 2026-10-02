@@ -624,6 +624,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Subprocess test-support readiness admits a queued valid signal after sender exit, preventing a false process-group cleanup failure without retrying the test gate.
+
 - The version-one catalog ledger names its executable ordering integration
   target, duplicate-refusal module, and filesystem publication unit-test owner
   instead of absent test files (#148).
