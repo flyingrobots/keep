@@ -54,19 +54,25 @@ fn queued_readiness_survives_exit_between_observations() -> Result<(), Box<dyn s
 
 #[test]
 fn an_invalid_readiness_byte_refuses() -> Result<(), Box<dyn std::error::Error>> {
-    let directory = TestDirectory::create("readiness-invalid-byte")?;
-    let path = directory.path().join("ready");
-    let listener = readiness_listener(&path)?;
-    let mut sender = UnixStream::connect(&path)?;
-    sender.write_all(b"x")?;
+    // Exhaust the byte domain in ascending order; the first failure is minimal.
+    for byte in u8::MIN..=u8::MAX {
+        if byte == b'r' {
+            continue;
+        }
+        let directory = TestDirectory::create(&format!("readiness-invalid-{byte}"))?;
+        let path = directory.path().join("ready");
+        let listener = readiness_listener(&path)?;
+        let mut sender = UnixStream::connect(&path)?;
+        sender.write_all(&[byte])?;
 
-    let result = wait_for_signal(&listener, || Ok(None));
+        let result = wait_for_signal(&listener, || Ok(None));
 
-    assert!(
-        matches!(result, Err(source) if source.kind() == io::ErrorKind::InvalidData),
-        "an invalid readiness byte must refuse with InvalidData"
-    );
-    directory.close()?;
+        assert!(
+            matches!(result, Err(source) if source.kind() == io::ErrorKind::InvalidData),
+            "readiness byte {byte} must refuse with InvalidData"
+        );
+        directory.close()?;
+    }
     Ok(())
 }
 

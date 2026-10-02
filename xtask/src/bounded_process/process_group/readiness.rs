@@ -22,18 +22,24 @@ pub(super) fn wait_for_signal(
 ) -> io::Result<()> {
     loop {
         match receive_signal(listener) {
-            Ok(()) => return Ok(()),
-            Err(source) if source.kind() == io::ErrorKind::WouldBlock => {
-                if let Some(status) = poll_exit()? {
-                    return Err(io::Error::new(
-                        io::ErrorKind::UnexpectedEof,
-                        format!("child exited before descendant readiness: {status}"),
-                    ));
-                }
-                std::thread::yield_now();
-            }
-            Err(source) => return Err(source),
+            Err(source) if source.kind() == io::ErrorKind::WouldBlock => {}
+            result => return result,
         }
+        if let Some(status) = poll_exit()? {
+            return receive_after_exit(listener, status);
+        }
+        std::thread::yield_now();
+    }
+}
+
+/// A sender can queue its signal between the empty poll and observed exit.
+fn receive_after_exit(listener: &UnixListener, status: ExitStatus) -> io::Result<()> {
+    match receive_signal(listener) {
+        Err(source) if source.kind() == io::ErrorKind::WouldBlock => Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            format!("child exited before descendant readiness: {status}"),
+        )),
+        result => result,
     }
 }
 
