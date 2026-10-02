@@ -121,8 +121,10 @@ Run the repository-owned matrix:
 cargo xtask durability-crash-matrix
 ```
 
-The command executes the three ordered positions for each stable
-`KEEP-CRASH-001`–`KEEP-CRASH-035` point: 105 canonical cases. Each case owns a
+The 105 version-one cases are a subset of the complete command, which also
+executes version-two migration cases. The version-one subset executes the
+three ordered positions for each stable `KEEP-CRASH-001`–`KEEP-CRASH-035`
+point. Each version-one case owns a
 fresh filesystem store and an isolated child process group. The child retains
 the writer lock and any open staged artifact while it executes the production
 initialization, segment-writing, catalog-publication, or recovery-discard

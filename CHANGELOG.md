@@ -624,6 +624,9 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Version-one crash documentation identifies its 105 cases as a subset of
+  the complete command, which also executes version-two migration cases (#69).
+
 - Version-one recovery documentation distinguishes streamed inventory
   fingerprint evidence from caller-supplied classifier bytes and the segment
   resumer's separate materialization (#69).
