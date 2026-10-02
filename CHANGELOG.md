@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- The fenced reader corruption law now requires the precise checksum-mismatch cause and expected/observed checksum bytes instead of accepting any root error (#99).
+
 - Correct the retention recovery documentation's obsolete integration status and explicitly retain its open incomplete-stage pinning and post-removal failure findings (#99).
 
 - Recovery fixtures now use production's head-to-manifest binding validation, preventing independently valid but contradictory records from becoming observed retention state (#99).
