@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery preserves interrupted initial roots, manifests and heads as corrupt evidence as soon as any available predecessor byte is nonzero, while retaining possible successor prefixes (#99).
+
 - Recovery rejects partial anchors when even their greatest canonical completion cannot follow the preceding anchor, preserving the exact offending stage (#99).
 
 - Recovery preserves partial layout-length fields whose minimum possible completion exceeds the format ceiling, with an explicit prefix-bound diagnostic (#99).

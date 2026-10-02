@@ -31,7 +31,7 @@ pub(super) fn root(encoded: &[u8]) -> Result<(), RetentionRootDecodeError> {
     if encoded.len() >= 48 {
         super::root_header_decoder::admit_prefix_length(encoded)?;
     }
-    if encoded.len() >= 148 {
+    if encoded.len() >= 116 {
         super::stage_history_admission::root(encoded)?;
     }
     super::stage_record_integrity::root(encoded)
@@ -59,7 +59,7 @@ pub(super) fn manifest(encoded: &[u8]) -> Result<(), RetentionManifestDecodeErro
     if encoded.len() >= 48 {
         super::manifest_header_decoder::admit_prefix_length(encoded)?;
     }
-    if encoded.len() >= 80 {
+    if encoded.len() >= 48 {
         super::stage_history_admission::manifest(encoded)?;
     }
     super::stage_record_integrity::manifest(encoded)
@@ -89,6 +89,8 @@ pub(super) fn head(encoded: &[u8]) -> Result<(), RetentionHeadDecodeError> {
     }
     if encoded.len() >= 104 {
         let _head = super::head_decoder::admit_fields(encoded)?;
+    } else if encoded.len() >= 72 {
+        super::stage_history_admission::head_prefix(encoded)?;
     }
     if let Some(preimage) = encoded.get(..super::head_decoder::CHECKSUM_OFFSET) {
         let checksum = super::head_decoder::checksum(preimage);
