@@ -44,6 +44,8 @@ mod filesystem_migration_fixed_artifact;
 mod filesystem_migration_namespace;
 mod filesystem_migration_namespace_directory;
 mod filesystem_migration_reader_fence;
+#[cfg(test)]
+mod filesystem_migration_remount_tests;
 mod filesystem_migration_storage;
 #[cfg(test)]
 mod filesystem_migration_storage_tests;

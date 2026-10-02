@@ -102,10 +102,12 @@ fn pin(parent: &Dir, name: &str) -> Result<Dir, FilesystemPlatformAdmissionError
 
 /// Requires the reopened root to be the physical root the migration intent bound.
 ///
-/// Device, mount, and file coordinates are compared exactly, as the migration
-/// authority compares them before mutation. A relocated or restored store
-/// refuses rather than receiving retention authority over a root whose intent
-/// describes a different volume.
+/// Only the restart-stable coordinates are compared: the root's device and its
+/// inode. The mount identity the intent also records is a same-process
+/// observation (`statx.stx_mnt_id` can change across mount instances and
+/// reboot), so a legitimately remounted store admits, while a relocated or
+/// restored store refuses rather than receiving retention authority over a
+/// root whose intent describes a different volume or inode.
 pub(super) fn require_root_identity(
     bound: BoundRootIdentity,
     observed: FilesystemRootIdentity,
@@ -115,11 +117,6 @@ pub(super) fn require_root_identity(
             StoreRootIdentityCoordinate::Device,
             bound.device(),
             observed.device(),
-        ),
-        (
-            StoreRootIdentityCoordinate::Mount,
-            bound.mount(),
-            observed.mount(),
         ),
         (
             StoreRootIdentityCoordinate::File,

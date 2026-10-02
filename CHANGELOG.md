@@ -606,6 +606,11 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Version-two reopen compares persisted device and inode coordinates while
+  retaining mount identity as same-process migration evidence (#97).
+  Simulated-remount reopen and exact moved-root refusals are regression-tested;
+  migration record bytes and the forward publication protocol are unchanged.
+
 - Reference staging exposes its fixed buffer/state allowance and measured
   capacity, deduplication, and repeated-content allocation laws (#74).
   Chunk payload limits and separately bounded metadata are documented without
