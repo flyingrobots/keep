@@ -45,6 +45,7 @@ The following pages form one protocol:
   manifest, and retention-head rules.
 - [Retention publication](retention-publication.md) owns closure admission and
   the generation transition.
+- [Retention publication recovery](retention-recovery.md) owns interrupted stages, restart publication, and retention process-death boundaries.
 - [Closure verification](closure.md) owns deterministic traversal, exact
   resource accounting, authenticated reconstruction, and closure evidence.
 - [Closure corruption boundary](closure-corruption.md) owns the admitted-record

@@ -52,6 +52,7 @@ fn version_two_is_one_routed_protocol() -> Result<(), Box<dyn std::error::Error>
         "successor to `keep.segment-store/v1`",
         "[Retention records](retention.md)",
         "[Retention publication](retention-publication.md)",
+        "[Retention publication recovery](retention-recovery.md)",
         "[Closure verification](closure.md)",
         "[Closure corruption boundary](closure-corruption.md)",
         "[GC and disposition records](gc.md)",
@@ -152,6 +153,7 @@ fn version_two_pages_stay_within_the_review_threshold() -> Result<(), Box<dyn st
         "recovery.md",
         "requirements.md",
         "retention-publication.md",
+        "retention-recovery.md",
         "retention.md",
     ] {
         let line_count = read(&format!("{FORMAT_ROOT}/{name}"))?.lines().count();

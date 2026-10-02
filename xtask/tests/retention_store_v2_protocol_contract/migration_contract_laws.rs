@@ -7,11 +7,13 @@ fn migration_and_recovery_define_every_authority_boundary() -> Result<(), Box<dy
 {
     // recovery.md owns the namespace, marker, fence, and record grammars;
     // migration-recovery.md owns the ordered protocol and partial recovery. The
-    // two pages state one contract, so the laws read them together.
+    // Retention restart has its own page; these are documentation guards,
+    // not executable evidence for the storage claims written in the pages.
     let recovery = format!(
-        "{}\n{}",
+        "{}\n{}\n{}",
         normalized(&read(&format!("{FORMAT_ROOT}/recovery.md"))?),
-        normalized(&read(&format!("{FORMAT_ROOT}/migration-recovery.md"))?)
+        normalized(&read(&format!("{FORMAT_ROOT}/migration-recovery.md"))?),
+        normalized(&read(&format!("{FORMAT_ROOT}/retention-recovery.md"))?)
     );
 
     for required in [

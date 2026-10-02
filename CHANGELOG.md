@@ -667,11 +667,7 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
-<!-- markdownlint-disable MD013 -->
-
 - Recovery synchronizes the exact complete retention stage before creating its immutable root or manifest pool link or replacing the retention head. A synchronization error refuses before that publication; the retained on-disk stage remains recovery evidence.
-
-<!-- markdownlint-enable MD013 -->
 
 - Interrupted retention stages with complete zero root or liveness generations now refuse recovery with the existing typed generation error before any mutation (#99). Incomplete generation fields remain eligible for canonical-prefix recovery; complete-record decoding and durable encodings are unchanged.
 
