@@ -206,3 +206,44 @@ fn successor_prefixes_recover_against_the_published_generation() -> Result<(), B
     }
     Ok(())
 }
+
+// Size: medium (owned filesystem); oracle: Core Law and recovery refusal
+// contract. Delete only if the same public recovery refusal and exact-byte
+// preservation are covered by a stronger test.
+#[test]
+fn noncanonical_short_stages_refuse_recovery_without_changing_retained_bytes()
+-> Result<(), Box<dyn Error>> {
+    use super::filesystem_retention_test_fixture::retention_witness;
+    use super::{FilesystemRetentionRecoveryError, RetentionFixedStage, RetentionRecoveryRefusal};
+
+    for (name, expected_stage) in [
+        ("root.next", RetentionFixedStage::Root),
+        ("manifest.next", RetentionFixedStage::Manifest),
+        ("head.next", RetentionFixedStage::Head),
+    ] {
+        let (sandbox, mut authority) = open_authority(&format!("short-corrupt-{name}"))?;
+        let root_bytes = fixture(ROOT_HEX)?;
+        let _published =
+            execute_retention_publication(&mut authority, &initial_preparation(&root_bytes)?)?;
+        fs::write(sandbox.path().join("retention").join(name), b"invalid")?;
+        let before = retention_witness(sandbox.path())?;
+
+        let result = authority.recover();
+
+        assert!(
+            matches!(
+                result,
+                Err(FilesystemRetentionRecoveryError::Plan {
+                    source: RetentionRecoveryRefusal::StageCorrupt { stage, .. }
+                }) if stage == expected_stage
+            ),
+            "noncanonical {name} must refuse recovery, observed {result:?}"
+        );
+        assert_eq!(
+            retention_witness(sandbox.path())?,
+            before,
+            "refusal must preserve every retained byte for {name}"
+        );
+    }
+    Ok(())
+}
