@@ -606,6 +606,10 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Source-structure admission refuses the nine Rust source basenames prohibited
+  by AGENTS.md with a typed repository-relative filename diagnostic (#144).
+  Existing filesystem, Python and line-size checks remain in force.
+
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
