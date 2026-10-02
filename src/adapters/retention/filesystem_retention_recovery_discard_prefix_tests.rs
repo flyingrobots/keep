@@ -9,7 +9,7 @@ use super::filesystem_retention_test_fixture::{
 };
 use super::{FilesystemRetentionRecoveryError, RetentionFixedStage, RetentionRecoveryRefusal};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 enum Missing {
     RootStage,
     RootLink,
@@ -48,7 +48,8 @@ fn truncated_head_refuses_a_missing_manifest_link() -> Result<(), Box<dyn Error>
 }
 
 fn require_refusal(stage: RetentionFixedStage, missing: Missing) -> Result<(), Box<dyn Error>> {
-    let (sandbox, mut authority) = open_authority("recovery-impossible-discard-prefix")?;
+    let label = format!("recovery-impossible-discard-{stage:?}-{missing:?}");
+    let (sandbox, mut authority) = open_authority(&label)?;
     let bytes = fixture(ROOT_HEX)?;
     let preparation = initial_preparation(&bytes)?;
     let (count, name) = match stage {
