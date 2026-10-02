@@ -40,6 +40,8 @@ mod filesystem_retention_expectation_tests;
 #[cfg(all(test, target_os = "linux"))]
 mod filesystem_retention_fifo_tests;
 #[cfg(test)]
+mod filesystem_retention_framing_prefix_tests;
+#[cfg(test)]
 mod filesystem_retention_generation_refusal_tests;
 mod filesystem_retention_namespace;
 #[cfg(test)]

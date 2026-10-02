@@ -11,6 +11,11 @@ use crate::{
 /// Failure to decode and admit one version-2 retention root.
 #[derive(Debug)]
 pub enum RetentionRootDecodeError {
+    /// Available size-field bytes admit no canonical completion.
+    FramingPrefixImpossible {
+        /// Actual byte length of the interrupted stage.
+        observed: usize,
+    },
     /// The byte string ended before its required exact length.
     Truncated {
         /// Required byte length.

@@ -7,6 +7,10 @@ use super::RetentionHeadDecodeError;
 impl fmt::Display for RetentionHeadDecodeError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::ManifestLengthPrefixImpossible { observed } => write!(
+                formatter,
+                "retention head size fields have no canonical completion at {observed} bytes"
+            ),
             Self::WrongLength { expected, observed } => write!(
                 formatter,
                 "retention head has {observed} bytes; expected {expected}"
@@ -66,6 +70,7 @@ impl Error for RetentionHeadDecodeError {
             Self::Semantic { source } => Some(source),
             Self::WrongLength { .. }
             | Self::PrefixByteMismatch { .. }
+            | Self::ManifestLengthPrefixImpossible { .. }
             | Self::InvalidMagic { .. }
             | Self::UnsupportedVersion { .. }
             | Self::InvalidRecordLength { .. }

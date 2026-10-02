@@ -7,6 +7,11 @@ use crate::{LivenessGenerationError, RetentionManifestError, RootGenerationError
 /// Failure to decode and admit one version-2 retention manifest.
 #[derive(Debug)]
 pub enum RetentionManifestDecodeError {
+    /// Available size-field bytes admit no canonical completion.
+    FramingPrefixImpossible {
+        /// Actual byte length of the interrupted stage.
+        observed: usize,
+    },
     /// The byte string ended before its required exact length.
     Truncated {
         /// Required byte length.

@@ -5,6 +5,11 @@ use crate::{LivenessGenerationError, RetentionHeadError, RetentionManifestLength
 /// Failure to decode and admit one version-2 retention head.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RetentionHeadDecodeError {
+    /// Available size-field bytes admit no canonical completion.
+    ManifestLengthPrefixImpossible {
+        /// Actual byte length of the interrupted stage.
+        observed: usize,
+    },
     /// The input was not exactly one complete fixed-width head.
     WrongLength {
         /// Required fixed width.

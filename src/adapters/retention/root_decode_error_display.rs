@@ -6,6 +6,10 @@ use super::RetentionRootDecodeError;
 impl fmt::Display for RetentionRootDecodeError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::FramingPrefixImpossible { observed } => write!(
+                formatter,
+                "retention root size fields have no canonical completion at {observed} bytes"
+            ),
             Self::Truncated { expected, observed } => {
                 write!(
                     formatter,
@@ -133,6 +137,7 @@ impl Error for RetentionRootDecodeError {
             Self::Truncated { .. }
             | Self::TrailingData { .. }
             | Self::PrefixByteMismatch { .. }
+            | Self::FramingPrefixImpossible { .. }
             | Self::ClosureLimitPrefixAboveMaximum { .. }
             | Self::LayoutLengthPrefixAboveMaximum { .. }
             | Self::InvalidMagic { .. }
