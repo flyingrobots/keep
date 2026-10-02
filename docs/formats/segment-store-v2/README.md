@@ -101,8 +101,11 @@ garbage collection. Partial-prefix migration recovery and the 68-case
 `KEEP-CRASH-053..073` process-death matrix are implemented. Broader migration
 restart corruption and compatibility coverage remain in #111 and #112.
 PR #99 contains retention recovery and reader fencing awaiting integration;
-issue #21 owns garbage collection;
-issue #97 owns the restart-stable root identity coordinate. A version-1 store
+issue #21 owns garbage collection.
+Reopen compares only the restart-stable root coordinates, device and inode,
+against the intent; see
+[root identity across restart](recovery.md#root-identity-across-restart). A
+version-1 store
 remains admitted until its owner migrates it, and the
 [requirements ledger](requirements.md) is the authority on which requirements
 are proven.

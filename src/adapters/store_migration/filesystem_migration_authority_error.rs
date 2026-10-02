@@ -23,11 +23,16 @@ pub enum FilesystemMigrationAuthorityArtifact {
 }
 
 /// Physical store-root coordinate compared during migration admission.
+///
+/// `Device` and `File` are restart-stable and are compared on every reopen of
+/// a migrated store. `Mount` names a mount instance that can change across
+/// unmount, remount, and reboot; only the migrating process compares it, and
+/// only against the observation it made itself.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StoreRootIdentityCoordinate {
     /// Platform device coordinate.
     Device,
-    /// Platform mount coordinate.
+    /// Platform mount coordinate; same-process evidence only.
     Mount,
     /// Platform file coordinate.
     File,

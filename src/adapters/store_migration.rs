@@ -59,6 +59,8 @@ mod filesystem_migration_receipt_evidence_tests;
 mod filesystem_migration_recovery_tests;
 #[cfg(test)]
 mod filesystem_migration_recovery_truncation_tests;
+#[cfg(test)]
+mod filesystem_migration_remount_tests;
 #[cfg(feature = "repository-tasks")]
 mod filesystem_migration_repository_tasks;
 mod filesystem_migration_residue;

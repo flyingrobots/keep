@@ -33,6 +33,7 @@ pub(crate) enum SourceStructureError {
     InvalidPath(String),
     NonRegular(PathBuf),
     PythonSource(PathBuf),
+    ForbiddenFilename(PathBuf),
     RepositoryRootChanged(PathBuf),
     SourceFileChanged(PathBuf),
     Violations {
@@ -89,6 +90,11 @@ impl fmt::Display for SourceStructureError {
                 escaped_path(formatter, path)?;
                 formatter.write_str("`")
             }
+            Self::ForbiddenFilename(path) => {
+                formatter.write_str("repository source uses forbidden filename `")?;
+                escaped_path(formatter, path)?;
+                formatter.write_str("`")
+            }
             Self::RepositoryRootChanged(path) => {
                 formatter.write_str("repository root changed during source inspection: `")?;
                 escaped_path(formatter, path)?;
@@ -115,6 +121,7 @@ impl Error for SourceStructureError {
             | Self::InvalidPath(_)
             | Self::NonRegular(_)
             | Self::PythonSource(_)
+            | Self::ForbiddenFilename(_)
             | Self::RepositoryRootChanged(_)
             | Self::SourceFileChanged(_)
             | Self::Violations { .. } => None,
