@@ -624,6 +624,9 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- The version-one segment ledger points to the existing filesystem-stage
+  regression module for exclusive staging and dropped-stage evidence (#69).
+
 - The version-one recovery overview links its implemented transitive
   candidate-view admission to the next-head boundary and requirement anchors (#69).
 
