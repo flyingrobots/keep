@@ -167,10 +167,12 @@ denominator separately and never use floating-point serialization. A zero
 denominator means the operation materialized no bytes; consumers must retain
 that exact state instead of inventing infinity, zero, or a substitute value.
 
-Whole-blob verification reads each complete chunk twice: once before output
-and once while emitting authenticated bytes. Its expected read amplification
-is therefore exactly `2 / 1`. Range-read amplification includes every complete
-selected chunk in both passes, not only returned slices.
+Current whole-blob verification authenticates each complete chunk once,
+before output, so authenticated-byte read amplification is exactly `1 / 1`.
+Range-read amplification counts every complete selected chunk once, including
+bytes outside returned slices. Emission fetches verified immutable chunks
+without another authentication pass. Historical two-pass artifacts retain
+their original `2 / 1` whole-blob counters and double-pass range counters.
 
 ## Regression threshold policy
 
