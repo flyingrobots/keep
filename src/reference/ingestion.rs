@@ -18,8 +18,32 @@ macro_rules! read_buffer_bytes {
 const READ_BUFFER_BYTES: usize = read_buffer_bytes!();
 // This bound makes more than one detector boundary per read impossible.
 const _: () = assert!(read_buffer_bytes!() <= FastCdc::MINIMUM_CHUNK_LENGTH.get());
+macro_rules! maximum_chunk_bytes {
+    () => {
+        262_144
+    };
+}
+
+const MAXIMUM_CHUNK_BYTES: usize = maximum_chunk_bytes!();
+const _: () = assert!(maximum_chunk_bytes!() == FastCdc::MAXIMUM_CHUNK_LENGTH.get());
 
 impl ReferenceStore {
+    /// Fixed buffer and stream-state allowance for one staging invocation.
+    ///
+    /// Includes the 8 KiB read buffer, one maximum-length chunk buffer, and
+    /// the stream state's detector, hasher, and bookkeeping. The value does
+    /// not grow with source length. It excludes staged unique chunk payloads,
+    /// map nodes, layout metadata, caller-owned input, and allocator overhead.
+    /// Layout and map metadata are bounded separately by [`LayoutEntryLimit`].
+    ///
+    /// Staged payloads cannot exceed the store's remaining capacity: the
+    /// adapter checks capacity before copying each new unique chunk. This
+    /// allowance is a resource contract, not a promise of constant total
+    /// memory or a measurement of process RSS.
+    pub const STAGING_SCRATCH_LIMIT_BYTES: usize = READ_BUFFER_BYTES
+        .saturating_add(MAXIMUM_CHUNK_BYTES)
+        .saturating_add(std::mem::size_of::<StreamState>());
+
     /// Reads one logical stream into invisible, validated staged work.
     ///
     /// The streaming engine retains one fixed 8 KiB read buffer, one buffer

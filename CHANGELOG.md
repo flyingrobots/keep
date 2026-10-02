@@ -611,6 +611,19 @@ after its public API and format compatibility policies are established.
   Simulated-remount reopen and exact moved-root refusals are regression-tested;
   migration record bytes and the forward publication protocol are unchanged.
 
+- Reference staging exposes its fixed buffer/state allowance and measured
+  capacity, deduplication, and repeated-content allocation laws (#74).
+  Chunk payload limits and separately bounded metadata are documented without
+  claiming constant total memory or durability. Source-failure cleanup after
+  partial staging preserves committed content and releases staging heap.
+
+- Source-structure admission refuses the nine Rust source basenames prohibited
+  by AGENTS.md with a typed repository-relative filename diagnostic (#144).
+  Existing filesystem, Python and line-size checks remain in force.
+
+- Benchmark source-identity laws exercise real Git cleanliness independently
+  of ambient CPU-model availability; benchmark hardware admission stays strict.
+
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
