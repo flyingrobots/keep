@@ -125,3 +125,46 @@ fn contradictory_history_in_short_heads_preserves_evidence() -> Result<(), Box<d
     }
     Ok(())
 }
+
+// Size: medium. Oracle: every available checksum byte must match the golden head checksum.
+// Delete only when stronger public recovery coverage subsumes interrupted-checksum corruption.
+#[test]
+fn contradictory_partial_head_checksums_preserve_evidence() -> Result<(), Box<dyn Error>> {
+    for offset in 112_usize..143 {
+        let (sandbox, mut authority) = open_authority(&format!("short-head-checksum-{offset}"))?;
+        let root = fixture(ROOT_HEX)?;
+        let preparation = initial_preparation(&root)?;
+        drive_publication(&mut authority, &preparation, 11)?;
+        let publication = preparation.publication().ok_or("missing publication")?;
+        let end = offset.checked_add(1).ok_or("checksum prefix overflow")?;
+        let mut partial = publication
+            .head()
+            .encoded()
+            .get(..end)
+            .ok_or("missing checksum prefix")?
+            .to_vec();
+        let byte = partial.get_mut(offset).ok_or("missing checksum byte")?;
+        let expected = *byte;
+        *byte ^= 1;
+        let observed = *byte;
+        fs::write(sandbox.path().join("retention/head.next"), partial)?;
+        let before = retention_witness(sandbox.path())?;
+
+        let result = authority.recover();
+
+        assert!(
+            matches!(&result,
+            Err(FilesystemRetentionRecoveryError::Plan {
+                source: RetentionRecoveryRefusal::StageCorrupt { stage: RetentionFixedStage::Head, source },
+            }) if source.downcast_ref::<RetentionHeadDecodeError>() ==
+                Some(&RetentionHeadDecodeError::PrefixByteMismatch { offset, expected, observed })),
+            "checksum prefix ending at {end} must report the exact contradictory byte: {result:?}"
+        );
+        assert_eq!(
+            retention_witness(sandbox.path())?,
+            before,
+            "corrupt checksum prefix ending at {end} must preserve retained evidence"
+        );
+    }
+    Ok(())
+}
