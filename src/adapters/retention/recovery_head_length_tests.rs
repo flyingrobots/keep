@@ -4,10 +4,10 @@ use std::error::Error;
 
 use super::filesystem_retention_test_fixture::{MANIFEST_HEX, ROOT_HEX, fixture};
 use super::{
-    AdmittedRetentionManifest, CanonicalRetentionHead, RetentionPoolEntryObservation as Pool,
-    RetentionPoolObservations, RetentionRecoveryEvidence, RetentionRecoveryOutcome,
-    RetentionRecoveryRefusal, RetentionStageAssessments, assess_head_stage, assess_manifest_stage,
-    assess_root_stage, plan_retention_recovery,
+    AdmittedRetentionManifest, CanonicalRetentionHead, CanonicalRetentionManifest,
+    RetentionPoolEntryObservation as Pool, RetentionPoolObservations, RetentionRecoveryEvidence,
+    RetentionRecoveryOutcome, RetentionRecoveryRefusal, RetentionStageAssessments,
+    assess_head_stage, assess_manifest_stage, assess_root_stage, plan_retention_recovery,
 };
 use crate::{RetentionHead, RetentionManifest, RetentionManifestLength};
 
@@ -21,10 +21,11 @@ fn recovery_binds_head_length_across_the_complete_canonical_length_domain()
     let manifest_bytes = fixture(MANIFEST_HEX)?;
     let manifest = AdmittedRetentionManifest::decode(&manifest_bytes)?;
     let actual = u64::try_from(manifest_bytes.len())?;
+    let (minimum, entry_width) = encoded_length_basis(manifest.manifest())?;
     for entries in 0..=RetentionManifest::MAXIMUM_ENTRY_COUNT {
         let length = u64::from(entries)
-            .checked_mul(72)
-            .and_then(|bytes| RetentionManifestLength::MINIMUM.get().checked_add(bytes))
+            .checked_mul(entry_width)
+            .and_then(|bytes| minimum.checked_add(bytes))
             .ok_or("canonical length sweep overflowed")?;
         let head = RetentionHead::new(
             manifest.manifest().generation(),
@@ -63,4 +64,32 @@ fn recovery_binds_head_length_across_the_complete_canonical_length_domain()
         }
     }
     Ok(())
+}
+
+/// Derives generated input lengths through the public encoding boundary.
+/// The expected planner result still compares against the independent fixture bytes.
+fn encoded_length_basis(manifest: &RetentionManifest) -> Result<(u64, u64), Box<dyn Error>> {
+    let entry = manifest
+        .entries()
+        .first()
+        .copied()
+        .ok_or("fixture has no entry")?;
+    let empty = RetentionManifest::new(manifest.generation(), manifest.predecessor(), vec![])?;
+    let single =
+        RetentionManifest::new(manifest.generation(), manifest.predecessor(), vec![entry])?;
+    let minimum = u64::try_from(
+        CanonicalRetentionManifest::from_manifest(&empty)?
+            .encoded()
+            .len(),
+    )?;
+    let single_length = u64::try_from(
+        CanonicalRetentionManifest::from_manifest(&single)?
+            .encoded()
+            .len(),
+    )?;
+    let width = single_length
+        .checked_sub(minimum)
+        .filter(|width| *width > 0)
+        .ok_or("one manifest entry must increase encoded length")?;
+    Ok((minimum, width))
 }
