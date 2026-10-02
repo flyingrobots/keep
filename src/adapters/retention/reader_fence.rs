@@ -10,6 +10,10 @@ use crate::adapters::filesystem_exact_record;
 
 const READER_LOCK: &str = "reader.lock";
 
+#[cfg(test)]
+#[path = "reader_fence_tests.rs"]
+mod tests;
+
 /// A shared kernel lock on `reader.lock` held for one snapshot's lifetime.
 ///
 /// Collection acquires the store writer authority and then an exclusive lock
@@ -29,8 +33,18 @@ impl ReaderFence {
     /// following links; its identity is verified after the open so a swapped
     /// entry refuses.
     pub(super) fn acquire(root: &Dir) -> io::Result<Self> {
+        Self::acquire_with(root, || Ok(()))
+    }
+
+    // Keep the acquisition protocol shared with deterministic replacement
+    // schedules, without ambient hooks or changes to production lock policy.
+    fn acquire_with(
+        root: &Dir,
+        after_verified_open: impl FnOnce() -> io::Result<()>,
+    ) -> io::Result<Self> {
         let file = filesystem_exact_record::open_read(root, READER_LOCK)?;
         verify(root, &file)?;
+        after_verified_open()?;
         flock(&file, FlockOperation::LockShared)?;
         verify(root, &file)?;
         Ok(Self { _file: file })

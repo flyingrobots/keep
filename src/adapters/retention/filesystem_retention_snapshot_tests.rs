@@ -5,6 +5,7 @@ use std::fs;
 
 use cap_std::fs::Dir;
 use rustix::fs::{FlockOperation, flock};
+use rustix::io::Errno;
 
 use super::filesystem_retention_test_fixture::{
     ROOT_HEX, fixture, initial_preparation, migrated_store, open_authority,
@@ -91,6 +92,8 @@ fn a_substituted_root_refuses_under_the_snapshot() -> Result<(), Box<dyn Error>>
 }
 
 #[test]
+// Size: medium. Oracle: live shared fences exclude a collector with WOULDBLOCK.
+// Delete when reader fencing is removed or stronger lifetime evidence subsumes this law.
 fn readers_share_the_fence_and_collection_cannot_take_it_exclusively() -> Result<(), Box<dyn Error>>
 {
     let sandbox = migrated_store("filesystem-retention-snapshot-fence")?;
@@ -101,7 +104,11 @@ fn readers_share_the_fence_and_collection_cannot_take_it_exclusively() -> Result
 
     let refused = flock(&collector, FlockOperation::NonBlockingLockExclusive);
 
-    assert!(refused.is_err(), "an exclusive fence must wait for readers");
+    assert_eq!(
+        refused,
+        Err(Errno::WOULDBLOCK),
+        "an exclusive fence must wait for readers"
+    );
     drop(second);
     drop(first);
     flock(&collector, FlockOperation::NonBlockingLockExclusive)?;
@@ -109,16 +116,19 @@ fn readers_share_the_fence_and_collection_cannot_take_it_exclusively() -> Result
 }
 
 #[test]
-fn a_replaced_reader_lock_refuses_the_fence() -> Result<(), Box<dyn Error>> {
+// Size: medium. Oracle: the reader.lock protocol requires an empty regular file.
+// Delete when that protocol is removed or a stronger public-reader law subsumes this case.
+fn a_non_empty_reader_lock_refuses_the_fence() -> Result<(), Box<dyn Error>> {
     let sandbox = migrated_store("filesystem-retention-snapshot-bad-fence")?;
     fs::write(sandbox.path().join("reader.lock"), b"not empty")?;
     let error =
         FilesystemRetentionSnapshot::load(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)
             .err()
             .ok_or("a non-empty reader.lock was accepted as the fence")?;
-    assert!(matches!(
-        error,
-        FilesystemRetentionSnapshotError::Fence { .. }
-    ));
+    assert!(
+        matches!(&error, FilesystemRetentionSnapshotError::Fence { source }
+            if source.kind() == std::io::ErrorKind::InvalidData),
+        "a nonempty lock must report Fence with InvalidData: {error:?}"
+    );
     Ok(())
 }

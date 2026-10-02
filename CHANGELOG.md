@@ -669,6 +669,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Reader-fence tests now replace the lock inode during acquisition, distinguish that case from nonempty lock bytes, and require the exact kernel contention errno; isolated mutations verify that the identity and exclusion assertions detect removed protections (#99).
+
 - Reader double collection preserves catalog length and the complete retention head, so changes to validated length or predecessor coordinates cannot be collapsed into an unchanged generation/digest pair. The public `RetentionViewCoordinates` catalog tuple now includes `CatalogLength`, and its retention field carries `RetentionHead` (#99).
 
 - Fenced retention readers preserve selected catalog and segment admission failures as `FilesystemRetentionSnapshotError::Catalog` with their exact restart source, while coordinate failures remain `View` errors; a moving head retries the speculative catalog result (#99).
