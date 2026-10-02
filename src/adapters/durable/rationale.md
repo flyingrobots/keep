@@ -12,4 +12,6 @@ Refusal and operational failure remain distinct typed sources. Missing logical c
 
 The writer lock and reader fence coordinate cooperating Keep operations in a managed namespace. They do not isolate arbitrary concurrent raw filesystem mutation. Existing exact-byte, identity, namespace and corruption checks remain in force, including selected-root re-admission during lookup.
 
+Selected-root admission binds the canonical root's namespace to the selecting manifest entry in addition to its digest and generation. A canonical root with a valid complete closure still refuses if another namespace selects it; the existing root error retains typed expected and observed namespace digests. This check belongs to the shared root-read boundary so initial admission and subsequent anchor lookup enforce the same rule.
+
 The delivery checklist and remaining evidence obligations are recorded in [the #109 evidence ledger](../../../docs/testing-evidence/durable-authenticated-reads.md). This rationale does not assert that the issue's acceptance checks are already complete.

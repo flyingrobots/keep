@@ -16,6 +16,7 @@ use keep::{
     DurableStoreError, FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError,
     ReaderAttemptLimit, RetentionHead, RetentionManifest, RetentionManifestEntry,
     RetentionManifestLength, RetentionNamespace, RetentionNamespaceDigest,
+    RetentionSelectedRootRefusal,
 };
 
 use super::durable_fixture::{build, identify, policy};
@@ -69,12 +70,15 @@ fn a_foreign_retained_namespace_refuses_durable_output() -> Result<(), Box<dyn E
 
 fn assert_root_refusal(
     refusal: &FilesystemRetentionSnapshotError,
-    _namespace: RetentionNamespaceDigest,
+    namespace: RetentionNamespaceDigest,
 ) -> Result<(), Box<dyn Error>> {
+    let original = RetentionNamespace::try_from(&b"worldline"[..])?.digest();
     assert!(
         matches!(refusal, FilesystemRetentionSnapshotError::Root { source }
-        if source.kind() == ErrorKind::InvalidData),
-        "a namespace contradiction must report root admission refusal: {refusal:?}"
+        if source.kind() == ErrorKind::InvalidData
+            && source.get_ref().and_then(|cause| cause.downcast_ref::<RetentionSelectedRootRefusal>())
+                == Some(&RetentionSelectedRootRefusal::Namespace {expected: namespace, observed: original})),
+        "a namespace contradiction must preserve its exact root refusal and coordinates: {refusal:?}"
     );
     Ok(())
 }

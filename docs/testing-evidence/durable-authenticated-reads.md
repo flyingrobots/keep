@@ -2,6 +2,41 @@
 
 Change kind: new read API with a shared-core extraction. The baseline is main `6051abb25a9fd33ae7ee0de5614514b709a4d82a`. No write protocol or on-disk format is changed; #125's candidate-catalog publication gate is not added or bypassed. This is an in-progress implementation ledger, not acceptance of #109.
 
+## Review after draft readiness
+
+The independent approval and successful checks on `186ab8a00796101d26640084f05960624d76f77d` predate the subsequent hosted Codex and CodeRabbit findings; they do not establish readiness of a revised candidate.
+
+| Review obligation | Disposition and evidence | Exit condition |
+| --- | --- | --- |
+| CodeRabbit: selected root namespace binding (`discussion_r4170510757`). | Confirmed runtime defect on `186ab8a`: both direct selected-root read and durable snapshot admission accepted a canonical foreign-namespace root. The fix at `FilesystemRetentionSnapshot::retained_root` retains existing digest/generation checks and reports typed expected/observed namespace coordinates. | Focused debug/release laws, source-preservation calibration, final-head full validation and independent delta review. |
+| Codex: inward ownership of shared authentication (`discussion_r4170495607`). | Open; durable code currently imports the shared policy and port through `reference`. | Move the shared behavior to an inward semantic boundary without changing authenticated output/refusal behavior; preserve public API compatibility and generated parity evidence. |
+| Codex: relative store locator stability (`discussion_r4170495611`). | Open; `DurableStore::open` retains relative paths for later resolution. | A controlled working-directory change cannot silently retarget the same handle; locator/admission errors remain typed and documented. |
+| Codex: reader production-platform admission (`discussion_r4170495617`). | Open; the current reader checks namespace and migration identity without the production filesystem-profile admission. | Reject unsupported filesystem semantics before exposing a durable snapshot, without taking writer authority; preserve positive production-profile reader evidence. |
+
+### Namespace regression
+
+Change kind: bug fix; the public fixture publishes real content, migrates, and retains it on the admitted ext4 profile, then deliberately installs a checksummed manifest selecting the original root under another namespace outside publication.
+
+No raw mutation occurs concurrently with the read under test.
+
+`a_selected_root_from_another_namespace_refuses_direct_read` and `a_foreign_retained_namespace_refuses_durable_output` were observed RED against production head `186ab8a` after successful compilation, reporting respectively `foreign namespace root was returned by the public reader` and `foreign namespace root admitted a durable snapshot`.
+
+The final laws assert `FilesystemRetentionSnapshotError::Root`, `InvalidData`, and the exact `RetentionSelectedRootRefusal::Namespace` expected/observed digests; the convenience-read law also checks the caller's output sentinel remains unchanged.
+
+The tests are medium, real-filesystem public-path evidence; no process-death, power-loss, or arbitrary concurrent namespace-isolation guarantee is inferred.
+
+The new diagnostic is preserved inside the existing root error boundary, so unrelated checksum, generation, digest, and operational causes retain their existing paths.
+
+Raw artifacts retain `namespace-red-on-186ab8a.log`, `namespace-green.log`, and `namespace-structure.log`; a replay initially included the new diagnostic type against the old library and failed compilation (`namespace-red-replay.log`), which is excluded from behavioral RED evidence.
+
+The corrected parent-compatible regression was replayed RED in `namespace-red-replay-corrected.log` and committed separately as `0a43198` before the fix; that commit can reproduce the original acceptance defect without the new diagnostic type.
+
+The fixed public laws pass in debug and release; the full Golden File Worldline integration binary, existing retention snapshot laws, doctests, all-target/all-feature Clippy, formatting, and structure checks also pass in the copied Docker candidate.
+
+Swapping only the new diagnostic's expected and observed namespace digests in a separate source/target directory made both final public laws fail their exact-coordinate assertion (`namespace-coordinate-red.log`); the unchanged candidate remained green (`namespace-relevant-validation.log`).
+
+Final full-chain checks and independent review remain pending while the other three review obligations are resolved.
+
 ## Delivered candidate behavior
 
 `DurableStore` pins a fresh `DurableSnapshot` per convenience call. Snapshot admission keeps the existing shared reader fence, catalog, retention head and manifest view and verifies every selected retained closure against the catalog. Blob lookup scans selected roots one at a time and chooses the lowest retained layout identity; exact-layout reads use the catalog directly. Reconstruction and ranges use the existing immutable reference cores and return receipts with the view coordinates only after emission succeeds.

@@ -168,6 +168,7 @@ mod root_field_decoder;
 mod root_header_decoder;
 mod root_integrity;
 mod root_semantic_header;
+mod selected_root_refusal;
 mod successor_manifest;
 mod transition_disposition;
 mod transition_error;
@@ -271,6 +272,7 @@ pub use retention_view_collector::{
 };
 pub use root_decode_error::RetentionRootDecodeError;
 pub use root_encode_error::RetentionRootEncodeError;
+pub use selected_root_refusal::RetentionSelectedRootRefusal;
 pub use transition_disposition::RetentionTransitionDisposition;
 pub use transition_error::RetentionTransitionError;
 pub use transition_planner::plan_retention_transition;
