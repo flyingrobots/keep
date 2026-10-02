@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery preserves interrupted root and manifest stages that declare counts above the format ceiling, even when their declared lengths are self-consistent (#99).
+
 - Recovery rejects and preserves short root and manifest headers whose complete size fields contradict their declared record length (#99).
 
 - Recovery verifies available checksum bytes in interrupted head stages and preserves contradictory prefixes as corrupt evidence instead of discarding them (#99).

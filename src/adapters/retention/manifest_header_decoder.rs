@@ -73,6 +73,7 @@ fn validate_fixed_fields(encoded: &[u8]) -> Result<(), RetentionManifestDecodeEr
 /// Checks framing once the complete size fields of an interrupted header exist.
 pub(super) fn admit_prefix_length(encoded: &[u8]) -> Result<(), RetentionManifestDecodeError> {
     let entry_count = read_u32(encoded, 44)?;
+    super::manifest_semantic_header::admit_count(entry_count)?;
     require_declared_length(encoded, canonical_length(entry_count)?)
 }
 

@@ -91,6 +91,7 @@ fn validate_fixed_fields(encoded: &[u8]) -> Result<(), RetentionRootDecodeError>
 pub(super) fn admit_prefix_length(encoded: &[u8]) -> Result<(), RetentionRootDecodeError> {
     let namespace_length = usize::from(read_u16(encoded, 40)?);
     let anchor_count = read_u32(encoded, 44)?;
+    super::root_semantic_header::admit_count(anchor_count)?;
     require_declared_length(encoded, canonical_length(namespace_length, anchor_count)?)
 }
 
