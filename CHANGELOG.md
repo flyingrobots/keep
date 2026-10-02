@@ -667,6 +667,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Retention recovery reopens and authenticates the manifest-selected predecessor before publication effects, refusing missing, corrupt, or substituted roots while preserving retained evidence.
+
 - Retention recovery refuses successor manifests that add, drop, or alter namespace entries unrelated to the staged root before linking the manifest or finalizing the head.
 
 - Retention recovery binds a complete staged head to its manifest's exact byte length and predecessor before committing or cleaning up. Canonical but inconsistent heads refuse with existing typed planning errors and preserve published and retained evidence (#99).

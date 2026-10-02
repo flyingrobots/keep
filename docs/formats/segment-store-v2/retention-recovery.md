@@ -12,6 +12,8 @@ A complete staged head must name the staged manifest's exact digest, generation,
 
 A staged successor manifest may change only the staged root's namespace entry. Every unrelated namespace entry must preserve its exact namespace, root generation, and root digest; additions, omissions, and changes refuse as `ManifestNotSuccessor` before manifest linking or head finalization. Already-committed cleanup uses its existing current-state handling rather than reconstructing unavailable predecessor history.
 
+Before executing a recovery plan for a complete staged root, the filesystem authority reopens the published root selected for that namespace through its pinned roots capability. A successor requires the predecessor record to decode to the manifest's exact generation and digest; an already-selected staged root requires exact committed bytes. Missing, corrupt, or substituted selections refuse at observation before any recovery effects. A newly inserted namespace has no published predecessor.
+
 At restart, a fixed retention stage is classified from its exact framing and transitive evidence:
 
 The forward protocol guarantees that `root.next` is durable before a new namespace directory is created. A new digest-named directory is created exclusively, verified as the exact regular directory rather than a link, and followed by synchronization of `retention/roots` before the immutable root is linked. An existing exact directory is idempotent; any wrong kind, substituted namespace, or unexpected entry refuses. Directory existence alone never proves a retained root.

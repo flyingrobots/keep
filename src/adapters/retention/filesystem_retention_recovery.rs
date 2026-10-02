@@ -143,6 +143,8 @@ impl FilesystemRetentionPublicationAuthority {
                 .map_err(|source| Error::Observe { source })?;
         let plan = plan_retention_recovery(observation.evidence())
             .map_err(|source| Error::Plan { source })?;
+        super::filesystem_retention_recovery_roots::admit(&self.roots, &observation.evidence())
+            .map_err(|source| Error::Observe { source })?;
         self.recovery = Some(
             RetentionRecoveryContext::reopen(&self.retention, &observation)
                 .map_err(|source| Error::Observe { source })?,
