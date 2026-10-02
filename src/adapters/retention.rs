@@ -122,6 +122,7 @@ mod recovery_execution;
 mod recovery_execution_tests;
 #[cfg(test)]
 mod recovery_head_length_tests;
+mod recovery_manifest_entries;
 mod recovery_plan;
 mod recovery_planner;
 #[cfg(test)]

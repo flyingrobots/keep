@@ -136,6 +136,11 @@ fn finalize_head(
     if !manifest_names_root(manifest, root) {
         return Err(Refusal::ManifestStageNamesOtherRoot);
     }
+    if !is_committed(current, manifest)
+        && !super::recovery_manifest_entries::preserves_unrelated(current, manifest, root)
+    {
+        return Err(Refusal::ManifestNotSuccessor);
+    }
     if pools.root != Pool::Identical {
         return Err(Refusal::RootNotLinkedBeforeHead);
     }
@@ -184,6 +189,9 @@ fn plan_manifest(
         return Err(Refusal::ManifestStageNamesOtherRoot);
     }
     if !manifest_succeeds(current, manifest) {
+        return Err(Refusal::ManifestNotSuccessor);
+    }
+    if !super::recovery_manifest_entries::preserves_unrelated(current, manifest, root) {
         return Err(Refusal::ManifestNotSuccessor);
     }
     if !root_succeeds(current, root) {

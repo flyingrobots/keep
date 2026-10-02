@@ -10,6 +10,8 @@ A root or manifest pool entry named by a complete retained stage must match that
 
 A complete staged head must name the staged manifest's exact digest, generation, byte length, and predecessor. A length disagreement refuses as `HeadStageNamesOtherManifest`; a predecessor disagreement refuses as `HeadPredecessorMismatch`. Checksums and valid individual field values do not establish this relationship. Recovery compares these coordinates before head finalization or stage cleanup, preserving the previously published head and all retained bytes on refusal.
 
+A staged successor manifest may change only the staged root's namespace entry. Every unrelated namespace entry must preserve its exact namespace, root generation, and root digest; additions, omissions, and changes refuse as `ManifestNotSuccessor` before manifest linking or head finalization. Already-committed cleanup uses its existing current-state handling rather than reconstructing unavailable predecessor history.
+
 At restart, a fixed retention stage is classified from its exact framing and transitive evidence:
 
 The forward protocol guarantees that `root.next` is durable before a new namespace directory is created. A new digest-named directory is created exclusively, verified as the exact regular directory rather than a link, and followed by synchronization of `retention/roots` before the immutable root is linked. An existing exact directory is idempotent; any wrong kind, substituted namespace, or unexpected entry refuses. Directory existence alone never proves a retained root.

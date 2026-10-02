@@ -93,3 +93,11 @@ Property commit `f72727e` sweeps the complete bounded canonical length domain de
 The [head binding decision](../adr/retention-recovery-head-binding.md) records the boundary and alternatives. These checks do not establish exact preservation of unrelated successor entries, predecessor pool reopening, closure verification, or physical power-loss durability; those remain independent review obligations.
 
 Focused retention laws and the full all-feature workspace suites passed in debug and release, including the canonical-length sweep. Both Clippy configurations, formatting, source structure, and Markdown passed. The prior published `6852d41` also passed every hosted CI gate; the new published fix still requires its own current-head validation and independent final review.
+
+## Unrelated successor entries
+
+Test commit `f036229` records real-filesystem RED on unfixed production `514a521`. Dropping or altering an unrelated namespace from an otherwise canonical successor manifest let manifest-stage recovery execute `LinkManifest` and head-stage recovery execute `FinalizeHead` with cleanup. All four retained-byte preservation checks failed. The fixture keeps valid successor coordinates and, for head-stage cases, a matching canonical head and same-inode manifest pool link, isolating entry-set admission from earlier binding checks.
+
+The planner now compares all unrelated entries as ordered semantic streams before either publication path. Focused retention tests passed in debug and release; both workspace Clippy configurations, source structure, and formatting passed in the owned Docker sandbox. These results establish the exercised filesystem counterexamples; they do not claim a new full-workspace run or exhaustive generated-input coverage. Independent diagnostic calibration, current-head hosted validation, predecessor reopening, closure admission, and final independent approval remain outstanding.
+
+The [successor entry decision](../adr/retention-recovery-successor-entries.md) records the allocation-free comparison, already-committed cleanup distinction, and remaining blind spots.
