@@ -1,4 +1,4 @@
-//! This module owns admission of available fixed-field retention stage bytes.
+//! This module owns admission of available retention stage fields.
 
 use super::{RetentionHeadDecodeError, RetentionManifestDecodeError, RetentionRootDecodeError};
 
@@ -60,7 +60,13 @@ pub(super) fn head(encoded: &[u8]) -> Result<(), RetentionHeadDecodeError> {
             observed,
         },
     )?;
-    super::stage_generation_admission::head(encoded)
+    super::stage_generation_admission::head(encoded)?;
+    if encoded.len() >= 40 {
+        let value = super::head_decoder::read_u64(encoded, 32)?;
+        let _length = crate::RetentionManifestLength::new(value)
+            .map_err(|source| RetentionHeadDecodeError::ManifestLength { source })?;
+    }
+    Ok(())
 }
 
 fn admit<E>(

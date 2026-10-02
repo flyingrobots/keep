@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery preserves interrupted head stages whose complete manifest-length field violates canonical bounds or alignment, returning the precise corruption cause instead of discarding them (#99).
+
 - Clarify that retention recovery and fenced readers are implemented but still under correctness remediation and independent review; link the completed process-death reader evidence and name remaining recovery gaps (#99).
 
 - Filesystem recovery tests now require the exact checksum-corrupt root-stage refusal and unchanged retained evidence, with calibrated diagnostic and deletion checks (#99).
