@@ -118,6 +118,8 @@ mod recovery_evidence;
 mod recovery_execution;
 #[cfg(test)]
 mod recovery_execution_tests;
+#[cfg(test)]
+mod recovery_head_length_tests;
 mod recovery_plan;
 mod recovery_planner;
 #[cfg(test)]
