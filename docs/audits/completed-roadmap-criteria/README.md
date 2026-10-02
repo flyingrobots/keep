@@ -10,6 +10,10 @@ The first-pass roadmap at commit
 `scope.tsv` records every original task, its original line, and its first-pass
 state. Originally unchecked tasks and feature-level checkboxes are excluded.
 
+The [foundation verdicts](foundations.md) cover the first five remaining
+checked tasks. Each separates its acceptance and mainline-delivery verdict
+and names the inspected evidence and validation limits.
+
 Task identifiers can have an alphabetic suffix: `T-22.1a` is a distinct
 originally completed task. Counting only numeric identifiers incorrectly
 produces 82 original and 63 remaining entries.
