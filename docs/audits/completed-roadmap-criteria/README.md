@@ -21,8 +21,9 @@ The [foundation verdicts](foundations.md),
 first 33 remaining checked tasks. Each separates acceptance and mainline
 delivery and names inspected evidence and limits. The individual verdicts
 retain their inspected historical coordinates. T-06.3 has unresolved
-acceptance scope. T-09.1's canonical report-admission gap is owned by issue
-#142. The historical T-10.2 forbidden-filename gap was owned by issue #144.
+acceptance scope. T-09.1's canonical report-admission gap was owned by issue
+#142 and has since been delivered as recorded below. The historical T-10.2
+forbidden-filename gap was owned by issue #144.
 T-11.2 exposes writable stage authority after sealing; issue #146 owns that
 correction. T-11.3 still lacks its originally named integration-test artifact;
 the living-documentation correction in #69 does not fulfill that requirement.
@@ -36,6 +37,23 @@ full accounting. T-12.1 and T-12.3 are not declared complete by the limited
 catalog checks.
 
 ## Mainline delivery after the inspected snapshot
+
+PR #143 delivered canonical benchmark report admission as
+`b50dbd4cb4cee286aea1aa0352152a232197dda1`. The
+[issue #142 receipt](https://github.com/flyingrobots/keep/issues/142#issuecomment-5946020879)
+records exact-head validation, bounded parser fuzzing and forty-five
+mainline task/library laws in each build mode. This resolves the identified
+admission gap; it does not assert a fresh performance measurement or replace
+the historical T-09.1 baseline evidence.
+
+PR #149 delivered the two catalog evidence-anchor corrections as
+`82374a995df095106aefe52f87ab3cb26184639d`. The
+[current-head merge gate](https://github.com/flyingrobots/keep/pull/149#issuecomment-5946195690)
+records the corrected independent review, green required hosted checks and
+fresh Docker execution of the two ordering and sixteen publication fixture
+laws in both modes on the byte-identical target runtime. Issue #148 is
+closed. These documentation corrections neither resolve T-12.2's platform
+admission bypass nor close #150.
 
 PR #135 delivered the T-06.4 capacity-bounded reference-store memory contract
 as `07bf0b8f4315305e248e1628b339243e5e59ee0b`. The

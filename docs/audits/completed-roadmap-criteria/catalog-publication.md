@@ -51,7 +51,11 @@ platform admission. The failure probe ran separately on the inspected newer
 main source; passing existing fixture laws does not negate that failure.
 
 The catalog ledger's absent ordering and filesystem publication evidence
-owners are being corrected by
-[PR #149](https://github.com/flyingrobots/keep/pull/149) for #148. Those
-reference corrections do not resolve T-12.2 or close #150. No fresh crash
-campaign or host-power-loss evidence is claimed here.
+owners were corrected by
+[PR #149](https://github.com/flyingrobots/keep/pull/149) for #148, integrated
+as `82374a995df095106aefe52f87ab3cb26184639d`. The two ordering and sixteen
+publisher fixture laws were freshly rerun in Docker debug and release on
+its exact target `b50dbd4cb4cee286aea1aa0352152a232197dda1`; the documentation
+PR changes no runtime or test code. Those reference corrections do not
+resolve T-12.2 or close #150. No fresh crash campaign or host-power-loss
+evidence is claimed here.
