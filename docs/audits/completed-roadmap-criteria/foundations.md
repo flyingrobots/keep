@@ -18,7 +18,7 @@ main, with evidence named in a ledger, changelog, or test file.
 Pass below applies to the stated task, not every future operation governed
 by its contract. A contract document can be complete while implementations
 that it governs remain incomplete. Originally reopened T-01.2 belongs to
-#110 and is excluded from these remaining-task verdicts.
+issue #110 and is excluded from these remaining-task verdicts.
 
 ## T-01.1 — State the law and its limits
 
