@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery preserves partial layout-length fields whose minimum possible completion exceeds the format ceiling, with an explicit prefix-bound diagnostic (#99).
+
 - Recovery preserves partial root anchors with contradictory embedded identity bytes or invalid complete layout-length fields, sharing the identity codecs' rules (#99).
 
 - Recovery preserves partial manifest entries whose namespace prefix cannot satisfy strict ordering or whose completed root-generation field is zero (#99).

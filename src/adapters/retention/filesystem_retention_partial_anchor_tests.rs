@@ -227,10 +227,7 @@ fn require_length_prefix(index: u32, available: usize, minimum: u64) -> Result<(
 // Delete only when stronger public assessment evidence subsumes these byte-boundary controls.
 #[test]
 fn canonical_layout_lengths_admit_every_partial_numeric_prefix() -> Result<(), Box<dyn Error>> {
-    for count in [0_u64]
-        .into_iter()
-        .chain((0..=20).filter_map(|bit| 1_u64.checked_shl(bit)))
-    {
+    for count in std::iter::once(0_u64).chain((0..=20).filter_map(|bit| 1_u64.checked_shl(bit))) {
         let length = count
             .checked_mul(44)
             .and_then(|size| size.checked_add(176))

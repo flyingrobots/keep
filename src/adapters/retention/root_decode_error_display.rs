@@ -74,12 +74,7 @@ impl fmt::Display for RetentionRootDecodeError {
                 formatter,
                 "retention root {limit} prefix requires at least {minimum}; maximum is {maximum}"
             ),
-            Self::BlobId { index, source } => {
-                write!(
-                    formatter,
-                    "invalid BlobId in retention anchor {index}: {source}"
-                )
-            }
+            Self::BlobId { index, source } => identity_failure(formatter, "BlobId", *index, source),
             Self::LayoutLengthPrefixAboveMaximum {
                 index,
                 minimum,
@@ -89,10 +84,7 @@ impl fmt::Display for RetentionRootDecodeError {
                 "retention anchor {index} layout-length prefix requires at least {minimum}; maximum is {maximum}"
             ),
             Self::LayoutId { index, source } => {
-                write!(
-                    formatter,
-                    "invalid LayoutId in retention anchor {index}: {source}"
-                )
+                identity_failure(formatter, "LayoutId", *index, source)
             }
             Self::NonCanonicalAnchorOrder { index, .. } => write!(
                 formatter,
@@ -113,6 +105,18 @@ impl fmt::Display for RetentionRootDecodeError {
             Self::Semantic { source } => write!(formatter, "invalid semantic root: {source}"),
         }
     }
+}
+
+fn identity_failure(
+    formatter: &mut fmt::Formatter<'_>,
+    kind: &str,
+    index: u32,
+    source: &dyn Error,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "invalid {kind} in retention anchor {index}: {source}"
+    )
 }
 
 impl Error for RetentionRootDecodeError {
