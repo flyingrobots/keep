@@ -1,6 +1,6 @@
 //! This module owns the blocking storage capability port for retention recovery.
 
-use std::io;
+use super::RetentionStorageError;
 
 /// Durable capabilities retention recovery executes, one per plan step.
 ///
@@ -14,21 +14,21 @@ pub trait RetentionRecoveryStorage {
     /// # Errors
     ///
     /// Returns the exact filesystem failure; the stage must remain when it fails.
-    fn discard_head_stage(&mut self) -> io::Result<()>;
+    fn discard_head_stage(&mut self) -> Result<(), RetentionStorageError>;
 
     /// Removes a truncated, never linked `manifest.next` and synchronizes `retention`.
     ///
     /// # Errors
     ///
     /// Returns the exact filesystem failure; the stage must remain when it fails.
-    fn discard_manifest_stage(&mut self) -> io::Result<()>;
+    fn discard_manifest_stage(&mut self) -> Result<(), RetentionStorageError>;
 
     /// Removes a truncated, never linked `root.next` and synchronizes `retention`.
     ///
     /// # Errors
     ///
     /// Returns the exact filesystem failure; the stage must remain when it fails.
-    fn discard_root_stage(&mut self) -> io::Result<()>;
+    fn discard_root_stage(&mut self) -> Result<(), RetentionStorageError>;
 
     /// Admits the staged root's namespace directory, links the complete root
     /// stage into it without replacement, and synchronizes both directories.
@@ -36,7 +36,7 @@ pub trait RetentionRecoveryStorage {
     /// # Errors
     ///
     /// Returns the exact filesystem failure or a refusal of a conflicting entry.
-    fn link_root(&mut self) -> io::Result<()>;
+    fn link_root(&mut self) -> Result<(), RetentionStorageError>;
 
     /// Links the complete manifest stage into the manifest pool without
     /// replacement and synchronizes the pool.
@@ -44,7 +44,7 @@ pub trait RetentionRecoveryStorage {
     /// # Errors
     ///
     /// Returns the exact filesystem failure or a refusal of a conflicting entry.
-    fn link_manifest(&mut self) -> io::Result<()>;
+    fn link_manifest(&mut self) -> Result<(), RetentionStorageError>;
 
     /// Replaces `retention/HEAD` with the complete head stage atomically and
     /// synchronizes `retention`.
@@ -52,7 +52,7 @@ pub trait RetentionRecoveryStorage {
     /// # Errors
     ///
     /// Returns the exact filesystem failure.
-    fn finalize_head(&mut self) -> io::Result<()>;
+    fn finalize_head(&mut self) -> Result<(), RetentionStorageError>;
 
     /// Removes the retained root stage after proving its pool link and
     /// synchronizes `retention`.
@@ -60,7 +60,7 @@ pub trait RetentionRecoveryStorage {
     /// # Errors
     ///
     /// Returns the exact filesystem failure or a refusal when the link is not proven.
-    fn remove_root_stage(&mut self) -> io::Result<()>;
+    fn remove_root_stage(&mut self) -> Result<(), RetentionStorageError>;
 
     /// Removes the retained manifest stage after proving its pool link and
     /// synchronizes `retention`.
@@ -68,5 +68,5 @@ pub trait RetentionRecoveryStorage {
     /// # Errors
     ///
     /// Returns the exact filesystem failure or a refusal when the link is not proven.
-    fn remove_manifest_stage(&mut self) -> io::Result<()>;
+    fn remove_manifest_stage(&mut self) -> Result<(), RetentionStorageError>;
 }

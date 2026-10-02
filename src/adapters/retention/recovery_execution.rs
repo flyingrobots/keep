@@ -1,8 +1,8 @@
 //! This module owns ordered execution of one retention recovery plan.
 
+use super::RetentionStorageError;
 use std::error::Error;
 use std::fmt;
-use std::io;
 
 use super::{
     RetentionRecoveryOutcome, RetentionRecoveryPlan, RetentionRecoveryStep,
@@ -36,10 +36,16 @@ impl RetentionRecoveryReceipt {
 pub struct RetentionRecoveryError {
     step: RetentionRecoveryStep,
     executed: Vec<RetentionRecoveryStep>,
-    source: io::Error,
+    source: RetentionStorageError,
 }
 
 impl RetentionRecoveryError {
+    /// The precise storage failure, without dynamic downcasting.
+    #[must_use]
+    pub const fn storage_error(&self) -> &RetentionStorageError {
+        &self.source
+    }
+
     /// The step that refused.
     #[must_use]
     pub const fn step(&self) -> RetentionRecoveryStep {

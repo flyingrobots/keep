@@ -137,6 +137,8 @@ mod transition_preflight_error;
 mod transition_readiness;
 mod verified_closure;
 
+#[cfg(test)]
+mod filesystem_retention_forward_error_tests;
 mod reader_attempt_limit;
 mod reader_fence;
 mod recovery_discard_prefix;
@@ -158,6 +160,8 @@ mod recovery_storage;
 mod retention_model_tests;
 mod retention_record_refusal;
 mod retention_storage_error;
+#[cfg(test)]
+mod retention_storage_error_law_tests;
 mod retention_view_collector;
 #[cfg(test)]
 mod retention_view_collector_tests;

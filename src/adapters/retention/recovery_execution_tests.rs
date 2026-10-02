@@ -1,5 +1,6 @@
 //! Retention recovery execution laws against a recording fake storage.
 
+use super::RetentionStorageError;
 use std::error::Error;
 use std::io;
 
@@ -15,9 +16,9 @@ struct Recording {
 }
 
 impl Recording {
-    fn record(&mut self, step: Step) -> io::Result<()> {
+    fn record(&mut self, step: Step) -> Result<(), RetentionStorageError> {
         if self.refuse_at == Some(step) {
-            return Err(io::Error::other("injected refusal"));
+            return Err(io::Error::other("injected refusal").into());
         }
         self.calls.push(step);
         Ok(())
@@ -25,28 +26,28 @@ impl Recording {
 }
 
 impl RetentionRecoveryStorage for Recording {
-    fn discard_head_stage(&mut self) -> io::Result<()> {
+    fn discard_head_stage(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::DiscardHeadStage)
     }
-    fn discard_manifest_stage(&mut self) -> io::Result<()> {
+    fn discard_manifest_stage(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::DiscardManifestStage)
     }
-    fn discard_root_stage(&mut self) -> io::Result<()> {
+    fn discard_root_stage(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::DiscardRootStage)
     }
-    fn link_root(&mut self) -> io::Result<()> {
+    fn link_root(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::LinkRoot)
     }
-    fn link_manifest(&mut self) -> io::Result<()> {
+    fn link_manifest(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::LinkManifest)
     }
-    fn finalize_head(&mut self) -> io::Result<()> {
+    fn finalize_head(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::FinalizeHead)
     }
-    fn remove_root_stage(&mut self) -> io::Result<()> {
+    fn remove_root_stage(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::RemoveRootStage)
     }
-    fn remove_manifest_stage(&mut self) -> io::Result<()> {
+    fn remove_manifest_stage(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::RemoveManifestStage)
     }
 }

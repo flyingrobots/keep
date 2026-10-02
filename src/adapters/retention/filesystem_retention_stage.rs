@@ -1,5 +1,6 @@
 //! This module owns exact variable-length retention stage publication.
 
+use super::{RetentionRecordRefusal, RetentionStorageError};
 use std::io::{self, Write};
 
 use cap_std::fs::{Dir, File};
@@ -24,7 +25,11 @@ pub(super) struct FilesystemRetentionStage {
 
 impl FilesystemRetentionStage {
     /// Exclusively creates the named stage and writes its complete bytes.
-    pub(super) fn create(root: &Dir, name: &'static str, expected: &[u8]) -> io::Result<Self> {
+    pub(super) fn create(
+        root: &Dir,
+        name: &'static str,
+        expected: &[u8],
+    ) -> Result<Self, RetentionStorageError> {
         let mut file = filesystem_catalog_artifact::create_exclusive(root, name)?;
         let identity = EntryIdentity::of_file(&file)?;
         file.write_all(expected)?;
@@ -42,7 +47,11 @@ impl FilesystemRetentionStage {
     /// The handle and the named entry are verified against `expected` and
     /// bound to the entry's identity, so every later transition refuses a
     /// substituted or replaced stage exactly as a freshly created one would.
-    pub(super) fn reopen(root: &Dir, name: &'static str, expected: &[u8]) -> io::Result<Self> {
+    pub(super) fn reopen(
+        root: &Dir,
+        name: &'static str,
+        expected: &[u8],
+    ) -> Result<Self, RetentionStorageError> {
         let file = exact_record::open_read(root, name)?;
         let identity = EntryIdentity::of_file(&file)?;
         verify_named_record(root, name, expected, identity)?;
@@ -55,14 +64,19 @@ impl FilesystemRetentionStage {
     }
 
     /// Synchronizes the complete stage and reverifies its exact bytes.
-    pub(super) fn synchronize(&self, root: &Dir) -> io::Result<()> {
+    pub(super) fn synchronize(&self, root: &Dir) -> Result<(), RetentionStorageError> {
         self.require_handle()?;
         self.file.sync_all()?;
         self.verify_stage(root)
     }
 
     /// Links the verified stage into `target` under `name` without replacement.
-    pub(super) fn link(&self, root: &Dir, target: &Dir, name: &str) -> io::Result<()> {
+    pub(super) fn link(
+        &self,
+        root: &Dir,
+        target: &Dir,
+        name: &str,
+    ) -> Result<(), RetentionStorageError> {
         self.verify_stage(root)?;
         exact_record::link_without_replacement(root, self.name, target, name)?;
         self.verify_stage(root)?;
@@ -70,7 +84,12 @@ impl FilesystemRetentionStage {
     }
 
     /// Removes only the retained stage after confirming its linked target.
-    pub(super) fn remove(self, root: &Dir, target: &Dir, name: &str) -> io::Result<()> {
+    pub(super) fn remove(
+        self,
+        root: &Dir,
+        target: &Dir,
+        name: &str,
+    ) -> Result<(), RetentionStorageError> {
         verify_named_record(target, name, &self.expected, self.identity)?;
         root.remove_file(self.name)?;
         exact_record::require_absent(root, self.name).map_err(retention_error)?;
@@ -78,22 +97,24 @@ impl FilesystemRetentionStage {
     }
 
     /// Renames the verified stage onto `name`, replacing it atomically.
-    pub(super) fn replace(self, root: &Dir, name: &str) -> io::Result<()> {
+    pub(super) fn replace(self, root: &Dir, name: &str) -> Result<(), RetentionStorageError> {
         self.verify_stage(root)?;
         root.rename(self.name, root, name)?;
         exact_record::require_absent(root, self.name).map_err(retention_error)?;
         verify_named_record(root, name, &self.expected, self.identity)
     }
 
-    fn require_handle(&self) -> io::Result<()> {
+    fn require_handle(&self) -> Result<(), RetentionStorageError> {
         if EntryIdentity::of_file(&self.file)? == self.identity {
             Ok(())
         } else {
-            Err(invalid_data("retention stage handle changed identity"))
+            Err(RetentionStorageError::Refused {
+                source: RetentionRecordRefusal::KindLengthOrIdentity,
+            })
         }
     }
 
-    fn verify_stage(&self, root: &Dir) -> io::Result<()> {
+    fn verify_stage(&self, root: &Dir) -> Result<(), RetentionStorageError> {
         self.require_handle()?;
         verify_named_record(root, self.name, &self.expected, self.identity)
     }
@@ -104,24 +125,26 @@ fn verify_named_record(
     name: &str,
     expected: &[u8],
     identity: EntryIdentity,
-) -> io::Result<()> {
+) -> Result<(), RetentionStorageError> {
     exact_record::verify_named(directory, name, expected, identity).map_err(retention_error)
 }
 
-/// Maps a shared exact-record failure onto this protocol's refusal messages.
-fn retention_error(error: ExactRecordError) -> io::Error {
+/// Adapts exact-record failures without erasing their semantic distinctions.
+pub(super) fn retention_error(error: ExactRecordError) -> RetentionStorageError {
     match error {
-        ExactRecordError::Io(source) => source,
-        ExactRecordError::Refused(refusal) => invalid_data(match refusal {
-            ExactRecordRefusal::LengthOverflow => "retention record length exceeded u64",
-            ExactRecordRefusal::KindOrLength | ExactRecordRefusal::KindLengthOrIdentity => {
-                "retention record kind, length, or identity disagreed"
-            }
-            ExactRecordRefusal::Bytes | ExactRecordRefusal::TrailingBytes => {
-                "retention record bytes disagreed"
-            }
-            ExactRecordRefusal::RemainedVisible => "removed retention stage remained visible",
-        }),
+        ExactRecordError::Io(source) => RetentionStorageError::Io { source },
+        ExactRecordError::Refused(refusal) => RetentionStorageError::Refused {
+            source: match refusal {
+                ExactRecordRefusal::LengthOverflow => RetentionRecordRefusal::LengthOverflow,
+                ExactRecordRefusal::KindOrLength => RetentionRecordRefusal::KindOrLength,
+                ExactRecordRefusal::KindLengthOrIdentity => {
+                    RetentionRecordRefusal::KindLengthOrIdentity
+                }
+                ExactRecordRefusal::Bytes => RetentionRecordRefusal::Bytes,
+                ExactRecordRefusal::TrailingBytes => RetentionRecordRefusal::TrailingBytes,
+                ExactRecordRefusal::RemainedVisible => RetentionRecordRefusal::RemainedVisible,
+            },
+        },
     }
 }
 

@@ -1,5 +1,6 @@
 //! This module owns filesystem execution of retention recovery under authority.
 
+use super::RetentionStorageError;
 use std::io;
 
 use cap_fs_ext::DirExt;
@@ -201,30 +202,30 @@ fn discard_truncated(
     retention: &Dir,
     name: &str,
     slot: &mut Option<RecoveredStage>,
-) -> io::Result<()> {
+) -> Result<(), RetentionStorageError> {
     let Some(RecoveredStage::Truncated { identity, length }) = slot.take() else {
-        return Err(invalid_data("recovery step expected a truncated stage"));
+        return Err(invalid_data("recovery step expected a truncated stage").into());
     };
     let metadata = retention.symlink_metadata(name)?;
     if !metadata.is_file() || metadata.len() != length || EntryIdentity::from(&metadata) != identity
     {
-        return Err(invalid_data(
-            "truncated retention stage changed before discard",
-        ));
+        return Err(RetentionStorageError::Refused {
+            source: super::RetentionRecordRefusal::KindLengthOrIdentity,
+        });
     }
     retention.remove_file(name)?;
     exact_record::require_absent(retention, name)
-        .map_err(|_source| invalid_data("discarded retention stage remained visible"))?;
-    synchronize_directory(retention)
+        .map_err(super::filesystem_retention_stage::retention_error)?;
+    synchronize_directory(retention).map_err(Into::into)
 }
 
 impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
-    fn discard_head_stage(&mut self) -> io::Result<()> {
+    fn discard_head_stage(&mut self) -> Result<(), RetentionStorageError> {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
         discard_truncated(&self.retention, pool_name::HEAD_STAGE, &mut context.head)
     }
 
-    fn discard_manifest_stage(&mut self) -> io::Result<()> {
+    fn discard_manifest_stage(&mut self) -> Result<(), RetentionStorageError> {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
         discard_truncated(
             &self.retention,
@@ -233,12 +234,12 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
         )
     }
 
-    fn discard_root_stage(&mut self) -> io::Result<()> {
+    fn discard_root_stage(&mut self) -> Result<(), RetentionStorageError> {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
         discard_truncated(&self.retention, pool_name::ROOT_STAGE, &mut context.root)
     }
 
-    fn link_root(&mut self) -> io::Result<()> {
+    fn link_root(&mut self) -> Result<(), RetentionStorageError> {
         let context = self.recovery.as_ref().ok_or_else(no_recovery)?;
         let Some(RecoveredStage::Complete {
             stage,
@@ -246,21 +247,21 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
             namespace: Some(namespace),
         }) = context.root.as_ref()
         else {
-            return Err(invalid_data("link_root expected a complete root stage"));
+            return Err(invalid_data("link_root expected a complete root stage").into());
         };
         stage.synchronize(&self.retention)?;
         match self.roots.create_dir(namespace) {
             Ok(()) => {}
             Err(source) if source.kind() == io::ErrorKind::AlreadyExists => {}
-            Err(source) => return Err(source),
+            Err(source) => return Err(source.into()),
         }
         let directory = self.roots.open_dir_nofollow(namespace)?;
         synchronize_directory(&self.roots)?;
         stage.link(&self.retention, &directory, name)?;
-        synchronize_directory(&directory)
+        synchronize_directory(&directory).map_err(Into::into)
     }
 
-    fn link_manifest(&mut self) -> io::Result<()> {
+    fn link_manifest(&mut self) -> Result<(), RetentionStorageError> {
         let context = self.recovery.as_ref().ok_or_else(no_recovery)?;
         let Some(RecoveredStage::Complete {
             stage,
@@ -268,36 +269,34 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
             ..
         }) = context.manifest.as_ref()
         else {
-            return Err(invalid_data(
-                "link_manifest expected a complete manifest stage",
-            ));
+            return Err(invalid_data("link_manifest expected a complete manifest stage").into());
         };
         stage.synchronize(&self.retention)?;
         stage.link(&self.retention, &self.manifests, name)?;
-        synchronize_directory(&self.manifests)
+        synchronize_directory(&self.manifests).map_err(Into::into)
     }
 
-    fn finalize_head(&mut self) -> io::Result<()> {
+    fn finalize_head(&mut self) -> Result<(), RetentionStorageError> {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
         let (stage, _name, _namespace) = take_complete(&mut context.head)?;
         stage.synchronize(&self.retention)?;
         stage.replace(&self.retention, pool_name::HEAD)?;
-        synchronize_directory(&self.retention)
+        synchronize_directory(&self.retention).map_err(Into::into)
     }
 
-    fn remove_root_stage(&mut self) -> io::Result<()> {
+    fn remove_root_stage(&mut self) -> Result<(), RetentionStorageError> {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
         let (stage, name, namespace) = take_complete(&mut context.root)?;
         let namespace = namespace.ok_or_else(|| invalid_data("root stage without a namespace"))?;
         let directory = self.roots.open_dir_nofollow(&namespace)?;
         stage.remove(&self.retention, &directory, &name)?;
-        synchronize_directory(&self.retention)
+        synchronize_directory(&self.retention).map_err(Into::into)
     }
 
-    fn remove_manifest_stage(&mut self) -> io::Result<()> {
+    fn remove_manifest_stage(&mut self) -> Result<(), RetentionStorageError> {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
         let (stage, name, _namespace) = take_complete(&mut context.manifest)?;
         stage.remove(&self.retention, &self.manifests, &name)?;
-        synchronize_directory(&self.retention)
+        synchronize_directory(&self.retention).map_err(Into::into)
     }
 }

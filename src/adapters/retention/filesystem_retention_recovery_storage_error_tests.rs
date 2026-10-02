@@ -13,6 +13,7 @@ use crate::adapters::retention::{
     execute_retention_recovery, plan_retention_recovery,
 };
 
+#[derive(Clone, Copy)]
 enum Damage {
     Bytes,
     Identity,
@@ -54,6 +55,11 @@ fn a_missing_stage_preserves_the_recovery_io_cause() -> Result<(), Box<dyn Error
         cause::<io::Error>(&error).map(io::Error::kind),
         Some(io::ErrorKind::NotFound),
         "recovery must preserve the missing-stage I/O error: {error:?}"
+    );
+    assert_eq!(
+        cause::<io::Error>(&error).and_then(io::Error::raw_os_error),
+        Some(rustix::io::Errno::NOENT.raw_os_error()),
+        "recovery must preserve the original OS error code: {error:?}"
     );
     Ok(())
 }

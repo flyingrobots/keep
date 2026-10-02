@@ -214,6 +214,7 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
         attempt::require_mut(&mut self.attempt)?
             .take_head_stage()?
             .replace(&self.retention, pool_name::HEAD)
+            .map_err(Into::into)
     }
 
     fn synchronize_retention_namespace(&mut self) -> io::Result<()> {
@@ -223,21 +224,25 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
     fn remove_root_stage(&mut self) -> io::Result<()> {
         let attempt = attempt::require_mut(&mut self.attempt)?;
         let stage = attempt.take_root_stage()?;
-        stage.remove(
-            &self.retention,
-            attempt.namespace()?,
-            attempt.retained_root_name()?,
-        )
+        stage
+            .remove(
+                &self.retention,
+                attempt.namespace()?,
+                attempt.retained_root_name()?,
+            )
+            .map_err(Into::into)
     }
 
     fn remove_manifest_stage(&mut self) -> io::Result<()> {
         let attempt = attempt::require_mut(&mut self.attempt)?;
         let stage = attempt.take_manifest_stage()?;
-        stage.remove(
-            &self.retention,
-            &self.manifests,
-            attempt.retained_manifest_name()?,
-        )
+        stage
+            .remove(
+                &self.retention,
+                &self.manifests,
+                attempt.retained_manifest_name()?,
+            )
+            .map_err(Into::into)
     }
 
     fn synchronize_cleanup(&mut self) -> io::Result<()> {
