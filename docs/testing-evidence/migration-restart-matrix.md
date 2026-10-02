@@ -1,0 +1,28 @@
+# Migration restart ambiguity matrix
+
+This is the working closure ledger for #111 and KEEP-MIGRATION-005. Change kind: missing runtime verification; no production behavior changes are currently included. Owner: `@flyingrobots`. Base: main `6051abb25a9fd33ae7ee0de5614514b709a4d82a`. The requirement remains in progress until every obligation below is covered and final validation passes.
+
+## Closure ledger
+
+| Invariant | Current evidence | Remaining work and exit condition |
+| --- | --- | --- |
+| Corrupt intent, marker and receipt refuse on restart | `filesystem_migration_restart_record_tests` damages the checksum of each staged/canonical record and requires the exact record-specific decoder variant and expected/observed checksum bytes. | Focused debug/release evidence exists; retain in final candidate checks. |
+| Overlong stages are not disposed of as partial records | The record laws require exact `StageOverlong` stage and observed length for all three stages. | Include in final candidate validation. |
+| Canonical/stage pairs bind one inode and identical bytes | `filesystem_migration_restart_pair_tests` replaces each linked stage with equal bytes at another inode, requiring `Adoption` with `ExactRecordRefusal::KindLengthOrIdentity`; contradictory bytes require the exact `StageDiffers` coordinate. | Removing the shared exact-record inode comparison incorrectly admits the substituted stage and fails the law. Include in final candidate validation. |
+| Effects cannot precede intent or required stage cleanup | `filesystem_migration_restart_order_tests` pins `EffectBeforeIntent` and `StageAfterEffect` with exact stage/effect coordinates through reopened filesystem authority. | Include in final candidate validation. |
+| Namespace holes, marker before namespace, receipt before marker refuse | Ordering laws cover filesystem-realizable namespace holes with exact absent/present coordinates and both record-order refusals. | Include in final candidate validation. An absent parent with a present child is not a realizable filesystem case. |
+| Persisted root identity is binding | `filesystem_migration_restart_root_tests` copies the complete interrupted store into a different root and requires `IntentDiffers`, preserving the copied evidence. Removing the root-file comparison makes the copied store incorrectly recover successfully and the law fail. | Retain in final candidate checks. |
+| Immutable pools and current HEAD remain authoritative | Existing admission and current-HEAD tests cover portions of this contract. | Still open: drive damaged/conflicting immutable-pool and changed-current-state evidence through fresh restart with exact source-chain checks and the complete preservation witness. |
+| Unknown entries and wrong kinds refuse before recovery effects | Existing namespace/admission tests cover portions of this contract. | Still open: restart matrix for unknown nested/root entries and wrong-kind records/fence/directories, preserving exact existing diagnostics. |
+| Refusal preserves evidence | Every new restart scenario recursively records the root and all descendants before reopening and after refusal: names, device/inode, file bytes, directory presence and symbolic-link targets. Unrecognized kinds fail witness construction. | A mutation removing HEAD during residue observation makes record laws fail at the preservation assertion. Final-state equality does not independently prove absence of a transient write restored before observation. |
+| Complete acceptance and truthful documentation | The requirement remains in progress; original roadmap checkboxes are untouched. | Still open: close the remaining rows, calibrate distinct remaining assertions, reconcile normative documentation and requirements, then full required validation and exact-head hosted checks. |
+
+## Execution and limits
+
+Tests run against copied Docker sources with pinned Rust 1.96.0 on Linux aarch64. The new laws are medium-size real-filesystem experiments; fixtures use repository-only platform admission to isolate migration semantics. They execute a named forward prefix, drop writer authority, alter owned evidence, then reopen and derive current intent before recovery. This is restart semantics with deterministic operation ordering, not a process-death or physical power-loss campaign. Existing crash campaigns retain ownership of those claims.
+
+Replay `cargo test --lib --all-features --locked filesystem_migration_restart` and the `--release` variant. Schedules are the named forward phase and scenario tuple in each law; no random seed is involved. Each scenario owns a fresh store. Assertions name the protocol requirement rather than a harness count. Raw execution and calibration logs are retained in the author's issue-111 scratch evidence, and the PR records immutable candidate coordinates and results.
+
+The original implementation passes the covered cases. Three separate source/build mutations demonstrate failures: omitting restart-stable root-file comparison incorrectly admits the copied root; omitting exact-record inode comparison incorrectly admits a byte-equal substituted stage; removing HEAD during residue observation breaks the complete preservation witness. None of these mutations is included in the branch. These are calibrations of missing verification, not a claimed production bug with fabricated parent RED.
+
+Ordinary-test resource ceilings and complete mutation coverage are not claimed. The enforcement profile's existing gaps remain open. Retire these laws only if the corresponding migration contract disappears or stronger restart evidence demonstrably subsumes it. Preserve historical receipts and distinguish setup/compiler failures from behavioral RED runs.
