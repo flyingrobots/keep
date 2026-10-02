@@ -173,11 +173,13 @@ fn a_crash_during_each_stage_write_discards_only_that_stage() -> Result<(), Box<
     Ok(())
 }
 
+// Size: medium. Oracle: every ordered successor prefix preserves the old root until head finalization.
+// Delete when stronger complete-prefix recovery evidence subsumes these runtime outcomes.
 #[test]
 fn successor_prefixes_recover_against_the_published_generation() -> Result<(), Box<dyn Error>> {
-    for count in [2, 9, 13, 15] {
+    for count in 0..=PUBLICATION_PHASE_COUNT {
         let name = format!("filesystem-retention-recovery-successor-{count}");
-        let (_sandbox, mut authority) = open_authority(&name)?;
+        let (sandbox, mut authority) = open_authority(&name)?;
         let root_bytes = fixture(ROOT_HEX)?;
         let _published =
             execute_retention_publication(&mut authority, &initial_preparation(&root_bytes)?)?;
@@ -196,13 +198,12 @@ fn successor_prefixes_recover_against_the_published_generation() -> Result<(), B
 
         assert_eq!(receipt.executed(), steps, "successor {count}: steps");
         assert_eq!(receipt.outcome(), outcome, "successor {count}: outcome");
-        if outcome == Outcome::Committed {
-            let observed = authority.observe_current()?.ok_or("no head after commit")?;
-            assert_eq!(
-                observed.head().generation(),
-                preparation.liveness_generation()
-            );
-        }
+        let selected = if count < 12 {
+            root_bytes.as_slice()
+        } else {
+            candidate.encoded()
+        };
+        require_successor_view(sandbox.path(), selected, count)?;
     }
     Ok(())
 }
@@ -245,5 +246,40 @@ fn noncanonical_short_stages_refuse_recovery_without_changing_retained_bytes()
             "refusal must preserve every retained byte for {name}"
         );
     }
+    Ok(())
+}
+
+/// Verifies persistent selected bytes independently of the recovery receipt.
+fn require_successor_view(
+    root: &Path,
+    expected: &[u8],
+    prefix: usize,
+) -> Result<(), Box<dyn Error>> {
+    use crate::{
+        CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemRetentionSnapshot,
+        ReaderAttemptLimit, SegmentReadPolicy,
+    };
+    let policy = CatalogRestartPolicy::new(
+        SegmentReadPolicy::MAXIMUM,
+        CatalogRestartByteLimit::new(1_048_576)?,
+    );
+    let view = FilesystemRetentionSnapshot::load(root, policy, ReaderAttemptLimit::DEFAULT)?;
+    let expected_root = AdmittedRetentionRoot::decode(expected)?;
+    let head = view
+        .retention_head()
+        .ok_or("successor recovery lost the published head")?;
+    let expected_generation = if prefix < 12 { 1 } else { 2 };
+    assert_eq!(
+        head.generation().get(),
+        expected_generation,
+        "successor prefix {prefix}: published generation"
+    );
+    let selected = view
+        .retained_root(expected_root.root().namespace().digest())?
+        .ok_or("successor recovery lost the selected root")?;
+    assert_eq!(
+        &*selected, expected,
+        "successor prefix {prefix}: exact selected root bytes"
+    );
     Ok(())
 }

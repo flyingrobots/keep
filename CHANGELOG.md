@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Successor recovery evidence now covers every ordered publication prefix and verifies the recovered generation and exact selected-root bytes through the fenced reader; the ledger distinguishes this from sampled mid-write truncations (#99).
+
 - Publication now identifies recovery-observation failures through `RecoveryObservationRefused`, preserving the original typed or OS cause in its error chain; explicit recovery and later planning/execution boundaries retain their existing behavior (#99).
 
 - Publication tests now require the exact missing-manifest recovery refusal for a retained complete head, rejecting unrelated recovery errors (#99).
