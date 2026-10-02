@@ -51,8 +51,9 @@ PR #136 delivered current v1 format documentation as
 `99551ece786d47ef62ecff785a2e24261a911e85`. Its corrected ledger names the
 actual filesystem unit laws. T-11.3's original named
 `tests/segment_filesystem_stage.rs` integration target remains absent, so
-closing #69 does not close this remaining audit gap. Issue #131 retains the
-gap pending an executable correction owner.
+closing #69 does not close this remaining audit gap. Executable
+[issue #147](https://github.com/flyingrobots/keep/issues/147) owns the named
+public integration target and its mainline evidence under the #131 audit.
 
 Validation now uses separate Docker build directories per source clone.
 A shared target directory reused a stale test binary across clones; those

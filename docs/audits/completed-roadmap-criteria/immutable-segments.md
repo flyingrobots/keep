@@ -54,9 +54,10 @@ outdated evidence reference, not evidence that those laws are missing.
 At this inspected snapshot, documentation correction was assigned to #69.
 PR #136 subsequently corrected the living v1 ledger and closed #69, but did
 not add the originally named integration target. The literal artifact
-requirement remains undelivered and is retained by the #131 audit until an
-executable correction owns it. Existing unit laws do not substitute for the
-named public API integration artifact.
+requirement remains undelivered; executable
+[issue #147](https://github.com/flyingrobots/keep/issues/147) now owns it under
+the #131 audit. Existing unit laws do not substitute for the named public API
+integration artifact.
 
 ## Executed evidence and limits
 
