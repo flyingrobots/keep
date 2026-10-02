@@ -176,6 +176,10 @@ filesystem whose individual operations returned success. Each would let an
 unsupported platform manufacture the authority that the proof is meant to
 represent.
 
+## Repository-task publisher admission
+
+The repository-tasks feature must preserve the platform-admission invariant for public catalog publisher authority (#150). Its legacy locked-root constructor performs actual production profile checks before creating an admission proof; a retained lock and lenient identity probe are insufficient. Keeping the existing method signature avoids an unnecessary source compatibility break, while its documentation explicitly corrects the former bypass behavior. The crash harness uses ordinary production initialization for its publisher so that unsupported scratch platforms fail honestly. A separate unchecked public publisher or a caller-provided admission flag would recreate the defect. Other repository adapters have separate admission boundaries and are not certified by this catalog-specific change.
+
 ## Observation before recovery
 
 Store opening performs no repair. It produces either one verified reader
