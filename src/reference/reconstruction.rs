@@ -6,7 +6,7 @@ use crate::{
     AdmittedLayout, BlobHasher, BlobId, BlobLength, LayoutDecodePolicy, LayoutId, ReferenceStore,
 };
 
-use super::chunk_verification::{ChunkVerificationError, verified_chunk};
+use super::chunk_verification::{ChunkVerificationError, emitted_chunk, verified_chunk};
 use super::output_write::{OutputWriteError, write_all};
 use super::profile_verification::ProfileVerifier;
 use super::{ReconstructionError, ReconstructionReceipt};
@@ -17,9 +17,10 @@ impl ReferenceStore {
     /// The lowest canonical committed [`LayoutId`] is chosen deterministically
     /// when more than one layout names the blob. Reconstruction first verifies
     /// every chunk, the registered storage-profile boundaries, and the complete
-    /// logical [`BlobId`] without writing. It then reverifies each immutable
-    /// reference-store chunk immediately before emitting it, so no
-    /// unauthenticated byte reaches `output`.
+    /// logical [`BlobId`] without writing, hashing each chunk exactly once. It
+    /// then emits each verified immutable chunk by identity without hashing it
+    /// again: the in-memory view cannot change under `&self`, so no
+    /// unauthenticated byte reaches `output` and no chunk pays for two hashes.
     ///
     /// Short writes are completed and interrupted writes are retried. This
     /// synchronous blocking operation allocates no adapter-owned heap memory,
@@ -192,7 +193,7 @@ where
     let mut written = 0_u64;
     for (index, entry) in layout.entries().iter().copied().enumerate() {
         let bytes =
-            verified_chunk(store, layout_id, index, entry).map_err(reconstruction_chunk_error)?;
+            emitted_chunk(store, layout_id, index, entry).map_err(reconstruction_chunk_error)?;
         write_chunk(output, layout_id, bytes, &mut written)?;
     }
     Ok(BlobLength::new(written))

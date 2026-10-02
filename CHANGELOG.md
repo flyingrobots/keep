@@ -624,6 +624,17 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- The benchmark workload catalog describes current range authentication once
+  before output, matching its single-pass metric definitions (#71).
+
+- Public reference range-read documentation describes its single pre-output
+  authentication and immutable emission without a second hash (#71).
+
+- Reference reconstruction and range reads authenticate each selected chunk
+  once, then emit its immutable stored bytes after all required checks pass.
+  Benchmark authenticated-byte counters now count one verification pass.
+  Hash-count and exact range-accounting regressions cover issue #71.
+
 - The version-one ledger discloses the pending repository-task sealed-stage
   capability escape (#146) while preserving the immutability requirement (#69).
 

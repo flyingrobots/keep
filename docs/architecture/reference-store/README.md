@@ -100,14 +100,14 @@ backend must define a separate explicit recovery protocol.
 
 ## Reconstruction
 
-Whole-blob reconstruction performs two passes over immutable in-memory chunks.
-Before output it:
+Whole-blob reconstruction hashes each immutable in-memory chunk exactly once,
+then emits the verified chunks by identity. Before output it:
 
 1. verifies every stored chunk against its named `ChunkId`;
 2. replays `fastcdc-64k-v1` and compares every boundary with the layout; and
 3. verifies the complete byte sequence against the target `BlobId`.
 
-Only after all three checks succeed does it reverify and emit each chunk. Short
+Only after all three checks succeed does it emit each verified chunk. Short
 writes are completed, interruptions are retried, and broken writer counts are
 typed refusals. The committed-layout path allocates no adapter-owned heap
 memory; any allocation by the supplied writer belongs to that writer.
@@ -134,7 +134,7 @@ planning, receipt coordinates, and chunk lookup use only the committed layout.
 None of the range APIs materializes the complete blob.
 
 Before any output, a range read authenticates every selected complete chunk
-against its `ChunkId`. During the output pass it reauthenticates each chunk,
+against its `ChunkId`. During the output pass it fetches each verified chunk,
 slices only the overlap, completes short writes, retries interruptions, and
 uses checked output accounting. Invalid layouts, out-of-bounds coordinates,
 missing or mismatched selected chunks, broken writers, and output failures are
