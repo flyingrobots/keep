@@ -26,6 +26,7 @@ type TestResult<T> = Result<T, Box<dyn Error>>;
 enum Records {
     Complete,
     LayoutsOnly,
+    OnlyChunk(keep::ChunkId),
 }
 
 pub(super) struct Identified {
@@ -82,6 +83,30 @@ pub(super) fn build_missing_chunk(name: &str, content: &[u8]) -> TestResult<Test
     Ok(sandbox)
 }
 
+pub(super) fn build_selected_chunk(
+    name: &str,
+    content: &[u8],
+    index: usize,
+) -> TestResult<TestDirectory> {
+    let sandbox = TestDirectory::create(name)?;
+    let identified = [identify(content)?];
+    let selected = identified
+        .first()
+        .ok_or("identity absent")?
+        .spans
+        .get(index)
+        .ok_or("selected chunk absent")?
+        .id();
+    publish_catalog(
+        &sandbox,
+        &[content],
+        &identified,
+        Records::OnlyChunk(selected),
+    )?;
+    migrate(&sandbox)?;
+    Ok(sandbox)
+}
+
 fn migrate(sandbox: &TestDirectory) -> TestResult<()> {
     let admission = FilesystemPlatformAdmission::reopen(sandbox.path())?;
     let mut migration = FilesystemStoreMigrationAuthority::open(
@@ -110,7 +135,10 @@ fn publish_catalog(
     let mut layouts = BTreeSet::new();
     for (bytes, identity) in contents.iter().zip(identified) {
         for span in &identity.spans {
-            if records == Records::Complete && chunks.insert(span.id()) {
+            if matches!(records, Records::Complete) || records == Records::OnlyChunk(span.id()) {
+                if !chunks.insert(span.id()) {
+                    continue;
+                }
                 let start = usize::try_from(span.offset().get())?;
                 let end = usize::try_from(span.end().get())?;
                 stage = stage.append(AdmittedSegmentRecord::for_chunk(
