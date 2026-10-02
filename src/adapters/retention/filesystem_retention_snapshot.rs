@@ -33,6 +33,10 @@ mod pinning_tests;
 #[path = "filesystem_retention_snapshot_moving_error_tests.rs"]
 mod moving_error_tests;
 
+#[cfg(test)]
+#[path = "filesystem_retention_snapshot_coordinate_tests.rs"]
+mod coordinate_tests;
+
 /// One consistent reader view: the catalog snapshot, the retention head, and
 /// the manifest it selects, all observed under one shared reader fence.
 ///
