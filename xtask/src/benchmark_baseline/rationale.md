@@ -58,3 +58,10 @@ these checks introduce no durable format version or public API change.
 Issue #142 remains open until bounded
 parser fuzzing is complete. A refusal law verifies that a prior artifact, an
 interrupted stage and the absence of a publication lock remain unchanged. Structural admission alone does not prove those semantics.
+
+The committed report supplies an independent row-order fixture: each of its
+38 adjacent-row transpositions refuses at the first exact order violation, and
+each of its 18 catalog-row deletions refuses the named incomplete catalog. A
+temporary metadata-order mutation causes the transposition law to fail; the
+restored production parser passes both laws in debug and release. This bounded
+model evidence does not replace the remaining parser fuzz campaign.

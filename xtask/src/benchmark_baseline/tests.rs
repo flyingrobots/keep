@@ -282,3 +282,6 @@ mod counter_width_tests;
 
 #[path = "report_input_tests.rs"]
 mod report_input_tests;
+
+#[path = "row_mutation_tests.rs"]
+mod row_mutation_tests;
