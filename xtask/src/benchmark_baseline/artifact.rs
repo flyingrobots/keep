@@ -19,10 +19,7 @@ pub(super) fn validate<'a>(
     bytes: &'a [u8],
     environment: &CapturedEnvironment,
 ) -> Result<AdmittedReport<'a>, BenchmarkBaselineError> {
-    let report =
-        std::str::from_utf8(bytes).map_err(|_source| BenchmarkBaselineError::ReportViolation {
-            reason: "report-is-not-utf8",
-        })?;
+    let report = super::report_input::decode(bytes)?;
     if report.contains('\r') || !report.ends_with('\n') {
         return violation("report-line-framing");
     }

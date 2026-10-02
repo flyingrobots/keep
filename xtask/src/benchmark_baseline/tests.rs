@@ -279,3 +279,6 @@ mod metric_relation_tests;
 
 #[path = "counter_width_tests.rs"]
 mod counter_width_tests;
+
+#[path = "report_input_tests.rs"]
+mod report_input_tests;

@@ -13,6 +13,7 @@ mod metric_error;
 mod metric_relations;
 mod process;
 mod report_grammar;
+mod report_input;
 mod report_schema;
 mod tracked_source;
 
@@ -22,7 +23,7 @@ use std::process::Command;
 pub(crate) use error::BenchmarkBaselineError;
 
 const DIAGNOSTIC_LIMIT: usize = 262_144;
-const REPORT_LIMIT: usize = 1_048_576;
+const REPORT_LIMIT: usize = report_input::MAXIMUM_REPORT_BYTES;
 
 pub(crate) fn run(repository_root: &Path) -> Result<(), BenchmarkBaselineError> {
     build_environment::admit(repository_root)?;

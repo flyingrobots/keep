@@ -618,6 +618,8 @@ after its public API and format compatibility policies are established.
   metrics admit only their portable unsigned 64-bit range; timing and throughput
   retain unsigned 128-bit precision. Publication requires an immutable admitted
   report; refusal preserves the prior artifact and retained recovery stage.
+  Direct parser admission enforces the same one-MiB input ceiling as subprocess
+  capture before decoding, and preserves UTF-8 error sources.
 
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.

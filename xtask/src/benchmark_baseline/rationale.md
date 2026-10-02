@@ -5,6 +5,12 @@ streaming-CAS baseline evidence. The report is a protocol, not arbitrary
 stdout: the named profile is `keep.streaming-cas-baseline/v1`, with UTF-8,
 LF framing, tab-separated fields and a final LF.
 
+The parser and subprocess capture share a one-MiB input ceiling. The parser
+checks byte length before UTF-8 decoding or allocation-heavy metadata admission.
+The exact limit reaches decoding; a larger input refuses with maximum and
+observed lengths, even if its encoding is invalid. UTF-8 failures retain their
+original source through the typed error chain.
+
 A source coordinate may occur exactly once. Identical duplicates also refuse:
 accepting them would admit multiple representations and leave ambiguous
 interpretations available to downstream tools. Refusals retain the coordinate

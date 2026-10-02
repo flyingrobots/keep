@@ -54,6 +54,7 @@ pub(crate) enum BenchmarkBaselineError {
     ExternalCargoConfiguration {
         path: PathBuf,
     },
+    ReportInput(super::report_input::ReportInputError),
     Metric(super::metric_error::ReportMetricError),
     InvalidReportRow {
         expected: &'static str,
@@ -125,6 +126,7 @@ impl fmt::Display for BenchmarkBaselineError {
                 escaped_path(formatter, path)?;
                 write!(formatter, "` makes benchmark evidence incomparable")
             }
+            Self::ReportInput(source) => fmt::Display::fmt(source, formatter),
             Self::Metric(source) => fmt::Display::fmt(source, formatter),
             Self::InvalidReportRow { expected, observed } => {
                 write!(
@@ -153,6 +155,7 @@ impl Error for BenchmarkBaselineError {
             Self::DiagnosticEncoding { source, .. } | Self::ValueEncoding { source, .. } => {
                 Some(source)
             }
+            Self::ReportInput(source) => Some(source),
             Self::Metric(source) => Some(source),
             Self::MissingPipe { .. }
             | Self::ReaderThread { .. }
