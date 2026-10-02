@@ -40,8 +40,11 @@
 //! namespace transitions while retaining version-1 immutable bytes.
 //! Partial-prefix recovery now plans and resumes lawful migration residue,
 //! returning typed refusals and an ordered execution receipt. Filesystem
-//! retention publication is available; retention restart recovery, immutable
-//! reader snapshots, and garbage collection remain absent.
+//! retention publication, bounded restart recovery and fenced snapshots are
+//! available. [`DurableStore`] composes a fenced snapshot with authenticated
+//! reconstruction and exact-range reads; its snapshot allocation policy is
+//! explicit. Garbage collection remains absent. Complete durable read-law and
+//! Worldline acceptance remains tracked in issue #109.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -54,6 +57,11 @@ mod layout;
 mod profile;
 mod reference;
 mod retention;
+
+pub use adapters::{
+    DurableOutcome, DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt,
+    DurableSnapshot, DurableStore, DurableStoreError, DurableView,
+};
 
 #[cfg(feature = "repository-tasks")]
 #[doc(hidden)]

@@ -26,6 +26,22 @@ mod reconstruction_receipt;
 mod staged_blob;
 mod store;
 
+#[expect(
+    clippy::redundant_pub_crate,
+    reason = "shared with the durable adapter without exposing a public port"
+)]
+pub(crate) use chunk_verification::ChunkSource;
+#[expect(
+    clippy::redundant_pub_crate,
+    reason = "shared with the durable adapter without exposing a public core"
+)]
+pub(crate) use range_read_execution::read_admitted;
+#[expect(
+    clippy::redundant_pub_crate,
+    reason = "shared with the durable adapter without exposing a public core"
+)]
+pub(crate) use reconstruction::reconstruct_admitted;
+
 pub use crate::profile::ProfileBoundary;
 pub use capacity::ReferenceStoreCapacity;
 pub use ingestion_error::{IngestionAllocation, IngestionError};

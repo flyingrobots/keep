@@ -6,7 +6,9 @@ use crate::{
     AdmittedLayout, BlobHasher, BlobId, BlobLength, LayoutDecodePolicy, LayoutId, ReferenceStore,
 };
 
-use super::chunk_verification::{ChunkVerificationError, emitted_chunk, verified_chunk};
+use super::chunk_verification::{
+    ChunkSource, ChunkVerificationError, emitted_chunk, verified_chunk,
+};
 use super::output_write::{OutputWriteError, write_all};
 use super::profile_verification::ProfileVerifier;
 use super::{ReconstructionError, ReconstructionReceipt};
@@ -127,13 +129,20 @@ impl ReferenceStore {
     }
 }
 
-fn reconstruct_admitted<W>(
-    store: &ReferenceStore,
+/// Authenticates the complete blob `layout` names against `store`, then
+/// emits it: the one reconstruction core every view shares.
+#[expect(
+    clippy::redundant_pub_crate,
+    reason = "reached from the durable adapter only through the crate-private re-export"
+)]
+pub(crate) fn reconstruct_admitted<S, W>(
+    store: &S,
     layout_id: LayoutId,
     layout: &AdmittedLayout,
     output: &mut W,
 ) -> Result<ReconstructionReceipt, ReconstructionError>
 where
+    S: ChunkSource + ?Sized,
     W: Write + ?Sized,
 {
     verify_complete_blob(store, layout_id, layout)?;
@@ -153,8 +162,8 @@ where
     ))
 }
 
-fn verify_complete_blob(
-    store: &ReferenceStore,
+fn verify_complete_blob<S: ChunkSource + ?Sized>(
+    store: &S,
     layout_id: LayoutId,
     layout: &AdmittedLayout,
 ) -> Result<(), ReconstructionError> {
@@ -181,13 +190,14 @@ fn verify_complete_blob(
     Ok(())
 }
 
-fn emit_authenticated<W>(
-    store: &ReferenceStore,
+fn emit_authenticated<S, W>(
+    store: &S,
     layout_id: LayoutId,
     layout: &AdmittedLayout,
     output: &mut W,
 ) -> Result<BlobLength, ReconstructionError>
 where
+    S: ChunkSource + ?Sized,
     W: Write + ?Sized,
 {
     let mut written = 0_u64;
