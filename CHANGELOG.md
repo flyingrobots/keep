@@ -606,6 +606,10 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Benchmark report admission refuses identical or conflicting repeated metadata
+  coordinates with a typed failure naming the coordinate (issue #142). Complete
+  canonical report admission remains in progress.
+
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 

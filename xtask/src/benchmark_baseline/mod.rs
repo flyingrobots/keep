@@ -6,6 +6,7 @@ mod build_environment;
 mod environment;
 mod error;
 mod host_environment;
+mod metadata_uniqueness;
 mod process;
 mod tracked_source;
 

@@ -54,6 +54,9 @@ pub(crate) enum BenchmarkBaselineError {
     ExternalCargoConfiguration {
         path: PathBuf,
     },
+    DuplicateReportMetadata {
+        coordinate: String,
+    },
     ReportViolation {
         reason: &'static str,
     },
@@ -117,6 +120,11 @@ impl fmt::Display for BenchmarkBaselineError {
                 escaped_path(formatter, path)?;
                 write!(formatter, "` makes benchmark evidence incomparable")
             }
+            Self::DuplicateReportMetadata { coordinate } => {
+                formatter.write_str("benchmark report repeats metadata `")?;
+                escaped_controls(formatter, coordinate)?;
+                formatter.write_str("`")
+            }
             Self::ReportViolation { reason } => {
                 write!(formatter, "benchmark report violates `{reason}`")
             }
@@ -138,6 +146,7 @@ impl Error for BenchmarkBaselineError {
             | Self::InvalidValue { .. }
             | Self::AmbientBuildSetting { .. }
             | Self::ExternalCargoConfiguration { .. }
+            | Self::DuplicateReportMetadata { .. }
             | Self::ReportViolation { .. } => None,
         }
     }

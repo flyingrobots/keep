@@ -195,3 +195,20 @@ fn report(environment: &CapturedEnvironment, scenarios: usize, profiles: usize) 
     }
     report
 }
+
+#[test]
+fn report_admission_refuses_conflicting_and_identical_source_duplicates() {
+    let environment = environment();
+    for commit in [
+        &environment.commit,
+        &String::from("ffffffffffffffffffffffffffffffffffffffff"),
+    ] {
+        let mut bytes = report(&environment, 13, 5);
+        let _written = writeln!(bytes, "metadata\tgit-commit\t{commit}");
+        assert!(matches!(
+            artifact::validate(bytes.as_bytes(), &environment),
+            Err(BenchmarkBaselineError::DuplicateReportMetadata { coordinate })
+                if coordinate == "git-commit"
+        ));
+    }
+}

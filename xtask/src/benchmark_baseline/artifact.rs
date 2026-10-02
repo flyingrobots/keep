@@ -14,6 +14,7 @@ pub(super) fn validate(
     if report.contains('\r') || !report.ends_with('\n') {
         return violation("report-line-framing");
     }
+    super::metadata_uniqueness::admit(report)?;
     let mut lines = report.lines();
     if lines.next() != Some("schema\tkeep.streaming-cas-baseline/v1") {
         return violation("report-schema");
