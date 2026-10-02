@@ -29,7 +29,9 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
     ) -> io::Result<RetentionTransitionDisposition> {
         self.attempt = None;
         let recovery = self.recover().map_err(|error| match error {
-            FilesystemRetentionRecoveryError::Observe { source } => source,
+            FilesystemRetentionRecoveryError::Observe { source } => {
+                RetentionCurrentStateRefusal::RecoveryObservationRefused { source }.into_io()
+            }
             FilesystemRetentionRecoveryError::Plan { source } => {
                 RetentionCurrentStateRefusal::RecoveryRefused { source }.into_io()
             }

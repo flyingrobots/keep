@@ -171,11 +171,18 @@ pub(super) fn successor_root(
     CanonicalRetentionRoot::from_root(&root).map_err(Into::into)
 }
 
-/// Extracts the typed current-state refusal carried by a verification error.
+/// Extracts the underlying current-state cause, traversing recovery observation.
+/// Tests of the observation boundary itself inspect the outer error directly.
 pub(super) fn refusal(source: &io::Error) -> Option<&RetentionCurrentStateRefusal> {
-    source
+    let refusal = source
         .get_ref()
-        .and_then(|inner| inner.downcast_ref::<RetentionCurrentStateRefusal>())
+        .and_then(|inner| inner.downcast_ref::<RetentionCurrentStateRefusal>())?;
+    match refusal {
+        RetentionCurrentStateRefusal::RecoveryObservationRefused { source } => {
+            self::refusal(source)
+        }
+        other => Some(other),
+    }
 }
 
 pub(super) fn head_path(root: &Path) -> PathBuf {

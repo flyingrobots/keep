@@ -14,13 +14,18 @@ fn observation(error: &RetentionPublicationError) -> Result<&io::Error, Box<dyn 
     let RetentionPublicationError::CurrentVerification { source } = error else {
         return Err(format!("observation must refuse current verification: {error:?}").into());
     };
-    let Some(Refusal::RecoveryObservationRefused { source }) = source
+    let Some(refusal @ Refusal::RecoveryObservationRefused { .. }) = source
         .get_ref()
         .and_then(|source| source.downcast_ref::<Refusal>())
     else {
         return Err(format!("publication must identify recovery observation: {error:?}").into());
     };
-    Ok(source)
+    refusal
+        .source()
+        .and_then(|source| source.downcast_ref::<io::Error>())
+        .ok_or_else(|| {
+            "observation must expose its original I/O source through Error::source".into()
+        })
 }
 
 // Size: medium. Oracle: publication identifies recovery observation and preserves its typed cause.
