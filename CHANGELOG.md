@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Repository-task migration admission now reports root capability-clone failures as namespace failures and identity-probe failures as root-identity failures, preserving their I/O causes (#99).
+
 - Reader collection tests now reject same-generation digest changes and require preserved I/O causes at all three read boundaries, using returned payloads instead of script load counters (#99).
 
 - Retention model tests now require exact preparation and superseded-publication refusals, including their identifying coordinates; unrelated errors no longer satisfy a rejected transition, and the harness sequence-count assertion is removed (#99).
