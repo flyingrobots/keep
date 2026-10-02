@@ -66,6 +66,9 @@ pub(super) fn head(encoded: &[u8]) -> Result<(), RetentionHeadDecodeError> {
         let _length = crate::RetentionManifestLength::new(value)
             .map_err(|source| RetentionHeadDecodeError::ManifestLength { source })?;
     }
+    if encoded.len() >= 104 {
+        let _head = super::head_decoder::admit_fields(encoded)?;
+    }
     Ok(())
 }
 

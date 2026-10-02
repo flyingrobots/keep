@@ -38,6 +38,8 @@ A pre-effect incomplete stage may be removed only when every later-ordered effec
 
 Once all bytes of a staged head's manifest-length field are available, recovery requires that value to satisfy the canonical manifest bounds and entry alignment even if the rest of the head is missing. An invalid value refuses as `StageCorrupt(Head)` with its typed `ManifestLength` cause, preserving the retained evidence.
 
+When a short head contains all generation and predecessor bytes, recovery applies the same semantic history rules as complete head decoding: generation one cannot name a predecessor, and a successor must name one. Contradictions refuse as `StageCorrupt(Head)` with the exact semantic cause before any stage removal.
+
 A truncated manifest requires a complete root stage already linked to its immutable pool entry. A truncated head requires both complete root and manifest stages already linked to their immutable pool entries. Missing or incomplete earlier evidence refuses as `TruncatedStageWithoutEarlierEvidence`, naming both stages, before any scheduled discard or relinking. Existing corruption and conflicting-pool diagnostics retain precedence; cross-record and history admission still precede execution.
 
 This retention protocol requires pinning the incomplete regular file. The separate [migration discard path](migration-crash.md#fixed-stage-law) revalidates the current entry's regular kind and incomplete length before removal without retaining an incomplete-stage handle. These are distinct protocol boundaries.
