@@ -4,7 +4,9 @@
 
 use xtask::{DurabilityCrashPoint, DurabilityCrashSequence};
 
-use DurabilityCrashSequence::{Catalog, Head, Initialization, Migration, RecoveryDiscard, Retention, Segment};
+use DurabilityCrashSequence::{
+    Catalog, Head, Initialization, Migration, RecoveryDiscard, Retention, Segment,
+};
 
 const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
     (

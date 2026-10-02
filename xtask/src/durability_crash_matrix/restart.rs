@@ -1,9 +1,9 @@
 //! This module owns independent post-process-death store verification.
 
 mod expectation;
-mod retention;
 mod migration;
 mod migration_expectation;
+mod retention;
 mod semantic;
 
 use std::collections::BTreeSet;
