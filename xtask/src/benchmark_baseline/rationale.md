@@ -26,10 +26,18 @@ require a coordinated update to the runner and admission contract. Process CPU
 clock, incremental live-heap memory, mandatory verification, nanoseconds, bytes
 and exact numerator/denominator ratios are admitted as fixed semantic values.
 
+Metric relationships are admitted with typed expected/observed failures. Ratio
+numerators and denominators must equal their named counters; reused chunks may
+not exceed their base or observed chunk counts. Percentiles must be ordered
+and may not exceed the aggregate total. Throughput is the exact integer quotient
+of logical bytes times samples times one billion divided by wall duration;
+overflow and zero duration refuse. The frozen profile timed input is one MiB.
+The decoder preserves its original integer parse error through the error chain.
+
 Admission runs before artifact publication. A grammar refusal performs no
 filesystem mutation. Existing publication and recovery ordering are unchanged;
 these checks introduce no durable format version or public API change.
 
-Issue #142 remains open until metric relationships, bounded
+Issue #142 remains open until numeric-width bounds, bounded
 parser fuzzing, a validated publication input and prior-artifact preservation
 laws are complete. Structural admission alone does not prove those semantics.

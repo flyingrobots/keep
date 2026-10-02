@@ -8,6 +8,8 @@ mod error;
 mod host_environment;
 mod metadata_policy;
 mod metadata_uniqueness;
+mod metric_error;
+mod metric_relations;
 mod process;
 mod report_grammar;
 mod report_schema;

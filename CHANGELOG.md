@@ -612,7 +612,9 @@ after its public API and format compatibility policies are established.
   headers/catalogs, complete metric widths and canonical unsigned decimals now
   refuse malformed reports while admitting the committed historical fixture.
   Fixed measurement policies and consistent per-row sample counts are admitted
-  before publication.
+  before publication. Ratios, throughput, percentile order and reused-chunk
+  bounds now refuse inconsistent evidence with typed expected/observed failures;
+  arithmetic and numeric parsing refuse without approximation.
 
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.

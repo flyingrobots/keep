@@ -273,14 +273,7 @@ fn noncanonical_or_overflowing_decimal_metrics_refuse_exactly() {
     let environment = environment();
     let valid = report(&environment, 13, 5);
     let prefix = "scenario\tcold-ingest\tingest-chunk-and-blob-identity\t";
-    for observed in [
-        "",
-        "0100",
-        "+100",
-        "-100",
-        "1.0",
-        "340282366920938463463374607431768211456",
-    ] {
+    for observed in ["", "0100", "+100", "-100", "1.0"] {
         let malformed = valid.replace(&format!("{prefix}100\t"), &format!("{prefix}{observed}\t"));
         assert!(
             matches!(artifact::validate(malformed.as_bytes(), &environment),
@@ -293,3 +286,6 @@ fn noncanonical_or_overflowing_decimal_metrics_refuse_exactly() {
 
 #[path = "metadata_policy_tests.rs"]
 mod metadata_policy_tests;
+
+#[path = "metric_relation_tests.rs"]
+mod metric_relation_tests;

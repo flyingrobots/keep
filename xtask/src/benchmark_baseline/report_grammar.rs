@@ -7,6 +7,11 @@ use super::report_schema::{
     METADATA_KEYS, PROFILE_HEADER, PROFILE_PREFIXES, SCENARIO_HEADER, SCENARIO_PREFIXES,
 };
 
+enum MetricCatalog {
+    Scenario,
+    Profile,
+}
+
 pub(super) fn admit(report: &str) -> Result<(), BenchmarkBaselineError> {
     let mut lines = report.lines();
     exact(&mut lines, "schema\tkeep.streaming-cas-baseline/v1")?;
@@ -15,11 +20,11 @@ pub(super) fn admit(report: &str) -> Result<(), BenchmarkBaselineError> {
     }
     exact(&mut lines, SCENARIO_HEADER)?;
     for prefix in SCENARIO_PREFIXES {
-        metrics(&mut lines, prefix, 28)?;
+        metrics(&mut lines, prefix, MetricCatalog::Scenario)?;
     }
     exact(&mut lines, PROFILE_HEADER)?;
     for prefix in PROFILE_PREFIXES {
-        metrics(&mut lines, prefix, 15)?;
+        metrics(&mut lines, prefix, MetricCatalog::Profile)?;
     }
     exact(&mut lines, "threshold-header\tmetric\tstatus\trationale")?;
     exact(
@@ -59,7 +64,7 @@ fn metadata(lines: &mut Lines<'_>, key: &'static str) -> Result<(), BenchmarkBas
 fn metrics(
     lines: &mut Lines<'_>,
     prefix: &'static str,
-    width: usize,
+    catalog: MetricCatalog,
 ) -> Result<(), BenchmarkBaselineError> {
     let observed = lines.next().unwrap_or_default();
     let Some(values) = observed
@@ -82,10 +87,12 @@ fn metrics(
                 observed: observed.to_owned(),
             })?;
     }
-    if count == width {
-        Ok(())
-    } else {
-        invalid("complete metric row", observed)
+    match (catalog, count) {
+        (MetricCatalog::Scenario, 28) => super::metric_relations::scenario(values),
+        (MetricCatalog::Profile, 15) => super::metric_relations::profile(values),
+        (MetricCatalog::Scenario | MetricCatalog::Profile, _) => {
+            invalid("complete metric row", observed)
+        }
     }
 }
 
@@ -93,11 +100,15 @@ fn decimal(value: &str) -> Result<(), BenchmarkBaselineError> {
     if value.is_empty()
         || !value.bytes().all(|byte| byte.is_ascii_digit())
         || (value.len() > 1 && value.starts_with('0'))
-        || value.parse::<u128>().is_err()
     {
         invalid("canonical unsigned decimal", value)
     } else {
-        Ok(())
+        value.parse::<u128>().map(|_admitted| ()).map_err(|source| {
+            BenchmarkBaselineError::Metric(super::metric_error::ReportMetricError::Encoding {
+                observed: value.to_owned(),
+                source,
+            })
+        })
     }
 }
 
