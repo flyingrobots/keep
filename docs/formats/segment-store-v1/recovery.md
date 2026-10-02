@@ -67,6 +67,12 @@ length, and recomputed stage fingerprint to match prior observation evidence;
 only `assess_recovery_stage` may dispatch those admitted bytes to a semantic
 classifier. Matching evidence does not convert corrupt bytes into lawful
 content.
+
+Transitive publication-view admission for a candidate `head.next` is
+implemented at [Leftover next head](#leftover-next-head). Its planner and
+filesystem finalizer require the complete candidate catalog snapshot under
+`KEEP-RECOVERY-017` and `KEEP-RECOVERY-018` before head replacement.
+
 `plan_recovery_stage_discard` admits only an exact truncation assessment and
 retains both its evidence and typed truncation reason. The semantic
 `execute_recovery_stage_discard` port refuses evidence drift before mutation,

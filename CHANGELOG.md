@@ -624,6 +624,9 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- The version-one recovery overview links its implemented transitive
+  candidate-view admission to the next-head boundary and requirement anchors (#69).
+
 - Version-one publication documentation assigns unchecked publisher
   construction to the crash harness and fault injection to its decorators (#69).
 
