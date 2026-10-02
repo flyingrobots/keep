@@ -94,6 +94,10 @@ boundaries; the public range receipt documents that narrower scope.
 
 ## Executed evidence and limitations
 
+The earlier targeted runs below used a shared target directory. Fresh
+source-isolated full keep debug/release suites now replace them as
+source-specific evidence; see the [validation correction](README.md).
+
 On 2026-10-01, copy-isolated Docker and pinned Rust 1.96.0 used the
 main-equivalent source clone identified in [foundations.md](foundations.md).
 The following twelve public targets passed in debug and release, totaling
@@ -110,5 +114,6 @@ test-list command failed because ripgrep was absent inside the container;
 the corrected exact-name execution ran and passed the intended law.
 
 No durable crash, benchmark execution, full-workspace or fuzz-campaign
-claim follows from these checks. Fourteen of the 64 remaining checked
-tasks now have verdicts; 50 and full accounting of 19 reopened tasks remain.
+claim follows from these checks. The subsequent
+[reference-store audit](reference-store-and-reads.md) brings accounting to
+22 verdicts; 42 and full accounting of 19 reopened tasks remain.

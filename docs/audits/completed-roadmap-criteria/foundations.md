@@ -99,6 +99,10 @@ an allocation benchmark or multi-GiB soak measurement for blob hashing.
 
 ## Executed evidence
 
+The earlier targeted runs below used a shared target directory. Fresh
+source-isolated full keep debug/release suites now replace them as
+source-specific evidence; see the [validation correction](README.md).
+
 On 2026-10-01, a Git-bundle clone of audit commit `7981988` ran in Docker
 with pinned Rust 1.96.0. Its Rust source and conformance corpus are unchanged
 from inspected main; the extra commit adds only the audit scope documents.
@@ -116,7 +120,7 @@ from inspected main; the extra commit adds only the audit scope documents.
 No full-workspace, reboot, power-loss, benchmark, or fuzz-run claim follows
 from these targeted results. The next five verdicts are in
 [identity layers and chunking](identity-layers-and-chunking.md). The other
-50 checked tasks and 19 reopened tasks still need complete accounting
+42 checked tasks and 19 reopened tasks still need complete accounting
 before issue #131 can close.
 
 <!-- markdownlint-enable MD013 -->

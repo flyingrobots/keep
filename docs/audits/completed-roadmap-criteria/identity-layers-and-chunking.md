@@ -90,6 +90,10 @@ language implementation or certify arbitrary third-party readers.
 
 ## Executed evidence
 
+The earlier targeted runs below used a shared target directory. Fresh
+source-isolated full keep debug/release suites now replace them as
+source-specific evidence; see the [validation correction](README.md).
+
 On 2026-10-01, copy-isolated Docker used the same pinned Rust 1.96.0
 main-equivalent source clone identified in [foundations.md](foundations.md).
 
@@ -101,5 +105,6 @@ main-equivalent source clone identified in [foundations.md](foundations.md).
 - `cargo bench -p keep --bench streaming_cdc --no-run`: passed.
 
 The next four verdicts are in [flat layout](flat-layout.md). Fourteen of
-the 64 remaining checked entries now have criterion-level verdicts. The
-other 50, plus full accounting of the 19 reopened entries, remain open.
+the 64 remaining checked entries had verdicts at that stage. The subsequent
+[reference-store audit](reference-store-and-reads.md) brings accounting to
+22 verdicts; the other 42 and 19 reopened entries remain open.

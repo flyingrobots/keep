@@ -12,9 +12,17 @@ state. Originally unchecked tasks and feature-level checkboxes are excluded.
 
 The [foundation verdicts](foundations.md),
 [identity-layer and chunking verdicts](identity-layers-and-chunking.md), and
-[flat-layout verdicts](flat-layout.md) cover the first fourteen remaining
-checked tasks. Each separates acceptance and mainline delivery and names
-inspected evidence and limits.
+[flat-layout verdicts](flat-layout.md), and
+[reference-store and read verdicts](reference-store-and-reads.md) cover the
+first 22 remaining checked tasks. Each separates acceptance and mainline
+delivery and names inspected evidence and limits. T-06.3 has unresolved
+acceptance scope; T-06.3 and T-06.4 are not delivered on main.
+
+Validation now uses separate Docker build directories per source clone.
+A shared target directory reused a stale test binary across clones; those
+earlier runs do not establish source-specific validation. Fresh isolated
+debug/release keep suites, formatting, workspace Clippy, and source policy
+passed for main and the inspected PR #134/#135 implementations.
 
 Task identifiers can have an alphabetic suffix: `T-22.1a` is a distinct
 originally completed task. Counting only numeric identifiers incorrectly
