@@ -181,3 +181,39 @@ fn short_head_refusal_reports_only_observed_bytes() {
         "one-byte head refusal must report offset 0, K and X; observed {assessment:?}"
     );
 }
+
+#[test]
+fn admitted_closure_values_remain_possible_at_every_prefix() -> Result<(), Box<dyn Error>> {
+    let fixture = support::decode_hex(ROOT.trim_end())?;
+    for (offset, width, maximum) in [
+        (88_usize, 8_usize, 1_048_576_u64),
+        (96, 2, 8),
+        (100, 8, 16_777_216),
+        (108, 8, 1_073_741_824),
+    ] {
+        // Deterministically cover every admitted high-bit boundary, plus the ceiling.
+        for value in (0..64)
+            .filter_map(|bit| 1_u64.checked_shl(bit))
+            .filter(|value| *value <= maximum)
+            .chain([maximum])
+        {
+            let raw = value.to_be_bytes();
+            let start = raw.len().checked_sub(width).ok_or("field width overflow")?;
+            let field = raw.get(start..).ok_or("missing encoded field")?;
+            for length in 1..=width {
+                let end = offset.checked_add(length).ok_or("prefix overflow")?;
+                let mut prefix = fixture.get(..end).ok_or("missing fixture")?.to_vec();
+                prefix
+                    .get_mut(offset..end)
+                    .ok_or("missing target")?
+                    .copy_from_slice(field.get(..length).ok_or("missing source")?);
+                let assessment = assess_root_stage(Some(&prefix));
+                assert!(
+                    matches!(assessment, RetentionStageAssessment::Truncated { .. }),
+                    "admitted closure value {value} at {offset}, prefix length {length}, must admit completion: {assessment:?}"
+                );
+            }
+        }
+    }
+    Ok(())
+}

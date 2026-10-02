@@ -183,6 +183,7 @@ mod retention_storage_error_law_tests;
 mod retention_view_collector;
 #[cfg(test)]
 mod retention_view_collector_tests;
+mod stage_closure_limit_admission;
 mod stage_fixed_field_admission;
 mod stage_generation_admission;
 mod stage_history_admission;
