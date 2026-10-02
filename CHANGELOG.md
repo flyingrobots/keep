@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery preserves partial manifest entries whose namespace prefix cannot satisfy strict ordering or whose completed root-generation field is zero (#99).
+
 - Recovery validates complete anchors and manifest entries inside interrupted bodies, preserving malformed identities, zero generations and duplicate ordering violations before discard (#99).
 
 - Recovery verifies available root and manifest digest and checksum bytes and complete body-set digests before discarding interrupted stages, preserving provably corrupt records (#99).

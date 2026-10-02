@@ -112,20 +112,19 @@ fn require_preservation(prefix: &[u8], fault: Fault) -> Result<(), Box<dyn Error
                 RetentionFixedStage::Manifest,
                 "identify the corrupt partial-entry stage"
             );
-            let exact = match (fault, source.downcast_ref::<RetentionManifestDecodeError>()) {
+            let exact = matches!(
+                (fault, source.downcast_ref::<RetentionManifestDecodeError>()),
                 (
                     Fault::Order,
                     Some(RetentionManifestDecodeError::NonCanonicalEntryOrder { index: 1 }),
-                ) => true,
-                (
+                ) | (
                     Fault::Generation,
                     Some(RetentionManifestDecodeError::RootGeneration {
                         index: 0,
                         source: RootGenerationError::Zero,
                     }),
-                ) => true,
-                _ => false,
-            };
+                )
+            );
             assert!(
                 exact,
                 "report exact partial-entry {fault:?} cause: {source:?}"
