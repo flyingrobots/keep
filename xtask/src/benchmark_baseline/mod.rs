@@ -8,6 +8,8 @@ mod error;
 mod host_environment;
 mod metadata_uniqueness;
 mod process;
+mod report_grammar;
+mod report_schema;
 mod tracked_source;
 
 use std::path::Path;

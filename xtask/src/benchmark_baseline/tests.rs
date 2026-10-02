@@ -166,34 +166,43 @@ fn host() -> CapturedHost {
     }
 }
 
+const HISTORICAL_BASELINE: &str =
+    include_str!("../../../benchmark/baselines/c529c07-aarch64-apple-darwin.tsv");
+
 fn report(environment: &CapturedEnvironment, scenarios: usize, profiles: usize) -> String {
-    let mut report = format!(
-        "schema\tkeep.streaming-cas-baseline/v1\n\
-         metadata\tgit-commit\t{}\n\
-         metadata\tgit-tree\t{}\n\
-         metadata\trustc-version\t{}\n\
-         metadata\ttarget-triple\t{}\n\
-         metadata\tos-description\t{}\n\
-         metadata\tcpu-model\t{}\n\
-         metadata\tlogical-cpu-count\t{}\n\
-         metadata\tbuild-profile\toptimized-release\n\
-         threshold\tall-performance-metrics\tunconfigured\t\
-         requires-controlled-baseline-history\n",
-        environment.commit,
-        environment.tree,
-        environment.rustc_version,
-        environment.target_triple,
-        environment.host.os_description,
-        environment.host.cpu_model,
-        environment.host.logical_cpu_count
-    );
-    for index in 0..scenarios {
-        let _written = writeln!(report, "scenario\t{index}");
+    let admitted_scenarios: Vec<_> = HISTORICAL_BASELINE
+        .lines()
+        .filter(|line| line.starts_with("scenario\t"))
+        .take(scenarios)
+        .collect();
+    let admitted_profiles: Vec<_> = HISTORICAL_BASELINE
+        .lines()
+        .filter(|line| line.starts_with("profile\t"))
+        .take(profiles)
+        .collect();
+    let mut output = String::new();
+    for line in HISTORICAL_BASELINE.lines() {
+        if line.starts_with("scenario\t") && !admitted_scenarios.contains(&line) {
+            continue;
+        }
+        if line.starts_with("profile\t") && !admitted_profiles.contains(&line) {
+            continue;
+        }
+        let _written = writeln!(output, "{line}");
     }
-    for index in 0..profiles {
-        let _written = writeln!(report, "profile\t{index}");
-    }
-    report
+    output
+        .replace(
+            "c529c07f385b5bcd76a4e57c1987001d496f9135",
+            &environment.commit,
+        )
+        .replace(
+            "rustc 1.96.0 (ac68faa20 2026-05-25)",
+            &environment.rustc_version,
+        )
+        .replace(
+            "metadata\tlogical-cpu-count\t10",
+            "metadata\tlogical-cpu-count\t1",
+        )
 }
 
 #[test]
@@ -210,5 +219,74 @@ fn report_admission_refuses_conflicting_and_identical_source_duplicates() {
             Err(BenchmarkBaselineError::DuplicateReportMetadata { coordinate })
                 if coordinate == "git-commit"
         ));
+    }
+}
+
+#[test]
+fn report_admission_requires_exact_headers_and_canonical_numbers() {
+    let environment = environment();
+    let valid = report(&environment, 13, 5);
+    let header = super::report_schema::SCENARIO_HEADER;
+    for (malformed, expected, observed) in [
+        (
+            valid.replace("scenario-header\tname", "scenario-header\tnames"),
+            header,
+            header.replace("\tname\t", "\tnames\t"),
+        ),
+        (
+            valid.replace(
+                "scenario\tcold-ingest\tingest-chunk-and-blob-identity\t100",
+                "scenario\tcold-ingest\tingest-chunk-and-blob-identity\t0100",
+            ),
+            "canonical unsigned decimal",
+            String::from("0100"),
+        ),
+        (
+            format!("{valid}unexpected\trow\n"),
+            "end of report",
+            String::from("unexpected\trow"),
+        ),
+    ] {
+        assert!(matches!(
+            artifact::validate(malformed.as_bytes(), &environment),
+            Err(BenchmarkBaselineError::InvalidReportRow { expected: actual_expected, observed: actual_observed })
+                if actual_expected == expected && actual_observed == observed
+        ));
+    }
+    assert!(artifact::validate(valid.as_bytes(), &environment).is_ok());
+}
+
+#[test]
+fn malformed_report_rows_cannot_forge_diagnostic_lines() {
+    let error = BenchmarkBaselineError::InvalidReportRow {
+        expected: "canonical unsigned decimal",
+        observed: String::from("1\nforged\tvalue"),
+    };
+    assert_eq!(
+        error.to_string(),
+        "benchmark report expected canonical unsigned decimal, observed `1\\nforged\\tvalue`"
+    );
+}
+
+#[test]
+fn noncanonical_or_overflowing_decimal_metrics_refuse_exactly() {
+    let environment = environment();
+    let valid = report(&environment, 13, 5);
+    let prefix = "scenario\tcold-ingest\tingest-chunk-and-blob-identity\t";
+    for observed in [
+        "",
+        "0100",
+        "+100",
+        "-100",
+        "1.0",
+        "340282366920938463463374607431768211456",
+    ] {
+        let malformed = valid.replace(&format!("{prefix}100\t"), &format!("{prefix}{observed}\t"));
+        assert!(
+            matches!(artifact::validate(malformed.as_bytes(), &environment),
+            Err(BenchmarkBaselineError::InvalidReportRow {
+                expected: "canonical unsigned decimal", observed: actual,
+            }) if actual == observed)
+        );
     }
 }

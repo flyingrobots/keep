@@ -87,7 +87,7 @@ pub(super) fn validate(
     {
         return violation("report-profile-count");
     }
-    Ok(())
+    super::report_grammar::admit(report)
 }
 
 fn require_line(

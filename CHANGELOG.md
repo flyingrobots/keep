@@ -608,7 +608,9 @@ after its public API and format compatibility policies are established.
 
 - Benchmark report admission refuses identical or conflicting repeated metadata
   coordinates with a typed failure naming the coordinate (issue #142). Complete
-  canonical report admission remains in progress.
+  canonical report admission remains in progress. Ordered metadata keys, exact
+  headers/catalogs, complete metric widths and canonical unsigned decimals now
+  refuse malformed reports while admitting the committed historical fixture.
 
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
