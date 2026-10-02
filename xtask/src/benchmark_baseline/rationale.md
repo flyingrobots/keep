@@ -63,7 +63,7 @@ The committed report supplies an independent row-order fixture: each of its
 each of its 18 catalog-row deletions refuses the named incomplete catalog. A
 temporary metadata-order mutation causes the transposition law to fail; the
 restored production parser passes both laws in debug and release. This bounded
-model evidence does not replace the remaining parser fuzz campaign.
+model evidence complements the parser fuzz campaign.
 
 The I/O-free benchmark-report fuzz facade reuses these production parser files
 and captured-coordinate types. Its dependency-free feature admits the fixed
@@ -73,3 +73,17 @@ reviewed nightly and cargo-fuzz versions, a final-source bounded campaign ran
 10,000 executions with seed 142, a one-MiB input cap, five-second input timeout
 and one-GiB RSS limit without a failure. This is exploration evidence, not a
 claim that green coverage establishes absence of malformed states.
+
+Compatibility also admits the unchanged single-pass report produced at
+`30ffe90e53c01a24d8931244a7f76eaecd0da8a4`, with its matching M5 Pro/Darwin
+coordinates. The copied fixture is historical evidence from PR #134, not a new
+measurement or a cross-host performance comparison. Thirty-six further catalog
+mutations refuse unknown or duplicated members at their exact slots.
+
+Final verification found the reviewed harness registry still listed eleven
+targets. It now includes `benchmark_report`; all 26 campaign-policy laws pass
+in debug and release. A clean exact-source full-workspace run remains blocked
+by the pre-existing hardware-dependent source-identity law tracked in #139 and
+PR #140. That prerequisite has no approvals and has not been merged. The first
+full run also lacked the installed external BLAKE3 tool on PATH; its oracle law
+passes with the real tool available. No full-workspace green result is claimed.

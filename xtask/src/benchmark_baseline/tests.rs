@@ -285,3 +285,9 @@ mod report_input_tests;
 
 #[path = "row_mutation_tests.rs"]
 mod row_mutation_tests;
+
+#[path = "report_compatibility_tests.rs"]
+mod report_compatibility_tests;
+
+#[path = "catalog_membership_tests.rs"]
+mod catalog_membership_tests;
