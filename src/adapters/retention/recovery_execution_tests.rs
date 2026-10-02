@@ -58,6 +58,37 @@ const FINALIZE: [Step; 3] = [
     Step::RemoveManifestStage,
 ];
 
+// Size: small. Oracle: the public executor stops at its first refused storage capability.
+// The port records successful effects, not executor internals; none may follow failed finalization.
+// Delete when a stronger recovery-boundary law subsumes first-step refusal and its empty receipt.
+#[test]
+fn refused_finalization_reports_no_completed_effects() -> Result<(), Box<dyn Error>> {
+    let plan = RetentionRecoveryPlan::new(FINALIZE.to_vec(), RetentionRecoveryOutcome::Committed);
+    let mut storage = Recording {
+        calls: Vec::new(),
+        refuse_at: Some(Step::FinalizeHead),
+    };
+
+    let error = execute_retention_recovery(&mut storage, &plan)
+        .err()
+        .ok_or("refused finalization was reported as success")?;
+
+    assert_eq!(
+        error.step(),
+        Step::FinalizeHead,
+        "name the first refused capability"
+    );
+    assert!(
+        error.executed().is_empty(),
+        "no operation completed before finalization refused"
+    );
+    assert!(
+        storage.calls.is_empty(),
+        "a finalization refusal must prevent cleanup effects"
+    );
+    Ok(())
+}
+
 #[test]
 fn every_step_calls_exactly_its_capability_in_plan_order() -> Result<(), Box<dyn Error>> {
     let all = [
