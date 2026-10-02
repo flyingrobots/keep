@@ -18,8 +18,8 @@ use crate::adapters::filesystem_platform_profile::root_identity;
 use crate::adapters::filesystem_version_two_admission::require_root_identity;
 use crate::adapters::{
     CatalogRestartError, CatalogRestartPolicy, ChecksummedPublicationHead,
-    FilesystemCatalogSnapshot, filesystem_initialization_namespace, filesystem_version_two_records,
-    publication_head_decoder,
+    FilesystemCatalogSnapshot, filesystem_initialization_namespace, filesystem_platform_profile,
+    filesystem_version_two_records, publication_head_decoder,
 };
 use crate::{RetentionHead, RetentionManifest, RetentionNamespaceDigest};
 
@@ -105,13 +105,17 @@ impl RetentionViewSource for Source {
 }
 
 impl FilesystemRetentionSnapshot {
-    /// Admits the root as version two, acquires the reader fence, and
+    /// Admits the production filesystem profile and version-two root, acquires the reader fence, and
     /// double-collects one consistent view within `limit` attempts.
     /// Admission requires the opened directory's restart-stable device and
     /// inode to match the jointly admitted migration records before fencing.
     ///
     /// The call takes no writer authority and mutates nothing. It may block
     /// while collection holds the fence exclusively.
+    /// Platform admission requires the existing local writable, case-sensitive
+    /// Linux ext4 profile across every present version-two protocol directory.
+    /// The same opened root capability is retained through namespace, migration
+    /// identity, fence, and coordinate admission; the ambient path is not reopened.
     ///
     /// # Errors
     ///
@@ -124,7 +128,7 @@ impl FilesystemRetentionSnapshot {
         policy: CatalogRestartPolicy,
         limit: ReaderAttemptLimit,
     ) -> Result<Self, Error> {
-        let root = Dir::open_ambient_dir(store_root, cap_std::ambient_authority())
+        let root = filesystem_platform_profile::open_version_two(store_root)
             .map_err(|source| Error::Admission { source })?;
         filesystem_initialization_namespace::admit_version_two(&root)
             .map_err(|source| Error::Admission { source })?;

@@ -73,6 +73,10 @@ impl DurableSnapshot {
     /// reader fence, double-collects one consistent view within `limit`
     /// attempts, and verifies every retained root's closure.
     ///
+    /// The reader enforces the existing local writable, case-sensitive Linux
+    /// ext4 profile without acquiring writer authority. The admitted directory
+    /// capability is retained through view collection.
+    ///
     /// Catalog/segment memory and record counts are bounded by `policy` and
     /// the format. Closure work is bounded per root by its persisted limits.
     /// This is blocking filesystem I/O and CPU verification, not publication;

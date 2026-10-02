@@ -221,6 +221,8 @@ An operation claiming durable logical reconstruction must additionally:
 
 `DurableStore::open` returns a result and fixes an absolute locator at construction; changing the process working directory later cannot select a different store through that handle. Failure to resolve the locator preserves the original I/O cause through `DurableStoreError::Locator`, before store admission or output.
 
+Snapshot admission requires the existing writable, case-sensitive local Linux ext4 profile across the root and present version-two protocol directories, retaining the admitted root capability through collection without acquiring writer authority. Valid migration records on an unsupported filesystem do not admit a readable snapshot.
+
 Every selected retention root must match its manifest entry's namespace as well as its root generation and digest; a canonical foreign-namespace root refuses with preserved expected and observed namespace coordinates before a durable snapshot or caller output is exposed.
 
 Admission materializes bounded catalog and segment bytes and verifies broader stored evidence than the logical range core. Each read re-admits those owned bytes and decoded indexes; the core's single authentication pass is not an end-to-end single-hash or minimal physical-I/O guarantee. Reads add no whole-blob output buffer. The byte budget is caller policy, and retained-root traversal uses the persisted per-root limits.

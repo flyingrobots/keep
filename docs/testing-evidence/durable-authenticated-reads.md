@@ -11,7 +11,7 @@ The independent approval and successful checks on `186ab8a00796101d26640084f0596
 | CodeRabbit: selected root namespace binding (`discussion_r4170510757`). | Confirmed runtime defect on `186ab8a`: both direct selected-root read and durable snapshot admission accepted a canonical foreign-namespace root. The fix at `FilesystemRetentionSnapshot::retained_root` retains existing digest/generation checks and reports typed expected/observed namespace coordinates. | Focused debug/release laws, source-preservation calibration, final-head full validation and independent delta review. |
 | Codex: inward ownership of shared authentication (`discussion_r4170495607`). | Open; durable code currently imports the shared policy and port through `reference`. | Move the shared behavior to an inward semantic boundary without changing authenticated output/refusal behavior; preserve public API compatibility and generated parity evidence. |
 | Codex: relative store locator stability (`discussion_r4170495611`). | Confirmed RED on `28f1720`; the constructor now fixes an absolute locator and preserves resolution failure as `DurableStoreError::Locator`. Public isolated-process laws cover two valid stores and a deleted current directory. | Focused runtime and source-preservation evidence below; final-head full validation and independent delta review remain required. |
-| Codex: reader production-platform admission (`discussion_r4170495617`). | Open; the current reader checks namespace and migration identity without the production filesystem-profile admission. | Reject unsupported filesystem semantics before exposing a durable snapshot, without taking writer authority; preserve positive production-profile reader evidence. |
+| Codex: reader production-platform admission (`discussion_r4170495617`). | Confirmed RED on `082c515`; direct and durable snapshot readers admitted a valid migrated tmpfs namespace. The shared reader loader now uses the existing version-two platform admission and retains its returned directory capability. | Focused tmpfs refusal and ext4 reader-availability evidence below; final-head full validation and independent delta review remain required. |
 
 ### Namespace regression
 
@@ -62,6 +62,32 @@ The original `locator-green.log` retains a Clippy type-complexity failure in the
 All existing constructor call sites and the compiled public example now propagate the constructor error; no existing output, refusal, or receipt expectations were weakened.
 
 Separate copied-source/target mutants replaced the original locator cause with `Other` and removed its `Error::source` link; the deleted-cwd law failed respectively at the exact-cause and source-chain assertions after successful compilation (`locator-mutants/cause/red.log` and `locator-mutants/source/red.log`).
+
+### Reader platform regression
+
+Change kind: bug fix; `FilesystemRetentionSnapshot::load` now calls the existing version-two filesystem-profile admission before namespace, migration identity, fence, and coordinate collection.
+
+The returned directory capability is reused throughout admission; no second ambient-path open or writer lock is introduced.
+
+Both `a_canonical_tmpfs_store_refuses_the_public_reader_profile` and `a_canonical_tmpfs_store_refuses_durable_snapshot_admission` were observed RED on `082c5155a244416cef94ea5217f15ca19a344383`, after successful compilation and construction of valid migration records, with successful snapshot admission being the wrong runtime outcome (`reader-platform-red-on-082c515.log`).
+
+The standalone RED commit is `397164e`.
+
+These are medium Linux filesystem laws: the negative fixture verifies `/dev/shm` is tmpfs, uses test-only writer admission to construct an internally consistent version-two store, and then calls the public production reader methods.
+
+The bypass is limited to adversarial fixture construction; the methods under test do not use a bypass.
+
+The exact expected refusal is `FilesystemRetentionSnapshotError::Admission` with `Unsupported`, preserved under `DurableStoreError::Snapshot` for the durable entry point.
+
+`reader_platform_admission_does_not_acquire_writer_authority` holds the actual writer lock while the production-profile reader admits the frozen catalog, demonstrating compatible reader availability rather than only rejection on an unsupported filesystem.
+
+Focused debug/release laws, existing snapshot laws, full Worldline integration, doctests, all-target/all-feature Clippy, formatting, and source structure pass in the copied Linux arm64 Docker candidate (`reader-platform-green.log`).
+
+The existing profile checks filesystem type, writable state, casefold flags, and device/mount agreement of present protocol directories; this change reuses those checks rather than introducing a second platform policy.
+
+These receipts exercise actual tmpfs rejection and ext4 acceptance, not new filesystem-specific crash, power-loss, or concurrent raw namespace guarantees.
+
+A separate copied-source/target mutant acquired writer authority inside reader admission; the reader-availability law then failed with the actual typed writer `Busy` cause (`reader-writer-lock-calibration-red.log`), while the unchanged candidate passed again (`reader-platform-post-calibration-green.log`).
 
 ## Delivered candidate behavior
 

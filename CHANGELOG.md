@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Retention and durable snapshot readers now enforce the existing version-two filesystem profile through the same opened directory capability, rejecting unsupported filesystems without acquiring writer authority (#109).
+
 - `DurableStore::open` now fixes an absolute locator and returns a typed result, preventing later working-directory changes from retargeting a handle; locator failures preserve their original I/O source (#109).
 
 - Selected retention-root reads now refuse a canonical root belonging to another namespace, preserving typed expected/observed namespace digests before durable snapshot admission or output (#109).
