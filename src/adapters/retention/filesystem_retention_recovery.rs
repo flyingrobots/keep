@@ -19,6 +19,10 @@ use crate::adapters::CatalogRestartPolicy;
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
 use crate::adapters::filesystem_exact_record::{self as exact_record, EntryIdentity};
 
+#[cfg(test)]
+#[path = "filesystem_retention_recovery_storage_error_tests.rs"]
+mod storage_error_tests;
+
 /// One retained stage as recovery holds it between steps.
 pub(super) enum RecoveredStage {
     /// A complete stage reopened and bound to its identity.

@@ -156,6 +156,8 @@ mod recovery_stage_assessment;
 mod recovery_storage;
 #[cfg(test)]
 mod retention_model_tests;
+mod retention_record_refusal;
+mod retention_storage_error;
 mod retention_view_collector;
 #[cfg(test)]
 mod retention_view_collector_tests;
@@ -208,6 +210,8 @@ pub use recovery_stage_assessment::{
     RetentionStageAssessment, assess_head_stage, assess_manifest_stage, assess_root_stage,
 };
 pub use recovery_storage::RetentionRecoveryStorage;
+pub use retention_record_refusal::RetentionRecordRefusal;
+pub use retention_storage_error::RetentionStorageError;
 pub use retention_view_collector::{
     RetentionViewCoordinates, RetentionViewError, RetentionViewSource, collect_retention_view,
 };
