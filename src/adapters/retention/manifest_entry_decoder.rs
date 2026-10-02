@@ -26,21 +26,9 @@ pub(super) fn decode(
     for (position, bytes) in encoded.chunks_exact(ENTRY_WIDTH).enumerate() {
         let index =
             u32::try_from(position).map_err(|_| RetentionManifestDecodeError::LengthOverflow)?;
-        let namespace = RetentionNamespaceDigest::from_hash(read_array(bytes, 0)?);
-        let root_generation = RootGeneration::new(read_u64(bytes, 32)?)
-            .map_err(|source| RetentionManifestDecodeError::RootGeneration { index, source })?;
-        let root_digest = RetentionRootDigest::from_hash(read_array(bytes, 40)?);
-        if let Some(prior) = previous
-            && namespace <= prior
-        {
-            return Err(RetentionManifestDecodeError::NonCanonicalEntryOrder { index });
-        }
-        entries.push(RetentionManifestEntry::new(
-            namespace,
-            root_generation,
-            root_digest,
-        ));
-        previous = Some(namespace);
+        let entry = admit_entry(bytes, index, previous)?;
+        previous = Some(entry.namespace());
+        entries.push(entry);
     }
     Ok(entries)
 }
@@ -66,4 +54,36 @@ fn read_array<const WIDTH: usize>(
         expected: end,
         observed: encoded.len(),
     })
+}
+
+/// Admits available complete entries without allocating the unavailable suffix.
+pub(super) fn admit_prefix(encoded: &[u8]) -> Result<(), RetentionManifestDecodeError> {
+    let mut previous = None;
+    for (position, bytes) in encoded.chunks_exact(ENTRY_WIDTH).enumerate() {
+        let index =
+            u32::try_from(position).map_err(|_| RetentionManifestDecodeError::LengthOverflow)?;
+        previous = Some(admit_entry(bytes, index, previous)?.namespace());
+    }
+    Ok(())
+}
+
+fn admit_entry(
+    bytes: &[u8],
+    index: u32,
+    previous: Option<RetentionNamespaceDigest>,
+) -> Result<RetentionManifestEntry, RetentionManifestDecodeError> {
+    let namespace = RetentionNamespaceDigest::from_hash(read_array(bytes, 0)?);
+    let root_generation = RootGeneration::new(read_u64(bytes, 32)?)
+        .map_err(|source| RetentionManifestDecodeError::RootGeneration { index, source })?;
+    let root_digest = RetentionRootDigest::from_hash(read_array(bytes, 40)?);
+    if let Some(prior) = previous
+        && namespace <= prior
+    {
+        return Err(RetentionManifestDecodeError::NonCanonicalEntryOrder { index });
+    }
+    Ok(RetentionManifestEntry::new(
+        namespace,
+        root_generation,
+        root_digest,
+    ))
 }

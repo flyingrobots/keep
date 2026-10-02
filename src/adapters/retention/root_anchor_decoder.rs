@@ -20,17 +20,7 @@ pub(super) fn decode(
     for (position, bytes) in encoded.chunks_exact(ANCHOR_WIDTH).enumerate() {
         let index =
             u32::try_from(position).map_err(|_| RetentionRootDecodeError::LengthOverflow)?;
-        let (blob_bytes, layout_bytes) = bytes.split_at(BLOB_ID_WIDTH);
-        let blob_id = BlobId::parse_binary(blob_bytes)
-            .map_err(|source| RetentionRootDecodeError::BlobId { index, source })?;
-        let layout_id = LayoutId::parse_binary(layout_bytes)
-            .map_err(|source| RetentionRootDecodeError::LayoutId { index, source })?;
-        let observed = RetentionAnchor::new(blob_id, layout_id);
-        if let Some(prior) = previous
-            && observed <= prior
-        {
-            return Err(RetentionRootDecodeError::NonCanonicalAnchorOrder { index });
-        }
+        let observed = admit_anchor(bytes, index, previous)?;
         anchors.push(observed);
         previous = Some(observed);
     }
@@ -44,4 +34,34 @@ pub(super) fn decode(
             observed: encoded.len(),
         })
     }
+}
+
+/// Admits available complete anchors without allocating the unavailable suffix.
+pub(super) fn admit_prefix(encoded: &[u8]) -> Result<(), RetentionRootDecodeError> {
+    let mut previous = None;
+    for (position, bytes) in encoded.chunks_exact(ANCHOR_WIDTH).enumerate() {
+        let index =
+            u32::try_from(position).map_err(|_| RetentionRootDecodeError::LengthOverflow)?;
+        previous = Some(admit_anchor(bytes, index, previous)?);
+    }
+    Ok(())
+}
+
+fn admit_anchor(
+    bytes: &[u8],
+    index: u32,
+    previous: Option<RetentionAnchor>,
+) -> Result<RetentionAnchor, RetentionRootDecodeError> {
+    let (blob_bytes, layout_bytes) = bytes.split_at(BLOB_ID_WIDTH);
+    let blob_id = BlobId::parse_binary(blob_bytes)
+        .map_err(|source| RetentionRootDecodeError::BlobId { index, source })?;
+    let layout_id = LayoutId::parse_binary(layout_bytes)
+        .map_err(|source| RetentionRootDecodeError::LayoutId { index, source })?;
+    let observed = RetentionAnchor::new(blob_id, layout_id);
+    if let Some(prior) = previous
+        && observed <= prior
+    {
+        return Err(RetentionRootDecodeError::NonCanonicalAnchorOrder { index });
+    }
+    Ok(observed)
 }

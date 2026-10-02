@@ -77,7 +77,7 @@ fn malformed_prefix(stage: Stage, fault: Fault) -> Result<Vec<u8>, Box<dyn Error
         Fault::Layout => {
             *prefix
                 .get_mut(body_start.checked_add(59).ok_or("offset overflow")?)
-                .ok_or("missing layout magic")? = 0
+                .ok_or("missing layout magic")? = 0;
         }
         Fault::Generation => {
             let start = body_start.checked_add(32).ok_or("offset overflow")?;

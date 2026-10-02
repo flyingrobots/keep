@@ -24,6 +24,9 @@ pub(super) fn root(encoded: &[u8]) -> Result<(), RootError> {
             super::root_field_decoder::read_array(encoded, 148)?,
         )?;
     }
+    if let Some(anchors) = encoded.get(body_start..encoded.len().min(digest_offset)) {
+        super::root_anchor_decoder::admit_prefix(anchors)?;
+    }
     Ok(())
 }
 
@@ -45,6 +48,11 @@ pub(super) fn manifest(encoded: &[u8]) -> Result<(), ManifestError> {
             entries,
             super::manifest_field_decoder::read_array(encoded, 80)?,
         )?;
+    }
+    if let Some(entries) =
+        encoded.get(super::manifest_header_decoder::HEADER_LENGTH..encoded.len().min(digest_offset))
+    {
+        super::manifest_entry_decoder::admit_prefix(entries)?;
     }
     Ok(())
 }
