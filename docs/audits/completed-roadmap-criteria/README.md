@@ -13,8 +13,9 @@ state. Originally unchecked tasks and feature-level checkboxes are excluded.
 The [foundation verdicts](foundations.md),
 [identity-layer and chunking verdicts](identity-layers-and-chunking.md), and
 [flat-layout verdicts](flat-layout.md), and
-[reference-store and read verdicts](reference-store-and-reads.md) cover the
-first 22 remaining checked tasks. Each separates acceptance and mainline
+[reference-store and read verdicts](reference-store-and-reads.md), and
+[conformance-oracle verdicts](conformance-oracles.md) cover the
+first 26 remaining checked tasks. Each separates acceptance and mainline
 delivery and names inspected evidence and limits. T-06.3 has unresolved
 acceptance scope; T-06.3 and T-06.4 are not delivered on main.
 

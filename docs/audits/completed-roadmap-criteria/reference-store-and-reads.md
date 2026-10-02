@@ -146,5 +146,6 @@ full-workspace or dependency-policy rerun is claimed here.
 
 Twenty-two of 64 remaining checked tasks have verdicts. Two reference-store
 corrections have unmet mainline delivery, and #71 additionally has unresolved
-acceptance scope. Forty-two tasks and the 19 reopened entries still need
-complete accounting. No checkbox is changed by this audit document.
+acceptance scope. Four further verdicts are in
+[conformance oracles](conformance-oracles.md). Thirty-eight tasks and the
+19 reopened entries still need complete accounting. No checkbox changes.
