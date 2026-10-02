@@ -70,10 +70,7 @@ retention-manifest, and retention-head decoders. The canonical one-root
 generation keeps mutations inside framing, semantic, ordering, checksum, and
 digest validation; every admitted value must retain its exact input bytes.
 
-The `migration_format` seeds select the public format-marker, migration-intent,
-and completion-receipt decoders. The receipt seed carries its exact marker and
-intent dependencies so mutations exercise integrity and cross-record binding;
-every admitted value must retain its exact input bytes.
+The `migration_format` seeds select public migration record decoders and bounded recovery planning. Receipt seeds carry exact marker and intent dependencies; malformed seeds exercise version, mandatory-flag and checksum refusals. Recovery seeds include valid prefixes and contradictory transition evidence. Properties require v1 admission only without migration evidence, precise pre-intent effect refusal, and complete success only with a full namespace and jointly admitted records. See [migration compatibility evidence](../docs/testing-evidence/migration-compatibility-fuzz.md) for the fuzz-only envelope, bounds, replay and oracle limits.
 
 The `segment_format` seeds select the public segment-header, record-header,
 complete-record, seal, and complete-segment boundaries. Canonical empty,

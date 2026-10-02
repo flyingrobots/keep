@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Migration compatibility laws preserve version-one bytes and reject version-one authority at every forward prefix; public version/flag refusal tests and bounded seeded recovery-planner fuzzing extend transition evidence (#112).
+
 - Retention recovery execution errors report the exact failed boundary, original typed cause, known namespace effects and uncertain effect/durability; retries freshly observe the store. Observed stage identity remains binding across reopening, and cleanup preserves verified pool evidence rather than promising the removed pathname survives (#99).
 
 - Retention recovery now preserves incomplete stages and requires explicit disposition before any recovery mutation or publication retry; automatic incomplete-stage disposal is deferred by maintainer decision (#99).
