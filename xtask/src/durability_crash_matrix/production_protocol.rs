@@ -10,6 +10,8 @@ mod publication;
 mod publication_storage;
 mod recovery;
 mod recovery_storage;
+pub(super) mod retention;
+mod retention_storage;
 mod segment_stage;
 
 use std::error::Error;
@@ -42,6 +44,9 @@ pub(super) fn run(
         }
         DurabilityCrashSequence::RecoveryDiscard => {
             recovery::run(&store_root, &mut control)?;
+        }
+        DurabilityCrashSequence::Retention => {
+            retention::run(&store_root, &mut control)?;
         }
         DurabilityCrashSequence::Migration => {
             migration::run(&store_root, &mut control)?;

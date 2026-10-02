@@ -251,7 +251,8 @@ pub(super) fn read_bounded_optional(
     Ok(Some(bytes))
 }
 
-fn open_read(directory: &Dir, name: &str) -> io::Result<File> {
+/// Opens a record read-only without following links or blocking.
+pub(super) fn open_read(directory: &Dir, name: &str) -> io::Result<File> {
     let mut options = OpenOptions::new();
     options.read(true).follow(FollowSymlinks::No).nonblock(true);
     directory.open_with(name, &options)

@@ -4,7 +4,9 @@
 
 use xtask::{DurabilityCrashPoint, DurabilityCrashSequence};
 
-use DurabilityCrashSequence::{Catalog, Head, Initialization, Migration, RecoveryDiscard, Segment};
+use DurabilityCrashSequence::{
+    Catalog, Head, Initialization, Migration, RecoveryDiscard, Retention, Segment,
+};
 
 const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
     (
@@ -161,6 +163,87 @@ const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
         DurabilityCrashPoint::SynchronizeRootAfterInitialization,
         "KEEP-CRASH-035",
         Initialization,
+    ),
+    (
+        DurabilityCrashPoint::WriteRootStage,
+        "KEEP-CRASH-036",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::SynchronizeRootStage,
+        "KEEP-CRASH-037",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::AdmitRootNamespace,
+        "KEEP-CRASH-038",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::SynchronizeRootsAfterNamespace,
+        "KEEP-CRASH-039",
+        Retention,
+    ),
+    (DurabilityCrashPoint::LinkRoot, "KEEP-CRASH-040", Retention),
+    (
+        DurabilityCrashPoint::SynchronizeRootNamespace,
+        "KEEP-CRASH-041",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::WriteManifestStage,
+        "KEEP-CRASH-042",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::SynchronizeManifestStage,
+        "KEEP-CRASH-043",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::LinkManifest,
+        "KEEP-CRASH-044",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::SynchronizeManifestPool,
+        "KEEP-CRASH-045",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::WriteHeadStage,
+        "KEEP-CRASH-046",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::SynchronizeHeadStage,
+        "KEEP-CRASH-047",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::ReplaceRetentionHead,
+        "KEEP-CRASH-048",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::SynchronizeRetentionNamespace,
+        "KEEP-CRASH-049",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::RemoveRootStage,
+        "KEEP-CRASH-050",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::RemoveManifestStage,
+        "KEEP-CRASH-051",
+        Retention,
+    ),
+    (
+        DurabilityCrashPoint::SynchronizeRetentionCleanup,
+        "KEEP-CRASH-052",
+        Retention,
     ),
     (
         DurabilityCrashPoint::MigrationWriteIntentStage,
@@ -331,13 +414,37 @@ fn migration_boundaries_follow_the_twenty_one_phases_in_order() {
     );
 }
 
+// Subject: repository-tool runtime, not Keep recovery acceptance evidence.
+// Size: small; oracle: the exact sequence names documented in README.md.
+// Delete if this CLI is removed or a stronger command-boundary test subsumes it.
 #[test]
-fn sequences_round_trip_their_command_line_identifiers() {
-    for sequence in DurabilityCrashSequence::ALL {
+fn crash_matrix_cli_admits_its_stable_sequence_names() {
+    for (name, expected) in [
+        ("segment", Segment),
+        ("catalog", Catalog),
+        ("head", Head),
+        ("recovery-discard", RecoveryDiscard),
+        ("initialization", Initialization),
+        ("retention", Retention),
+        ("migration", Migration),
+    ] {
         assert_eq!(
-            DurabilityCrashSequence::from_identifier(sequence.identifier()),
-            Some(sequence)
+            DurabilityCrashSequence::from_identifier(name),
+            Some(expected),
+            "CLI sequence {name} must select {expected:?}"
         );
     }
-    assert_eq!(DurabilityCrashSequence::from_identifier("retention"), None);
+}
+
+// Subject: repository-tool runtime. Size: small; oracle: exact CLI vocabulary.
+// Delete if this CLI is removed or a stronger command-boundary test subsumes it.
+#[test]
+fn crash_matrix_cli_refuses_names_outside_its_exact_vocabulary() {
+    for name in ["", "unknown", "Retention", "retentions", "retention "] {
+        assert_eq!(
+            DurabilityCrashSequence::from_identifier(name),
+            None,
+            "unsupported CLI sequence {name:?} must refuse"
+        );
+    }
 }

@@ -7,6 +7,10 @@ use super::RetentionManifestDecodeError;
 impl fmt::Display for RetentionManifestDecodeError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::FramingPrefixImpossible { observed } => write!(
+                formatter,
+                "retention manifest size fields have no canonical completion at {observed} bytes"
+            ),
             Self::Truncated { expected, observed } => write!(
                 formatter,
                 "retention manifest has {observed} bytes; expected {expected}"
@@ -14,6 +18,14 @@ impl fmt::Display for RetentionManifestDecodeError {
             Self::TrailingData { expected, observed } => write!(
                 formatter,
                 "retention manifest has trailing data: expected {expected} bytes, observed {observed}"
+            ),
+            Self::PrefixByteMismatch {
+                offset,
+                expected,
+                observed,
+            } => write!(
+                formatter,
+                "retention stage byte {offset} is {observed:#04x}; expected {expected:#04x}"
             ),
             Self::InvalidMagic { observed } => {
                 write!(
@@ -91,6 +103,8 @@ impl Error for RetentionManifestDecodeError {
             Self::Semantic { source } => Some(source),
             Self::Truncated { .. }
             | Self::TrailingData { .. }
+            | Self::PrefixByteMismatch { .. }
+            | Self::FramingPrefixImpossible { .. }
             | Self::InvalidMagic { .. }
             | Self::UnsupportedVersion { .. }
             | Self::InvalidHeaderLength { .. }

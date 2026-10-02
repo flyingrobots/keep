@@ -3,7 +3,7 @@
 use std::path::Path;
 
 use cap_fs_ext::DirExt;
-#[cfg(test)]
+#[cfg(any(test, feature = "repository-tasks"))]
 use cap_std::ambient_authority;
 use cap_std::fs::Dir;
 
@@ -54,8 +54,18 @@ impl FilesystemVersionTwoAdmission {
         Self::admit(root)
     }
 
-    #[cfg(test)]
-    pub(super) fn reopen_unchecked_for_tests(
+    /// Reopens a migrated root without platform admission for repository tasks.
+    ///
+    /// The crash matrix and other repository tools run on hosts outside the
+    /// admitted Linux profile; every namespace, record, and identity law still
+    /// applies. Production callers use [`Self::reopen`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FilesystemPlatformAdmissionError`] exactly as [`Self::reopen`]
+    /// does for every boundary after platform admission.
+    #[cfg(any(test, feature = "repository-tasks"))]
+    pub fn reopen_unchecked_for_repository_tasks(
         store_root: &Path,
     ) -> Result<Self, FilesystemPlatformAdmissionError> {
         let root = Dir::open_ambient_dir(store_root, ambient_authority())

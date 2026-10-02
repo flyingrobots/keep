@@ -51,10 +51,10 @@ Keep is required to refuse all three, before mutating anything.
   generation-versioned catalogs, and a fixed-width `HEAD` are published
   through an ordered protocol whose every step is a named crash point.
   Platform admission is Linux ext4, non-casefolded, one writer.
-- **Proven restart recovery for version 1.** The crash matrix kills real
-  writer processes at 105 before/during/after coordinates
-  (`KEEP-CRASH-001`–`035`) and verifies the store lands in exactly one
-  documented lawful state each time.
+- **Process-death recovery evidence.** The crash matrix kills real writer processes
+  at 156 before/during/after coordinates (`KEEP-CRASH-001`–`052`) and
+  verifies the store lands in exactly one documented lawful state each time,
+  for version-1 publication and for version-2 retention publication.
 - **Version-2 retention and migration, forward path.** Explicit retention
   roots, deterministic closure verification, a one-way 21-phase migration,
   and a 17-phase retention publication — all with production filesystem
@@ -77,18 +77,22 @@ Keep is required to refuse all three, before mutating anything.
 
 ## What it does not do yet
 
-Version-2 retention publication writes from a clean start and refuses the
-residue of an interrupted retention publication. Retention publication recovery
-and the reader snapshot fence await integration from PR #99, so **an
-interrupted retention publication waits for explicit recovery.** Migration
-restart recovery is implemented and does not grant retention authority. A
-version-1 store stays admitted until its owner migrates it; migrate only if
-you accept that wait.
+Version-2 retention recovery, fenced reader snapshots and model-based transitions are implemented in this branch but still require the correctness corrections and independent acceptance review tracked in PR #99.
+
+The retention process-death sequence checks the recovered head generation and exact selected-root bytes before retry; its [evidence receipt](docs/testing-evidence/retention-crash-reader-oracle.md) bounds that claim to the declared initial-publication crash coordinates.
+
+Incomplete retention stages are preserved and block publication pending explicit disposition; automatic disposal is deferred. The [landing ledger](docs/testing-evidence/retention-landing.md) tracks execution-failure reporting and final acceptance under the [approved recovery contract](docs/formats/segment-store-v2/retention-recovery.md).
+
+Complete orphans remain recovery-protected until explicit disposition lands with garbage collection (#21).
+
+Migration restart recovery is implemented and does not grant retention authority.
+
+A version-1 store stays admitted until its owner migrates it.
 
 | Gap | Tracked |
 | --- | --- |
-| Retention publication restart recovery and broader migration corruption coverage | [PR #99](https://github.com/flyingrobots/keep/pull/99), [#111](https://github.com/flyingrobots/keep/issues/111) |
-| Reader fence binding one consistent catalog + retention snapshot | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
+| Retention recovery correctness remediation and broader migration corruption coverage | [PR #99](https://github.com/flyingrobots/keep/pull/99), [#111](https://github.com/flyingrobots/keep/issues/111) |
+| Fenced reader correctness remediation and independent acceptance | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
 | Precise verification reports at explicit depths | [#20](https://github.com/flyingrobots/keep/issues/20) |
 | Garbage collection and identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |
 | Bounded production ingestion through the durable store | [#82](https://github.com/flyingrobots/keep/issues/82) |
@@ -192,6 +196,22 @@ cargo test --workspace --all-features --locked
 cargo xtask durability-crash-matrix        # kills real writer processes
 cargo xtask golden-file-worldline-check
 cargo xtask conformance-check
+```
+
+Select a crash campaign with `--sequence NAME` using these exact CLI names:
+
+| Name | Campaign |
+| --- | --- |
+| `segment` | Segment publication |
+| `catalog` | Catalog publication |
+| `head` | Publication-head replacement |
+| `recovery-discard` | Explicit recovery evidence discard |
+| `initialization` | Writer-locked initialization |
+| `retention` | Retention root, manifest, and head publication |
+| `migration` | Version-one to version-two migration |
+
+```bash
+cargo xtask durability-crash-matrix --sequence retention
 ```
 
 ## Design boundary

@@ -6,6 +6,10 @@ use super::RetentionRootDecodeError;
 impl fmt::Display for RetentionRootDecodeError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::FramingPrefixImpossible { observed } => write!(
+                formatter,
+                "retention root size fields have no canonical completion at {observed} bytes"
+            ),
             Self::Truncated { expected, observed } => {
                 write!(
                     formatter,
@@ -16,6 +20,11 @@ impl fmt::Display for RetentionRootDecodeError {
                 formatter,
                 "retention root has trailing data: expected {expected} bytes, observed {observed}"
             ),
+            Self::PrefixByteMismatch {
+                offset,
+                expected,
+                observed,
+            } => prefix_failure(formatter, *offset, *expected, *observed),
             Self::InvalidMagic { observed } => {
                 write!(formatter, "invalid retention root magic {observed:02x?}")
             }
@@ -58,17 +67,25 @@ impl fmt::Display for RetentionRootDecodeError {
             Self::ClosureLimit { source } => {
                 write!(formatter, "invalid root closure limit: {source}")
             }
-            Self::BlobId { index, source } => {
-                write!(
-                    formatter,
-                    "invalid BlobId in retention anchor {index}: {source}"
-                )
-            }
+            Self::ClosureLimitPrefixAboveMaximum {
+                limit,
+                minimum,
+                maximum,
+            } => write!(
+                formatter,
+                "retention root {limit} prefix requires at least {minimum}; maximum is {maximum}"
+            ),
+            Self::BlobId { index, source } => identity_failure(formatter, "BlobId", *index, source),
+            Self::LayoutLengthPrefixAboveMaximum {
+                index,
+                minimum,
+                maximum,
+            } => write!(
+                formatter,
+                "retention anchor {index} layout-length prefix requires at least {minimum}; maximum is {maximum}"
+            ),
             Self::LayoutId { index, source } => {
-                write!(
-                    formatter,
-                    "invalid LayoutId in retention anchor {index}: {source}"
-                )
+                identity_failure(formatter, "LayoutId", *index, source)
             }
             Self::NonCanonicalAnchorOrder { index, .. } => write!(
                 formatter,
@@ -91,6 +108,30 @@ impl fmt::Display for RetentionRootDecodeError {
     }
 }
 
+fn prefix_failure(
+    formatter: &mut fmt::Formatter<'_>,
+    offset: usize,
+    expected: u8,
+    observed: u8,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "retention stage byte {offset} is {observed:#04x}; expected {expected:#04x}"
+    )
+}
+
+fn identity_failure(
+    formatter: &mut fmt::Formatter<'_>,
+    kind: &str,
+    index: u32,
+    source: &dyn Error,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "invalid {kind} in retention anchor {index}: {source}"
+    )
+}
+
 impl Error for RetentionRootDecodeError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
@@ -104,6 +145,10 @@ impl Error for RetentionRootDecodeError {
             Self::Semantic { source } => Some(source),
             Self::Truncated { .. }
             | Self::TrailingData { .. }
+            | Self::PrefixByteMismatch { .. }
+            | Self::FramingPrefixImpossible { .. }
+            | Self::ClosureLimitPrefixAboveMaximum { .. }
+            | Self::LayoutLengthPrefixAboveMaximum { .. }
             | Self::InvalidMagic { .. }
             | Self::UnsupportedVersion { .. }
             | Self::InvalidHeaderLength { .. }

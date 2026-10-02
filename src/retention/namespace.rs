@@ -44,7 +44,8 @@ impl RetentionNamespace {
         RetentionNamespaceDigest::from_hash(*hasher.finalize().as_bytes())
     }
 
-    fn admit_length(observed: usize) -> Result<NonZeroU8, RetentionNamespaceError> {
+    /// Admits a declared namespace length without allocating or requiring its bytes.
+    pub(crate) fn admit_length(observed: usize) -> Result<NonZeroU8, RetentionNamespaceError> {
         let length = u8::try_from(observed).map_err(|_| RetentionNamespaceError::TooLong {
             maximum: Self::MAXIMUM_BYTE_LENGTH,
             observed,

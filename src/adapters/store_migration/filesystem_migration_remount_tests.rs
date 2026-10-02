@@ -127,5 +127,5 @@ fn reopen(root: &Path) -> Result<FilesystemVersionTwoAdmission, FilesystemPlatfo
 
 #[cfg(not(target_os = "linux"))]
 fn reopen(root: &Path) -> Result<FilesystemVersionTwoAdmission, FilesystemPlatformAdmissionError> {
-    FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(root)
+    FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(root)
 }

@@ -8,8 +8,124 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Retention recovery execution errors report the exact failed boundary, original typed cause, known namespace effects and uncertain effect/durability; retries freshly observe the store. Observed stage identity remains binding across reopening, and cleanup preserves verified pool evidence rather than promising the removed pathname survives (#99).
+
+- Retention recovery now preserves incomplete stages and requires explicit disposition before any recovery mutation or publication retry; automatic incomplete-stage disposal is deferred by maintainer decision (#99).
+
+- Complete-stage cleanup now verifies the retained source as well as the pool target before unlink, detecting source substitution while retaining the opened evidence (#99).
+
+- Earlier retention prefix-validation entries describe historical diagnostic fixes. They do not claim that the current landing automatically discards incomplete stages or proves every prefix has a canonical completion (#99).
+- Recovery preserves interrupted initial roots, manifests and heads as corrupt evidence as soon as any available predecessor byte is nonzero, while retaining possible successor prefixes (#99).
+
+- Recovery rejects partial anchors when even their greatest canonical completion cannot follow the preceding anchor, preserving the exact offending stage (#99).
+
+- Recovery preserves partial layout-length fields whose minimum possible completion exceeds the format ceiling, with an explicit prefix-bound diagnostic (#99).
+
+- Recovery preserves partial root anchors with contradictory embedded identity bytes or invalid complete layout-length fields, sharing the identity codecs' rules (#99).
+
+- Recovery preserves partial manifest entries whose namespace prefix cannot satisfy strict ordering or whose completed root-generation field is zero (#99).
+
+- Recovery validates complete anchors and manifest entries inside interrupted bodies, preserving malformed identities, zero generations and duplicate ordering violations before discard (#99).
+
+- Recovery verifies available root and manifest digest and checksum bytes and complete body-set digests before discarding interrupted stages, preserving provably corrupt records (#99).
+
+- Recovery admits each closure-limit field as bytes arrive, preserving impossible partial bounds and invalid complete fields with precise typed diagnostics (#99).
+
+- Recovery rejects every available contradictory byte of an interrupted registered-profile identity, version or digest and preserves the root stage (#99).
+
+- Recovery preserves interrupted roots with invalid complete realization-profile or closure-policy groups, returning the exact domain refusal before stage discard (#99).
+
+- Recovery preserves interrupted roots and manifests whose complete generation/predecessor fields contradict initial or successor history (#99).
+
+- Recovery preserves interrupted roots declaring empty or oversized namespaces, applying the domain length rule before payload arrival (#99).
+
+- Recovery preserves interrupted root and manifest stages that declare counts above the format ceiling, even when their declared lengths are self-consistent (#99).
+
+- Recovery rejects and preserves short root and manifest headers whose complete size fields contradict their declared record length (#99).
+
+- Recovery verifies available checksum bytes in interrupted head stages and preserves contradictory prefixes as corrupt evidence instead of discarding them (#99).
+
+- Recovery preserves short heads whose complete generation/predecessor fields contradict initial or successor history, sharing semantic admission with complete head decoding (#99).
+
+- Recovery preserves interrupted head stages whose complete manifest-length field violates canonical bounds or alignment, returning the precise corruption cause instead of discarding them (#99).
+
+- Clarify that retention recovery and fenced readers are implemented but still under correctness remediation and independent review; link the completed process-death reader evidence and name remaining recovery gaps (#99).
+
+- Filesystem recovery tests now require the exact checksum-corrupt root-stage refusal and unchanged retained evidence, with calibrated diagnostic and deletion checks (#99).
+
+- Recovery now reports `ManifestStageWithoutRootStage` when complete head and manifest stages lack their root stage, instead of incorrectly reporting a missing manifest; refusal preserves retained evidence (#99).
+
+- The retention process-death matrix now independently reads the recovered head generation and exact selected-root bytes before forward retry, including absence before publication (#99).
+
+- Successor recovery evidence now covers every ordered publication prefix and verifies the recovered generation and exact selected-root bytes through the fenced reader; the ledger distinguishes this from sampled mid-write truncations (#99).
+
+- Publication now identifies recovery-observation failures through `RecoveryObservationRefused`, preserving the original typed or OS cause in its error chain; explicit recovery and later planning/execution boundaries retain their existing behavior (#99).
+
+- Publication tests now require the exact missing-manifest recovery refusal for a retained complete head, rejecting unrelated recovery errors (#99).
+
+- The fenced reader corruption law now requires the precise checksum-mismatch cause and expected/observed checksum bytes instead of accepting any root error (#99).
+
+- Correct the retention recovery documentation's obsolete integration status and explicitly retain its open incomplete-stage pinning and post-removal failure findings (#99).
+
+- Recovery fixtures now use production's head-to-manifest binding validation, preventing independently valid but contradictory records from becoming observed retention state (#99).
+
+- Repository-task migration admission now reports root capability-clone failures as namespace failures and identity-probe failures as root-identity failures, preserving their I/O causes (#99).
+
+- Reader collection tests now reject same-generation digest changes and require preserved I/O causes at all three read boundaries, using returned payloads instead of script load counters (#99).
+
+- Retention model tests now require exact preparation and superseded-publication refusals, including their identifying coordinates; unrelated errors no longer satisfy a rejected transition, and the harness sequence-count assertion is removed (#99).
+
+- Derive the recovery manifest read bound from the codec's checked framing calculation and semantic entry limit, removing a separately maintained size literal (#99).
+
+- Keep the reader fence private to the crate; callers retain snapshots through `FilesystemRetentionSnapshot`, which owns the fence for its lifetime (#99).
+
+- Retention readers load catalog bytes through the originally pinned store directory, so replacement of its ambient path cannot redirect catalog collection into another directory.
+
 ### Added
 
+- Model-based retention evidence: every three-operation sequence over initial
+  publications of two namespaces, a successor, a byte-identical retry, and a
+  stale initial (125 sequences, each in a fresh migrated store) agrees with a
+  deterministic namespace-to-(generation, anchor-set) map and liveness after
+  every step, observed through the fenced reader view; a source contract
+  keeps clocks, paths, environment, and identity out of the retention core.
+- `FilesystemRetentionSnapshot` is the version-two reader view: it admits the
+  root as version two, acquires a shared `ReaderFence` on `reader.lock`,
+  double-collects the catalog and retention heads around loading through
+  `collect_retention_view` (bounded by `ReaderAttemptLimit`, refusing an
+  exhausted limit or an absent catalog), binds the catalog snapshot, the
+  retention head, and its manifest, and verifies each selected root against
+  the manifest on demand while the fence is held.
+- Storage-independent retention recovery planning: `assess_root_stage`,
+  `assess_manifest_stage`, and `assess_head_stage` classify each fixed stage
+  as absent, complete, truncated, or corrupt through the decoders' own
+  truncation laws; `plan_retention_recovery` turns that evidence, the observed
+  current state, and pool-entry observations into an ordered
+  `RetentionRecoveryPlan` (discard a pre-effect truncated stage, link and
+  protect complete orphans, finalize a complete head over linked stages, clean
+  up stages the published head already names) or a typed
+  `RetentionRecoveryRefusal`. `RetentionRecoveryStorage` names one blocking
+  capability per step and `execute_retention_recovery` runs a plan in order,
+  stopping at the first refused step with the completed prefix named in
+  `RetentionRecoveryError`. `FilesystemRetentionPublicationAuthority::recover`
+  observes the stages within their format bounds, reopens complete stages
+  bound to their identity, and executes the plan under the retained writer
+  lock, so a crash after the head stage is synchronized finalizes on restart
+  and a byte-identical retry is already committed. Laws drive every
+  publication prefix from 0 through 18 phases, truncate each stage mid-write,
+  and replay successor prefixes over a published generation; each recovers to
+  its documented state, recovery is idempotent, and the forward retry reports
+  the predicted outcome. Publication runs that recovery as its first step, so
+  an interrupted publication no longer waits for a human unless it left a
+  complete orphan; `RecoveryRefused` and `RecoveryStepRefused` carry
+  recovery's own errors through `RetentionCurrentStateRefusal`. The crash
+  matrix gains `KEEP-CRASH-036` through `052`: a child migrates a golden
+  bundle store, publishes retention generation one, and is killed before,
+  during, or after each of the seventeen phases; restart reopens the store,
+  runs recovery, and requires the documented steps, outcome, and forward
+  retry. `FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks`
+  and `FilesystemStoreMigrationAuthority::open_unchecked_for_repository_tasks`
+  give repository tools the same bypass version one already had.
 - Recovery receipts retain the exact observed namespace prefix and bound
   migration intent digest, including observations of completed migration.
 
@@ -624,6 +740,38 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Retention recovery capabilities and execution errors preserve typed exact-record refusals and original I/O causes through `RetentionStorageError`. Callers can inspect `RetentionRecoveryError::storage_error()` directly; shared forward-stage adapters retain the typed source when adapting to their existing I/O boundary (#99).
+
+- Reader-fence tests now replace the lock inode during acquisition, distinguish that case from nonempty lock bytes, and require the exact kernel contention errno; isolated mutations verify that the identity and exclusion assertions detect removed protections (#99).
+
+- Reader double collection preserves catalog length and the complete retention head, so changes to validated length or predecessor coordinates cannot be collapsed into an unchanged generation/digest pair. The public `RetentionViewCoordinates` catalog tuple now includes `CatalogLength`, and its retention field carries `RetentionHead` (#99).
+
+- Fenced retention readers preserve selected catalog and segment admission failures as `FilesystemRetentionSnapshotError::Catalog` with their exact restart source, while coordinate failures remain `View` errors; a moving head retries the speculative catalog result (#99).
+
+- Fenced retention readers compare the opened root's restart-stable device and inode with the jointly admitted migration records before acquiring a fence or loading a catalog. A foreign binding refuses at reader admission with the exact typed identity coordinate, expected value, and observed value (#99).
+
+- Retention recovery reauthenticates the current catalog and selected segments and replays staged-root closure laws before publication effects. Forward publication shares live verification after pure preflight and preserves prepared catalog binding. Recovery exposes an explicit catalog loading policy; the default aggregate retained-segment cap is one protocol-maximum segment (1 GiB), with larger selections refusing before mutation (#99).
+
+- Retention recovery refuses truncated manifest or head stages whose earlier complete stage or immutable pool link is missing, preserving impossible-prefix evidence instead of deleting it (#99).
+
+- Retention recovery requires an uncommitted head's staged root to satisfy the same generation and predecessor rules as root-only and manifest-only recovery. Already committed cleanup remains admissible (#99).
+
+- Retention recovery reopens and authenticates the manifest-selected predecessor before publication effects, refusing missing, corrupt, or substituted roots while preserving retained evidence.
+
+- Retention recovery refuses successor manifests that add, drop, or alter namespace entries unrelated to the staged root before linking the manifest or finalizing the head.
+
+- Retention recovery binds a complete staged head to its manifest's exact byte length and predecessor before committing or cleaning up. Canonical but inconsistent heads refuse with existing typed planning errors and preserve published and retained evidence (#99).
+
+- Retention recovery refuses byte-identical root or manifest pool substitutions before committing the head or removing stages. Pool observation binds exact bytes to the retained stage's device and inode and preserves the typed pool refusal (#99).
+
+- Retention recovery admits namespace names and pool kinds before stage observation or mutation. Direct and publication-triggered recovery preserve retained evidence when unknown entries or noncanonical pool names refuse (#99).
+
+- Recovery synchronizes the exact complete retention stage before creating its immutable root or manifest pool link or replacing the retention head. A synchronization error refuses before that publication; the retained on-disk stage remains recovery evidence.
+
+- Interrupted retention stages with complete zero root or liveness generations now refuse recovery with the existing typed generation error before any mutation (#99). Incomplete generation fields remain eligible for canonical-prefix recovery; complete-record decoding and durable encodings are unchanged.
+
+- Retention recovery refuses an interrupted root, manifest, or head stage when any available magic, version, fixed width, flag, or reserved byte contradicts the canonical format (#99). The typed `PrefixByteMismatch` names the actual byte and offset without inventing missing bytes; refusal preserves retained evidence. Canonical interrupted prefixes remain recoverable. Complete-record decoding and on-disk bytes are unchanged; the decode-error enums gain a diagnostic variant.
+
 - Subprocess test-support readiness admits a queued valid signal after sender exit, preventing a false process-group cleanup failure without retrying the test gate.
 
 - The version-one catalog ledger names its executable ordering integration
@@ -717,6 +865,11 @@ after its public API and format compatibility policies are established.
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
+- Retention and migration crash tasks share the migration repository-task
+  constructor after main integration instead of defining it twice (#19).
+- Explicit retention recovery verifies the pinned retention and immutable-pool
+  directory identities before any recovery effect, preserving retained stage
+  evidence when a protocol directory was replaced (#19, PR #99).
 - Retention publication reopens the catalog pool entry this store's `HEAD`
   selects, bounded by the head's declared length, and requires it to decode
   to that generation and digest (`CatalogAbsent`, `CatalogRefused`,

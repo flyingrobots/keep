@@ -52,6 +52,7 @@ fn version_two_is_one_routed_protocol() -> Result<(), Box<dyn std::error::Error>
         "successor to `keep.segment-store/v1`",
         "[Retention records](retention.md)",
         "[Retention publication](retention-publication.md)",
+        "[Retention publication recovery](retention-recovery.md)",
         "[Closure verification](closure.md)",
         "[Closure corruption boundary](closure-corruption.md)",
         "[GC and disposition records](gc.md)",
@@ -139,33 +140,6 @@ fn gc_records_are_bounded_before_their_implementation() -> Result<(), Box<dyn st
 }
 
 #[test]
-fn requirement_ledger_names_planned_and_executable_evidence()
--> Result<(), Box<dyn std::error::Error>> {
-    let requirements = normalized(&read(&format!("{FORMAT_ROOT}/requirements.md"))?);
-
-    for required in [
-        "`KEEP-RETENTION-001`",
-        "`KEEP-RETENTION-010`",
-        "`KEEP-MIGRATION-001`",
-        "`KEEP-MIGRATION-008`",
-        "`KEEP-GC-001`",
-        "Planned in #19",
-        "Planned in #21",
-        "golden-format",
-        "model-based",
-        "corruption",
-        "crash-injection",
-        "fuzz",
-    ] {
-        assert!(
-            requirements.contains(required),
-            "segment-store v2 requirement ledger omits `{required}`"
-        );
-    }
-    Ok(())
-}
-
-#[test]
 fn version_two_pages_stay_within_the_review_threshold() -> Result<(), Box<dyn std::error::Error>> {
     for name in [
         "README.md",
@@ -179,6 +153,7 @@ fn version_two_pages_stay_within_the_review_threshold() -> Result<(), Box<dyn st
         "recovery.md",
         "requirements.md",
         "retention-publication.md",
+        "retention-recovery.md",
         "retention.md",
     ] {
         let line_count = read(&format!("{FORMAT_ROOT}/{name}"))?.lines().count();

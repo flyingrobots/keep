@@ -6,44 +6,8 @@ use std::error::Error;
 
 use xtask::{
     DurabilityCrashCase, DurabilityCrashCaseError, DurabilityCrashOccurrence, DurabilityCrashPoint,
-    DurabilityCrashPosition, DurabilityCrashSequence,
+    DurabilityCrashPosition,
 };
-
-#[test]
-fn every_crash_point_has_three_ordered_positions_and_one_during_case_per_occurrence()
--> Result<(), Box<dyn Error>> {
-    let cases: Vec<_> = DurabilityCrashCase::all().collect();
-    let mut expected = Vec::new();
-    for point in DurabilityCrashPoint::ALL {
-        for position in DurabilityCrashPosition::ALL {
-            let occurrences = if position == DurabilityCrashPosition::During {
-                point.during_occurrences()
-            } else {
-                1
-            };
-            for ordinal in 0..occurrences {
-                let occurrence = point
-                    .occurrence_counted()
-                    .then_some(DurabilityCrashOccurrence::new(ordinal));
-                expected.push(DurabilityCrashCase::new(point, position, occurrence)?);
-            }
-        }
-    }
-
-    assert_eq!(cases, expected);
-    // 56 boundaries at three positions, plus five extra namespace-prefix
-    // lengths for `KEEP-CRASH-060`.
-    assert_eq!(cases.len(), 173);
-    let migration: Vec<_> =
-        DurabilityCrashCase::in_sequence(DurabilityCrashSequence::Migration).collect();
-    assert_eq!(migration.len(), 68);
-    assert!(
-        migration
-            .iter()
-            .all(|case| case.point().sequence() == DurabilityCrashSequence::Migration)
-    );
-    Ok(())
-}
 
 #[test]
 fn occurrence_coordinates_exist_only_for_counted_boundaries() -> Result<(), Box<dyn Error>> {

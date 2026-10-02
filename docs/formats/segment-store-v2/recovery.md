@@ -88,8 +88,6 @@ Migration is a one-way explicit migration under exclusive writer authority.
 
 `migration.intent` is exactly 256 bytes:
 
-<!-- markdownlint-disable MD013 -->
-
 | Offset | Width | Field | Canonical value |
 | ---: | ---: | --- | --- |
 | 0 | 16 | magic | `KEEP:MIG:INT2\0\0\0` |
@@ -107,8 +105,6 @@ Migration is a one-way explicit migration under exclusive writer authority.
 | 160 | 32 | target format-definition digest | exact registered v2 digest |
 | 192 | 32 | new store identifier | deterministic derivation below |
 | 224 | 32 | checksum | BLAKE3-256 over bytes `0..224` |
-
-<!-- markdownlint-enable MD013 -->
 
 The checksum domain is `keep.store-migration-intent-checksum/v2\0`. The
 receipt's intent digest is BLAKE3-256 of
@@ -181,8 +177,6 @@ necessary.
 
 `migration.receipt` is exactly 256 bytes:
 
-<!-- markdownlint-disable MD013 -->
-
 | Offset | Width | Field | Canonical value |
 | ---: | ---: | --- | --- |
 | 0 | 16 | magic | `KEEP:MIG:REC2\0\0\0` |
@@ -197,8 +191,6 @@ necessary.
 | 184 | 32 | disposition namespace digest | exact no-payload digest below |
 | 216 | 8 | completed synchronization mask | every mandatory bit set |
 | 224 | 32 | checksum | BLAKE3-256 over bytes `0..224` |
-
-<!-- markdownlint-enable MD013 -->
 
 Its checksum domain is `keep.store-migration-receipt-checksum/v2\0`. Unknown
 synchronization bits, a missing mandatory bit, or any mismatch with the intent
@@ -222,70 +214,6 @@ issue #112.
 
 ## Retention publication recovery
 
-At restart, a fixed retention stage is classified from its exact framing and
-transitive evidence:
+[Retention publication recovery](retention-recovery.md) owns fixed-stage classification, synchronization before publication, exact retained evidence, and the `KEEP-CRASH-036` through `052` process-death boundaries.
 
-The forward protocol guarantees that `root.next` is durable before a new
-namespace directory is created. A new digest-named directory is created
-exclusively, verified as the exact regular directory rather than a link, and
-followed by synchronization of `retention/roots` before the immutable root is
-linked. An existing exact directory is idempotent; any wrong kind, substituted
-namespace, or unexpected entry refuses. Directory existence alone never proves
-a retained root.
-
-<!-- markdownlint-disable MD013 -->
-
-| Fixed stage | Complete evidence | Recovery |
-| --- | --- | --- |
-| `root.next` | canonical successor root, matching namespace and closure proof | finalize its immutable pool link and retain the stage |
-| `manifest.next` | canonical successor manifest naming only admitted roots | finalize its immutable pool link and retain both stages |
-| `head.next` | canonical successor head naming the staged manifest | finalize the head, synchronize it, then remove retained stages |
-
-<!-- markdownlint-enable MD013 -->
-
-A pre-effect incomplete stage may be removed only when every later-ordered
-effect is absent and all earlier evidence admits exactly. Recovery pins that
-regular file, removes it, synchronizes `retention`, and returns a typed discard
-report. Any later effect, stale generation, mismatched digest, missing
-transitive member, reappeared stage, conflicting pool entry, or other
-corruption is a typed refusal. A complete valid orphan remains
-recovery-protected until explicit disposition.
-
-This retention protocol requires pinning the incomplete regular file. The
-separate [migration discard path](migration-crash.md#fixed-stage-law)
-revalidates the current entry's regular kind and incomplete length before
-removal without retaining an incomplete-stage handle. These are distinct
-protocol boundaries; retention recovery awaits integration from PR #99.
-
-The retention crash points are:
-
-| Identifier | Boundary |
-| --- | --- |
-| `KEEP-CRASH-036` | root stage write |
-| `KEEP-CRASH-037` | root stage synchronization |
-| `KEEP-CRASH-038` | new namespace-directory creation or exact admission |
-| `KEEP-CRASH-039` | namespace-pool synchronization after creation |
-| `KEEP-CRASH-040` | immutable root link |
-| `KEEP-CRASH-041` | root namespace-directory synchronization |
-| `KEEP-CRASH-042` | manifest stage write |
-| `KEEP-CRASH-043` | manifest stage synchronization |
-| `KEEP-CRASH-044` | immutable manifest link |
-| `KEEP-CRASH-045` | manifest pool synchronization |
-| `KEEP-CRASH-046` | retention-head stage write |
-| `KEEP-CRASH-047` | retention-head stage synchronization |
-| `KEEP-CRASH-048` | retention-head atomic replacement |
-| `KEEP-CRASH-049` | committed retention namespace synchronization |
-| `KEEP-CRASH-050` | retained root-stage removal |
-| `KEEP-CRASH-051` | retained manifest-stage removal |
-| `KEEP-CRASH-052` | retention cleanup synchronization |
-
-`RetentionPublicationPhase::ALL` freezes this exact order as a typed public
-vocabulary. Storage execution and process-death evidence remain unimplemented.
-
-Each point requires before, during, and after process-death evidence. Restart
-must establish exact catalog visibility, retention head, namespace generation,
-orphan classification, stage disposition, and recovery report.
-
-`GcRetirementIntent`, `GcRetirementReceipt`, and
-`RecoveryDispositionReceipt` are owned by the [GC specification](gc.md). Until
-issue #21 implements them, any such artifact is unsupported and refuses.
+`GcRetirementIntent`, `GcRetirementReceipt`, and `RecoveryDispositionReceipt` are owned by the [GC specification](gc.md). Until issue #21 implements them, any such artifact is unsupported and refuses.

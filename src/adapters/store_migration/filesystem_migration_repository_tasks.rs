@@ -28,14 +28,21 @@ impl FilesystemStoreMigrationAuthority {
     ///
     /// # Errors
     ///
-    /// Returns the same admission and pool failures as [`Self::open`].
+    /// Returns [`Error::Namespace`] when the root capability cannot be cloned,
+    /// [`Error::RootIdentity`] when its identity cannot be observed, or the
+    /// inventory failures from [`Self::open`]. No platform admission is performed.
     #[doc(hidden)]
     pub fn open_unchecked_for_repository_tasks(
         lock: FilesystemWriterLock,
         policy: SegmentReadPolicy,
     ) -> Result<Self, Error> {
-        let admission = FilesystemPlatformAdmission::unchecked_for_repository_tasks(lock)
-            .map_err(|source| Error::Platform { source })?;
+        let root = lock
+            .clone_directory()
+            .map_err(|source| Error::Namespace { source })?;
+        let identity = crate::adapters::filesystem_platform_profile::root_identity_lenient(&root)
+            .map_err(|source| Error::RootIdentity { source })?;
+        drop(root);
+        let admission = FilesystemPlatformAdmission::initialized(lock, identity);
         let inventory = FilesystemStoreMigrationInventoryReader::open(admission, policy)
             .map_err(|source| Error::Inventory { source })?;
         Ok(Self::with_policy(

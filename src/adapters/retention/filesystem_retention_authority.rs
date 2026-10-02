@@ -9,6 +9,7 @@ use super::filesystem_retention_authority_error::{
     FilesystemRetentionAuthorityError as Error, RetentionAuthorityDirectory as Directory,
 };
 use super::filesystem_retention_current::{self, ObservedRetentionState};
+use super::filesystem_retention_recovery::RetentionRecoveryContext;
 use crate::adapters::{FilesystemVersionTwoAdmission, FilesystemWriterLock};
 
 /// Exclusive authority to publish retention transitions on one pinned root.
@@ -32,6 +33,9 @@ pub struct FilesystemRetentionPublicationAuthority {
     pub(super) roots: Dir,
     pub(super) manifests: Dir,
     pub(super) attempt: Option<PublicationAttempt>,
+    pub(super) recovery: Option<RetentionRecoveryContext>,
+    #[cfg(test)]
+    pub(super) recovery_sync_failure: Option<super::RetentionStorageBoundary>,
     _lock: FilesystemWriterLock,
 }
 
@@ -68,6 +72,9 @@ impl FilesystemRetentionPublicationAuthority {
             roots,
             manifests,
             attempt: None,
+            recovery: None,
+            #[cfg(test)]
+            recovery_sync_failure: None,
             _lock: lock,
         })
     }
