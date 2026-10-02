@@ -3,6 +3,7 @@
 mod artifact;
 mod artifact_publication;
 mod build_environment;
+mod captured_environment;
 mod counter_widths;
 mod environment;
 mod error;

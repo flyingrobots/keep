@@ -1,5 +1,6 @@
 //! This module owns deterministic fuzz seed recipes and materialization.
 
+mod benchmark_report_seeds;
 mod catalog_seeds;
 mod cdc_seeds;
 mod filesystem;
@@ -68,6 +69,7 @@ impl Seed {
 pub(super) fn prepare(repository_root: &Path) -> Result<(), FuzzSeedError> {
     let files = RepositoryFiles::open(repository_root)?;
     let mut seeds = identity_seeds::seeds(&files)?;
+    seeds.extend(benchmark_report_seeds::seeds()?);
     seeds.extend(catalog_seeds::seeds(&files)?);
     seeds.extend(cdc_seeds::seeds()?);
     seeds.extend(golden_protocol_seeds_from(&files)?);

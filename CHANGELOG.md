@@ -619,7 +619,9 @@ after its public API and format compatibility policies are established.
   retain unsigned 128-bit precision. Publication requires an immutable admitted
   report; refusal preserves the prior artifact and retained recovery stage.
   Direct parser admission enforces the same one-MiB input ceiling as subprocess
-  capture before decoding, and preserves UTF-8 error sources.
+  capture before decoding, and preserves UTF-8 error sources. A dedicated
+  I/O-free fuzz facade exercises the production parser with a deterministic
+  historical seed; seed preparation and campaign discovery include the target.
 
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
