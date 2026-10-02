@@ -87,6 +87,8 @@ mod filesystem_retention_short_head_tests;
 mod filesystem_retention_short_history_tests;
 #[cfg(test)]
 mod filesystem_retention_short_namespace_tests;
+#[cfg(test)]
+mod filesystem_retention_short_policy_tests;
 mod filesystem_retention_snapshot;
 mod filesystem_retention_snapshot_error;
 #[cfg(test)]
