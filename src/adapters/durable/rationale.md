@@ -8,6 +8,8 @@ A durable snapshot keeps the fence and selected catalog alive for every borrowed
 
 The existing catalog loader materializes selected segment bytes under the caller's aggregate byte policy. This cost is explicit in the API documentation; it is not a lazy segment reader. Reconstruction adds no whole-blob buffer. Selected roots are loaded one at a time rather than accumulating a second index of all anchors. The format bounds each root and manifest, and each root supplies traversal counters. This bounds memory without inventing another on-disk limit.
 
+The [domain read core](../../authenticated_read/rationale.md) owns the shared verification and emission policy; both storage adapters depend inward on it. Codec-bearing public errors are assembled at the shared adapter boundary without changing their variants or sources.
+
 The shared crate-private chunk source must return immutable bytes throughout verification and emission. The reference map and durable catalog satisfy this requirement through owned immutable storage. Both cores preserve the verify-before-output contract and single hash pass; no public mutable or callback-provided source is admitted through this internal boundary.
 
 Refusal and operational failure remain distinct typed sources. Missing logical content is evidenced against an admitted view; inability to open a physical segment is a catalog I/O failure. Output failures preserve the exact accepted prefix through the existing reconstruction/range errors. A receipt is constructed only after successful emission and includes the complete admitted retention head and catalog coordinates.

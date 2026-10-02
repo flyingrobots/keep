@@ -5,51 +5,22 @@
 //! makes a retention, crash-recovery, or durability claim.
 
 mod capacity;
+mod chunk_source;
 mod chunk_staging;
-mod chunk_verification;
 mod ingestion;
 mod ingestion_error;
-mod output_write;
-mod profile_verification;
 mod publish_error;
 mod published_blob;
 mod range_read;
-mod range_read_error;
-mod range_read_error_display;
-mod range_read_error_mapping;
-mod range_read_execution;
-mod range_read_receipt;
 mod reconstruction;
-mod reconstruction_error;
-mod reconstruction_error_display;
-mod reconstruction_receipt;
 mod staged_blob;
 mod store;
 
-#[expect(
-    clippy::redundant_pub_crate,
-    reason = "shared with the durable adapter without exposing a public port"
-)]
-pub(crate) use chunk_verification::ChunkSource;
-#[expect(
-    clippy::redundant_pub_crate,
-    reason = "shared with the durable adapter without exposing a public core"
-)]
-pub(crate) use range_read_execution::read_admitted;
-#[expect(
-    clippy::redundant_pub_crate,
-    reason = "shared with the durable adapter without exposing a public core"
-)]
-pub(crate) use reconstruction::reconstruct_admitted;
-
-pub use crate::profile::ProfileBoundary;
 pub use capacity::ReferenceStoreCapacity;
 pub use ingestion_error::{IngestionAllocation, IngestionError};
 pub use publish_error::PublishError;
 pub use published_blob::PublishedBlob;
-pub use range_read_error::RangeReadError;
-pub use range_read_receipt::RangeReadReceipt;
-pub use reconstruction_error::ReconstructionError;
-pub use reconstruction_receipt::ReconstructionReceipt;
 pub use staged_blob::StagedBlob;
 pub use store::ReferenceStore;
+
+use crate::{RangeReadError, RangeReadReceipt, ReconstructionError, ReconstructionReceipt};

@@ -6,34 +6,29 @@ use crate::{AdmittedLayout, ByteLength, ByteRange, ChunkId, LayoutEntry, LayoutI
 
 use super::chunk_verification::{ChunkSource, emitted_chunk, verified_chunk};
 use super::output_write::write_all;
-use super::range_read_error_mapping::{range_chunk_error, range_output_error};
-use super::{RangeReadError, RangeReadReceipt};
+use super::{RangeReadFailure, RangeReadReceipt};
 
 /// Authenticates only the chunks overlapping `requested` against `store`,
 /// then emits exactly the requested bytes: the one range core every view
 /// shares.
-#[expect(
-    clippy::redundant_pub_crate,
-    reason = "reached from the durable adapter only through the crate-private re-export"
-)]
 pub(crate) fn read_admitted<S, W>(
     store: &S,
     layout_id: LayoutId,
     layout: &AdmittedLayout,
     requested: ByteRange,
     output: &mut W,
-) -> Result<RangeReadReceipt, RangeReadError>
+) -> Result<RangeReadReceipt, RangeReadFailure>
 where
     S: ChunkSource + ?Sized,
     W: Write + ?Sized,
 {
     let plan = layout
         .plan_range(requested)
-        .map_err(RangeReadError::RangePlan)?;
+        .map_err(RangeReadFailure::RangePlan)?;
     verify_selected(store, layout_id, layout, plan)?;
     let written = emit_selected(store, layout_id, layout, plan, output)?;
     if written != requested.length() {
-        return Err(RangeReadError::WrittenLengthMismatch {
+        return Err(RangeReadFailure::WrittenLengthMismatch {
             layout: layout_id,
             expected: requested.length(),
             observed: written,
@@ -52,10 +47,11 @@ fn verify_selected<S: ChunkSource + ?Sized>(
     layout_id: LayoutId,
     layout: &AdmittedLayout,
     plan: RangePlan,
-) -> Result<(), RangeReadError> {
+) -> Result<(), RangeReadFailure> {
     let (first, entries) = selected_entries(layout, plan)?;
     for (index, entry) in (first..plan.end_entry()).zip(entries.iter().copied()) {
-        let _bytes = verified_chunk(store, layout_id, index, entry).map_err(range_chunk_error)?;
+        let _bytes =
+            verified_chunk(store, layout_id, index, entry).map_err(RangeReadFailure::Chunk)?;
     }
     Ok(())
 }
@@ -66,7 +62,7 @@ fn emit_selected<S, W>(
     layout: &AdmittedLayout,
     plan: RangePlan,
     output: &mut W,
-) -> Result<ByteLength, RangeReadError>
+) -> Result<ByteLength, RangeReadFailure>
 where
     S: ChunkSource + ?Sized,
     W: Write + ?Sized,
@@ -74,10 +70,13 @@ where
     let (first, entries) = selected_entries(layout, plan)?;
     let mut written = 0_u64;
     for (index, entry) in (first..plan.end_entry()).zip(entries.iter().copied()) {
-        let bytes = emitted_chunk(store, layout_id, index, entry).map_err(range_chunk_error)?;
+        let bytes =
+            emitted_chunk(store, layout_id, index, entry).map_err(RangeReadFailure::Chunk)?;
         let selected = selected_chunk_slice(layout_id, index, entry, plan.requested(), bytes)?;
-        write_all(output, selected, &mut written)
-            .map_err(|error| range_output_error(layout_id, error))?;
+        write_all(output, selected, &mut written).map_err(|error| RangeReadFailure::Output {
+            layout: layout_id,
+            source: error,
+        })?;
     }
     Ok(ByteLength::new(written))
 }
@@ -85,18 +84,16 @@ where
 fn selected_entries(
     layout: &AdmittedLayout,
     plan: RangePlan,
-) -> Result<(usize, &[LayoutEntry]), RangeReadError> {
+) -> Result<(usize, &[LayoutEntry]), RangeReadFailure> {
     let first = plan.first_entry().map_or(0, std::convert::identity);
     let end = plan.end_entry();
-    let entries =
-        layout
-            .entries()
-            .get(first..end)
-            .ok_or_else(|| RangeReadError::PlanEntriesUnavailable {
-                first,
-                end,
-                available: layout.entries().len(),
-            })?;
+    let entries = layout.entries().get(first..end).ok_or_else(|| {
+        RangeReadFailure::PlanEntriesUnavailable {
+            first,
+            end,
+            available: layout.entries().len(),
+        }
+    })?;
     Ok((first, entries))
 }
 
@@ -106,7 +103,7 @@ fn selected_chunk_slice(
     entry: LayoutEntry,
     requested: ByteRange,
     bytes: &[u8],
-) -> Result<&[u8], RangeReadError> {
+) -> Result<&[u8], RangeReadFailure> {
     let chunk = entry.chunk_id();
     let entry_start = entry.offset().get();
     let entry_end = entry_start
@@ -134,15 +131,11 @@ const fn slice_unavailable(
     index: usize,
     requested: ByteRange,
     chunk: ChunkId,
-) -> RangeReadError {
-    RangeReadError::ChunkSliceUnavailable {
+) -> RangeReadFailure {
+    RangeReadFailure::ChunkSliceUnavailable {
         layout,
         index,
         requested,
         chunk,
     }
 }
-
-#[cfg(test)]
-#[path = "range_read_tests.rs"]
-mod tests;

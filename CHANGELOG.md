@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Reference and durable reads now share an inward authentication core and immutable chunk port, preserving public receipts, precise errors and codec admission at the adapter boundary (#109).
+
 - Retention and durable snapshot readers now enforce the existing version-two filesystem profile through the same opened directory capability, rejecting unsupported filesystems without acquiring writer authority (#109).
 
 - `DurableStore::open` now fixes an absolute locator and returns a typed result, preventing later working-directory changes from retargeting a handle; locator failures preserve their original I/O source (#109).

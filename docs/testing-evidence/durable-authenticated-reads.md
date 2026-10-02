@@ -9,7 +9,7 @@ The independent approval and successful checks on `186ab8a00796101d26640084f0596
 | Review obligation | Disposition and evidence | Exit condition |
 | --- | --- | --- |
 | CodeRabbit: selected root namespace binding (`discussion_r4170510757`). | Confirmed runtime defect on `186ab8a`: both direct selected-root read and durable snapshot admission accepted a canonical foreign-namespace root. The fix at `FilesystemRetentionSnapshot::retained_root` retains existing digest/generation checks and reports typed expected/observed namespace coordinates. | Focused debug/release laws, source-preservation calibration, final-head full validation and independent delta review. |
-| Codex: inward ownership of shared authentication (`discussion_r4170495607`). | Open; durable code currently imports the shared policy and port through `reference`. | Move the shared behavior to an inward semantic boundary without changing authenticated output/refusal behavior; preserve public API compatibility and generated parity evidence. |
+| Codex: inward ownership of shared authentication (`discussion_r4170495607`). | The `f1312d6` baseline imported policy and the port through `reference`. The revised source moves authentication, immutable chunk lookup, semantic failures and receipts to `authenticated_read`; shared codec-bearing public errors and lossless outward mapping live under `adapters/authenticated_read`. | Move the shared behavior to an inward semantic boundary without changing authenticated output/refusal behavior; preserve public API compatibility and generated parity evidence. |
 | Codex: relative store locator stability (`discussion_r4170495611`). | Confirmed RED on `28f1720`; the constructor now fixes an absolute locator and preserves resolution failure as `DurableStoreError::Locator`. Public isolated-process laws cover two valid stores and a deleted current directory. | Focused runtime and source-preservation evidence below; final-head full validation and independent delta review remain required. |
 | Codex: reader production-platform admission (`discussion_r4170495617`). | Confirmed RED on `082c515`; direct and durable snapshot readers admitted a valid migrated tmpfs namespace. The shared reader loader now uses the existing version-two platform admission and retains its returned directory capability. | Focused tmpfs refusal and ext4 reader-availability evidence below; final-head full validation and independent delta review remain required. |
 
@@ -89,9 +89,31 @@ These receipts exercise actual tmpfs rejection and ext4 acceptance, not new file
 
 A separate copied-source/target mutant acquired writer authority inside reader admission; the reader-availability law then failed with the actual typed writer `Busy` cause (`reader-writer-lock-calibration-red.log`), while the unchanged candidate passed again (`reader-platform-post-calibration-green.log`).
 
+### Shared authentication ownership
+
+Change kind: structural refactoring with unchanged public behavior, using `f1312d6f60c10421ad32aec66a926a0bb5535456` as the before-state.
+
+The before-state placed both production callers behind `reference::{ChunkSource, read_admitted, reconstruct_admitted}`; the revised callers depend on `authenticated_read`, whose transitive semantic dependencies contain no storage adapter or codec error.
+
+The reference adapter retains lookup and decoding; durable ingress retains its catalog, retained-root, platform and fence checks.
+
+Core failures preserve original causes and coordinates, and exhaustive outward mappings preserve every existing public variant without adding an error-source layer.
+
+The two existing source-inspection test files only update relocated input paths; their assertions are unchanged and are static evidence, not product evidence.
+
+No runtime RED is claimed for ownership alone, and no harness-count or source-string regression is added for it.
+
+The existing generated range/source-slice laws, private corruption laws, public writer/refusal laws and Worldline cases supply behavioral verification; their expected bytes, receipts and error coordinates remain unchanged.
+
+The first local check attempt used a login shell that omitted Cargo from its path (`core-extraction-check.log`); the corrected Docker shell compiled successfully (`core-extraction-check-corrected.log`).
+
+The first focused run stopped at Clippy's crate-visibility and large-error lints (`core-extraction-focused.log`); explicit scoped expectations preserve crate-private boundaries and allocation-free typed failures rather than changing the public contract.
+
+Full validation and independent review of the resulting candidate remain required before readiness.
+
 ## Delivered candidate behavior
 
-`DurableStore` pins a fresh `DurableSnapshot` per convenience call. Snapshot admission keeps the existing shared reader fence, catalog, retention head and manifest view and verifies every selected retained closure against the catalog. Blob lookup scans selected roots one at a time and chooses the lowest retained layout identity; exact-layout reads use the catalog directly. Reconstruction and ranges use the existing immutable reference cores and return receipts with the view coordinates only after emission succeeds.
+`DurableStore` pins a fresh `DurableSnapshot` per convenience call. Snapshot admission keeps the existing shared reader fence, catalog, retention head and manifest view and verifies every selected retained closure against the catalog. Blob lookup scans selected roots one at a time and chooses the lowest retained layout identity; exact-layout reads use the catalog directly. Reconstruction and ranges use the shared immutable domain cores and return receipts with the view coordinates only after emission succeeds.
 
 The allocation, blocking and failure contract is in the public API documentation and [rationale](../../src/adapters/durable/rationale.md). Catalog and selected segment bytes are materialized under explicit caller policy; the API does not claim lazy segment reads or constant total memory. It adds no whole-blob output buffer or aggregate anchor index.
 
@@ -216,3 +238,15 @@ The remaining explicitly identified refusal claims were challenged in isolated s
 The grouped proof mutation falsifies two distinct promised outcomes: complete identity and storage-profile admission. The record-only mutations deliberately leave the earlier semantic/whole assertions intact so their failures cannot mask the later entrypoint assertions. The successful ingress-equivalence law remains green in all three layout mutation copies, demonstrating that ordinary successful reads alone would not detect these omissions.
 
 The earlier calibration receipts cover the other established claim families: emitted bytes and generated source-slice oracles (`emission-mutation-red.log`, `worldline-emission-mutation-red.log`); view generation (`coordinate-mutation-red.log`); actual collector exclusion (`fence-mutation-red.log`); accepted-prefix accounting (`output-prefix-mutation-red.log`, `range-zero-isolated-mutation-red.log`); immediate writer cause and maximum write count (`writer-parity-mutation-red.log`); additional whole-blob allocation (`read-memory-mutation-red.log`); and logical overlap independence (`range-overlap-mutation-red.log`). Historical witnesses retain their recorded source coordinates; the final independent review must assess whether the combined mapping satisfies the binding standard. This table does not turn unexecuted individual diagnostic-field mutations into evidence.
+
+## Shared-core extraction validation
+
+The copied Docker candidate passes all-target/all-feature Clippy and the unchanged reference private laws, generated range properties, streaming CAS suite and complete Golden File Worldline binary in both debug and release (`core-extraction-focused-corrected.log`).
+
+These generated tests retain their independent source-slice and frozen-corpus oracles; agreement does not prove untested input spaces or new filesystem concurrency guarantees.
+
+Markdown validation passes after removing one extra blank line (`core-markdown-corrected.log`); the original formatting failure remains in `core-markdown.log`.
+
+The local dependency-policy attempt could not start because this container has no `cargo-deny` installation (`core-dependency-validation.log`); dependency policy must be verified by the final-head hosted job rather than counted as a local pass.
+
+The stable-candidate full validation command sequence is retained in `core-final-validation.sh`, with output in `core-final-validation.log`; its completion and the final pushed SHA are recorded in the PR review activity rather than anticipated here.

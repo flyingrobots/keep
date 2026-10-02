@@ -243,12 +243,12 @@ Evidence anchors:
 - [exact logical byte identity](../../adr/0001-exact-logical-byte-identity.md)
 - [identity and physical-storage separation](../../adr/0002-separate-identity-from-physical-storage.md)
 - [`ReferenceStore` contract tests](../../../tests/reference_store_contract.rs)
-- [reconstruction implementation](../../../src/reference/reconstruction.rs)
-- [range-read implementation](../../../src/reference/range_read.rs)
+- [shared reconstruction core](../../../src/authenticated_read/reconstruction.rs)
+- [shared range-read core](../../../src/authenticated_read/range_read_execution.rs)
 - [whole-object refusal laws](../../../tests/streaming_cas/refusal_laws.rs)
 - [range-read refusal laws](../../../tests/range_read_failures.rs)
-- [reconstruction receipt](../../../src/reference/reconstruction_receipt.rs)
-- [range-read receipt](../../../src/reference/range_read_receipt.rs)
+- [reconstruction receipt](../../../src/authenticated_read/reconstruction_receipt.rs)
+- [range-read receipt](../../../src/authenticated_read/range_read_receipt.rs)
 
 ## Consumer rule
 

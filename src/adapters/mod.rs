@@ -7,6 +7,8 @@
 //! policy.
 
 mod admitted_catalog;
+mod authenticated_read;
+pub use authenticated_read::{RangeReadError, ReconstructionError};
 mod durable;
 pub use durable::{
     DurableOutcome, DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt,

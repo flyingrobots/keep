@@ -1,4 +1,4 @@
-//! Exact reference-store chunk lookup and authentication.
+//! This module owns exact chunk authentication through an immutable semantic source.
 
 use crate::{ChunkHashError, ChunkId, LayoutEntry, LayoutId};
 
@@ -7,10 +7,6 @@ use crate::{ChunkHashError, ChunkId, LayoutEntry, LayoutId};
 /// the source returns before trusting it.
 /// Implementations must expose immutable bytes for the entire read operation:
 /// emission deliberately reuses the verification pass without rehashing.
-#[expect(
-    clippy::redundant_pub_crate,
-    reason = "reached from the durable adapter only through the crate-private re-export"
-)]
 pub(crate) trait ChunkSource {
     /// The exact bytes stored under `identity`, if the view holds them.
     fn chunk(&self, identity: ChunkId) -> Option<&[u8]>;
@@ -52,7 +48,7 @@ pub(super) fn verified_chunk<S: ChunkSource + ?Sized>(
 }
 
 #[derive(Clone, Copy, Debug)]
-pub(super) enum ChunkVerificationError {
+pub(crate) enum ChunkVerificationError {
     Missing {
         layout: LayoutId,
         index: usize,
@@ -91,17 +87,4 @@ pub(super) fn emitted_chunk<S: ChunkSource + ?Sized>(
         index,
         requested: expected,
     })
-}
-
-impl ChunkSource for crate::ReferenceStore {
-    fn chunk(&self, identity: ChunkId) -> Option<&[u8]> {
-        self.chunk(identity)
-    }
-
-    fn note_chunk_hash(&self, identity: ChunkId) {
-        #[cfg(test)]
-        self.observed_chunk_hashes.borrow_mut().push(identity);
-        #[cfg(not(test))]
-        let _ = identity;
-    }
 }

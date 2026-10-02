@@ -3,8 +3,8 @@
 use crate::{ByteLength, LayoutId};
 
 use super::RangeReadError;
-use super::chunk_verification::ChunkVerificationError;
-use super::output_write::OutputWriteError;
+use crate::authenticated_read::ChunkVerificationError;
+use crate::authenticated_read::OutputWriteError;
 
 pub(super) const fn range_chunk_error(error: ChunkVerificationError) -> RangeReadError {
     match error {

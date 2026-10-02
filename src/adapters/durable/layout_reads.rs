@@ -6,7 +6,7 @@ use super::snapshot::CatalogChunks;
 use super::{
     DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt, DurableSnapshot,
 };
-use crate::reference::reconstruct_admitted;
+use crate::authenticated_read::reconstruct_admitted;
 use crate::{AdmittedLayout, ByteRange, LayoutDecodePolicy, RangeReadError, ReconstructionError};
 
 impl DurableSnapshot {
@@ -41,7 +41,7 @@ impl DurableSnapshot {
         let catalog = self.catalog()?;
         reconstruct_admitted(&CatalogChunks::new(&catalog), identity, layout, output)
             .map(|receipt| DurableReconstructionReceipt::new(receipt, self.view()))
-            .map_err(|source| DurableReadError::Reconstruction(Box::new(source)))
+            .map_err(|source| DurableReadError::Reconstruction(Box::new(source.into())))
     }
 
     /// Decodes a bounded canonical layout record and reconstructs its exact blob.

@@ -11,7 +11,7 @@ use crate::adapters::{
     AdmittedSegmentRecord, CatalogRestartPolicy, CatalogSnapshot, FilesystemRetentionSnapshot,
     LayoutDecodePolicy, ReaderAttemptLimit, SegmentRecordIdentity,
 };
-use crate::reference::{ChunkSource, read_admitted, reconstruct_admitted};
+use crate::authenticated_read::{ChunkSource, read_admitted, reconstruct_admitted};
 use crate::{AdmittedLayout, BlobId, ByteRange, ChunkId, LayoutId};
 
 /// One consistent, fenced view of a version-two store.
@@ -20,7 +20,7 @@ use crate::{AdmittedLayout, BlobId, ByteRange, ChunkId, LayoutId};
 /// collector can retire a segment it may read; every read borrows the
 /// snapshot, so dropping the view mid-read is impossible. Blobs resolve
 /// through the retained roots' anchors; layouts and chunks resolve through
-/// the pinned catalog and are authenticated by the reference read cores
+/// the pinned catalog and are authenticated by the domain read cores
 /// before a byte is emitted.
 ///
 /// Opening materializes the complete selected catalog and its segment bytes
@@ -161,7 +161,7 @@ impl DurableSnapshot {
         let chunks = CatalogChunks::new(&catalog);
         reconstruct_admitted(&chunks, layout_id, &layout, output)
             .map(|receipt| DurableReconstructionReceipt::new(receipt, self.coordinates))
-            .map_err(|source| DurableReadError::Reconstruction(Box::new(source)))
+            .map_err(|source| DurableReadError::Reconstruction(Box::new(source.into())))
     }
 
     /// Reads exactly `requested` of `target` through its first retained
@@ -203,7 +203,7 @@ impl DurableSnapshot {
         let chunks = CatalogChunks::new(&catalog);
         read_admitted(&chunks, layout_id, &layout, requested, output)
             .map(|receipt| DurableRangeReadReceipt::new(receipt, self.coordinates))
-            .map_err(|source| DurableReadError::RangeRead(Box::new(source)))
+            .map_err(|source| DurableReadError::RangeRead(Box::new(source.into())))
     }
 
     fn first_layout_id(&self, target: BlobId) -> Result<LayoutId, DurableReadError> {

@@ -50,6 +50,7 @@
 extern crate self as keep;
 
 mod adapters;
+mod authenticated_read;
 mod blob;
 mod catalog;
 mod chunk;
@@ -190,10 +191,11 @@ pub use layout::{
     AdmittedLayout, LayoutEntry, LayoutEntryLimit, LayoutEntryLimitError, LayoutId,
     LayoutIdMismatch, LayoutRecordLength, LayoutValidationError, RangePlan, RangePlanError,
 };
-pub use profile::{RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId};
+pub use profile::{
+    ProfileBoundary, RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId,
+};
 pub use reference::{
-    IngestionAllocation, IngestionError, ProfileBoundary, PublishError, PublishedBlob,
-    RangeReadError, RangeReadReceipt, ReconstructionError, ReconstructionReceipt, ReferenceStore,
+    IngestionAllocation, IngestionError, PublishError, PublishedBlob, ReferenceStore,
     ReferenceStoreCapacity, StagedBlob,
 };
 pub use retention::{
@@ -207,3 +209,6 @@ pub use retention::{
     RetentionProfileAdmissionError, RetentionRoot, RetentionRootDigest, RetentionRootError,
     RootGeneration, RootGenerationError,
 };
+
+pub use adapters::{RangeReadError, ReconstructionError};
+pub use authenticated_read::{RangeReadReceipt, ReconstructionReceipt};

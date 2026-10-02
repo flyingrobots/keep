@@ -10,11 +10,13 @@ const ARCHITECTURE: &str = include_str!("../docs/architecture/reference-store/RE
 const ARCHITECTURE_RATIONALE: &str =
     include_str!("../docs/architecture/reference-store/rationale.md");
 const RECONSTRUCTION_ERROR_DISPLAY: &str =
-    include_str!("../src/reference/reconstruction_error_display.rs");
-const RECONSTRUCTION_ERROR: &str = include_str!("../src/reference/reconstruction_error.rs");
+    include_str!("../src/adapters/authenticated_read/reconstruction_error_display.rs");
+const RECONSTRUCTION_ERROR: &str =
+    include_str!("../src/adapters/authenticated_read/reconstruction_error.rs");
 const REFERENCE_INGESTION: &str = include_str!("../src/reference/ingestion.rs");
 const PUBLISHED_BLOB: &str = include_str!("../src/reference/published_blob.rs");
-const RECONSTRUCTION_RECEIPT: &str = include_str!("../src/reference/reconstruction_receipt.rs");
+const RECONSTRUCTION_RECEIPT: &str =
+    include_str!("../src/authenticated_read/reconstruction_receipt.rs");
 const STAGED_BLOB_TESTS: &str = include_str!("../src/reference/staged_blob_tests.rs");
 const GOLDEN_TEST_ENTRYPOINT: &str = include_str!("golden_file_worldline.rs");
 const STREAMING_TEST_ENTRYPOINT: &str = include_str!("streaming_cas.rs");
