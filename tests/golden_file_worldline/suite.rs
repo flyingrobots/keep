@@ -28,6 +28,9 @@ mod durable_fixture;
 #[path = "durable_layout_laws.rs"]
 mod durable_layout_laws;
 #[cfg(target_os = "linux")]
+#[path = "durable_locator_laws.rs"]
+mod durable_locator_laws;
+#[cfg(target_os = "linux")]
 #[path = "durable_namespace_laws.rs"]
 mod durable_namespace_laws;
 #[cfg(target_os = "linux")]
