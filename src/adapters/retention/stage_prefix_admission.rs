@@ -29,6 +29,9 @@ pub(super) fn root(encoded: &[u8]) -> Result<(), RetentionRootDecodeError> {
     if encoded.len() >= 48 {
         super::root_header_decoder::admit_prefix_length(encoded)?;
     }
+    if encoded.len() >= 148 {
+        super::stage_history_admission::root(encoded)?;
+    }
     Ok(())
 }
 
@@ -53,6 +56,9 @@ pub(super) fn manifest(encoded: &[u8]) -> Result<(), RetentionManifestDecodeErro
     super::stage_generation_admission::manifest(encoded)?;
     if encoded.len() >= 48 {
         super::manifest_header_decoder::admit_prefix_length(encoded)?;
+    }
+    if encoded.len() >= 80 {
+        super::stage_history_admission::manifest(encoded)?;
     }
     Ok(())
 }

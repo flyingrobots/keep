@@ -178,6 +178,7 @@ mod retention_view_collector;
 #[cfg(test)]
 mod retention_view_collector_tests;
 mod stage_generation_admission;
+mod stage_history_admission;
 mod stage_prefix_admission;
 pub use admitted_manifest::AdmittedRetentionManifest;
 pub use admitted_root::AdmittedRetentionRoot;

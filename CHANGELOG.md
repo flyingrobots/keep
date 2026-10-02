@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery preserves interrupted roots and manifests whose complete generation/predecessor fields contradict initial or successor history (#99).
+
 - Recovery preserves interrupted roots declaring empty or oversized namespaces, applying the domain length rule before payload arrival (#99).
 
 - Recovery preserves interrupted root and manifest stages that declare counts above the format ceiling, even when their declared lengths are self-consistent (#99).
