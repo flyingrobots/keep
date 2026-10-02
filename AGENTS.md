@@ -104,6 +104,15 @@ Never silently repair, approximate, substitute, weaken verification, or continue
 
 Every meaningful change must include tests appropriate to its failure modes.
 
+Follow the binding [Keep Testing Standards](docs/Testing%20Standards.md) and
+its [enforcement profile](docs/testing/enforcement.md). Identify product,
+tool, calibration, and static/API evidence separately; tooling success does
+not prove Keep runtime behavior. Declare change kind and named oracles, show
+load-bearing assertions able to fail, and observe bug regressions RED on the
+unfixed revision. Loops, conditionals, and compound test names are review
+signals, not automatic defects. Record actual enforcement, owners, budgets,
+and gaps; a policy declaration is not an implemented gate.
+
 ### Required test classes
 
 * unit tests;

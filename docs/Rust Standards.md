@@ -1482,6 +1482,8 @@ number — `0004-hexagonal-boundary-architecture.md`, never `0001.md` or
 
 ## **17. Testing Doctrine**
 
+The binding [Keep Testing Standards](Testing%20Standards.md) govern evidence subjects, contract boundaries, independent oracles, assertion calibration and trustworthy gates. Their [enforcement profile](testing/enforcement.md) records actual mechanisms, owners and gaps; this section supplies Rust-specific application without introducing competing coverage targets or test-count ratios.
+
 Keep tests do not ask merely:
 
 Did the function return the expected value?
@@ -1492,7 +1494,7 @@ Did the system preserve its invariants under valid input, malformed input, inter
 
 Cargo conventionally places unit tests near source and integration tests under `tests/`; Keep should follow that division while treating public integration tests as the primary behavioral contract. (⁠[Rust Docs](https://doc.rust-lang.org/cargo/guide/tests.html?utm_source=chatgpt.com))
 
-### **17.1 Test pyramid**
+### **17.1 Required evidence classes**
 
 Required layers:
 
@@ -1511,17 +1513,17 @@ Required layers:
 
 ### **17.2 Unit tests**
 
-Every nontrivial private algorithm MUST have focused unit tests.
+Every nontrivial algorithm MUST have focused behavioral verification at the narrowest meaningful contract that owns its promise. Rust visibility does not create a contract, and a private helper does not require a structure-pinning direct test merely because it exists.
 
-Tests should sit close to the implementation only when they test private behavior.
+Tests may sit close to the implementation when they exercise an owning module contract. If an internal needs its own meaningful contract, promote its semantic ownership rather than expose test-only accessors or freeze incidental structure.
 
 Do not embed 1,000 lines of test code under a 50-line module. Move large scenario suites to dedicated test modules or integration tests.
 
 ### **17.3 Public API tests**
 
-At least half of behavioral tests SHOULD exercise Keep exactly as an external crate would.
+Tests of externally consumed promises MUST exercise the relevant public API as a consumer would, with observable outputs or exact refusals. Tests of lower-level contracts exercise the owning module or semantic port; testing only through the outermost API is not required.
 
-This prevents the test suite from depending on internal shortcuts unavailable to users.
+Allocate the evidence portfolio by failure consequence and subsystem risk, not a fixed proportion of test counts. This preserves consumer-contract evidence without making private shortcuts or arbitrary ratios the measure of correctness.
 
 ### **17.4 Naming**
 
@@ -1713,7 +1715,7 @@ Every fuzz-discovered defect becomes a permanent regression test.
 
 ### **17.13 Mutation testing**
 
-Mutation testing SHOULD gate release candidates.
+Load-bearing assertion calibration MUST establish that the promised behavior can be broken and the named assertion detects it. Use diff-scoped mutation campaigns where blast radius justifies them, including release-candidate review; never gate on a mutation score or percentage.
 
 Targets:
 
@@ -1726,18 +1728,13 @@ Targets:
 - change inclusive/exclusive bound;
 - drop error propagation.
 
-If the test suite survives meaningful mutations, it is lying about coverage.
+Triage surviving mutations as missing or weak assertions, equivalent/optimization-only mutations, or explicit blind spots. A mutation that causes setup or compilation failure does not demonstrate assertion calibration.
 
 ### **17.14 Coverage**
 
-Line coverage target:
+Coverage is an inspection instrument: surface changed lines without execution, inspect subsystem maps periodically, and investigate execution changes on unchanged source. No workspace or module percentage is a quality target or merge gate.
 
-- workspace: **≥ 90%**
-- identity and format modules: **≥ 95%**
-- recovery and retention transitions: **≥ 95%**
-- unsafe wrapper crate, if created: **100% line and branch coverage**
-
-Coverage is evidence of execution, not proof of correctness.
+An explicitly justified component-level branch-completeness decision must record costs, defensive-code/fuzzing tradeoffs and independent behavioral evidence. It does not establish correctness from a percentage.
 
 No one gets to improve coverage with meaningless assertions.
 
@@ -2020,7 +2017,9 @@ Also gate:
 - committed generated-code cleanliness;
 - public API diff;
 - format fixture diff;
-- test coverage threshold.
+- load-bearing assertion calibration and observed RED-on-unfixed evidence for bug fixes.
+
+Coverage maps inform review and risk assessment; coverage percentages and mutation scores MUST NOT gate integration. The [testing enforcement profile](testing/enforcement.md) distinguishes required evidence from currently implemented CI mechanisms and records missing automation.
 
 Nightly CI SHOULD additionally run:
 
