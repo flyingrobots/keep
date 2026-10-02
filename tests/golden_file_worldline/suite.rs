@@ -248,3 +248,7 @@ fn reader_failures_preserve_precise_boundaries_and_sources() -> TestResult {
 #[cfg(target_os = "linux")]
 #[path = "durable_writer_failures.rs"]
 mod durable_writer_failures;
+
+#[cfg(target_os = "linux")]
+#[path = "durable_closure_refusal.rs"]
+mod durable_closure_refusal;
