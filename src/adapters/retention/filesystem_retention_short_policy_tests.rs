@@ -51,7 +51,7 @@ fn invalid_short_root_profiles_preserve_evidence() -> Result<(), Box<dyn Error>>
             offset,
             &replacement,
             88,
-            RetentionRootDecodeError::Profile { source: expected },
+            &RetentionRootDecodeError::Profile { source: expected },
         )?;
     }
     Ok(())
@@ -87,7 +87,7 @@ fn invalid_short_root_closure_limits_preserve_evidence() -> Result<(), Box<dyn E
                 offset,
                 replacement,
                 116,
-                RetentionRootDecodeError::ClosureLimit { source },
+                &RetentionRootDecodeError::ClosureLimit { source },
             )?;
         }
     }
@@ -98,7 +98,7 @@ fn require_policy_refusal(
     offset: usize,
     replacement: &[u8],
     prefix_length: usize,
-    expected: RetentionRootDecodeError,
+    expected: &RetentionRootDecodeError,
 ) -> Result<(), Box<dyn Error>> {
     let (sandbox, mut authority) =
         open_authority(&format!("short-root-policy-{offset}-{prefix_length}"))?;
@@ -123,12 +123,13 @@ fn require_policy_refusal(
                 RetentionFixedStage::Root,
                 "identify the corrupt policy stage"
             );
-            require_policy_cause(source.as_ref(), &expected);
+            require_policy_cause(source.as_ref(), expected);
         }
         result => {
-            return Err(
-                format!("invalid root policy at {offset} must refuse recovery: {result:?}").into(),
-            );
+            return Err(format!(
+                "invalid root policy at {offset} must refuse recovery: {result:?}"
+            )
+            .into());
         }
     }
     assert_eq!(

@@ -182,6 +182,7 @@ mod retention_view_collector_tests;
 mod stage_generation_admission;
 mod stage_history_admission;
 mod stage_prefix_admission;
+mod stage_root_policy_admission;
 pub use admitted_manifest::AdmittedRetentionManifest;
 pub use admitted_root::AdmittedRetentionRoot;
 pub use canonical_head::CanonicalRetentionHead;

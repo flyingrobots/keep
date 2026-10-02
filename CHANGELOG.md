@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery preserves interrupted roots with invalid complete realization-profile or closure-policy groups, returning the exact domain refusal before stage discard (#99).
+
 - Recovery preserves interrupted roots and manifests whose complete generation/predecessor fields contradict initial or successor history (#99).
 
 - Recovery preserves interrupted roots declaring empty or oversized namespaces, applying the domain length rule before payload arrival (#99).

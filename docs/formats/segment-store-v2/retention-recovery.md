@@ -50,6 +50,8 @@ A complete namespace-length field in an interrupted root must declare between on
 
 When an interrupted root or manifest contains its complete generation and predecessor fields, recovery applies the same domain history rules as complete-record construction. Initial records naming a predecessor and successors omitting one refuse with the precise semantic cause before stage discard; all retained evidence remains intact.
 
+When an interrupted root contains the complete realization-profile group (through byte 88) or closure-policy group (through byte 116), recovery applies the domain profile and closure-limit validators before discarding the stage. Unsupported profile coordinates, definition-digest mismatches, zero limits, and excessive limits refuse as `StageCorrupt(Root)` with their exact typed cause and preserve retained evidence. This check does not yet admit incomplete policy groups.
+
 A truncated manifest requires a complete root stage already linked to its immutable pool entry. A truncated head requires both complete root and manifest stages already linked to their immutable pool entries. Missing or incomplete earlier evidence refuses as `TruncatedStageWithoutEarlierEvidence`, naming both stages, before any scheduled discard or relinking. Existing corruption and conflicting-pool diagnostics retain precedence; cross-record and history admission still precede execution.
 
 This retention protocol requires pinning the incomplete regular file. The separate [migration discard path](migration-crash.md#fixed-stage-law) revalidates the current entry's regular kind and incomplete length before removal without retaining an incomplete-stage handle. These are distinct protocol boundaries.
