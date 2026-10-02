@@ -108,3 +108,36 @@ fn a_truncated_root_stage_is_discarded() -> Result<(), Box<dyn Error>> {
     assert!(!stage.exists());
     Ok(())
 }
+
+// Size: medium. Oracle: recovery names the missing root, preserving ambiguous evidence.
+// Delete only when stronger public recovery evidence subsumes this diagnostic and preservation law.
+#[test]
+fn a_complete_manifest_without_its_root_reports_the_missing_root() -> Result<(), Box<dyn Error>> {
+    use super::filesystem_retention_test_fixture::retention_witness;
+    use super::{FilesystemRetentionRecoveryError, RetentionRecoveryRefusal};
+
+    let (sandbox, mut authority) = open_authority("recovery-missing-root")?;
+    let root_bytes = fixture(ROOT_HEX)?;
+    let preparation = initial_preparation(&root_bytes)?;
+    drive_publication(&mut authority, &preparation, 13)?;
+    fs::remove_file(sandbox.path().join("retention/root.next"))?;
+    let before = retention_witness(sandbox.path())?;
+
+    let result = authority.recover();
+
+    assert!(
+        matches!(
+            result,
+            Err(FilesystemRetentionRecoveryError::Plan {
+                source: RetentionRecoveryRefusal::ManifestStageWithoutRootStage,
+            })
+        ),
+        "a complete manifest with no root stage must name the missing root: {result:?}"
+    );
+    assert_eq!(
+        retention_witness(sandbox.path())?,
+        before,
+        "missing-root refusal must preserve all retained bytes"
+    );
+    Ok(())
+}
