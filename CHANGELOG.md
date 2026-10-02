@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Retention model histories now include release and restore, with expected generations and anchor sets derived independently from requested operations rather than copied from publication candidates; exact stale/retry refusals remain checked (#128).
+
 - Retention recovery execution errors report the exact failed boundary, original typed cause, known namespace effects and uncertain effect/durability; retries freshly observe the store. Observed stage identity remains binding across reopening, and cleanup preserves verified pool evidence rather than promising the removed pathname survives (#99).
 
 - Retention recovery now preserves incomplete stages and requires explicit disposition before any recovery mutation or publication retry; automatic incomplete-stage disposal is deferred by maintainer decision (#99).
@@ -84,8 +86,8 @@ after its public API and format compatibility policies are established.
 ### Added
 
 - Model-based retention evidence: every three-operation sequence over initial
-  publications of two namespaces, a successor, a byte-identical retry, and a
-  stale initial (125 sequences, each in a fresh migrated store) agrees with a
+  publications of two namespaces, successor, release, restore, byte-identical
+  retry, and stale initial (343 sequences, each in a fresh migrated store) agrees with a
   deterministic namespace-to-(generation, anchor-set) map and liveness after
   every step, observed through the fenced reader view; a source contract
   keeps clocks, paths, environment, and identity out of the retention core.
