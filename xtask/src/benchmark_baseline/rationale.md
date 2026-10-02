@@ -80,13 +80,21 @@ coordinates. The copied fixture is historical evidence from PR #134, not a new
 measurement or a cross-host performance comparison. Thirty-six further catalog
 mutations refuse unknown or duplicated members at their exact slots.
 
-Final verification found the reviewed harness registry still listed eleven
-targets. It now includes `benchmark_report`; all 26 campaign-policy laws pass
-in debug and release. A clean exact-source full-workspace run remains blocked
-by the pre-existing hardware-dependent source-identity law tracked in #139 and
-PR #140. That prerequisite has no approvals and has not been merged. The first
-full run also lacked the installed external BLAKE3 tool on PATH; its oracle law
-passes with the real tool available. No full-workspace green result is claimed.
+Earlier verification found the reviewed harness registry still listed eleven
+targets. It now includes `benchmark_report`; all 26 campaign-policy laws passed
+in debug and release. That earlier full-workspace run was blocked by the
+hardware-dependent source-identity law tracked in #139 and PR #140. The first
+run also lacked the external BLAKE3 tool on PATH; its oracle law passed with
+the real tool available. Those results describe the earlier source, not the
+current validation state.
+
+After integrating main through `8d902516e682361882bc5c9902de296ce5c9de85`,
+including the merged #140 correction, exact head
+`e1e03e50ffc62741f3fb1c884dd414c13637a399` passed copy-isolated Docker full
+workspace debug and release tests, including doctests, formatting, both
+all-target/all-feature Clippy profiles with warnings denied, and source
+structure checks. The external BLAKE3 oracle used the installed real tool.
+These checks do not replace independent review or establish merge approval.
 
 Completeness models also check all sixteen metadata coordinates for deletion
 and unknown-key replacement (32 mutations), and all eighteen metric rows for
