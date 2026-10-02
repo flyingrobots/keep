@@ -624,6 +624,9 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- The benchmark workload catalog describes current range authentication once
+  before output, matching its single-pass metric definitions (#71).
+
 - Public reference range-read documentation describes its single pre-output
   authentication and immutable emission without a second hash (#71).
 

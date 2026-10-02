@@ -117,9 +117,10 @@ Every timed sample must return exactly the same semantic counters. Any change
 is a typed nondeterminism failure.
 
 Verification has no disabled state. Ingest authenticates chunk and complete
-blob identity. Range reads authenticate every selected complete chunk before
-and during output. Whole reconstruction authenticates chunks, profile
-boundaries, and the complete named blob.
+blob identity. Range reads authenticate every selected complete chunk once
+before output, then emit verified immutable chunks by identity. Whole
+reconstruction authenticates chunks, profile boundaries, and the complete
+named blob.
 
 ## Chunking-profile comparison
 
