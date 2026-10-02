@@ -51,8 +51,12 @@ four filesystem laws live in
 `src/adapters/filesystem_segment_stage_tests.rs`, covering exclusive creation,
 one owner, exact sealed bytes, and retained unsealed prefixes. This is an
 outdated evidence reference, not evidence that those laws are missing.
-Documentation correction remains part of the existing #69 owner; this audit
-does not declare the literal artifact requirement fully delivered.
+At this inspected snapshot, documentation correction was assigned to #69.
+PR #136 subsequently corrected the living v1 ledger and closed #69, but did
+not add the originally named integration target. The literal artifact
+requirement remains undelivered and is retained by the #131 audit until an
+executable correction owns it. Existing unit laws do not substitute for the
+named public API integration artifact.
 
 ## Executed evidence and limits
 
