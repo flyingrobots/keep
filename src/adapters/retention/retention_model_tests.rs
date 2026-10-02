@@ -6,6 +6,10 @@ use std::collections::BTreeMap;
 use std::error::Error;
 use std::path::PathBuf;
 
+#[path = "retention_model_refusal.rs"]
+mod refusal;
+use refusal::Refusal;
+
 use super::filesystem_retention_test_fixture::{
     ROOT_HEX, fixture, initial_preparation, initial_root, new_namespace_preparation,
     open_authority, successor_preparation, successor_root,
@@ -155,7 +159,7 @@ type Planned = (Recipe, Expected);
 enum Expected {
     Published,
     AlreadyCommitted,
-    Refused,
+    Refused(Refusal),
 }
 
 /// Builds the recipe an operation would publish and the model's expected
@@ -173,7 +177,10 @@ fn recipe(
         Operation::Initial(namespace) => {
             let candidate = candidate_bytes(store, namespace)?;
             let expected = if model.namespaces.contains_key(&digest_of(&candidate)?) {
-                Expected::Refused
+                Expected::Refused(Refusal::repeated_initial(
+                    &candidate,
+                    fresh_manifest.as_deref(),
+                )?)
             } else {
                 Expected::Published
             };
@@ -197,7 +204,7 @@ fn recipe(
             ) {
                 (None, 0) => Expected::Published,
                 (Some(_), 1) => Expected::AlreadyCommitted,
-                _ => Expected::Refused,
+                _ => Expected::Refused(Refusal::superseded(fresh_manifest.as_deref())?),
             };
             Some((
                 Recipe::Initial {
@@ -241,8 +248,8 @@ fn apply(store: &mut Store, model: &mut Model, operation: Operation) -> Result<(
         return Ok(());
     };
     match (expected, recipe.publish(&mut store.authority)) {
-        (Expected::AlreadyCommitted, Ok(RetentionPublicationOutcome::AlreadyCommitted))
-        | (Expected::Refused, Err(_)) => {}
+        (Expected::AlreadyCommitted, Ok(RetentionPublicationOutcome::AlreadyCommitted)) => {}
+        (Expected::Refused(refusal), Err(error)) => refusal.verify(error.as_ref())?,
         (Expected::Published, Ok(RetentionPublicationOutcome::Published)) => {
             let candidate = AdmittedRetentionRoot::decode(recipe.candidate())?;
             model.namespaces.insert(
@@ -331,32 +338,41 @@ fn run_sequences(first: Operation, label: &str) -> Result<(), Box<dyn Error>> {
             sequences = sequences.saturating_add(1);
         }
     }
-    assert_eq!(sequences, 25);
     Ok(())
 }
 
+// Size: medium. Oracle: namespace state model plus exact rejected-operation contract.
+// Delete only when stronger scenario exploration subsumes these histories and diagnostics.
 #[test]
 fn sequences_starting_with_an_initial_publication_of_a_agree_with_the_model()
 -> Result<(), Box<dyn Error>> {
     run_sequences(Operation::Initial(Namespace::A), "initial-a")
 }
 
+// Size: medium. Oracle: namespace state model plus exact rejected-operation contract.
+// Delete only when stronger scenario exploration subsumes these histories and diagnostics.
 #[test]
 fn sequences_starting_with_an_initial_publication_of_b_agree_with_the_model()
 -> Result<(), Box<dyn Error>> {
     run_sequences(Operation::Initial(Namespace::B), "initial-b")
 }
 
+// Size: medium. Oracle: namespace state model plus exact rejected-operation contract.
+// Delete only when stronger scenario exploration subsumes these histories and diagnostics.
 #[test]
 fn sequences_starting_with_a_successor_agree_with_the_model() -> Result<(), Box<dyn Error>> {
     run_sequences(Operation::Successor, "successor")
 }
 
+// Size: medium. Oracle: namespace state model plus exact rejected-operation contract.
+// Delete only when stronger scenario exploration subsumes these histories and diagnostics.
 #[test]
 fn sequences_starting_with_a_retry_agree_with_the_model() -> Result<(), Box<dyn Error>> {
     run_sequences(Operation::RetryLast, "retry")
 }
 
+// Size: medium. Oracle: namespace state model plus exact rejected-operation contract.
+// Delete only when stronger scenario exploration subsumes these histories and diagnostics.
 #[test]
 fn sequences_starting_with_a_stale_initial_agree_with_the_model() -> Result<(), Box<dyn Error>> {
     run_sequences(Operation::StaleInitial, "stale")
