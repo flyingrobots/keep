@@ -1,0 +1,41 @@
+# Retention stage prefix refusal evidence
+
+This receipt owns the focused fixed-field recovery correction in PR #99, production fix `ffb5074`, and the policy-only integration of reviewed PR #152 in `813df95`. The change kind is a bug fix with an additional public error diagnostic; it does not certify the entire retention PR.
+
+## Runtime claim and oracle
+
+When an interrupted root, manifest, or head stage contains an available fixed byte that contradicts the version-two grammar, recovery must return the stage-specific `StageCorrupt` refusal and preserve every retained file's bytes. Canonical strict prefixes must remain classified as interrupted writes. The oracle is the format grammar and checked-in canonical conformance records, independently of the case generator.
+
+The public assessment laws are in [retention_stage_prefix.rs](../../tests/retention_stage_prefix.rs). The filesystem regression is `noncanonical_short_stages_refuse_recovery_without_changing_retained_bytes` in [filesystem_retention_recovery_prefix_tests.rs](../../src/adapters/retention/filesystem_retention_recovery_prefix_tests.rs). These assert production classification, typed diagnostics, and persistent bytes. They do not assert test-harness case totals.
+
+## Observed RED
+
+On unfixed production `ee0e585864d8b17ee9b2b2e52950c5f6f5fad4a5` with the filesystem regression copied into the isolated Docker checkout, `cargo test -p keep --lib noncanonical_short_stages_refuse_recovery_without_changing_retained_bytes -- --nocapture` exited 101 at the intended assertion: malformed `root.next` returned `Ok` with `DiscardRootStage` and `Clean`. Test commit `8b3557d` records that reproduction.
+
+On exact unfixed commit `4513a776d1c901c659d20a75bcf436c96eedf43a`, `cargo test -p keep --test retention_stage_prefix` exited 101. Each corrupt-prefix law failed at fixed byte zero and prefix length one; canonical-prefix laws passed. This was repeated in a dedicated build directory, independent of the fixed checkout's artifacts.
+
+## Calibration
+
+Changing the production prefix comparator to report the wrong expected byte made each `short_*_refusal_reports_only_observed_bytes` assertion fail. Changing production admission to reject canonical prefixes made each `canonical_*_prefixes_remain_recoverable_interrupted_writes` assertion fail at its named check.
+
+Deleting the retained root stage after observing it but before planning left the correct typed corruption refusal intact and made the exact-byte preservation assertion fail: `refusal must preserve every retained byte for root.next`. This demonstrates the preservation assertion independently of the refusal assertion.
+
+One early calibration selected zero matching tests after independent checkouts shared a build directory. That run is invalid and is excluded from this evidence. Parent, fixed, and mutated checkouts were re-executed with separate Cargo target directories; mutations affected only disposable Docker copies.
+
+## Observed GREEN
+
+All execution used copy-based Docker isolation on Linux with pinned Rust 1.96.0. `cargo test -p keep` passed, including the library, public integrations and doctests. `cargo test -p keep --release --test retention_stage_prefix` and `cargo test -p keep --release --lib retention` passed. Full release workspace validation is not claimed.
+
+Both workspace Clippy configurations passed with all targets and `-D warnings`, with and without all features. Rust formatting, fuzz formatting, the source structure check, whitespace validation, and Docker Markdown lint passed. The duplicate cross-sequence match arms encountered during integration were corrected separately in `5b9fc4d` without changing their typed refusal.
+
+The old successful interrupted-write fixture used literal garbage. It now uses a strict prefix of the actual canonical manifest and retains its existing publication/head-byte assertions. The new refusal regression separately protects malformed short bytes; this preserves the distinction between interrupted canonical writes and corruption.
+
+## Bounded fuzz exploration
+
+The existing retention format target now calls all three stage assessments as well as complete-record decoders. The focused Docker command was `cargo +nightly-2026-07-24 fuzz run retention_format --debug-assertions --sanitizer address -- -seed=99 -max_total_time=15 -timeout=5 -max_len=1048576 -rss_limit_mb=1024 -print_final_stats=1`, using cargo-fuzz 0.13.2 and the prepared canonical corpus. Seed 99 was fixed in the invocation outside the fuzz process; the resource arguments match [campaign.env](../../fuzz/campaign.env). The command completed successfully without a reported finding.
+
+An earlier exploratory run used different input/RSS limits and is not the policy smoke receipt. Fuzz completion is robustness evidence for the exercised target, not proof that every semantic corruption is refused or every trust-boundary parser is covered.
+
+## Remaining blind spots
+
+The focused fix checks fixed fields. Incomplete semantic and variable fields, sync-before-publication recovery ordering, current-generation and namespace admission, error boundaries, and stronger persistent-view oracles remain review obligations. The runtime fixtures bypass production platform admission deliberately to isolate post-admission storage behavior; they do not establish platform eligibility or physical power-loss durability. PR #99 remains gated on its complete review queue and current-head validation.
