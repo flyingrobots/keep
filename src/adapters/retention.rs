@@ -80,6 +80,8 @@ mod filesystem_retention_recovery_tests;
 mod filesystem_retention_short_head_tests;
 #[cfg(test)]
 mod filesystem_retention_short_framing_tests;
+#[cfg(test)]
+mod filesystem_retention_short_count_tests;
 mod filesystem_retention_refusal;
 mod filesystem_retention_snapshot;
 mod filesystem_retention_snapshot_error;
