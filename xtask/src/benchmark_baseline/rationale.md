@@ -87,3 +87,8 @@ by the pre-existing hardware-dependent source-identity law tracked in #139 and
 PR #140. That prerequisite has no approvals and has not been merged. The first
 full run also lacked the installed external BLAKE3 tool on PATH; its oracle law
 passes with the real tool available. No full-workspace green result is claimed.
+
+Completeness models also check all sixteen metadata coordinates for deletion
+and unknown-key replacement (32 mutations), and all eighteen metric rows for
+a missing or extra field (36 mutations). Both laws assert exact typed failure
+coordinates or complete-row observations and pass in Docker debug and release.

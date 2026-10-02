@@ -291,3 +291,6 @@ mod report_compatibility_tests;
 
 #[path = "catalog_membership_tests.rs"]
 mod catalog_membership_tests;
+
+#[path = "completeness_tests.rs"]
+mod completeness_tests;
