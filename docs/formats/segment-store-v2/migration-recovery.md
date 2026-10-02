@@ -58,6 +58,12 @@ The migration recovery boundary admits only these ordered prefixes:
 
 <!-- markdownlint-enable MD013 -->
 
+Every row also requires the admission checks in
+[Executable recovery boundary](#executable-recovery-boundary). An intent stage
+surviving a namespace effect, or a marker stage surviving a receipt effect,
+refuses as `StageAfterEffect`. When a stage and canonical target both exist,
+exact bytes and one shared device/inode identity are required before resumption.
+
 A partial migration retry revalidates intent and existing bytes, resumes at the
 first absent canonical step, and never replaces an entry. A missing predecessor,
 changed version-1 coordinate, out-of-order name, wrong kind or bytes, conflicting
@@ -65,3 +71,35 @@ receipt, unknown entry, or changed root identity is unrecoverable ambiguity.
 
 Death before durable intent leaves v1 plus at most its non-authoritative stage.
 Death after durable intent leaves recovery-required v2 migration state.
+
+## Executable recovery boundary
+
+`FilesystemStoreMigrationAuthority::reopen_for_recovery` reacquires writer
+authority without granting version-1 publication admission.
+`recover_store_migration` revalidates the caller's freshly derived current
+intent, then observes bounded residue and applies
+`plan_store_migration_recovery` before adopting records or discarding stages.
+Nested directory membership is checked before mutating recovery. An intent
+stage surviving namespace creation, or a marker stage surviving receipt
+publication, is refused as `StageAfterEffect`.
+
+When both a stage and its canonical target exist, adoption verifies they share
+the same device and inode as well as exact bytes before any forward phase,
+including directory synchronization.
+
+The receipt retains the exact observed namespace prefix and bound intent
+digest, names the admitted plan, and lists the executed forward phases
+through `executed_phases()`. The plan records the earliest unproven boundary;
+it does not infer which synchronization calls completed before process death.
+For `VersionOne`, `intent_digest()` returns `None`: no migration intent was
+admitted. Every other plan reports the intent used by recovery. An incomplete
+pre-effect intent stage has no complete persisted intent, so its discard path
+uses the freshly verified current intent.
+Restart compares device and inode identity; mount identity is same-process
+evidence. Whenever an exact intent survives, recovery continues with its
+persisted bytes.
+
+The filesystem laws cover every forward prefix, every strict byte-prefix
+truncation of all three stages, unchanged version-1 bytes, and refusal before
+mutation for corrupt intent and unexpected nested residue. The complete
+restart corruption matrix remains tracked separately in #111.

@@ -18,6 +18,7 @@ impl fmt::Display for DurabilityCrashMatrixError {
             | Self::HardLinkIdentityMismatch { .. }
             | Self::InventoryMismatch { .. }
             | Self::MissingVisibleRecord { .. }
+            | Self::RecoveryPlanMismatch { .. }
             | Self::RepeatedInventoryPath { .. }
             | Self::SnapshotGenerationMismatch { .. }
             | Self::UnexpectedArtifactKind { .. } => format_state(self, formatter),
@@ -31,10 +32,14 @@ impl fmt::Display for DurabilityCrashMatrixError {
             | Self::FixtureTerminator { .. } => format_fixture(self, formatter),
             Self::Case { .. }
             | Self::InvalidCase(_)
+            | Self::InvalidOccurrenceEncoding
             | Self::InvalidPointEncoding
             | Self::InvalidPositionEncoding
+            | Self::InvalidSequenceEncoding
+            | Self::UnknownOccurrence(_)
             | Self::UnknownPoint(_)
             | Self::UnknownPosition(_)
+            | Self::UnknownSequence(_)
             | Self::Usage => format_command(self, formatter),
             Self::Io { .. }
             | Self::NonUnicodeStatePath
@@ -82,6 +87,10 @@ fn format_state(
                 "post-crash snapshot lacks visible record `{record}`"
             )
         }
+        DurabilityCrashMatrixError::RecoveryPlanMismatch { expected, observed } => write!(
+            formatter,
+            "post-crash migration recovery planned {observed:?}, expected {expected:?}"
+        ),
         DurabilityCrashMatrixError::RepeatedInventoryPath { path } => {
             write!(formatter, "post-crash inventory repeated path `{path}`")
         }
@@ -182,15 +191,25 @@ fn format_command(
         DurabilityCrashMatrixError::Case {
             point,
             position,
+            occurrence,
             source,
-        } => write!(
-            formatter,
-            "{} {}: {source}",
-            point.identifier(),
-            position.identifier()
-        ),
+        } => {
+            write!(
+                formatter,
+                "{} {}",
+                point.identifier(),
+                position.identifier()
+            )?;
+            if let Some(occurrence) = occurrence {
+                write!(formatter, " occurrence {}", occurrence.get())?;
+            }
+            write!(formatter, ": {source}")
+        }
         DurabilityCrashMatrixError::InvalidCase(error) => {
             write!(formatter, "invalid crash case: {error}")
+        }
+        DurabilityCrashMatrixError::InvalidOccurrenceEncoding => {
+            formatter.write_str("crash occurrence is not valid Unicode")
         }
         DurabilityCrashMatrixError::InvalidPointEncoding => {
             formatter.write_str("crash point is not valid Unicode")
@@ -198,15 +217,25 @@ fn format_command(
         DurabilityCrashMatrixError::InvalidPositionEncoding => {
             formatter.write_str("crash position is not valid Unicode")
         }
+        DurabilityCrashMatrixError::InvalidSequenceEncoding => {
+            formatter.write_str("crash sequence is not valid Unicode")
+        }
+        DurabilityCrashMatrixError::UnknownOccurrence(occurrence) => {
+            write!(formatter, "unknown crash occurrence `{occurrence}`")
+        }
         DurabilityCrashMatrixError::UnknownPoint(point) => {
             write!(formatter, "unknown crash point `{point}`")
         }
         DurabilityCrashMatrixError::UnknownPosition(position) => {
             write!(formatter, "unknown crash position `{position}`")
         }
+        DurabilityCrashMatrixError::UnknownSequence(sequence) => {
+            write!(formatter, "unknown crash sequence `{sequence}`")
+        }
         DurabilityCrashMatrixError::Usage => formatter.write_str(
             "usage: cargo xtask durability-crash-matrix \
-             --case <KEEP-CRASH-NNN> <before|during|after>",
+             [--case <KEEP-CRASH-NNN> <before|during|after> [<occurrence>] \
+             | --sequence <segment|catalog|head|recovery-discard|initialization|migration>]",
         ),
         _ => Err(fmt::Error),
     }

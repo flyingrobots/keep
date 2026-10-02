@@ -8,11 +8,12 @@ namespaces.
 
 ADR-0009 owns the cross-cutting retention and liveness decision. These pages
 own its durable representation. The one-way migration, version-two reopen, and
-forward retention publication are implemented with executable evidence;
-recovery of retained retention stages, reader fencing, and collection remain
-planned in issue #19, and the [requirements ledger](requirements.md) records
-exactly which requirements are proven. A version-1 store remains admitted until
-its owner migrates it.
+forward retention publication, partial-prefix migration recovery, and the
+68-case migration process-death matrix are implemented with executable
+evidence. Retention recovery and reader fencing await integration from PR #99;
+collection remains planned in #21. The [requirements ledger](requirements.md)
+records exactly which requirements are proven. A version-1 store remains
+admitted until its owner migrates it.
 
 ## Core laws
 
@@ -95,10 +96,16 @@ stages, replaced protocol directories, and every namespace or capacity
 violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 
 Not implemented: retention publication recovery and `KEEP-CRASH-036..052`
-process-death evidence, partial-prefix migration recovery and
-`KEEP-CRASH-053..073`, the reader fence, model-based transition evidence, and
-garbage collection. Issue #19 owns the first four and issue #21 the last;
-issue #97 owns the restart-stable root identity coordinate. A version-1 store
+process-death evidence, the reader fence, model-based transition evidence, and
+garbage collection. Partial-prefix migration recovery and the 68-case
+`KEEP-CRASH-053..073` process-death matrix are implemented. Broader migration
+restart corruption and compatibility coverage remain in #111 and #112.
+PR #99 contains retention recovery and reader fencing awaiting integration;
+issue #21 owns garbage collection.
+Reopen compares only the restart-stable root coordinates, device and inode,
+against the intent; see
+[root identity across restart](recovery.md#root-identity-across-restart). A
+version-1 store
 remains admitted until its owner migrates it, and the
 [requirements ledger](requirements.md) is the authority on which requirements
 are proven.

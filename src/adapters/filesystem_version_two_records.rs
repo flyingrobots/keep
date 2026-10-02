@@ -21,25 +21,22 @@ const RECEIPT_NAME: &str = "migration.receipt";
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct BoundRootIdentity {
     device: u64,
-    mount: u64,
     file: u64,
 }
 
 impl BoundRootIdentity {
-    pub(super) const fn new(device: u64, mount: u64, file: u64) -> Self {
-        Self {
-            device,
-            mount,
-            file,
-        }
+    /// Binds the two restart-stable root coordinates the intent persists.
+    ///
+    /// The intent also records the mount identity observed during migration,
+    /// but `statx.stx_mnt_id` can change across mount instances and reboots, so
+    /// reopen does not compare it; the migration authority compares it only
+    /// inside the process that observed it.
+    pub(super) const fn new(device: u64, file: u64) -> Self {
+        Self { device, file }
     }
 
     pub(super) const fn device(self) -> u64 {
         self.device
-    }
-
-    pub(super) const fn mount(self) -> u64 {
-        self.mount
     }
 
     pub(super) const fn file(self) -> u64 {
@@ -69,7 +66,6 @@ pub(super) fn admit(root: &Dir) -> io::Result<BoundRootIdentity> {
         .map_err(|source| Refusal::Receipt { source }.into_io())?;
     Ok(BoundRootIdentity::new(
         intent.root_device_identity().get(),
-        intent.root_mount_identity().get(),
         intent.root_file_identity().get(),
     ))
 }

@@ -1,5 +1,6 @@
 //! This module owns source inventory orchestration and the 500-line law.
 
+mod forbidden_filename;
 mod python_source;
 mod repository_path;
 mod source_error;
@@ -113,6 +114,7 @@ fn source_violations_with_modes(
     for relative in paths {
         let tracked_mode = tracked_modes.get(relative.as_path()).copied();
         let source = admit_regular(source_root, relative.as_path(), tracked_mode)?;
+        forbidden_filename::admit(relative.as_path())?;
         if is_extensionless_file(relative.as_str().as_bytes())
             && source.execution() == FileExecution::NonExecutable
         {
@@ -226,3 +228,7 @@ mod executable_candidate_tests;
 mod pure_rust_tests;
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+#[path = "source_structure/filename_policy_tests.rs"]
+mod filename_policy_tests;

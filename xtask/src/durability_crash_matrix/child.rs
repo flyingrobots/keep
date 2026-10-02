@@ -37,10 +37,15 @@ fn write_marker(
 }
 
 pub(super) fn marker(case: DurabilityCrashCase) -> Vec<u8> {
-    format!(
-        "{}\t{}\n",
+    let mut marker = format!(
+        "{}\t{}",
         case.point().identifier(),
         case.position().identifier()
-    )
-    .into_bytes()
+    );
+    if let Some(occurrence) = case.occurrence() {
+        marker.push('\t');
+        marker.push_str(&occurrence.get().to_string());
+    }
+    marker.push('\n');
+    marker.into_bytes()
 }

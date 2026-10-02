@@ -55,14 +55,24 @@ exact truncation only when every available segment- or record-header framing
 byte remains canonical. It preserves proven partial-framing and
 complete-looking corruption as typed refusals. Catalog- and
 next-head-stage classifiers apply the same available-fixed-framing rule before
-distinguishing exact truncation from complete canonical bytes. Transitive
-publication-view admission and filesystem-streaming semantic classification
-remain unimplemented.
+distinguishing exact truncation from complete canonical bytes. Every
+classifier consumes complete, caller-supplied protocol-bounded stage bytes;
+the ledger's classification rows (`KEEP-RECOVERY-010`, `KEEP-RECOVERY-011`)
+are whole-byte by design, and no classifier streams from a filesystem handle.
+The inventory reader returns fingerprint evidence without retaining stage
+bytes. The filesystem segment resumer separately materializes its pinned
+writable stage before re-admission and continuation.
 `admit_recovery_stage_bytes` first requires the canonical-name stage, exact
 length, and recomputed stage fingerprint to match prior observation evidence;
 only `assess_recovery_stage` may dispatch those admitted bytes to a semantic
 classifier. Matching evidence does not convert corrupt bytes into lawful
 content.
+
+Transitive publication-view admission for a candidate `head.next` is
+implemented at [Leftover next head](#leftover-next-head). Its planner and
+filesystem finalizer require the complete candidate catalog snapshot under
+`KEEP-RECOVERY-017` and `KEEP-RECOVERY-018` before head replacement.
+
 `plan_recovery_stage_discard` admits only an exact truncation assessment and
 retains both its evidence and typed truncation reason. The semantic
 `execute_recovery_stage_discard` port refuses evidence drift before mutation,
@@ -117,8 +127,10 @@ Run the repository-owned matrix:
 cargo xtask durability-crash-matrix
 ```
 
-The command executes the three ordered positions for each stable
-`KEEP-CRASH-001`–`KEEP-CRASH-035` point: 105 canonical cases. Each case owns a
+The 105 version-one cases are a subset of the complete command, which also
+executes version-two migration cases. The version-one subset executes the
+three ordered positions for each stable `KEEP-CRASH-001`–`KEEP-CRASH-035`
+point. Each version-one case owns a
 fresh filesystem store and an isolated child process group. The child retains
 the writer lock and any open staged artifact while it executes the production
 initialization, segment-writing, catalog-publication, or recovery-discard

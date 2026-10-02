@@ -7,15 +7,18 @@ use std::error::Error;
 use std::io;
 use std::time::Duration;
 
+use keep::StoreMigrationRecoveryPlan;
 use xtask::protocol_admission::HexError;
 use xtask::{
-    DurabilityCrashCase, DurabilityCrashCaseError, DurabilityCrashPoint, DurabilityCrashPosition,
+    DurabilityCrashCase, DurabilityCrashCaseError, DurabilityCrashOccurrence, DurabilityCrashPoint,
+    DurabilityCrashPosition,
 };
 
 pub(crate) enum DurabilityCrashMatrixError {
     Case {
         point: DurabilityCrashPoint,
         position: DurabilityCrashPosition,
+        occurrence: Option<DurabilityCrashOccurrence>,
         source: Box<Self>,
     },
     ArtifactBytesMismatch {
@@ -50,8 +53,10 @@ pub(crate) enum DurabilityCrashMatrixError {
         artifact: &'static str,
     },
     InvalidCase(DurabilityCrashCaseError),
+    InvalidOccurrenceEncoding,
     InvalidPointEncoding,
     InvalidPositionEncoding,
+    InvalidSequenceEncoding,
     InvalidReadinessSignal {
         observed: u8,
     },
@@ -78,6 +83,10 @@ pub(crate) enum DurabilityCrashMatrixError {
     PointSequenceMismatch {
         point: DurabilityCrashPoint,
     },
+    RecoveryPlanMismatch {
+        expected: StoreMigrationRecoveryPlan,
+        observed: StoreMigrationRecoveryPlan,
+    },
     RepeatedInventoryPath {
         path: String,
     },
@@ -93,8 +102,10 @@ pub(crate) enum DurabilityCrashMatrixError {
         expected: &'static str,
         observed: &'static str,
     },
+    UnknownOccurrence(String),
     UnknownPoint(String),
     UnknownPosition(String),
+    UnknownSequence(String),
     Usage,
     Verification {
         phase: &'static str,
@@ -127,6 +138,7 @@ impl DurabilityCrashMatrixError {
         Self::Case {
             point: case.point(),
             position: case.position(),
+            occurrence: case.occurrence(),
             source: Box::new(self),
         }
     }
@@ -147,20 +159,25 @@ impl Error for DurabilityCrashMatrixError {
             | Self::FixtureLength { .. }
             | Self::FixtureRange
             | Self::FixtureTerminator { .. }
+            | Self::InvalidOccurrenceEncoding
             | Self::InvalidPointEncoding
             | Self::InvalidPositionEncoding
+            | Self::InvalidSequenceEncoding
             | Self::InvalidReadinessSignal { .. }
             | Self::InventoryMismatch { .. }
             | Self::HardLinkIdentityMismatch { .. }
             | Self::MissingVisibleRecord { .. }
             | Self::NonUnicodeStatePath
             | Self::PointSequenceMismatch { .. }
+            | Self::RecoveryPlanMismatch { .. }
             | Self::RepeatedInventoryPath { .. }
             | Self::SnapshotGenerationMismatch { .. }
             | Self::Timeout { .. }
             | Self::UnexpectedArtifactKind { .. }
+            | Self::UnknownOccurrence(_)
             | Self::UnknownPoint(_)
             | Self::UnknownPosition(_)
+            | Self::UnknownSequence(_)
             | Self::Usage => None,
         }
     }

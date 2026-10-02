@@ -32,6 +32,12 @@ impl fmt::Display for StoreRootIdentityCoordinate {
 impl fmt::Display for FilesystemMigrationAuthorityError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Platform { .. } => {
+                formatter.write_str("filesystem migration platform admission was refused")
+            }
+            Self::WriterLock { .. } => {
+                formatter.write_str("filesystem migration writer lock was refused")
+            }
             Self::Inventory { .. } => {
                 formatter.write_str("filesystem migration inventory was refused")
             }
@@ -96,7 +102,10 @@ impl Error for FilesystemMigrationAuthorityError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::Inventory { source } => Some(source),
-            Self::Namespace { source } | Self::RootIdentity { source } => Some(source),
+            Self::WriterLock { source } => Some(source),
+            Self::Platform { source }
+            | Self::Namespace { source }
+            | Self::RootIdentity { source } => Some(source),
             Self::Artifact { source, .. } => Some(source),
             Self::Head { source } => Some(source),
             Self::Catalog { source, .. } => Some(source),
