@@ -176,6 +176,10 @@ filesystem whose individual operations returned success. Each would let an
 unsupported platform manufacture the authority that the proof is meant to
 represent.
 
+## Sealed-stage observation
+
+Repository segment observation keeps writable stage authority private (#146). The former sealed `map_stage` callback could mutate an already synchronized stage while keeping the original receipt metadata; publication-time revalidation did not make that receipt truthful. `ObservedSegmentStage` now owns the stage and performs its actual write, flush and synchronization operations, exposing only lengths and before/after durability events to its observer. Its specialized sealed `without_observer` conversion drops the observer and preserves the same hidden stage and metadata together. There is no arbitrary user conversion of a sealed stage. Returning an error from an after-write hook cannot undo bytes; an `Interrupted` cause is retained inside a non-retryable I/O error so ordinary write retry cannot duplicate those effects. A new arbitrary unwrap trait or caller-supplied closure would reopen the capability escape and was rejected.
+
 ## Observation before recovery
 
 Store opening performs no repair. It produces either one verified reader
