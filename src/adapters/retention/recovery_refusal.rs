@@ -44,7 +44,7 @@ pub enum RetentionRecoveryRefusal {
         /// The truncated stage.
         stage: RetentionFixedStage,
     },
-    /// A complete stage names a pool entry that exists with other bytes.
+    /// A complete stage names a pool entry whose bytes or stage identity differ.
     PoolEntryDiffers {
         /// The pool holding the conflicting entry.
         pool: RetentionPool,

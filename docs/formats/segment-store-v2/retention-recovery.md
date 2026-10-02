@@ -6,6 +6,8 @@ Both publication-triggered and explicit recovery first verify that `retention`, 
 
 Both entry points then admit every retention entry name and every root and manifest pool entry's canonical name and regular kind before observing stages or executing recovery. Recovery permits only the three fixed stage names in addition to the forward namespace; stage observation separately verifies their exact kinds, bounds, and bytes. An unknown retention entry, non-namespace root entry, or noncanonical pool entry refuses inside `Observe` with its existing typed namespace source and preserves every retained file's bytes.
 
+A root or manifest pool entry named by a complete retained stage must match that stage's device and inode identity as well as its exact bytes. Observation verifies the opened pool handle and named entry on both sides of the bounded read. Equal bytes on a substituted inode classify as `Different`, so planning returns `PoolEntryDiffers` for the exact pool before finalizing `HEAD` or removing stages. Inode coordinates are transition evidence, not public content identity.
+
 At restart, a fixed retention stage is classified from its exact framing and transitive evidence:
 
 The forward protocol guarantees that `root.next` is durable before a new namespace directory is created. A new digest-named directory is created exclusively, verified as the exact regular directory rather than a link, and followed by synchronization of `retention/roots` before the immutable root is linked. An existing exact directory is idempotent; any wrong kind, substituted namespace, or unexpected entry refuses. Directory existence alone never proves a retained root.

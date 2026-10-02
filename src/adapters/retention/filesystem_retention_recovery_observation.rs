@@ -54,27 +54,31 @@ impl RetentionRecoveryObservation {
             pool_name::HEAD_STAGE,
             head_decoder::ENCODED_LENGTH,
         )?;
-        let root_pool = match assess_root_stage(root.as_ref().map(|stage| &*stage.bytes)) {
-            RetentionStageAssessment::Complete(admitted) => {
+        let root_pool = match root
+            .as_ref()
+            .map(|stage| (assess_root_stage(Some(&stage.bytes)), stage.identity))
+        {
+            Some((RetentionStageAssessment::Complete(admitted), identity)) => {
                 let namespace = pool_name::namespace(admitted.root().namespace().digest());
                 let name = pool_name::root(admitted.root().generation(), admitted.digest());
                 match roots.open_dir_nofollow(namespace) {
-                    Ok(directory) => pool_entry(&directory, &name, admitted.encoded())?,
+                    Ok(directory) => pool_entry(&directory, &name, admitted.encoded(), identity)?,
                     Err(source) if source.kind() == io::ErrorKind::NotFound => Pool::Absent,
                     Err(source) => return Err(source),
                 }
             }
             _ => Pool::Absent,
         };
-        let manifest_pool =
-            match assess_manifest_stage(manifest.as_ref().map(|stage| &*stage.bytes)) {
-                RetentionStageAssessment::Complete(admitted) => {
-                    let name =
-                        pool_name::manifest(admitted.manifest().generation(), admitted.digest());
-                    pool_entry(manifests, &name, admitted.encoded())?
-                }
-                _ => Pool::Absent,
-            };
+        let manifest_pool = match manifest
+            .as_ref()
+            .map(|stage| (assess_manifest_stage(Some(&stage.bytes)), stage.identity))
+        {
+            Some((RetentionStageAssessment::Complete(admitted), identity)) => {
+                let name = pool_name::manifest(admitted.manifest().generation(), admitted.digest());
+                pool_entry(manifests, &name, admitted.encoded(), identity)?
+            }
+            _ => Pool::Absent,
+        };
         Ok(Self {
             current,
             root,
@@ -143,12 +147,19 @@ fn read_stage(retention: &Dir, name: &str, bound: usize) -> io::Result<Option<St
     }))
 }
 
-/// Whether `directory` holds `name` with exactly `expected` bytes.
-fn pool_entry(directory: &Dir, name: &str, expected: &[u8]) -> io::Result<Pool> {
-    match exact_record::read_exact_optional(directory, name, expected.len()) {
-        Ok(None) => Ok(Pool::Absent),
-        Ok(Some(bytes)) if bytes == expected => Ok(Pool::Identical),
-        Ok(Some(_)) | Err(ExactRecordError::Refused(_)) => Ok(Pool::Different),
+/// Whether the pool entry names the exact retained stage inode and bytes.
+fn pool_entry(
+    directory: &Dir,
+    name: &str,
+    expected: &[u8],
+    identity: EntryIdentity,
+) -> io::Result<Pool> {
+    match exact_record::verify_named(directory, name, expected, identity) {
+        Ok(()) => Ok(Pool::Identical),
+        Err(ExactRecordError::Io(source)) if source.kind() == io::ErrorKind::NotFound => {
+            Ok(Pool::Absent)
+        }
+        Err(ExactRecordError::Refused(_)) => Ok(Pool::Different),
         Err(ExactRecordError::Io(source)) => Err(source),
     }
 }

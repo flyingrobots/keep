@@ -667,6 +667,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Retention recovery refuses byte-identical root or manifest pool substitutions before committing the head or removing stages. Pool observation binds exact bytes to the retained stage's device and inode and preserves the typed pool refusal (#99).
+
 - Retention recovery admits namespace names and pool kinds before stage observation or mutation. Direct and publication-triggered recovery preserve retained evidence when unknown entries or noncanonical pool names refuse (#99).
 
 - Recovery synchronizes the exact complete retention stage before creating its immutable root or manifest pool link or replacing the retention head. A synchronization error refuses before that publication; the retained on-disk stage remains recovery evidence.

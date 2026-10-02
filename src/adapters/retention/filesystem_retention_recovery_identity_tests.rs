@@ -46,9 +46,9 @@ fn require_substitution_refusal(pool: RetentionPool) -> Result<(), Box<dyn Error
     fs::rename(replacement, &target)?;
     let source = fs::metadata(&stage)?;
     let replaced = fs::metadata(&target)?;
-    if (source.dev(), source.ino()) == (replaced.dev(), replaced.ino())
-        || fs::read(&stage)? != fs::read(&target)?
-    {
+    let stage_identity = (source.dev(), source.ino());
+    let pool_identity = (replaced.dev(), replaced.ino());
+    if stage_identity == pool_identity || fs::read(&stage)? != fs::read(&target)? {
         return Err("fixture must contain equal bytes on distinct inodes".into());
     }
     let before = retention_witness(sandbox.path())?;
