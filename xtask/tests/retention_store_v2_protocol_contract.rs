@@ -8,6 +8,8 @@ mod closure_contract_laws;
 mod migration_contract_laws;
 #[path = "retention_store_v2_protocol_contract/parser_fuzz_laws.rs"]
 mod parser_fuzz_laws;
+#[path = "retention_store_v2_protocol_contract/transition_laws.rs"]
+mod transition_laws;
 
 use std::fs;
 use std::io;

@@ -62,8 +62,9 @@ corpus `definition.tsv` bytes. The format-marker digest is BLAKE3-256 of
 `CanonicalStoreMigrationIntent` retains typed intent coordinates; `CanonicalStoreMigrationReceipt` binds completion; admitted record types verify both.
 `StoreMigrationStorage` names all 21 durability capabilities; `execute_store_migration` verifies current authority first and returns only after final synchronization.
 `FilesystemStoreMigrationInventoryReader` inventories version-1 bytes under
-retained writer authority. The fresh writer executes once; partial-prefix
-recovery is absent; version-1 reopen and recovery both refuse a migrated root.
+retained writer authority. The fresh writer executes once; separate migration
+recovery plans and executes the lawful remaining suffix after process death.
+Version-1 reopen and version-1 recovery both refuse a migrated root.
 
 ## Reader fence
 
@@ -160,12 +161,13 @@ The restart-stable root identity is therefore the pair `(device, file)`:
   same process; that comparison catches a root swapped underneath a running
   migration and never crosses a restart.
 - `FilesystemVersionTwoAdmission::reopen` compares device and
-  file only and refuse with `RootIdentityChanged { coordinate: Device | File,
+  file only and refuses with `RootIdentityChanged { coordinate: Device | File,
   .. }`. A remounted store admits; a store copied to another device or
   restored into a different directory refuses.
 
-Future partial-prefix recovery must use the same restart comparison;
-this decision does not implement that recovery engine.
+Partial-prefix migration recovery uses the same restart comparison; its
+authority and resumption protocol are specified in
+[the executable recovery boundary](migration-recovery.md#executable-recovery-boundary).
 
 The mount coordinate stays in the record as the migration-time observation.
 It remains evidence for same-process migration checks, not restart authority.
@@ -212,9 +214,11 @@ recovery instead. Direct version-2 initialization is undefined.
 
 The exact offsets and fixtures are requirement `KEEP-MIGRATION-002`. The fresh
 writer emits only those canonical records; success is not restart evidence.
-A migrated store is admitted for forward publication, but partial-prefix
-recovery and `KEEP-MIGRATION-007` process-death evidence remain absent, so an
-interrupted migration waits for recovery instead of continuing.
+A migrated store is admitted for forward publication. Partial-prefix recovery
+now plans and executes the lawful remaining migration suffix under writer
+authority; the 68-case migration process-death matrix supplies restart evidence.
+Broader hostile restart and compatibility coverage remain tracked in #111 and
+issue #112.
 
 ## Retention publication recovery
 
@@ -246,6 +250,12 @@ report. Any later effect, stale generation, mismatched digest, missing
 transitive member, reappeared stage, conflicting pool entry, or other
 corruption is a typed refusal. A complete valid orphan remains
 recovery-protected until explicit disposition.
+
+This retention protocol requires pinning the incomplete regular file. The
+separate [migration discard path](migration-crash.md#fixed-stage-law)
+revalidates the current entry's regular kind and incomplete length before
+removal without retaining an incomplete-stage handle. These are distinct
+protocol boundaries; retention recovery awaits integration from PR #99.
 
 The retention crash points are:
 

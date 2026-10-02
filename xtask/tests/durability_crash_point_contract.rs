@@ -4,7 +4,7 @@
 
 use xtask::{DurabilityCrashPoint, DurabilityCrashSequence};
 
-use DurabilityCrashSequence::{Catalog, Head, Initialization, RecoveryDiscard, Segment};
+use DurabilityCrashSequence::{Catalog, Head, Initialization, Migration, RecoveryDiscard, Segment};
 
 const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
     (
@@ -162,6 +162,111 @@ const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
         "KEEP-CRASH-035",
         Initialization,
     ),
+    (
+        DurabilityCrashPoint::MigrationWriteIntentStage,
+        "KEEP-CRASH-053",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationSynchronizeIntentStage,
+        "KEEP-CRASH-054",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationLinkIntent,
+        "KEEP-CRASH-055",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationSynchronizeRootAfterIntent,
+        "KEEP-CRASH-056",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationRemoveIntentStage,
+        "KEEP-CRASH-057",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationSynchronizeRootAfterIntentCleanup,
+        "KEEP-CRASH-058",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationAdmitReaderFence,
+        "KEEP-CRASH-059",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationAdmitNamespacePrefix,
+        "KEEP-CRASH-060",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationSynchronizeRootAfterNamespace,
+        "KEEP-CRASH-061",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationWriteMarkerStage,
+        "KEEP-CRASH-062",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationSynchronizeMarkerStage,
+        "KEEP-CRASH-063",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationLinkMarker,
+        "KEEP-CRASH-064",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationSynchronizeRootAfterMarker,
+        "KEEP-CRASH-065",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationRemoveMarkerStage,
+        "KEEP-CRASH-066",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationSynchronizeRootAfterMarkerCleanup,
+        "KEEP-CRASH-067",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationWriteReceiptStage,
+        "KEEP-CRASH-068",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationSynchronizeReceiptStage,
+        "KEEP-CRASH-069",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationLinkReceipt,
+        "KEEP-CRASH-070",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationSynchronizeRootAfterReceipt,
+        "KEEP-CRASH-071",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationRemoveReceiptStage,
+        "KEEP-CRASH-072",
+        Migration,
+    ),
+    (
+        DurabilityCrashPoint::MigrationSynchronizeRootAfterReceiptCleanup,
+        "KEEP-CRASH-073",
+        Migration,
+    ),
 ];
 
 #[test]
@@ -173,7 +278,7 @@ fn crash_boundaries_have_one_contiguous_stable_vocabulary() {
 }
 
 #[test]
-fn only_record_append_selects_an_occurrence() {
+fn only_record_append_and_namespace_prefix_select_an_occurrence() {
     let occurrence_counted: Vec<_> = DurabilityCrashPoint::ALL
         .into_iter()
         .filter(|point| point.occurrence_counted())
@@ -181,6 +286,58 @@ fn only_record_append_selects_an_occurrence() {
 
     assert_eq!(
         occurrence_counted,
-        [DurabilityCrashPoint::AppendSegmentRecord]
+        [
+            DurabilityCrashPoint::AppendSegmentRecord,
+            DurabilityCrashPoint::MigrationAdmitNamespacePrefix
+        ]
     );
+}
+
+#[test]
+fn the_namespace_prefix_runs_one_during_case_per_directory() {
+    for point in DurabilityCrashPoint::ALL {
+        let expected = if point == DurabilityCrashPoint::MigrationAdmitNamespacePrefix {
+            DurabilityCrashPoint::NAMESPACE_PREFIX_DIRECTORIES
+        } else {
+            1
+        };
+        assert_eq!(
+            point.during_occurrences(),
+            expected,
+            "{}",
+            point.identifier()
+        );
+    }
+    assert_eq!(DurabilityCrashPoint::NAMESPACE_PREFIX_DIRECTORIES, 6);
+}
+
+#[test]
+fn migration_boundaries_follow_the_twenty_one_phases_in_order() {
+    let migration: Vec<_> = DurabilityCrashPoint::ALL
+        .into_iter()
+        .filter(|point| point.sequence() == Migration)
+        .collect();
+
+    assert_eq!(migration, DurabilityCrashPoint::MIGRATION);
+    assert_eq!(migration.len(), keep::StoreMigrationPhase::ALL.len());
+    assert_eq!(
+        DurabilityCrashPoint::MIGRATION.map(DurabilityCrashPoint::identifier),
+        std::array::from_fn::<_, 21, _>(|index| {
+            let ordinal = 53 + index;
+            let identifier = format!("KEEP-CRASH-{ordinal:03}");
+            DurabilityCrashPoint::from_identifier(&identifier)
+                .map_or("missing", DurabilityCrashPoint::identifier)
+        })
+    );
+}
+
+#[test]
+fn sequences_round_trip_their_command_line_identifiers() {
+    for sequence in DurabilityCrashSequence::ALL {
+        assert_eq!(
+            DurabilityCrashSequence::from_identifier(sequence.identifier()),
+            Some(sequence)
+        );
+    }
+    assert_eq!(DurabilityCrashSequence::from_identifier("retention"), None);
 }

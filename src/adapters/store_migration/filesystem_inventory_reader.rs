@@ -50,6 +50,19 @@ impl FilesystemStoreMigrationInventoryReader {
         policy: SegmentReadPolicy,
     ) -> Result<Self, FilesystemMigrationInventoryError> {
         let (lock, root_identity) = admission.into_parts();
+        Self::open_locked(lock, root_identity, policy)
+    }
+
+    /// Pins both immutable pools under an already-held writer lock.
+    ///
+    /// Migration recovery uses this so a root carrying migration residue never
+    /// mints a version-1 platform admission the version-1 publisher could
+    /// consume.
+    pub(super) fn open_locked(
+        lock: FilesystemWriterLock,
+        root_identity: FilesystemRootIdentity,
+        policy: SegmentReadPolicy,
+    ) -> Result<Self, FilesystemMigrationInventoryError> {
         let root =
             lock.clone_directory()
                 .map_err(|source| FilesystemMigrationInventoryError::Io {

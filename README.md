@@ -67,19 +67,28 @@ Keep is required to refuse all three, before mutating anything.
   files, replaced protocol directories, and every namespace or capacity
   violation before it writes anything. Each refusal is a typed value, not a
   string.
+- **Migration restart recovery.** Recovery verifies current authority,
+  classifies the observed prefix, and resumes an exact persisted migration
+  intent through the remaining phases. An incomplete pre-effect intent stage
+  is discarded and rebuilt from freshly verified current intent. Its crash
+  matrix kills real writer processes
+  at 68 before/during/after coordinates (`KEEP-CRASH-053`–`073`), preserving
+  every version-1 byte. Broader hostile restart combinations remain in #111.
 
 ## What it does not do yet
 
-Version 2 writes correctly from a clean start and, if it finds the residue of
-an interrupted publication, refuses rather than guesses. Nothing yet recovers
-that residue, and readers have no fence, so **an interrupted version-2
-publication waits for a human until #19 lands.** A version-1 store stays
-admitted until its owner migrates it; migrate only if you accept that wait.
+Version-2 retention publication writes from a clean start and refuses the
+residue of an interrupted retention publication. Retention publication recovery
+and the reader snapshot fence await integration from PR #99, so **an
+interrupted retention publication waits for explicit recovery.** Migration
+restart recovery is implemented and does not grant retention authority. A
+version-1 store stays admitted until its owner migrates it; migrate only if
+you accept that wait.
 
 | Gap | Tracked |
 | --- | --- |
-| Restart recovery for retention publication and migration | [#19](https://github.com/flyingrobots/keep/issues/19) |
-| Reader fence binding one consistent catalog + retention snapshot | [#19](https://github.com/flyingrobots/keep/issues/19) |
+| Retention publication restart recovery and broader migration corruption coverage | [PR #99](https://github.com/flyingrobots/keep/pull/99), [#111](https://github.com/flyingrobots/keep/issues/111) |
+| Reader fence binding one consistent catalog + retention snapshot | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
 | Precise verification reports at explicit depths | [#20](https://github.com/flyingrobots/keep/issues/20) |
 | Garbage collection and identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |
 | Bounded production ingestion through the durable store | [#82](https://github.com/flyingrobots/keep/issues/82) |
