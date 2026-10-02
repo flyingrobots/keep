@@ -120,3 +120,51 @@ fn cause<'a, T: Error + 'static>(mut error: &'a (dyn Error + 'static)) -> Option
         error = error.source()?;
     }
 }
+
+// Size: medium. Oracle: cleanup may remove only the exact retained source with proven pool evidence.
+// Bug regression; delete only when a stronger runtime identity law subsumes this boundary.
+#[test]
+fn substituted_cleanup_source_refuses_before_unlink() -> Result<(), Box<dyn Error>> {
+    let (sandbox, mut authority) = open_authority("cleanup-source-substitution")?;
+    let root = fixture(ROOT_HEX)?;
+    let preparation = initial_preparation(&root)?;
+    drive_publication(&mut authority, &preparation, 15)?;
+    let observation = RetentionRecoveryObservation::observe(
+        &authority.retention,
+        &authority.roots,
+        &authority.manifests,
+    )?;
+    let plan = plan_retention_recovery(observation.evidence())?;
+    authority.recovery = Some(RetentionRecoveryContext::reopen(
+        &authority.retention,
+        &observation,
+    )?);
+    let stage = sandbox.path().join("retention/root.next");
+    let replacement = stage.with_extension("replacement");
+    fs::copy(&stage, &replacement)?;
+    fs::rename(replacement, stage)?;
+    let before = retention_witness(sandbox.path())?;
+    let error = execute_retention_recovery(&mut authority, &plan)
+        .err()
+        .ok_or("cleanup deleted substituted source")?;
+    assert_eq!(
+        error.step(),
+        RetentionRecoveryStep::RemoveRootStage,
+        "source identity must be guarded before cleanup"
+    );
+    assert_eq!(
+        cause::<RetentionRecordRefusal>(&error),
+        Some(&RetentionRecordRefusal::KindLengthOrIdentity),
+        "source substitution must retain its typed cause"
+    );
+    assert!(
+        error.executed().is_empty(),
+        "no preceding recovery step completed"
+    );
+    assert_eq!(
+        retention_witness(sandbox.path())?,
+        before,
+        "pre-effect source refusal must preserve source and pool evidence"
+    );
+    Ok(())
+}

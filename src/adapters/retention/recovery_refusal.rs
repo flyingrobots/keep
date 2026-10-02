@@ -32,6 +32,15 @@ pub enum RetentionPool {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum RetentionRecoveryRefusal {
+    /// A retained stage is incomplete; automatic disposition is not supported.
+    IncompleteStageRequiresDisposition {
+        /// The stage requiring explicit disposition.
+        stage: RetentionFixedStage,
+        /// The minimum boundary currently required by decoding, not a completion proof.
+        expected: usize,
+        /// Bytes actually observed.
+        observed: usize,
+    },
     /// A stage is complete enough to judge and fails a canonical law.
     StageCorrupt {
         /// The stage that failed.
@@ -122,6 +131,14 @@ impl fmt::Display for RetentionPool {
 impl fmt::Display for RetentionRecoveryRefusal {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::IncompleteStageRequiresDisposition {
+                stage,
+                expected,
+                observed,
+            } => write!(
+                formatter,
+                "retention stage {stage} requires disposition: {observed} bytes, decoder requires {expected}"
+            ),
             Self::StageCorrupt { stage, .. } => {
                 write!(formatter, "retention stage {stage} is corrupt")
             }
@@ -172,6 +189,7 @@ impl RetentionRecoveryRefusal {
                 "root.next is not the successor of its namespace's current root"
             }
             Self::StageCorrupt { .. }
+            | Self::IncompleteStageRequiresDisposition { .. }
             | Self::TruncatedStageWithLaterEffect { .. }
             | Self::TruncatedStageWithoutEarlierEvidence { .. }
             | Self::PoolEntryDiffers { .. } => "retention recovery refused",

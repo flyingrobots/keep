@@ -43,6 +43,8 @@ mod filesystem_retention_fifo_tests;
 mod filesystem_retention_framing_prefix_tests;
 #[cfg(test)]
 mod filesystem_retention_generation_refusal_tests;
+#[cfg(test)]
+mod filesystem_retention_incomplete_disposition_tests;
 mod filesystem_retention_namespace;
 #[cfg(test)]
 mod filesystem_retention_namespace_tests;
