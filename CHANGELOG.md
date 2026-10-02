@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery verifies available checksum bytes in interrupted head stages and preserves contradictory prefixes as corrupt evidence instead of discarding them (#99).
+
 - Recovery preserves short heads whose complete generation/predecessor fields contradict initial or successor history, sharing semantic admission with complete head decoding (#99).
 
 - Recovery preserves interrupted head stages whose complete manifest-length field violates canonical bounds or alignment, returning the precise corruption cause instead of discarding them (#99).

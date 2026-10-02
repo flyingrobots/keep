@@ -69,6 +69,18 @@ pub(super) fn head(encoded: &[u8]) -> Result<(), RetentionHeadDecodeError> {
     if encoded.len() >= 104 {
         let _head = super::head_decoder::admit_fields(encoded)?;
     }
+    if let Some(preimage) = encoded.get(..super::head_decoder::CHECKSUM_OFFSET) {
+        let checksum = super::head_decoder::checksum(preimage);
+        admit(
+            encoded,
+            &[(super::head_decoder::CHECKSUM_OFFSET, &checksum)],
+            |offset, expected, observed| RetentionHeadDecodeError::PrefixByteMismatch {
+                offset,
+                expected,
+                observed,
+            },
+        )?;
+    }
     Ok(())
 }
 
