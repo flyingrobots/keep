@@ -4,6 +4,7 @@ mod expectation;
 mod migration;
 mod migration_expectation;
 mod retention;
+mod retention_snapshot;
 mod semantic;
 
 use std::collections::BTreeSet;

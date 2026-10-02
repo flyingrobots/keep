@@ -3,8 +3,8 @@
 //! After the child dies at its coordinate, restart reopens the migrated store
 //! through the same admission a production caller would use, runs retention
 //! recovery, and requires the documented steps and outcome for that exact
-//! prefix; then it requires the forward retry to report the outcome recovery
-//! predicts.
+//! prefix; then it independently reads the persistent snapshot before requiring
+//! the forward retry to report the outcome recovery predicts.
 
 use std::io;
 use std::path::Path;
@@ -56,6 +56,8 @@ pub(super) fn verify(
         )));
     }
     let root = GoldenFixture::retention_root()?;
+    let generation = (prefix(case).0 >= 12).then_some(1);
+    super::retention_snapshot::verify(store_root, root.bytes(), generation)?;
     let preparation = preparation(root.bytes())?;
     match (
         retry,

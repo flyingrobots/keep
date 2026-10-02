@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- The retention process-death matrix now independently reads the recovered head generation and exact selected-root bytes before forward retry, including absence before publication (#99).
+
 - Successor recovery evidence now covers every ordered publication prefix and verifies the recovered generation and exact selected-root bytes through the fenced reader; the ledger distinguishes this from sampled mid-write truncations (#99).
 
 - Publication now identifies recovery-observation failures through `RecoveryObservationRefused`, preserving the original typed or OS cause in its error chain; explicit recovery and later planning/execution boundaries retain their existing behavior (#99).
