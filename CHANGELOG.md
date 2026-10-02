@@ -758,6 +758,8 @@ after its public API and format compatibility policies are established.
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
+- Retention and migration crash tasks share the migration repository-task
+  constructor after main integration instead of defining it twice (#19).
 - Explicit retention recovery verifies the pinned retention and immutable-pool
   directory identities before any recovery effect, preserving retained stage
   evidence when a protocol directory was replaced (#19, PR #99).
