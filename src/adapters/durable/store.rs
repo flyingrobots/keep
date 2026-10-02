@@ -20,6 +20,35 @@ use crate::{BlobId, ByteRange, LayoutId};
 /// Every convenience read pays the complete snapshot admission and allocation
 /// cost described by [`DurableSnapshot`]; callers doing repeated reads should
 /// retain an explicit snapshot. No method here publishes or synchronizes data.
+///
+/// # Example
+///
+/// On Linux, read an already migrated version-two store with a retained blob.
+/// The caller owns output visibility: a failed write can leave an untrusted
+/// prefix. The receipt names the view; it does not extend retention after the
+/// snapshot is dropped. This example's byte budget is application policy.
+///
+/// ```no_run
+/// #[cfg(target_os = "linux")]
+/// fn copy_retained_blob(
+///     root: &std::path::Path,
+///     target: keep::BlobId,
+///     output: &mut impl std::io::Write,
+/// ) -> Result<keep::DurableReconstructionReceipt, Box<dyn std::error::Error>> {
+///     use keep::{
+///         CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, LayoutEntryLimit,
+///         ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit,
+///     };
+///     // Explicit admission budget for the catalog and selected segment bytes.
+///     let policy = CatalogRestartPolicy::new(
+///         SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
+///         CatalogRestartByteLimit::new(16_777_216)?,
+///     );
+///     let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT);
+///     let snapshot = store.snapshot()?;
+///     Ok(snapshot.reconstruct(target, output)?)
+/// }
+/// ```
 #[must_use]
 #[derive(Debug)]
 pub struct DurableStore {
