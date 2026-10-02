@@ -141,3 +141,52 @@ fn a_complete_manifest_without_its_root_reports_the_missing_root() -> Result<(),
     );
     Ok(())
 }
+
+// Size: medium. Oracle: Core Law refuses checksum corruption and preserves the exact evidence.
+// Delete only when stronger filesystem recovery coverage subsumes this corruption law.
+#[test]
+fn checksum_corrupt_root_stage_is_refused_without_changing_evidence() -> Result<(), Box<dyn Error>>
+{
+    use super::filesystem_retention_test_fixture::retention_witness;
+    use super::{
+        FilesystemRetentionRecoveryError, RetentionFixedStage, RetentionRecoveryRefusal,
+        RetentionRootDecodeError,
+    };
+
+    let (sandbox, mut authority) = open_authority("recovery-checksum-corrupt-root")?;
+    let root_bytes = fixture(ROOT_HEX)?;
+    let mut corrupt = root_bytes.clone();
+    *corrupt.last_mut().ok_or("empty root fixture")? ^= 0x01;
+    let checksum_offset = root_bytes.len().checked_sub(32).ok_or("missing checksum")?;
+    let expected_checksum: [u8; 32] = root_bytes
+        .get(checksum_offset..)
+        .ok_or("missing checksum")?
+        .try_into()?;
+    let observed_checksum: [u8; 32] = corrupt
+        .get(checksum_offset..)
+        .ok_or("missing damaged checksum")?
+        .try_into()?;
+    fs::write(sandbox.path().join("retention/root.next"), &corrupt)?;
+    let before = retention_witness(sandbox.path())?;
+
+    let result = authority.recover();
+
+    assert!(
+        matches!(&result,
+            Err(FilesystemRetentionRecoveryError::Plan {
+                source: RetentionRecoveryRefusal::StageCorrupt {
+                    stage: RetentionFixedStage::Root, source,
+                },
+            }) if matches!(source.downcast_ref::<RetentionRootDecodeError>(),
+                Some(RetentionRootDecodeError::ChecksumMismatch { expected, observed })
+                    if *expected == expected_checksum && *observed == observed_checksum)
+        ),
+        "corrupt root stage must report its exact checksum refusal: {result:?}"
+    );
+    assert_eq!(
+        retention_witness(sandbox.path())?,
+        before,
+        "corrupt-stage refusal must preserve all retained bytes"
+    );
+    Ok(())
+}

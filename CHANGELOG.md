@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Filesystem recovery tests now require the exact checksum-corrupt root-stage refusal and unchanged retained evidence, with calibrated diagnostic and deletion checks (#99).
+
 - Recovery now reports `ManifestStageWithoutRootStage` when complete head and manifest stages lack their root stage, instead of incorrectly reporting a missing manifest; refusal preserves retained evidence (#99).
 
 - The retention process-death matrix now independently reads the recovered head generation and exact selected-root bytes before forward retry, including absence before publication (#99).
