@@ -122,6 +122,15 @@ pub enum RetentionRootDecodeError {
         /// Preserved coordinate failure.
         source: BlobIdBinaryParseError,
     },
+    /// An incomplete layout length cannot fit within its format ceiling.
+    LayoutLengthPrefixAboveMaximum {
+        /// Zero-based anchor index.
+        index: u32,
+        /// Smallest completion of the available big-endian length bytes.
+        minimum: u64,
+        /// Maximum admitted layout record length.
+        maximum: u64,
+    },
     /// One anchor contained a malformed `LayoutId`.
     LayoutId {
         /// Zero-based anchor index.

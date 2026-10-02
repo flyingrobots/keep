@@ -80,6 +80,14 @@ impl fmt::Display for RetentionRootDecodeError {
                     "invalid BlobId in retention anchor {index}: {source}"
                 )
             }
+            Self::LayoutLengthPrefixAboveMaximum {
+                index,
+                minimum,
+                maximum,
+            } => write!(
+                formatter,
+                "retention anchor {index} layout-length prefix requires at least {minimum}; maximum is {maximum}"
+            ),
             Self::LayoutId { index, source } => {
                 write!(
                     formatter,
@@ -122,6 +130,7 @@ impl Error for RetentionRootDecodeError {
             | Self::TrailingData { .. }
             | Self::PrefixByteMismatch { .. }
             | Self::ClosureLimitPrefixAboveMaximum { .. }
+            | Self::LayoutLengthPrefixAboveMaximum { .. }
             | Self::InvalidMagic { .. }
             | Self::UnsupportedVersion { .. }
             | Self::InvalidHeaderLength { .. }
