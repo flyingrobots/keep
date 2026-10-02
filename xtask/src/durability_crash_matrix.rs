@@ -12,9 +12,11 @@ use std::path::Path;
 pub(crate) use error::DurabilityCrashMatrixError;
 use xtask::{
     DurabilityCrashCase, DurabilityCrashOccurrence, DurabilityCrashPoint, DurabilityCrashPosition,
+    DurabilityCrashSequence,
 };
 
 const CASE_ARGUMENT: &str = "--case";
+const SEQUENCE_ARGUMENT: &str = "--sequence";
 
 pub(crate) fn run(
     repository_root: &Path,
@@ -26,6 +28,14 @@ pub(crate) fn run(
         }
         return Ok(());
     };
+    if flag == OsStr::new(SEQUENCE_ARGUMENT) {
+        let sequence = parse_sequence(&mut arguments)?;
+        refuse_extra(&mut arguments)?;
+        for case in DurabilityCrashCase::in_sequence(sequence) {
+            run_case(repository_root, case)?;
+        }
+        return Ok(());
+    }
     if flag != OsStr::new(CASE_ARGUMENT) {
         return Err(DurabilityCrashMatrixError::Usage);
     }
@@ -44,6 +54,8 @@ pub(crate) fn run_child(
     child::run(case, Path::new(&case_root), Path::new(&readiness_socket))
 }
 
+/// Parses `POINT POSITION [OCCURRENCE]`; the occurrence is read only for an
+/// occurrence-counted boundary and defaults to the first occurrence.
 fn parse_case(
     arguments: &mut impl Iterator<Item = OsString>,
 ) -> Result<DurabilityCrashCase, DurabilityCrashMatrixError> {
@@ -59,11 +71,38 @@ fn parse_case(
         .ok_or(DurabilityCrashMatrixError::InvalidPositionEncoding)?;
     let position = DurabilityCrashPosition::from_identifier(position_text)
         .ok_or_else(|| DurabilityCrashMatrixError::UnknownPosition(position_text.into()))?;
-    let occurrence = point
-        .occurrence_counted()
-        .then_some(DurabilityCrashOccurrence::FIRST);
+    let occurrence = if point.occurrence_counted() {
+        Some(parse_occurrence(arguments)?)
+    } else {
+        None
+    };
     DurabilityCrashCase::new(point, position, occurrence)
         .map_err(DurabilityCrashMatrixError::InvalidCase)
+}
+
+fn parse_occurrence(
+    arguments: &mut impl Iterator<Item = OsString>,
+) -> Result<DurabilityCrashOccurrence, DurabilityCrashMatrixError> {
+    let Some(argument) = arguments.next() else {
+        return Ok(DurabilityCrashOccurrence::FIRST);
+    };
+    let text = argument
+        .to_str()
+        .ok_or(DurabilityCrashMatrixError::InvalidOccurrenceEncoding)?;
+    text.parse()
+        .map(DurabilityCrashOccurrence::new)
+        .map_err(|_| DurabilityCrashMatrixError::UnknownOccurrence(text.into()))
+}
+
+fn parse_sequence(
+    arguments: &mut impl Iterator<Item = OsString>,
+) -> Result<DurabilityCrashSequence, DurabilityCrashMatrixError> {
+    let argument = arguments.next().ok_or(DurabilityCrashMatrixError::Usage)?;
+    let text = argument
+        .to_str()
+        .ok_or(DurabilityCrashMatrixError::InvalidSequenceEncoding)?;
+    DurabilityCrashSequence::from_identifier(text)
+        .ok_or_else(|| DurabilityCrashMatrixError::UnknownSequence(text.into()))
 }
 
 fn refuse_extra(

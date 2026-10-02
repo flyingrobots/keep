@@ -2,7 +2,7 @@
 
 use crate::{
     DurabilityCrashCaseError, DurabilityCrashOccurrence, DurabilityCrashPoint,
-    DurabilityCrashPosition,
+    DurabilityCrashPosition, DurabilityCrashSequence,
 };
 
 /// One validated process-death coordinate in the durability crash matrix.
@@ -21,12 +21,19 @@ impl DurabilityCrashCase {
     /// Returns [`DurabilityCrashCaseError::MissingOccurrence`] when a repeated
     /// transition lacks an occurrence, or
     /// [`DurabilityCrashCaseError::UnexpectedOccurrence`] when a non-repeated
-    /// transition receives one.
+    /// transition receives one. Namespace admission also returns
+    /// [`DurabilityCrashCaseError::OccurrenceOutOfRange`] outside its six
+    /// `during` occurrences or sole `before` and `after` occurrences.
     pub const fn new(
         point: DurabilityCrashPoint,
         position: DurabilityCrashPosition,
         occurrence: Option<DurabilityCrashOccurrence>,
     ) -> Result<Self, DurabilityCrashCaseError> {
+        if let Some(observed) = occurrence
+            && let Err(source) = validate_fixed_range(point, position, observed)
+        {
+            return Err(source);
+        }
         match (point.occurrence_counted(), occurrence) {
             (true, None) => Err(DurabilityCrashCaseError::MissingOccurrence { point }),
             (false, Some(observed)) => {
@@ -41,11 +48,38 @@ impl DurabilityCrashCase {
     }
 
     /// Returns every canonical case in point-major, position-minor order.
+    ///
+    /// A boundary with more than one `during` occurrence contributes one
+    /// `during` case per occurrence, in occurrence order, between its
+    /// `before` and `after` cases.
     pub fn all() -> impl Iterator<Item = Self> {
         DurabilityCrashPoint::ALL.into_iter().flat_map(|point| {
             DurabilityCrashPosition::ALL
                 .into_iter()
-                .map(move |position| Self::canonical(point, position))
+                .flat_map(move |position| Self::canonical_at(point, position))
+        })
+    }
+
+    /// Returns every canonical case whose boundary belongs to `sequence`.
+    pub fn in_sequence(sequence: DurabilityCrashSequence) -> impl Iterator<Item = Self> {
+        Self::all().filter(move |case| case.point().sequence() == sequence)
+    }
+
+    fn canonical_at(
+        point: DurabilityCrashPoint,
+        position: DurabilityCrashPosition,
+    ) -> impl Iterator<Item = Self> {
+        let occurrences = if position == DurabilityCrashPosition::During {
+            point.during_occurrences()
+        } else {
+            1
+        };
+        (0..occurrences).map(move |ordinal| {
+            let mut case = Self::canonical(point, position);
+            if point.occurrence_counted() {
+                case.occurrence = Some(DurabilityCrashOccurrence::new(ordinal));
+            }
+            case
         })
     }
 
@@ -78,4 +112,27 @@ impl DurabilityCrashCase {
             },
         }
     }
+}
+
+const fn validate_fixed_range(
+    point: DurabilityCrashPoint,
+    position: DurabilityCrashPosition,
+    observed: DurabilityCrashOccurrence,
+) -> Result<(), DurabilityCrashCaseError> {
+    if !matches!(point, DurabilityCrashPoint::MigrationAdmitNamespacePrefix) {
+        return Ok(());
+    }
+    let exclusive_limit = if matches!(position, DurabilityCrashPosition::During) {
+        point.during_occurrences()
+    } else {
+        1
+    };
+    if observed.get() >= exclusive_limit {
+        return Err(DurabilityCrashCaseError::OccurrenceOutOfRange {
+            point,
+            observed,
+            exclusive_limit,
+        });
+    }
+    Ok(())
 }

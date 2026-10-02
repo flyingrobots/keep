@@ -202,3 +202,35 @@ fn ambiguous_namespace() -> io::Error {
         "store root is not an empty or partial canonical initialization namespace",
     )
 }
+
+/// Admits a published version-1 root carrying any subset of migration
+/// residue, for migration recovery only.
+///
+/// The five published names are required with their kinds; every migration
+/// record, stage, the reader fence, and the three protocol directories are
+/// optional but must have their kinds; anything else refuses. Which subsets
+/// are lawful is the recovery planner's decision, not this admission's.
+pub(super) fn admit_migrating(directory: &Dir) -> io::Result<()> {
+    admit_required_file(directory, LOCK_NAME)?;
+    admit_required_directory(directory, STAGING_NAME)?;
+    admit_required_directory(directory, SEGMENTS_NAME)?;
+    admit_required_directory(directory, CATALOGS_NAME)?;
+    admit_required_file(directory, HEAD_NAME)?;
+    for name in [
+        READER_LOCK_NAME,
+        MARKER_NAME,
+        "FORMAT.next",
+        INTENT_NAME,
+        "migration.intent.next",
+        RECEIPT_NAME,
+        "migration.receipt.next",
+    ] {
+        admit_optional_file(directory, name)?;
+    }
+    for name in [RETENTION_NAME, GC_NAME, RECOVERY_NAME] {
+        admit_optional_directory(directory, name)?;
+    }
+    let mut allowed: Vec<&str> = PUBLISHED_NAMES.to_vec();
+    allowed.extend_from_slice(&VERSION_TWO_MARKERS);
+    admit_membership(directory, &allowed)
+}

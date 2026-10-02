@@ -38,9 +38,10 @@
 //! and the complete synchronization mask. Writer-locked filesystem authority
 //! now executes one fresh forward migration through exact fixed-record and
 //! namespace transitions while retaining version-1 immutable bytes.
-//! Partial-prefix migration recovery, filesystem retention execution,
-//! immutable reader snapshots, and garbage collection remain intentionally
-//! absent.
+//! Partial-prefix recovery now plans and resumes lawful migration residue,
+//! returning typed refusals and an ordered execution receipt. Filesystem
+//! retention publication is available; retention restart recovery, immutable
+//! reader snapshots, and garbage collection remain absent.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -146,6 +147,13 @@ pub use adapters::{
     RetentionTransitionPreflight, RetentionTransitionPreflightError, RetentionTransitionReadiness,
     VerifiedRetentionClosure, execute_retention_publication, plan_retention_transition,
     preflight_retention_transition, prepare_retention_publication, verify_retention_closure,
+};
+pub use adapters::{
+    FilesystemMigrationRecoveryRefusal, FilesystemMigrationResidueKind, MIGRATION_NAMESPACE_PREFIX,
+    StoreMigrationEffect, StoreMigrationFixedStage, StoreMigrationNamespacePrefix,
+    StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError, StoreMigrationRecoveryPlan,
+    StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,
+    StoreMigrationStageDecodeError, plan_store_migration_recovery, recover_store_migration,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
