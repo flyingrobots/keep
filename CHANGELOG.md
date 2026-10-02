@@ -624,6 +624,30 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- The version-one ledger discloses the pending repository-task sealed-stage
+  capability escape (#146) while preserving the immutability requirement (#69).
+
+- The version-one segment ledger points to the existing filesystem-stage
+  regression module for exclusive staging and dropped-stage evidence (#69).
+
+- The version-one recovery overview links its implemented transitive
+  candidate-view admission to the next-head boundary and requirement anchors (#69).
+
+- Version-one publication documentation assigns unchecked publisher
+  construction to the crash harness and fault injection to its decorators (#69).
+
+- Version-one crash documentation identifies its 105 cases as a subset of
+  the complete command, which also executes version-two migration cases (#69).
+
+- Version-one recovery documentation distinguishes streamed inventory
+  fingerprint evidence from caller-supplied classifier bytes and the segment
+  resumer's separate materialization (#69).
+
+- Living version-1 format pages describe implemented initialization,
+  platform admission, publication, restart, recovery, and process-death
+  evidence rather than completed issue-era plans (#69). Historical issue
+  references and existing requirement/test anchors remain available.
+
 - The migration transition-ledger guard rejects noncanonical line endings,
   extra rows, misplaced discard claims, and counterfeit completion postures.
   Recovery posture and namespace interruption checks use their exact columns.
