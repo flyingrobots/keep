@@ -99,7 +99,4 @@ Restart compares device and inode identity; mount identity is same-process
 evidence. Whenever an exact intent survives, recovery continues with its
 persisted bytes.
 
-The filesystem laws cover every forward prefix, every strict byte-prefix
-truncation of all three stages, unchanged version-1 bytes, and refusal before
-mutation for corrupt intent and unexpected nested residue. The complete
-restart corruption matrix remains tracked separately in #111.
+The filesystem laws cover every forward prefix, every strict byte-prefix truncation of all three stages and unchanged version-1 bytes. The [restart ambiguity matrix](../../testing-evidence/migration-restart-matrix.md) covers corrupt records, contradictory and byte-equal substituted stages, invalid ordering, copied-root identity, immutable-pool and current-head damage, changed inventory, foreign receipts, unknown names and wrong kinds. Each new refusal retains a complete before/after witness of names, file identities and bytes and checks the existing typed failure boundary. The evidence record distinguishes kernel/filesystem behavior from platform-admission, process-death and power-loss claims.

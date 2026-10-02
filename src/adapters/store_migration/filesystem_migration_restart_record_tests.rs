@@ -134,3 +134,30 @@ fn overlong_stages_refuse_restart_without_disposal() -> Result<(), Box<dyn Error
     }
     Ok(())
 }
+
+// Size: medium. Oracle: a checksummed receipt from another root cannot bind this intent.
+// Delete only if receipts no longer bind the migration intent.
+#[test]
+fn a_valid_foreign_receipt_refuses_its_conflicting_intent_digest() -> Result<(), Box<dyn Error>> {
+    use super::AdmittedStoreMigrationIntent;
+    let store = prefix("restart-foreign-receipt-local", Phase::RemoveReceiptStage)?;
+    let foreign = prefix("restart-foreign-receipt-other", Phase::RemoveReceiptStage)?;
+    let own_intent = fs::read(store.path().join("migration.intent"))?;
+    let other_intent = fs::read(foreign.path().join("migration.intent"))?;
+    let expected = AdmittedStoreMigrationIntent::decode(&own_intent)?.digest();
+    let observed = AdmittedStoreMigrationIntent::decode(&other_intent)?.digest();
+    fs::copy(
+        foreign.path().join("migration.receipt"),
+        store.path().join("migration.receipt"),
+    )?;
+    let error = refusal(store.path())?;
+    assert!(
+        matches!(error.downcast_ref::<Recovery>(), Some(Recovery::Ambiguity {
+        source: Ambiguity::ReceiptUndecodable { source: ReceiptDecode::IntentDigestMismatch { expected: found_expected, observed: found_observed } }
+    }) if found_expected == expected.as_bytes() && found_observed == observed.as_bytes()),
+        "{error:?}"
+    );
+    store.remove()?;
+    foreign.remove()?;
+    Ok(())
+}

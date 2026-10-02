@@ -8,7 +8,7 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
-- Migration restart laws now preserve complete filesystem witnesses when rejecting damaged records, conflicting or substituted stages, invalid ordering and copied-root identity; the broader restart matrix remains in progress (#111).
+- Migration restart laws preserve complete filesystem witnesses when rejecting damaged records and pools, conflicting or substituted stages, invalid ordering, copied-root identity, changed inventory, foreign receipts, unknown names and wrong kinds (#111).
 
 - Retention recovery execution errors report the exact failed boundary, original typed cause, known namespace effects and uncertain effect/durability; retries freshly observe the store. Observed stage identity remains binding across reopening, and cleanup preserves verified pool evidence rather than promising the removed pathname survives (#99).
 
