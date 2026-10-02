@@ -15,3 +15,9 @@ The comparison allocates no memory and examines only bounded fixed-field bytes. 
 The filesystem regression requires the exact stage-specific refusal and equality of every retained file's bytes before and after refusal. Generated laws verify strict canonical prefixes and contradictory fixed bytes across interrupted lengths. Diagnostic, valid-prefix, and byte-preservation assertions were separately calibrated by mutations that changed production behavior and failed the named checks. The retention fuzz target now exercises stage assessment as well as complete decoding.
 
 This decision does not claim complete semantic admission of incomplete variable fields, validation of every recovery transition, or physical power-loss evidence. Those remain separate review obligations; the PR is not approved by this focused fix alone.
+
+## Complete generation fields
+
+A complete generation field in an incomplete record is independently decidable. Root generations and global liveness generations must be positive, so recovery uses the existing domain constructors as soon as all eight generation bytes are present. Zero produces the existing record-specific generation error and `StageCorrupt`; a shorter field remains unknown and is not padded or rejected as zero.
+
+Public laws sweep every later strict prefix after a complete zero generation, and the filesystem law requires corruption refusal and equality of every retained file's bytes. They fail on unfixed production `ce54ae50eb99ba6b44d45c43f97b80e64b1e55c4`. A separate production mutation deleting evidence before planning confirms the byte-preservation assertion independently of the refusal. This extends the fixed-field correction without claiming admission of other incomplete semantic fields.

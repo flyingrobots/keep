@@ -8,8 +8,9 @@ use super::{
 /// One fixed retention stage as assessed from its exact bytes at restart.
 ///
 /// `Truncated` means the bytes end before the boundary the record's own
-/// framing declares and available fixed-field bytes are canonical, which is
-/// the shape a crash during the stage write leaves behind. A short record with
+/// framing declares, available fixed-field bytes are canonical, and any complete
+/// generation field is positive. This is the shape a crash during the stage
+/// write leaves behind. A short record with
 /// a noncanonical fixed-field byte is `Corrupt`, just as a complete-looking record
 /// that fails a checksum, digest, or semantic law is unrecoverable ambiguity,
 /// never an incomplete write.

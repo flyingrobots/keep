@@ -667,6 +667,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Interrupted retention stages with complete zero root or liveness generations now refuse recovery with the existing typed generation error before any mutation (#99). Incomplete generation fields remain eligible for canonical-prefix recovery; complete-record decoding and durable encodings are unchanged.
+
 - Retention recovery refuses an interrupted root, manifest, or head stage when any available magic, version, fixed width, flag, or reserved byte contradicts the canonical format (#99). The typed `PrefixByteMismatch` names the actual byte and offset without inventing missing bytes; refusal preserves retained evidence. Canonical interrupted prefixes remain recoverable. Complete-record decoding and on-disk bytes are unchanged; the decode-error enums gain a diagnostic variant.
 
 - The version-one catalog ledger names its executable ordering integration

@@ -251,7 +251,7 @@ a retained root.
 
 <!-- markdownlint-disable MD013 -->
 
-Available fixed-field bytes in an interrupted retention stage must match the canonical magic, version, header or record width, flags, anchor or entry width, and reserved fields. A contradiction is `StageCorrupt` with a `PrefixByteMismatch` source naming the exact offset, expected byte, and observed byte; recovery refuses before mutation and preserves every retained file. Absent bytes are not padded or reported as observed. This check does not establish semantic validity of incomplete variable fields.
+Available fixed-field bytes in an interrupted retention stage must match the canonical magic, version, header or record width, flags, anchor or entry width, and reserved fields. A contradiction is `StageCorrupt` with a `PrefixByteMismatch` source naming the exact offset, expected byte, and observed byte; recovery refuses before mutation and preserves every retained file. Absent bytes are not padded or reported as observed. Complete generation fields must also admit through the positive root or liveness generation constructor; zero is corruption even if later fields are absent. Incomplete generation fields remain undecided. These checks do not establish semantic validity of other incomplete variable fields.
 
 <!-- markdownlint-enable MD013 -->
 

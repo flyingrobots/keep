@@ -107,7 +107,7 @@ fn read_u32(encoded: &[u8], offset: usize) -> Result<u32, RetentionHeadDecodeErr
     read_array(encoded, offset).map(u32::from_be_bytes)
 }
 
-fn read_u64(encoded: &[u8], offset: usize) -> Result<u64, RetentionHeadDecodeError> {
+pub(super) fn read_u64(encoded: &[u8], offset: usize) -> Result<u64, RetentionHeadDecodeError> {
     read_array(encoded, offset).map(u64::from_be_bytes)
 }
 
