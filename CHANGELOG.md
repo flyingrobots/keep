@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery preserves partial root anchors with contradictory embedded identity bytes or invalid complete layout-length fields, sharing the identity codecs' rules (#99).
+
 - Recovery preserves partial manifest entries whose namespace prefix cannot satisfy strict ordering or whose completed root-generation field is zero (#99).
 
 - Recovery validates complete anchors and manifest entries inside interrupted bodies, preserving malformed identities, zero generations and duplicate ordering violations before discard (#99).

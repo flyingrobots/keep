@@ -30,7 +30,7 @@ fn contradictory_partial_anchor_fields_preserve_evidence() -> Result<(), Box<dyn
     for index in [0_u32, 1] {
         for relative in (0_usize..19).chain(59..79) {
             let length = relative.checked_add(1).ok_or("length overflow")?;
-            let (mut prefix, start) = partial_anchor(index, length)?;
+            let PartialAnchor { mut prefix, start } = partial_anchor(index, length)?;
             let offset = start.checked_add(relative).ok_or("offset overflow")?;
             let expected = *prefix.get(offset).ok_or("missing field byte")?;
             let observed = expected ^ 1;
@@ -55,7 +55,7 @@ fn invalid_lengths_in_partial_anchors_preserve_evidence() -> Result<(), Box<dyn 
     for index in [0_u32, 1] {
         for length in [87, 118] {
             for observed in [0_u64, 177, 46_137_521] {
-                let (mut prefix, start) = partial_anchor(index, length)?;
+                let PartialAnchor { mut prefix, start } = partial_anchor(index, length)?;
                 let field_start = start.checked_add(79).ok_or("offset overflow")?;
                 let field_end = start.checked_add(87).ok_or("offset overflow")?;
                 prefix
@@ -78,7 +78,12 @@ fn invalid_lengths_in_partial_anchors_preserve_evidence() -> Result<(), Box<dyn 
     Ok(())
 }
 
-fn partial_anchor(index: u32, length: usize) -> Result<(Vec<u8>, usize), Box<dyn Error>> {
+struct PartialAnchor {
+    prefix: Vec<u8>,
+    start: usize,
+}
+
+fn partial_anchor(index: u32, length: usize) -> Result<PartialAnchor, Box<dyn Error>> {
     let root = fixture(ROOT_HEX)?;
     let mut prefix = root
         .get(..195)
@@ -103,7 +108,7 @@ fn partial_anchor(index: u32, length: usize) -> Result<(Vec<u8>, usize), Box<dyn
         .get_mut(44..48)
         .ok_or("missing count")?
         .copy_from_slice(&count.to_be_bytes());
-    Ok((prefix, start))
+    Ok(PartialAnchor { prefix, start })
 }
 
 fn require_preservation(prefix: &[u8], expected: &Fault) -> Result<(), Box<dyn Error>> {

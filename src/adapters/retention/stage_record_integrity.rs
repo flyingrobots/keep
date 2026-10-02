@@ -25,7 +25,7 @@ pub(super) fn root(encoded: &[u8]) -> Result<(), RootError> {
         )?;
     }
     if let Some(anchors) = encoded.get(body_start..encoded.len().min(digest_offset)) {
-        super::root_anchor_decoder::admit_prefix(anchors)?;
+        super::root_anchor_decoder::admit_prefix(anchors, body_start)?;
     }
     Ok(())
 }

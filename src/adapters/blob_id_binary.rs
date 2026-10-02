@@ -3,9 +3,9 @@
 use super::blob_id_binary_error::BlobIdBinaryParseError;
 use crate::blob::{BlobId, BlobLength};
 
-const BINARY_MAGIC: [u8; 16] = *b"KEEP:BLOB:ID\0\0\0\0";
-const IDENTITY_VERSION: u16 = 1;
-const HASH_ALGORITHM: u8 = 1;
+pub(super) const BINARY_MAGIC: [u8; 16] = *b"KEEP:BLOB:ID\0\0\0\0";
+pub(super) const IDENTITY_VERSION: u16 = 1;
+pub(super) const HASH_ALGORITHM: u8 = 1;
 const BINARY_BYTES: usize = 59;
 
 impl BlobId {

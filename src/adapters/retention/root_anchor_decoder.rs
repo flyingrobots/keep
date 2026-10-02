@@ -36,12 +36,22 @@ pub(super) fn decode(
     }
 }
 
-/// Admits available complete anchors without allocating the unavailable suffix.
-pub(super) fn admit_prefix(encoded: &[u8]) -> Result<(), RetentionRootDecodeError> {
+/// Admits complete anchors and available coordinates in the partial suffix.
+pub(super) fn admit_prefix(
+    encoded: &[u8],
+    body_start: usize,
+) -> Result<(), RetentionRootDecodeError> {
     let mut previous = None;
-    for (position, bytes) in encoded.chunks_exact(ANCHOR_WIDTH).enumerate() {
+    for (position, bytes) in encoded.chunks(ANCHOR_WIDTH).enumerate() {
         let index =
             u32::try_from(position).map_err(|_| RetentionRootDecodeError::LengthOverflow)?;
+        if bytes.len() < ANCHOR_WIDTH {
+            let start = position
+                .checked_mul(ANCHOR_WIDTH)
+                .and_then(|offset| body_start.checked_add(offset))
+                .ok_or(RetentionRootDecodeError::LengthOverflow)?;
+            return super::root_anchor_prefix::admit(bytes, index, start);
+        }
         previous = Some(admit_anchor(bytes, index, previous)?);
     }
     Ok(())
