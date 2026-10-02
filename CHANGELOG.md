@@ -628,6 +628,23 @@ after its public API and format compatibility policies are established.
   target, duplicate-refusal module, and filesystem publication unit-test owner
   instead of absent test files (#148).
 
+- Benchmark report admission refuses identical or conflicting repeated metadata
+  coordinates with a typed failure naming the coordinate (issue #142). Complete
+  canonical report admission remains in progress. Ordered metadata keys, exact
+  headers/catalogs, complete metric widths and canonical unsigned decimals now
+  refuse malformed reports while admitting the committed historical fixture.
+  Fixed measurement policies and consistent per-row sample counts are admitted
+  before publication. Ratios, throughput, percentile order and reused-chunk
+  bounds now refuse inconsistent evidence with typed expected/observed failures;
+  arithmetic and numeric parsing refuse without approximation. Byte/count
+  metrics admit only their portable unsigned 64-bit range; timing and throughput
+  retain unsigned 128-bit precision. Publication requires an immutable admitted
+  report; refusal preserves the prior artifact and retained recovery stage.
+  Direct parser admission enforces the same one-MiB input ceiling as subprocess
+  capture before decoding, and preserves UTF-8 error sources. A dedicated
+  I/O-free fuzz facade exercises the production parser with a deterministic
+  historical seed; seed preparation and campaign discovery include the target.
+
 - The benchmark workload catalog describes current range authentication once
   before output, matching its single-pass metric definitions (#71).
 

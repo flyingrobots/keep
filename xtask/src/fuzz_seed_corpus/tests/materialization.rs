@@ -47,7 +47,8 @@ fn seed_preparation_materializes_the_complete_deterministic_set()
     prepare(root)?;
     let corpus = root.join("fuzz/corpus");
     let first = seed_contents(&corpus)?;
-    assert_eq!(first.len(), 46);
+    assert_eq!(first.len(), 47);
+    assert_eq!(target_seed_count(&first, "benchmark_report/"), 1);
     assert_eq!(target_seed_count(&first, "catalog_format/"), 6);
     assert_eq!(target_seed_count(&first, "golden_protocol/"), 9);
     assert_eq!(target_seed_count(&first, "layout_record/"), 4);
