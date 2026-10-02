@@ -24,6 +24,10 @@ use crate::{RetentionHead, RetentionManifest, RetentionNamespaceDigest};
 
 const HEAD_NAME: &str = "HEAD";
 
+#[cfg(test)]
+#[path = "filesystem_retention_snapshot_pinning_tests.rs"]
+mod pinning_tests;
+
 /// One consistent reader view: the catalog snapshot, the retention head, and
 /// the manifest it selects, all observed under one shared reader fence.
 ///
