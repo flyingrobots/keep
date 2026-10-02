@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery fixtures now use production's head-to-manifest binding validation, preventing independently valid but contradictory records from becoming observed retention state (#99).
+
 - Repository-task migration admission now reports root capability-clone failures as namespace failures and identity-probe failures as root-identity failures, preserving their I/O causes (#99).
 
 - Reader collection tests now reject same-generation digest changes and require preserved I/O causes at all three read boundaries, using returned payloads instead of script load counters (#99).
