@@ -67,8 +67,10 @@ Keep is required to refuse all three, before mutating anything.
   violation before it writes anything. Each refusal is a typed value, not a
   string.
 - **Migration restart recovery.** Recovery verifies current authority,
-  classifies the observed prefix, and resumes the persisted migration intent
-  through the remaining phases. Its crash matrix kills real writer processes
+  classifies the observed prefix, and resumes an exact persisted migration
+  intent through the remaining phases. An incomplete pre-effect intent stage
+  is discarded and rebuilt from freshly verified current intent. Its crash
+  matrix kills real writer processes
   at 68 before/during/after coordinates (`KEEP-CRASH-053`–`073`), preserving
   every version-1 byte. Broader hostile restart combinations remain in #111.
 
