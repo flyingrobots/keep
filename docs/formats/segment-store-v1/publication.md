@@ -134,10 +134,10 @@ which runs the ordered initialization protocol (`KEEP-RECOVERY-002`); a
 published store reacquires one through `FilesystemPlatformAdmission::reopen`,
 which mutates nothing and admits the production platform
 (`KEEP-RECOVERY-003`). Both are described in
-[Recovery and platform contract](recovery.md). The crash matrix's
-fault-injecting decorators obtain an unchecked value only behind the
-`repository-tasks` Cargo feature, reserved for repository harnesses rather
-than production admission.
+[Recovery and platform contract](recovery.md). The crash matrix harness opens
+an unchecked publisher only behind the `repository-tasks` Cargo feature,
+then wraps the publisher in fault-injecting decorators. This bypass is
+reserved for repository harnesses rather than production admission.
 
 `publish_catalog_generation` performs complete semantic preflight before the
 first storage transition. With `FilesystemCatalogPublisher`, it then executes

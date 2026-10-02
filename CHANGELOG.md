@@ -624,6 +624,9 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Version-one publication documentation assigns unchecked publisher
+  construction to the crash harness and fault injection to its decorators (#69).
+
 - Version-one crash documentation identifies its 105 cases as a subset of
   the complete command, which also executes version-two migration cases (#69).
 
