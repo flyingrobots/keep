@@ -12,17 +12,17 @@ The allocation, blocking and failure contract is in the public API documentation
 
 | Obligation | Current evidence | Required exit condition |
 | --- | --- | --- |
-| Golden bytes and exact read coordinates | `durable_read_law_tests` reconstructs the independent one-zero corpus and exercises empty/nonempty ranges and unretained-blob refusal. | Extend receipt assertions to independently expected digests and cover all relevant reference read laws. |
+| Golden bytes and exact read coordinates | `durable_read_law_tests` reconstructs the independent one-zero corpus and compares catalog and manifest digests against frozen bytes. Public Worldline tests reconstruct all frozen identities after reopening. | Finish the explicit reference-law parity map and remaining calibration. |
 | Stable retained view across publication | `durable_view_law_tests` releases the retained root while an older snapshot remains alive; the old reader emits its original byte and head generation, and a fresh view sees release. | Add catalog-generation successor/restart evidence without introducing unsupported v2 publication. |
 | Collector exclusion | The public snapshot holds the actual kernel shared fence; a deterministic exclusive try-lock refuses until drop. | Preserve this claim as fence evidence; actual GC execution remains absent on main under #21. |
-| Operational failures versus evidenced absence | Removing the selected segment yields exact `OpenSegment` / `NotFound` through the public snapshot error. | Add missing catalog member, corruption and output-failure laws with exact typed coordinates and source preservation. |
+| Operational failures versus evidenced absence | Removing the selected segment yields exact `OpenSegment` / `NotFound`; public whole/range reads of a catalogued layout missing its chunk yield exact logical `ChunkMissing` with untouched output. Prefix failures preserve layout, accepted bytes and `PermissionDenied`; corrupt input layouts preserve exact checksum coordinates. | Complete remaining broken-writer, absent-layout and physical-corruption parity checks. |
 | Reference-core equivalence | Existing reference algorithms are generalized only over a crate-private immutable source; their single-pass authentication tests are retained. | Run generated reference properties plus complete debug/release validation, and calibrate distinct new load-bearing assertions. |
-| Golden File Worldline | Not yet connected to the durable reader. | Run its restart and range assertions against the durable backend with independent expected bytes and identities. |
+| Golden File Worldline | `tests/golden_file_worldline/durable_assertions.rs` publishes the corpus through production v1 authority, migrates it, retains it, reopens and checks frozen identities and exact bytes/ranges. `durable_range_properties.rs` adds exhaustive short intervals and multichunk boundary sweeps. | Retain precise scope: reopening after writer handles close, not a process-death test. Final-head validation remains required. |
 | Documentation and final acceptance | API costs and design rationale are documented. | Update reconstruction requirements and Linux example only after complete evidence; run required final checks and reconcile exact-head review. |
 
 ## Evidence limits
 
-The initial filesystem laws use owned test directories and the existing repository migration fixture with platform admission bypassed; they establish read behavior on the test filesystem, not production platform admission. No sleep or probabilistic race is used. The collector test uses a kernel try-lock in one process, not a full GC integration or process-death claim.
+The initial unit filesystem laws use owned test directories and the existing repository migration fixture with platform admission bypassed. The newer Linux public Worldline laws use production platform admission, publication, migration and retention in owned ext4 scratch. No sleep or probabilistic race is used. The collector test uses a kernel try-lock in one process, not a full GC integration or process-death claim.
 
 New laws are medium-size because they own filesystem state. Per-test resource enforcement and suite SLOs remain gaps described in the repository [enforcement profile](../testing/enforcement.md); no compliance waiver or new resource ceiling is claimed here. Deletion criteria and oracles appear beside the laws.
 
@@ -34,4 +34,18 @@ Implementation commit `d6c38a1` passed formatting, source structure, both worksp
 
 Three isolated source/build mutations were observed RED on that implementation: substituting `[1]` during emission after verification made whole-read, exact-layout and nonempty-range assertions report expected `[0]` versus observed `[1]`; advancing the receipt's catalog generation made its coordinate assertion report expected 1 versus observed 2; replacing shared fence acquisition with unlock made the collector-exclusion assertion report expected `WouldBlock` versus observed successful acquisition. These are runtime calibration, not parent-bug reproductions or an assertion that every new check has already been calibrated.
 
-The remaining closure-ledger obligations above are still open, including generated multi-chunk durable laws, Worldline restart/range witnesses, precise missing-member/output failures, independent digest expectations and complete final-head review/CI. The issue stays open and its PR remains a draft until they are satisfied.
+At that first receipt, generated durable laws, Worldline reopen/range witnesses, missing-member/output failures and independent digest expectations remained open; the subsequent expansion below addresses those items. The issue stays open and its PR remains a draft until the full closure ledger is satisfied.
+
+## Worldline and layout-ingress expansion
+
+Commit `ab518b2` added production-admitted Worldline reopen/range reads, bounded range sweeps, exact logical-member absence, output-prefix failures and independent digest coordinates. It passed complete all-feature workspace debug/release tests, both Clippy profiles, formatting and source structure. This evidence does not transfer to later semantic changes.
+
+Isolated mutations made the new whole/range prefix assertions report a false zero accepted count instead of five, and made Worldline and range source-slice assertions detect an altered emitted byte after verification. Both were observed RED at the intended runtime assertions. The mutation that changes emitted bytes correctly leaves refusal-only laws green; those protect different claims.
+
+The next candidate adds the four caller-supplied layout entry points so reference whole-blob and catalogued-range binding laws have durable equivalents. Exact whole-blob mismatch and corrupt-layout checksum coordinates are asserted before output. These entry points and the public memory law pass focused debug/release tests and all-feature Clippy; final source-bound validation remains pending.
+
+`durable_read_memory` measures incremental allocation during reconstruction of the frozen 1 MiB Worldline source into a nonallocating sink. It requires peak incremental allocation below one whole blob, after explicit snapshot admission; it does not claim that snapshot construction avoids materializing selected segments or prove a universal resident-memory ceiling.
+
+The short-range sweep enumerates its finite domain in increasing length, making the first failing interval minimal within that domain. The multichunk sweep uses fixed documented boundary coordinates over the frozen source. Neither uses ambient randomness or claims exhaustive coverage of arbitrary large layouts. Replay is the named public test on the recorded source; any discovered counterexample must be retained before extending the domain.
+
+Memory calibration inserted a deliberately unnecessary 1,048,576-byte allocation into reconstruction in an isolated source/build copy. The new public memory assertion went RED with an observed peak of 1,048,576 bytes against its strictly smaller-than-blob requirement; the unmodified candidate passed. This validates that concrete additional-buffer detector, not the entire process memory budget.

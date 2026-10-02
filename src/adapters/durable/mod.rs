@@ -1,6 +1,7 @@
 //! This module owns authenticated reads through an admitted fenced durable view.
 
 mod error;
+mod layout_reads;
 mod receipt;
 mod retained_anchors;
 mod snapshot;

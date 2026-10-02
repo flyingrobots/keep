@@ -36,6 +36,10 @@ use crate::{AdmittedLayout, BlobId, ByteRange, ChunkId, LayoutId};
 /// retaining at most one root's bytes and decoded anchors at a time. Its cost
 /// is linear in those roots and anchors. A lookup rechecks canonical identity;
 /// substituted or unreadable evidence fails rather than becoming absence.
+/// The shared fence remains held across caller output callbacks so collection
+/// cannot invalidate the read. No writer lock is acquired by these reads;
+/// callers must not make output wait for an exclusive collector fence that
+/// their own live snapshot prevents from being acquired.
 #[must_use]
 pub struct DurableSnapshot {
     view: FilesystemRetentionSnapshot,
@@ -44,12 +48,14 @@ pub struct DurableSnapshot {
 }
 
 /// The pinned catalog as a chunk source: every chunk record's exact payload.
-struct CatalogChunks<'snapshot, 'head, 'catalog, 'records> {
+pub(super) struct CatalogChunks<'snapshot, 'head, 'catalog, 'records> {
     catalog: &'snapshot CatalogSnapshot<'head, 'catalog, 'records>,
 }
 
 impl<'snapshot, 'head, 'catalog, 'records> CatalogChunks<'snapshot, 'head, 'catalog, 'records> {
-    const fn new(catalog: &'snapshot CatalogSnapshot<'head, 'catalog, 'records>) -> Self {
+    pub(super) const fn new(
+        catalog: &'snapshot CatalogSnapshot<'head, 'catalog, 'records>,
+    ) -> Self {
         Self { catalog }
     }
 }
@@ -202,7 +208,7 @@ impl DurableSnapshot {
             .ok_or(DurableReadError::BlobMissing { requested: target })
     }
 
-    fn catalog(&self) -> Result<CatalogSnapshot<'_, '_, '_>, DurableReadError> {
+    pub(super) fn catalog(&self) -> Result<CatalogSnapshot<'_, '_, '_>, DurableReadError> {
         self.view
             .catalog()
             .snapshot()
