@@ -111,7 +111,7 @@ fn namespace_occurrences_are_admitted_only_within_the_protocol_fixed_range()
     let point = DurabilityCrashPoint::MigrationAdmitNamespacePrefix;
     for position in DurabilityCrashPosition::ALL {
         let exclusive_limit = if position == DurabilityCrashPosition::During {
-            6
+            DurabilityCrashPoint::NAMESPACE_PREFIX_DIRECTORIES
         } else {
             1
         };
