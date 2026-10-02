@@ -44,8 +44,6 @@ only version-2 migration recovery may continue.
 
 The migration recovery boundary admits only these ordered prefixes:
 
-<!-- markdownlint-disable MD013 -->
-
 | State | Required response |
 | --- | --- |
 | no migration artifact | admit exact version 1 |
@@ -55,8 +53,6 @@ The migration recovery boundary admits only these ordered prefixes:
 | complete v2 shape without marker | verify directories and write marker |
 | marker without receipt | reopen full v2 view and publish receipt |
 | exact receipt with optional exact receipt stage | clean the stage and admit complete migration |
-
-<!-- markdownlint-enable MD013 -->
 
 Every row also requires the admission checks in
 [Executable recovery boundary](#executable-recovery-boundary). An intent stage
