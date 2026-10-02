@@ -8,6 +8,8 @@ Both entry points then admit every retention entry name and every root and manif
 
 A root or manifest pool entry named by a complete retained stage must match that stage's device and inode identity as well as its exact bytes. Observation verifies the opened pool handle and named entry on both sides of the bounded read. Equal bytes on a substituted inode classify as `Different`, so planning returns `PoolEntryDiffers` for the exact pool before finalizing `HEAD` or removing stages. Inode coordinates are transition evidence, not public content identity.
 
+A complete head stage without a manifest stage refuses as `HeadStageWithoutManifestStage`. When both head and manifest stages are complete but the root stage is absent, recovery instead reports `ManifestStageWithoutRootStage`, preserving the retained evidence before any execution.
+
 A complete staged head must name the staged manifest's exact digest, generation, byte length, and predecessor. A length disagreement refuses as `HeadStageNamesOtherManifest`; a predecessor disagreement refuses as `HeadPredecessorMismatch`. Checksums and valid individual field values do not establish this relationship. Recovery compares these coordinates before head finalization or stage cleanup, preserving the previously published head and all retained bytes on refusal.
 
 A staged successor manifest may change only the staged root's namespace entry. Every unrelated namespace entry must preserve its exact namespace, root generation, and root digest; additions, omissions, and changes refuse as `ManifestNotSuccessor` before manifest linking or head finalization. Already-committed cleanup uses its existing current-state handling rather than reconstructing unavailable predecessor history.

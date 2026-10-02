@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery now reports `ManifestStageWithoutRootStage` when complete head and manifest stages lack their root stage, instead of incorrectly reporting a missing manifest; refusal preserves retained evidence (#99).
+
 - The retention process-death matrix now independently reads the recovered head generation and exact selected-root bytes before forward retry, including absence before publication (#99).
 
 - Successor recovery evidence now covers every ordered publication prefix and verifies the recovered generation and exact selected-root bytes through the fenced reader; the ledger distinguishes this from sampled mid-write truncations (#99).

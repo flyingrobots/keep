@@ -92,7 +92,8 @@ pub fn plan_retention_recovery(
             pools,
             steps,
         ),
-        (Some(_), _, _) => Err(Refusal::HeadStageWithoutManifestStage),
+        (Some(_), None, _) => Err(Refusal::HeadStageWithoutManifestStage),
+        (Some(_), Some(_), None) => Err(Refusal::ManifestStageWithoutRootStage),
         (None, Some(manifest), root) => {
             plan_manifest(current, &manifest, root.as_ref(), pools, steps)
         }
