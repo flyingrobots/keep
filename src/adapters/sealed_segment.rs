@@ -7,6 +7,19 @@ use super::{ClosedSegment, SegmentDigest, SegmentStage};
 ///
 /// The stage remains unpublished. This type exposes no mutable stage handle,
 /// makes no directory-durability claim, and is not a catalog reference.
+///
+/// Sealing cannot hand writable authority to a conversion callback, including
+/// with `repository-tasks` enabled:
+///
+/// ```compile_fail
+/// use keep::{SealedSegment, SegmentStage};
+/// fn rewrite<S: SegmentStage>(sealed: SealedSegment<S>) {
+///     let _ = sealed.map_stage(|mut stage| {
+///         let _ = std::io::Write::write_all(&mut stage, b"!");
+///         stage
+///     });
+/// }
+/// ```
 #[must_use]
 pub struct SealedSegment<S>
 where
