@@ -40,8 +40,21 @@
 //! namespace transitions while retaining version-1 immutable bytes.
 //! Partial-prefix recovery now plans and resumes lawful migration residue,
 //! returning typed refusals and an ordered execution receipt. Filesystem
-//! retention publication is available; retention restart recovery, immutable
-//! reader snapshots, and garbage collection remain absent.
+//! retention publication and complete-stage restart recovery are available.
+//!
+//! Incomplete retention stages require explicit disposition before recovery
+//! effects; automatic disposal remains deferred. Execution failures preserve
+//! their typed cause and distinguish known effects from uncertain effects or
+//! durability. Writer authority coordinates cooperating writers in a managed
+//! namespace; it does not isolate arbitrary out-of-band filesystem mutation.
+//!
+//! [`FilesystemRetentionSnapshot`] holds a shared reader fence while binding
+//! one catalog, retention head, and manifest view, and verifies selected roots
+//! on demand. This is retention evidence, not a durable BlobId-to-writer read
+//! API. Durable authenticated reads, durable verification reports, production
+//! ingestion, garbage collection, and compaction remain unimplemented here.
+//! General version-2 catalog publication also still needs a retained-closure
+//! gate; retention publication's live closure verification does not supply it.
 
 #[cfg(test)]
 extern crate self as keep;

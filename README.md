@@ -75,13 +75,19 @@ Keep is required to refuse all three, before mutating anything.
   at 68 before/during/after coordinates (`KEEP-CRASH-053`–`073`), preserving
   every version-1 byte. Broader hostile restart combinations remain in #111.
 
-## What it does not do yet
-
-Version-2 retention recovery, fenced reader snapshots and model-based transitions are implemented in this branch but still require the correctness corrections and independent acceptance review tracked in PR #99.
+Version-2 complete-stage retention recovery, fenced retention snapshots and model-based transitions are implemented on main through [PR #99](https://github.com/flyingrobots/keep/pull/99).
 
 The retention process-death sequence checks the recovered head generation and exact selected-root bytes before retry; its [evidence receipt](docs/testing-evidence/retention-crash-reader-oracle.md) bounds that claim to the declared initial-publication crash coordinates.
 
-Incomplete retention stages are preserved and block publication pending explicit disposition; automatic disposal is deferred. The [landing ledger](docs/testing-evidence/retention-landing.md) tracks execution-failure reporting and final acceptance under the [approved recovery contract](docs/formats/segment-store-v2/retention-recovery.md).
+Recovery failures retain their typed cause and report known effects separately from uncertain effects or durability under the [approved recovery contract](docs/formats/segment-store-v2/retention-recovery.md).
+
+Writer authority coordinates cooperating writers in a managed namespace; it does not isolate arbitrary concurrent out-of-band filesystem mutation.
+
+## What it does not do yet
+
+Incomplete retention stages are preserved and block publication pending explicit disposition; automatic disposal remains deferred in [#155](https://github.com/flyingrobots/keep/issues/155).
+
+Fenced retention snapshots provide bound retention evidence and selected-root verification; a durable authenticated blob-to-writer or exact-range read API remains in [#109](https://github.com/flyingrobots/keep/issues/109).
 
 Complete orphans remain recovery-protected until explicit disposition lands with garbage collection (#21).
 
@@ -91,9 +97,10 @@ A version-1 store stays admitted until its owner migrates it.
 
 | Gap | Tracked |
 | --- | --- |
-| Retention recovery correctness remediation and broader migration corruption coverage | [PR #99](https://github.com/flyingrobots/keep/pull/99), [#111](https://github.com/flyingrobots/keep/issues/111) |
-| Fenced reader correctness remediation and independent acceptance | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
-| Precise verification reports at explicit depths | [#20](https://github.com/flyingrobots/keep/issues/20) |
+| Broader migration corruption and compatibility evidence | [#111](https://github.com/flyingrobots/keep/issues/111), [#112](https://github.com/flyingrobots/keep/issues/112) |
+| Reader-fence process-death evidence | [#113](https://github.com/flyingrobots/keep/issues/113) |
+| Candidate-catalog preservation of every retained closure | [#125](https://github.com/flyingrobots/keep/issues/125) |
+| Precise durable verification reports at explicit depths | [#114](https://github.com/flyingrobots/keep/issues/114), parent [#20](https://github.com/flyingrobots/keep/issues/20) |
 | Garbage collection and identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |
 | Bounded production ingestion through the durable store | [#82](https://github.com/flyingrobots/keep/issues/82) |
 | Encrypted representations | [#86](https://github.com/flyingrobots/keep/issues/86) |

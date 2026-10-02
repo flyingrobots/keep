@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Crate and version-two documentation now distinguish merged retention recovery and fenced snapshots from pending durable reads, verification, ingestion, GC, compaction, and general candidate-catalog retained-closure admission (#130).
+
 - Retention recovery execution errors report the exact failed boundary, original typed cause, known namespace effects and uncertain effect/durability; retries freshly observe the store. Observed stage identity remains binding across reopening, and cleanup preserves verified pool evidence rather than promising the removed pathname survives (#99).
 
 - Retention recovery now preserves incomplete stages and requires explicit disposition before any recovery mutation or publication retry; automatic incomplete-stage disposal is deferred by maintainer decision (#99).
