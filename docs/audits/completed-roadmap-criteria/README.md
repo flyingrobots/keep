@@ -21,8 +21,8 @@ The [foundation verdicts](foundations.md),
 first 33 remaining checked tasks. Each separates acceptance and mainline
 delivery and names inspected evidence and limits. The individual verdicts
 retain their inspected historical coordinates. T-06.3 has unresolved
-acceptance scope. T-09.1's canonical report-admission gap was owned by issue
-#142 and has since been delivered as recorded below. The historical T-10.2
+acceptance scope. T-09.1's canonical report-admission gap was owned by
+issue #142 and has since been delivered as recorded below. The historical T-10.2
 forbidden-filename gap was owned by issue #144.
 T-11.2 exposes writable stage authority after sealing; issue #146 owns that
 correction. T-11.3 still lacks its originally named integration-test artifact;
