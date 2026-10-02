@@ -98,3 +98,39 @@ fn a_zero_progress_durable_writer_refuses_at_the_output_boundary() -> Result<(),
     );
     Ok(())
 }
+
+#[test]
+fn durable_ranges_complete_short_and_interrupted_writes() -> Result<(), Box<dyn Error>> {
+    let bytes = b"authenticated durable range through short writes";
+    let sandbox = build("durable-range-short", &[bytes])?;
+    let identified = identify(bytes)?;
+    let snapshot =
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+    let requested = ByteRange::new(ByteOffset::new(3), ByteLength::new(13))?;
+    let mut output = PartitionWriter::new(&[1, 7, 3])?;
+    let receipt = snapshot.read_range(identified.target, requested, &mut output)?;
+    assert_eq!(output.bytes(), bytes.get(3..16).ok_or("range absent")?);
+    assert_eq!(receipt.receipt().bytes_written(), requested.length());
+    Ok(())
+}
+
+#[test]
+fn a_zero_progress_durable_range_writer_refuses_before_acceptance() -> Result<(), Box<dyn Error>> {
+    let bytes = b"nonempty range must make progress";
+    let sandbox = build("durable-range-zero", &[bytes])?;
+    let identified = identify(bytes)?;
+    let snapshot =
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+    let requested = ByteRange::new(ByteOffset::new(3), ByteLength::new(13))?;
+    let failure = snapshot
+        .read_range(identified.target, requested, &mut ZeroWriter)
+        .err()
+        .ok_or("zero range writer succeeded")?;
+    assert!(
+        matches!(&failure, DurableReadError::RangeRead(source)
+        if matches!(source.as_ref(), RangeReadError::WriteZero { layout, bytes_written }
+            if *layout == identified.record.id() && bytes_written.is_empty())),
+        "exact zero-progress range refusal: {failure:?}"
+    );
+    Ok(())
+}

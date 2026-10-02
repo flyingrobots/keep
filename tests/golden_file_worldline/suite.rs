@@ -34,6 +34,9 @@ mod durable_range_properties;
 #[path = "durable_read_memory.rs"]
 mod durable_read_memory;
 #[cfg(target_os = "linux")]
+#[path = "durable_corruption_laws.rs"]
+mod durable_corruption_laws;
+#[cfg(target_os = "linux")]
 #[path = "durable_refusal_laws.rs"]
 mod durable_refusal_laws;
 #[cfg(target_os = "linux")]
