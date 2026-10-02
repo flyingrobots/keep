@@ -17,8 +17,9 @@ use crate::adapters::filesystem_exact_record::{self as exact_record, ExactRecord
 use crate::adapters::filesystem_platform_profile::root_identity;
 use crate::adapters::filesystem_version_two_admission::require_root_identity;
 use crate::adapters::{
-    CatalogRestartPolicy, ChecksummedPublicationHead, FilesystemCatalogSnapshot,
-    filesystem_initialization_namespace, filesystem_version_two_records, publication_head_decoder,
+    CatalogRestartError, CatalogRestartPolicy, ChecksummedPublicationHead,
+    FilesystemCatalogSnapshot, filesystem_initialization_namespace, filesystem_version_two_records,
+    publication_head_decoder,
 };
 use crate::{RetentionHead, RetentionManifest, RetentionNamespaceDigest};
 
@@ -27,6 +28,10 @@ const HEAD_NAME: &str = "HEAD";
 #[cfg(test)]
 #[path = "filesystem_retention_snapshot_pinning_tests.rs"]
 mod pinning_tests;
+
+#[cfg(test)]
+#[path = "filesystem_retention_snapshot_moving_error_tests.rs"]
+mod moving_error_tests;
 
 /// One consistent reader view: the catalog snapshot, the retention head, and
 /// the manifest it selects, all observed under one shared reader fence.
@@ -55,7 +60,7 @@ struct Source {
 }
 
 impl RetentionViewSource for Source {
-    type View = View;
+    type View = Result<View, CatalogRestartError>;
 
     fn coordinates(&mut self) -> io::Result<RetentionViewCoordinates> {
         let catalog = filesystem_retention_current::read_exact_optional(
@@ -74,15 +79,18 @@ impl RetentionViewSource for Source {
         Ok(RetentionViewCoordinates { catalog, retention })
     }
 
-    fn load(&mut self) -> io::Result<View> {
+    fn load(&mut self) -> io::Result<Self::View> {
         let catalog = crate::adapters::catalog_restart_loader::load_from_directory(
             &self.root,
             HEAD_NAME,
             self.policy,
-        )
-        .map_err(|source| io::Error::new(io::ErrorKind::InvalidData, source))?;
+        );
+        let catalog = match catalog {
+            Ok(catalog) => catalog,
+            Err(source) => return Ok(Err(source)),
+        };
         let retention = filesystem_retention_current::observe(&self.retention, &self.manifests)?;
-        Ok(View { catalog, retention })
+        Ok(Ok(View { catalog, retention }))
     }
 }
 
@@ -99,6 +107,8 @@ impl FilesystemRetentionSnapshot {
     ///
     /// Returns [`FilesystemRetentionSnapshotError`](super::FilesystemRetentionSnapshotError)
     /// at the exact admission, fence, collection, or catalog refusal.
+    /// A catalog admission result is returned only after both coordinate
+    /// reads agree; a moving head discards that result and retries.
     pub fn load(
         store_root: &Path,
         policy: CatalogRestartPolicy,
@@ -130,8 +140,9 @@ impl FilesystemRetentionSnapshot {
             manifests,
             policy,
         };
-        let view =
-            collect_retention_view(&mut source, limit).map_err(|source| Error::View { source })?;
+        let view = collect_retention_view(&mut source, limit)
+            .map_err(|source| Error::View { source })?
+            .map_err(|source| Error::Catalog { source })?;
         Ok(Self {
             _fence: fence,
             roots,

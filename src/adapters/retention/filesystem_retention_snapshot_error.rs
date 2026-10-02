@@ -21,12 +21,12 @@ pub enum FilesystemRetentionSnapshotError {
         /// The exact filesystem failure.
         source: io::Error,
     },
-    /// The heads never agreed, or a head read failed.
+    /// The heads never agreed, or a coordinate or retention read failed.
     View {
         /// The exact collection refusal.
         source: RetentionViewError,
     },
-    /// The catalog `HEAD` selects a catalog that does not admit.
+    /// Stable collected heads select a catalog that does not admit.
     Catalog {
         /// The exact restart refusal.
         source: CatalogRestartError,

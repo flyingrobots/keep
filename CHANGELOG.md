@@ -669,6 +669,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Fenced retention readers preserve selected catalog and segment admission failures as `FilesystemRetentionSnapshotError::Catalog` with their exact restart source, while coordinate failures remain `View` errors; a moving head retries the speculative catalog result (#99).
+
 - Fenced retention readers compare the opened root's restart-stable device and inode with the jointly admitted migration records before acquiring a fence or loading a catalog. A foreign binding refuses at reader admission with the exact typed identity coordinate, expected value, and observed value (#99).
 
 - Retention recovery reauthenticates the current catalog and selected segments and replays staged-root closure laws before publication effects. Forward publication shares live verification after pure preflight and preserves prepared catalog binding. Recovery exposes an explicit catalog loading policy; the default aggregate retained-segment cap is one protocol-maximum segment (1 GiB), with larger selections refusing before mutation (#99).

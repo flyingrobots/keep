@@ -37,7 +37,7 @@ fn replacing_the_ambient_root_preserves_the_pinned_catalog() -> Result<(), Box<d
 
     fs::rename(sandbox.path(), moved.path().join("pinned"))?;
     fs::create_dir(sandbox.path())?;
-    let result = collect_retention_view(&mut source, ReaderAttemptLimit::DEFAULT);
+    let result = collect_retention_view(&mut source, ReaderAttemptLimit::DEFAULT)?;
     assert!(
         result.is_ok(),
         "ambient replacement must not displace the pinned catalog"
