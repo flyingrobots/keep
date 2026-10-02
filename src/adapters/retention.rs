@@ -40,6 +40,8 @@ mod filesystem_retention_namespace_tests;
 mod filesystem_retention_pool_name;
 mod filesystem_retention_recovery;
 #[cfg(test)]
+mod filesystem_retention_recovery_closure_tests;
+#[cfg(test)]
 mod filesystem_retention_recovery_directory_tests;
 #[cfg(test)]
 mod filesystem_retention_recovery_discard_prefix_tests;
