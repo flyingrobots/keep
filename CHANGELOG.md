@@ -667,6 +667,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Retention recovery requires an uncommitted head's staged root to satisfy the same generation and predecessor rules as root-only and manifest-only recovery. Already committed cleanup remains admissible (#99).
+
 - Retention recovery reopens and authenticates the manifest-selected predecessor before publication effects, refusing missing, corrupt, or substituted roots while preserving retained evidence.
 
 - Retention recovery refuses successor manifests that add, drop, or alter namespace entries unrelated to the staged root before linking the manifest or finalizing the head.

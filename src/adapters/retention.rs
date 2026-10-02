@@ -43,11 +43,11 @@ mod filesystem_retention_recovery;
 mod filesystem_retention_recovery_directory_tests;
 #[cfg(test)]
 mod filesystem_retention_recovery_entry_set_tests;
-#[cfg(test)]
-mod filesystem_retention_recovery_history_tests;
 mod filesystem_retention_recovery_error;
 #[cfg(test)]
 mod filesystem_retention_recovery_head_binding_tests;
+#[cfg(test)]
+mod filesystem_retention_recovery_history_tests;
 #[cfg(test)]
 mod filesystem_retention_recovery_identity_tests;
 #[cfg(test)]

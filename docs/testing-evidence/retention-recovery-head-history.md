@@ -1,0 +1,11 @@
+# Retention recovery head-history evidence
+
+Change kind: bug fix. Subject: Keep runtime retention recovery. Size: medium. Oracle: an existing namespace permits only the checked successor root generation with the selected predecessor digest; refusal preserves retained bytes.
+
+The regression in `filesystem_retention_recovery_history_tests::recovered_head_refuses_a_skipped_root_generation` was observed RED on commit `91762ea`, based on the ordinary integration of main in `47d7f07`. Canonical generation-three root bytes named the authenticated generation-one predecessor, with matching manifest and head coordinates and retained-stage pool hard links. Recovery returned `Committed`, replaced the head, and removed stages, failing the retained-byte assertion. The reproduction failed at the intended runtime assertion rather than setup.
+
+The fix applies the existing `root_succeeds` predicate during uncommitted head planning. The regression passes in debug and release. A separate copied-source mutation changed the new refusal to `ManifestNotSuccessor`; byte preservation still passed, but the exact typed `RootNotSuccessor` assertion failed with the observed wrong variant. The original RED run calibrates the retained-byte assertion; the mutation calibrates the typed refusal assertion.
+
+Validation ran in copied Docker source on pinned Rust 1.96.0, Linux aarch64, with the existing isolated ext4 audit filesystem. The retention suite and full all-feature workspace suites passed in debug and release. Formatting, Clippy for all and minimal features with warnings denied, source-structure checks including the new staged regression module, and Markdown lint passed. Raw RED, mutation, focused GREEN, and workspace logs are retained as review artifacts outside tracked source.
+
+This reproduction establishes one skipped-generation scenario at the complete pre-head boundary. It does not establish the entire generation domain, initial publication or namespace insertion history, every filesystem schedule, physical power-loss behavior, or per-test resource-ceiling enforcement. Broader generated history evidence remains outstanding. Existing legitimate committed-cleanup and publication-prefix laws passed in the retention suite; green checks do not establish absence of every regression.
