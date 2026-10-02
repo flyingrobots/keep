@@ -21,6 +21,8 @@ mod filesystem_retention_attempt_tests;
 mod filesystem_retention_authority;
 mod filesystem_retention_authority_error;
 #[cfg(test)]
+mod filesystem_retention_body_prefix_tests;
+#[cfg(test)]
 mod filesystem_retention_capacity_tests;
 mod filesystem_retention_catalog;
 #[cfg(test)]
