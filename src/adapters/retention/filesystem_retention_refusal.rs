@@ -123,6 +123,11 @@ pub enum RetentionCurrentStateRefusal {
     /// A protocol directory named at admission (`retention`, `roots`, or
     /// `manifests`) no longer names the pinned directory that was admitted.
     ProtocolDirectoryReplaced,
+    /// Restart recovery could not observe or admit its retained evidence.
+    RecoveryObservationRefused {
+        /// The original observation failure, including its typed or OS cause.
+        source: io::Error,
+    },
     /// Restart recovery refused the retained stages as unrecoverable ambiguity.
     RecoveryRefused {
         /// The exact planning refusal.
@@ -243,6 +248,7 @@ impl RetentionCurrentStateRefusal {
                 "restart recovery refused the retained retention stages"
             }
             Self::RecoveryStepRefused { .. } => "a restart recovery step refused",
+            Self::RecoveryObservationRefused { .. } => "restart recovery observation refused",
             Self::ProtocolDirectoryReplaced => {
                 "a retention protocol directory was replaced after admission"
             }
@@ -270,6 +276,7 @@ impl Error for RetentionCurrentStateRefusal {
             Self::CatalogRefused { source } => Some(source.as_ref()),
             Self::RecoveryRefused { source } => Some(source),
             Self::RecoveryStepRefused { source } => Some(source),
+            Self::RecoveryObservationRefused { source } => Some(source),
             _ => None,
         }
     }

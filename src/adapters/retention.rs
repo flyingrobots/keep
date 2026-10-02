@@ -38,6 +38,8 @@ mod filesystem_retention_generation_refusal_tests;
 mod filesystem_retention_namespace;
 #[cfg(test)]
 mod filesystem_retention_namespace_tests;
+#[cfg(test)]
+mod filesystem_retention_observation_error_tests;
 mod filesystem_retention_pool_name;
 #[cfg(test)]
 mod filesystem_retention_publication_closure_tests;
