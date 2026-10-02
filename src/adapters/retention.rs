@@ -51,6 +51,8 @@ mod filesystem_retention_partial_anchor_tests;
 #[cfg(test)]
 mod filesystem_retention_partial_entry_tests;
 #[cfg(test)]
+mod filesystem_retention_partial_history_tests;
+#[cfg(test)]
 mod filesystem_retention_partial_integrity_tests;
 #[cfg(test)]
 mod filesystem_retention_partial_profile_tests;
