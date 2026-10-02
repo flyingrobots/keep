@@ -16,4 +16,6 @@ A copied-source mutation retained the `Namespace` variant but reconstructed the 
 
 The migration suite passed in debug and release. After explicitly restoring the temporary root handle's original lifetime, the focused regression passed again in both modes, with both workspace Clippy feature configurations, formatting and source-structure checks. Markdown validation passed separately.
 
-Replay uses `cargo test --lib a_root_clone_failure --all-features`, adding `--release` for optimized execution, inside copied Linux Docker. The fault schedule is deterministic descriptor exhaustion after writer-lock acquisition. Other targets do not run this Linux-specific regression.
+The descriptor law now lives in the dedicated `migration_descriptor_exhaustion` integration binary, so spawning its child cannot inherit descriptors from concurrent library tests. A full workspace run caught the original source-layout violation; the guard was retained and the test moved. Setup uses the public repository initialization API to obtain writer authority over a fresh version-one namespace before exhausting descriptors.
+
+Replay uses `cargo test --test migration_descriptor_exhaustion --all-features`, adding `--release` for optimized execution, inside copied Linux Docker. The fault schedule is deterministic descriptor exhaustion after writer-lock acquisition. Other targets do not run this Linux-specific regression.

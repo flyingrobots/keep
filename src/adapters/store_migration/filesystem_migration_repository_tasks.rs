@@ -22,10 +22,6 @@ use super::{
 };
 use crate::adapters::{FilesystemPlatformAdmission, FilesystemWriterLock, SegmentReadPolicy};
 
-#[cfg(all(test, target_os = "linux"))]
-#[path = "filesystem_migration_descriptor_tests.rs"]
-mod descriptor_tests;
-
 impl FilesystemStoreMigrationAuthority {
     /// Opens fresh migration authority over a store built without platform
     /// admission, for repository process-death tasks.

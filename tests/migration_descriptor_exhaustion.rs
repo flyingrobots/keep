@@ -1,14 +1,21 @@
 //! This module owns migration admission diagnostics under descriptor exhaustion.
 
+#![cfg(all(feature = "repository-tasks", target_os = "linux"))]
+
+#[path = "segment_filesystem_stage/sandbox.rs"]
+pub mod sandbox;
+
 use std::error::Error;
 use std::fs::File;
 use std::process::Command;
 
-use super::super::filesystem_migration_test_fixture::{maximum_policy, open_authority};
-use super::{Error as AuthorityError, FilesystemStoreMigrationAuthority, FilesystemWriterLock};
+use keep::{
+    FilesystemMigrationAuthorityError as AuthorityError, FilesystemStoreMigrationAuthority,
+    RepositoryInitializationStorage, SegmentReadPolicy, initialize_store,
+};
 
 const CHILD: &str = "KEEP_MIGRATION_DESCRIPTOR_CHILD";
-const TEST: &str = "adapters::store_migration::filesystem_migration_repository_tasks::descriptor_tests::a_root_clone_failure_reports_the_namespace_boundary";
+const TEST: &str = "a_root_clone_failure_reports_the_namespace_boundary";
 
 // Size: medium. Oracle: capability duplication failure is Namespace with its original EMFILE.
 // The isolated child owns a 64-descriptor ceiling and a 20-second execution ceiling.
@@ -41,13 +48,14 @@ fn a_root_clone_failure_reports_the_namespace_boundary() -> Result<(), Box<dyn E
 }
 
 fn exhaust_descriptors() -> Result<(), Box<dyn Error>> {
-    let (sandbox, authority) = open_authority("migration-clone-descriptor-exhaustion")?;
-    drop(authority);
-    let lock = FilesystemWriterLock::try_acquire(sandbox.path())?;
+    let sandbox = sandbox::TestDirectory::create("migration-clone-descriptor-exhaustion")?;
+    let mut storage = RepositoryInitializationStorage::admit_unchecked(sandbox.path())?;
+    let _initialized = initialize_store(&mut storage)?;
+    let lock = storage.into_writer_lock()?;
     let descriptors = fill_descriptors()?;
     let result = FilesystemStoreMigrationAuthority::open_unchecked_for_repository_tasks(
         lock,
-        maximum_policy(),
+        SegmentReadPolicy::MAXIMUM,
     );
     drop(descriptors);
     let error = result
