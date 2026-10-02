@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Linux public snapshot process laws verify reader-death fence release, persistent lock identity and exclusion of new readers during collection with kernel-observed ordering (#113).
+
 - Retention recovery execution errors report the exact failed boundary, original typed cause, known namespace effects and uncertain effect/durability; retries freshly observe the store. Observed stage identity remains binding across reopening, and cleanup preserves verified pool evidence rather than promising the removed pathname survives (#99).
 
 - Retention recovery now preserves incomplete stages and requires explicit disposition before any recovery mutation or publication retry; automatic incomplete-stage disposal is deferred by maintainer decision (#99).
