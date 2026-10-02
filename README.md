@@ -59,10 +59,11 @@ Keep is required to refuse all three, before mutating anything.
   roots, deterministic closure verification, a one-way 21-phase migration,
   and a 17-phase retention publication — all with production filesystem
   writers, all preserving every version-1 byte. Reopening a migrated store
-  jointly admits its marker, intent, and receipt, binds the root's device,
-  mount, and inode identity to the intent, and pins the directories it
-  admitted. Publication binds this store's own catalog head and the catalog
-  it selects, and refuses retained stages, superseded candidates, substituted
+  jointly admits its marker, intent, and receipt, binds the root's device and
+  inode identity to the intent, and pins the directories it admitted. Mount
+  identity remains a check within the live migration process. Publication
+  binds this store's own catalog head and the catalog it selects, and refuses
+  retained stages, superseded candidates, substituted
   files, replaced protocol directories, and every namespace or capacity
   violation before it writes anything. Each refusal is a typed value, not a
   string.
