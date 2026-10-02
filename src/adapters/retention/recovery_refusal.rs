@@ -44,6 +44,13 @@ pub enum RetentionRecoveryRefusal {
         /// The truncated stage.
         stage: RetentionFixedStage,
     },
+    /// A truncated stage lacks a complete, linked earlier stage.
+    TruncatedStageWithoutEarlierEvidence {
+        /// The truncated stage that cannot be discarded.
+        stage: RetentionFixedStage,
+        /// The earlier stage whose complete record or pool link is missing.
+        earlier_stage: RetentionFixedStage,
+    },
     /// A complete stage names a pool entry whose bytes or stage identity differ.
     PoolEntryDiffers {
         /// The pool holding the conflicting entry.
@@ -128,6 +135,13 @@ impl fmt::Display for RetentionRecoveryRefusal {
                     "{pool} holds a different entry under the staged name"
                 )
             }
+            Self::TruncatedStageWithoutEarlierEvidence {
+                stage,
+                earlier_stage,
+            } => write!(
+                formatter,
+                "truncated retention stage {stage} lacks complete linked {earlier_stage} evidence"
+            ),
             other => formatter.write_str(other.message()),
         }
     }
@@ -159,6 +173,7 @@ impl RetentionRecoveryRefusal {
             }
             Self::StageCorrupt { .. }
             | Self::TruncatedStageWithLaterEffect { .. }
+            | Self::TruncatedStageWithoutEarlierEvidence { .. }
             | Self::PoolEntryDiffers { .. } => "retention recovery refused",
         }
     }

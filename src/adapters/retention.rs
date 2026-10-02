@@ -42,6 +42,8 @@ mod filesystem_retention_recovery;
 #[cfg(test)]
 mod filesystem_retention_recovery_directory_tests;
 #[cfg(test)]
+mod filesystem_retention_recovery_discard_prefix_tests;
+#[cfg(test)]
 mod filesystem_retention_recovery_entry_set_tests;
 mod filesystem_retention_recovery_error;
 #[cfg(test)]
