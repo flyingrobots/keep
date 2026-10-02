@@ -89,9 +89,12 @@ head and the catalog it selects, and refuses superseded candidates, retained
 stages, replaced protocol directories, and every namespace or capacity
 violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 
-Retention publication recovery, fenced reader snapshots and model-based
-transition evidence are implemented in this branch. Their correctness
-corrections and independent acceptance remain tracked in PR #99.
+Retention publication recovery, fenced reader snapshots and model-based transition evidence are implemented in this branch.
+
+Their correctness corrections and independent acceptance remain tracked in PR #99, including the open incomplete-stage pinning and post-removal failure findings in the [retention recovery contract](retention-recovery.md).
+
+The `KEEP-CRASH-036..052` initial-publication process-death sequence includes independent recovered-reader checks; its [evidence receipt](../../testing-evidence/retention-crash-reader-oracle.md) records the assertions, calibration, and scope.
+
 Partial-prefix migration recovery and the 68-case `KEEP-CRASH-053..073`
 process-death matrix are implemented. Broader migration restart corruption
 and compatibility coverage remain in #111 and #112; issue #21 owns garbage
