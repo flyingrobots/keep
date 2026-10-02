@@ -3,8 +3,9 @@
 mod support;
 
 use keep::{
-    AdmittedStoreMigrationIntent, StoreMigrationEffect, StoreMigrationFixedStage,
-    StoreMigrationRecoveryAmbiguity, StoreMigrationResidue, plan_store_migration_recovery,
+    AdmittedStoreMigrationIntent, MIGRATION_NAMESPACE_PREFIX, StoreMigrationEffect,
+    StoreMigrationFixedStage, StoreMigrationRecoveryAmbiguity, StoreMigrationResidue,
+    plan_store_migration_recovery,
 };
 use std::error::Error;
 
@@ -96,7 +97,7 @@ fn a_receipt_before_the_marker_reports_the_missing_marker_at_every_partial_names
         include_str!("../conformance/segment-store/v2/migration-receipt.hex").trim(),
     )?;
     let expected = AdmittedStoreMigrationIntent::decode(&intent)?;
-    for extent in 0..7 {
+    for extent in 0..=MIGRATION_NAMESPACE_PREFIX.len() {
         for (receipt_stage, canonical) in
             [(Some(receipt.clone()), None), (None, Some(receipt.clone()))]
         {
