@@ -6,6 +6,13 @@ The corpus was constructed on 2026-07-29 with:
 - `cargo 1.96.0 (30a34c682 2026-05-25)`; and
 - `b3sum 1.8.5`.
 
+`transitions.tsv` was added on 2026-09-30 by transcribing the 21 boundaries of
+`StoreMigrationPhase::ALL` and the recovery table in
+`docs/formats/segment-store-v2/migration-recovery.md`. No independent oracle
+constructs this ledger. Its committed-byte guard is `transition_laws.rs`
+under `xtask/tests/retention_store_v2_protocol_contract/`. The crash matrix
+checks runtime behavior at the same boundaries without reading the TSV.
+
 ## Independent inputs
 
 The oracle imports exact bytes only from these previously accepted fixtures:
@@ -60,6 +67,9 @@ Exact output:
 A temporary ignored Rust test wrote the initially reviewed TSV and hexadecimal
 artifacts from the handwritten oracle. That write path was removed immediately
 after materialization. The committed oracle is read-only and rejects drift.
+This construction claim covers the original format tables and hexadecimal
+records; the later handwritten `transitions.tsv` has the separate verification
+boundary described above.
 
 Changing any fixture requires a deliberate specification change, an updated
 definition or profile digest when affected, fresh independent construction,

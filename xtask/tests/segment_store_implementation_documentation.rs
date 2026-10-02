@@ -4,7 +4,17 @@ const ROOT_README: &str = include_str!("../../README.md");
 const FORMAT_REGISTRY: &str = include_str!("../../docs/formats/README.md");
 const FORMAT_README: &str = include_str!("../../docs/formats/segment-store-v1/README.md");
 const REQUIREMENTS: &str = include_str!("../../docs/formats/segment-store-v1/requirements.md");
+const PUBLICATION: &str = include_str!("../../docs/formats/segment-store-v1/publication.md");
+const RECOVERY: &str = include_str!("../../docs/formats/segment-store-v1/recovery.md");
 const CORPUS_README: &str = include_str!("../../conformance/segment-store/v1/README.md");
+
+#[test]
+fn version_one_crash_evidence_is_distinguished_from_the_complete_command() {
+    assert!(
+        RECOVERY.contains("105 version-one cases are a subset"),
+        "the unqualified crash command also executes version-two migration cases"
+    );
+}
 
 #[test]
 fn living_documentation_names_the_implemented_segment_boundary() {
@@ -31,4 +41,33 @@ fn living_documentation_names_the_implemented_segment_boundary() {
         );
     }
     assert!(!ROOT_README.contains("Durable segment storage, retention"));
+}
+
+#[test]
+fn recovery_documentation_does_not_assign_materialization_to_the_inventory_reader() {
+    assert!(
+        !RECOVERY.contains("bytes that the inventory\nreader materializes"),
+        "inventory fingerprinting returns evidence, not materialized stage bytes"
+    );
+}
+
+#[test]
+fn living_v1_pages_no_longer_assign_shipped_recovery_to_a_future_issue() {
+    for (document, stale_claim) in [
+        (FORMAT_README, "remain owned by issue #17"),
+        (PUBLICATION, "Issue #17 must implement initialization"),
+        (
+            PUBLICATION,
+            "Issue #16 does not implement store-root initialization",
+        ),
+        (PUBLICATION, "A future admission producer"),
+        (RECOVERY, "remain unimplemented"),
+        (REQUIREMENTS, "Explicit\nrecovery remains separate work"),
+        (REQUIREMENTS, "remain\nowned by issue #17"),
+    ] {
+        assert!(
+            !document.contains(stale_claim),
+            "stale issue-era claim survives: {stale_claim:?}"
+        );
+    }
 }

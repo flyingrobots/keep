@@ -62,8 +62,9 @@ corpus `definition.tsv` bytes. The format-marker digest is BLAKE3-256 of
 `CanonicalStoreMigrationIntent` retains typed intent coordinates; `CanonicalStoreMigrationReceipt` binds completion; admitted record types verify both.
 `StoreMigrationStorage` names all 21 durability capabilities; `execute_store_migration` verifies current authority first and returns only after final synchronization.
 `FilesystemStoreMigrationInventoryReader` inventories version-1 bytes under
-retained writer authority. The fresh writer executes once; partial-prefix
-recovery is absent; version-1 reopen and recovery both refuse a migrated root.
+retained writer authority. The fresh writer executes once; separate migration
+recovery plans and executes the lawful remaining suffix after process death.
+Version-1 reopen and version-1 recovery both refuse a migrated root.
 
 ## Reader fence
 
@@ -139,6 +140,45 @@ identity, caller identity, path, and time do not enter the identifier. The
 migration intent separately binds the physical root coordinates so in-place
 recovery refuses a substituted store.
 
+### Root identity across restart
+
+The three root coordinates the intent records do not have the same lifetime.
+`statx.stx_mnt_id` names a mount instance: it can change when a filesystem
+is unmounted and mounted again or after a reboot. A restart path must not
+require the historical mount identifier. The device and inode coordinates
+name the volume and the root directory and survive remounts on the admitted
+platform.
+
+The Linux [statx reference](https://man7.org/linux/man-pages/man2/statx.2.html)
+defines the mount identifier separately from device and inode coordinates.
+The lifetime distinction above is the reason Keep does not use it as restart
+authority.
+
+The restart-stable root identity is therefore the pair `(device, file)`:
+
+- `FilesystemStoreMigrationAuthority` compares all three coordinates, but
+  only against the observation it made itself when it opened the root in the
+  same process; that comparison catches a root swapped underneath a running
+  migration and never crosses a restart.
+- `FilesystemVersionTwoAdmission::reopen` compares device and
+  file only and refuses with `RootIdentityChanged { coordinate: Device | File,
+  .. }`. A remounted store admits; a store copied to another device or
+  restored into a different directory refuses.
+
+Partial-prefix migration recovery uses the same restart comparison; its
+authority and resumption protocol are specified in
+[the executable recovery boundary](migration-recovery.md#executable-recovery-boundary).
+
+The mount coordinate stays in the record as the migration-time observation.
+It remains evidence for same-process migration checks, not restart authority.
+
+Limit: `dev_t` is stable across reboots only while the block device keeps its
+major and minor numbers. A device-mapper or hot-plug renumbering makes a
+correct store refuse with `RootIdentityChanged { coordinate: Device, .. }`;
+version 2 defines no re-admission for that case, and a successor coordinate
+(the filesystem UUID) is the rationale's recorded alternative if it proves
+necessary.
+
 `migration.receipt` is exactly 256 bytes:
 
 <!-- markdownlint-disable MD013 -->
@@ -174,9 +214,11 @@ recovery instead. Direct version-2 initialization is undefined.
 
 The exact offsets and fixtures are requirement `KEEP-MIGRATION-002`. The fresh
 writer emits only those canonical records; success is not restart evidence.
-A migrated store is admitted for forward publication, but partial-prefix
-recovery and `KEEP-MIGRATION-007` process-death evidence remain absent, so an
-interrupted migration waits for recovery instead of continuing.
+A migrated store is admitted for forward publication. Partial-prefix recovery
+now plans and executes the lawful remaining migration suffix under writer
+authority; the 68-case migration process-death matrix supplies restart evidence.
+Broader hostile restart and compatibility coverage remain tracked in #111 and
+issue #112.
 
 ## Retention publication recovery
 
@@ -208,6 +250,12 @@ report. Any later effect, stale generation, mismatched digest, missing
 transitive member, reappeared stage, conflicting pool entry, or other
 corruption is a typed refusal. A complete valid orphan remains
 recovery-protected until explicit disposition.
+
+This retention protocol requires pinning the incomplete regular file. The
+separate [migration discard path](migration-crash.md#fixed-stage-law)
+revalidates the current entry's regular kind and incomplete length before
+removal without retaining an incomplete-stage handle. These are distinct
+protocol boundaries; retention recovery awaits integration from PR #99.
 
 The retention crash points are:
 
