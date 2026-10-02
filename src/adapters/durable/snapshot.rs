@@ -29,6 +29,8 @@ use crate::{AdmittedLayout, BlobId, ByteRange, ChunkId, LayoutId};
 /// one at a time under their stored traversal limits. Reads decode one bounded
 /// layout and stream authenticated chunks to the caller without assembling an
 /// additional whole-blob buffer. Caller-owned output may allocate separately.
+/// Each read also re-admits the already materialized catalog and segment bytes,
+/// allocating bounded decoded indexes; even a short range pays that cost.
 ///
 /// Blob lookup performs synchronous reads over the manifest-selected roots,
 /// retaining at most one root's bytes and decoded anchors at a time. Its cost
@@ -42,7 +44,7 @@ pub struct DurableSnapshot {
 }
 
 /// The pinned catalog as a chunk source: every chunk record's exact payload.
-pub(super) struct CatalogChunks<'snapshot, 'head, 'catalog, 'records> {
+struct CatalogChunks<'snapshot, 'head, 'catalog, 'records> {
     catalog: &'snapshot CatalogSnapshot<'head, 'catalog, 'records>,
 }
 
@@ -153,7 +155,8 @@ impl DurableSnapshot {
     }
 
     /// Reads exactly `requested` of `target` through its first retained
-    /// anchor, authenticating only the overlapping chunks.
+    /// anchor. The range receipt covers only overlapping chunks; snapshot
+    /// and catalog admission also verify the surrounding stored evidence.
     ///
     /// # Errors
     ///
@@ -199,14 +202,14 @@ impl DurableSnapshot {
             .ok_or(DurableReadError::BlobMissing { requested: target })
     }
 
-    pub(super) fn catalog(&self) -> Result<CatalogSnapshot<'_, '_, '_>, DurableReadError> {
+    fn catalog(&self) -> Result<CatalogSnapshot<'_, '_, '_>, DurableReadError> {
         self.view
             .catalog()
             .snapshot()
             .map_err(|source| DurableReadError::View(Box::new(source)))
     }
 
-    pub(super) fn layout(
+    fn layout(
         &self,
         catalog: &CatalogSnapshot<'_, '_, '_>,
         layout_id: LayoutId,

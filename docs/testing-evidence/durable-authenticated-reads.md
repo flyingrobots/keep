@@ -27,3 +27,11 @@ The initial filesystem laws use owned test directories and the existing reposito
 New laws are medium-size because they own filesystem state. Per-test resource enforcement and suite SLOs remain gaps described in the repository [enforcement profile](../testing/enforcement.md); no compliance waiver or new resource ceiling is claimed here. Deletion criteria and oracles appear beside the laws.
 
 Initial debug/release golden-read checks and all-feature Clippy passed; expanded view laws passed in debug. Initial authoring/compilation and Clippy failures are retained in the local evidence logs and are not product RED evidence. Final source SHAs, complete check results and actual mutation observations belong in the final PR receipt. This new API did not exist on the parent; parent compilation failure would not prove a runtime regression.
+
+## First implementation receipt
+
+Implementation commit `d6c38a1` passed formatting, source structure, both workspace Clippy feature profiles, complete all-feature workspace debug/release tests and doctests, and rustdoc generation on pinned Rust 1.96.0 in a copied Docker source tree. These runs include the existing generated range-to-source-slice properties and reference single-hash-pass laws. Subsequent documentation and visibility narrowing require their own final-head checks; this receipt does not transfer to future semantic changes.
+
+Three isolated source/build mutations were observed RED on that implementation: substituting `[1]` during emission after verification made whole-read, exact-layout and nonempty-range assertions report expected `[0]` versus observed `[1]`; advancing the receipt's catalog generation made its coordinate assertion report expected 1 versus observed 2; replacing shared fence acquisition with unlock made the collector-exclusion assertion report expected `WouldBlock` versus observed successful acquisition. These are runtime calibration, not parent-bug reproductions or an assertion that every new check has already been calibrated.
+
+The remaining closure-ledger obligations above are still open, including generated multi-chunk durable laws, Worldline restart/range witnesses, precise missing-member/output failures, independent digest expectations and complete final-head review/CI. The issue stays open and its PR remains a draft until they are satisfied.
