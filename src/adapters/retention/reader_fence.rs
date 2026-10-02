@@ -22,7 +22,7 @@ mod tests;
 /// only adds immutable successors. Dropping the fence releases only the
 /// kernel lock; the persistent file is never deleted.
 #[must_use]
-pub struct ReaderFence {
+pub(super) struct ReaderFence {
     _file: File,
 }
 

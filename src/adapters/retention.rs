@@ -198,7 +198,7 @@ pub use publication_preparation_error::RetentionPublicationPreparationError;
 pub use publication_receipt::RetentionPublicationReceipt;
 pub use publication_storage::RetentionPublicationStorage;
 pub use reader_attempt_limit::ReaderAttemptLimit;
-pub use reader_fence::ReaderFence;
+use reader_fence::ReaderFence;
 pub use recovery_evidence::{
     RetentionPoolEntryObservation, RetentionPoolObservations, RetentionRecoveryEvidence,
     RetentionStageAssessments,
