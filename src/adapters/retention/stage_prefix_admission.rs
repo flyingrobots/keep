@@ -30,6 +30,10 @@ pub(super) fn root(encoded: &[u8]) -> Result<(), RetentionRootDecodeError> {
     }
     if encoded.len() >= 48 {
         super::root_header_decoder::admit_prefix_length(encoded)?;
+    } else if super::stage_framing_prefix::root(encoded) != Some(()) {
+        return Err(RetentionRootDecodeError::FramingPrefixImpossible {
+            observed: encoded.len(),
+        });
     }
     if encoded.len() >= 116 {
         super::stage_history_admission::root(encoded)?;
@@ -58,6 +62,10 @@ pub(super) fn manifest(encoded: &[u8]) -> Result<(), RetentionManifestDecodeErro
     super::stage_generation_admission::manifest(encoded)?;
     if encoded.len() >= 48 {
         super::manifest_header_decoder::admit_prefix_length(encoded)?;
+    } else if super::stage_framing_prefix::manifest(encoded) != Some(()) {
+        return Err(RetentionManifestDecodeError::FramingPrefixImpossible {
+            observed: encoded.len(),
+        });
     }
     if encoded.len() >= 48 {
         super::stage_history_admission::manifest(encoded)?;
@@ -86,6 +94,10 @@ pub(super) fn head(encoded: &[u8]) -> Result<(), RetentionHeadDecodeError> {
         let value = super::head_decoder::read_u64(encoded, 32)?;
         let _length = crate::RetentionManifestLength::new(value)
             .map_err(|source| RetentionHeadDecodeError::ManifestLength { source })?;
+    } else if super::stage_framing_prefix::head(encoded) != Some(()) {
+        return Err(RetentionHeadDecodeError::ManifestLengthPrefixImpossible {
+            observed: encoded.len(),
+        });
     }
     if encoded.len() >= 104 {
         let _head = super::head_decoder::admit_fields(encoded)?;

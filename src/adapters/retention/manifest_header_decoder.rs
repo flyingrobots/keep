@@ -6,8 +6,8 @@ use super::manifest_field_decoder::{
 };
 
 pub(super) const HEADER_LENGTH: usize = 160;
-const ENTRY_WIDTH: usize = 72;
-const TRAILER_LENGTH: usize = 64;
+pub(super) const ENTRY_WIDTH: usize = 72;
+pub(super) const TRAILER_LENGTH: usize = 64;
 
 /// Derives the read bound from the same framing admitted by this decoder.
 pub(super) fn maximum_encoded_length() -> Result<usize, RetentionManifestDecodeError> {

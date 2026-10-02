@@ -7,8 +7,8 @@ use super::root_field_decoder::{
 };
 
 pub(super) const HEADER_LENGTH: usize = 192;
-const ANCHOR_WIDTH: usize = 119;
-const TRAILER_LENGTH: usize = 64;
+pub(super) const ANCHOR_WIDTH: usize = 119;
+pub(super) const TRAILER_LENGTH: usize = 64;
 /// Longest canonical root: the header, a namespace at
 /// `RetentionNamespace::MAXIMUM_BYTE_LENGTH` (255), `RetentionRoot::
 /// MAXIMUM_ANCHOR_COUNT` (65,536) anchors, and the trailer. Pinned against the

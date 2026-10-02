@@ -11,6 +11,8 @@ use super::{
 };
 use std::{error::Error, fs};
 
+type StagePrefix = (Stage, Vec<u8>);
+
 // Size: medium. Oracle: canonical framing has bounded counts, namespace lengths and entry widths.
 // Delete only when stronger runtime laws subsume impossible-prefix refusal and evidence preservation.
 #[test]
@@ -53,7 +55,7 @@ fn impossible_framing_prefixes_preserve_evidence() -> Result<(), Box<dyn Error>>
     Ok(())
 }
 
-fn impossible_prefixes() -> Result<Vec<(Stage, Vec<u8>)>, Box<dyn Error>> {
+fn impossible_prefixes() -> Result<Vec<StagePrefix>, Box<dyn Error>> {
     let mut cases = Vec::new();
     // A nonzero high length byte exceeds every format ceiling at each partial endpoint.
     for (stage, corpus, offset) in [
@@ -71,8 +73,10 @@ fn impossible_prefixes() -> Result<Vec<(Stage, Vec<u8>)>, Box<dyn Error>> {
     }
     for (stage, corpus, declared) in [
         (Stage::Root, ROOT_HEX, 256_u64),
+        (Stage::Root, ROOT_HEX, 7_799_296),
         (Stage::Manifest, MANIFEST_HEX, 223),
         (Stage::Manifest, MANIFEST_HEX, 225),
+        (Stage::Manifest, MANIFEST_HEX, 295_137),
     ] {
         let mut bytes = fixture(corpus)?;
         bytes
@@ -103,6 +107,31 @@ fn impossible_prefixes() -> Result<Vec<(Stage, Vec<u8>)>, Box<dyn Error>> {
         .copy_from_slice(&4_u16.to_be_bytes());
     namespace.truncate(42);
     cases.push((Stage::Root, namespace));
+    cases.extend(insufficient_count_prefixes()?);
+    let mut head = fixture(HEAD_HEX)?;
+    head.get_mut(32..40)
+        .ok_or("length absent")?
+        .copy_from_slice(&295_168_u64.to_be_bytes());
+    head.truncate(39);
+    cases.push((Stage::Head, head));
+    Ok(cases)
+}
+
+fn insufficient_count_prefixes() -> Result<Vec<StagePrefix>, Box<dyn Error>> {
+    let mut cases = Vec::new();
+    // A zero three-byte count prefix admits at most 255 items, below the required 256.
+    for (stage, corpus, total) in [
+        (Stage::Root, ROOT_HEX, 30_723_u64),
+        (Stage::Manifest, MANIFEST_HEX, 18_656),
+    ] {
+        let mut bytes = fixture(corpus)?;
+        bytes
+            .get_mut(24..32)
+            .ok_or("length absent")?
+            .copy_from_slice(&total.to_be_bytes());
+        bytes.truncate(47);
+        cases.push((stage, bytes));
+    }
     Ok(cases)
 }
 

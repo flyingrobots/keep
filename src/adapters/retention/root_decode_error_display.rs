@@ -24,10 +24,7 @@ impl fmt::Display for RetentionRootDecodeError {
                 offset,
                 expected,
                 observed,
-            } => write!(
-                formatter,
-                "retention stage byte {offset} is {observed:#04x}; expected {expected:#04x}"
-            ),
+            } => prefix_failure(formatter, *offset, *expected, *observed),
             Self::InvalidMagic { observed } => {
                 write!(formatter, "invalid retention root magic {observed:02x?}")
             }
@@ -109,6 +106,18 @@ impl fmt::Display for RetentionRootDecodeError {
             Self::Semantic { source } => write!(formatter, "invalid semantic root: {source}"),
         }
     }
+}
+
+fn prefix_failure(
+    formatter: &mut fmt::Formatter<'_>,
+    offset: usize,
+    expected: u8,
+    observed: u8,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "retention stage byte {offset} is {observed:#04x}; expected {expected:#04x}"
+    )
 }
 
 fn identity_failure(

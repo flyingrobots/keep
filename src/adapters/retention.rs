@@ -201,6 +201,7 @@ mod retention_view_collector;
 mod retention_view_collector_tests;
 mod stage_closure_limit_admission;
 mod stage_fixed_field_admission;
+mod stage_framing_prefix;
 mod stage_generation_admission;
 mod stage_history_admission;
 mod stage_prefix_admission;
