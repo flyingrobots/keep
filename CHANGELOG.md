@@ -667,6 +667,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Retention recovery reauthenticates the current catalog and selected segments and replays staged-root closure laws before publication effects. Forward publication shares live verification after pure preflight and preserves prepared catalog binding. Recovery exposes an explicit catalog loading policy; the default aggregate retained-segment cap is one protocol-maximum segment (1 GiB), with larger selections refusing before mutation (#99).
+
 - Retention recovery refuses truncated manifest or head stages whose earlier complete stage or immutable pool link is missing, preserving impossible-prefix evidence instead of deleting it (#99).
 
 - Retention recovery requires an uncommitted head's staged root to satisfy the same generation and predecessor rules as root-only and manifest-only recovery. Already committed cleanup remains admissible (#99).

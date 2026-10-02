@@ -87,7 +87,12 @@ fn require_refusal(damage: Damage, prefix: usize) -> Result<(), Box<dyn Error>> 
         Damage::MissingSegment | Damage::MissingCatalog => fs::remove_file(path)?,
         Damage::CorruptSegment | Damage::CorruptCatalog => {
             let mut bytes = fs::read(&path)?;
-            *bytes.last_mut().ok_or("empty transitive artifact")? ^= 1;
+            let offset = match damage {
+                Damage::CorruptCatalog => bytes.len().checked_sub(64),
+                _ => bytes.len().checked_sub(1),
+            }
+            .ok_or("artifact lacks its integrity trailer")?;
+            *bytes.get_mut(offset).ok_or("integrity trailer is absent")? ^= 1;
             fs::write(path, bytes)?;
         }
     }

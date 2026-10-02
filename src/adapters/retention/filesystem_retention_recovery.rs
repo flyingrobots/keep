@@ -15,6 +15,7 @@ use super::{
     RetentionStageAssessment, assess_head_stage, assess_manifest_stage, assess_root_stage,
     execute_retention_recovery, plan_retention_recovery,
 };
+use crate::adapters::CatalogRestartPolicy;
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
 use crate::adapters::filesystem_exact_record::{self as exact_record, EntryIdentity};
 
@@ -112,7 +113,7 @@ fn truncated(stage: &StageBytes) -> RecoveredStage {
 }
 
 impl FilesystemRetentionPublicationAuthority {
-    /// Observes, plans, and executes recovery of every fixed retention stage.
+    /// Recovers fixed retention stages with an explicit catalog loading policy.
     ///
     /// The synchronous call runs under the retained writer lock. A clean store
     /// returns an empty receipt; a truncated pre-effect stage is discarded; a
@@ -122,12 +123,21 @@ impl FilesystemRetentionPublicationAuthority {
     /// as its first step; callers may also run it explicitly at restart.
     /// Both entry points verify that protocol names still identify the pinned
     /// directories before observing stages or executing recovery effects.
+    /// A complete root requires loading every head-selected catalog segment
+    /// into bounded retained memory, then replaying its anchors and closure
+    /// limits before any recovery effect. The supplied policy bounds aggregate
+    /// segment bytes and per-segment record admission; catalog bytes also have
+    /// their independent protocol bound. Clean and incomplete-root recovery
+    /// does not materialize the catalog. This call may allocate and block on I/O.
     ///
     /// # Errors
     ///
     /// Returns [`FilesystemRetentionRecoveryError`](super::FilesystemRetentionRecoveryError)
     /// at the exact observation failure, planning refusal, or refused step.
-    pub fn recover(&mut self) -> Result<RetentionRecoveryReceipt, Error> {
+    pub fn recover_with_catalog_policy(
+        &mut self,
+        policy: CatalogRestartPolicy,
+    ) -> Result<RetentionRecoveryReceipt, Error> {
         require_pinned_directories(&self.root, &self.retention, &self.roots, &self.manifests)
             .map_err(|source| Error::Observe { source })?;
         self.attempt = None;
@@ -145,6 +155,12 @@ impl FilesystemRetentionPublicationAuthority {
             .map_err(|source| Error::Plan { source })?;
         super::filesystem_retention_recovery_roots::admit(&self.roots, &observation.evidence())
             .map_err(|source| Error::Observe { source })?;
+        super::filesystem_retention_closure_admission::admit_recovery(
+            &self.root,
+            &observation.evidence(),
+            policy,
+        )
+        .map_err(|source| Error::Observe { source })?;
         self.recovery = Some(
             RetentionRecoveryContext::reopen(&self.retention, &observation)
                 .map_err(|source| Error::Observe { source })?,

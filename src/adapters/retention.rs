@@ -25,6 +25,7 @@ mod filesystem_retention_capacity_tests;
 mod filesystem_retention_catalog;
 #[cfg(test)]
 mod filesystem_retention_catalog_tests;
+mod filesystem_retention_closure_admission;
 mod filesystem_retention_current;
 #[cfg(test)]
 mod filesystem_retention_current_tests;
@@ -38,7 +39,11 @@ mod filesystem_retention_namespace;
 #[cfg(test)]
 mod filesystem_retention_namespace_tests;
 mod filesystem_retention_pool_name;
+#[cfg(test)]
+mod filesystem_retention_publication_closure_tests;
 mod filesystem_retention_recovery;
+#[cfg(test)]
+mod filesystem_retention_recovery_closure_law_tests;
 #[cfg(test)]
 mod filesystem_retention_recovery_closure_tests;
 #[cfg(test)]
@@ -59,6 +64,9 @@ mod filesystem_retention_recovery_identity_tests;
 #[cfg(test)]
 mod filesystem_retention_recovery_namespace_tests;
 mod filesystem_retention_recovery_observation;
+mod filesystem_retention_recovery_policy;
+#[cfg(test)]
+mod filesystem_retention_recovery_policy_tests;
 #[cfg(test)]
 mod filesystem_retention_recovery_predecessor_tests;
 #[cfg(test)]
