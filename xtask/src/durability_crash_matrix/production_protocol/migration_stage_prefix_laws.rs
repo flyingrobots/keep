@@ -28,8 +28,11 @@ fn stage_interruptions_are_nonempty_strict_prefixes_of_admitted_records()
         (marker.encoded(), MARKER_INTERRUPTION),
         (receipt.encoded(), RECEIPT_INTERRUPTION),
     ] {
-        assert!(prefix > 0 && prefix < bytes.len());
-        assert_eq!(bytes.get(..prefix).map(<[u8]>::len), Some(prefix));
+        assert!(prefix > 0, "an interruption must leave a nonempty prefix");
+        assert!(
+            prefix < bytes.len(),
+            "an interruption must not complete the record"
+        );
     }
     Ok(())
 }
