@@ -25,6 +25,15 @@ pub enum RetentionRootDecodeError {
         /// Observed byte length.
         observed: usize,
     },
+    /// An available byte contradicts a fixed field in an interrupted stage.
+    PrefixByteMismatch {
+        /// Absolute byte offset in the observed stage.
+        offset: usize,
+        /// The canonical byte required at this offset.
+        expected: u8,
+        /// The byte actually present at this offset.
+        observed: u8,
+    },
     /// The fixed record magic was not canonical.
     InvalidMagic {
         /// Observed 16 magic bytes.

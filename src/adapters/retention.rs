@@ -122,6 +122,7 @@ mod retention_model_tests;
 mod retention_view_collector;
 #[cfg(test)]
 mod retention_view_collector_tests;
+mod stage_prefix_admission;
 pub use admitted_manifest::AdmittedRetentionManifest;
 pub use admitted_root::AdmittedRetentionRoot;
 pub use canonical_head::CanonicalRetentionHead;

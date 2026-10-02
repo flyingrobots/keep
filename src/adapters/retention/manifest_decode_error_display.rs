@@ -15,6 +15,14 @@ impl fmt::Display for RetentionManifestDecodeError {
                 formatter,
                 "retention manifest has trailing data: expected {expected} bytes, observed {observed}"
             ),
+            Self::PrefixByteMismatch {
+                offset,
+                expected,
+                observed,
+            } => write!(
+                formatter,
+                "retention stage byte {offset} is {observed:#04x}; expected {expected:#04x}"
+            ),
             Self::InvalidMagic { observed } => {
                 write!(
                     formatter,
@@ -91,6 +99,7 @@ impl Error for RetentionManifestDecodeError {
             Self::Semantic { source } => Some(source),
             Self::Truncated { .. }
             | Self::TrailingData { .. }
+            | Self::PrefixByteMismatch { .. }
             | Self::InvalidMagic { .. }
             | Self::UnsupportedVersion { .. }
             | Self::InvalidHeaderLength { .. }

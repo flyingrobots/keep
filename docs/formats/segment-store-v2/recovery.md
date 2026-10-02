@@ -249,6 +249,12 @@ a retained root.
 
 <!-- markdownlint-enable MD013 -->
 
+<!-- markdownlint-disable MD013 -->
+
+Available fixed-field bytes in an interrupted retention stage must match the canonical magic, version, header or record width, flags, anchor or entry width, and reserved fields. A contradiction is `StageCorrupt` with a `PrefixByteMismatch` source naming the exact offset, expected byte, and observed byte; recovery refuses before mutation and preserves every retained file. Absent bytes are not padded or reported as observed. This check does not establish semantic validity of incomplete variable fields.
+
+<!-- markdownlint-enable MD013 -->
+
 A pre-effect incomplete stage may be removed only when every later-ordered
 effect is absent and all earlier evidence admits exactly. Recovery pins that
 regular file, removes it, synchronizes `retention`, and returns a typed discard

@@ -11,6 +11,14 @@ impl fmt::Display for RetentionHeadDecodeError {
                 formatter,
                 "retention head has {observed} bytes; expected {expected}"
             ),
+            Self::PrefixByteMismatch {
+                offset,
+                expected,
+                observed,
+            } => write!(
+                formatter,
+                "retention stage byte {offset} is {observed:#04x}; expected {expected:#04x}"
+            ),
             Self::InvalidMagic { observed } => {
                 write!(formatter, "invalid retention head magic {observed:02x?}")
             }
@@ -57,6 +65,7 @@ impl Error for RetentionHeadDecodeError {
             Self::ManifestLength { source } => Some(source),
             Self::Semantic { source } => Some(source),
             Self::WrongLength { .. }
+            | Self::PrefixByteMismatch { .. }
             | Self::InvalidMagic { .. }
             | Self::UnsupportedVersion { .. }
             | Self::InvalidRecordLength { .. }
