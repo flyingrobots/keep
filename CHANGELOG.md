@@ -609,7 +609,8 @@ after its public API and format compatibility policies are established.
 - Reference staging exposes its fixed buffer/state allowance and measured
   capacity, deduplication, and repeated-content allocation laws (#74).
   Chunk payload limits and separately bounded metadata are documented without
-  claiming constant total memory or durability.
+  claiming constant total memory or durability. Source-failure cleanup after
+  partial staging preserves committed content and releases staging heap.
 
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.

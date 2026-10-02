@@ -1,7 +1,7 @@
 //! Isolated heap-allocation evidence for reference-store staging and reconstruction.
 
 use std::error::Error;
-use std::io::{Cursor, Read, repeat, sink};
+use std::io::{self, Cursor, Read, repeat, sink};
 
 use allocation_counter::{AllocationInfo, measure};
 use keep::{
@@ -187,6 +187,67 @@ fn a_multi_gib_source_refuses_before_materializing_a_prefix() -> Result<(), Box<
     assert!(observed.bytes_max <= u64::try_from(maximum)?);
     assert_eq!(observed.bytes_current, 0);
     Ok(())
+}
+
+#[test]
+fn source_failure_releases_staged_payload_and_preserves_committed_content()
+-> Result<(), Box<dyn Error>> {
+    let original = b"already committed bytes";
+    let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+    let published = store
+        .stage(&mut Cursor::new(original), LayoutEntryLimit::MAXIMUM)?
+        .commit(&mut store)?;
+    let refused_target = keep::BlobId::hash_bytes(&vec![0_u8; 300_000])?;
+    // Preserve the source error without counting its caller-owned allocation
+    // as staging memory retained after refusal.
+    let failure = io::Error::new(
+        io::ErrorKind::PermissionDenied,
+        "source failed after staged chunk",
+    );
+    let mut reader = repeat(0).take(300_000).chain(FailedSource {
+        failure: Some(failure),
+    });
+    let mut result = None;
+
+    let observed = measure(|| {
+        result = Some(store.stage(&mut reader, LayoutEntryLimit::MAXIMUM));
+    });
+
+    let error = result
+        .ok_or("measurement did not run staging")?
+        .err()
+        .ok_or("failed source unexpectedly staged")?;
+    let IngestionError::Read { source } = error else {
+        return Err("source failure reached the wrong boundary".into());
+    };
+    assert_eq!(source.kind(), io::ErrorKind::PermissionDenied);
+    assert_eq!(source.to_string(), "source failed after staged chunk");
+    assert_eq!(reader.get_ref().0.limit(), 0);
+    assert!(
+        observed.bytes_max
+            >= u64::from(FastCdc::MAXIMUM_CHUNK_LENGTH.get())
+                .checked_mul(2)
+                .ok_or("fixture bound overflow")?
+    );
+    assert_eq!(observed.bytes_current, 0, "source refusal retained heap");
+    assert!(!store.contains_blob(refused_target));
+    let mut output = Vec::new();
+    let receipt = store.reconstruct(published.target(), &mut output)?;
+    assert_eq!(receipt.target(), published.target());
+    assert_eq!(output, original);
+    Ok(())
+}
+
+struct FailedSource {
+    failure: Option<io::Error>,
+}
+
+impl Read for FailedSource {
+    fn read(&mut self, _buffer: &mut [u8]) -> io::Result<usize> {
+        self.failure
+            .take()
+            .map_or_else(|| Err(io::ErrorKind::BrokenPipe.into()), Err)
+    }
 }
 
 fn metadata_allowance(source_length: usize) -> Result<usize, Box<dyn Error>> {

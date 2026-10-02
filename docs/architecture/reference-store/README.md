@@ -65,7 +65,8 @@ Metadata remains bounded by `LayoutEntryLimit`, rather than by logical bytes.
 
 The allocation laws measure incremental live heap during `stage`, excluding
 caller input and previously committed data. They cover over-capacity refusal
-with no retained heap, already-committed deduplication, and a synthetic stream
+with no retained heap, source failure after a staged chunk with preserved
+committed content, already-committed deduplication, and a synthetic stream
 sixteen times capacity whose repeated content stages one unique chunk. A
 synthetic 4 GiB source refuses on its first oversized chunk after consuming
 256 KiB, with bounded heap and no caller-side source allocation. The
