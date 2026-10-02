@@ -26,6 +26,8 @@ mod filesystem_retention_catalog;
 #[cfg(test)]
 mod filesystem_retention_catalog_tests;
 mod filesystem_retention_closure_admission;
+#[cfg(test)]
+mod filesystem_retention_closure_prefix_tests;
 mod filesystem_retention_current;
 #[cfg(test)]
 mod filesystem_retention_current_tests;

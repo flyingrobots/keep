@@ -3,9 +3,9 @@
 use std::collections::TryReserveError;
 
 use crate::{
-    BlobIdBinaryParseError, LayoutIdBinaryParseError, RetentionClosureLimitError,
-    RetentionNamespaceError, RetentionProfileAdmissionError, RetentionRootError,
-    RootGenerationError,
+    BlobIdBinaryParseError, LayoutIdBinaryParseError, RetentionClosureLimit,
+    RetentionClosureLimitError, RetentionNamespaceError, RetentionProfileAdmissionError,
+    RetentionRootError, RootGenerationError,
 };
 
 /// Failure to decode and admit one version-2 retention root.
@@ -105,6 +105,15 @@ pub enum RetentionRootDecodeError {
     ClosureLimit {
         /// Preserved limit failure.
         source: RetentionClosureLimitError,
+    },
+    /// An interrupted limit cannot be completed within its resource ceiling.
+    ClosureLimitPrefixAboveMaximum {
+        /// Resource whose available bytes already exceed its ceiling.
+        limit: RetentionClosureLimit,
+        /// Smallest value possible when all unavailable bytes are zero.
+        minimum: u64,
+        /// Largest admitted value for this resource.
+        maximum: u64,
     },
     /// One anchor contained a malformed `BlobId`.
     BlobId {

@@ -66,6 +66,14 @@ impl fmt::Display for RetentionRootDecodeError {
             Self::ClosureLimit { source } => {
                 write!(formatter, "invalid root closure limit: {source}")
             }
+            Self::ClosureLimitPrefixAboveMaximum {
+                limit,
+                minimum,
+                maximum,
+            } => write!(
+                formatter,
+                "retention root {limit} prefix requires at least {minimum}; maximum is {maximum}"
+            ),
             Self::BlobId { index, source } => {
                 write!(
                     formatter,
@@ -113,6 +121,7 @@ impl Error for RetentionRootDecodeError {
             Self::Truncated { .. }
             | Self::TrailingData { .. }
             | Self::PrefixByteMismatch { .. }
+            | Self::ClosureLimitPrefixAboveMaximum { .. }
             | Self::InvalidMagic { .. }
             | Self::UnsupportedVersion { .. }
             | Self::InvalidHeaderLength { .. }
