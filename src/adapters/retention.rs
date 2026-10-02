@@ -15,6 +15,8 @@ mod closure_profile_error;
 mod closure_verifier;
 #[cfg(test)]
 mod filesystem_recovery_admission_tests;
+#[cfg(test)]
+mod filesystem_retention_anchor_order_prefix_tests;
 mod filesystem_retention_attempt;
 #[cfg(test)]
 mod filesystem_retention_attempt_tests;
