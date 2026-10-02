@@ -253,6 +253,8 @@ a retained root.
 
 Available fixed-field bytes in an interrupted retention stage must match the canonical magic, version, header or record width, flags, anchor or entry width, and reserved fields. A contradiction is `StageCorrupt` with a `PrefixByteMismatch` source naming the exact offset, expected byte, and observed byte; recovery refuses before mutation and preserves every retained file. Absent bytes are not padded or reported as observed. Complete generation fields must also admit through the positive root or liveness generation constructor; zero is corruption even if later fields are absent. Incomplete generation fields remain undecided. These checks do not establish semantic validity of other incomplete variable fields.
 
+Recovery synchronizes each complete staged file and reverifies its exact bytes before creating its root or manifest pool link or replacing `HEAD`. The file synchronization precedes namespace creation for a recovered root. A failed synchronization stops that recovery step before publication and preserves the on-disk stage; directory synchronization alone does not establish durability of the file contents.
+
 <!-- markdownlint-enable MD013 -->
 
 A pre-effect incomplete stage may be removed only when every later-ordered

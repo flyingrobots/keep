@@ -220,6 +220,7 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
         else {
             return Err(invalid_data("link_root expected a complete root stage"));
         };
+        stage.synchronize(&self.retention)?;
         match self.roots.create_dir(namespace) {
             Ok(()) => {}
             Err(source) if source.kind() == io::ErrorKind::AlreadyExists => {}
@@ -243,6 +244,7 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
                 "link_manifest expected a complete manifest stage",
             ));
         };
+        stage.synchronize(&self.retention)?;
         stage.link(&self.retention, &self.manifests, name)?;
         synchronize_directory(&self.manifests)
     }
@@ -250,6 +252,7 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
     fn finalize_head(&mut self) -> io::Result<()> {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
         let (stage, _name, _namespace) = take_complete(&mut context.head)?;
+        stage.synchronize(&self.retention)?;
         stage.replace(&self.retention, pool_name::HEAD)?;
         synchronize_directory(&self.retention)
     }

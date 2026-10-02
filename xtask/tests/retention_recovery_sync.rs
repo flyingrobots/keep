@@ -9,7 +9,8 @@ use std::process::Command;
 // Oracle: retention recovery must sync exact stage contents before publication.
 // Delete only when this protocol is removed or stronger OS fault evidence subsumes it.
 #[test]
-fn recovered_root_contents_are_synchronized_before_pool_publication() -> Result<(), Box<dyn Error>> {
+fn recovered_root_contents_are_synchronized_before_pool_publication() -> Result<(), Box<dyn Error>>
+{
     require_stage_sync("KEEP-CRASH-036", "root.next", "linkat(")
 }
 
@@ -20,7 +21,8 @@ fn recovered_manifest_contents_are_synchronized_before_pool_publication()
 }
 
 #[test]
-fn recovered_head_contents_are_synchronized_before_head_publication() -> Result<(), Box<dyn Error>> {
+fn recovered_head_contents_are_synchronized_before_head_publication() -> Result<(), Box<dyn Error>>
+{
     require_stage_sync("KEEP-CRASH-046", "head.next", "renameat(")
 }
 
@@ -30,7 +32,10 @@ fn require_stage_sync(point: &str, stage: &str, publication: &str) -> Result<(),
         .arg(env!("CARGO_BIN_EXE_xtask"))
         .args(["durability-crash-matrix", "--case", point, "after"])
         .output()?;
-    assert!(output.status.success(), "traced recovery failed: {output:?}");
+    assert!(
+        output.status.success(),
+        "traced recovery failed: {output:?}"
+    );
     let trace = std::str::from_utf8(&output.stderr)?;
     // The killed writer has a [pid ...] prefix. Only the surviving parent
     // performs restart recovery; its unprefixed syscalls are the observation.
