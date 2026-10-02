@@ -606,6 +606,12 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Reference staging exposes its fixed buffer/state allowance and measured
+  capacity, deduplication, and repeated-content allocation laws (#74).
+  Chunk payload limits and separately bounded metadata are documented without
+  claiming constant total memory or durability. Source-failure cleanup after
+  partial staging preserves committed content and releases staging heap.
+
 - Source-structure admission refuses the nine Rust source basenames prohibited
   by AGENTS.md with a typed repository-relative filename diagnostic (#144).
   Existing filesystem, Python and line-size checks remain in force.

@@ -27,6 +27,28 @@ reports the number and bytes of chunks absent from the store used during
 staging. Commit rechecks that another destination already owns any required
 chunks omitted by that deduplication.
 
+## Why staging materializes up to capacity
+
+Issue #74 permits an explicit rationale for unavoidable materialization.
+The reference store owns process memory. Keeping new chunks invisible until
+the entire stream has an admitted layout and verified blob identity requires
+the staged value to own those chunks; moving them into the visible store
+earlier would publish a prefix. A separate unpublished spill store could avoid
+that heap cost, but it would be a new storage adapter with its own failure,
+publication, cleanup, and recovery protocol.
+
+The existing adapter checks committed plus pending plus incoming payload bytes
+against capacity before copying. Stream buffers/state are fixed, and map and
+layout metadata are bounded by the entry limit. The public scratch allowance
+and allocation regressions make those separate resource terms explicit.
+Neither a large capacity nor bounded payload bytes proves low process RSS.
+
+A streaming publication window was rejected because a later source or identity
+failure must leave no visible prefix. A filesystem spill was rejected here
+because maintaining the in-memory adapter's current API does not establish
+safe durable publication or recovery. Those requirements belong to a separate
+durable ingestion implementation, not an implicit reference-store fallback.
+
 ## Why stage before commit
 
 Reading, chunking, hashing, allocation, and canonical layout calculation can
