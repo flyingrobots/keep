@@ -1,7 +1,7 @@
 //! This module owns one fenced, double-collected reader view of a version-two store.
 
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
@@ -51,7 +51,6 @@ struct Source {
     root: Dir,
     retention: Dir,
     manifests: Dir,
-    store_root: PathBuf,
     policy: CatalogRestartPolicy,
 }
 
@@ -76,8 +75,12 @@ impl RetentionViewSource for Source {
     }
 
     fn load(&mut self) -> io::Result<View> {
-        let catalog = FilesystemCatalogSnapshot::load(&self.store_root, self.policy)
-            .map_err(|source| io::Error::new(io::ErrorKind::InvalidData, source))?;
+        let catalog = crate::adapters::catalog_restart_loader::load_from_directory(
+            &self.root,
+            HEAD_NAME,
+            self.policy,
+        )
+        .map_err(|source| io::Error::new(io::ErrorKind::InvalidData, source))?;
         let retention = filesystem_retention_current::observe(&self.retention, &self.manifests)?;
         Ok(View { catalog, retention })
     }
@@ -125,7 +128,6 @@ impl FilesystemRetentionSnapshot {
             root,
             retention,
             manifests,
-            store_root: store_root.to_path_buf(),
             policy,
         };
         let view =

@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Retention readers load catalog bytes through the originally pinned store directory, so replacement of its ambient path cannot redirect catalog collection into another directory.
+
 ### Added
 
 - Model-based retention evidence: every three-operation sequence over initial

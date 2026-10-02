@@ -25,7 +25,6 @@ fn replacing_the_ambient_root_preserves_the_pinned_catalog() -> Result<(), Box<d
         root,
         retention,
         manifests,
-        store_root: sandbox.path().to_path_buf(),
         policy: CatalogRestartPolicy::new(
             SegmentReadPolicy::MAXIMUM,
             CatalogRestartByteLimit::new(1_048_576)?,
