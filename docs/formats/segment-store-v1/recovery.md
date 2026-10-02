@@ -56,10 +56,12 @@ byte remains canonical. It preserves proven partial-framing and
 complete-looking corruption as typed refusals. Catalog- and
 next-head-stage classifiers apply the same available-fixed-framing rule before
 distinguishing exact truncation from complete canonical bytes. Every
-classifier consumes complete, protocol-bounded stage bytes that the inventory
-reader materializes after fingerprinting; the ledger's classification rows
-(`KEEP-RECOVERY-010`, `KEEP-RECOVERY-011`) are whole-byte by design, and no
-classifier streams from a filesystem handle.
+classifier consumes complete, caller-supplied protocol-bounded stage bytes;
+the ledger's classification rows (`KEEP-RECOVERY-010`, `KEEP-RECOVERY-011`)
+are whole-byte by design, and no classifier streams from a filesystem handle.
+The inventory reader returns fingerprint evidence without retaining stage
+bytes. The filesystem segment resumer separately materializes its pinned
+writable stage before re-admission and continuation.
 `admit_recovery_stage_bytes` first requires the canonical-name stage, exact
 length, and recomputed stage fingerprint to match prior observation evidence;
 only `assess_recovery_stage` may dispatch those admitted bytes to a semantic

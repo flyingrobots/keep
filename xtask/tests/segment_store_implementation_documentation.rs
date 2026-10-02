@@ -36,6 +36,14 @@ fn living_documentation_names_the_implemented_segment_boundary() {
 }
 
 #[test]
+fn recovery_documentation_does_not_assign_materialization_to_the_inventory_reader() {
+    assert!(
+        !RECOVERY.contains("bytes that the inventory\nreader materializes"),
+        "inventory fingerprinting returns evidence, not materialized stage bytes"
+    );
+}
+
+#[test]
 fn living_v1_pages_no_longer_assign_shipped_recovery_to_a_future_issue() {
     for (document, stale_claim) in [
         (FORMAT_README, "remain owned by issue #17"),

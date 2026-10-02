@@ -624,6 +624,10 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Version-one recovery documentation distinguishes streamed inventory
+  fingerprint evidence from caller-supplied classifier bytes and the segment
+  resumer's separate materialization (#69).
+
 - Living version-1 format pages describe implemented initialization,
   platform admission, publication, restart, recovery, and process-death
   evidence rather than completed issue-era plans (#69). Historical issue
