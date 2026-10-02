@@ -624,8 +624,9 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
-- The version-one catalog ledger names its executable integration target and
-  ordering/duplicate-refusal module instead of an absent test file (#148).
+- The version-one catalog ledger names its executable ordering integration
+  target, duplicate-refusal module, and filesystem publication unit-test owner
+  instead of absent test files (#148).
 
 - The benchmark workload catalog describes current range authentication once
   before output, matching its single-pass metric definitions (#71).
