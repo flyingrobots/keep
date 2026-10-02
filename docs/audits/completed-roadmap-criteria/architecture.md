@@ -2,8 +2,7 @@
 
 This page owns T-10.1 and T-10.2 from the originally checked roadmap at
 `1a586d83d5750083172d440f90e7b786d540ff0e`, lines 496–513. Inspected main is
-`f49cff732cf7a6e1b472decba9e4c4130990559e`. T-10.3's broader durable-port/fake
-claim remains pending and is not counted as an audited verdict here.
+`f49cff732cf7a6e1b472decba9e4c4130990559e`. T-10.3's durable-port/fake inventory is evaluated below.
 
 ## T-10.1 — Decide the architecture
 
@@ -34,6 +33,43 @@ Its coherent scope is the existing literal basename prohibitions, with exact
 refusals and preservation of current source/path/Python/size checks. It does
 not introduce a new dependency-analysis requirement or substring naming ban.
 
-Twenty-nine remaining checked tasks now have verdicts. Thirty-five other
-checked tasks and nineteen reopened entries still need full accounting.
-No checkbox changed, and neither issue #131 nor its tracking parent is closed.
+## T-10.3 — Durable protocol ports and fault-injecting fakes
+
+**Named acceptance and delivery: met on main.** The implemented durable write
+protocols expose storage capabilities and deterministic fakes. The inventory
+below checks the port and failure laws rather than relying on filenames alone.
+
+| Protocol | Port | Executed failure evidence |
+| --- | --- | --- |
+| Immutable segment writing | `SegmentStage` | Scripted short/interrupted/zero/overreported writes and synchronization refusals; no receipt after failed durability |
+| Store initialization | `StoreInitializationStorage` | Failure at each of six initialization phases; exact phase/source and attempted prefix |
+| Catalog generation publication | `CatalogPublicationStorage` | Recording storage with exact phase failures and stopping later writes |
+| Recovery stage discard | `RecoveryStageDiscardStorage` | Exact expected-state and directory-sync refusals; retained stage on refusal |
+| Recovery stage completion | `RecoveryStageCompletionStorage` | Stage/pool/staging synchronization failures, pool conflict and operation-prefix assertions |
+| Recovery next-head finalization | `RecoveryNextHeadFinalizationStorage` | Verification, candidate sync, replacement and root-sync failure laws |
+| Recovery segment resume | `RecoverySegmentResumeStorage` | Injected storage failure returns no resumable stage; stale fingerprint refuses |
+| Retention publication | `RetentionPublicationStorage` | All 17 publication phase failures preserve exact attempted prefix; authority failure precedes mutation |
+| Store migration | `StoreMigrationStorage` | All 21 phase failures preserve exact attempted prefix; current-state verification failure precedes mutation |
+
+The immutable segment port is exercised by the scripted `stage_double`;
+catalog, recovery, retention and migration suites carry their recording or
+in-memory storage doubles. These are substitution boundaries with observable
+failures, not placeholder traits. Inspection of existing domain directories
+found no adapter/filesystem/network/Serde imports, but this targeted review is
+not an exhaustive architectural analysis of every boundary module.
+
+Copy-isolated Docker with pinned Rust 1.96.0 and the dedicated main-equivalent
+source build directory ran all eleven listed public integration targets: 72
+laws passed in debug and 72 in release, with zero filtered or ignored tests.
+The source clone has unchanged main Rust/corpus content; no new production
+implementation or native test was introduced for this evidence.
+
+This verdict establishes ports and fakes for implemented protocols. It does
+not assert that passing mocks proves filesystem durability, that partial
+migration recovery is delivered, or that retention production admission is
+complete; those require their own later-task and correction-owner evidence.
+T-10.2 remains unmerged on main, with its correction in PR #145.
+
+Thirty remaining checked tasks now have verdicts. Thirty-four other checked
+tasks and nineteen reopened entries still need full accounting. No checkbox
+changed, and neither issue #131 nor its tracking parent is closed.
