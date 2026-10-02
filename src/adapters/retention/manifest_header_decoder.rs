@@ -70,6 +70,12 @@ fn validate_fixed_fields(encoded: &[u8]) -> Result<(), RetentionManifestDecodeEr
     require_zero(encoded, 112, 48, "trailing header")
 }
 
+/// Checks framing once the complete size fields of an interrupted header exist.
+pub(super) fn admit_prefix_length(encoded: &[u8]) -> Result<(), RetentionManifestDecodeError> {
+    let entry_count = read_u32(encoded, 44)?;
+    require_declared_length(encoded, canonical_length(entry_count)?)
+}
+
 fn canonical_length(entry_count: u32) -> Result<usize, RetentionManifestDecodeError> {
     let entries = usize::try_from(entry_count)
         .map_err(|_| RetentionManifestDecodeError::LengthOverflow)?

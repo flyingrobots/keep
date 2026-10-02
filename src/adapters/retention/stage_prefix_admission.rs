@@ -20,7 +20,11 @@ pub(super) fn root(encoded: &[u8]) -> Result<(), RetentionRootDecodeError> {
             observed,
         },
     )?;
-    super::stage_generation_admission::root(encoded)
+    super::stage_generation_admission::root(encoded)?;
+    if encoded.len() >= 48 {
+        super::root_header_decoder::admit_prefix_length(encoded)?;
+    }
+    Ok(())
 }
 
 pub(super) fn manifest(encoded: &[u8]) -> Result<(), RetentionManifestDecodeError> {
@@ -41,7 +45,11 @@ pub(super) fn manifest(encoded: &[u8]) -> Result<(), RetentionManifestDecodeErro
             observed,
         },
     )?;
-    super::stage_generation_admission::manifest(encoded)
+    super::stage_generation_admission::manifest(encoded)?;
+    if encoded.len() >= 48 {
+        super::manifest_header_decoder::admit_prefix_length(encoded)?;
+    }
+    Ok(())
 }
 
 pub(super) fn head(encoded: &[u8]) -> Result<(), RetentionHeadDecodeError> {

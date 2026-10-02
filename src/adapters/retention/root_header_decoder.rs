@@ -87,6 +87,13 @@ fn validate_fixed_fields(encoded: &[u8]) -> Result<(), RetentionRootDecodeError>
     require_zero(encoded, 180, 12, "trailing header")
 }
 
+/// Checks framing once the complete size fields of an interrupted header exist.
+pub(super) fn admit_prefix_length(encoded: &[u8]) -> Result<(), RetentionRootDecodeError> {
+    let namespace_length = usize::from(read_u16(encoded, 40)?);
+    let anchor_count = read_u32(encoded, 44)?;
+    require_declared_length(encoded, canonical_length(namespace_length, anchor_count)?)
+}
+
 fn canonical_length(
     namespace_length: usize,
     anchor_count: u32,

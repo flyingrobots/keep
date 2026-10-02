@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Recovery rejects and preserves short root and manifest headers whose complete size fields contradict their declared record length (#99).
+
 - Recovery verifies available checksum bytes in interrupted head stages and preserves contradictory prefixes as corrupt evidence instead of discarding them (#99).
 
 - Recovery preserves short heads whose complete generation/predecessor fields contradict initial or successor history, sharing semantic admission with complete head decoding (#99).

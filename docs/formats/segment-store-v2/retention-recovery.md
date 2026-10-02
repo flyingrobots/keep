@@ -42,6 +42,8 @@ When a short head contains all generation and predecessor bytes, recovery applie
 
 Once a short head contains the entire checksum preimage, recovery computes its checksum and checks every checksum byte already present. Any mismatch refuses as `StageCorrupt(Head)` with `PrefixByteMismatch` naming the offset and exact expected and observed bytes; the incomplete stage remains intact.
 
+A root or manifest prefix containing all framing-size fields must declare the exact length those fields imply. Recovery uses the same checked framing calculation as complete decoding and refuses a disagreement with `DeclaredLengthMismatch` inside the exact stage-corruption error before discarding any stage.
+
 A truncated manifest requires a complete root stage already linked to its immutable pool entry. A truncated head requires both complete root and manifest stages already linked to their immutable pool entries. Missing or incomplete earlier evidence refuses as `TruncatedStageWithoutEarlierEvidence`, naming both stages, before any scheduled discard or relinking. Existing corruption and conflicting-pool diagnostics retain precedence; cross-record and history admission still precede execution.
 
 This retention protocol requires pinning the incomplete regular file. The separate [migration discard path](migration-crash.md#fixed-stage-law) revalidates the current entry's regular kind and incomplete length before removal without retaining an incomplete-stage handle. These are distinct protocol boundaries.
