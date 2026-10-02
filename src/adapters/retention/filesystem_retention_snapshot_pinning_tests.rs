@@ -51,7 +51,7 @@ fn replacing_the_ambient_root_preserves_the_pinned_catalog() -> Result<(), Box<d
     );
     assert_eq!(
         view.catalog.catalog_digest(),
-        expected.1,
+        expected.2,
         "pinned catalog digest"
     );
     Ok(())

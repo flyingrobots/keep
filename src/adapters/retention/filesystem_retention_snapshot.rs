@@ -74,12 +74,18 @@ impl RetentionViewSource for Source {
         )?
         .map(|bytes| {
             ChecksummedPublicationHead::decode(&bytes)
-                .map(|head| (head.generation(), head.catalog_digest()))
+                .map(|head| {
+                    (
+                        head.generation(),
+                        head.catalog_length(),
+                        head.catalog_digest(),
+                    )
+                })
                 .map_err(|source| io::Error::new(io::ErrorKind::InvalidData, source))
         })
         .transpose()?;
         let retention = filesystem_retention_current::observe(&self.retention, &self.manifests)?
-            .map(|state| (state.head().generation(), state.head().manifest_digest()));
+            .map(|state| *state.head());
         Ok(RetentionViewCoordinates { catalog, retention })
     }
 

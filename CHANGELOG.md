@@ -669,6 +669,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Reader double collection preserves catalog length and the complete retention head, so changes to validated length or predecessor coordinates cannot be collapsed into an unchanged generation/digest pair. The public `RetentionViewCoordinates` catalog tuple now includes `CatalogLength`, and its retention field carries `RetentionHead` (#99).
+
 - Fenced retention readers preserve selected catalog and segment admission failures as `FilesystemRetentionSnapshotError::Catalog` with their exact restart source, while coordinate failures remain `View` errors; a moving head retries the speculative catalog result (#99).
 
 - Fenced retention readers compare the opened root's restart-stable device and inode with the jointly admitted migration records before acquiring a fence or loading a catalog. A foreign binding refuses at reader admission with the exact typed identity coordinate, expected value, and observed value (#99).

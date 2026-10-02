@@ -87,7 +87,7 @@ fn a_head_change_discards_the_superseded_catalog_refusal() -> Result<(), Box<dyn
     );
     assert_eq!(
         view.catalog.catalog_digest(),
-        expected.1,
+        expected.2,
         "accepted catalog digest"
     );
     assert_eq!(

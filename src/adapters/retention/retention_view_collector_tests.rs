@@ -8,7 +8,7 @@ use super::{
     ReaderAttemptLimit, RetentionViewCoordinates, RetentionViewError, RetentionViewSource,
     collect_retention_view,
 };
-use crate::{CatalogDigest, CatalogGeneration};
+use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
 struct Scripted {
     coordinates: Vec<RetentionViewCoordinates>,
@@ -35,6 +35,7 @@ fn published(generation: u64) -> Result<RetentionViewCoordinates, Box<dyn Error>
     Ok(RetentionViewCoordinates {
         catalog: Some((
             CatalogGeneration::new(generation)?,
+            CatalogLength::MINIMUM,
             CatalogDigest::from_validated([0; 32]),
         )),
         retention: None,

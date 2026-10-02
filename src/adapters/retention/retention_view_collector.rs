@@ -5,7 +5,11 @@ use std::fmt;
 use std::io;
 
 use super::ReaderAttemptLimit;
-use crate::{CatalogDigest, CatalogGeneration, LivenessGeneration, RetentionManifestDigest};
+use crate::{CatalogDigest, CatalogGeneration, CatalogLength, RetentionHead};
+
+#[cfg(test)]
+#[path = "retention_view_coordinate_law_tests.rs"]
+mod coordinate_law_tests;
 
 /// The coordinates both heads name at one instant.
 ///
@@ -15,9 +19,9 @@ use crate::{CatalogDigest, CatalogGeneration, LivenessGeneration, RetentionManif
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct RetentionViewCoordinates {
     /// The catalog `HEAD` coordinate, or `None` when no catalog is published.
-    pub catalog: Option<(CatalogGeneration, CatalogDigest)>,
+    pub catalog: Option<(CatalogGeneration, CatalogLength, CatalogDigest)>,
     /// The `retention/HEAD` coordinate, or `None` when no retention head is published.
-    pub retention: Option<(LivenessGeneration, RetentionManifestDigest)>,
+    pub retention: Option<RetentionHead>,
 }
 
 /// The reads one reader view needs, in the order the collector calls them.
@@ -84,8 +88,9 @@ impl Error for RetentionViewError {
 ///
 /// Each attempt reads the coordinates, loads the view, and reads the
 /// coordinates again; a view is accepted only when both reads agree. A
-/// generation, length, digest, or checksum change discards the view and
-/// retries until `limit` is exhausted, which refuses.
+/// validated generation, length, digest, or predecessor change discards the
+/// view and retries until `limit` is exhausted, which refuses. Invalid head
+/// encodings, including checksum failures, return the source's read error.
 ///
 /// # Errors
 ///
