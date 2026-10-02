@@ -207,7 +207,7 @@ fn copy_retained_blob(
         SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
         CatalogRestartByteLimit::new(16_777_216)?,
     );
-    let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT);
+    let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT)?;
     let snapshot = store.snapshot()?;
     Ok(snapshot.reconstruct(target, output)?)
 }

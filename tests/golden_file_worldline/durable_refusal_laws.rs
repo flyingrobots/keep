@@ -24,7 +24,7 @@ fn a_durable_layout_naming_an_absent_chunk_refuses_before_reconstruction_output(
         .ok_or("nonempty input has no chunk")?
         .id();
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let mut output = vec![0xAB];
     let failure = snapshot
         .reconstruct_layout(expected.record.id(), &mut output)
@@ -55,7 +55,7 @@ fn a_durable_range_naming_an_absent_chunk_refuses_before_output() -> Result<(), 
         .ok_or("nonempty input has no chunk")?
         .id();
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let requested = ByteRange::new(ByteOffset::new(1), ByteLength::new(3))?;
     let mut output = vec![0xAB];
     let failure = snapshot
@@ -79,7 +79,7 @@ fn an_out_of_bounds_durable_range_refuses_the_exact_requested_coordinates()
     let sandbox = build("durable-range-outside", &[bytes])?;
     let expected = identify(bytes)?;
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let requested = ByteRange::new(ByteOffset::new(2), ByteLength::new(2))?;
     let mut output = vec![0xAB];
     let failure = snapshot
@@ -102,7 +102,7 @@ fn an_absent_durable_blob_refuses_range_output_with_its_exact_identity()
     let sandbox = build("durable-absent-blob", &[b"present"])?;
     let absent = identify(b"absent")?;
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let requested = ByteRange::new(ByteOffset::new(0), ByteLength::new(1))?;
     let mut output = vec![0xAB];
     let failure = snapshot
@@ -121,7 +121,7 @@ fn an_absent_durable_layout_refuses_before_reconstruction_output() -> Result<(),
     let sandbox = build("durable-absent-layout", &[b"present"])?;
     let absent = identify(b"absent")?;
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let mut output = vec![0xAB];
     let failure = snapshot
         .reconstruct_layout(absent.record.id(), &mut output)

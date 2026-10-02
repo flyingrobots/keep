@@ -15,8 +15,9 @@ use crate::{BlobId, ByteRange, LayoutId};
 ///
 /// The handle holds no fence and no view; every read pins a fresh
 /// [`DurableSnapshot`] unless the caller pins one with [`Self::snapshot`]
-/// and reads through it. `open` takes no authority and touches nothing;
-/// admission happens when a snapshot is pinned.
+/// and reads through it. `open` resolves a relative locator against the current
+/// directory once and takes no store authority; admission happens when a
+/// snapshot is pinned.
 /// Every convenience read pays the complete snapshot admission and allocation
 /// cost described by [`DurableSnapshot`]; callers doing repeated reads should
 /// retain an explicit snapshot. No method here publishes or synchronizes data.
@@ -44,7 +45,7 @@ use crate::{BlobId, ByteRange, LayoutId};
 ///         SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
 ///         CatalogRestartByteLimit::new(16_777_216)?,
 ///     );
-///     let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT);
+///     let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT)?;
 ///     let snapshot = store.snapshot()?;
 ///     Ok(snapshot.reconstruct(target, output)?)
 /// }
@@ -61,17 +62,32 @@ impl DurableStore {
     /// Names the store at `root`, reading under `policy` and collecting a
     /// consistent view within `limit` attempts.
     ///
-    /// Allocates a copy of the locator, performs no I/O, and does not prove
-    /// that the named store exists. This path is not a content identity.
-    pub fn open(root: &Path, policy: CatalogRestartPolicy, limit: ReaderAttemptLimit) -> Self {
-        Self {
-            root: root.to_path_buf(),
+    /// Allocates an absolute locator and queries the current directory for a
+    /// relative path. It does not open the store or prove that it exists.
+    /// Later working-directory changes cannot retarget this handle. The path
+    /// remains a locator, not a content identity or a pinned directory handle;
+    /// snapshot admission still checks the named store on every call.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DurableStoreError::Locator`] with the original I/O cause when
+    /// the absolute locator cannot be established, including a deleted current
+    /// directory for a relative path.
+    pub fn open(
+        root: &Path,
+        policy: CatalogRestartPolicy,
+        limit: ReaderAttemptLimit,
+    ) -> Result<Self, DurableStoreError> {
+        let root =
+            std::path::absolute(root).map_err(|source| DurableStoreError::Locator { source })?;
+        Ok(Self {
+            root,
             policy,
             limit,
-        }
+        })
     }
 
-    /// The store root.
+    /// The absolute store locator fixed at handle construction.
     #[must_use]
     pub fn root(&self) -> &Path {
         &self.root

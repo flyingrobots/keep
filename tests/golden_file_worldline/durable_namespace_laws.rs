@@ -42,7 +42,7 @@ fn a_foreign_retained_namespace_refuses_durable_output() -> Result<(), Box<dyn E
     let bytes = b"namespace-bound";
     let sandbox = build("durable-foreign-root-output", &[bytes])?;
     let namespace = install_foreign_selection(sandbox.path())?;
-    let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT);
+    let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
     let refusal = store
         .snapshot()
         .err()

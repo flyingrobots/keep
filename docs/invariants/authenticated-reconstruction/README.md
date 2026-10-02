@@ -219,6 +219,8 @@ An operation claiming durable logical reconstruction must additionally:
 
 `DurableStore` pins a fresh `DurableSnapshot` per convenience read. An explicit snapshot holds the shared reader fence, verifies manifest-selected retained closures, and preserves its catalog and liveness coordinates while retention successors publish. Blob reads select a retained anchor; exact-layout reads may use an unretained catalogued layout. Both authenticate exact immutable bytes before output and return the reference receipt together with catalog generation/digest and the selected retention head when present.
 
+`DurableStore::open` returns a result and fixes an absolute locator at construction; changing the process working directory later cannot select a different store through that handle. Failure to resolve the locator preserves the original I/O cause through `DurableStoreError::Locator`, before store admission or output.
+
 Every selected retention root must match its manifest entry's namespace as well as its root generation and digest; a canonical foreign-namespace root refuses with preserved expected and observed namespace coordinates before a durable snapshot or caller output is exposed.
 
 Admission materializes bounded catalog and segment bytes and verifies broader stored evidence than the logical range core. Each read re-admits those owned bytes and decoded indexes; the core's single authentication pass is not an end-to-end single-hash or minimal physical-I/O guarantee. Reads add no whole-blob output buffer. The byte budget is caller policy, and retained-root traversal uses the persisted per-root limits.

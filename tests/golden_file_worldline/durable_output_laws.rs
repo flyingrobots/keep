@@ -20,7 +20,7 @@ fn durable_reconstruction_completes_short_and_interrupted_writes() -> Result<(),
     let sandbox = build("durable-short-writes", &[bytes])?;
     let identified = identify(bytes)?;
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let mut output = PartitionWriter::new(&[1, 7, 3])?;
     let receipt = snapshot.reconstruct(identified.target, &mut output)?;
     assert_eq!(output.bytes(), bytes);
@@ -38,7 +38,7 @@ fn durable_reconstruction_preserves_a_failed_writers_accepted_prefix() -> Result
     let sandbox = build("durable-output-prefix", &[bytes])?;
     let identified = identify(bytes)?;
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let mut output = PrefixThenFailWriter::new(5)?;
     let failure = snapshot
         .reconstruct(identified.target, &mut output)
@@ -61,7 +61,7 @@ fn durable_range_preserves_a_failed_writers_accepted_prefix() -> Result<(), Box<
     let sandbox = build("durable-range-prefix", &[bytes])?;
     let identified = identify(bytes)?;
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let requested = ByteRange::new(ByteOffset::new(3), ByteLength::new(13))?;
     let mut output = PrefixThenFailWriter::new(5)?;
     let failure = snapshot
@@ -85,7 +85,7 @@ fn a_zero_progress_durable_writer_refuses_at_the_output_boundary() -> Result<(),
     let sandbox = build("durable-output-zero", &[bytes])?;
     let identified = identify(bytes)?;
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let failure = snapshot
         .reconstruct(identified.target, &mut ZeroWriter)
         .err()
@@ -105,7 +105,7 @@ fn durable_ranges_complete_short_and_interrupted_writes() -> Result<(), Box<dyn 
     let sandbox = build("durable-range-short", &[bytes])?;
     let identified = identify(bytes)?;
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let requested = ByteRange::new(ByteOffset::new(3), ByteLength::new(13))?;
     let mut output = PartitionWriter::new(&[1, 7, 3])?;
     let receipt = snapshot.read_range(identified.target, requested, &mut output)?;
@@ -120,7 +120,7 @@ fn a_zero_progress_durable_range_writer_refuses_before_acceptance() -> Result<()
     let sandbox = build("durable-range-zero", &[bytes])?;
     let identified = identify(bytes)?;
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let requested = ByteRange::new(ByteOffset::new(3), ByteLength::new(13))?;
     let failure = snapshot
         .read_range(identified.target, requested, &mut ZeroWriter)

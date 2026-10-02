@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- `DurableStore::open` now fixes an absolute locator and returns a typed result, preventing later working-directory changes from retargeting a handle; locator failures preserve their original I/O source (#109).
+
 - Selected retention-root reads now refuse a canonical root belonging to another namespace, preserving typed expected/observed namespace digests before durable snapshot admission or output (#109).
 
 - Added an in-progress fenced durable read API with view-bound reconstruction and range receipts; full read-law and Worldline acceptance remains tracked in #109.

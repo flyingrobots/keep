@@ -18,7 +18,7 @@ fn durable_reconstruction_preserves_immediate_output_failure() -> Result<(), Box
     let sandbox = build("durable-reconstruction-failing", &[bytes])?;
     let identified = identify(bytes)?;
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let failure = snapshot
         .reconstruct(identified.target, &mut FailingWriter)
         .err()
@@ -39,7 +39,7 @@ fn durable_reconstruction_rejects_impossible_write_counts() -> Result<(), Box<dy
     let sandbox = build("durable-reconstruction-lying", &[bytes])?;
     let identified = identify(bytes)?;
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let failure = snapshot
         .reconstruct(identified.target, &mut LyingWriter)
         .err()
@@ -62,7 +62,7 @@ fn durable_range_preserves_immediate_output_failure() -> Result<(), Box<dyn Erro
     let sandbox = build("durable-range-failing", &[bytes])?;
     let identified = identify(bytes)?;
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let requested = ByteRange::new(ByteOffset::new(3), ByteLength::new(11))?;
     let failure = snapshot
         .read_range(identified.target, requested, &mut FailingWriter)
@@ -84,7 +84,7 @@ fn durable_range_rejects_impossible_write_counts() -> Result<(), Box<dyn Error>>
     let sandbox = build("durable-range-lying", &[bytes])?;
     let identified = identify(bytes)?;
     let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let requested = ByteRange::new(ByteOffset::new(3), ByteLength::new(11))?;
     let failure = snapshot
         .read_range(identified.target, requested, &mut LyingWriter)

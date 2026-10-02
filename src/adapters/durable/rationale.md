@@ -2,6 +2,8 @@
 
 The read adapter composes the existing immutable catalog snapshot, shared reader fence, retention root admission and authenticated reconstruction cores. It performs no publication, deletion or repair. An opened store handle is a locator; only snapshot admission establishes a readable view.
 
+Handle construction resolves a relative locator to an absolute path once and preserves any resolution failure as a typed locator error. Resolving on every read was rejected because an unrelated working-directory change could silently select another valid store. This does not canonicalize or pin a directory capability, and every snapshot still admits the named store. The new constructor is fallible; resolving a relative path may query the current directory but does not open or verify the store.
+
 A durable snapshot keeps the fence and selected catalog alive for every borrowed read. Snapshot admission verifies every manifest-selected retained closure against that catalog. Blob lookup chooses the lowest canonical retained layout identity; exact-layout reads may name any layout in the admitted catalog, including an unretained one, while the fence protects the view.
 
 The existing catalog loader materializes selected segment bytes under the caller's aggregate byte policy. This cost is explicit in the API documentation; it is not a lazy segment reader. Reconstruction adds no whole-blob buffer. Selected roots are loaded one at a time rather than accumulating a second index of all anchors. The format bounds each root and manifest, and each root supplies traversal counters. This bounds memory without inventing another on-disk limit.

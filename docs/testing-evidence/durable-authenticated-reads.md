@@ -10,7 +10,7 @@ The independent approval and successful checks on `186ab8a00796101d26640084f0596
 | --- | --- | --- |
 | CodeRabbit: selected root namespace binding (`discussion_r4170510757`). | Confirmed runtime defect on `186ab8a`: both direct selected-root read and durable snapshot admission accepted a canonical foreign-namespace root. The fix at `FilesystemRetentionSnapshot::retained_root` retains existing digest/generation checks and reports typed expected/observed namespace coordinates. | Focused debug/release laws, source-preservation calibration, final-head full validation and independent delta review. |
 | Codex: inward ownership of shared authentication (`discussion_r4170495607`). | Open; durable code currently imports the shared policy and port through `reference`. | Move the shared behavior to an inward semantic boundary without changing authenticated output/refusal behavior; preserve public API compatibility and generated parity evidence. |
-| Codex: relative store locator stability (`discussion_r4170495611`). | Open; `DurableStore::open` retains relative paths for later resolution. | A controlled working-directory change cannot silently retarget the same handle; locator/admission errors remain typed and documented. |
+| Codex: relative store locator stability (`discussion_r4170495611`). | Confirmed RED on `28f1720`; the constructor now fixes an absolute locator and preserves resolution failure as `DurableStoreError::Locator`. Public isolated-process laws cover two valid stores and a deleted current directory. | Focused runtime and source-preservation evidence below; final-head full validation and independent delta review remain required. |
 | Codex: reader production-platform admission (`discussion_r4170495617`). | Open; the current reader checks namespace and migration identity without the production filesystem-profile admission. | Reject unsupported filesystem semantics before exposing a durable snapshot, without taking writer authority; preserve positive production-profile reader evidence. |
 
 ### Namespace regression
@@ -35,7 +35,33 @@ The fixed public laws pass in debug and release; the full Golden File Worldline 
 
 Swapping only the new diagnostic's expected and observed namespace digests in a separate source/target directory made both final public laws fail their exact-coordinate assertion (`namespace-coordinate-red.log`); the unchanged candidate remained green (`namespace-relevant-validation.log`).
 
-Final full-chain checks and independent review remain pending while the other three review obligations are resolved.
+Final full-chain checks and independent review remain pending while the remaining review obligations are resolved.
+
+### Relative locator regression
+
+Change kind: bug fix with a fallible-constructor adjustment to the new, unmerged API; `DurableStore::open` now returns `Result<DurableStore, DurableStoreError>` and fixes an absolute locator before returning a handle.
+
+Resolving a relative path queries the current directory once, while store admission remains deferred to snapshot creation.
+
+This prevents working-directory changes from retargeting a handle; it does not pin the filesystem pathname against unsupported out-of-band replacement.
+
+The medium public regression creates two production-profile stores with different retained blobs in an isolated child, opens `.` in the first, changes to the second, and checks original retention and reconstructed bytes through the same handle.
+
+The unfixed code at `28f172043c6a3e360478137231c9c51e0e4ad725` failed `the same handle must retain its original store after cwd changes` after successful compilation (`locator-red-on-28f1720.log`); the standalone RED test is commit `4f37597`.
+
+A second isolated child deletes its current directory and checks the constructor's exact `Locator` / `NotFound` / `ENOENT` outcome and preserved `io::Error` source.
+
+Each child is selected by the harness with an exact test name, runs alone, and has a 20-second execution ceiling enforced by `timeout`; the ceiling is a hang guard, not a performance promise.
+
+There are no sleeps or schedule sampling, and cwd mutation never occurs in the parallel parent test process.
+
+Focused debug/release laws, the full Worldline binary, existing durable-read unit laws, doctests, Clippy, formatting, and structure validation passed in the copied Linux arm64 Docker candidate (`locator-green-corrected.log`).
+
+The original `locator-green.log` retains a Clippy type-complexity failure in the child runner; a local result alias corrected it without changing a product expectation.
+
+All existing constructor call sites and the compiled public example now propagate the constructor error; no existing output, refusal, or receipt expectations were weakened.
+
+Separate copied-source/target mutants replaced the original locator cause with `Other` and removed its `Error::source` link; the deleted-cwd law failed respectively at the exact-cause and source-chain assertions after successful compilation (`locator-mutants/cause/red.log` and `locator-mutants/source/red.log`).
 
 ## Delivered candidate behavior
 

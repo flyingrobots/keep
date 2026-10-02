@@ -21,7 +21,7 @@ fn reopened_durable_views_reconstruct_every_worldline_identity() -> Result<(), B
     let sources = bytes.iter().map(Vec::as_slice).collect::<Vec<_>>();
     let sandbox = build("durable-worldline-reopen", &sources)?;
     for (case, expected) in cases.iter().zip(&bytes) {
-        let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT);
+        let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
         let target = case.expected_id()?;
         let mut output = Vec::new();
         let receipt = store.reconstruct(target, &mut output)?;
@@ -59,7 +59,7 @@ fn durable_worldline_ranges_match_source_slices_after_reopen() -> Result<(), Box
     let sources = bytes.iter().map(Vec::as_slice).collect::<Vec<_>>();
     let sandbox = build("durable-worldline-ranges", &sources)?;
     for (case, expected) in cases.iter().zip(&bytes) {
-        let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT);
+        let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
         let snapshot = store.snapshot()?;
         let target = case.expected_id()?;
         let length = u64::try_from(expected.len())?;

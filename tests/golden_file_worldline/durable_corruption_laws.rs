@@ -43,7 +43,7 @@ fn a_corrupt_selected_chunk_preserves_exact_record_refusal_before_output()
         .ok_or("record preimage absent")?;
     let expected = record_checksum(covered)?;
     fs::write(segment_path, bytes)?;
-    let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT);
+    let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
     let mut output = vec![0xAB];
     let failure = store
         .reconstruct(target, &mut output)
@@ -89,7 +89,7 @@ fn a_corrupt_selected_chunk_refuses_a_range_before_output() -> Result<(), Box<dy
         .ok_or("record preimage absent")?;
     let expected = record_checksum(covered)?;
     fs::write(segment_path, bytes)?;
-    let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT);
+    let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
     let mut output = vec![0xAB];
     let failure = store
         .read_range(

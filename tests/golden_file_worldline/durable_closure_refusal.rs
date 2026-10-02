@@ -43,7 +43,7 @@ fn an_unsatisfied_retained_closure_refuses_snapshot_admission_before_output()
         .iter()
         .map(fs::read)
         .collect::<Result<Vec<_>, _>>()?;
-    let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT);
+    let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
     let failure = store
         .snapshot()
         .err()

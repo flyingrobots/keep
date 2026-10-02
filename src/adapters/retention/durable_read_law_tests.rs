@@ -23,7 +23,7 @@ fn store(root: &std::path::Path) -> Result<DurableStore, Box<dyn Error>> {
             CatalogRestartByteLimit::new(1_048_576)?,
         ),
         ReaderAttemptLimit::DEFAULT,
-    ))
+    )?)
 }
 
 #[test]

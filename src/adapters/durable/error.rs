@@ -4,6 +4,7 @@
 
 use std::error::Error;
 use std::fmt;
+use std::io;
 
 use crate::adapters::{CatalogRestartError, FilesystemRetentionSnapshotError};
 use crate::{
@@ -14,6 +15,11 @@ use crate::{
 /// Why a durable store or snapshot could not be opened.
 #[derive(Debug)]
 pub enum DurableStoreError {
+    /// The store locator could not be resolved at handle construction.
+    Locator {
+        /// Original path-resolution failure, preserved without stringification.
+        source: io::Error,
+    },
     /// The root did not admit as a version-two store, the fence could not
     /// be taken, or one consistent view could not be collected.
     Snapshot(Box<FilesystemRetentionSnapshotError>),
@@ -43,6 +49,9 @@ pub enum DurableStoreError {
 impl fmt::Display for DurableStoreError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Locator { .. } => {
+                formatter.write_str("the durable store locator could not be resolved")
+            }
             Self::Snapshot(_) => formatter.write_str("the durable view could not be pinned"),
             Self::Catalog(_) => formatter.write_str("the pinned catalog refused"),
             Self::RootMissing { .. } => formatter.write_str("the selected root is absent"),
@@ -55,6 +64,7 @@ impl fmt::Display for DurableStoreError {
 impl Error for DurableStoreError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::Locator { source } => Some(source),
             Self::Snapshot(source) => Some(source.as_ref()),
             Self::Catalog(source) => Some(source.as_ref()),
             Self::RootMissing { .. } => None,
