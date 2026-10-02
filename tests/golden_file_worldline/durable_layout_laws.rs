@@ -152,3 +152,37 @@ fn corrupt_layout_ingress_refuses_exact_checksum_coordinates_before_output()
     assert_eq!(output, [0xAB]);
     Ok(())
 }
+
+#[test]
+fn a_content_correct_durable_layout_refuses_false_profile_boundaries() -> Result<(), Box<dyn Error>>
+{
+    let mutation = crate::layout_mutation_support::mutation_cases()?
+        .into_iter()
+        .find(|candidate| candidate.case() == "profile-boundary-mismatch")
+        .ok_or("profile mismatch fixture absent")?;
+    let encoded = mutation.mutated_record()?;
+    let first = vec![0_u8; 262_143];
+    let last = [0_u8; 2];
+    let sandbox = build("durable-false-profile", &[&first, &last])?;
+    let snapshot =
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+    let mut output = vec![0xAB];
+    let failure = snapshot
+        .reconstruct_record(
+            &encoded,
+            LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM),
+            &mut output,
+        )
+        .err()
+        .ok_or("false profile boundaries reconstructed")?;
+    assert!(
+        matches!(&failure, DurableReadError::Reconstruction(error)
+        if matches!(error.as_ref(), ReconstructionError::ProfileBoundaryMismatch {
+            index: 0, expected: Some(expected), observed: Some(observed), .. }
+            if expected.offset().get() == 0 && expected.length().get() == 262_143
+                && observed.offset().get() == 0 && observed.length().get() == 262_144)),
+        "false profile must preserve exact boundary coordinates: {failure:?}"
+    );
+    assert_eq!(output, [0xAB]);
+    Ok(())
+}

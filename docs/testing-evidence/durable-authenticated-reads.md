@@ -61,3 +61,31 @@ Additional range-output laws verify exact bytes through short/interrupted writes
 Calibration changed the zero-progress writer's reported accepted count from zero to one in an isolated source copy. The new range assertion was observed RED on the exact `WriteZero` outcome with `ByteLength(1)` (`range-zero-mutation-red.log`), rather than a setup or compilation failure. The candidate source retains zero and is rechecked separately. The broader calibration ledger remains open; this witness is specific to accepted-byte accounting.
 
 An initial post-mutation candidate run reused mutant build output because both copies shared a Cargo target directory. That run is invalid candidate evidence and is retained as `corruption-final-slice-corrected.log`; the earlier mistyped xtask command is retained separately. The corrected protocol gives the mutant its own target directory and invalidates the candidate's compiled source before rerunning the full public integration target in debug/release, formatting, source structure and Clippy. Only `range-zero-isolated-mutation-red.log` and `corruption-final-candidate.log` are admissible for that corrected RED/GREEN pair.
+
+## Reference read-law reconciliation
+
+This map covers runtime read claims, not source-string assertions in `range_read_contract.rs` or write/staging laws. Durable twins may preserve a stronger pre-output admission boundary; that difference must be named instead of describing every reference error as identical.
+
+| Reference claim / source | Durable evidence | Remaining difference or action |
+| --- | --- | --- |
+| Exact reconstructed bytes, empty blobs, frozen identities (`streaming_cas/reconstruction_laws`, Worldline) | `durable_assertions`, `durable_read_law_tests` | Complete frozen corpus exercised after writer handles close and store reopen. |
+| Short/interrupted writes, zero progress, accepted prefix (`reconstruction_laws`, `refusal_laws`, `range_read`, `range_read_failures`) | `durable_output_laws` | Whole and range outputs covered; calibration receipts are above. |
+| Immediate output error and impossible returned write count (`refusal_laws`, `range_read_failures`) | `durable_writer_failures` | Exact layout, accepted prefix, cause or supplied/observed count checked. New validation recorded separately. |
+| Whole-blob identity mismatch (`reconstruction_laws`) | `durable_layout_laws` | Caller-supplied layout reconstructs from catalogued chunks and refuses the wrong target before output. |
+| False chunk-profile boundaries (`refusal_laws`) | `durable_layout_laws` | Frozen false-boundary record against production-published constituent chunks; exact expected/observed boundary and untouched output. |
+| Absent blob/layout, bounds (`range_read`) | `durable_refusal_laws`, unretained-blob unit law | Exact identities and unchanged caller output; debug/release validation passes. |
+| Malformed canonical layout (`refusal_laws`, `range_read`) | `durable_layout_laws` | Whole and range ingress preserve exact checksum coordinates. |
+| Committed target binding / semantic and record ingress (`range_read_entrypoints`) | `durable_layout_laws` | Both durable ingress paths are exercised. |
+| All short intervals / generated multichunk ranges (`range_read_properties`) | `durable_range_properties` | Short finite domain exhaustive; multichunk grid is bounded, not identical to the reference generated corpus. |
+| Missing selected chunk (`reconstruction_laws`, reference private range laws) | `durable_refusal_laws` | Catalogued unretained layout exercises evidenced absence; retained missing closure refuses earlier at snapshot admission. |
+| Corrupt selected chunk (reference private reconstruction/range laws) | `durable_corruption_laws` | Physical payload corruption refuses during segment admission before whole-read output; add a direct range witness. |
+| Only overlapping chunks read (reference private range law) | Range source-slice laws only | Durable admission materializes/verifies selected segments before logical range execution; no minimal physical-I/O parity is established. Explicitly reconcile this scope before acceptance. |
+| Exactly one chunk hash per reconstruction/selected range (reference private instrumentation) | Existing shared-core reference tests retained | Durable admission also verifies persisted evidence. No durable end-to-end single-hash claim established; instrumentation alone cannot substitute for the promised runtime contract. |
+
+The issue itself states that collection exclusion is vacuous until #21 lands. Current evidence strengthens that floor with real shared/exclusive kernel fence exclusion and a live snapshot surviving retention publication. It does not claim an executable GC or unsupported version-two catalog publisher. The final requirement reconciliation must preserve these distinctions.
+
+The next parity slice adds the false-profile-boundary twin using the frozen mutation record and production-published constituent chunks. It preserves the exact expected 262,143-byte first boundary versus the observed 262,144-byte boundary before output. Immediate writer errors, impossible write counts, absent range blobs and absent reconstruction layouts also have direct public durable witnesses. The complete public integration target passes debug/release, Clippy and source structure (`read-parity.log`).
+
+Hosted validation of `cc189ff` caught a formatting-only error in the module declaration order: the earlier copy-back omitted the formatted `suite.rs`. Its Rust quality gate failed; the other required jobs passed. The author corrected the module list and records this as a validation-transfer mistake, not a runtime failure or a green final-head receipt. Subsequent validation checks the copied source against the committed files.
+
+The writer-parity calibration uses an isolated source and target directory. It substitutes an impossible maximum of zero and wraps the immediate I/O cause as `Other`; the four whole/range assertions fail on those specific wrong public outcomes (`writer-parity-mutation-red.log`). The original source passed the same assertions in debug/release. This is assertion calibration for the new API, not a parent regression: the durable API does not exist on main.

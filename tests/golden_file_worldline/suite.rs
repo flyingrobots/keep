@@ -19,6 +19,9 @@ mod storage_assertions;
 #[path = "durable_assertions.rs"]
 mod durable_assertions;
 #[cfg(target_os = "linux")]
+#[path = "durable_corruption_laws.rs"]
+mod durable_corruption_laws;
+#[cfg(target_os = "linux")]
 #[path = "durable_fixture.rs"]
 mod durable_fixture;
 #[cfg(target_os = "linux")]
@@ -33,9 +36,6 @@ mod durable_range_properties;
 #[cfg(target_os = "linux")]
 #[path = "durable_read_memory.rs"]
 mod durable_read_memory;
-#[cfg(target_os = "linux")]
-#[path = "durable_corruption_laws.rs"]
-mod durable_corruption_laws;
 #[cfg(target_os = "linux")]
 #[path = "durable_refusal_laws.rs"]
 mod durable_refusal_laws;
@@ -244,3 +244,7 @@ fn reader_failures_preserve_precise_boundaries_and_sources() -> TestResult {
     ));
     Ok(())
 }
+
+#[cfg(target_os = "linux")]
+#[path = "durable_writer_failures.rs"]
+mod durable_writer_failures;

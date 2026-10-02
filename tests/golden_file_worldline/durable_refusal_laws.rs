@@ -95,3 +95,41 @@ fn an_out_of_bounds_durable_range_refuses_the_exact_requested_coordinates()
     assert_eq!(output, [0xAB]);
     Ok(())
 }
+
+#[test]
+fn an_absent_durable_blob_refuses_range_output_with_its_exact_identity()
+-> Result<(), Box<dyn Error>> {
+    let sandbox = build("durable-absent-blob", &[b"present"])?;
+    let absent = identify(b"absent")?;
+    let snapshot =
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+    let requested = ByteRange::new(ByteOffset::new(0), ByteLength::new(1))?;
+    let mut output = vec![0xAB];
+    let failure = snapshot
+        .read_range(absent.target, requested, &mut output)
+        .err()
+        .ok_or("absent blob produced a range")?;
+    assert!(
+        matches!(failure, DurableReadError::BlobMissing { requested } if requested == absent.target)
+    );
+    assert_eq!(output, [0xAB]);
+    Ok(())
+}
+
+#[test]
+fn an_absent_durable_layout_refuses_before_reconstruction_output() -> Result<(), Box<dyn Error>> {
+    let sandbox = build("durable-absent-layout", &[b"present"])?;
+    let absent = identify(b"absent")?;
+    let snapshot =
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT).snapshot()?;
+    let mut output = vec![0xAB];
+    let failure = snapshot
+        .reconstruct_layout(absent.record.id(), &mut output)
+        .err()
+        .ok_or("absent layout reconstructed")?;
+    assert!(
+        matches!(failure, DurableReadError::LayoutMissing { requested } if requested == absent.record.id())
+    );
+    assert_eq!(output, [0xAB]);
+    Ok(())
+}
