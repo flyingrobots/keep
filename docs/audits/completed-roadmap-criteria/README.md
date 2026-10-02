@@ -10,10 +10,11 @@ The first-pass roadmap at commit
 `scope.tsv` records every original task, its original line, and its first-pass
 state. Originally unchecked tasks and feature-level checkboxes are excluded.
 
-The [foundation verdicts](foundations.md) and
-[identity-layer and chunking verdicts](identity-layers-and-chunking.md)
-cover the first ten remaining checked tasks. Each separates its acceptance
-and mainline-delivery verdict and names inspected evidence and limits.
+The [foundation verdicts](foundations.md),
+[identity-layer and chunking verdicts](identity-layers-and-chunking.md), and
+[flat-layout verdicts](flat-layout.md) cover the first fourteen remaining
+checked tasks. Each separates acceptance and mainline delivery and names
+inspected evidence and limits.
 
 Task identifiers can have an alphabetic suffix: `T-22.1a` is a distinct
 originally completed task. Counting only numeric identifiers incorrectly

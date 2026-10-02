@@ -100,5 +100,6 @@ main-equivalent source clone identified in [foundations.md](foundations.md).
 - `cargo xtask conformance-check`: passed with b3sum 1.8.5.
 - `cargo bench -p keep --bench streaming_cdc --no-run`: passed.
 
-Ten of the 64 remaining checked entries now have criterion-level verdicts.
-The other 54, plus full accounting of the 19 reopened entries, remain open.
+The next four verdicts are in [flat layout](flat-layout.md). Fourteen of
+the 64 remaining checked entries now have criterion-level verdicts. The
+other 50, plus full accounting of the 19 reopened entries, remain open.
