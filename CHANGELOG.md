@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Derive the recovery manifest read bound from the codec's checked framing calculation and semantic entry limit, removing a separately maintained size literal (#99).
+
 - Keep the reader fence private to the crate; callers retain snapshots through `FilesystemRetentionSnapshot`, which owns the fence for its lifetime (#99).
 
 - Retention readers load catalog bytes through the originally pinned store directory, so replacement of its ambient path cannot redirect catalog collection into another directory.

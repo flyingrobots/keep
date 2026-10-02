@@ -10,14 +10,11 @@ use super::filesystem_retention_pool_name as pool_name;
 use super::{
     RetentionPoolEntryObservation as Pool, RetentionPoolObservations, RetentionRecoveryEvidence,
     RetentionStageAssessment, RetentionStageAssessments, assess_head_stage, assess_manifest_stage,
-    assess_root_stage, head_decoder, root_header_decoder,
+    assess_root_stage, head_decoder, manifest_header_decoder, root_header_decoder,
 };
 use crate::adapters::filesystem_exact_record::{
     self as exact_record, EntryIdentity, ExactRecordError,
 };
-
-/// 160-byte header, 4,096 entries of 72 bytes, manifest digest, checksum.
-const MANIFEST_MAXIMUM_ENCODED_LENGTH: usize = 295_136;
 
 /// The exact bytes and entry identity of one retained stage.
 pub(super) struct StageBytes {
@@ -47,7 +44,8 @@ impl RetentionRecoveryObservation {
         let manifest = read_stage(
             retention,
             pool_name::MANIFEST_STAGE,
-            MANIFEST_MAXIMUM_ENCODED_LENGTH,
+            manifest_header_decoder::maximum_encoded_length()
+                .map_err(|source| io::Error::new(io::ErrorKind::InvalidData, source))?,
         )?;
         let head = read_stage(
             retention,

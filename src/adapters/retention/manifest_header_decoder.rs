@@ -9,6 +9,11 @@ pub(super) const HEADER_LENGTH: usize = 160;
 const ENTRY_WIDTH: usize = 72;
 const TRAILER_LENGTH: usize = 64;
 
+/// Derives the read bound from the same framing admitted by this decoder.
+pub(super) fn maximum_encoded_length() -> Result<usize, RetentionManifestDecodeError> {
+    canonical_length(crate::RetentionManifest::MAXIMUM_ENTRY_COUNT)
+}
+
 pub(super) struct DecodedManifestHeader {
     pub(super) generation: u64,
     pub(super) entry_count: u32,
