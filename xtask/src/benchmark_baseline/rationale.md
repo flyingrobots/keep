@@ -41,10 +41,14 @@ unsigned 128-bit precision. The maximum counter is admitted; a larger value
 refuses with the metric name, maximum and observed value before relationship
 checks. The ingress makes no narrowing or saturating conversion.
 
-Admission runs before artifact publication. A grammar refusal performs no
+Admission produces an `AdmittedReport` whose fields are private to the
+admission module. It borrows the exact immutable input bytes without copying
+them. Publication requires a reference to this validated type; raw bytes cannot
+reach the persister directly. The borrow prevents mutation of the source bytes
+between admission and publication. Admission runs before artifact publication. A grammar refusal performs no
 filesystem mutation. Existing publication and recovery ordering are unchanged;
 these checks introduce no durable format version or public API change.
 
 Issue #142 remains open until bounded
-parser fuzzing, a validated publication input and prior-artifact preservation
-laws are complete. Structural admission alone does not prove those semantics.
+parser fuzzing is complete. A refusal law verifies that a prior artifact, an
+interrupted stage and the absence of a publication lock remain unchanged. Structural admission alone does not prove those semantics.

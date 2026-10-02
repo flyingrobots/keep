@@ -616,7 +616,8 @@ after its public API and format compatibility policies are established.
   bounds now refuse inconsistent evidence with typed expected/observed failures;
   arithmetic and numeric parsing refuse without approximation. Byte/count
   metrics admit only their portable unsigned 64-bit range; timing and throughput
-  retain unsigned 128-bit precision.
+  retain unsigned 128-bit precision. Publication requires an immutable admitted
+  report; refusal preserves the prior artifact and retained recovery stage.
 
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.

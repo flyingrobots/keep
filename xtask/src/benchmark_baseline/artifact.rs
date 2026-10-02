@@ -3,10 +3,22 @@
 use super::BenchmarkBaselineError;
 use super::environment::CapturedEnvironment;
 
-pub(super) fn validate(
-    bytes: &[u8],
+/// Immutable report bytes admitted against captured measurement coordinates.
+#[must_use]
+pub(super) struct AdmittedReport<'a> {
+    bytes: &'a [u8],
+}
+
+impl<'a> AdmittedReport<'a> {
+    pub(super) const fn bytes(&self) -> &'a [u8] {
+        self.bytes
+    }
+}
+
+pub(super) fn validate<'a>(
+    bytes: &'a [u8],
     environment: &CapturedEnvironment,
-) -> Result<(), BenchmarkBaselineError> {
+) -> Result<AdmittedReport<'a>, BenchmarkBaselineError> {
     let report =
         std::str::from_utf8(bytes).map_err(|_source| BenchmarkBaselineError::ReportViolation {
             reason: "report-is-not-utf8",
@@ -87,7 +99,8 @@ pub(super) fn validate(
     {
         return violation("report-profile-count");
     }
-    super::report_grammar::admit(report)
+    super::report_grammar::admit(report)?;
+    Ok(AdmittedReport { bytes })
 }
 
 fn require_line(

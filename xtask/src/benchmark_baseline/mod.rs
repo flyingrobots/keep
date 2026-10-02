@@ -67,8 +67,8 @@ pub(crate) fn run(repository_root: &Path) -> Result<(), BenchmarkBaselineError> 
             reason: "successful-benchmark-wrote-diagnostics",
         });
     }
-    artifact::validate(&output.stdout, &environment)?;
-    artifact_publication::persist(repository_root, &output.stdout)
+    let report = artifact::validate(&output.stdout, &environment)?;
+    artifact_publication::persist(repository_root, &report)
 }
 
 fn admit_clean_source(
