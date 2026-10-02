@@ -652,6 +652,9 @@ after its public API and format compatibility policies are established.
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 
+- Explicit retention recovery verifies the pinned retention and immutable-pool
+  directory identities before any recovery effect, preserving retained stage
+  evidence when a protocol directory was replaced (#19, PR #99).
 - Retention publication reopens the catalog pool entry this store's `HEAD`
   selects, bounded by the head's declared length, and requires it to decode
   to that generation and digest (`CatalogAbsent`, `CatalogRefused`,

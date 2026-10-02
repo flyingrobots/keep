@@ -28,7 +28,6 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
         preparation: &RetentionPublicationPreparation<'_>,
     ) -> io::Result<RetentionTransitionDisposition> {
         self.attempt = None;
-        require_pinned_directories(&self.root, &self.retention, &self.roots, &self.manifests)?;
         let recovery = self.recover().map_err(|error| match error {
             FilesystemRetentionRecoveryError::Observe { source } => source,
             FilesystemRetentionRecoveryError::Plan { source } => {
@@ -254,7 +253,7 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
 /// `roots`, or `manifests` entry renamed and replaced after admission means the
 /// store's namespace no longer describes the admitted state; publication
 /// refuses instead of writing into a directory no reader would find.
-fn require_pinned_directories(
+pub(super) fn require_pinned_directories(
     root: &Dir,
     retention: &Dir,
     roots: &Dir,

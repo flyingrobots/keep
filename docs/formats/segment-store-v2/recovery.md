@@ -180,6 +180,12 @@ interrupted migration waits for recovery instead of continuing.
 
 ## Retention publication recovery
 
+Both publication-triggered and explicit recovery first verify that
+`retention`, `retention/roots`, and `retention/manifests` still name the
+directories writer admission pinned. A replaced directory refuses as
+`ProtocolDirectoryReplaced` before stage observation or mutation; explicit
+recovery preserves that refusal inside its `Observe` error boundary.
+
 At restart, a fixed retention stage is classified from its exact framing and
 transitive evidence:
 

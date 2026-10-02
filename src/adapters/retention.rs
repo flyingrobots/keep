@@ -37,6 +37,8 @@ mod filesystem_retention_namespace;
 mod filesystem_retention_namespace_tests;
 mod filesystem_retention_pool_name;
 mod filesystem_retention_recovery;
+#[cfg(test)]
+mod filesystem_retention_recovery_directory_tests;
 mod filesystem_retention_recovery_error;
 mod filesystem_retention_recovery_observation;
 #[cfg(test)]

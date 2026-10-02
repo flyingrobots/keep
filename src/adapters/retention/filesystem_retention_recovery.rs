@@ -9,6 +9,7 @@ use super::filesystem_retention_authority::FilesystemRetentionPublicationAuthori
 use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_recovery_observation::{RetentionRecoveryObservation, StageBytes};
 use super::filesystem_retention_stage::{FilesystemRetentionStage, invalid_data};
+use super::filesystem_retention_storage::require_pinned_directories;
 use super::{
     FilesystemRetentionRecoveryError as Error, RetentionRecoveryReceipt, RetentionRecoveryStorage,
     RetentionStageAssessment, assess_head_stage, assess_manifest_stage, assess_root_stage,
@@ -119,12 +120,16 @@ impl FilesystemRetentionPublicationAuthority {
     /// a complete head over linked stages is finalized. Any pending
     /// publication attempt is discarded first. Publication calls this itself
     /// as its first step; callers may also run it explicitly at restart.
+    /// Both entry points verify that protocol names still identify the pinned
+    /// directories before observing stages or executing recovery effects.
     ///
     /// # Errors
     ///
     /// Returns [`FilesystemRetentionRecoveryError`](super::FilesystemRetentionRecoveryError)
     /// at the exact observation failure, planning refusal, or refused step.
     pub fn recover(&mut self) -> Result<RetentionRecoveryReceipt, Error> {
+        require_pinned_directories(&self.root, &self.retention, &self.roots, &self.manifests)
+            .map_err(|source| Error::Observe { source })?;
         self.attempt = None;
         self.recovery = None;
         let observation =
