@@ -114,7 +114,9 @@ from inspected main; the extra commit adds only the audit scope documents.
   the corrected command succeeded.
 
 No full-workspace, reboot, power-loss, benchmark, or fuzz-run claim follows
-from these targeted results. The remaining 59 checked tasks and 19 reopened
-tasks still need complete accounting before #131 can close.
+from these targeted results. The next five verdicts are in
+[identity layers and chunking](identity-layers-and-chunking.md). The other
+54 checked tasks and 19 reopened tasks still need complete accounting
+before issue #131 can close.
 
 <!-- markdownlint-enable MD013 -->
