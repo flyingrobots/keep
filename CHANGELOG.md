@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Publication tests now require the exact missing-manifest recovery refusal for a retained complete head, rejecting unrelated recovery errors (#99).
+
 - The fenced reader corruption law now requires the precise checksum-mismatch cause and expected/observed checksum bytes instead of accepting any root error (#99).
 
 - Correct the retention recovery documentation's obsolete integration status and explicitly retain its open incomplete-stage pinning and post-removal failure findings (#99).

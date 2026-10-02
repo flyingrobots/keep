@@ -59,6 +59,8 @@ fn existing_root_stage_is_never_truncated() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+// Size: medium. Oracle: a complete head without its manifest refuses with HeadStageWithoutManifestStage.
+// Delete when this recovery state is removed or stronger public-boundary coverage subsumes it.
 #[test]
 fn retained_stage_refuses_publication_before_recovery() -> Result<(), Box<dyn Error>> {
     let (sandbox, mut authority) = open_authority("filesystem-retention-recovery-required")?;
@@ -77,10 +79,15 @@ fn retained_stage_refuses_publication_before_recovery() -> Result<(), Box<dyn Er
         return Err("retained stage refused outside current-state verification".into());
     };
     assert_eq!(source.kind(), io::ErrorKind::InvalidData);
-    assert!(matches!(
-        super::filesystem_retention_test_fixture::refusal(&source),
-        Some(super::RetentionCurrentStateRefusal::RecoveryRefused { .. })
-    ));
+    assert!(
+        matches!(
+            super::filesystem_retention_test_fixture::refusal(&source),
+            Some(super::RetentionCurrentStateRefusal::RecoveryRefused {
+                source: super::RetentionRecoveryRefusal::HeadStageWithoutManifestStage
+            })
+        ),
+        "head-only evidence must report its missing manifest: {source:?}"
+    );
     assert!(!head_path(sandbox.path()).exists());
     Ok(())
 }

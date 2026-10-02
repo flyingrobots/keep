@@ -13,6 +13,8 @@ use super::{
     RetentionPublicationStorage, RetentionTransitionDisposition,
 };
 
+// Size: medium. Oracle: a complete head without its manifest refuses with HeadStageWithoutManifestStage.
+// Delete when this recovery state is removed or stronger public-boundary coverage subsumes it.
 #[test]
 fn refused_verification_admits_no_later_phase() -> Result<(), Box<dyn Error>> {
     let (sandbox, mut authority) = open_authority("filesystem-retention-attempt-refused")?;
@@ -28,10 +30,15 @@ fn refused_verification_admits_no_later_phase() -> Result<(), Box<dyn Error>> {
         .verify_current(&preparation)
         .err()
         .ok_or("an ambiguous head stage was admitted")?;
-    assert!(matches!(
-        refusal(&error),
-        Some(RetentionCurrentStateRefusal::RecoveryRefused { .. })
-    ));
+    assert!(
+        matches!(
+            refusal(&error),
+            Some(RetentionCurrentStateRefusal::RecoveryRefused {
+                source: super::RetentionRecoveryRefusal::HeadStageWithoutManifestStage
+            })
+        ),
+        "head-only evidence must report its missing manifest: {error:?}"
+    );
     let error = authority
         .write_root_stage(preparation.candidate())
         .err()
