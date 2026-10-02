@@ -606,6 +606,9 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Benchmark source-identity laws exercise real Git cleanliness independently
+  of ambient CPU-model availability; benchmark hardware admission stays strict.
+
 Review corrections to the unreleased retention and migration work above; none
 of these shipped in a release.
 

@@ -116,6 +116,10 @@ fn captured_source_identity_detects_assume_unchanged_bytes() -> Result<(), Box<d
     fs::write(&source, b"law\n")?;
     git(directory.path(), &["add", "tracked.txt"])?;
     git(directory.path(), &["commit", "--quiet", "-m", "fixture"])?;
+    assert_eq!(environment::source_tree_state(directory.path())?, "clean");
+    fs::write(&source, b"rot\n")?;
+    assert_eq!(environment::source_tree_state(directory.path())?, "dirty");
+    fs::write(&source, b"law\n")?;
     git(
         directory.path(),
         &["update-index", "--assume-unchanged", "tracked.txt"],
@@ -127,7 +131,7 @@ fn captured_source_identity_detects_assume_unchanged_bytes() -> Result<(), Box<d
         &["status", "--porcelain=v1", "--untracked-files=all"],
     )?;
     assert!(status.is_empty());
-    assert_eq!(environment::capture(directory.path())?.tree, "dirty");
+    assert_eq!(environment::source_tree_state(directory.path())?, "dirty");
     directory.close()?;
     Ok(())
 }
