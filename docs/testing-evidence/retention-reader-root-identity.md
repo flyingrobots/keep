@@ -1,0 +1,13 @@
+# Retention reader root-identity evidence
+
+Change kind: bug fix. Subject: Keep runtime fenced snapshot admission. Size: medium. Oracle: mutually consistent migration records are admissible for reading only when their restart-stable device and inode binding names the opened root; identity diagnostics preserve the bound and observed values.
+
+Regression commit `5c32126`, based on `5d73016`, transplants the complete migration-record set from one controlled migrated directory into a second directory on the same filesystem, then invokes `FilesystemRetentionSnapshot::load`. The unfixed reader returned a snapshot and the regression was observed RED with `reader accepted migration records naming another physical root`. This was a runtime acceptance failure rather than setup or source-spelling evidence.
+
+The fixed reader probes the opened directory's identity and applies the writer's existing `require_root_identity` predicate before fence acquisition and catalog loading. The regression requires the exact `File` coordinate, donor inode as expected, and recipient inode as observed in the retained `FilesystemPlatformAdmissionError::RootIdentityChanged` source. Its numerical oracle comes from independent filesystem metadata observations, not the production comparison helper.
+
+Independent copied-source mutation builds use fresh Cargo target directories. Swapping expected and observed values in the shared refusal constructor fails the precise runtime assertion. Stringifying the reader's identity source also fails that assertion while preserving the admission refusal, demonstrating that a generic error is insufficient. The mutation failures name the required coordinate and both observed values.
+
+Full all-feature workspace debug and release suites, both Clippy feature configurations with warnings denied, formatting, and staged source-structure checks passed in copied Docker isolation on pinned Rust 1.96.0 and Linux aarch64 with the existing ext4 audit filesystem. A final import-only readability change passed focused snapshot laws and all-feature Clippy. Markdown checks passed separately. Raw RED, mutation, and validation artifacts remain outside tracked source.
+
+This experiment covers a foreign inode binding on one filesystem and preserves the ordinary migrated-reader positive path. It does not execute an actual device move or remount, establish the full production platform profile for readers, repair catalog-path re-resolution, complete collected head coordinates, or enforce per-test resource ceilings. Mount-instance identity remains excluded by the unchanged shared predicate. No durable bytes, hash preimages, or API signatures change.

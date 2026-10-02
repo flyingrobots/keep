@@ -14,6 +14,8 @@ use super::{
     root_header_decoder,
 };
 use crate::adapters::filesystem_exact_record::{self as exact_record, ExactRecordError};
+use crate::adapters::filesystem_platform_profile::root_identity;
+use crate::adapters::filesystem_version_two_admission::require_root_identity;
 use crate::adapters::{
     CatalogRestartPolicy, ChecksummedPublicationHead, FilesystemCatalogSnapshot,
     filesystem_initialization_namespace, filesystem_version_two_records, publication_head_decoder,
@@ -80,6 +82,8 @@ impl RetentionViewSource for Source {
 impl FilesystemRetentionSnapshot {
     /// Admits the root as version two, acquires the reader fence, and
     /// double-collects one consistent view within `limit` attempts.
+    /// Admission requires the opened directory's restart-stable device and
+    /// inode to match the jointly admitted migration records before fencing.
     ///
     /// The call takes no writer authority and mutates nothing. It may block
     /// while collection holds the fence exclusively.
@@ -97,8 +101,12 @@ impl FilesystemRetentionSnapshot {
             .map_err(|source| Error::Admission { source })?;
         filesystem_initialization_namespace::admit_version_two(&root)
             .map_err(|source| Error::Admission { source })?;
-        let _bound = filesystem_version_two_records::admit(&root)
+        let bound = filesystem_version_two_records::admit(&root)
             .map_err(|source| Error::Admission { source })?;
+        let observed = root_identity(&root).map_err(|source| Error::Admission { source })?;
+        require_root_identity(bound, observed).map_err(|source| Error::Admission {
+            source: io::Error::new(io::ErrorKind::InvalidData, source),
+        })?;
         let fence = ReaderFence::acquire(&root).map_err(|source| Error::Fence { source })?;
         let retention = root
             .open_dir_nofollow(pool_name::RETENTION)
