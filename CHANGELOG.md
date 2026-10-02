@@ -667,6 +667,8 @@ after its public API and format compatibility policies are established.
 
 ### Fixed
 
+- Retention recovery binds a complete staged head to its manifest's exact byte length and predecessor before committing or cleaning up. Canonical but inconsistent heads refuse with existing typed planning errors and preserve published and retained evidence (#99).
+
 - Retention recovery refuses byte-identical root or manifest pool substitutions before committing the head or removing stages. Pool observation binds exact bytes to the retained stage's device and inode and preserves the typed pool refusal (#99).
 
 - Retention recovery admits namespace names and pool kinds before stage observation or mutation. Direct and publication-triggered recovery preserve retained evidence when unknown entries or noncanonical pool names refuse (#99).

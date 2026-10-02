@@ -124,8 +124,14 @@ fn finalize_head(
     let head = head.head();
     if head.manifest_digest() != manifest.digest()
         || head.generation() != manifest.manifest().generation()
+        || head.manifest_length().get()
+            != u64::try_from(manifest.encoded().len())
+                .map_err(|_| Refusal::HeadStageNamesOtherManifest)?
     {
         return Err(Refusal::HeadStageNamesOtherManifest);
+    }
+    if head.predecessor() != manifest.manifest().predecessor() {
+        return Err(Refusal::HeadPredecessorMismatch);
     }
     if !manifest_names_root(manifest, root) {
         return Err(Refusal::ManifestStageNamesOtherRoot);

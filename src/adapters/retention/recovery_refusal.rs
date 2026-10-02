@@ -51,9 +51,9 @@ pub enum RetentionRecoveryRefusal {
     },
     /// A complete head stage exists without a complete manifest stage.
     HeadStageWithoutManifestStage,
-    /// The head stage names a manifest other than the staged one.
+    /// The head stage's digest, generation, or length disagrees with the manifest.
     HeadStageNamesOtherManifest,
-    /// The head stage's predecessor is not the published manifest.
+    /// The head stage's predecessor disagrees with staged or published history.
     HeadPredecessorMismatch,
     /// The head stage exists but the staged manifest was never linked.
     ManifestNotLinkedBeforeHead,
