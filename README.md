@@ -194,6 +194,22 @@ cargo xtask golden-file-worldline-check
 cargo xtask conformance-check
 ```
 
+Select a crash campaign with `--sequence NAME` using these exact CLI names:
+
+| Name | Campaign |
+| --- | --- |
+| `segment` | Segment publication |
+| `catalog` | Catalog publication |
+| `head` | Publication-head replacement |
+| `recovery-discard` | Explicit recovery evidence discard |
+| `initialization` | Writer-locked initialization |
+| `retention` | Retention root, manifest, and head publication |
+| `migration` | Version-one to version-two migration |
+
+```bash
+cargo xtask durability-crash-matrix --sequence retention
+```
+
 ## Design boundary
 
 Keep owns physical content storage: exact byte identity; chunking and
