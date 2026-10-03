@@ -1,0 +1,31 @@
+# Catalog publisher platform admission
+
+Change kind: bug fix for #150, under completed-roadmap audit #131. Owner: `@flyingrobots`. Public catalog publisher authority must preserve production platform admission with `repository-tasks` enabled. Main `6051abb25a9fd33ae7ee0de5614514b709a4d82a` admitted a publisher from a writer lock even after ordinary initialization refused the same tmpfs root. The exact regression is committed in `1ffdf5a`; the following fix keeps its expected outcome unchanged.
+
+## Public outcome and oracle
+
+The medium-size Linux integration law `a_writer_lock_cannot_mint_publication_authority_on_a_refused_platform` creates owned scratch on `/dev/shm`, requires ordinary initialization to return `StoreInitializationError::Io` at `AdmitPlatform` with `Unsupported`, constructs the canonical namespace, acquires a real writer lock, and calls the alternate public publisher constructor. The specified oracle is KEEP-CATALOG-007: its result must also refuse with `Unsupported`. The parent instead returned a publisher and failed with `refused platform acquired public publisher authority`. This is an observed runtime RED, not a compilation or source-text check.
+
+The positive law `repository_publisher_preserves_staging_on_an_admitted_platform` initializes actual ext4 storage, reacquires writer authority, opens through the same alternate constructor, writes a stage, and observes the exact retained bytes after closing the handles. It prevents an unconditional-refusal implementation from satisfying the negative case. The bytes are independently supplied by the test; no production normalization computes the expectation.
+
+A separate copied production mutation reported successful writes without persisting any bytes. The positive law executed and failed its exact-byte assertion with an empty observed file; the negative law still passed. Its dedicated build directory was separate from both parent and fixed candidates. This calibration mutation was not committed.
+
+Both laws pass in debug and release after the fix. The first attempted strict probe correctly exposed an adapter descriptor mismatch: writer directories may use `O_PATH`, while profile ioctls need readable descriptors. That attempt returned `EBADF` and failed both laws. The correction opens `.` relative to the retained directory capability before profile inspection; it neither reopens an ambient path nor changes the lock or storage identity.
+
+## Finite capability inventory
+
+`FilesystemCatalogPublisher::open` consumes a privately constructed `FilesystemPlatformAdmission`. Its ordinary producers remain production initialization and published-store reopen. The alternate public `open_unchecked_for_repository_tasks` now runs the same Linux root and protocol-directory profile checks plus strict root identity before creating that proof; on unsupported operating systems it refuses. Its legacy method name and signature remain for source compatibility, with the corrected semantics documented explicitly. Private unit-test construction remains gated by `cfg(test)` and is unavailable to downstream callers.
+
+The publisher's fields remain private to its adapter module; no other external constructor produces this authority. Version-two admission, migration authority and recovery-stage-discard adapters are distinct public boundaries, retain their existing implementations, and are not certified by this probe. The pinned-root route establishes the properties of that retained capability; it cannot attest the spelling or alias history of the earlier path used to acquire it. No claim of inode-conditional pathname mutation or arbitrary out-of-band namespace isolation is added.
+
+## Harness integration and preservation
+
+Catalog crash execution now opens its publisher using `FilesystemPlatformAdmission::initialize` and the ordinary publisher constructor. Its ordered publication phases, fault decorators and restart oracles are unchanged. Full debug and optimized process-death matrices pass on actual ext4 scratch storage. The generic initialization fault port and other protocols retain their separate fault-injection boundaries. The campaign now honestly requires supported scratch storage for production catalog publication; an unsupported development filesystem cannot silently receive production publisher authority.
+
+The removed source-string test `publisher_has_no_unadmitted_production_constructor` survived the demonstrated bypass because it inspected only one constructor signature and declarations in one file. Deletion criterion: failed calibration against the exact claim, replaced by the public runtime refusal and positive capability laws above. Existing no-follow namespace, writer exclusion, canonical publication, corruption and restart laws remain. No test-case count is treated as a storage oracle.
+
+## Replay and limitations
+
+Replay `cargo test --test catalog_platform_admission --all-features --locked` in debug and with `--release`. Execute both `cargo xtask durability-crash-matrix` and `cargo run --quiet --release --locked --package xtask -- durability-crash-matrix`. Copy-isolated Linux aarch64 Docker validation uses pinned Rust 1.96.0, dedicated build output, tmpfs for the negative fixture and admitted ext4 for the positive fixture and crash campaign. Source SHAs, final required checks and review outcome are recorded on the PR. No host Rust tests, writable checkout mount or fabricated platform proof is used.
+
+The fixtures own per-process directories. Missing or differently configured `/dev/shm` fails setup visibly; it does not skip the refusal law. The schedules are deterministic and use no sleeps or random input. The negative law's RED proves detection of the reported bug; the positive law failed under the descriptor-defective implementation and passes with supported staging. This is not a new parser, performance or physical-power-loss claim, and no on-disk format changes. Resource ceilings and ordinary CI enforcement gaps remain those recorded in the testing enforcement profile; no new compliant-sandbox or latency-distribution claim is made. Retire these laws only if the public authority route is removed or stronger public evidence demonstrably replaces them.

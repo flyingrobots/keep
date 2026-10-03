@@ -1,0 +1,88 @@
+   Compiling libc v0.2.186
+   Compiling rustix v1.1.4
+   Compiling find-msvc-tools v0.1.9
+   Compiling shlex v2.0.1
+   Compiling bitflags v2.13.1
+   Compiling io-lifetimes v2.0.4
+   Compiling io-lifetimes v3.0.1
+   Compiling linux-raw-sys v0.12.1
+   Compiling io-extras v0.19.0
+   Compiling serde_core v1.0.229
+   Compiling cap-primitives v4.0.2
+   Compiling once_cell v1.21.4
+   Compiling maybe-owned v0.3.4
+   Compiling ipnet v2.12.0
+   Compiling ambient-authority v0.0.2
+   Compiling cap-std v4.0.2
+   Compiling zmij v1.0.23
+   Compiling serde_json v1.0.151
+   Compiling serde v1.0.229
+   Compiling cap-fs-ext v4.0.2
+   Compiling itoa v1.0.18
+   Compiling arrayvec v0.7.8
+   Compiling arrayref v0.3.9
+   Compiling memchr v2.8.3
+   Compiling constant_time_eq v0.4.2
+   Compiling cfg-if v1.0.4
+   Compiling arbitrary v1.4.2
+   Compiling jobserver v0.1.35
+   Compiling cc v1.3.0
+   Compiling blake3 v1.8.5
+   Compiling libfuzzer-sys v0.4.13
+   Compiling fs-set-times v0.20.3
+   Compiling rustix-linux-procfs v0.1.1
+   Compiling xtask v0.0.0 (<isolated-build>/xtask)
+   Compiling keep v0.0.0 (<isolated-build>)
+   Compiling keep-fuzz v0.0.0 (<isolated-build>/fuzz)
+    Finished `release` profile [optimized + debuginfo] target(s) in 12.30s
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.01s
+     Running `<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format -artifact_prefix=<isolated-build>/fuzz/artifacts/segment_format/ -runs=1 -timeout=5 -rss_limit_mb=1024 fuzz/corpus/segment_format/recovery-unsupported-partial-seal-version`
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 2076612330
+INFO: Loaded 1 modules   (68145 inline 8-bit counters): 68145 [0xaaaac2e670c0, 0xaaaac2e77af1),
+INFO: Loaded 1 PC tables (68145 PCs): 68145 [0xaaaac2e77af8,0xaaaac2f81e08),
+<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format: Running 1 inputs 1 time(s) each.
+Running: fuzz/corpus/segment_format/recovery-unsupported-partial-seal-version
+
+thread '<unnamed>' (1780079) panicked at fuzz_targets/segment_format.rs:98:17:
+assertion `left == right` failed: discardable seal contradicts fixed field at 16
+  left: 2
+ right: 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+==1780079== ERROR: libFuzzer: deadly signal
+    #0 0xaaaac289f638  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x2af638) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #1 0xaaaac28e3440  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x2f3440) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #2 0xaaaac28d21ac  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x2e21ac) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #3 0xffffaf2328bc  (linux-vdso.so.1+0x8bc) (BuildId: 91bd37d5562c97f21721e188c8617e7fb312061b)
+    #4 0xffffaed57d7c  (/lib/aarch64-linux-gnu/libc.so.6+0x87d7c) (BuildId: 4c1eca4527d1163b2dde55860b69f270158febb4)
+    #5 0xffffaed0693c  (/lib/aarch64-linux-gnu/libc.so.6+0x3693c) (BuildId: 4c1eca4527d1163b2dde55860b69f270158febb4)
+    #6 0xffffaecf1a80  (/lib/aarch64-linux-gnu/libc.so.6+0x21a80) (BuildId: 4c1eca4527d1163b2dde55860b69f270158febb4)
+    #7 0xaaaac2805028  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x215028) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #8 0xaaaac2804e78  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x214e78) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #9 0xaaaac27ea98c  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x1fa98c) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #10 0xaaaac2cee06c  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x6fe06c) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #11 0xaaaac2cdf00c  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x6ef00c) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #12 0xaaaac2cd9984  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x6e9984) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #13 0xaaaac2cdf5d0  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x6ef5d0) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #14 0xaaaac28056d0  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x2156d0) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #15 0xaaaac28055c4  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x2155c4) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #16 0xaaaac27ea5dc  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x1fa5dc) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #17 0xaaaac28c7b90  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x2d7b90) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #18 0xaaaac28cab34  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x2dab34) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #19 0xaaaac28cbae0  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x2dbae0) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #20 0xaaaac28cc82c  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x2dc82c) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #21 0xaaaac28cb344  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x2db344) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #22 0xaaaac28d270c  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x2e270c) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #23 0xaaaac28ec470  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x2fc470) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #24 0xaaaac28f532c  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x30532c) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #25 0xaaaac2805980  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x215980) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+    #26 0xffffaecf2258  (/lib/aarch64-linux-gnu/libc.so.6+0x22258) (BuildId: 4c1eca4527d1163b2dde55860b69f270158febb4)
+    #27 0xffffaecf2338  (/lib/aarch64-linux-gnu/libc.so.6+0x22338) (BuildId: 4c1eca4527d1163b2dde55860b69f270158febb4)
+    #28 0xaaaac2805aec  (<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format+0x215aec) (BuildId: 0e8550fd6e645c555c405b6d285564352028a80e)
+
+NOTE: libFuzzer has rudimentary signal handlers.
+      Combine libFuzzer with AddressSanitizer or similar for better crash reports.
+SUMMARY: libFuzzer: deadly signal
+────────────────────────────────────────────────────────────────────────────────
+
+Error: Fuzz target exited with exit status: 77

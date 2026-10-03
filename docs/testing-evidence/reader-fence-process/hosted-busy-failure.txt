@@ -1,0 +1,16 @@
+test collection_excludes_a_new_snapshot_until_release ... FAILED
+2026-10-03T20:54:11.0422983Z test reader_death_releases_collection_without_replacing_the_fence ... ok
+2026-10-03T20:54:11.0423520Z
+2026-10-03T20:54:11.0423612Z failures:
+2026-10-03T20:54:11.0423714Z
+2026-10-03T20:54:11.0423957Z ---- collection_excludes_a_new_snapshot_until_release stdout ----
+2026-10-03T20:54:11.0424328Z Error: Busy
+2026-10-03T20:54:11.0424451Z
+2026-10-03T20:54:11.0424471Z
+2026-10-03T20:54:11.0424558Z failures:
+2026-10-03T20:54:11.0424793Z     collection_excludes_a_new_snapshot_until_release
+2026-10-03T20:54:11.0425083Z
+2026-10-03T20:54:11.0425373Z test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+2026-10-03T20:54:11.0425777Z
+2026-10-03T20:54:11.0426024Z error: test failed, to rerun pass `-p keep --test reader_fence_process`
+2026-10-03T20:54:11.0455695Z ##[error]Process completed with exit code 101.

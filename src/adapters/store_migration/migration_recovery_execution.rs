@@ -74,7 +74,7 @@ pub enum StoreMigrationRecoveryError {
         /// Preserved current-state refusal or operational failure.
         source: io::Error,
     },
-    /// The residue could not be observed.
+    /// The residue or completed namespace could not be admitted without effects.
     Observation {
         /// Preserved storage failure.
         source: io::Error,
@@ -117,6 +117,10 @@ pub enum StoreMigrationRecoveryError {
 ///
 /// Returns [`StoreMigrationRecoveryError`] at the exact boundary that refused.
 ///
+/// A complete plan verifies the completed version-two namespace before returning,
+/// without requiring the retention pools to remain empty. A completion refusal
+/// retains its source under [`StoreMigrationRecoveryError::Observation`].
+///
 /// Resumption is internal: external callers cannot bypass recovery admission.
 ///
 /// ```compile_fail
@@ -140,6 +144,11 @@ pub fn recover_store_migration(
         })?;
     let plan = plan_store_migration_recovery(&expected_admitted, &residue)
         .map_err(|source| StoreMigrationRecoveryError::Ambiguity { source })?;
+    if plan == StoreMigrationRecoveryPlan::Complete {
+        storage
+            .verify_complete()
+            .map_err(|source| StoreMigrationRecoveryError::Observation { source })?;
+    }
     let observed_prefix = super::StoreMigrationNamespacePrefix::observe(&residue)
         .map_err(|source| StoreMigrationRecoveryError::Ambiguity { source })?;
     let persisted = persisted_intent(&residue, expected)?;

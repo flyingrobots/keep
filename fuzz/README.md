@@ -76,7 +76,7 @@ The `segment_format` seeds select the public segment-header, record-header,
 complete-record, seal, and complete-segment boundaries. Canonical empty,
 one-record, and bundled segments keep mutations inside the nested parsers;
 every admitted fixed-width value must re-encode byte-for-byte, and every
-admitted segment must retain its exact bytes and declared record count. Run
+admitted segment must retain its exact bytes and declared record count. The recovery selector also invokes whole-byte stage classification and requires every available fixed seal byte in a discardable truncation to match the independently specified format. Its permanent unsupported-version counterexample lives in `tests/fixtures/recovery/` and is replayed by ordinary runtime tests as well as seeded fuzzing. Run
 the reviewed smoke campaign across every registered target with:
 
 ```bash
