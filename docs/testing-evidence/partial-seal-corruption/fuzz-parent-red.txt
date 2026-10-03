@@ -39,8 +39,8 @@
      Running `<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format -artifact_prefix=<isolated-build>/fuzz/artifacts/segment_format/ -runs=1 -timeout=5 -rss_limit_mb=1024 fuzz/corpus/segment_format/recovery-unsupported-partial-seal-version`
 INFO: Running with entropic power schedule (0xFF, 100).
 INFO: Seed: 2076612330
-INFO: Loaded 1 modules   (68145 inline 8-bit counters): 68145 [0xaaaac2e670c0, 0xaaaac2e77af1), 
-INFO: Loaded 1 PC tables (68145 PCs): 68145 [0xaaaac2e77af8,0xaaaac2f81e08), 
+INFO: Loaded 1 modules   (68145 inline 8-bit counters): 68145 [0xaaaac2e670c0, 0xaaaac2e77af1),
+INFO: Loaded 1 PC tables (68145 PCs): 68145 [0xaaaac2e77af8,0xaaaac2f81e08),
 <isolated-build>/aarch64-unknown-linux-gnu/release/segment_format: Running 1 inputs 1 time(s) each.
 Running: fuzz/corpus/segment_format/recovery-unsupported-partial-seal-version
 

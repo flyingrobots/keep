@@ -3,8 +3,8 @@
      Running `<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format -artifact_prefix=<isolated-build>/fuzz/artifacts/segment_format/ -runs=1 -timeout=5 -rss_limit_mb=1024 fuzz/corpus/segment_format/recovery-unsupported-partial-seal-version`
 INFO: Running with entropic power schedule (0xFF, 100).
 INFO: Seed: 470667612
-INFO: Loaded 1 modules   (68182 inline 8-bit counters): 68182 [0xaaaaae387100, 0xaaaaae397b56), 
-INFO: Loaded 1 PC tables (68182 PCs): 68182 [0xaaaaae397b58,0xaaaaae4a20b8), 
+INFO: Loaded 1 modules   (68182 inline 8-bit counters): 68182 [0xaaaaae387100, 0xaaaaae397b56),
+INFO: Loaded 1 PC tables (68182 PCs): 68182 [0xaaaaae397b58,0xaaaaae4a20b8),
 <isolated-build>/aarch64-unknown-linux-gnu/release/segment_format: Running 1 inputs 1 time(s) each.
 Running: fuzz/corpus/segment_format/recovery-unsupported-partial-seal-version
 Executed fuzz/corpus/segment_format/recovery-unsupported-partial-seal-version in 0 ms
@@ -17,8 +17,8 @@ Executed fuzz/corpus/segment_format/recovery-unsupported-partial-seal-version in
      Running `<isolated-build>/aarch64-unknown-linux-gnu/release/segment_format -artifact_prefix=<isolated-build>/fuzz/artifacts/segment_format/ -seed=17101 -max_total_time=15 -timeout=5 -rss_limit_mb=1024 -max_len=1048576 <isolated-build>/fuzz/corpus/segment_format`
 INFO: Running with entropic power schedule (0xFF, 100).
 INFO: Seed: 17101
-INFO: Loaded 1 modules   (68182 inline 8-bit counters): 68182 [0xaaaad3357100, 0xaaaad3367b56), 
-INFO: Loaded 1 PC tables (68182 PCs): 68182 [0xaaaad3367b58,0xaaaad34720b8), 
+INFO: Loaded 1 modules   (68182 inline 8-bit counters): 68182 [0xaaaad3357100, 0xaaaad3367b56),
+INFO: Loaded 1 PC tables (68182 PCs): 68182 [0xaaaad3367b58,0xaaaad34720b8),
 INFO:       10 files found in <isolated-build>/fuzz/corpus/segment_format
 INFO: seed corpus: files: 10 min: 65b max: 702b total: 2364b rss: 36Mb
 #11	INITED cov: 518 ft: 1061 corp: 10/2364b exec/s: 0 rss: 39Mb
