@@ -15,7 +15,7 @@ impl SegmentDigest {
         &self.0
     }
 
-    pub(super) const fn from_validated(bytes: [u8; 32]) -> Self {
+    pub(crate) const fn from_validated(bytes: [u8; 32]) -> Self {
         Self(bytes)
     }
 }

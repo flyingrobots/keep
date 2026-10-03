@@ -54,6 +54,7 @@ mod layout;
 mod profile;
 mod reference;
 mod retention;
+mod segment_digest;
 mod verification;
 
 #[cfg(feature = "repository-tasks")]

@@ -21,3 +21,11 @@ Copying a report preserves its claims and carries no fence or retention authorit
 The prepared reference-store report was not imported unchanged because its layout/blob-only coordinates do not describe the durable catalog subject required here.
 
 No durable format, hashing preimage, write protocol, or recovery action changes in this slice.
+
+Segment reports certify only physical framing/checksum evidence; chunk and layout claims are attached to their own logical record subjects, so an empty physical segment cannot masquerade as evidence of some logical object.
+
+`SegmentDigest` now lives in a domain-owned module rather than under the codec adapters; its public name and byte representation are unchanged, and reporting does not introduce an inward dependency on filesystem or codec implementations.
+
+Logical-record reports use their admitted immutable payload evidence without claiming catalog membership or publication, including records prepared for writing but not persisted.
+
+The supported-depth matrix is explicit per subject, and reporting never uses enum ordering to accept a request.

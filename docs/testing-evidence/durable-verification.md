@@ -51,8 +51,52 @@ Raw local artifacts are retained under the issue's audit scratch record: `catalo
 
 ## Remaining acceptance
 
-This slice reports already admitted catalog evidence only; it does not yet provide raw durable loading-to-verification error classification, segment/blob/retention reports, all required durable depth operations, an aggregate report, or the catalog-ceiling memory campaign.
+This slice reports already admitted catalog evidence only; it does not yet provide raw durable loading-to-verification error classification, complete-blob/retention reports, all required durable depth operations, an aggregate report, or the catalog-ceiling memory campaign. The segment and logical-record extension is recorded below.
 
 Full required validation, independent exact-head review, hosted checks, and the final #114 PR remain pending until the complete candidate is stable.
 
 No existing tests were deleted or expectations weakened; individual laws state their deletion criteria beside their oracles.
+
+## Segment and logical-record reporting
+
+Change kind: new reporting feature over already admitted evidence, plus a behavior-preserving relocation of `SegmentDigest` from the codec adapter to domain ownership; the source baseline is `92f92089cf00d1a766fe8775dac28561ff738b27`.
+
+`AdmittedSegment::verify` reports only physical framing/checksum evidence, while `AdmittedSegmentRecord::verify` reports framing/checksum and the exact record kind's chunk or layout identity.
+
+The public [subject/depth matrix](../invariants/verification/README.md) documents costs and rejects ordinal-depth inference, publication claims and complete-blob claims from an isolated layout record.
+
+The physical-coordinate oracle is the frozen empty and one-zero segment digests in `conformance/segment-store/v1/artifacts.tsv`.
+
+Logical subjects use the frozen one-zero bundle, its declared layout identity and the named identity of the one-zero chunk; the report implementation does not derive expected values for these tests.
+
+These small tests use immutable in-memory fixtures and exhaust the finite request vocabulary for physical segments and both logical record kinds; no random seed, scheduler, filesystem fault or generated-space completeness claim applies.
+
+| Protected claim | Deliberate production violation | Observed runtime failure |
+| --- | --- | --- |
+| Unsupported requests never become success, including an isolated layout without its chunks. | Disable the segment and record support guards. | The physical and logical matrix laws reject unsupported success; the isolated-layout law reports `layout identity was presented as complete-blob evidence`. |
+| Physical evidence names the exact frozen segment. | Replace the reported segment digest with zero bytes. | The physical-coordinate assertion and exact refusal-subject assertion fail. |
+| Chunk evidence names a chunk subject. | Replace only the chunk report subject with a physical-segment subject. | The public record subject/proof assertion fails. |
+| Layout evidence names its canonical layout subject. | Replace only the layout subject with a physical-segment subject, leaving chunk reporting intact. | The later layout branch of the matrix and the isolated-layout law fail. |
+| Requests remain distinct from achieved evidence. | Replace the report request with `SnapshotBinding`. | The segment and logical-record request assertions fail. |
+| Achieved evidence is never silently inflated. | Replace only the achieved depth with `CompleteBlobIdentity`. | Request assertions pass, then segment and logical proof assertions fail. |
+| Refusals preserve the exact supported policy. | Return an empty supported set while retaining the guard. | Exact typed-refusal assertions fail for physical segments and both logical record kinds. |
+| Reports contain their promised subject evidence. | Return an empty subject slice. | Physical and logical report laws fail with their missing-subject diagnostics. |
+| Reporting allocates no additional heap memory. | Allocate and black-box a 1,024-byte vector in each reporting operation. | Both incremental-allocation assertions report 1,024 bytes rather than zero. |
+
+All listed RED results follow successful compilation and reach the intended runtime check; each mutant uses separate copied source and a separate target directory, leaving the candidate unchanged.
+
+Raw sources, logs and exit receipts live under `segment-mutants`; the exact omitted-subject failure is also preserved in `segment-mutants/no-subject/red.log`.
+
+The initial calibration-copy attempt exhausted the ext4 scratch mount's inode capacity before the remaining mutants could run; `segment-calibration-inode-status.log` records that environment condition, which is excluded from calibration evidence.
+
+Completed and incomplete copied sources were preserved on the container's larger build filesystem, and the remaining in-memory calibrations ran there without changing their inputs or oracle.
+
+The unchanged candidate passes debug/release report laws, existing catalog reports, segment/record/header/seal and memory laws, doctests, all-target/all-feature Clippy, formatting and source structure.
+
+`segment-release-related-validation.log` preserves an attempted nonexistent test-target invocation; `segment-related-validation-corrected.log` runs the actual segment-record/header/memory targets and remaining checks, without counting the invocation error as a product result.
+
+The execution receipts are `segment-first-check.log`, `segment-release-related-validation.log`, `segment-related-validation-corrected.log` and `segment-post-calibration-green.log`.
+
+Per-test resource enforcement remains the previously disclosed repository gap; allocation assertions measure reporting after admission, not total admission memory or process RSS.
+
+No existing runtime expectations were changed or tests removed, and the full durable failure/retention/aggregate and memory-ceiling obligations remain open.
