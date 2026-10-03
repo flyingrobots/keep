@@ -29,4 +29,3 @@ test adapters::retention::retention_model_tests::sequences_starting_with_an_init
 test adapters::retention::retention_model_tests::sequences_starting_with_a_stale_initial_agree_with_the_model ... ok
 
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 347 filtered out; finished in 3.65s
-

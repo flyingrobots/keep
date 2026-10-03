@@ -2,10 +2,7 @@ diff --git a/src/adapters/retention/filesystem_retention_snapshot.rs b/src/adapt
 index 751aebc..3d5a396 100644
 --- a/src/adapters/retention/filesystem_retention_snapshot.rs
 +++ b/src/adapters/retention/filesystem_retention_snapshot.rs
-@@ -246,7 +246,21 @@ impl FilesystemRetentionSnapshot {
-                 source: invalid("selected root does not decode to the manifest's selection"),
-             });
-         }
+@@ -249 +249,15 @@ impl FilesystemRetentionSnapshot {
 -        Ok(Some(bytes.into_boxed_slice()))
 +        let changed = crate::RetentionRoot::new(
 +            root.root().namespace().clone(),
@@ -22,6 +19,3 @@ index 751aebc..3d5a396 100644
 +            source: io::Error::new(io::ErrorKind::InvalidData, source),
 +        })?;
 +        Ok(Some(changed.encoded().to_vec().into_boxed_slice()))
-     }
- }
- 
