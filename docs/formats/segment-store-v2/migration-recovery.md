@@ -96,3 +96,7 @@ evidence. Whenever an exact intent survives, recovery continues with its
 persisted bytes.
 
 The filesystem laws cover every forward prefix, every strict byte-prefix truncation of all three stages and unchanged version-1 bytes. The [restart ambiguity matrix](../../testing-evidence/migration-restart-matrix.md) covers corrupt records, contradictory and byte-equal substituted stages, invalid ordering, copied-root identity, immutable-pool and current-head damage, changed inventory, foreign receipts, unknown names and wrong kinds. Each new refusal retains a complete before/after witness of names, file identities and bytes and checks the existing typed failure boundary. The evidence record distinguishes kernel/filesystem behavior from platform-admission, process-death and power-loss claims.
+
+## Completed namespace admission
+
+After a plan selects `Complete`, recovery calls `StoreMigrationRecoveryStorage::verify_complete` before returning its receipt. The filesystem implementation applies existing version-two namespace admission: reserved GC/recovery entries must match the current protocol, while owned retention state is permitted. A refusal retains the original cause under `StoreMigrationRecoveryError::Observation` and `FilesystemMigrationRecoveryRefusal::NamespacePreflight`, before any recovery effect. This is namespace admission, not verification or recovery of retained content; retention remains the owner of those records and stages.

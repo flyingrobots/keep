@@ -1,0 +1,125 @@
++ cargo test --lib --all-features --locked completed_migration
+   Compiling rustix v1.1.4
+   Compiling io-lifetimes v3.0.1
+   Compiling proc-macro2 v1.0.107
+   Compiling linux-raw-sys v0.12.1
+   Compiling io-lifetimes v2.0.4
+   Compiling bitflags v2.13.1
+   Compiling io-extras v0.19.0
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.24
+   Compiling shlex v2.0.1
+   Compiling cap-primitives v4.0.2
+   Compiling find-msvc-tools v0.1.9
+   Compiling once_cell v1.21.4
+   Compiling ambient-authority v0.0.2
+   Compiling libc v0.2.186
+   Compiling anstyle v1.0.14
+   Compiling cap-std v4.0.2
+   Compiling ipnet v2.12.0
+   Compiling clap_lex v1.1.0
+   Compiling maybe-owned v0.3.4
+   Compiling cc v1.3.0
+   Compiling cfg-if v1.0.4
+   Compiling clap_builder v4.6.2
+   Compiling cap-fs-ext v4.0.2
+   Compiling condtype v1.3.0
+   Compiling arrayvec v0.7.8
+   Compiling arrayref v0.3.9
+   Compiling constant_time_eq v0.4.2
+   Compiling regex-lite v0.1.9
+   Compiling allocation-counter v0.8.1
+   Compiling syn v2.0.119
+   Compiling blake3 v1.8.5
+   Compiling clap v4.6.4
+   Compiling fs-set-times v0.20.3
+   Compiling rustix-linux-procfs v0.1.1
+   Compiling divan-macros v0.1.21
+   Compiling divan v0.1.21
+   Compiling keep v0.0.0 (<fixed-source>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.51s
+     Running unittests src/lib.rs (<green-target>/debug/deps/keep-09abf1fe30bdfc46)
+
+running 2 tests
+test adapters::retention::filesystem_retention_migration_completion_tests::completed_migration_preserves_published_retention_state ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::completed_migration_refuses_unknown_reserved_entries_without_effects ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 374 filtered out; finished in 0.21s
+
++ cargo test --lib --all-features --release --locked completed_migration
+   Compiling rustix v1.1.4
+   Compiling bitflags v2.13.1
+   Compiling linux-raw-sys v0.12.1
+   Compiling io-lifetimes v2.0.4
+   Compiling io-lifetimes v3.0.1
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling io-extras v0.19.0
+   Compiling unicode-ident v1.0.24
+   Compiling cap-primitives v4.0.2
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.9
+   Compiling once_cell v1.21.4
+   Compiling anstyle v1.0.14
+   Compiling clap_lex v1.1.0
+   Compiling maybe-owned v0.3.4
+   Compiling ambient-authority v0.0.2
+   Compiling libc v0.2.186
+   Compiling ipnet v2.12.0
+   Compiling cap-std v4.0.2
+   Compiling cc v1.3.0
+   Compiling clap_builder v4.6.2
+   Compiling cap-fs-ext v4.0.2
+   Compiling cfg-if v1.0.4
+   Compiling condtype v1.3.0
+   Compiling constant_time_eq v0.4.2
+   Compiling arrayref v0.3.9
+   Compiling arrayvec v0.7.8
+   Compiling regex-lite v0.1.9
+   Compiling allocation-counter v0.8.1
+   Compiling syn v2.0.119
+   Compiling blake3 v1.8.5
+   Compiling clap v4.6.4
+   Compiling fs-set-times v0.20.3
+   Compiling rustix-linux-procfs v0.1.1
+   Compiling divan-macros v0.1.21
+   Compiling divan v0.1.21
+   Compiling keep v0.0.0 (<fixed-source>)
+    Finished `release` profile [optimized] target(s) in 6.05s
+     Running unittests src/lib.rs (<green-target>/release/deps/keep-ab9e64645c5a4507)
+
+running 2 tests
+test adapters::retention::filesystem_retention_migration_completion_tests::completed_migration_preserves_published_retention_state ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::completed_migration_refuses_unknown_reserved_entries_without_effects ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 374 filtered out; finished in 0.09s
+
++ cargo test --lib --all-features --locked filesystem_migration_restart
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (<green-target>/debug/deps/keep-09abf1fe30bdfc46)
+
+running 22 tests
+test adapters::store_migration::filesystem_migration_restart_pool_tests::adding_a_valid_orphan_cannot_reuse_the_previous_migration_intent ... ok
+test adapters::store_migration::filesystem_migration_restart_pool_tests::a_valid_segment_substitution_reports_both_digest_coordinates ... ok
+test adapters::store_migration::filesystem_migration_restart_pool_tests::a_damaged_current_head_preserves_all_restart_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::a_nonempty_reader_fence_preserves_its_exact_refusal ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::effects_without_durable_intent_preserve_restart_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_pool_tests::unknown_immutable_pool_names_refuse_with_the_exact_name ... ok
+test adapters::store_migration::filesystem_migration_restart_pool_tests::damaged_immutable_pool_bytes_refuse_restart_before_effects ... ok
+test adapters::store_migration::filesystem_migration_restart_root_tests::a_byte_equal_store_copy_refuses_the_persisted_root_identity ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::a_marker_before_namespace_completion_preserves_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::a_receipt_without_its_marker_preserves_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::stages_surviving_later_effects_refuse_restart ... ok
+test adapters::store_migration::filesystem_migration_restart_pair_tests::byte_equal_stage_substitution_refuses_before_restart_effects ... ok
+test adapters::store_migration::filesystem_migration_restart_pair_tests::conflicting_stage_bytes_preserve_both_records_on_restart ... ok
+test adapters::store_migration::filesystem_migration_restart_record_tests::overlong_stages_refuse_restart_without_disposal ... ok
+test adapters::store_migration::filesystem_migration_restart_record_tests::a_valid_foreign_receipt_refuses_its_conflicting_intent_digest ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::completed_migration_refuses_unknown_reserved_entries_without_effects ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::namespace_holes_refuse_restart_at_the_exact_coordinates ... ok
+test adapters::store_migration::filesystem_migration_restart_record_tests::checksum_damage_in_each_migration_record_preserves_restart_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::regular_files_at_protocol_directory_names_refuse_restart ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::unknown_root_and_nested_entries_preserve_restart_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::symbolic_links_at_fixed_record_names_refuse_without_following_them ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::directory_substitution_at_each_fixed_file_refuses_restart ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 354 filtered out; finished in 0.26s
