@@ -1,9 +1,6 @@
 # Catalog publication admission audit
 
-This page owns the current T-12.2 verdict from the originally checked roadmap
-at `1a586d83d5750083172d440f90e7b786d540ff0e`, lines 546–548. Inspected main
-is `b50dbd4cb4cee286aea1aa0352152a232197dda1`. T-12.1 and T-12.3 remain under
-review; the checks below do not establish their complete definitions of done.
+This page owns the T-12.2 and T-12.3 verdicts from the originally checked roadmap at `1a586d83d5750083172d440f90e7b786d540ff0e`, lines 546–550. The T-12.2 finding inspects main `b50dbd4cb4cee286aea1aa0352152a232197dda1`; the later T-12.3 verdict names its own inspected revision below. T-12.1 remains under review.
 
 ## T-12.2 — Writer exclusion and platform-admitted publication
 
@@ -59,3 +56,15 @@ its exact target `b50dbd4cb4cee286aea1aa0352152a232197dda1`; the documentation
 PR changes no runtime or test code. Those reference corrections do not
 resolve T-12.2 or close #150. No fresh crash campaign or host-power-loss
 evidence is claimed here.
+
+## T-12.3 — Restart snapshot and model agreement
+
+**Acceptance: restart examples supported; model-agreement evidence incomplete under the binding testing standard.** This verdict inspects main `6051abb25a9fd33ae7ee0de5614514b709a4d82a`. `KEEP-CATALOG-009` and `KEEP-CATALOG-010` are separate promises; passing restart examples does not establish generated model agreement.
+
+`src/adapters/catalog_restart_loader.rs::load_from_directory` reads and admits the selected head, admits its named catalog, checks generation/length/digest, loads the referenced segments and constructs an admitted filesystem snapshot. `tests/catalog_restart.rs` exercises exact frozen payload reconstruction. Its `catalog_restart/refusal_laws.rs` exercises corrupt and unsupported heads, noncanonical catalogs, missing catalog/segment files and conflicting physical-name contents through `FilesystemCatalogSnapshot::load`. These are actual filesystem-backed public outcomes, not harness enumeration. They do not establish arbitrary concurrent out-of-band namespace isolation or physical power-loss recovery.
+
+`tests/catalog_model.rs::generation_transitions_and_lookups_match_a_btree_map` checks only one hand-written sequence: bundle, one chunk, empty. Its `model()` obtains expected identities and payloads through the same production `AdmittedSegment::records()` boundary consumed by catalog construction. The example can detect some lookup defects, but shared decoding errors can agree on both sides. It has no generated history space, independent input-derived map, absent-lookup checks or generated invalid transitions. The separate transition examples establish specified stale/predecessor refusals at their chosen points; they do not close this model-evidence gap.
+
+Testing Standards rules 5 and 6 require generated evidence for agreement claims and an independently grounded oracle. Existing tests have no blanket exemption under `docs/testing/enforcement.md`. Therefore the complete definition of done is not established, even though the historical requirement ledger says implemented and its existing example passes. [Issue #166](https://github.com/flyingrobots/keep/issues/166) owns generated independent model histories, exact runtime assertions, replay/reduction and assertion calibration as one independently mergeable correction. No production catalog defect is alleged by this finding.
+
+Fresh source-specific Docker runs on `6051abb25a9fd33ae7ee0de5614514b709a4d82a` passed `cargo test --locked` and `cargo test --release --locked`, each selecting `catalog_generation`, `catalog`, `publication_head`, `catalog_encoding`, `catalog_locations`, `catalog_transition`, `catalog_snapshot`, `catalog_restart` and `catalog_model` with `--test`. Source and build directories were separate from other candidate branches, and filesystem scratch used the container's owned ext4 mount. This receipt establishes those existing runtime examples only; no new mutation, generated campaign, full crash campaign or resource-ceiling enforcement is claimed. T-12.1 remains under review.
