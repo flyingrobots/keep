@@ -20,16 +20,24 @@ fn replaced_lock_entry_refuses_authority_after_kernel_acquisition() -> Result<()
     let directory = Dir::open_ambient_dir(sandbox.path(), ambient_authority())?;
     let root_lock = acquire_root(&directory)?;
     let opened = open_existing(&directory)?;
+    let contender = fs::File::open(sandbox.path().join(LOCK_FILE_NAME))?;
 
     let mut replacement = Ok(());
+    let mut lock_observation = None;
     let result = FilesystemWriterLock::acquire_with(directory, root_lock, opened, || {
+        lock_observation = Some(contender.try_lock());
         replacement = fs::rename(
             sandbox.path().join(LOCK_FILE_NAME),
             sandbox.path().join("displaced.lock"),
         )
         .and_then(|()| fs::write(sandbox.path().join(LOCK_FILE_NAME), b"replacement evidence"));
     });
+    drop(contender);
     replacement?;
+    assert!(
+        matches!(lock_observation, Some(Err(fs::TryLockError::WouldBlock))),
+        "replacement checkpoint must observe the acquired kernel lock: {lock_observation:?}"
+    );
     let error = result
         .err()
         .ok_or("replacement received writer authority")?;

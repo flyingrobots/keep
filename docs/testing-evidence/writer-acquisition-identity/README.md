@@ -29,6 +29,7 @@ Substitute each other listed patch for `early-order.patch`. The captured asserti
 | Mutation | Patch | Actual RED output | Named failure |
 | --- | --- | --- | --- |
 | Verify before taking the file lock | [patch](early-order.patch) | [receipt](early-order-red.txt) | `replacement received writer authority` |
+| Run checkpoint before taking the file lock | [patch](early-checkpoint.patch) | [receipt](early-checkpoint-red.txt) | `replacement checkpoint must observe the acquired kernel lock` |
 | Ignore the identity refusal | [patch](ignored-refusal.patch) | [receipt](ignored-refusal-red.txt) | `replacement received writer authority` |
 | Return the wrong phase | [patch](wrong-phase.patch) | [receipt](wrong-phase-red.txt) | `replacement must retain the identity-refusal boundary` |
 | Truncate displaced evidence | [patch](lost-original.patch) | [receipt](lost-original-red.txt) | Original bytes differ from empty observed bytes |
@@ -51,3 +52,5 @@ cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 ```
 
 The helper-only test is retired because the stronger authority-boundary law subsumes its refusal claim. Complete generated schedule exploration, unrelated recovery paths and physical durability remain outside these receipts.
+
+The [checkpoint-order survivor](early-checkpoint-survived.txt) runs the focused debug law at `1b27e4c6d2e791b8088123793befc219a97937c2` with the checkpoint moved before locking. The [checkpoint-order RED](early-checkpoint-red.txt) adds the independent contention witness to that mutation; the [restored checkpoint GREEN](checkpoint-green.txt) records formatting, the focused law in debug/release and all-feature workspace Clippy after restoring production order. These runs use the same copied Docker toolchain and ext4 scratch profile above. They supplement the earlier receipts rather than changing their historical coordinates.

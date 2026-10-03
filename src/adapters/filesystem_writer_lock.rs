@@ -102,7 +102,8 @@ impl FilesystemWriterLock {
     }
 
     // The private synchronous seam runs under root-then-file locks. Production
-    // supplies a no-op; tests may replace the entry here without acquiring locks.
+    // supplies a no-op; tests may probe contention nonblockingly and replace
+    // the entry here, but must never wait for another lock.
     fn acquire_with<F: FnOnce()>(
         directory: Dir,
         root_lock_file: File,
