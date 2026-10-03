@@ -43,6 +43,7 @@ mod recovery_segment_resume_request;
 pub(in crate::adapters) mod recovery_segment_resume_state;
 mod recovery_segment_resume_storage;
 mod recovery_segment_resume_storage_error;
+mod recovery_segment_seal_framing;
 mod recovery_segment_stage;
 mod recovery_segment_stage_error;
 mod recovery_segment_truncation;

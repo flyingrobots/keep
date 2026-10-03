@@ -1,0 +1,24 @@
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.93s
+     Running tests/recovery_partial_seal.rs (<isolated-build>/debug/deps/recovery_partial_seal-50cc4959e316d0ba)
+
+running 3 tests
+test unsupported_partial_seal_version_refuses_classification ... ok
+test unsupported_partial_seal_version_refuses_discard_assessment ... ok
+test framing_laws::available_fixed_seal_contradictions_refuse_every_later_short_boundary ... FAILED
+
+failures:
+
+---- framing_laws::available_fixed_seal_contradictions_refuse_every_later_short_boundary stdout ----
+
+thread 'framing_laws::available_fixed_seal_contradictions_refuse_every_later_short_boundary' (1794445) panicked at tests/recovery_partial_seal/framing_laws.rs:47:17:
+unobserved mutation offset=16, observed=16 must not become corruption
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    framing_laws::available_fixed_seal_contradictions_refuse_every_later_short_boundary
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--test recovery_partial_seal`

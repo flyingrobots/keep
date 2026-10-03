@@ -1,0 +1,11 @@
+--- a/src/adapters/recovery/recovery_segment_stage_error.rs
++++ b/src/adapters/recovery/recovery_segment_stage_error.rs
+@@ -75,7 +75,7 @@
+         match self {
+             Self::Metadata { source } => Some(source),
+             Self::Header { source } => Some(source),
+-            Self::Seal { source } => Some(source),
++            Self::Seal { .. } => None,
+             Self::Record { source } | Self::Complete { source } => Some(source),
+             Self::AddressSpace { .. } => None,
+         }
