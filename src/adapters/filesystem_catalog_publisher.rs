@@ -77,8 +77,9 @@ impl FilesystemCatalogPublisher {
 
     /// Admits an already locked root and opens a publisher for repository tasks.
     ///
-    /// Repository process-death tests use this after executing the production
-    /// initialization protocol through [`crate::RepositoryInitializationStorage`].
+    /// This legacy route accepts an already retained writer lock. The catalog
+    /// crash campaign instead uses ordinary platform initialization and
+    /// [`Self::open`].
     /// Despite the legacy name, this method now checks the full production
     /// platform profile, including protocol-directory mount/device identity.
     /// The pinned root is the authority; this does not re-admit an ambient path.
