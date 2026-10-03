@@ -92,3 +92,5 @@ Original acceptance criteria and definitions of done remain binding. The
 reviewed implementation and its integration into `main` require separate
 verdicts. Existing follow-ups for reopened entries remain owned by the
 [tracking container](https://github.com/flyingrobots/keep/issues/132).
+
+The [recovery findings in progress](recovery-findings.md) record a reproduced T-13.2 partial-seal contradiction that reaches a discard plan, owned by #171. This does not complete T-13.2's remaining criterion review or change the recorded verdict totals.
