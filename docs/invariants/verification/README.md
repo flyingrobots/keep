@@ -1,6 +1,6 @@
 # Verification reports
 
-Status: durable verification candidate under [#114](https://github.com/flyingrobots/keep/issues/114); final acceptance is tracked in the [closure ledger](../../audits/114-durable-verification-scope.md).
+Status: implemented on main through [PR #165](https://github.com/flyingrobots/keep/pull/165) for [#114](https://github.com/flyingrobots/keep/issues/114); final acceptance and historical scope are recorded in the [closure ledger](../../audits/114-durable-verification-scope.md).
 
 ## Contract
 

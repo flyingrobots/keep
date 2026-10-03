@@ -6,7 +6,11 @@ catalog, and publication-head byte while adding explicit retention state,
 reader fences, migration evidence, and reserved GC and recovery-disposition
 namespaces.
 
-ADR-0009 owns the cross-cutting retention and liveness decision. These pages own its durable representation. The one-way migration, version-two reopen, forward retention publication, partial-prefix migration recovery, and the 68-case migration process-death matrix are implemented with executable evidence. Retention recovery and reader fencing are implemented in this branch; correctness remediation and independent acceptance remain tracked in PR #99. Collection remains planned in #21. The [requirements ledger](requirements.md) records requirements and their evidence status. A version-1 store remains admitted until its owner migrates it.
+ADR-0009 owns the cross-cutting retention and liveness decision. These pages own its durable representation.
+
+The one-way migration, version-two reopen, forward retention publication, partial-prefix migration recovery, complete-stage retention recovery, and fenced retention snapshots are implemented on main through [PR #99](https://github.com/flyingrobots/keep/pull/99).
+
+The [requirements ledger](requirements.md) records evidence and remaining obligations; the laws below are normative requirements, not a claim that every corresponding runtime surface exists.
 
 ## Core laws
 
@@ -89,19 +93,31 @@ head and the catalog it selects, and refuses superseded candidates, retained
 stages, replaced protocol directories, and every namespace or capacity
 violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 
-Retention publication recovery, fenced reader snapshots and model-based transition evidence are implemented in this branch.
+Retention publication recovery, fenced retention snapshots and model-based transition evidence are implemented on main.
 
-Their bounded landing and independent acceptance remain tracked in PR #99 and the [landing ledger](../../testing-evidence/retention-landing.md). Incomplete retention stages are preserved pending explicit disposition; automatic disposal is deferred. Execution-failure reporting remains part of the [retention recovery contract](retention-recovery.md).
+The [landing ledger](../../testing-evidence/retention-landing.md) records the accepted scope and evidence for merged PR #99.
+
+Incomplete retention stages are preserved pending explicit disposition; automatic disposal remains deferred in [#155](https://github.com/flyingrobots/keep/issues/155).
+
+Execution failures preserve the typed cause and report known effects separately from uncertain effects or durability, as specified by the [retention recovery contract](retention-recovery.md).
+
+Writer authority coordinates cooperating writers in a managed namespace; it does not isolate arbitrary out-of-band filesystem mutation or make pathname unlink conditional on inode identity.
+
+`FilesystemRetentionSnapshot` binds a catalog, retention head and manifest under a shared reader fence and verifies selected roots on demand. `DurableStore` composes that view with authenticated whole-blob and exact-range reads, delivered in [PR #164](https://github.com/flyingrobots/keep/pull/164); the [read contract](../../invariants/authenticated-reconstruction/README.md) records proof and allocation limits.
+
+General version-two catalog publication still needs the candidate-catalog retained-closure admission gate tracked in [#125](https://github.com/flyingrobots/keep/issues/125); verifying a new retention root against the current catalog is a different operation.
+
+[Durable verification reports](../../invariants/verification/README.md) are delivered in [PR #165](https://github.com/flyingrobots/keep/pull/165), with explicit subject/depth evidence and typed non-success outcomes.
+
+Production durable ingestion ([#82](https://github.com/flyingrobots/keep/issues/82)), garbage collection and compaction ([#21](https://github.com/flyingrobots/keep/issues/21)) remain absent from main; those prepared portions of unmerged PR #107 are not delivered APIs here.
 
 The `KEEP-CRASH-036..052` initial-publication process-death sequence includes independent recovered-reader checks; its [evidence receipt](../../testing-evidence/retention-crash-reader-oracle.md) records the assertions, calibration, and scope.
 
 Partial-prefix migration recovery and the 68-case `KEEP-CRASH-053..073`
-process-death matrix are implemented. Broader migration restart corruption
-and compatibility coverage remain in #111 and #112; issue #21 owns garbage
-collection. Reopen compares only the restart-stable root coordinates, device
-and inode, against the intent; see
-[root identity across restart](recovery.md#root-identity-across-restart). A
-version-1 store
-remains admitted until its owner migrates it, and the
-[requirements ledger](requirements.md) is the authority on which requirements
-are proven.
+process-death matrix are implemented.
+
+The [migration restart matrix](../../testing-evidence/migration-restart-matrix.md) and [compatibility and fuzz evidence](../../testing-evidence/migration-compatibility-fuzz.md) record the additional merged #111/#112 evidence and its remaining limits.
+
+Reopen compares restart-stable root coordinates, device and inode, against the intent; see [root identity across restart](recovery.md#root-identity-across-restart).
+
+A version-1 store remains admitted until its owner migrates it. The [requirements ledger](requirements.md) records implementation and evidence gaps; planned cases are not proof.

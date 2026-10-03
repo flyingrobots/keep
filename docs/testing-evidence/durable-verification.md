@@ -1,6 +1,8 @@
 # Durable verification evidence
 
-Status: the scoped implementation and post-readiness review corrections for [#114](https://github.com/flyingrobots/keep/issues/114) are implemented on the PR branch. Final exact-head independent review and required checks remain acceptance gates in the [scope ledger](../audits/114-durable-verification-scope.md); mainline delivery is not claimed. The sections below preserve chronological slice evidence, including superseded intermediate limitations.
+Status: Delivered in [PR #165](https://github.com/flyingrobots/keep/pull/165), merged as `2efc131e8466b458088eaf5de0a5981e636d8f85`. [Independent review](https://github.com/flyingrobots/keep/pull/165#issuecomment-5974504658), [Code Lawyer closure](https://github.com/flyingrobots/keep/pull/165#issuecomment-5974510981) and all four [candidate checks](https://github.com/flyingrobots/keep/actions/runs/37160522753) cover exact head `1f3991f86fa66783d88b9ac8dbb79ecd0d9a9554`; the signed merge preserves that tree.
+
+The sections below preserve chronological slice and intermediate review evidence. Earlier pending acceptance statements describe those historical heads and are superseded by the final landing receipt above; no broader runtime or power-loss guarantee is inferred.
 
 ## Catalog report slice
 
