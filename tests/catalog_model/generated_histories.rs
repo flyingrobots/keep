@@ -118,7 +118,11 @@ fn check_successors(
             .validate_successor(after.checksummed().admit(new_records)?)?;
         assert_eq!(
             successor.generation(),
-            CatalogGeneration::new(u64::try_from(index)?.checked_add(2).ok_or("generation overflow")?)?,
+            CatalogGeneration::new(
+                u64::try_from(index)?
+                    .checked_add(2)
+                    .ok_or("generation overflow")?
+            )?,
             "successor history={history:?} packing={packing:?}"
         );
     }
