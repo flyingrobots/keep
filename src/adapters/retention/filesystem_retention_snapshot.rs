@@ -13,7 +13,9 @@ use super::{
     ReaderFence, RetentionSelectedRootRefusal, RetentionViewCoordinates, RetentionViewSource,
     collect_retention_view, root_header_decoder,
 };
-use crate::adapters::filesystem_exact_record::{self as exact_record, ExactRecordError};
+use crate::adapters::filesystem_exact_record::{
+    self as exact_record, ExactRecordError, ExactRecordRefusal,
+};
 use crate::adapters::filesystem_platform_profile::root_identity;
 use crate::adapters::filesystem_version_two_admission::require_root_identity;
 use crate::adapters::{
@@ -225,6 +227,11 @@ impl FilesystemRetentionSnapshot {
         let length = directory
             .symlink_metadata(&name)
             .and_then(|metadata| {
+                if !metadata.is_file() {
+                    return Err(
+                        ExactRecordError::Refused(ExactRecordRefusal::KindOrLength).into_io()
+                    );
+                }
                 usize::try_from(metadata.len()).map_err(|_source| {
                     selected_refusal(RetentionSelectedRootRefusal::HostLength {
                         observed: metadata.len(),

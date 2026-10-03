@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Selected-root verification preserves observed non-regular file evidence as typed corruption instead of an inconclusive no-follow-open error (#114).
+
 - Published retention verification rejects unsupported depths before reading selected root evidence, even when that evidence is missing (#114).
 
 - Removed ordinal comparison traits from verification depths; callers use each subject’s explicit supported-depth set (#114).

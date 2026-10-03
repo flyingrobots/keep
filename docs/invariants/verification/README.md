@@ -27,6 +27,8 @@ Every other depth returns `VerificationRefusal::Unsupported` (wrapped by `Verifi
 
 `FilesystemRetentionSnapshot::verify_retention` accepts the same depths as direct root verification. Unsupported requests refuse with the requested namespace before reading its selected root or re-admitting the catalog, including when the namespace or root evidence is absent. Loading the fenced snapshot is a separate operation with its own admission failures.
 
+Selected-root observation rejects a non-regular file, including a symlink to valid root bytes, with a typed kind refusal classified as corruption. Subsequent opens still follow no links and check the opened file; the preliminary kind observation provides no isolation guarantee against concurrent raw namespace substitution.
+
 `SnapshotBinding` remains unsupported until its separate protocol exists; catalog/retention coordinates must not be mislabeled as that future proof.
 
 ## Costs and admission boundary
