@@ -203,3 +203,9 @@ Three isolated production mutations inverted raw root classification, inverted l
 The earlier `6504c86` candidate passed the corrected local workspace debug/release, both feature-mode Clippy, doctests, documentation build, structure and formatting checks, and all four required hosted checks in [run 37087373122](https://github.com/flyingrobots/keep/actions/runs/37087373122).
 
 Those green results do not approve this subsequent mapping delta; the final pushed head requires its own independent confirmation and hosted checks before readiness.
+
+The delta review found a surviving resource-classification oracle: the layout wrapper accepted a `Corrupt` result carrying `ConfiguredEntryLimitExceeded`, so the first inverted-classification receipt showed the configured-cap law still passing while the other layout laws failed.
+
+The corrected wrapper explicitly rejects that resource cause in the corruption arm; `layout-resource-red.log` records the same production inversion failing the targeted configured-cap law with “a configured resource cap must remain operational, never corruption,” and `layout-resource-green.log` records unmutated debug/release and focused Clippy success.
+
+This is a strengthened test oracle; production classification was unchanged and already correct, so the mutation is calibration rather than a claim of a runtime bug on the parent.

@@ -11,7 +11,19 @@ pub(super) fn classified(error: LayoutDecodeError) -> Result<LayoutDecodeError, 
         VerificationError::Refused {
             refusal: VerificationRefusal::Corrupt { .. },
             source: Some(source),
-        } => source,
+        } => {
+            assert!(
+                !matches!(
+                    *source,
+                    VerificationSource::Layout(
+                        LayoutDecodeError::ConfiguredEntryLimitExceeded { .. }
+                    )
+                ),
+                "a configured resource cap must remain operational, never corruption"
+            );
+            source
+        }
+
         VerificationError::Operational { source } => {
             assert!(
                 matches!(
