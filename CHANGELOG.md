@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Added read-only durable verification ingress, exact moving-view conflict witnesses, selected-namespace root reports, and typed selected-root diagnostic sources (#114).
+
 - Added catalog-bound complete-blob and admitted-retention-root verification reports, preserving exact missing members, identity/profile contradictions, resource failures, and original typed causes (#114).
 
 - Added allocation-free verification reports for already-admitted physical segments and logical chunk/layout records, with explicit subject-specific supported depths; full durable verification remains in progress under #114.

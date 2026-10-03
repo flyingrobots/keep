@@ -153,14 +153,15 @@ pub use adapters::{
     RetentionRecoveryOutcome, RetentionRecoveryPlan, RetentionRecoveryReceipt,
     RetentionRecoveryRefusal, RetentionRecoveryStep, RetentionRecoveryStorage,
     RetentionRootDecodeError, RetentionRootEncodeError, RetentionRootStageAssessment,
-    RetentionStageAssessment, RetentionStageAssessments, RetentionStorageBoundary,
-    RetentionStorageError, RetentionStorageProgress, RetentionTransitionDisposition,
-    RetentionTransitionError, RetentionTransitionPreflight, RetentionTransitionPreflightError,
-    RetentionTransitionReadiness, RetentionViewCoordinates, RetentionViewError,
-    RetentionViewSource, VerifiedRetentionClosure, assess_head_stage, assess_manifest_stage,
-    assess_root_stage, collect_retention_view, execute_retention_publication,
-    execute_retention_recovery, plan_retention_recovery, plan_retention_transition,
-    preflight_retention_transition, prepare_retention_publication, verify_retention_closure,
+    RetentionSelectedRootRefusal, RetentionStageAssessment, RetentionStageAssessments,
+    RetentionStorageBoundary, RetentionStorageError, RetentionStorageProgress,
+    RetentionTransitionDisposition, RetentionTransitionError, RetentionTransitionPreflight,
+    RetentionTransitionPreflightError, RetentionTransitionReadiness, RetentionViewCoordinates,
+    RetentionViewError, RetentionViewSource, VerifiedRetentionClosure, assess_head_stage,
+    assess_manifest_stage, assess_root_stage, collect_retention_view, collect_verification_view,
+    execute_retention_publication, execute_retention_recovery, plan_retention_recovery,
+    plan_retention_transition, preflight_retention_transition, prepare_retention_publication,
+    verify_retention_closure,
 };
 pub use adapters::{
     FilesystemMigrationRecoveryRefusal, FilesystemMigrationResidueKind, MIGRATION_NAMESPACE_PREFIX,
@@ -169,7 +170,7 @@ pub use adapters::{
     StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,
     StoreMigrationStageDecodeError, plan_store_migration_recovery, recover_store_migration,
 };
-pub use adapters::{VerificationError, VerificationSource};
+pub use adapters::{VerificationError, VerificationSource, verify_catalog_bytes, verify_segment};
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
     ByteRange, ByteRangeError,

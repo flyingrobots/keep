@@ -73,3 +73,15 @@ New runtime assertions must be calibrated against the behavior they protect; abs
 Bug fixes discovered at existing boundaries require a runtime regression observed on the unfixed revision, preserving the original failure artifact.
 
 Durable report serialization, a new report decoder, repair, GC execution, remote attestation, application trust policy, and unrelated prepared-branch features remain outside this issue.
+
+## Interface reconciliation and current candidate
+
+The original T-21.1 acceptance requires one `VerifiedSubject` per verified subject and explicitly names `verify_blob`, `verify_catalog`, and `verify_retention`; these operations select one subject each, so a truthful singleton subject list satisfies that contract.
+
+The earlier normative-page references to aggregate reporting were an implementation-plan inference, now corrected; this candidate does not expose or claim a whole-store enumeration API, CLI, MCP tool or durable report serialization.
+
+The independent bounded preflight agreed that the original named interfaces do not establish a mandatory aggregate enumerator; final exact-head review must still verify this reconciliation and the concrete subject/depth matrix.
+
+Raw segment/catalog classification, owned filesystem catalog reports, selected-namespace retention reports, precise moving-view candidates, typed selected-root diagnostics, and the scoped catalog-ceiling allocation law are implemented in the current candidate.
+
+The [consolidated evidence](../testing-evidence/durable-verification.md) records their runtime checks and falsification; final full validation and independent exact-head review remain acceptance gates, not assumptions inferred from earlier green commits.

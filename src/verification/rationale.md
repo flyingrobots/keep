@@ -1,6 +1,6 @@
 # Subject-specific verification evidence
 
-Status: implementation in progress for #114.
+Status: durable verification candidate for #114.
 
 Verification reports name the evidence established for a subject; the enum's ordering does not turn a catalog-membership proof into complete logical blob verification.
 
@@ -35,3 +35,13 @@ Logical verification now names its exact catalog provenance and constructs a rep
 Blob discovery uses canonical layout order, matching the distinction between multiple lawful representations and conflicting evidence; it holds only one decoded layout at a time rather than constructing an additional whole-catalog index.
 
 The semantic refusal keeps bounded coordinates inline; narrowly scoped Clippy expectations preserve precise diagnostics without introducing extra allocation solely to reduce an error enum's stack footprint. Original adapter causes are boxed only on error and remain typed.
+
+The original interfaces each select one catalog, blob or retained namespace; one private `VerifiedSubject` per report satisfies this contract without an additional whole-store enumeration operation.
+
+Earlier aggregate wording in the implementation notes was an inference, not an implemented feature or a separately approved requirement; this reconciliation does not reduce any named subject's supported depth or omit a failed dependency from its verification.
+
+Moving-view ambiguity carries the actual final observation pair in a fixed-size box; resource or I/O failure is not relabeled corruption merely because it prevented a report.
+
+The shared retention coordinate type belongs to the domain because both ordinary collection and verification evidence name it; its existing adapter export remains compatible.
+
+Selected-root failures retain typed namespace, generation, digest and length evidence through the existing I/O boundary, instead of flattening it into prose.

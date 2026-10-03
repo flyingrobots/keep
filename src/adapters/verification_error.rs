@@ -33,6 +33,17 @@ pub enum VerificationError {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum VerificationSource {
+    /// Fenced view collection could not choose one consistent observation.
+    View(crate::RetentionViewError),
+    /// Bounded immutable segment admission failed.
+    Segment(crate::SegmentReadError),
+    /// Published catalog loading or binding failed.
+    Catalog(crate::CatalogRestartError),
+    /// Published retention view or selected-root observation failed.
+    Retention(crate::FilesystemRetentionSnapshotError),
+    /// Canonical retention root admission failed.
+    Root(crate::RetentionRootDecodeError),
+
     /// Canonical layout decoding failed.
     Layout(LayoutDecodeError),
     /// Retention closure admission or its resource accounting failed.
@@ -75,7 +86,13 @@ impl Error for VerificationError {
 impl fmt::Display for VerificationSource {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::View(source) => source.fmt(formatter),
+            Self::Segment(source) => source.fmt(formatter),
+            Self::Catalog(source) => source.fmt(formatter),
+            Self::Retention(source) => source.fmt(formatter),
+            Self::Root(source) => source.fmt(formatter),
             Self::Layout(source) => source.fmt(formatter),
+
             Self::Closure(source) => source.fmt(formatter),
             Self::BlobHash(source) => source.fmt(formatter),
         }
@@ -85,7 +102,13 @@ impl fmt::Display for VerificationSource {
 impl Error for VerificationSource {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::View(source) => Some(source),
+            Self::Segment(source) => Some(source),
+            Self::Catalog(source) => Some(source),
+            Self::Retention(source) => Some(source),
+            Self::Root(source) => Some(source),
             Self::Layout(source) => Some(source),
+
             Self::Closure(source) => Some(source),
             Self::BlobHash(source) => Some(source),
         }

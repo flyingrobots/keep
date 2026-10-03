@@ -66,3 +66,6 @@ pub use root_digest::RetentionRootDigest;
 pub use root_error::RetentionRootError;
 pub use root_generation::RootGeneration;
 pub use root_generation_error::RootGenerationError;
+
+mod view_coordinates;
+pub use view_coordinates::RetentionViewCoordinates;

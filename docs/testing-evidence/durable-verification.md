@@ -134,3 +134,45 @@ Replay the focused suite with `cargo test --locked --test blob_verification` and
 This evidence establishes operations over admitted immutable views, not raw filesystem failure classification, publication-selected retention, aggregate reports, the catalog-ceiling memory bound, process-death recovery, or final exact-head review and CI for the complete #114 candidate. Those remaining obligations are still open and implementation continues within the same PR.
 
 After restoring the candidate, the blob, catalog, segment and existing retention-closure suites passed in debug and release, and all ordinary and compile-fail doctests passed. The first post-calibration command then stopped at the nonexistent `source-check` alias; the corrected `cargo xtask source-structure-check` and formatting check passed separately. All-target/all-feature Clippy with warnings denied passed after the focused suite. The corrected structure receipt is `closure-structure-corrected.log`; these local receipts do not replace the full validation chain on the final candidate.
+
+## Durable ingress, selected publication and bounded observation
+
+Change kinds: new verification feature and a focused bug fix to preserve selected-root diagnostic coordinates, based on `b204f83d6aa9e55f3984ea0933890abb00576847`.
+
+The selected-root coordinate regression was observed RED on that exact parent with only the new public diagnostic type/export and regression test transplanted; the production reader remained unfixed and returned a message-only I/O cause, so the downcast observed `None` instead of the exact expected/observed generation/digest refusal.
+
+The corrected reader passes the same runtime assertion; `coordinate-parent-red.log` and `selection-laws-green.log` distinguish actual bug evidence from new-API compile failures.
+
+Public ingress laws check segment framing/checksum/version and resource classification, catalog absence/version and retained-byte limits, moving catalog/retention coordinates, exact final conflict candidates, permission failures, typed publication-decoder contradictions, selected-root absence/checksum/namespace refusal, and exact catalog/retention provenance.
+
+Existing segment framing/identity corruption laws now apply their original exact typed assertions to the cause retained by verification, and the catalog mutation laws additionally require the same exact decoder error through raw catalog verification.
+
+The v1 report matrix covers empty and populated physical segments, chunk/layout records, catalog success/refusal, absent or incomplete blob closure, and complete blob identity/profile replay; the v2 matrix covers admitted and publication-selected roots, closure/refusal, and moving retention heads.
+
+Supported and unsupported depth sets together exercise every depth for each named admitted subject; published retention delegates to the same root-depth operation after exact selection, and raw ingress must complete prerequisite admission even for a shallow request.
+
+The existing root/manifest/head decoders retain their own precise corruption-law suites; typed observation and root adapters classify their causes without reparsing prose, while unknown I/O and allocation/resource failures remain operational.
+
+The deterministic moving-view laws are port-level schedules, not filesystem race or syscall evidence; selected-root success/refusal and unchanged-evidence assertions execute against actual copied Linux ext4 fixtures with the reader fence held.
+
+The ingress calibration campaign independently inverted raw resource/content classification, reversed candidate order, accepted a moving view, dropped known observation classification, bypassed namespace selection, erased retention-head provenance and inverted root-corruption classification; each mutation compiled and failed its intended public runtime assertion.
+
+A separate mutation wrote changed selected-root bytes after reading them; the first successful report's persistent-evidence comparison failed, demonstrating that read-only success is an asserted observable outcome rather than merely a method name.
+
+Calibration artifacts preserve original and mutated source, command, compiler output, runtime failure and exit status under `ingress-mutants`; `cargo clean -p keep` invalidated changed package artifacts between mutants, and mutations occurred only in a separate copied tree.
+
+The catalog-ceiling law admits 1,048,576 distinct chunk entries, verifies exact named sample bytes and reports catalog reachability; the 1 GiB assertion measures incremental tracked live allocations during catalog/head admission, lookup and reporting, excluding fixture construction, pre-admitted segment owners and process RSS.
+
+On Linux arm64 Rust 1.96.0, an isolated measurement probe using the unchanged production implementation and a deliberately zero test threshold recorded 436,207,624 peak tracked bytes; that probe is measurement extraction, not assertion calibration.
+
+The actual calibration added a live allocation of 1,073,741,825 bytes inside production catalog reporting; the unchanged 1 GiB assertion failed at an observed 1,241,513,985 peak tracked bytes, while the unmutated law passed in debug and release.
+
+The memory receipts are `catalog-ceiling-green.log`, `final-ingress-focused.log`, `ceiling-measurement.log` and `ingress-mutants/admission-memory/red.log`; these measurements are not performance comparisons or total-process memory guarantees.
+
+Focused debug/release ingress, selection and catalog laws passed; all-target/all-feature Clippy passed after them, and the complete candidate validation is recorded separately below.
+
+The first broad copied-tree run passed product tests but stopped on two tooling-environment failures: `b3sum` was absent from PATH and the copied Git repository had no commit for a clone-based documentation-integrity test; `ingress-stable-validation.log` preserves those failures and they are not product regression RED evidence.
+
+The singleton report interpretation is explicitly reconciled in the normative page and scope ledger: the original named interfaces each select one subject, and no whole-store aggregate enumeration is claimed.
+
+Final required checks and independent review remain pending for the exact committed/pushed candidate; earlier receipts do not transfer approval to a different head.

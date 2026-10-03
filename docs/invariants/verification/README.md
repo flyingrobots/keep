@@ -1,6 +1,6 @@
 # Verification reports
 
-Status: implementation in progress under [#114](https://github.com/flyingrobots/keep/issues/114); this page describes the currently implemented admitted-evidence reporting operations, not completed durable verification acceptance.
+Status: durable verification candidate under [#114](https://github.com/flyingrobots/keep/issues/114); final acceptance is tracked in the [closure ledger](../../audits/114-durable-verification-scope.md).
 
 ## Contract
 
@@ -37,13 +37,39 @@ A framing request on already admitted evidence still requires that stronger admi
 
 Records prepared for publication provide the same logical proof over their canonical representation without asserting that the record has been written or made durable.
 
-## Remaining durable contract
+## Durable ingress and view collection
 
-Raw durable loading-to-report failure classification, published-retention namespace selection, aggregate per-subject reports, and the catalog-ceiling memory campaign remain required by the [closure ledger](../../audits/114-durable-verification-scope.md).
+`verify_segment` admits raw segment bytes before reporting; `verify_catalog_bytes` admits the supplied publication head, catalog and selected segments before reporting.
+
+`FilesystemCatalogSnapshot::load_for_verification` reads the exact selected artifacts under `CatalogRestartPolicy`, and its `verify` and `verify_blob` methods re-admit owned bytes before reporting.
+
+`FilesystemRetentionSnapshot::load_for_verification` holds the existing shared fence and uses bounded before/load/after collection; `verify_retention` reads and verifies only the manifest-selected root for the supplied namespace digest, checks namespace/generation/digest, and establishes the requested root evidence against that same catalog.
+
+Filesystem loading blocks on reads and fence acquisition; the owner retains caller-bounded segment bytes plus protocol-bounded catalog/manifest data, while reporting may rebuild the bounded catalog indexes.
+
+Selected-root verification holds one bounded root buffer, decoded anchors and catalog indexes; closure adds its checked node-bounded member index and one decoded layout at a time, with no whole-blob output buffer.
+
+These operations do not publish, repair, synchronize, run recovery, or acquire writer authority; a retained incomplete stage is not disposed of by verification.
+
+Exhausted moving-view collection returns `Ambiguous` with the actual last before/after catalog and retention coordinates; no partial view or report is returned.
+
+A failed observation is operational unless its retained typed cause establishes a precise missing artifact or content contradiction; classification never parses error prose.
+
+Each named original interface verifies one requested subject and returns one `VerifiedSubject`; traversal of a blob's chunks or a root's anchors establishes that subject's depth, without manufacturing separate reports for its dependencies.
+
+This satisfies the original per-subject interface contract; it is not a whole-store enumeration or aggregate-report API, and the earlier work-in-progress references to a required aggregate operation were broader than the original named interfaces.
+
+## Catalog-ceiling memory boundary
+
+The catalog-ceiling runtime law supplies 1,048,576 distinct chunk records and requires exact sample lookups plus a `CatalogReachability` report within 1 GiB (1,073,741,824 bytes) of incremental tracked live allocations during catalog/head admission, lookups and reporting.
+
+This bound excludes caller-owned encoded segment/catalog buffers, fixture construction, segment admission, allocator bookkeeping and process RSS; it is not a total-process memory promise.
+
+Filesystem owners additionally retain the selected segment bytes up to their explicit `CatalogRestartByteLimit`, protocol-bounded catalog bytes and admission indexes; those owners must be included when sizing a verification process.
 
 No serialization, repair, quarantine, GC execution or new durable report format is introduced here.
 
-[Evidence and calibration](../../testing-evidence/durable-verification.md) distinguish runtime laws, static/API restrictions and unimplemented acceptance obligations.
+[Evidence and calibration](../../testing-evidence/durable-verification.md) distinguish runtime laws, static/API restrictions and final acceptance checks.
 
 ## Logical refusal contract
 
@@ -51,4 +77,4 @@ Blob and root verification distinguish missing catalog members, demonstrated con
 
 The report preserves the catalog generation/digest used by catalog, blob and root operations; this provenance is not a live fence. Multiple valid layouts for a blob are representations, not automatically ambiguity: discovery selects the first canonical identity.
 
-The refusal vocabulary contains bounded conflicting candidates, but the admitted immutable-view operations do not manufacture an ambiguity outcome merely to exercise that variant; durable observation classification remains part of the unfinished contract.
+Immutable admitted-view operations have no moving observation to classify; ambiguity is produced by the durable collection path, retaining at most the last conflicting coordinate pair and the original attempt-limit cause.

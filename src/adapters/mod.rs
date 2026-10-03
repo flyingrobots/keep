@@ -21,6 +21,7 @@ mod catalog_admission;
 mod catalog_admission_error;
 mod catalog_admission_error_display;
 mod catalog_allocation_phase;
+mod catalog_byte_verification;
 mod catalog_decode_error;
 mod catalog_decode_error_display;
 mod catalog_decoder;
@@ -235,6 +236,8 @@ mod sync_capable_directory;
 mod test_support;
 mod verification_admission;
 mod verification_error;
+mod verification_failure_class;
+mod verification_ingress;
 mod writer_lock_acquire_error;
 mod writer_lock_acquire_phase;
 
@@ -246,3 +249,7 @@ use catalog_record_binding::CatalogRecordBinding;
 use decoded_catalog_entry::DecodedCatalogEntry;
 
 pub use verification_error::{VerificationError, VerificationSource};
+
+pub use verification_ingress::verify_segment;
+
+pub use catalog_byte_verification::verify_catalog_bytes;

@@ -64,6 +64,7 @@ impl VerifiedSubject {
 pub struct VerificationReport {
     requested: VerificationDepth,
     catalog: Option<(CatalogGeneration, CatalogDigest)>,
+    retention: Option<crate::RetentionHead>,
     subject: VerifiedSubject,
 }
 
@@ -85,6 +86,18 @@ impl VerificationReport {
         self.catalog
     }
 
+    /// Returns the exact publication-selected retention head, when applicable.
+    ///
+    /// Root verification over supplied bytes alone has no publication coordinate.
+    pub const fn retention_head(&self) -> Option<crate::RetentionHead> {
+        self.retention
+    }
+
+    pub(crate) const fn in_retention(mut self, head: Option<crate::RetentionHead>) -> Self {
+        self.retention = head;
+        self
+    }
+
     pub(crate) const fn in_catalog(
         mut self,
         generation: CatalogGeneration,
@@ -101,6 +114,7 @@ impl VerificationReport {
         Self {
             requested: depth,
             catalog: None,
+            retention: None,
             subject: VerifiedSubject { subject, depth },
         }
     }

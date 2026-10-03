@@ -6,7 +6,7 @@ use std::fmt;
 use super::{VerificationDepth, VerificationObservation, VerificationSubject};
 
 /// Why a verification request cannot establish its requested evidence.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum VerificationRefusal {
     /// Required evidence is absent from an admitted immutable view.
@@ -26,7 +26,7 @@ pub enum VerificationRefusal {
     /// Conflicting observations prevent selection of one admissible view.
     Ambiguous {
         /// Bounded pair of conflicting observations, not an exhaustive inventory.
-        candidates: [VerificationSubject; 2],
+        candidates: Box<[crate::retention::RetentionViewCoordinates; 2]>,
     },
 
     /// The operation cannot establish this depth for the requested subject.

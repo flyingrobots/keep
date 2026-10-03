@@ -76,7 +76,7 @@ pub(super) fn closure(subject: VerificationSubject, source: Closure) -> Verifica
     }
 }
 
-const fn structural(subject: VerificationSubject) -> VerificationRefusal {
+pub(super) const fn structural(subject: VerificationSubject) -> VerificationRefusal {
     VerificationRefusal::Corrupt {
         subject,
         expected: Observation::Canonical,

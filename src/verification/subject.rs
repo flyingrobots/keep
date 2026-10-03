@@ -13,6 +13,18 @@ use crate::{
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum VerificationSubject {
+    /// Supplied segment bytes that have not established a physical identity.
+    SegmentInput,
+    /// The catalog selected by a store's publication head, before admission.
+    PublishedCatalog,
+    /// A published catalog/retention observation before its subject admits.
+    PublishedView,
+    /// The published root requested by namespace, before its coordinates admit.
+    RetentionNamespace {
+        /// Requested opaque namespace digest.
+        namespace: RetentionNamespaceDigest,
+    },
+
     /// A logical blob requested independently of its physical realization.
     Blob {
         /// Complete logical byte identity.
