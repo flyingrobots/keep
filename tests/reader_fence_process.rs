@@ -8,7 +8,7 @@ pub mod reader;
 #[path = "segment_filesystem_stage/sandbox.rs"]
 pub mod sandbox;
 
-use keep::FilesystemWriterLock;
+use keep::{FilesystemWriterLock, WriterLockAcquireError};
 use rustix::{
     fs::{FlockOperation, flock},
     io::Errno,
@@ -25,6 +25,13 @@ fn reader_death_releases_collection_without_replacing_the_fence() -> Result<(), 
         return reader::serve();
     }
     let store = fixture::migrated("reader-death")?;
+    assert!(
+        matches!(
+            FilesystemWriterLock::try_acquire(store.path()),
+            Err(WriterLockAcquireError::Busy)
+        ),
+        "collector preparation must continuously exclude competing writers"
+    );
     let lock_path = store.path().join("reader.lock");
     let before = fs::metadata(&lock_path)?;
     let mut reader = reader::Reader::spawn(
@@ -62,6 +69,13 @@ fn collection_excludes_a_new_snapshot_until_release() -> Result<(), Box<dyn Erro
         return reader::serve();
     }
     let store = fixture::migrated("collector-exclusion")?;
+    assert!(
+        matches!(
+            FilesystemWriterLock::try_acquire(store.path()),
+            Err(WriterLockAcquireError::Busy)
+        ),
+        "collector preparation must continuously exclude competing writers"
+    );
     let writer = FilesystemWriterLock::try_acquire(store.path())?;
     let collector = fs::File::open(store.path().join("reader.lock"))?;
     flock(&collector, FlockOperation::NonBlockingLockExclusive)?;
