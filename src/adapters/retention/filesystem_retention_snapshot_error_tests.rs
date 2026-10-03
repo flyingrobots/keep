@@ -52,7 +52,7 @@ fn a_missing_selected_segment_reports_its_exact_catalog_refusal() -> Result<(), 
 
     assert!(
         matches!(&error, Some(SnapshotError::Catalog {
-            source: CatalogRestartError::Io { phase: CatalogRestartPhase::OpenSegment, source }
+            source: CatalogRestartError::SegmentIo { phase: CatalogRestartPhase::OpenSegment, source, .. }
         }) if source.kind() == io::ErrorKind::NotFound),
         "missing selected segment must preserve its catalog boundary, phase and I/O kind: {error:?}"
     );

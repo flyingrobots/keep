@@ -122,7 +122,7 @@ fn an_unreadable_segment_preserves_the_operational_open_failure() -> Result<(), 
     assert!(
         matches!(failure.downcast_ref::<DurableStoreError>(), Some(DurableStoreError::Snapshot(source))
         if matches!(source.as_ref(), FilesystemRetentionSnapshotError::Catalog { source }
-            if matches!(source, CatalogRestartError::Io { phase: CatalogRestartPhase::OpenSegment, source }
+            if matches!(source, CatalogRestartError::SegmentIo { phase: CatalogRestartPhase::OpenSegment, source, .. }
                 if source.kind() == std::io::ErrorKind::NotFound))),
         "missing physical evidence must preserve OpenSegment/NotFound: {failure:?}"
     );
