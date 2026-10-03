@@ -21,6 +21,15 @@ pub enum CatalogRestartError {
         /// Preserved filesystem source.
         source: io::Error,
     },
+    /// I/O failed while opening or reading one catalog-selected segment.
+    SegmentIo {
+        /// Physical digest selected by the admitted catalog.
+        expected: SegmentDigest,
+        /// Exact operation that failed.
+        phase: CatalogRestartPhase,
+        /// Original filesystem source, preserved without rewrapping.
+        source: io::Error,
+    },
     /// An opened protocol artifact was not a regular file.
     NotRegular {
         /// Artifact whose type was wrong.
@@ -128,6 +137,17 @@ pub enum CatalogRestartError {
 }
 
 impl CatalogRestartError {
+    pub(super) fn with_segment(self, expected: SegmentDigest) -> Self {
+        match self {
+            Self::Io { phase, source } => Self::SegmentIo {
+                expected,
+                phase,
+                source,
+            },
+            other => other,
+        }
+    }
+
     pub(super) const fn io(phase: CatalogRestartPhase, source: io::Error) -> Self {
         Self::Io { phase, source }
     }
@@ -136,7 +156,9 @@ impl CatalogRestartError {
 impl fmt::Display for CatalogRestartError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Io { phase, .. } => write!(formatter, "catalog restart {phase} failed"),
+            Self::Io { phase, .. } | Self::SegmentIo { phase, .. } => {
+                write!(formatter, "catalog restart {phase} failed")
+            }
             Self::NotRegular { .. } => formatter.write_str("restart artifact is not regular"),
             Self::Length { .. } => formatter.write_str("restart artifact length is invalid"),
             Self::LengthArithmetic { .. } => {
@@ -173,7 +195,7 @@ impl fmt::Display for CatalogRestartError {
 impl Error for CatalogRestartError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::Io { source, .. } => Some(source),
+            Self::Io { source, .. } | Self::SegmentIo { source, .. } => Some(source),
             Self::Allocation {
                 source: Some(source),
                 ..

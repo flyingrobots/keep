@@ -63,7 +63,8 @@ pub(super) fn load(
             &name,
             artifact,
             CatalogRestartPhase::OpenSegment,
-        )?;
+        )
+        .map_err(|source| source.with_segment(*digest))?;
         if observed > MAXIMUM_SEGMENT_LENGTH {
             return Err(CatalogRestartError::Length {
                 artifact,
@@ -89,7 +90,8 @@ pub(super) fn load(
             artifact,
             CatalogRestartPhase::ReadSegment,
             observed,
-        )?;
+        )
+        .map_err(|source| source.with_segment(*digest))?;
         let segment =
             AdmittedSegment::decode(&encoded, policy.segment_read()).map_err(|source| {
                 CatalogRestartError::Segment {

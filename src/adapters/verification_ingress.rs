@@ -104,6 +104,21 @@ impl FilesystemCatalogSnapshot {
 }
 
 pub(super) fn catalog_error(source: CatalogRestartError) -> VerificationError {
+    if let CatalogRestartError::SegmentIo {
+        expected,
+        phase: CatalogRestartPhase::OpenSegment,
+        source: nested,
+    } = &source
+        && nested.kind() == ErrorKind::NotFound
+    {
+        return VerificationError::Refused {
+            refusal: VerificationRefusal::Missing {
+                subject: VerificationSubject::Segment { digest: *expected },
+            },
+            source: Some(Box::new(VerificationSource::Catalog(source))),
+        };
+    }
+
     if let CatalogRestartError::CatalogAdmission { source: nested } = &source
         && let crate::CatalogAdmissionError::MissingSegment { digest } = nested.as_ref()
     {

@@ -81,6 +81,7 @@ pub(super) const fn segment_class(error: &SegmentReadError) -> FailureClass {
 pub(super) fn catalog_class(error: &CatalogRestartError) -> FailureClass {
     match error {
         CatalogRestartError::Io { .. }
+        | CatalogRestartError::SegmentIo { .. }
         | CatalogRestartError::LengthArithmetic { .. }
         | CatalogRestartError::Allocation { .. }
         | CatalogRestartError::SegmentIndexLength

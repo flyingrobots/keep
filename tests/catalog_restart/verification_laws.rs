@@ -91,3 +91,44 @@ fn catalog_memory_limits_do_not_become_corruption_claims() -> Result<(), Box<dyn
     );
     store.remove()
 }
+
+// Size: medium. Oracle: the frozen catalog selects SEGMENT_DIGEST; deleting only
+// that file must name the missing segment, leaving its catalog and head unchanged.
+// Delete if stronger generated missing-evidence coverage subsumes this boundary.
+#[test]
+fn verification_names_the_missing_selected_segment() -> Result<(), Box<dyn Error>> {
+    let store = StoreFixture::create("verification-missing-segment-identity")?;
+    let expected: [u8; 32] = super::support::decode_hex(super::SEGMENT_DIGEST)?
+        .as_slice()
+        .try_into()?;
+    let catalog = fs::read(&store.catalog_path)?;
+    let head = fs::read(store.path().join("HEAD"))?;
+    fs::remove_file(&store.segment_path)?;
+    let error = FilesystemCatalogSnapshot::load_for_verification(store.path(), restart_policy()?)
+        .err()
+        .ok_or("missing segment admitted")?;
+    assert!(
+        matches!(&error, VerificationError::Refused {
+        refusal: VerificationRefusal::Missing { subject: VerificationSubject::Segment { digest } }, ..
+    } if digest.as_bytes() == &expected),
+        "missing selected segment identity: {error:?}"
+    );
+    assert!(
+        matches!(&error, VerificationError::Refused { source: Some(source), .. }
+        if matches!(source.as_ref(), VerificationSource::Catalog(CatalogRestartError::SegmentIo {
+            expected: digest, phase: CatalogRestartPhase::OpenSegment, source
+        }) if digest.as_bytes() == &expected && source.kind() == std::io::ErrorKind::NotFound)),
+        "missing segment must preserve its physical identity, open boundary and original I/O cause: {error:?}"
+    );
+    assert_eq!(
+        fs::read(&store.catalog_path)?,
+        catalog,
+        "present catalog must survive refusal"
+    );
+    assert_eq!(
+        fs::read(store.path().join("HEAD"))?,
+        head,
+        "published head must survive refusal"
+    );
+    store.remove()
+}
