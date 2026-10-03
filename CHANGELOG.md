@@ -16,11 +16,11 @@ after its public API and format compatibility policies are established.
 
 - Added read-only durable verification ingress, exact moving-view conflict witnesses, selected-namespace root reports, and typed selected-root diagnostic sources (#114).
 
-- Added catalog-bound complete-blob and admitted-retention-root verification reports, preserving exact missing members, identity/profile contradictions, resource failures, and original typed causes (#114).
+- Added complete-blob and admitted-retention-root verification reports, with catalog provenance for checked blob evidence and successful root closure, preserving exact missing members, identity/profile contradictions, resource failures, and original typed causes (#114).
 
-- Added allocation-free verification reports for already-admitted physical segments and logical chunk/layout records, with explicit subject-specific supported depths; full durable verification remains in progress under #114.
+- Added allocation-free verification reports for already-admitted physical segments and logical chunk/layout records, with explicit subject-specific supported depths (#114).
 
-- Admitted catalog snapshots can report explicit framing, checksum, or catalog-reachability evidence with immutable subject coordinates; unsupported requests refuse without claiming blob completeness or retention closure (#114, initial report slice).
+- Admitted catalog snapshots can report explicit framing, checksum, or catalog-reachability evidence with immutable subject coordinates; unsupported requests refuse without claiming blob completeness or retention closure (#114).
 
 - Retention recovery execution errors report the exact failed boundary, original typed cause, known namespace effects and uncertain effect/durability; retries freshly observe the store. Observed stage identity remains binding across reopening, and cleanup preserves verified pool evidence rather than promising the removed pathname survives (#99).
 

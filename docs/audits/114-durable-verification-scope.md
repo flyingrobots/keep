@@ -86,9 +86,9 @@ Raw segment/catalog classification, owned filesystem catalog reports, selected-n
 
 The [consolidated evidence](../testing-evidence/durable-verification.md) records their runtime checks and falsification; final full validation and independent exact-head review remain acceptance gates, not assumptions inferred from earlier green commits.
 
-The independent exact-head review of `6504c86` found one acceptance gap in existing corruption-law mapping; the follow-up retains those laws' exact assertions while exercising production verification classification, with focused debug/release and mutation evidence. Final delta review and pushed-head checks remain pending.
+The independent exact-head review of `6504c86` found one acceptance gap in existing corruption-law mapping; the follow-up retains those laws' exact assertions while exercising production verification classification, with focused debug/release and mutation evidence. That delta received independent approval and green pushed-head checks at `b33c7da`; later hosted review reopened the finite queue below.
 
-## Implementation disposition
+## Pre-readiness implementation disposition
 
 | Obligation | Disposition and evidence |
 | --- | --- |
@@ -100,7 +100,7 @@ The independent exact-head review of `6504c86` found one acceptance gap in exist
 | Read-only behavior | Implemented: unchanged filesystem evidence on success/refusal; an injected production write fails the persistent-evidence assertion. |
 | Honest delivery | Normative contract, public rustdoc, rationale, requirement status and consolidated evidence reconciled. Mainline integration is not claimed before merge. |
 
-The independent-review finding on `6504c86` is implemented and calibrated in its follow-up; approval of that delta and required checks must be recorded against the resulting exact head in [PR #165](https://github.com/flyingrobots/keep/pull/165) before it leaves draft.
+The independent-review finding on `6504c86` is implemented and calibrated in its follow-up; approval of that delta and required checks must be recorded against the resulting exact head in [PR #165](https://github.com/flyingrobots/keep/pull/165) before acceptance; earlier approvals and checks do not transfer to a changed head.
 
 This table closes implementation obligations, not the independent review or human merge gate; the PR is the live authority for those exact-head decisions.
 
@@ -113,8 +113,8 @@ Reviews arriving after `b33c7da` reopened the acceptance gate. The earlier imple
 | Shallow root provenance | Verified bug: framing/checksum attached an unconsulted catalog. Public parent regression RED; direct and publication-selected laws GREEN after attaching coordinates only for successful closure. | Fix pushed, review of resulting head, final required checks. |
 | Store-admission contradictions | Verified and corrected: public loader regressions RED on `26d3522`; typed record/root-identity contradictions now remain corrupt with their causes; host-width and unclassified I/O remain operational, with distinct calibration. | Fix pushed, resulting-head review and final checks. |
 | Verification-depth ordering | Removed `Ord`/`PartialOrd`; the public compile-fail law is RED on `665ffb3` because comparison compiled, then GREEN after removal. Runtime supported-depth laws remain GREEN. | Resulting-head review and final checks. |
-| Observation classification exhaustiveness | Wildcard currently permits future current-state variants to default silently to operational. | Explicitly classify every existing variant; compiler and existing runtime classifications remain correct. |
-| Shared layout failure classification | Admission, closure and ingress duplicate the operational cause list. | Use one exhaustive classifier without changing existing supported outcomes; verify the affected runtime laws. |
-| Current documentation status | Initial-slice wording remains in current summary/changelog positions. | Reconcile current delivered scope, preserve historical evidence and identify final-head review/CI separately. |
+| Observation classification exhaustiveness | Every existing current-state variant is now explicit; classifications are unchanged and affected runtime laws pass. | Resulting-head review and final checks. |
+| Shared layout failure classification | Admission, closure and ingress use one exhaustive classifier. Generated differential receipts match the parent; affected debug/release laws and all-feature all-target Clippy pass. | Resulting-head review and final checks. |
+| Current documentation status | Current summary/changelog wording is reconciled; chronological evidence is explicitly historical, and current review/CI gates remain separate. | Markdown and documentation integrity checks on the final candidate. |
 
 No finding is resolved merely because an earlier independent review approved the preceding head. No merge is authorized by this ledger.

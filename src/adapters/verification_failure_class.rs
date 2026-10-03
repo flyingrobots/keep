@@ -12,16 +12,37 @@ pub(super) enum FailureClass {
 }
 
 pub(super) const fn layout_class(error: &LayoutDecodeError) -> FailureClass {
-    if matches!(
-        error,
+    match error {
         LayoutDecodeError::Allocation { .. }
-            | LayoutDecodeError::EntryCountHostWidth { .. }
-            | LayoutDecodeError::HostRecordLengthOutOfRange { .. }
-            | LayoutDecodeError::ConfiguredEntryLimitExceeded { .. }
-    ) {
-        FailureClass::Operational
-    } else {
-        FailureClass::Corrupt
+        | LayoutDecodeError::EntryCountHostWidth { .. }
+        | LayoutDecodeError::HostRecordLengthOutOfRange { .. }
+        | LayoutDecodeError::ConfiguredEntryLimitExceeded { .. } => FailureClass::Operational,
+        LayoutDecodeError::TruncatedHeader { .. }
+        | LayoutDecodeError::InvalidMagic { .. }
+        | LayoutDecodeError::UnsupportedFormatVersion { .. }
+        | LayoutDecodeError::UnsupportedCodec { .. }
+        | LayoutDecodeError::UnknownFlags { .. }
+        | LayoutDecodeError::WrongHeaderLength { .. }
+        | LayoutDecodeError::WrongEntryLength { .. }
+        | LayoutDecodeError::UnsupportedChecksumAlgorithm { .. }
+        | LayoutDecodeError::UnsupportedChunkHashAlgorithm { .. }
+        | LayoutDecodeError::UnsupportedChunkIdentityVersion { .. }
+        | LayoutDecodeError::NonzeroReserved { .. }
+        | LayoutDecodeError::EntryCountLimitExceeded { .. }
+        | LayoutDecodeError::RecordLengthLimitExceeded { .. }
+        | LayoutDecodeError::RecordLengthArithmetic { .. }
+        | LayoutDecodeError::RecordLengthMismatch { .. }
+        | LayoutDecodeError::EntryCountLengthMismatch { .. }
+        | LayoutDecodeError::TruncatedRecord { .. }
+        | LayoutDecodeError::TrailingData { .. }
+        | LayoutDecodeError::ChecksumMismatch { .. }
+        | LayoutDecodeError::BlobId { .. }
+        | LayoutDecodeError::UnsupportedStorageProfileVersion { .. }
+        | LayoutDecodeError::UnsupportedStorageProfileAlgorithm { .. }
+        | LayoutDecodeError::StorageProfile { .. }
+        | LayoutDecodeError::ZeroChunkLength { .. }
+        | LayoutDecodeError::Validation { .. }
+        | LayoutDecodeError::LayoutIdentity { .. } => FailureClass::Corrupt,
     }
 }
 

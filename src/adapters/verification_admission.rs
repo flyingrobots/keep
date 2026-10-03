@@ -1,5 +1,6 @@
 //! This module owns lossless semantic classification of verification failures.
 
+use super::verification_failure_class::{FailureClass, layout_class};
 use super::{VerificationError, VerificationSource};
 use crate::{
     LayoutDecodeError, RetentionClosureVerificationError as Closure, SegmentRecordIdentity,
@@ -7,13 +8,7 @@ use crate::{
 };
 
 pub(super) fn layout(subject: VerificationSubject, source: LayoutDecodeError) -> VerificationError {
-    let operational = matches!(
-        source,
-        LayoutDecodeError::Allocation { .. }
-            | LayoutDecodeError::EntryCountHostWidth { .. }
-            | LayoutDecodeError::HostRecordLengthOutOfRange { .. }
-            | LayoutDecodeError::ConfiguredEntryLimitExceeded { .. }
-    );
+    let operational = matches!(layout_class(&source), FailureClass::Operational);
     let source = Box::new(VerificationSource::Layout(source));
     if operational {
         return VerificationError::Operational { source };
@@ -58,13 +53,7 @@ pub(super) fn closure(subject: VerificationSubject, source: Closure) -> Verifica
         }
     };
     if let Closure::LayoutDecode { source: nested, .. } = &source
-        && matches!(
-            nested,
-            LayoutDecodeError::Allocation { .. }
-                | LayoutDecodeError::EntryCountHostWidth { .. }
-                | LayoutDecodeError::HostRecordLengthOutOfRange { .. }
-                | LayoutDecodeError::ConfiguredEntryLimitExceeded { .. }
-        )
+        && matches!(layout_class(nested), FailureClass::Operational)
     {
         return VerificationError::Operational {
             source: Box::new(VerificationSource::Closure(source)),

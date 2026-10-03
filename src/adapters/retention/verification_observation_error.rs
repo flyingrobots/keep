@@ -24,7 +24,36 @@ pub(super) fn refusal(error: &io::Error) -> Option<VerificationRefusal> {
         }),
         Current::ManifestRefused {
             source: RetentionManifestDecodeError::Allocation { .. },
-        } => None,
+        }
+        | Current::RetainedStage
+        | Current::HeadAbsentWithArtifacts
+        | Current::ExpectedCurrentOverAbsentHead
+        | Current::NonInitialOverAbsentHead
+        | Current::PreparedHeadRefused { .. }
+        | Current::CatalogDisagreed { .. }
+        | Current::LivenessExhausted
+        | Current::StaleCommittedRetry
+        | Current::Superseded { .. }
+        | Current::CommittedSelectionMissing
+        | Current::CommittedSelectionMismatch
+        | Current::CommittedNamespaceUnavailable
+        | Current::CommittedRootAbsent
+        | Current::CommittedRootChanged
+        | Current::PredecessorMismatch
+        | Current::PredecessorRootAbsent
+        | Current::PredecessorRootChanged
+        | Current::UnknownRetentionEntry
+        | Current::NonNamespaceEntry
+        | Current::NoncanonicalPoolEntry { .. }
+        | Current::NamespaceCapacity
+        | Current::NamespaceExpectationViolated
+        | Current::AttemptNamespaceDisagreed
+        | Current::CommittedRetryOverAbsentHead
+        | Current::ProtocolDirectoryReplaced
+        | Current::RecoveryObservationRefused { .. }
+        | Current::RecoveryRefused { .. }
+        | Current::RecoveryStepRefused { .. }
+        | Current::RecordLengthOverflow => None,
         Current::HeadRefused { .. }
         | Current::ManifestRefused { .. }
         | Current::ManifestDisagreed
@@ -36,6 +65,5 @@ pub(super) fn refusal(error: &io::Error) -> Option<VerificationRefusal> {
         | Current::CatalogChanged => Some(verification_admission::structural(
             VerificationSubject::PublishedView,
         )),
-        _ => None,
     }
 }

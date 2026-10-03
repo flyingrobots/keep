@@ -1,6 +1,6 @@
 # Durable verification evidence
 
-Status: partial implementation for [#114](https://github.com/flyingrobots/keep/issues/114); the full durable verification acceptance contract remains open in the [scope ledger](../audits/114-durable-verification-scope.md).
+Status: the scoped implementation and post-readiness review corrections for [#114](https://github.com/flyingrobots/keep/issues/114) are implemented on the PR branch. Final exact-head independent review and required checks remain acceptance gates in the [scope ledger](../audits/114-durable-verification-scope.md); mainline delivery is not claimed. The sections below preserve chronological slice evidence, including superseded intermediate limitations.
 
 ## Catalog report slice
 
@@ -231,3 +231,11 @@ The corrected runtime laws cover malformed `FORMAT`, intent and receipt magic, e
 Change kind: public API correction. `VerificationDepth` no longer implements `Ord` or `PartialOrd`; equality and every operation's explicit supported-depth set remain intact. This removes the misleading ability to treat catalog reachability as ordinally stronger than complete blob identity. The public rustdoc example is a static/API compile-fail contract, not runtime storage evidence.
 
 On unfixed `665ffb3bf65efd94ba46a94c28dfde636828caf1`, the new compile-fail example failed because the forbidden comparison compiled successfully. After removing the ordering derives, the same example passes with the intended unsupported binary comparison. Catalog, segment and blob/root verification laws pass in Docker debug/release, preserving actual runtime depth acceptance/refusal. This corrects an unreleased API; it changes no durable format or verification policy.
+
+## Post-readiness review: exhaustive shared classification
+
+Change kind: refactoring. Layout admission, nested retention-closure layout failures and durable ingress now call one exhaustive `layout_class` match. Its operational variants remain allocation, host entry-count width, host record-length width and configured entry limit; every other existing layout variant remains corrupt. The current-publication observation match explicitly names its remaining operational variants instead of accepting future variants through a wildcard. This is compiler-enforced classification ownership, not a new runtime failure policy.
+
+A temporary Rust probe generated every single-bit mutation at every byte of the frozen empty, one-zero and max-plus-one-zero layout records, plus unchanged records, under a one-entry cap and the maximum cap. It captured the public decoder/error-conversion outcomes on refactor parent `2b28c4a` and the candidate in separate copied Docker source/build trees; the complete ordered receipts compare byte-for-byte equal. This bounded differential evidence covers the generated decoder outcomes, not arbitrary allocation failures or a universal equivalence proof. The probe and raw receipts remain review artifacts; no implementation-shaped test was added to the permanent suite.
+
+Unchanged verification ingress/view, blob/root, segment, retention-root decoding and layout-decoding laws pass in Docker debug/release. All-feature all-target Clippy passes after consolidating identical operational match arms. The initial duplicate-arm lint failure is retained as setup/tooling feedback and is not claimed as behavioral RED. No runtime expectations were rebaselined for this refactor.
