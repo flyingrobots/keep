@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Retention model histories now include release and restore, with expected generations and anchor sets derived independently from requested operations rather than copied from publication candidates; exact stale/retry refusals remain checked (#128).
+
 - Public filesystem-stage integration laws now exercise production ext4 admission, exclusive creation, canonical sealed bytes, and preservation of unsealed evidence through the promised `segment_filesystem_stage` target (#147).
 
 - Repository-task catalog publisher construction now enforces the production filesystem profile even when given an existing writer lock; catalog publication crash campaigns use ordinary platform admission (#150).
@@ -92,8 +94,8 @@ after its public API and format compatibility policies are established.
 ### Added
 
 - Model-based retention evidence: every three-operation sequence over initial
-  publications of two namespaces, a successor, a byte-identical retry, and a
-  stale initial (125 sequences, each in a fresh migrated store) agrees with a
+  publications of two namespaces, successor, release, restore, byte-identical
+  retry, and stale initial (343 sequences, each in a fresh migrated store) agrees with a
   deterministic namespace-to-(generation, anchor-set) map and liveness after
   every step, observed through the fenced reader view; a source contract
   keeps clocks, paths, environment, and identity out of the retention core.
