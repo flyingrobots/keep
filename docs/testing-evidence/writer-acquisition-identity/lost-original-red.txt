@@ -1,0 +1,24 @@
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.65s
+     Running unittests src/lib.rs (<isolated-build>/debug/deps/keep-882caa9da157737f)
+
+running 1 test
+error: test failed, to rerun pass `--lib`
+test adapters::filesystem_writer_lock::tests::replaced_lock_entry_refuses_authority_after_kernel_acquisition ... FAILED
+
+failures:
+
+---- adapters::filesystem_writer_lock::tests::replaced_lock_entry_refuses_authority_after_kernel_acquisition stdout ----
+
+thread 'adapters::filesystem_writer_lock::tests::replaced_lock_entry_refuses_authority_after_kernel_acquisition' (1751542) panicked at src/adapters/filesystem_writer_lock_tests.rs:45:5:
+assertion `left == right` failed
+  left: []
+ right: [111, 114, 105, 103, 105, 110, 97, 108, 32, 101, 118, 105, 100, 101, 110, 99, 101]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    adapters::filesystem_writer_lock::tests::replaced_lock_entry_refuses_authority_after_kernel_acquisition
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 352 filtered out; finished in 0.00s
+

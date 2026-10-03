@@ -21,13 +21,16 @@ fn replaced_lock_entry_refuses_authority_after_kernel_acquisition() -> Result<()
     let root_lock = acquire_root(&directory)?;
     let opened = open_existing(&directory)?;
 
-    fs::rename(
-        sandbox.path().join(LOCK_FILE_NAME),
-        sandbox.path().join("displaced.lock"),
-    )?;
-    fs::write(sandbox.path().join(LOCK_FILE_NAME), b"replacement evidence")?;
-
-    let error = FilesystemWriterLock::acquire(directory, root_lock, opened)
+    let mut replacement = Ok(());
+    let result = FilesystemWriterLock::acquire_with(directory, root_lock, opened, || {
+        replacement = fs::rename(
+            sandbox.path().join(LOCK_FILE_NAME),
+            sandbox.path().join("displaced.lock"),
+        )
+        .and_then(|()| fs::write(sandbox.path().join(LOCK_FILE_NAME), b"replacement evidence"));
+    });
+    replacement?;
+    let error = result
         .err()
         .ok_or("replacement received writer authority")?;
     assert!(

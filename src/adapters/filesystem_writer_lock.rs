@@ -98,6 +98,17 @@ impl FilesystemWriterLock {
         root_lock_file: File,
         lock_file: cap_std::fs::File,
     ) -> Result<Self, WriterLockAcquireError> {
+        Self::acquire_with(directory, root_lock_file, lock_file, || {})
+    }
+
+    // The private synchronous seam runs under root-then-file locks. Production
+    // supplies a no-op; tests may replace the entry here without acquiring locks.
+    fn acquire_with<F: FnOnce()>(
+        directory: Dir,
+        root_lock_file: File,
+        lock_file: cap_std::fs::File,
+        after_acquire: F,
+    ) -> Result<Self, WriterLockAcquireError> {
         let metadata = lock_file.metadata().map_err(|source| {
             WriterLockAcquireError::io(WriterLockAcquirePhase::InspectFile, source)
         })?;
@@ -107,6 +118,7 @@ impl FilesystemWriterLock {
         let expected_identity = FileIdentity::from(&metadata);
         let lock_file = lock_file.into_std();
         acquire_lock(&lock_file, WriterLockAcquirePhase::Acquire)?;
+        after_acquire();
         verify_current_identity(&directory, expected_identity)?;
         Ok(Self {
             directory,

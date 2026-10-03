@@ -8,7 +8,7 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
-- Strengthened writer-lock replacement evidence to exercise actual authority acquisition, exact refusal and preserved file bytes; production locking behavior is unchanged (#169).
+- Strengthened writer-lock replacement evidence with a private after-lock scheduling checkpoint, exact refusal and preserved file bytes; production lock ordering and public behavior are unchanged (#169).
 
 - Retention recovery execution errors report the exact failed boundary, original typed cause, known namespace effects and uncertain effect/durability; retries freshly observe the store. Observed stage identity remains binding across reopening, and cleanup preserves verified pool evidence rather than promising the removed pathname survives (#99).
 
