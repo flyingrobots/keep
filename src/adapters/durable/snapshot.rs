@@ -75,7 +75,9 @@ impl DurableSnapshot {
     ///
     /// The reader enforces the existing local writable, case-sensitive Linux
     /// ext4 profile without acquiring writer authority. The admitted directory
-    /// capability is retained through view collection.
+    /// capability is retained through view collection. Platform admission
+    /// synchronizes the root directory before fencing; a synchronization
+    /// failure is preserved under the snapshot's admission error.
     ///
     /// Catalog/segment memory and record counts are bounded by `policy` and
     /// the format. Closure work is bounded per root by its persisted limits.

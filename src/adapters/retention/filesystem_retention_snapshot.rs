@@ -110,7 +110,9 @@ impl FilesystemRetentionSnapshot {
     /// Admission requires the opened directory's restart-stable device and
     /// inode to match the jointly admitted migration records before fencing.
     ///
-    /// The call takes no writer authority and mutates nothing. It may block
+    /// The call takes no writer authority and performs no namespace writes.
+    /// Platform admission synchronizes the opened root directory; failure is
+    /// returned as `Admission` with the original I/O cause. It may also block
     /// while collection holds the fence exclusively.
     /// Platform admission requires the existing local writable, case-sensitive
     /// Linux ext4 profile across every present version-two protocol directory.

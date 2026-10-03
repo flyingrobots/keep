@@ -20,7 +20,10 @@ use crate::{BlobId, ByteRange, LayoutId};
 /// snapshot is pinned.
 /// Every convenience read pays the complete snapshot admission and allocation
 /// cost described by [`DurableSnapshot`]; callers doing repeated reads should
-/// retain an explicit snapshot. No method here publishes or synchronizes data.
+/// retain an explicit snapshot. Snapshot admission performs a blocking
+/// root-directory synchronization as part of the platform check and may
+/// fail at that admission boundary. These methods do not publish content or
+/// flush caller output; a read receipt grants no new content-durability claim.
 ///
 /// # Example
 ///

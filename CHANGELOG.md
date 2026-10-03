@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Clarified the root-directory synchronization and precise admission-time I/O failure performed when opening a durable reader snapshot; the existing platform policy and runtime behavior are unchanged (#109).
+
 - Reference and durable reads now share an inward authentication core and immutable chunk port, preserving public receipts, precise errors and codec admission at the adapter boundary (#109).
 
 - Retention and durable snapshot readers now enforce the existing version-two filesystem profile through the same opened directory capability, rejecting unsupported filesystems without acquiring writer authority (#109).

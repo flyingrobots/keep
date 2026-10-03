@@ -250,3 +250,23 @@ Markdown validation passes after removing one extra blank line (`core-markdown-c
 The local dependency-policy attempt could not start because this container has no `cargo-deny` installation (`core-dependency-validation.log`); dependency policy must be verified by the final-head hosted job rather than counted as a local pass.
 
 The stable-candidate full validation command sequence is retained in `core-final-validation.sh`, with output in `core-final-validation.log`; its completion and the final pushed SHA are recorded in the PR review activity rather than anticipated here.
+
+## Independent review of the extracted core
+
+The independent Codex reviewer assessed exact head `c0bd6fb960ec864d5e6c6de71fbab3dbdb6f6160` under the agy-review protocol and confirmed the four hosted findings were addressed.
+
+Its remaining P2 finding was a public documentation mismatch: store reads claimed no synchronization, while reader platform admission invokes root-directory `sync_all` before fencing.
+
+The full feedback and checklist were posted before correction at [the independent review](https://github.com/flyingrobots/keep/pull/164#issuecomment-5963396072).
+
+The documentation correction discloses the blocking directory synchronization and original I/O cause under `Admission`, while preserving the distinction from publication, caller-output flushing and a content-durability promise.
+
+Change kind for that correction: documentation-only; the oracle is the unchanged production call chain `DurableStore::snapshot` → `DurableSnapshot::open` → `FilesystemRetentionSnapshot::load` → `open_version_two` → `admit_linux_profile` → `sync_all`, not an artificial runtime regression.
+
+The initial full local chain passed its corpus, debug/release crash, structure, formatting, feature and Clippy steps, then stopped at an existing xtask test that clones the source repository because the Docker validation copy had no commit to clone.
+
+Creating a local validation-copy commit corrected that environment without changing the source tree: both the pushed `c0bd6fb` and the committed copy have tree `f3bc4733a444af62c945805dcb3eb9c1335fc23a`.
+
+The affected exact law then passed, followed by complete debug/release workspace tests, doctests, documentation, MSRV and fuzz-target check/Clippy (`core-final-validation-corrected.log`, exit zero); the original failure remains in `core-final-validation.log` and is not counted as a product regression or silently retried away.
+
+Final-head hosted checks and independent confirmation of the documentation delta remain required; approval of a preceding SHA does not transfer.
