@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Strengthened writer-lock replacement evidence with a private after-lock scheduling checkpoint, exact refusal and preserved file bytes; production lock ordering and public behavior are unchanged (#169).
+
 - Migration compatibility laws preserve version-one bytes and reject version-one authority at every forward prefix; public version/flag refusal tests and bounded seeded recovery-planner fuzzing extend transition evidence (#112).
 
 - Completed migration recovery now verifies the version-two namespace before reporting success, refusing unknown reserved GC/recovery entries without effects while preserving published retention state (#111). Recovery storage implementors must supply the new read-only `verify_complete` capability.
