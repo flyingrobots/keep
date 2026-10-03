@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Current durable-surface documentation distinguishes delivered recovery, fenced authenticated reads and explicit verification from pending ingestion, GC, compaction and general candidate-catalog retained-closure admission (#130).
+
 - Retention verification refuses observed file or symlink substitutions of a selected namespace directory as typed corruption, preserving the original selected root evidence (#114).
 
 - Verification preserves typed canonical-namespace and no-follow entry-kind contradictions as corruption while leaving inconclusive observation failures operational (#114).

@@ -1,6 +1,8 @@
 # Durable authenticated reads (#109)
 
-Change kind: new read API with a shared-core extraction. The baseline is main `6051abb25a9fd33ae7ee0de5614514b709a4d82a`. No write protocol or on-disk format is changed; #125's candidate-catalog publication gate is not added or bypassed. This is an in-progress implementation ledger, not acceptance of #109.
+Change kind: new read API with a shared-core extraction. The baseline is main `6051abb25a9fd33ae7ee0de5614514b709a4d82a`. No write protocol or on-disk format is changed; #125's candidate-catalog publication gate is not added or bypassed. The sections below preserve chronological implementation and review evidence; earlier pending gates describe their historical heads and are superseded by this final landing receipt.
+
+Delivered in [PR #164](https://github.com/flyingrobots/keep/pull/164), merged as `1079551bc6b331eb9847823e7d22b22ea4c47b62`. [Independent review](https://github.com/flyingrobots/keep/pull/164#issuecomment-5974246110), [Code Lawyer closure](https://github.com/flyingrobots/keep/pull/164#issuecomment-5974261856), all four [candidate checks](https://github.com/flyingrobots/keep/actions/runs/37158962636) and [post-merge checks](https://github.com/flyingrobots/keep/actions/runs/37159373928) pass; reviewed head `9d19e2e0c3184efd5bc08c1f8cc12edd15421a93` and signed merge have the same tree.
 
 ## Review after draft readiness
 

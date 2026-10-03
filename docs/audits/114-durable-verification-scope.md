@@ -1,6 +1,10 @@
 # Durable verification landing scope
 
-Status: implementation candidate for [#114](https://github.com/flyingrobots/keep/issues/114), under verification parent [#20](https://github.com/flyingrobots/keep/issues/20).
+Status: implemented on main for [#114](https://github.com/flyingrobots/keep/issues/114), under verification parent [#20](https://github.com/flyingrobots/keep/issues/20).
+
+Delivered in [PR #165](https://github.com/flyingrobots/keep/pull/165), merged as `2efc131e8466b458088eaf5de0a5981e636d8f85`. [Independent review](https://github.com/flyingrobots/keep/pull/165#issuecomment-5974504658), [Code Lawyer closure](https://github.com/flyingrobots/keep/pull/165#issuecomment-5974510981) and all four [candidate checks](https://github.com/flyingrobots/keep/actions/runs/37160522753) cover exact head `1f3991f86fa66783d88b9ac8dbb79ecd0d9a9554`; the signed merge preserves that tree.
+
+The sections below preserve chronological implementation and review records. Earlier pending gates and open-finding tables describe their named intermediate heads; final closure above supersedes those statuses without expanding their historical evidence claims.
 
 This ledger reconciles the requested verification outcome with the code available at the branch baseline; current closure dispositions and their evidence are recorded below.
 
