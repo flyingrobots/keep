@@ -21,7 +21,8 @@ impl AdmittedRetentionRoot<'_> {
     /// Verifies this exact root at the requested depth against `catalog`.
     ///
     /// Framing/checksum reporting is constant-time and allocation-free over
-    /// already admitted canonical bytes. Closure verification visits every
+    /// already admitted canonical bytes and claims no catalog provenance.
+    /// Closure verification visits every
     /// anchor, requires catalog members, replays storage profiles and hashes
     /// complete blobs. Its checked node, depth, encoded and physical byte
     /// limits are those admitted from the root. It allocates an ordered index
@@ -52,11 +53,12 @@ impl AdmittedRetentionRoot<'_> {
             }
             .into());
         }
-        if requested == VerificationDepth::RetentionClosure {
-            let _evidence = verify_retention_closure(root, catalog)
-                .map_err(|source| verification_admission::closure(subject, source))?;
+        let report = VerificationReport::established(subject, requested);
+        if requested != VerificationDepth::RetentionClosure {
+            return Ok(report);
         }
-        Ok(VerificationReport::established(subject, requested)
-            .in_catalog(catalog.generation(), catalog.catalog_digest()))
+        let _evidence = verify_retention_closure(root, catalog)
+            .map_err(|source| verification_admission::closure(subject, source))?;
+        Ok(report.in_catalog(catalog.generation(), catalog.catalog_digest()))
     }
 }

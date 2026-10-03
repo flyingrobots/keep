@@ -15,8 +15,8 @@ use std::fs;
 // Size: medium. Oracle: exact published corpus root/head and immutable bytes.
 // Delete when superseded by a generated durable-report law retaining this case.
 #[test]
-fn published_root_reports_bind_both_views_without_mutating_evidence() -> Result<(), Box<dyn Error>>
-{
+fn published_root_reports_name_only_the_evidence_established_at_the_requested_depth()
+-> Result<(), Box<dyn Error>> {
     let (sandbox, mut authority) = open_authority("verify-published-root")?;
     let bytes = fixture(ROOT_HEX)?;
     let preparation = initial_preparation(&bytes)?;
@@ -39,7 +39,7 @@ fn published_root_reports_bind_both_views_without_mutating_evidence() -> Result<
         );
         assert_eq!(
             report.catalog(),
-            Some((
+            (depth == Depth::RetentionClosure).then_some((
                 snapshot.catalog().generation(),
                 snapshot.catalog().catalog_digest()
             ))

@@ -28,7 +28,8 @@ fn a_root_report_requires_complete_closure_in_its_named_catalog() -> Result<(), 
             assert_eq!(report.requested(), depth);
             assert_eq!(
                 report.catalog(),
-                Some((catalog.generation(), catalog.catalog_digest()))
+                (depth == Depth::RetentionClosure)
+                    .then_some((catalog.generation(), catalog.catalog_digest()))
             );
             let claims: Vec<_> = report
                 .subjects()
@@ -151,6 +152,26 @@ fn root_reports_refuse_unrelated_depths() -> Result<(), Box<dyn Error>> {
             assert!(
                 matches!(error, VerificationError::Refused { refusal: Refusal::Unsupported { subject: Subject::RetentionRoot { namespace, generation, digest }, requested: actual, supported }, source: None } if namespace == admitted.root().namespace().digest() && generation == RootGeneration::new(1)? && digest == root.digest() && actual == requested && supported == [Depth::Framing, Depth::Checksum, Depth::RetentionClosure]),
                 "exact root policy refusal required: {error:?}"
+            );
+        }
+        Ok(())
+    })
+}
+
+// Size: small. Oracle: framing/checksum inspect only admitted root bytes;
+// the supplied empty catalog proves no root membership and earns no provenance.
+// Delete only if these shallow depths are removed or begin verifying closure.
+#[test]
+fn shallow_root_reports_do_not_claim_an_unconsulted_catalog() -> Result<(), Box<dyn Error>> {
+    let root = root(RetentionClosureLimits::new(2, 2, 220, 509)?)?;
+    let admitted = AdmittedRetentionRoot::decode(root.encoded())?;
+    with_records(&[], |catalog| {
+        for requested in [Depth::Framing, Depth::Checksum] {
+            let report = admitted.verify(catalog, requested)?;
+            assert_eq!(
+                report.catalog(),
+                None,
+                "shallow {requested:?} must not certify catalog provenance"
             );
         }
         Ok(())

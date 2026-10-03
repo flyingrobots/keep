@@ -75,7 +75,7 @@ No serialization, repair, quarantine, GC execution or new durable report format 
 
 Blob and root verification distinguish missing catalog members, demonstrated contradictions, unsupported requests, and operational failures without returning partial reports. Original layout or closure causes retain their typed coordinates. Resource exhaustion is operational, not evidence of corruption.
 
-The report preserves the catalog generation/digest used by catalog, blob and root operations; this provenance is not a live fence. Multiple valid layouts for a blob are representations, not automatically ambiguity: discovery selects the first canonical identity.
+The report preserves the catalog generation/digest used by catalog and blob operations or successful root closure; root framing/checksum reports carry no catalog provenance; this provenance is not a live fence. Multiple valid layouts for a blob are representations, not automatically ambiguity: discovery selects the first canonical identity.
 
 Immutable admitted-view operations have no moving observation to classify; ambiguity is produced by the durable collection path, retaining at most the last conflicting coordinate pair and the original attempt-limit cause.
 

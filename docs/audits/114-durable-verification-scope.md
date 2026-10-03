@@ -103,3 +103,18 @@ The independent exact-head review of `6504c86` found one acceptance gap in exist
 The independent-review finding on `6504c86` is implemented and calibrated in its follow-up; approval of that delta and required checks must be recorded against the resulting exact head in [PR #165](https://github.com/flyingrobots/keep/pull/165) before it leaves draft.
 
 This table closes implementation obligations, not the independent review or human merge gate; the PR is the live authority for those exact-head decisions.
+
+## Post-readiness review queue
+
+Reviews arriving after `b33c7da` reopened the acceptance gate. The earlier implementation-disposition table is the pre-review candidate's account; it does not supersede these concrete obligations or establish current readiness. The complete review bodies, global discussion and inline findings are included, regardless of thread age.
+
+| Obligation | Current evidence and disposition | Exit condition |
+| --- | --- | --- |
+| Shallow root provenance | Verified bug: framing/checksum attached an unconsulted catalog. Public parent regression RED; direct and publication-selected laws GREEN after attaching coordinates only for successful closure. | Fix pushed, review of resulting head, final required checks. |
+| Store-admission contradictions | `view_error` currently sends all non-catalog snapshot errors to operational classification, including typed admission refusals. | Reproduce typed contradictory records/root identity through the public loader; preserve precise causes and operational resource/I/O cases; RED/GREEN. |
+| Verification-depth ordering | Public `Ord`/`PartialOrd` expose cross-subject comparisons despite the documented absence of an implication order. | Remove the unsupported comparison API, demonstrate its rejection at the compile boundary and preserve runtime depth policies. |
+| Observation classification exhaustiveness | Wildcard currently permits future current-state variants to default silently to operational. | Explicitly classify every existing variant; compiler and existing runtime classifications remain correct. |
+| Shared layout failure classification | Admission, closure and ingress duplicate the operational cause list. | Use one exhaustive classifier without changing existing supported outcomes; verify the affected runtime laws. |
+| Current documentation status | Initial-slice wording remains in current summary/changelog positions. | Reconcile current delivered scope, preserve historical evidence and identify final-head review/CI separately. |
+
+No finding is resolved merely because an earlier independent review approved the preceding head. No merge is authorized by this ledger.

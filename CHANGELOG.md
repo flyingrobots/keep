@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Shallow retention-root verification reports no longer claim unused catalog provenance; catalog coordinates are attached only after successful closure verification (#114).
+
 - Added read-only durable verification ingress, exact moving-view conflict witnesses, selected-namespace root reports, and typed selected-root diagnostic sources (#114).
 
 - Added catalog-bound complete-blob and admitted-retention-root verification reports, preserving exact missing members, identity/profile contradictions, resource failures, and original typed causes (#114).

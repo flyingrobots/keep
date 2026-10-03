@@ -209,3 +209,11 @@ The delta review found a surviving resource-classification oracle: the layout wr
 The corrected wrapper explicitly rejects that resource cause in the corruption arm; `layout-resource-red.log` records the same production inversion failing the targeted configured-cap law with “a configured resource cap must remain operational, never corruption,” and `layout-resource-green.log` records unmutated debug/release and focused Clippy success.
 
 This is a strengthened test oracle; production classification was unchanged and already correct, so the mutation is calibration rather than a claim of a runtime bug on the parent.
+
+## Post-readiness review: shallow root provenance
+
+Change kind: bug fix. CodeRabbit identified that `AdmittedRetentionRoot::verify` attached catalog provenance even when framing/checksum reporting never consulted the catalog. On unfixed `b33c7da4ec6fae68437b49663ca383edf5c297e1`, the new public regression `shallow_root_reports_do_not_claim_an_unconsulted_catalog` failed with a framing report's `Some((generation, digest))` against specified `None`, using an empty catalog that cannot establish the root's closure.
+
+The fix attaches catalog coordinates only after successful retention-closure verification. Shallow reports still name the exact admitted root and requested depth; publication-selected reports retain their actual retention-head provenance. Existing shallow catalog expectations in both direct and filesystem laws were incorrect and are corrected to `None`; the closure expectations remain unchanged. This is a correction to the report's evidence claim, not a change to root admission, retained closure, publication or formats.
+
+Copied Docker runs of `cargo test --locked --test blob_verification` and its release counterpart pass after the fix. The `filesystem_verification_law_tests` library filter passes in both profiles, exercising the publication-selected root boundary and unchanged filesystem witnesses; focused library/integration Clippy passes with warnings denied. These filesystem fixtures are repository-admitted test stores, not a new production-platform or physical durability certification. The parent RED, direct GREEN and filesystem GREEN receipts remain distinct; final full validation belongs to the final pushed candidate after the remaining review findings are resolved.
