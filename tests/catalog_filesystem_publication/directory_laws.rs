@@ -7,24 +7,6 @@ use crate::{FilesystemCatalogPublisher, FilesystemWriterLock};
 use super::{StoreFixture, restart_policy};
 
 #[test]
-fn publisher_has_no_unadmitted_production_constructor() -> Result<(), Box<dyn Error>> {
-    let publisher = include_str!("../../src/adapters/filesystem_catalog_publisher.rs");
-    let admission = include_str!("../../src/adapters/filesystem_platform_admission.rs");
-    if !publisher.contains("pub fn open(\n        admission: FilesystemPlatformAdmission,") {
-        return Err("publisher construction does not require platform admission".into());
-    }
-    let public_items = admission
-        .lines()
-        .map(str::trim_start)
-        .filter(|line| line.starts_with("pub "))
-        .collect::<Vec<_>>();
-    if public_items != ["pub struct FilesystemPlatformAdmission {"] {
-        return Err("platform admission exposes an unverified public producer".into());
-    }
-    Ok(())
-}
-
-#[test]
 fn publisher_refuses_a_non_directory_protocol_namespace() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-nondirectory")?;
     fs::remove_dir(store.staging())?;

@@ -1,0 +1,69 @@
+//! This module owns classification of typed publication observation failures.
+
+use crate::adapters::verification_admission;
+use crate::{
+    PublicationHeadDecodeError, RetentionCurrentStateRefusal as Current,
+    RetentionManifestDecodeError, VerificationRefusal, VerificationSubject,
+};
+use std::io;
+
+pub(super) fn refusal(error: &io::Error) -> Option<VerificationRefusal> {
+    let source = error.get_ref()?;
+    if source
+        .downcast_ref::<PublicationHeadDecodeError>()
+        .is_some()
+    {
+        return Some(verification_admission::structural(
+            VerificationSubject::PublishedCatalog,
+        ));
+    }
+    let current = source.downcast_ref::<Current>()?;
+    match current {
+        Current::ManifestAbsent | Current::CatalogAbsent => Some(VerificationRefusal::Missing {
+            subject: VerificationSubject::PublishedView,
+        }),
+        Current::ManifestRefused {
+            source: RetentionManifestDecodeError::Allocation { .. },
+        }
+        | Current::RetainedStage
+        | Current::HeadAbsentWithArtifacts
+        | Current::ExpectedCurrentOverAbsentHead
+        | Current::NonInitialOverAbsentHead
+        | Current::PreparedHeadRefused { .. }
+        | Current::CatalogDisagreed { .. }
+        | Current::LivenessExhausted
+        | Current::StaleCommittedRetry
+        | Current::Superseded { .. }
+        | Current::CommittedSelectionMissing
+        | Current::CommittedSelectionMismatch
+        | Current::CommittedNamespaceUnavailable
+        | Current::CommittedRootAbsent
+        | Current::CommittedRootChanged
+        | Current::PredecessorMismatch
+        | Current::PredecessorRootAbsent
+        | Current::PredecessorRootChanged
+        | Current::UnknownRetentionEntry
+        | Current::NonNamespaceEntry
+        | Current::NoncanonicalPoolEntry { .. }
+        | Current::NamespaceCapacity
+        | Current::NamespaceExpectationViolated
+        | Current::AttemptNamespaceDisagreed
+        | Current::CommittedRetryOverAbsentHead
+        | Current::ProtocolDirectoryReplaced
+        | Current::RecoveryObservationRefused { .. }
+        | Current::RecoveryRefused { .. }
+        | Current::RecoveryStepRefused { .. }
+        | Current::RecordLengthOverflow => None,
+        Current::HeadRefused { .. }
+        | Current::ManifestRefused { .. }
+        | Current::ManifestDisagreed
+        | Current::HeadPredecessorDisagreed
+        | Current::RecordKindOrLength
+        | Current::RecordTrailingBytes
+        | Current::CatalogHeadRefused { .. }
+        | Current::CatalogRefused { .. }
+        | Current::CatalogChanged => Some(verification_admission::structural(
+            VerificationSubject::PublishedView,
+        )),
+    }
+}

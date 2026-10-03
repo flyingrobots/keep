@@ -1,0 +1,11 @@
+--- a/src/adapters/filesystem_writer_lock.rs
++++ b/src/adapters/filesystem_writer_lock.rs
+@@ -183,7 +183,7 @@
+         return Ok(());
+     }
+     Err(WriterLockAcquireError::io(
+-        WriterLockAcquirePhase::VerifyFileIdentity,
++        WriterLockAcquirePhase::Acquire,
+         io::Error::new(
+             io::ErrorKind::InvalidData,
+             "writer.lock changed identity during acquisition",

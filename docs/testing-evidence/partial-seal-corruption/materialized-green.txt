@@ -1,0 +1,23 @@
+   Compiling xtask v0.0.0 (<isolated-build>/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.91s
+     Running unittests src/main.rs (<isolated-build>/debug/deps/xtask-b2c3eaacd20fcb12)
+
+running 1 test
+test fuzz_seed_corpus::tests::materialization::seed_preparation_preserves_a_replayable_recovery_counterexample ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 303 filtered out; finished in 0.25s
+
+   Compiling keep v0.0.0 (<isolated-build>)
+   Compiling xtask v0.0.0 (<isolated-build>/xtask)
+    Finished `release` profile [optimized] target(s) in 4.42s
+     Running unittests src/main.rs (<isolated-build>/release/deps/xtask-9acf4f0e621733b7)
+
+running 1 test
+test fuzz_seed_corpus::tests::materialization::seed_preparation_preserves_a_replayable_recovery_counterexample ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 303 filtered out; finished in 0.19s
+
+    Checking keep v0.0.0 (<isolated-build>)
+    Checking xtask v0.0.0 (<isolated-build>/xtask)
+    Checking keep-benchmark v0.0.0 (<isolated-build>/benchmark)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.73s

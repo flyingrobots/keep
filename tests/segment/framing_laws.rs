@@ -3,8 +3,7 @@
 use std::error::Error;
 
 use keep::{
-    AdmittedSegment, LayoutEntryLimit, SegmentReadError, SegmentReadPolicy, SegmentRecordLimit,
-    SegmentSealError,
+    LayoutEntryLimit, SegmentReadError, SegmentReadPolicy, SegmentRecordLimit, SegmentSealError,
 };
 
 use super::format_oracle::seal_segment;
@@ -141,8 +140,5 @@ fn declared_count_above_physical_records_refuses_the_missing_header() -> Result<
 }
 
 fn refusal(encoded: &[u8], policy: SegmentReadPolicy) -> Result<SegmentReadError, Box<dyn Error>> {
-    match AdmittedSegment::decode(encoded, policy) {
-        Ok(_admitted) => Err("malformed complete segment was admitted".into()),
-        Err(error) => Ok(error),
-    }
+    super::verification_refusal(encoded, policy)
 }

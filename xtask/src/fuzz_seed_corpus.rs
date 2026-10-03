@@ -6,6 +6,7 @@ mod cdc_seeds;
 mod filesystem;
 mod identity_seeds;
 mod layout_seeds;
+mod migration_recovery_seeds;
 mod migration_seeds;
 mod retention_seeds;
 mod segment_seeds;

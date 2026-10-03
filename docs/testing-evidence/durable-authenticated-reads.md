@@ -1,0 +1,320 @@
+# Durable authenticated reads (#109)
+
+Change kind: new read API with a shared-core extraction. The baseline is main `6051abb25a9fd33ae7ee0de5614514b709a4d82a`. No write protocol or on-disk format is changed; #125's candidate-catalog publication gate is not added or bypassed. This is an in-progress implementation ledger, not acceptance of #109.
+
+## Review after draft readiness
+
+The independent approval and successful checks on `186ab8a00796101d26640084f05960624d76f77d` predate the subsequent hosted Codex and CodeRabbit findings; they do not establish readiness of a revised candidate.
+
+| Review obligation | Disposition and evidence | Exit condition |
+| --- | --- | --- |
+| CodeRabbit: selected root namespace binding (`discussion_r4170510757`). | Confirmed runtime defect on `186ab8a`: both direct selected-root read and durable snapshot admission accepted a canonical foreign-namespace root. The fix at `FilesystemRetentionSnapshot::retained_root` retains existing digest/generation checks and reports typed expected/observed namespace coordinates. | Focused debug/release laws, source-preservation calibration, final-head full validation and independent delta review. |
+| Codex: inward ownership of shared authentication (`discussion_r4170495607`). | The `f1312d6` baseline imported policy and the port through `reference`. The revised source moves authentication, immutable chunk lookup, semantic failures and receipts to `authenticated_read`; shared codec-bearing public errors and lossless outward mapping live under `adapters/authenticated_read`. | Move the shared behavior to an inward semantic boundary without changing authenticated output/refusal behavior; preserve public API compatibility and generated parity evidence. |
+| Codex: relative store locator stability (`discussion_r4170495611`). | Confirmed RED on `28f1720`; the constructor now fixes an absolute locator and preserves resolution failure as `DurableStoreError::Locator`. Public isolated-process laws cover two valid stores and a deleted current directory. | Focused runtime and source-preservation evidence below; final-head full validation and independent delta review remain required. |
+| Codex: reader production-platform admission (`discussion_r4170495617`). | Confirmed RED on `082c515`; direct and durable snapshot readers admitted a valid migrated tmpfs namespace. The shared reader loader now uses the existing version-two platform admission and retains its returned directory capability. | Focused tmpfs refusal and ext4 reader-availability evidence below; final-head full validation and independent delta review remain required. |
+
+### Namespace regression
+
+Change kind: bug fix; the public fixture publishes real content, migrates, and retains it on the admitted ext4 profile, then deliberately installs a checksummed manifest selecting the original root under another namespace outside publication.
+
+No raw mutation occurs concurrently with the read under test.
+
+`a_selected_root_from_another_namespace_refuses_direct_read` and `a_foreign_retained_namespace_refuses_durable_output` were observed RED against production head `186ab8a` after successful compilation, reporting respectively `foreign namespace root was returned by the public reader` and `foreign namespace root admitted a durable snapshot`.
+
+The final laws assert `FilesystemRetentionSnapshotError::Root`, `InvalidData`, and the exact `RetentionSelectedRootRefusal::Namespace` expected/observed digests; the convenience-read law also checks the caller's output sentinel remains unchanged.
+
+The tests are medium, real-filesystem public-path evidence; no process-death, power-loss, or arbitrary concurrent namespace-isolation guarantee is inferred.
+
+The new diagnostic is preserved inside the existing root error boundary, so unrelated checksum, generation, digest, and operational causes retain their existing paths.
+
+Raw artifacts retain `namespace-red-on-186ab8a.log`, `namespace-green.log`, and `namespace-structure.log`; a replay initially included the new diagnostic type against the old library and failed compilation (`namespace-red-replay.log`), which is excluded from behavioral RED evidence.
+
+The corrected parent-compatible regression was replayed RED in `namespace-red-replay-corrected.log` and committed separately as `0a43198` before the fix; that commit can reproduce the original acceptance defect without the new diagnostic type.
+
+The fixed public laws pass in debug and release; the full Golden File Worldline integration binary, existing retention snapshot laws, doctests, all-target/all-feature Clippy, formatting, and structure checks also pass in the copied Docker candidate.
+
+Swapping only the new diagnostic's expected and observed namespace digests in a separate source/target directory made both final public laws fail their exact-coordinate assertion (`namespace-coordinate-red.log`); the unchanged candidate remained green (`namespace-relevant-validation.log`).
+
+Final full-chain checks and independent review remain pending while the remaining review obligations are resolved.
+
+### Relative locator regression
+
+Change kind: bug fix with a fallible-constructor adjustment to the new, unmerged API; `DurableStore::open` now returns `Result<DurableStore, DurableStoreError>` and fixes an absolute locator before returning a handle.
+
+Resolving a relative path queries the current directory once, while store admission remains deferred to snapshot creation.
+
+This prevents working-directory changes from retargeting a handle; it does not pin the filesystem pathname against unsupported out-of-band replacement.
+
+The medium public regression creates two production-profile stores with different retained blobs in an isolated child, opens `.` in the first, changes to the second, and checks original retention and reconstructed bytes through the same handle.
+
+The unfixed code at `28f172043c6a3e360478137231c9c51e0e4ad725` failed `the same handle must retain its original store after cwd changes` after successful compilation (`locator-red-on-28f1720.log`); the standalone RED test is commit `4f37597`.
+
+A second isolated child deletes its current directory and checks the constructor's exact `Locator` / `NotFound` / `ENOENT` outcome and preserved `io::Error` source.
+
+Each child is selected by the harness with an exact test name, runs alone, and has a 20-second execution ceiling enforced by `timeout`; the ceiling is a hang guard, not a performance promise.
+
+There are no sleeps or schedule sampling, and cwd mutation never occurs in the parallel parent test process.
+
+Focused debug/release laws, the full Worldline binary, existing durable-read unit laws, doctests, Clippy, formatting, and structure validation passed in the copied Linux arm64 Docker candidate (`locator-green-corrected.log`).
+
+The original `locator-green.log` retains a Clippy type-complexity failure in the child runner; a local result alias corrected it without changing a product expectation.
+
+All existing constructor call sites and the compiled public example now propagate the constructor error; no existing output, refusal, or receipt expectations were weakened.
+
+Separate copied-source/target mutants replaced the original locator cause with `Other` and removed its `Error::source` link; the deleted-cwd law failed respectively at the exact-cause and source-chain assertions after successful compilation (`locator-mutants/cause/red.log` and `locator-mutants/source/red.log`).
+
+### Reader platform regression
+
+Change kind: bug fix; `FilesystemRetentionSnapshot::load` now calls the existing version-two filesystem-profile admission before namespace, migration identity, fence, and coordinate collection.
+
+The returned directory capability is reused throughout admission; no second ambient-path open or writer lock is introduced.
+
+Both `a_canonical_tmpfs_store_refuses_the_public_reader_profile` and `a_canonical_tmpfs_store_refuses_durable_snapshot_admission` were observed RED on `082c5155a244416cef94ea5217f15ca19a344383`, after successful compilation and construction of valid migration records, with successful snapshot admission being the wrong runtime outcome (`reader-platform-red-on-082c515.log`).
+
+The standalone RED commit is `397164e`.
+
+These are medium Linux filesystem laws: the negative fixture verifies `/dev/shm` is tmpfs, uses test-only writer admission to construct an internally consistent version-two store, and then calls the public production reader methods.
+
+The bypass is limited to adversarial fixture construction; the methods under test do not use a bypass.
+
+The exact expected refusal is `FilesystemRetentionSnapshotError::Admission` with `Unsupported`, preserved under `DurableStoreError::Snapshot` for the durable entry point.
+
+`reader_platform_admission_does_not_acquire_writer_authority` holds the actual writer lock while the production-profile reader admits the frozen catalog, demonstrating compatible reader availability rather than only rejection on an unsupported filesystem.
+
+Focused debug/release laws, existing snapshot laws, full Worldline integration, doctests, all-target/all-feature Clippy, formatting, and source structure pass in the copied Linux arm64 Docker candidate (`reader-platform-green.log`).
+
+The existing profile checks filesystem type, writable state, casefold flags, and device/mount agreement of present protocol directories; this change reuses those checks rather than introducing a second platform policy.
+
+These receipts exercise actual tmpfs rejection and ext4 acceptance, not new filesystem-specific crash, power-loss, or concurrent raw namespace guarantees.
+
+A separate copied-source/target mutant acquired writer authority inside reader admission; the reader-availability law then failed with the actual typed writer `Busy` cause (`reader-writer-lock-calibration-red.log`), while the unchanged candidate passed again (`reader-platform-post-calibration-green.log`).
+
+### Shared authentication ownership
+
+Change kind: structural refactoring with unchanged public behavior, using `f1312d6f60c10421ad32aec66a926a0bb5535456` as the before-state.
+
+The before-state placed both production callers behind `reference::{ChunkSource, read_admitted, reconstruct_admitted}`; the revised callers depend on `authenticated_read`, whose transitive semantic dependencies contain no storage adapter or codec error.
+
+The reference adapter retains lookup and decoding; durable ingress retains its catalog, retained-root, platform and fence checks.
+
+Core failures preserve original causes and coordinates, and exhaustive outward mappings preserve every existing public variant without adding an error-source layer.
+
+The two existing source-inspection test files only update relocated input paths; their assertions are unchanged and are static evidence, not product evidence.
+
+No runtime RED is claimed for ownership alone, and no harness-count or source-string regression is added for it.
+
+The existing generated range/source-slice laws, private corruption laws, public writer/refusal laws and Worldline cases supply behavioral verification; their expected bytes, receipts and error coordinates remain unchanged.
+
+The first local check attempt used a login shell that omitted Cargo from its path (`core-extraction-check.log`); the corrected Docker shell compiled successfully (`core-extraction-check-corrected.log`).
+
+The first focused run stopped at Clippy's crate-visibility and large-error lints (`core-extraction-focused.log`); explicit scoped expectations preserve crate-private boundaries and allocation-free typed failures rather than changing the public contract.
+
+Full validation and independent review of the resulting candidate remain required before readiness.
+
+## Delivered candidate behavior
+
+`DurableStore` pins a fresh `DurableSnapshot` per convenience call. Snapshot admission keeps the existing shared reader fence, catalog, retention head and manifest view and verifies every selected retained closure against the catalog. Blob lookup scans selected roots one at a time and chooses the lowest retained layout identity; exact-layout reads use the catalog directly. Reconstruction and ranges use the shared immutable domain cores and return receipts with the view coordinates only after emission succeeds.
+
+The allocation, blocking and failure contract is in the public API documentation and [rationale](../../src/adapters/durable/rationale.md). Selected segment bytes are materialized under the caller's aggregate segment-byte limit. Catalog bytes are bounded separately by `CatalogLength::MAXIMUM`; decoded indexes and retention records allocate additionally under format and record-count limits. The segment limit is not a total snapshot-memory cap, and the API does not claim lazy segment reads or constant total memory. It adds no whole-blob output buffer or aggregate anchor index.
+
+## Closure ledger
+
+| Obligation | Current evidence | Required exit condition |
+| --- | --- | --- |
+| Golden bytes and exact read coordinates | `durable_read_law_tests` reconstructs the independent one-zero corpus and compares catalog and manifest digests against frozen bytes. Public Worldline tests reconstruct all frozen identities after reopening. | Parity map below is populated; independent review must assess the stated scope and calibration gaps. |
+| Stable retained view across publication | `durable_view_law_tests` releases the retained root while an older snapshot remains alive; the old reader emits its original byte and head generation, and a fresh view sees release. | Current supported retention-publication path is exercised. A production v2 catalog writer is absent on the baseline; review must not confuse that absent path with demonstrated catalog-successor execution. |
+| Collector exclusion | The public snapshot holds the actual kernel shared fence; a deterministic exclusive try-lock refuses until drop. | Preserve this claim as fence evidence; actual GC execution remains absent on main under #21. |
+| Operational failures versus evidenced absence | Removing the selected segment yields exact `OpenSegment` / `NotFound`; public whole/range reads of a catalogued layout missing its chunk yield exact logical `ChunkMissing` with untouched output. Prefix failures preserve layout, accepted bytes and `PermissionDenied`; corrupt input layouts preserve exact checksum coordinates. | Public writer, absence, physical whole/range corruption and false-profile witnesses are present; require final-head validation and review. |
+| Reference-core equivalence | Existing reference algorithms are generalized only over a crate-private immutable source; their single-pass authentication tests are retained. | Reference and durable generated domains are exercised. Core authentication-pass evidence remains distinct from repeated durable admission; final validation and independent review remain. |
+| Golden File Worldline | `tests/golden_file_worldline/durable_assertions.rs` publishes the corpus through production v1 authority, migrates it, retains it, reopens and checks frozen identities and exact bytes/ranges. `durable_range_properties.rs` adds exhaustive short intervals and multichunk boundary sweeps. | Retain precise scope: reopening after writer handles close, not a process-death test. Final-head validation remains required. |
+| Documentation and final acceptance | API costs and design rationale are documented. | Requirements and compiled Linux example are updated for the candidate; final checks and exact-head independent review remain open. |
+
+## Evidence limits
+
+The initial unit filesystem laws use owned test directories and the existing repository migration fixture with platform admission bypassed. The newer Linux public Worldline laws use production platform admission, publication, migration and retention in owned ext4 scratch. No sleep or probabilistic race is used. The collector test uses a kernel try-lock in one process, not a full GC integration or process-death claim.
+
+New laws are medium-size because they own filesystem state. Per-test resource enforcement and suite SLOs remain gaps described in the repository [enforcement profile](../testing/enforcement.md); no compliance waiver or new resource ceiling is claimed here. Deletion criteria and oracles appear beside the laws.
+
+Initial debug/release golden-read checks and all-feature Clippy passed; expanded view laws passed in debug. Initial authoring/compilation and Clippy failures are retained in the local evidence logs and are not product RED evidence. Final source SHAs, complete check results and actual mutation observations belong in the final PR receipt. This new API did not exist on the parent; parent compilation failure would not prove a runtime regression.
+
+## First implementation receipt
+
+Implementation commit `d6c38a1` passed formatting, source structure, both workspace Clippy feature profiles, complete all-feature workspace debug/release tests and doctests, and rustdoc generation on pinned Rust 1.96.0 in a copied Docker source tree. These runs include the existing generated range-to-source-slice properties and reference single-hash-pass laws. Subsequent documentation and visibility narrowing require their own final-head checks; this receipt does not transfer to future semantic changes.
+
+Three isolated source/build mutations were observed RED on that implementation: substituting `[1]` during emission after verification made whole-read, exact-layout and nonempty-range assertions report expected `[0]` versus observed `[1]`; advancing the receipt's catalog generation made its coordinate assertion report expected 1 versus observed 2; replacing shared fence acquisition with unlock made the collector-exclusion assertion report expected `WouldBlock` versus observed successful acquisition. These are runtime calibration, not parent-bug reproductions or an assertion that every new check has already been calibrated.
+
+At that first receipt, generated durable laws, Worldline reopen/range witnesses, missing-member/output failures and independent digest expectations remained open; the subsequent expansion below addresses those items. The issue stays open and its PR remains a draft until the full closure ledger is satisfied.
+
+## Worldline and layout-ingress expansion
+
+Commit `ab518b2` added production-admitted Worldline reopen/range reads, bounded range sweeps, exact logical-member absence, output-prefix failures and independent digest coordinates. It passed complete all-feature workspace debug/release tests, both Clippy profiles, formatting and source structure. This evidence does not transfer to later semantic changes.
+
+Isolated mutations made the new whole/range prefix assertions report a false zero accepted count instead of five, and made Worldline and range source-slice assertions detect an altered emitted byte after verification. Both were observed RED at the intended runtime assertions. The mutation that changes emitted bytes correctly leaves refusal-only laws green; those protect different claims.
+
+The next candidate adds the four caller-supplied layout entry points so reference whole-blob and catalogued-range binding laws have durable equivalents. Exact whole-blob mismatch and corrupt-layout checksum coordinates are asserted before output. These entry points and the public memory law pass focused debug/release tests and all-feature Clippy; final source-bound validation remains pending.
+
+`durable_read_memory` measures incremental allocation during reconstruction of the frozen 1 MiB Worldline source into a nonallocating sink. It requires peak incremental allocation below one whole blob, after explicit snapshot admission; it does not claim that snapshot construction avoids materializing selected segments or prove a universal resident-memory ceiling.
+
+The short-range sweep enumerates its finite domain in increasing length, making the first failing interval minimal within that domain. The multichunk sweep uses fixed documented boundary coordinates over the frozen source. Neither uses ambient randomness or claims exhaustive coverage of arbitrary large layouts. Replay is the named public test on the recorded source; any discovered counterexample must be retained before extending the domain.
+
+Memory calibration inserted a deliberately unnecessary 1,048,576-byte allocation into reconstruction in an isolated source/build copy. The new public memory assertion went RED with an observed peak of 1,048,576 bytes against its strictly smaller-than-blob requirement; the unmodified candidate passed. This validates that concrete additional-buffer detector, not the entire process memory budget.
+
+## Physical corruption and range output boundaries
+
+Candidate `e0a540c1e0913097329b209c3ab06be40e017e56` passed the complete local validation chain and all four required hosted checks: Rust quality gates, documentation and workflow integrity, runtime fuzz smoke and dependency policy. Later test additions require their own checks; this receipt does not transfer to them.
+
+The next test slice corrupts an actual selected segment payload in a production-admitted ext4 store. Its independent checksum preimage follows the normative v1 framing; reconstruction must preserve the typed record-index, offset and expected/observed checksum refusal before touching caller output. This is physical filesystem corruption evidence, not simulated port failure or process-death evidence.
+
+Additional range-output laws verify exact bytes through short/interrupted writes and exact zero-progress refusal before any accepted output. The complete public Worldline integration target passes in debug and release with these additions, and all-feature Clippy passes. The local receipts are `physical-corruption.log` and `corruption-output-validation.log`; no new production behavior is introduced by this test slice.
+
+Calibration changed the zero-progress writer's reported accepted count from zero to one in an isolated source copy. The new range assertion was observed RED on the exact `WriteZero` outcome with `ByteLength(1)` (`range-zero-mutation-red.log`), rather than a setup or compilation failure. The candidate source retains zero and is rechecked separately. The broader calibration ledger remains open; this witness is specific to accepted-byte accounting.
+
+An initial post-mutation candidate run reused mutant build output because both copies shared a Cargo target directory. That run is invalid candidate evidence and is retained as `corruption-final-slice-corrected.log`; the earlier mistyped xtask command is retained separately. The corrected protocol gives the mutant its own target directory and invalidates the candidate's compiled source before rerunning the full public integration target in debug/release, formatting, source structure and Clippy. Only `range-zero-isolated-mutation-red.log` and `corruption-final-candidate.log` are admissible for that corrected RED/GREEN pair.
+
+## Reference read-law reconciliation
+
+This map covers runtime read claims, not source-string assertions in `range_read_contract.rs` or write/staging laws. Durable twins may preserve a stronger pre-output admission boundary; that difference must be named instead of describing every reference error as identical.
+
+| Reference claim / source | Durable evidence | Remaining difference or action |
+| --- | --- | --- |
+| Exact reconstructed bytes, empty blobs, frozen identities (`streaming_cas/reconstruction_laws`, Worldline) | `durable_assertions`, `durable_read_law_tests` | Complete frozen corpus exercised after writer handles close and store reopen. |
+| Short/interrupted writes, zero progress, accepted prefix (`reconstruction_laws`, `refusal_laws`, `range_read`, `range_read_failures`) | `durable_output_laws` | Whole and range outputs covered; calibration receipts are above. |
+| Immediate output error and impossible returned write count (`refusal_laws`, `range_read_failures`) | `durable_writer_failures` | Exact layout, accepted prefix, cause or supplied/observed count checked. New validation recorded separately. |
+| Whole-blob identity mismatch (`reconstruction_laws`) | `durable_layout_laws` | Caller-supplied layout reconstructs from catalogued chunks and refuses the wrong target before output. |
+| False chunk-profile boundaries (`refusal_laws`) | `durable_layout_laws` | Frozen false-boundary record against production-published constituent chunks; exact expected/observed boundary and untouched output. |
+| Absent blob/layout, bounds (`range_read`) | `durable_refusal_laws`, unretained-blob unit law | Exact identities and unchanged caller output; debug/release validation passes. |
+| Malformed canonical layout (`refusal_laws`, `range_read`) | `durable_layout_laws` | Whole and range ingress preserve exact checksum coordinates. |
+| Committed target binding / semantic and record ingress (`range_read_entrypoints`) | `durable_layout_laws` | Both durable ingress paths are exercised. |
+| All short intervals / generated multichunk ranges (`range_read_properties`) | `durable_range_properties` | Short finite domain exhaustive; the durable suite also runs the reference's fixed 786,432-byte patterned source and affine coordinate domain, alongside the Worldline boundary grid. |
+| Missing selected chunk (`reconstruction_laws`, reference private range laws) | `durable_refusal_laws` | Catalogued unretained layout exercises evidenced absence; retained missing closure refuses earlier at snapshot admission. |
+| Corrupt selected chunk (reference private reconstruction/range laws) | `durable_corruption_laws` | Physical payload corruption refuses during segment admission before whole or range output, preserving exact record/checksum coordinates. |
+| Only overlapping chunks read (reference private range law) | `a_durable_range_needs_no_nonoverlapping_chunk_records` | An unretained catalogued layout with only its interior chunk present serves an exact interior range; whole reconstruction refuses the missing first chunk. This establishes logical member independence, not minimal physical I/O during snapshot admission. |
+| Exactly one chunk hash per reconstruction/selected range (reference private instrumentation) | Existing shared-core reference tests retained | The normative single-hash paragraph explicitly describes ReferenceStore. Durable reads reuse that immutable core pass, while snapshot/catalog admission independently verifies persisted evidence. No durable end-to-end single-hash promise is made; independent review must assess this scope reconciliation. |
+
+The issue itself states that collection exclusion is vacuous until #21 lands. Current evidence strengthens that floor with real shared/exclusive kernel fence exclusion and a live snapshot surviving retention publication. It does not claim an executable GC or unsupported version-two catalog publisher. The final requirement reconciliation must preserve these distinctions.
+
+The next parity slice adds the false-profile-boundary twin using the frozen mutation record and production-published constituent chunks. It preserves the exact expected 262,143-byte first boundary versus the observed 262,144-byte boundary before output. Immediate writer errors, impossible write counts, absent range blobs and absent reconstruction layouts also have direct public durable witnesses. The complete public integration target passes debug/release, Clippy and source structure (`read-parity.log`).
+
+Hosted validation of `cc189ff` caught a formatting-only error in the module declaration order: the earlier copy-back omitted the formatted `suite.rs`. Its Rust quality gate failed; the other required jobs passed. The author corrected the module list and records this as a validation-transfer mistake, not a runtime failure or a green final-head receipt. Subsequent validation checks the copied source against the committed files.
+
+The writer-parity calibration uses an isolated source and target directory. It substitutes an impossible maximum of zero and wraps the immediate I/O cause as `Other`; the four whole/range assertions fail on those specific wrong public outcomes (`writer-parity-mutation-red.log`). The original source passed the same assertions in debug/release. This is assertion calibration for the new API, not a parent regression: the durable API does not exist on main.
+
+## Range-domain and overlap closure
+
+The range continuation adds a direct physical-corruption range witness, the reference suite's fixed patterned multichunk source/coordinate domain, and a selected-member-only catalog. The last case deliberately cannot reconstruct its whole layout: the absent first chunk produces an exact `ChunkMissing` with untouched output, while the interior range succeeds with exact source bytes and receipt coordinates. The comparison is one proof-scope behavior, not a count of harness cases. Publication and migration use production capabilities; no retained root falsely claims closure over the intentionally incomplete layout.
+
+The complete Worldline target passes debug/release, all-feature Clippy and source structure (`range-overlap-parity.log`). Earlier generator-only and physical-corruption receipts are retained separately. The finite affine coordinate domain is replayable from source but does not claim a general shrinking framework; the exhaustive short-domain run remains ordered by increasing length. This narrows the remaining acceptance work without claiming arbitrary-input exhaustiveness.
+
+An isolated source/build mutation made range verification start with all layout entries instead of the selected entries. The overlap law went RED at the read boundary with an exact missing first-chunk refusal (`range-overlap-mutation-red.log`); the original candidate succeeds on the interior range. This calibrates logical overlap independence without using internal lookup counters as its oracle.
+
+## Acceptance documentation candidate
+
+The Linux README example mirrors a compiled `DurableStore` doctest and names an explicit 16 MiB aggregate catalog-selected segment budget, with catalog bytes and decoded metadata allocated separately. Normative documents now identify the available API, typed outcomes, view coordinates, managed-namespace fence scope and materialization costs. Requirement rows 009 and 010 identify the candidate implementation and explicitly retain final #109 acceptance as pending; they do not certify an unreviewed release.
+
+Review queue inspection found no submitted review bodies or inline threads; the sole top-level comment reports that CodeRabbit skipped this draft. All retrieved connections were exhausted. Independent review must cover the whole diff, the raw receipts and the scope distinctions above; no absence of comments is treated as approval.
+
+## Independent review and retained-closure correction
+
+Independent Codex review of `dd42dcbede0316fc64487283b45a78e7a4a0cac6` returned REQUEST CHANGES for evidence gaps, with no demonstrated production defect. The [full findings and checklist](https://github.com/flyingrobots/keep/pull/164#issuecomment-5962524242) were posted before remediation. Agy exhausted its quota without a verdict; it supplies no approval. All required hosted checks passed on the reviewed head, which does not transfer to subsequent changes.
+
+The first finding is addressed by `an_unsatisfied_retained_closure_refuses_snapshot_admission_before_output`. A production-admitted ext4 store contains a canonical layout but lacks its chunk. The fixture deliberately installs checksummed root/manifest/head evidence claiming that incomplete closure, outside publication; this is adversarial persisted state, not an assertion that production preflight permits it. Snapshot admission and the convenience reconstruction both preserve the exact namespace and `MissingMember::Chunk` coordinates. Caller output and selected root/manifest/head bytes remain unchanged.
+
+Focused debug/release, all-feature Clippy and source structure pass (`closure-refusal-corrected.log`). The initial Clippy tuple-complexity failure is preserved separately as authoring evidence. An isolated source and target bypasses closure verification only when a manifest is present, leaving all earlier physical/canonical admission intact; the new test was observed RED with “incomplete retained closure admitted a snapshot” (`closure-admission-mutation-red.log`). This directly challenges the new owning boundary rather than only the shared closure verifier. The remaining review finding requires the consolidated refusal-calibration map and its missing observations before re-review.
+
+## Refusal calibration requested by independent review
+
+The remaining explicitly identified refusal claims were challenged in isolated source/build copies of `4d801e491eebc580866d6fa1c18d1365035fa3a9`. These mutations change production behavior or returned diagnostics, not test expectations. `refusal-calibration-green.log` records the unmodified layout laws passing in debug/release and the retained-closure law passing again. Each mutant compiles and reaches the named runtime check; build failures are not counted.
+
+| Protected claim / assertion | Deliberate violation | Observed RED receipt |
+| --- | --- | --- |
+| Wrong whole-blob claims refuse before output | Skip complete-object verification for nonempty layouts | `proof-and-semantic-binding-red.log`: `false blob claim succeeded` |
+| Content-correct false profile boundaries refuse | Same skipped complete-object verification pass | `proof-and-semantic-binding-red.log`: `false profile boundaries reconstructed` |
+| Semantic range ingress requires exact catalogued binding | Execute the range core directly on the supplied layout | `proof-and-semantic-binding-red.log`: `uncatalogued layout succeeded` |
+| Canonical record range ingress requires exact binding independently | Bypass binding only in record ingress; semantic ingress remains unchanged | `record-binding-red.log`: first semantic refusal passes, then `uncatalogued record succeeded` |
+| Whole-record checksum refusal preserves expected/observed coordinates | Swap decoder checksum coordinates | `proof-and-semantic-binding-red.log`: whole-record checksum assertion fails |
+| Range-record checksum refusal preserves coordinates independently | Swap checksum coordinates only at range ingress | `range-checksum-red.log`: whole-record assertion passes, then range-record checksum assertion fails |
+| Snapshot admission proves selected retained closure | Skip closure verification only for a present manifest | `closure-admission-mutation-red.log`: `incomplete retained closure admitted a snapshot` |
+
+The grouped proof mutation falsifies two distinct promised outcomes: complete identity and storage-profile admission. The record-only mutations deliberately leave the earlier semantic/whole assertions intact so their failures cannot mask the later entrypoint assertions. The successful ingress-equivalence law remains green in all three layout mutation copies, demonstrating that ordinary successful reads alone would not detect these omissions.
+
+The earlier calibration receipts cover the other established claim families: emitted bytes and generated source-slice oracles (`emission-mutation-red.log`, `worldline-emission-mutation-red.log`); view generation (`coordinate-mutation-red.log`); actual collector exclusion (`fence-mutation-red.log`); accepted-prefix accounting (`output-prefix-mutation-red.log`, `range-zero-isolated-mutation-red.log`); immediate writer cause and maximum write count (`writer-parity-mutation-red.log`); additional whole-blob allocation (`read-memory-mutation-red.log`); and logical overlap independence (`range-overlap-mutation-red.log`). Historical witnesses retain their recorded source coordinates; the final independent review must assess whether the combined mapping satisfies the binding standard. This table does not turn unexecuted individual diagnostic-field mutations into evidence.
+
+## Shared-core extraction validation
+
+The copied Docker candidate passes all-target/all-feature Clippy and the unchanged reference private laws, generated range properties, streaming CAS suite and complete Golden File Worldline binary in both debug and release (`core-extraction-focused-corrected.log`).
+
+These generated tests retain their independent source-slice and frozen-corpus oracles; agreement does not prove untested input spaces or new filesystem concurrency guarantees.
+
+Markdown validation passes after removing one extra blank line (`core-markdown-corrected.log`); the original formatting failure remains in `core-markdown.log`.
+
+The local dependency-policy attempt could not start because this container has no `cargo-deny` installation (`core-dependency-validation.log`); dependency policy must be verified by the final-head hosted job rather than counted as a local pass.
+
+The stable-candidate full validation command sequence is retained in `core-final-validation.sh`, with output in `core-final-validation.log`; its completion and the final pushed SHA are recorded in the PR review activity rather than anticipated here.
+
+## Independent review of the extracted core
+
+The independent Codex reviewer assessed exact head `c0bd6fb960ec864d5e6c6de71fbab3dbdb6f6160` under the agy-review protocol and confirmed the four hosted findings were addressed.
+
+Its remaining P2 finding was a public documentation mismatch: store reads claimed no synchronization, while reader platform admission invokes root-directory `sync_all` before fencing.
+
+The full feedback and checklist were posted before correction at [the independent review](https://github.com/flyingrobots/keep/pull/164#issuecomment-5963396072).
+
+The documentation correction discloses the blocking directory synchronization and original I/O cause under `Admission`, while preserving the distinction from publication, caller-output flushing and a content-durability promise.
+
+Change kind for that correction: documentation-only; the oracle is the unchanged production call chain `DurableStore::snapshot` → `DurableSnapshot::open` → `FilesystemRetentionSnapshot::load` → `open_version_two` → `admit_linux_profile` → `sync_all`, not an artificial runtime regression.
+
+The initial full local chain passed its corpus, debug/release crash, structure, formatting, feature and Clippy steps, then stopped at an existing xtask test that clones the source repository because the Docker validation copy had no commit to clone.
+
+Creating a local validation-copy commit corrected that environment without changing the source tree: both the pushed `c0bd6fb` and the committed copy have tree `f3bc4733a444af62c945805dcb3eb9c1335fc23a`.
+
+The affected exact law then passed, followed by complete debug/release workspace tests, doctests, documentation, MSRV and fuzz-target check/Clippy (`core-final-validation-corrected.log`, exit zero); the original failure remains in `core-final-validation.log` and is not counted as a product regression or silently retried away.
+
+Current-head hosted checks and independent review outcomes are recorded in the [PR activity](https://github.com/flyingrobots/keep/pull/164); this committed implementation evidence does not substitute for those exact-head gates.
+
+## CodeRabbit fixture follow-up
+
+CodeRabbit's review of `0a19dde68b2e6bf0fd46610b753f7d5974df7c83` raised a live-status wording concern and two test-fixture isolation concerns; it introduced no new production-read finding.
+
+Change kind: test-infrastructure correction and documentation clarification; no production statement, API, format, assertion expectation or storage policy changes.
+
+| Review obligation | Disposition and evidence | Exit condition |
+| --- | --- | --- |
+| Avoid a stale pending-review sentence (`discussion_r4170862136`). | The committed document now points to current PR activity for exact-head status instead of anticipating approval of its own commit. Historical evidence remains pinned. | Current-head review and checks are recorded on the PR. |
+| Avoid tmpfs collisions after PID reuse (`discussion_r4170862139`). | Scratch creation atomically tries bounded deterministic suffixes, skips existing names and never removes a name it did not create. No clock, ambient randomness or dependency is added. | Existing platform laws pass with the initial scratch name deliberately occupied; occupied sentinel files remain unchanged. |
+| Restore cwd on failing isolated locator paths (`discussion_r4170862148`). | A scoped guard attempts restoration on error/unwind, while normal-path restoration remains checked. A child marker alone no longer enables in-process execution: its law name and complete single-law command arguments must match. | Existing debug/release locator laws pass even with an inherited stale child marker; independent inspection confirms guarded cleanup on early exits. |
+
+The tmpfs creation loop admits at most 1,024 candidate names before returning an explicit setup error; this is a finite setup-work cap, not a measured latency guarantee.
+
+A controlled subprocess occupied both the old PID-only path and the revised first-suffix path before executing the existing direct-reader law with that same PID.
+
+The old fixture failed with `AlreadyExists` before reaching its product assertion (`tmpfs-collision-before.log`); the revised fixture reached and passed the unchanged typed platform-refusal assertion (`tmpfs-collision-after.log`), leaving both occupied witnesses intact (`tmpfs-collision-preserved.log`).
+
+That before-state is fixture-setup failure evidence, not a product RED or additional proof of Keep's runtime semantics.
+
+The cwd guard's early-exit coverage is source inspection; normal-path runtime evidence still comes from the existing isolated public locator laws, not a new test of helper choreography.
+
+Focused platform and locator laws pass in debug/release and Clippy passes with warnings denied (`fixture-followup-validation-corrected.log`); an earlier edit-script mismatch left the source unchanged, so the preceding `fixture-followup-validation.log` is not evidence for the revised fixtures.
+
+No test was deleted, and no product expectation was weakened to obtain these passes.
+
+## Landing allocation-contract correction
+
+The fresh landing review found that the README example and snapshot API documentation incorrectly included catalog bytes in the caller's aggregate byte budget. The unchanged loader reads the catalog under `CatalogLength::MAXIMUM` before applying `CatalogRestartPolicy::retained_segment_bytes` to selected segments; decoded indexes and retention records have separate bounds and allocate additionally.
+
+Change kind: documentation-only. The corrected README, API, normative requirements and current evidence distinguish these allocations without changing runtime admission or inventing a total-memory cap. Earlier runtime receipts remain historical evidence; their wording does not establish an aggregate cap covering the catalog. The source oracle is `catalog_restart_loader.rs:67–80`, `catalog_restart_segments.rs:75–85`, and `filesystem_catalog_snapshot.rs:61–96`; compiled examples and documentation checks passed for tree `59a921a04283046c67a1e74ffabefdf6c91512ec`, and independent delta review approved `8794c9e` before the later CodeRabbit findings reopened acceptance. All four hosted jobs subsequently passed for that same head in run `37158167907`. These completed receipts do not transfer approval to a successor; current review and check status is recorded on the PR.
+
+## Landing caller-input error boundary
+
+Change kind: bug fix with correction of an existing erroneous oracle. CodeRabbit's late review of `8794c9ec6a349fabbfaef72f11dcfb47eaae2869` identified that caller-supplied malformed layout records and corrupt committed layouts shared the committed-record error variant. The reference adapter and public variant documentation require distinct boundaries.
+
+The prior combined checksum law is replaced by separate whole-record and range-record laws; neither exact checksum-coordinate assertion nor output-preservation obligation is removed. Each independently fails on the unfixed production source at `8794c9e` with `DurableReadError::LayoutDecode` (`164-caller-decode-red.log`). Both now expect their operation's nested input-decode error; committed catalog decoding keeps the original variant. The copied-Docker `durable_layout_laws` suite passes in debug and release (`164-caller-decode-green.log`). No serialization, stored bytes, successful read behavior or admission policy changes. Final successor review and hosted checks remain separate PR gates.
+
+## Landing diagnostic rendering and review reconciliation
+
+Change kind: bug fix. Public durable store/read wrappers previously printed their source and exposed that same source again through `Error::source`. Controlled public reconstruction, range and absent-store failures reach the repeated-message assertions on unfixed `8794c9e` (`164-diagnostic-red.log`). With only the outer wrapper corrected, both inner wrapper assertions independently fail (`164-diagnostic-inner-red.log`); no earlier assertion masks those checks. Fixed contextual messages preserve the original typed source chain. This claim covers the new durable wrappers, not every older inner error's rendering convention.
+
+The three diagnostic laws pass in copied-Docker debug and release. The first focused Clippy pass then rejected an unquoted `Error::source` doc identifier, after the runtime laws passed; the comment was corrected without changing their oracle. Full candidate validation and independent successor review are separate final gates.
+
+CodeRabbit's terminology clarification is applied across current public allocation claims: the budget covers catalog-selected segment bytes, including bytes backing unretained layouts, and excludes catalog/metadata allocations. The runtime policy field name is unchanged. The earlier completed documentation review is recorded with its actual coordinates above; it is not represented as current successor approval.
+
+The range-corruption law now names unexpected range success in its failure message. The requested fixture extraction is declined: these two small explicit laws independently display normative v1 framing and their checksum oracle. Testing Standards Rule 18 prefers clarity over abstraction or forced duplication; no current framing inconsistency or weakened assertion was demonstrated. Both existing runtime laws remain registered and unchanged in expectation.

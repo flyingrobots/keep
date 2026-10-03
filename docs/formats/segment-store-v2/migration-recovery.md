@@ -44,8 +44,6 @@ only version-2 migration recovery may continue.
 
 The migration recovery boundary admits only these ordered prefixes:
 
-<!-- markdownlint-disable MD013 -->
-
 | State | Required response |
 | --- | --- |
 | no migration artifact | admit exact version 1 |
@@ -55,8 +53,6 @@ The migration recovery boundary admits only these ordered prefixes:
 | complete v2 shape without marker | verify directories and write marker |
 | marker without receipt | reopen full v2 view and publish receipt |
 | exact receipt with optional exact receipt stage | clean the stage and admit complete migration |
-
-<!-- markdownlint-enable MD013 -->
 
 Every row also requires the admission checks in
 [Executable recovery boundary](#executable-recovery-boundary). An intent stage
@@ -99,7 +95,8 @@ Restart compares device and inode identity; mount identity is same-process
 evidence. Whenever an exact intent survives, recovery continues with its
 persisted bytes.
 
-The filesystem laws cover every forward prefix, every strict byte-prefix
-truncation of all three stages, unchanged version-1 bytes, and refusal before
-mutation for corrupt intent and unexpected nested residue. The complete
-restart corruption matrix remains tracked separately in #111.
+The filesystem laws cover every forward prefix, every strict byte-prefix truncation of all three stages and unchanged version-1 bytes. The [restart ambiguity matrix](../../testing-evidence/migration-restart-matrix.md) covers corrupt records, contradictory and byte-equal substituted stages, invalid ordering, copied-root identity, immutable-pool and current-head damage, changed inventory, foreign receipts, unknown names and wrong kinds. Each new refusal retains a complete before/after witness of names, file identities and bytes and checks the existing typed failure boundary. The evidence record distinguishes kernel/filesystem behavior from platform-admission, process-death and power-loss claims.
+
+## Completed namespace admission
+
+After a plan selects `Complete`, recovery calls `StoreMigrationRecoveryStorage::verify_complete` before returning its receipt. The filesystem implementation applies existing version-two namespace admission: reserved GC/recovery entries must match the current protocol, while owned retention state is permitted. A refusal retains the original cause under `StoreMigrationRecoveryError::Observation` and `FilesystemMigrationRecoveryRefusal::NamespacePreflight`, before any recovery effect. This is namespace admission, not verification or recovery of retained content; retention remains the owner of those records and stages.

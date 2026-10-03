@@ -11,9 +11,9 @@ use crate::adapters::CatalogRestartError;
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum FilesystemRetentionSnapshotError {
-    /// The root is not an exactly admitted version-two store.
+    /// The platform profile or exact version-two root admission failed.
     Admission {
-        /// The exact namespace or record refusal.
+        /// The exact platform I/O, namespace, or record failure.
         source: io::Error,
     },
     /// The reader fence could not be acquired.
