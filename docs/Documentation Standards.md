@@ -541,7 +541,7 @@ git diff --check
 git diff --cached --check
 ```
 
-Use `markdownlint-cli2` 0.23.2. The repository-owned configuration records
+Use `markdownlint-cli2` 0.23.3. The repository-owned configuration records
 deliberate rule choices. The Rust checker selects tracked Markdown plus
 nonignored new Markdown, disables configuration globs for that invocation,
 and refuses a different tool version. It also runs `lychee` 0.21.0 offline
