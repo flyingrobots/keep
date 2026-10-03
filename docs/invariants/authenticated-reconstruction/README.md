@@ -1,9 +1,6 @@
 # Authenticated Reconstruction Contract
 
-**Status:** Normative for every Keep operation that claims authenticated
-reconstruction. The public non-durable `ReferenceStore` implements the
-complete-object and exact-range forms. A consolidated durable logical-read
-surface is not yet implemented.
+**Status:** Normative for every Keep operation that claims authenticated reconstruction. The public non-durable `ReferenceStore` implements the complete-object and exact-range forms. Linux `DurableStore` and `DurableSnapshot` compose those read cores with fenced version-two catalog and retained-root admission; final #109 acceptance remains recorded in the [evidence ledger](../../testing-evidence/durable-authenticated-reads.md).
 
 The [rationale](rationale.md) records the governed decisions and rejected
 alternatives. The [requirement ledger](requirements.md) maps each law to its
@@ -208,7 +205,7 @@ range and explicitly carry the narrower range proof posture.
 
 ## Durable reconstruction requirement
 
-A future operation claiming durable logical reconstruction must additionally:
+An operation claiming durable logical reconstruction must additionally:
 
 - bind reads to one admitted immutable snapshot or catalog generation;
 - prevent required supporting evidence from being garbage-collected, deleted,
@@ -220,12 +217,17 @@ A future operation claiming durable logical reconstruction must additionally:
 - separate evidenced refusal from operational failure;
 - preserve the output-visibility rule above.
 
-The current durable segment, catalog, publication, and recovery surfaces do
-not yet form this consolidated high-level `BlobId`-to-writer contract.
-Retention publication now records verified closures as generation-checked
-roots, but nothing collects or fences yet, so no current surface protects or
-releases the evidence closure this operation requires. These lower-level surfaces must not be
-described as an implemented durable logical reconstruction API.
+`DurableStore` pins a fresh `DurableSnapshot` per convenience read. An explicit snapshot holds the shared reader fence, verifies manifest-selected retained closures, and preserves its catalog and liveness coordinates while retention successors publish. Blob reads select a retained anchor; exact-layout reads may use an unretained catalogued layout. Both authenticate exact immutable bytes before output and return the reference receipt together with catalog generation/digest and the selected retention head when present.
+
+`DurableStore::open` returns a result and fixes an absolute locator at construction; changing the process working directory later cannot select a different store through that handle. Failure to resolve the locator preserves the original I/O cause through `DurableStoreError::Locator`, before store admission or output.
+
+Snapshot admission requires the existing writable, case-sensitive local Linux ext4 profile across the root and present version-two protocol directories, retaining the admitted root capability through collection without acquiring writer authority. Valid migration records on an unsupported filesystem do not admit a readable snapshot.
+
+Every selected retention root must match its manifest entry's namespace as well as its root generation and digest; a canonical foreign-namespace root refuses with preserved expected and observed namespace coordinates before a durable snapshot or caller output is exposed.
+
+Admission materializes bounded catalog and segment bytes and verifies broader stored evidence than the logical range core. Each read re-admits those owned bytes and decoded indexes; the core's single authentication pass is not an end-to-end single-hash or minimal physical-I/O guarantee. Reads add no whole-blob output buffer. The caller's aggregate byte budget limits catalog-selected segment bytes only. Catalog bytes have separate format bounds, and decoded indexes and retention records allocate additionally under their own format and record-count limits. Retained-root traversal uses the persisted per-root limits.
+
+The fence coordinates cooperating Keep operations in a managed namespace. Arbitrary concurrent out-of-band mutation is outside that isolation guarantee; exact-byte, no-follow, identity and corruption protections still apply. Actual GC remains absent, so collector evidence demonstrates kernel fence exclusion rather than end-to-end collection. A receipt grants no retention beyond the snapshot lifetime and does not make caller output transactional.
 
 ## Current public evidence
 
@@ -241,12 +243,12 @@ Evidence anchors:
 - [exact logical byte identity](../../adr/0001-exact-logical-byte-identity.md)
 - [identity and physical-storage separation](../../adr/0002-separate-identity-from-physical-storage.md)
 - [`ReferenceStore` contract tests](../../../tests/reference_store_contract.rs)
-- [reconstruction implementation](../../../src/reference/reconstruction.rs)
-- [range-read implementation](../../../src/reference/range_read.rs)
+- [shared reconstruction core](../../../src/authenticated_read/reconstruction.rs)
+- [shared range-read core](../../../src/authenticated_read/range_read_execution.rs)
 - [whole-object refusal laws](../../../tests/streaming_cas/refusal_laws.rs)
 - [range-read refusal laws](../../../tests/range_read_failures.rs)
-- [reconstruction receipt](../../../src/reference/reconstruction_receipt.rs)
-- [range-read receipt](../../../src/reference/range_read_receipt.rs)
+- [reconstruction receipt](../../../src/authenticated_read/reconstruction_receipt.rs)
+- [range-read receipt](../../../src/authenticated_read/range_read_receipt.rs)
 
 ## Consumer rule
 

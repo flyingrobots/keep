@@ -8,6 +8,24 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Durable read diagnostics render their boundary once while preserving each original typed source for error-chain reporters (#109).
+
+- Caller-supplied malformed durable layout records now preserve the reconstruction or range input-decode boundary instead of reporting committed-layout corruption (#109).
+
+- Corrected durable-read allocation documentation: the caller's aggregate byte limit caps catalog-selected segment bytes; catalog bytes and decoded metadata have separate bounds and allocate additionally (#109).
+
+- Clarified the root-directory synchronization and precise admission-time I/O failure performed when opening a durable reader snapshot; the existing platform policy and runtime behavior are unchanged (#109).
+
+- Reference and durable reads now share an inward authentication core and immutable chunk port, preserving public receipts, precise errors and codec admission at the adapter boundary (#109).
+
+- Retention and durable snapshot readers now enforce the existing version-two filesystem profile through the same opened directory capability, rejecting unsupported filesystems without acquiring writer authority (#109).
+
+- `DurableStore::open` now fixes an absolute locator and returns a typed result, preventing later working-directory changes from retargeting a handle; locator failures preserve their original I/O source (#109).
+
+- Selected retention-root reads now refuse a canonical root belonging to another namespace, preserving typed expected/observed namespace digests before durable snapshot admission or output (#109).
+
+- Added an in-progress fenced durable read API with view-bound reconstruction and range receipts; full read-law and Worldline acceptance remains tracked in #109.
+
 - Strengthened writer-lock replacement evidence with a private after-lock scheduling checkpoint, exact refusal and preserved file bytes; production lock ordering and public behavior are unchanged (#169).
 
 - Migration compatibility laws preserve version-one bytes and reject version-one authority at every forward prefix; public version/flag refusal tests and bounded seeded recovery-planner fuzzing extend transition evidence (#112).

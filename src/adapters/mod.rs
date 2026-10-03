@@ -7,6 +7,13 @@
 //! policy.
 
 mod admitted_catalog;
+mod authenticated_read;
+pub use authenticated_read::{RangeReadError, ReconstructionError};
+mod durable;
+pub use durable::{
+    DurableOutcome, DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt,
+    DurableSnapshot, DurableStore, DurableStoreError, DurableView,
+};
 mod admitted_recovery_stage_bytes;
 mod admitted_segment;
 mod admitted_segment_record;

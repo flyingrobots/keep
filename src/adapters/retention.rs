@@ -14,6 +14,10 @@ mod closure_member;
 mod closure_profile_error;
 mod closure_verifier;
 #[cfg(test)]
+mod durable_read_law_tests;
+#[cfg(test)]
+mod durable_view_law_tests;
+#[cfg(test)]
 mod filesystem_recovery_admission_tests;
 #[cfg(test)]
 mod filesystem_retention_anchor_order_prefix_tests;
@@ -164,6 +168,7 @@ mod root_field_decoder;
 mod root_header_decoder;
 mod root_integrity;
 mod root_semantic_header;
+mod selected_root_refusal;
 mod successor_manifest;
 mod transition_disposition;
 mod transition_error;
@@ -177,6 +182,8 @@ mod verified_closure;
 mod filesystem_retention_forward_error_tests;
 mod reader_attempt_limit;
 mod reader_fence;
+#[cfg(all(test, target_os = "linux"))]
+mod reader_platform_law_tests;
 mod recovery_evidence;
 mod recovery_execution;
 #[cfg(test)]
@@ -267,6 +274,7 @@ pub use retention_view_collector::{
 };
 pub use root_decode_error::RetentionRootDecodeError;
 pub use root_encode_error::RetentionRootEncodeError;
+pub use selected_root_refusal::RetentionSelectedRootRefusal;
 pub use transition_disposition::RetentionTransitionDisposition;
 pub use transition_error::RetentionTransitionError;
 pub use transition_planner::plan_retention_transition;

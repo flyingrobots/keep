@@ -40,13 +40,17 @@
 //! namespace transitions while retaining version-1 immutable bytes.
 //! Partial-prefix recovery now plans and resumes lawful migration residue,
 //! returning typed refusals and an ordered execution receipt. Filesystem
-//! retention publication is available; retention restart recovery, immutable
-//! reader snapshots, and garbage collection remain absent.
+//! retention publication, bounded restart recovery and fenced snapshots are
+//! available. [`DurableStore`] composes a fenced snapshot with authenticated
+//! reconstruction and exact-range reads; its snapshot allocation policy is
+//! explicit. Garbage collection remains absent. Complete durable read-law and
+//! Worldline acceptance remains tracked in issue #109.
 
 #[cfg(test)]
 extern crate self as keep;
 
 mod adapters;
+mod authenticated_read;
 mod blob;
 mod catalog;
 mod chunk;
@@ -54,6 +58,11 @@ mod layout;
 mod profile;
 mod reference;
 mod retention;
+
+pub use adapters::{
+    DurableOutcome, DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt,
+    DurableSnapshot, DurableStore, DurableStoreError, DurableView,
+};
 
 pub use adapters::{
     AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedSegment, AdmittedSegmentRecord,
@@ -148,14 +157,15 @@ pub use adapters::{
     RetentionRecoveryOutcome, RetentionRecoveryPlan, RetentionRecoveryReceipt,
     RetentionRecoveryRefusal, RetentionRecoveryStep, RetentionRecoveryStorage,
     RetentionRootDecodeError, RetentionRootEncodeError, RetentionRootStageAssessment,
-    RetentionStageAssessment, RetentionStageAssessments, RetentionStorageBoundary,
-    RetentionStorageError, RetentionStorageProgress, RetentionTransitionDisposition,
-    RetentionTransitionError, RetentionTransitionPreflight, RetentionTransitionPreflightError,
-    RetentionTransitionReadiness, RetentionViewCoordinates, RetentionViewError,
-    RetentionViewSource, VerifiedRetentionClosure, assess_head_stage, assess_manifest_stage,
-    assess_root_stage, collect_retention_view, execute_retention_publication,
-    execute_retention_recovery, plan_retention_recovery, plan_retention_transition,
-    preflight_retention_transition, prepare_retention_publication, verify_retention_closure,
+    RetentionSelectedRootRefusal, RetentionStageAssessment, RetentionStageAssessments,
+    RetentionStorageBoundary, RetentionStorageError, RetentionStorageProgress,
+    RetentionTransitionDisposition, RetentionTransitionError, RetentionTransitionPreflight,
+    RetentionTransitionPreflightError, RetentionTransitionReadiness, RetentionViewCoordinates,
+    RetentionViewError, RetentionViewSource, VerifiedRetentionClosure, assess_head_stage,
+    assess_manifest_stage, assess_root_stage, collect_retention_view,
+    execute_retention_publication, execute_retention_recovery, plan_retention_recovery,
+    plan_retention_transition, preflight_retention_transition, prepare_retention_publication,
+    verify_retention_closure,
 };
 pub use adapters::{
     FilesystemMigrationRecoveryRefusal, FilesystemMigrationResidueKind, MIGRATION_NAMESPACE_PREFIX,
@@ -184,10 +194,11 @@ pub use layout::{
     AdmittedLayout, LayoutEntry, LayoutEntryLimit, LayoutEntryLimitError, LayoutId,
     LayoutIdMismatch, LayoutRecordLength, LayoutValidationError, RangePlan, RangePlanError,
 };
-pub use profile::{RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId};
+pub use profile::{
+    ProfileBoundary, RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId,
+};
 pub use reference::{
-    IngestionAllocation, IngestionError, ProfileBoundary, PublishError, PublishedBlob,
-    RangeReadError, RangeReadReceipt, ReconstructionError, ReconstructionReceipt, ReferenceStore,
+    IngestionAllocation, IngestionError, PublishError, PublishedBlob, ReferenceStore,
     ReferenceStoreCapacity, StagedBlob,
 };
 pub use retention::{
@@ -201,3 +212,6 @@ pub use retention::{
     RetentionProfileAdmissionError, RetentionRoot, RetentionRootDigest, RetentionRootError,
     RootGeneration, RootGenerationError,
 };
+
+pub use adapters::{RangeReadError, ReconstructionError};
+pub use authenticated_read::{RangeReadReceipt, ReconstructionReceipt};

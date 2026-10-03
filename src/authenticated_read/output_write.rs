@@ -56,7 +56,7 @@ fn checked_written(written: u64, incoming: usize) -> Result<u64, OutputWriteErro
 }
 
 #[derive(Debug)]
-pub(super) enum OutputWriteError {
+pub(crate) enum OutputWriteError {
     WriteZero {
         bytes_written: u64,
     },
