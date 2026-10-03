@@ -1,4 +1,7 @@
-//! Framing, integrity, and semantic refusal laws for retention manifests.
+//! Codec laws with public verification classification of every corrupt input.
+
+#[path = "../verification_corruption/observation.rs"]
+mod verification_observation;
 
 use std::io;
 
@@ -16,7 +19,7 @@ fn manifest_framing_and_integrity_have_exact_first_refusals()
     let mut truncated = bytes.clone();
     assert!(truncated.pop().is_some());
     assert!(matches!(
-        AdmittedRetentionManifest::decode(&truncated),
+        verification_decode(&truncated)?,
         Err(RetentionManifestDecodeError::Truncated {
             expected: 296,
             observed: 295,
@@ -26,7 +29,7 @@ fn manifest_framing_and_integrity_have_exact_first_refusals()
     let mut trailing = bytes.clone();
     trailing.push(0);
     assert!(matches!(
-        AdmittedRetentionManifest::decode(&trailing),
+        verification_decode(&trailing)?,
         Err(RetentionManifestDecodeError::TrailingData {
             expected: 296,
             observed: 297,
@@ -39,7 +42,7 @@ fn manifest_framing_and_integrity_have_exact_first_refusals()
         .ok_or_else(|| io::Error::other("frozen manifest is empty"))?;
     *last ^= 1;
     assert!(matches!(
-        AdmittedRetentionManifest::decode(&checksum_corruption),
+        verification_decode(&checksum_corruption)?,
         Err(RetentionManifestDecodeError::ChecksumMismatch { .. })
     ));
 
@@ -50,7 +53,7 @@ fn manifest_framing_and_integrity_have_exact_first_refusals()
     *digest_byte ^= 1;
     refresh_checksum(&mut digest_corruption)?;
     assert!(matches!(
-        AdmittedRetentionManifest::decode(&digest_corruption),
+        verification_decode(&digest_corruption)?,
         Err(RetentionManifestDecodeError::ManifestDigestMismatch { .. })
     ));
     Ok(())
@@ -64,13 +67,13 @@ fn complete_integrity_precedes_manifest_semantics() -> Result<(), Box<dyn std::e
         .ok_or_else(|| io::Error::other("frozen manifest lacks generation bytes"))?
         .fill(0);
     assert!(matches!(
-        AdmittedRetentionManifest::decode(&bytes),
+        verification_decode(&bytes)?,
         Err(RetentionManifestDecodeError::ChecksumMismatch { .. })
     ));
 
     refresh_manifest_digest_and_checksum(&mut bytes)?;
     assert!(matches!(
-        AdmittedRetentionManifest::decode(&bytes),
+        verification_decode(&bytes)?,
         Err(RetentionManifestDecodeError::LivenessGeneration { .. })
     ));
     Ok(())
@@ -86,7 +89,7 @@ fn entry_set_integrity_precedes_nested_root_generation_admission()
     *first_entry_byte ^= 1;
     refresh_manifest_digest_and_checksum(&mut bytes)?;
     assert!(matches!(
-        AdmittedRetentionManifest::decode(&bytes),
+        verification_decode(&bytes)?,
         Err(RetentionManifestDecodeError::EntrySetDigestMismatch { .. })
     ));
 
@@ -97,7 +100,7 @@ fn entry_set_integrity_precedes_nested_root_generation_admission()
     refresh_entry_set_digest(&mut bytes)?;
     refresh_manifest_digest_and_checksum(&mut bytes)?;
     assert!(matches!(
-        AdmittedRetentionManifest::decode(&bytes),
+        verification_decode(&bytes)?,
         Err(RetentionManifestDecodeError::RootGeneration { index: 0, .. })
     ));
     Ok(())
@@ -146,4 +149,25 @@ fn refresh_checksum(bytes: &mut [u8]) -> Result<(), io::Error> {
     hasher.update(preimage);
     checksum_slot.copy_from_slice(hasher.finalize().as_bytes());
     Ok(())
+}
+
+// Size: small. The original typed assertions remain the corruption oracle.
+fn verification_decode(
+    bytes: &[u8],
+) -> Result<
+    Result<AdmittedRetentionManifest<'_>, RetentionManifestDecodeError>,
+    Box<dyn std::error::Error>,
+> {
+    let error = match AdmittedRetentionManifest::decode(bytes) {
+        Ok(value) => return Ok(Ok(value)),
+        Err(error) => error,
+    };
+    let observed = verification_observation::classify(
+        keep::RetentionCurrentStateRefusal::ManifestRefused { source: error },
+        keep::VerificationSubject::PublishedView,
+    )?;
+    let keep::RetentionCurrentStateRefusal::ManifestRefused { source } = observed else {
+        return Err("decoder boundary changed".into());
+    };
+    Ok(Err(source))
 }

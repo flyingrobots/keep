@@ -3,7 +3,11 @@
 use crate::profile::StorageProfileVerificationError;
 use crate::{LayoutId, RetentionClosureVerificationError};
 
-pub(super) const fn map(
+#[expect(
+    clippy::redundant_pub_crate,
+    reason = "the sibling verification adapter shares this lossless profile mapping"
+)]
+pub(crate) const fn map(
     layout: LayoutId,
     error: StorageProfileVerificationError,
 ) -> RetentionClosureVerificationError {

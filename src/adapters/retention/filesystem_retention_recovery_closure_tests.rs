@@ -124,7 +124,7 @@ fn require_refusal(damage: Damage, prefix: usize) -> Result<(), Box<dyn Error>> 
 
 fn matches_damage(damage: Damage, error: Option<&CatalogRestartError>) -> bool {
     match (damage, error) {
-        (Damage::MissingSegment, Some(CatalogRestartError::Io { phase, source })) => {
+        (Damage::MissingSegment, Some(CatalogRestartError::SegmentIo { phase, source, .. })) => {
             *phase == CatalogRestartPhase::OpenSegment && source.kind() == io::ErrorKind::NotFound
         }
         (Damage::MissingCatalog, Some(CatalogRestartError::Io { phase, source })) => {

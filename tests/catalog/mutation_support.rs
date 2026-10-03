@@ -53,6 +53,20 @@ pub(crate) fn assert_catalog_refusal(
         "mutated catalog was admitted",
     )?;
     assert!(predicate(error), "unexpected refusal: {error:?}");
+    // The same corrupted bytes must retain this exact decoder cause through
+    // the public verification ingress, without being relabeled operational.
+    let head = crate::support::decode_hex(
+        include_str!("../../conformance/segment-store/v1/one-zero-head.hex").trim_end(),
+    )?;
+    let report_error = require_error(
+        keep::verify_catalog_bytes(&head, encoded, &[], keep::VerificationDepth::Framing),
+        "corrupt catalog received verification evidence",
+    )?;
+    assert!(
+        matches!(report_error, keep::VerificationError::Refused { refusal: keep::VerificationRefusal::Corrupt { .. }, source: Some(source) } if matches!(source.as_ref(), keep::VerificationSource::Catalog(keep::CatalogRestartError::Catalog { source }) if *source == error)),
+        "verification must preserve the existing exact corruption oracle"
+    );
+
     Ok(())
 }
 

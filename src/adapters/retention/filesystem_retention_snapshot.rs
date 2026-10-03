@@ -13,7 +13,9 @@ use super::{
     ReaderFence, RetentionSelectedRootRefusal, RetentionViewCoordinates, RetentionViewSource,
     collect_retention_view, root_header_decoder,
 };
-use crate::adapters::filesystem_exact_record::{self as exact_record, ExactRecordError};
+use crate::adapters::filesystem_exact_record::{
+    self as exact_record, ExactRecordError, ExactRecordRefusal,
+};
 use crate::adapters::filesystem_platform_profile::root_identity;
 use crate::adapters::filesystem_version_two_admission::require_root_identity;
 use crate::adapters::{
@@ -51,12 +53,12 @@ pub struct FilesystemRetentionSnapshot {
     retention: Option<ObservedRetentionState>,
 }
 
-struct View {
+pub(super) struct View {
     catalog: FilesystemCatalogSnapshot,
     retention: Option<ObservedRetentionState>,
 }
 
-struct Source {
+pub(super) struct Source {
     root: Dir,
     retention: Dir,
     manifests: Dir,
@@ -130,6 +132,19 @@ impl FilesystemRetentionSnapshot {
         policy: CatalogRestartPolicy,
         limit: ReaderAttemptLimit,
     ) -> Result<Self, Error> {
+        Self::load_with(store_root, policy, limit, |source, limit| {
+            collect_retention_view(source, limit)
+                .map_err(|source| Error::View { source })?
+                .map_err(|source| Error::Catalog { source })
+        })
+    }
+
+    pub(super) fn load_with<E: From<Error>>(
+        store_root: &Path,
+        policy: CatalogRestartPolicy,
+        limit: ReaderAttemptLimit,
+        collect: impl FnOnce(&mut Source, ReaderAttemptLimit) -> Result<View, E>,
+    ) -> Result<Self, E> {
         let root = filesystem_platform_profile::open_version_two(store_root)
             .map_err(|source| Error::Admission { source })?;
         filesystem_initialization_namespace::admit_version_two(&root)
@@ -156,9 +171,7 @@ impl FilesystemRetentionSnapshot {
             manifests,
             policy,
         };
-        let view = collect_retention_view(&mut source, limit)
-            .map_err(|source| Error::View { source })?
-            .map_err(|source| Error::Catalog { source })?;
+        let view = collect(&mut source, limit)?;
         Ok(Self {
             _fence: fence,
             roots,
@@ -199,6 +212,9 @@ impl FilesystemRetentionSnapshot {
     /// when the entry is absent, unreadable, or not the selected root.
     /// A namespace contradiction preserves [`RetentionSelectedRootRefusal`]
     /// inside that error's I/O source, including expected and observed digests.
+    /// An observed wrong-kind namespace directory preserves
+    /// [`crate::FilesystemNamespaceRefusal`] with the exact entry kinds.
+    /// The no-follow metadata guard does not make the later open atomic with it.
     pub fn retained_root(
         &self,
         namespace: RetentionNamespaceDigest,
@@ -214,33 +230,49 @@ impl FilesystemRetentionSnapshot {
         else {
             return Ok(None);
         };
-        let directory = self
-            .roots
-            .open_dir_nofollow(pool_name::namespace(namespace))
+        let directory = selected_namespace_directory(&self.roots, namespace)
             .map_err(|source| Error::Root { source })?;
         let name = pool_name::root(entry.root_generation(), entry.root_digest());
         let length = directory
             .symlink_metadata(&name)
             .and_then(|metadata| {
-                usize::try_from(metadata.len()).map_err(|_source| invalid("root length overflow"))
+                if !metadata.is_file() {
+                    return Err(
+                        ExactRecordError::Refused(ExactRecordRefusal::KindOrLength).into_io()
+                    );
+                }
+                usize::try_from(metadata.len()).map_err(|_source| {
+                    selected_refusal(RetentionSelectedRootRefusal::HostLength {
+                        observed: metadata.len(),
+                    })
+                })
             })
             .map_err(|source| Error::Root { source })?;
         if length > root_header_decoder::MAXIMUM_ENCODED_LENGTH {
             return Err(Error::Root {
-                source: invalid("selected root exceeds the format bound"),
+                source: selected_refusal(RetentionSelectedRootRefusal::Length {
+                    maximum: u64::try_from(root_header_decoder::MAXIMUM_ENCODED_LENGTH).map_err(
+                        |source| Error::Root {
+                            source: io::Error::other(source),
+                        },
+                    )?,
+                    observed: u64::try_from(length).map_err(|source| Error::Root {
+                        source: io::Error::other(source),
+                    })?,
+                }),
             });
         }
         let bytes = match exact_record::read_exact_optional(&directory, &name, length) {
             Ok(Some(bytes)) => bytes,
             Ok(None) => {
                 return Err(Error::Root {
-                    source: invalid("selected root is absent"),
+                    source: selected_refusal(RetentionSelectedRootRefusal::Absent),
                 });
             }
             Err(ExactRecordError::Io(source)) => return Err(Error::Root { source }),
             Err(ExactRecordError::Refused(refusal)) => {
                 return Err(Error::Root {
-                    source: invalid_string(format!("selected root refused: {refusal}")),
+                    source: ExactRecordError::Refused(refusal).into_io(),
                 });
             }
         };
@@ -251,7 +283,12 @@ impl FilesystemRetentionSnapshot {
             || root.root().generation() != entry.root_generation()
         {
             return Err(Error::Root {
-                source: invalid("selected root does not decode to the manifest's selection"),
+                source: selected_refusal(RetentionSelectedRootRefusal::Coordinate {
+                    expected_generation: entry.root_generation(),
+                    observed_generation: root.root().generation(),
+                    expected_digest: entry.root_digest(),
+                    observed_digest: root.digest(),
+                }),
             });
         }
         let observed = root.root().namespace().digest();
@@ -270,10 +307,15 @@ impl FilesystemRetentionSnapshot {
     }
 }
 
-fn invalid(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
+fn selected_refusal(refusal: RetentionSelectedRootRefusal) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, refusal)
 }
 
-fn invalid_string(message: String) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
+fn selected_namespace_directory(
+    roots: &Dir,
+    namespace: RetentionNamespaceDigest,
+) -> io::Result<Dir> {
+    let name = pool_name::namespace(namespace);
+    crate::adapters::filesystem_namespace_refusal::require_directory(roots, &name)?;
+    roots.open_dir_nofollow(name)
 }

@@ -58,6 +58,8 @@ mod layout;
 mod profile;
 mod reference;
 mod retention;
+mod segment_digest;
+mod verification;
 
 pub use adapters::{
     DurableOutcome, DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt,
@@ -162,7 +164,7 @@ pub use adapters::{
     RetentionTransitionDisposition, RetentionTransitionError, RetentionTransitionPreflight,
     RetentionTransitionPreflightError, RetentionTransitionReadiness, RetentionViewCoordinates,
     RetentionViewError, RetentionViewSource, VerifiedRetentionClosure, assess_head_stage,
-    assess_manifest_stage, assess_root_stage, collect_retention_view,
+    assess_manifest_stage, assess_root_stage, collect_retention_view, collect_verification_view,
     execute_retention_publication, execute_retention_recovery, plan_retention_recovery,
     plan_retention_transition, preflight_retention_transition, prepare_retention_publication,
     verify_retention_closure,
@@ -180,6 +182,7 @@ pub use adapters::{
     ObservedSegmentStage, RepositoryInitializationStorage, SegmentStageDurabilityEvent,
     SegmentStageObserver,
 };
+pub use adapters::{VerificationError, VerificationSource, verify_catalog_bytes, verify_segment};
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
     ByteRange, ByteRangeError,
@@ -212,6 +215,12 @@ pub use retention::{
     RetentionProfileAdmissionError, RetentionRoot, RetentionRootDigest, RetentionRootError,
     RootGeneration, RootGenerationError,
 };
+pub use verification::{
+    VerificationDepth, VerificationObservation, VerificationRefusal, VerificationReport,
+    VerificationSubject, VerifiedSubject,
+};
 
 pub use adapters::{RangeReadError, ReconstructionError};
 pub use authenticated_read::{RangeReadReceipt, ReconstructionReceipt};
+
+pub use adapters::{FilesystemEntryKind, FilesystemNamespaceRefusal};

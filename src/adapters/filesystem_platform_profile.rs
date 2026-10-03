@@ -134,8 +134,10 @@ fn open_protocol_directory(root: &Dir, name: &str) -> io::Result<Dir> {
     let first = components
         .next()
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "empty protocol name"))?;
+    super::filesystem_namespace_refusal::require_directory(root, first)?;
     let mut current = super::sync_capable_directory::open(root, first)?;
     for component in components {
+        super::filesystem_namespace_refusal::require_directory(&current, component)?;
         current = super::sync_capable_directory::open(&current, component)?;
     }
     Ok(current)

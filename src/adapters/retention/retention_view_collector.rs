@@ -5,24 +5,11 @@ use std::fmt;
 use std::io;
 
 use super::ReaderAttemptLimit;
-use crate::{CatalogDigest, CatalogGeneration, CatalogLength, RetentionHead};
+pub use crate::retention::RetentionViewCoordinates;
 
 #[cfg(test)]
 #[path = "retention_view_coordinate_law_tests.rs"]
 mod coordinate_law_tests;
-
-/// The coordinates both heads name at one instant.
-///
-/// A view is accepted only when the coordinates read before loading it equal
-/// the coordinates read after, so the view belongs to one catalog generation
-/// and one liveness generation.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct RetentionViewCoordinates {
-    /// The catalog `HEAD` coordinate, or `None` when no catalog is published.
-    pub catalog: Option<(CatalogGeneration, CatalogLength, CatalogDigest)>,
-    /// The `retention/HEAD` coordinate, or `None` when no retention head is published.
-    pub retention: Option<RetentionHead>,
-}
 
 /// The reads one reader view needs, in the order the collector calls them.
 pub trait RetentionViewSource {

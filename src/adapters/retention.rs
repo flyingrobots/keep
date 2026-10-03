@@ -129,6 +129,9 @@ mod filesystem_retention_storage_tests;
 mod filesystem_retention_successor_tests;
 #[cfg(test)]
 mod filesystem_retention_test_fixture;
+mod filesystem_retention_verification;
+#[cfg(test)]
+mod filesystem_verification_law_tests;
 #[cfg(test)]
 mod filesystem_version_two_admission_tests;
 mod head_decode_error;
@@ -168,6 +171,7 @@ mod root_field_decoder;
 mod root_header_decoder;
 mod root_integrity;
 mod root_semantic_header;
+mod root_verification;
 mod selected_root_refusal;
 mod successor_manifest;
 mod transition_disposition;
@@ -176,6 +180,18 @@ mod transition_planner;
 mod transition_preflight;
 mod transition_preflight_error;
 mod transition_readiness;
+#[cfg(test)]
+mod verification_namespace_kind_tests;
+#[cfg(test)]
+mod verification_namespace_law_tests;
+#[cfg(test)]
+mod verification_root_kind_tests;
+#[cfg(test)]
+mod verification_selection_law_tests;
+#[cfg(test)]
+mod verification_store_admission_tests;
+#[cfg(test)]
+mod verification_unsupported_depth_tests;
 mod verified_closure;
 
 #[cfg(test)]
@@ -216,6 +232,8 @@ mod stage_history_admission;
 mod stage_prefix_admission;
 mod stage_record_integrity;
 mod stage_root_policy_admission;
+mod verification_observation_error;
+mod verification_view_collector;
 pub use admitted_manifest::AdmittedRetentionManifest;
 pub use admitted_root::AdmittedRetentionRoot;
 pub use canonical_head::CanonicalRetentionHead;
@@ -282,6 +300,10 @@ pub use transition_preflight::{RetentionTransitionPreflight, preflight_retention
 pub use transition_preflight_error::RetentionTransitionPreflightError;
 pub use transition_readiness::RetentionTransitionReadiness;
 pub use verified_closure::VerifiedRetentionClosure;
+
+pub(super) use closure_profile_error::map as profile_verification_refusal;
+
+pub use verification_view_collector::collect_verification_view;
 
 #[cfg(all(test, feature = "repository-tasks"))]
 mod filesystem_retention_migration_completion_tests;

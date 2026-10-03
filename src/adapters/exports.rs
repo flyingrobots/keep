@@ -73,7 +73,6 @@ pub use super::recovery::*;
 pub use super::repository_initialization_storage::RepositoryInitializationStorage;
 pub use super::retention::*;
 pub use super::sealed_segment::SealedSegment;
-pub use super::segment_digest::SegmentDigest;
 pub use super::segment_header::SegmentHeader;
 pub use super::segment_header_error::SegmentHeaderError;
 pub use super::segment_publication::SegmentPublication;
@@ -108,3 +107,6 @@ pub use super::store_initialization_storage::StoreInitializationStorage;
 pub use super::store_migration::*;
 pub use super::writer_lock_acquire_error::WriterLockAcquireError;
 pub use super::writer_lock_acquire_phase::WriterLockAcquirePhase;
+pub use crate::segment_digest::SegmentDigest;
+
+pub use super::filesystem_namespace_refusal::{FilesystemEntryKind, FilesystemNamespaceRefusal};

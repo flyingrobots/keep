@@ -8,6 +8,30 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Retention verification refuses observed file or symlink substitutions of a selected namespace directory as typed corruption, preserving the original selected root evidence (#114).
+
+- Verification preserves typed canonical-namespace and no-follow entry-kind contradictions as corruption while leaving inconclusive observation failures operational (#114).
+
+- Filesystem verification names the missing catalog-selected segment and preserves its digest, failing I/O phase and original cause instead of labeling the present catalog missing (#114).
+
+- Selected-root verification preserves observed non-regular file evidence as typed corruption instead of an inconclusive no-follow-open error (#114).
+
+- Published retention verification rejects unsupported depths before reading selected root evidence, even when that evidence is missing (#114).
+
+- Removed ordinal comparison traits from verification depths; callers use each subject’s explicit supported-depth set (#114).
+
+- Verification classifies typed migration-record and root-identity contradictions as corruption while preserving admission causes and keeping resource or unclassified I/O failures operational (#114).
+
+- Shallow retention-root verification reports no longer claim unused catalog provenance; catalog coordinates are attached only after successful closure verification (#114).
+
+- Added read-only durable verification ingress, exact moving-view conflict witnesses, selected-namespace root reports, and typed selected-root diagnostic sources (#114).
+
+- Added complete-blob and admitted-retention-root verification reports, with catalog provenance for checked blob evidence and successful root closure, preserving exact missing members, identity/profile contradictions, resource failures, and original typed causes (#114).
+
+- Added allocation-free verification reports for already-admitted physical segments and logical chunk/layout records, with explicit subject-specific supported depths (#114).
+
+- Admitted catalog snapshots can report explicit framing, checksum, or catalog-reachability evidence with immutable subject coordinates; unsupported requests refuse without claiming blob completeness or retention closure (#114).
+
 - Durable read diagnostics render their boundary once while preserving each original typed source for error-chain reporters (#109).
 
 - Caller-supplied malformed durable layout records now preserve the reconstruction or range input-decode boundary instead of reporting committed-layout corruption (#109).
