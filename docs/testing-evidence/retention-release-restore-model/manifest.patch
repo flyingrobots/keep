@@ -1,0 +1,15 @@
+diff --git a/src/adapters/retention/filesystem_retention_snapshot.rs b/src/adapters/retention/filesystem_retention_snapshot.rs
+index 751aebc..7cbcc97 100644
+--- a/src/adapters/retention/filesystem_retention_snapshot.rs
++++ b/src/adapters/retention/filesystem_retention_snapshot.rs
+@@ -175,9 +175,7 @@ impl FilesystemRetentionSnapshot {
+     /// The manifest the retention head selects, or `None` when none is published.
+     #[must_use]
+     pub fn manifest(&self) -> Option<&RetentionManifest> {
+-        self.retention
+-            .as_ref()
+-            .map(ObservedRetentionState::manifest)
++        None
+     }
+ 
+     /// Reads and verifies the root the manifest selects for `namespace`.

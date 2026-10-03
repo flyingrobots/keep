@@ -1,0 +1,32 @@
++ git rev-parse 'HEAD^{tree}'
+ee9b32733e943eb40e364822ae88aa83c5490899
++ cargo test --lib --all-features --locked retention_model_tests
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.03s
+     Running unittests src/lib.rs (<restored-target>/debug/deps/keep-09abf1fe30bdfc46)
+
+running 7 tests
+test adapters::retention::retention_model_tests::sequences_starting_with_release_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_a_successor_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_a_retry_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_restore_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_an_initial_publication_of_b_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_a_stale_initial_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_an_initial_publication_of_a_agree_with_the_model ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 347 filtered out; finished in 6.52s
+
++ cargo test --lib --all-features --locked --release retention_model_tests
+    Finished `release` profile [optimized] target(s) in 0.02s
+     Running unittests src/lib.rs (<restored-target>/release/deps/keep-ab9e64645c5a4507)
+
+running 7 tests
+test adapters::retention::retention_model_tests::sequences_starting_with_a_retry_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_a_successor_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_release_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_restore_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_an_initial_publication_of_b_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_an_initial_publication_of_a_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_a_stale_initial_agree_with_the_model ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 347 filtered out; finished in 3.65s
+

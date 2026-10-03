@@ -1,0 +1,13 @@
+diff --git a/src/adapters/retention/filesystem_retention_snapshot.rs b/src/adapters/retention/filesystem_retention_snapshot.rs
+index 751aebc..bf8a02d 100644
+--- a/src/adapters/retention/filesystem_retention_snapshot.rs
++++ b/src/adapters/retention/filesystem_retention_snapshot.rs
+@@ -169,7 +169,7 @@ impl FilesystemRetentionSnapshot {
+     /// The published retention head, or `None` when no generation is published.
+     #[must_use]
+     pub fn retention_head(&self) -> Option<&RetentionHead> {
+-        self.retention.as_ref().map(ObservedRetentionState::head)
++        None
+     }
+ 
+     /// The manifest the retention head selects, or `None` when none is published.

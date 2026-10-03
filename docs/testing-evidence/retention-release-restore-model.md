@@ -18,6 +18,22 @@ Two separate oracle calibrations supplied canonically valid but semantically wro
 
 The unmodified production implementation passes the expanded histories in debug and release. Formatting and warnings-denied Clippy pass. The PR records the immutable candidate SHA, full validation and final hosted checks; historical #99 evidence still describes its earlier, smaller operation alphabet and cannot be relabeled as this expanded campaign.
 
+## Landing calibration of the independent state comparisons
+
+The landing review of `64bbbf915d87e43fa5c902ddeb0d893f246f9af5` required direct falsification of the namespace-map, liveness and selected-root-generation comparisons in addition to the anchor and missing-root evidence above. Three independent copies of that exact source received one production-reader mutation each; the model and its expectations were unchanged. The copied tracked tree before mutation was `ee9b32733e943eb40e364822ae88aa83c5490899`.
+
+| Mutated reader outcome | Patch and observed assertion failure |
+| --- | --- |
+| Published manifest hidden from the reader | [Patch](retention-release-restore-model/manifest.patch); [RED](retention-release-restore-model/manifest-red.txt): the complete namespace map is empty instead of containing namespace A at generation one. |
+| Published retention head hidden from the reader | [Patch](retention-release-restore-model/liveness.patch); [RED](retention-release-restore-model/liveness-red.txt): liveness is zero instead of one. |
+| Selected root re-encoded with its successor generation after the normal read verification | [Patch](retention-release-restore-model/root-generation.patch); [RED](retention-release-restore-model/root-generation-red.txt): selected-root generation is two instead of one. The manifest and liveness comparisons pass before this check fails. |
+
+Each copied variant compiled and exited 101 at the named assertion in `cargo test --lib --all-features --locked retention_model_tests::sequences_starting_with_an_initial_publication_of_a_agree_with_the_model`. The reported full schedule is `[Initial(A), Initial(A), Initial(A)]`, and the failure occurs after its first operation; the reduced witness is one initial publication. These mutations alter production reader outputs, not expected model values or test assertions. They are calibration experiments, not evidence that the unchanged reader has those defects.
+
+The [restored GREEN receipt](retention-release-restore-model/restored-green.txt) records the source tree and successful `cargo test --lib --all-features --locked retention_model_tests` runs in debug and release. Each mutant used a separate copied source and build directory inside Linux aarch64 Docker with pinned Rust 1.96.0 and owned ext4 scratch; the unmodified candidate used its own build directory. The full candidate validation chain also passed before this documentation-only receipt addition. Final hosted checks and exact-head independent review are recorded on the PR. The committed raw receipts normalize only container source/build path prefixes; assertion diagnostics and outcomes are retained. No broad campaign is repeated per diagnostic coordinate, and no mutation is part of the product or test implementation.
+
+Replay a patch only in an isolated copy of the recorded source with its own build output, run the named focused law, and require the specific assertion failure rather than compilation or setup failure. Restore from the unmodified source and run the focused debug/release commands. Existing fixture and enforcement limitations below still apply; calibration is not a new fault-injection, process-death or power-loss guarantee.
+
 ## Execution, replay and limits
 
 Replay `cargo test --lib --all-features --locked retention_model_tests` and its `--release` variant in copied Docker source with pinned Rust 1.96.0. The tests are medium-size filesystem experiments using owned per-history scratch. They retain the existing model fixture's repository-only migration/admission setup, so they verify post-admission retention behavior and do not prove production platform eligibility. No host Rust execution or writable host checkout mount is used.
