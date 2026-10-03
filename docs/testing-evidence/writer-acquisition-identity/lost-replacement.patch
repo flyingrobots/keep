@@ -1,0 +1,10 @@
+--- a/src/adapters/filesystem_writer_lock.rs
++++ b/src/adapters/filesystem_writer_lock.rs
+@@ -182,6 +182,7 @@
+     if observed == expected {
+         return Ok(());
+     }
++    directory.open_with("writer.lock", &lock_options()).and_then(|file| file.set_len(0)).map_err(|source| WriterLockAcquireError::io(WriterLockAcquirePhase::VerifyFileIdentity, source))?;
+     Err(WriterLockAcquireError::io(
+         WriterLockAcquirePhase::VerifyFileIdentity,
+         io::Error::new(

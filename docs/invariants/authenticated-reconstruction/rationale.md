@@ -20,10 +20,7 @@ successful receipt authenticates the complete emitted sequence. Failure may
 leave an untrusted prefix, so consumers that require atomic visibility must
 quarantine output and publish it transactionally after receipt validation.
 
-Current `ReferenceStore` behavior is the executable oracle for non-durable
-complete-object and range forms. It is not evidence that Keep has a durable
-logical reconstruction API. A future durable form must pin one immutable view,
-retain its complete supporting evidence, and bind the view into its result.
+Current `ReferenceStore` behavior is the executable oracle for non-durable complete-object and range forms. The Linux durable adapter has its own public filesystem witnesses and composes the same immutable read cores with catalog, retained-closure and reader-fence admission. It pins the supporting view and binds its coordinates into successful receipts; reference tests alone are not evidence for those filesystem obligations.
 
 ## Governed surfaces
 
@@ -34,7 +31,7 @@ This decision governs:
 - receipt and refusal meaning;
 - output visibility after failure;
 - layout selection and committed layout-to-target binding;
-- the future durable read aperture and evidence-retention obligation; and
+- the durable read aperture and evidence-retention obligation; and
 - the public integration boundary available to consumers.
 
 It does not govern Echo semantics, causal authority, application retry law, or
@@ -86,6 +83,5 @@ is retained under the same contract.
 - Caller-supplied range layouts must resolve through an admitted store view.
 - A failure after output began returns no success receipt; accepted bytes
   remain untrusted.
-- Durable integration remains blocked on a pinned-view consumer capability and
-  evidence retention.
+- Durable reads hold a shared reader fence across output; production GC is still absent, and the fence does not isolate arbitrary raw namespace mutation.
 - Application-specific meaning remains outside Keep core.

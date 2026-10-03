@@ -3,6 +3,8 @@
 #[path = "layout_mutations/support.rs"]
 pub mod layout_mutation_support;
 pub mod support;
+#[path = "verification_corruption/layout_decode.rs"]
+mod verification_decode;
 
 use std::error::Error;
 
@@ -31,7 +33,10 @@ fn every_frozen_mutation_reaches_its_exact_first_failure_phase() -> Result<(), B
             );
             continue;
         }
-        let error = require_error(result, "mutation was unexpectedly admitted")?;
+        let error = verification_decode::classified(require_error(
+            result,
+            "mutation was unexpectedly admitted",
+        )?)?;
         assert_eq!(
             classify(&error),
             Some(mutation.expected_outcome()),
@@ -46,10 +51,10 @@ fn every_frozen_mutation_reaches_its_exact_first_failure_phase() -> Result<(), B
 fn configured_entry_cap_refuses_before_materialization() -> Result<(), Box<dyn Error>> {
     let bytes = layout_record_bytes("max-plus-one-zeros")?;
     let policy = LayoutDecodePolicy::new(LayoutEntryLimit::new(1)?);
-    let error = require_error(
+    let error = verification_decode::classified(require_error(
         AdmittedLayout::decode_record(&bytes, policy),
         "two entries were admitted under a one-entry cap",
-    )?;
+    )?)?;
 
     assert!(matches!(
         error,
@@ -65,13 +70,13 @@ fn configured_entry_cap_refuses_before_materialization() -> Result<(), Box<dyn E
 fn expected_layout_identity_is_checked_after_structural_admission() -> Result<(), Box<dyn Error>> {
     let empty_id = layout_case_field("empty", 10)?.parse::<LayoutId>()?;
     let one_zero_bytes = layout_record_bytes("one-zero")?;
-    let length_error = require_error(
+    let length_error = verification_decode::classified(require_error(
         AdmittedLayout::decode_record(
             &one_zero_bytes,
             LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM).with_expected_id(empty_id),
         ),
         "a different record length matched expected identity",
-    )?;
+    )?)?;
     assert!(matches!(
         length_error,
         LayoutDecodeError::LayoutIdentity {
@@ -85,13 +90,13 @@ fn expected_layout_identity_is_checked_after_structural_admission() -> Result<()
         .ok_or_else(|| invalid_corpus("layout identity binary is empty"))?;
     *last ^= 1;
     let altered_id = LayoutId::parse_binary(&altered_coordinate)?;
-    let digest_error = require_error(
+    let digest_error = verification_decode::classified(require_error(
         AdmittedLayout::decode_record(
             &one_zero_bytes,
             LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM).with_expected_id(altered_id),
         ),
         "a different layout digest matched expected identity",
-    )?;
+    )?)?;
     assert!(matches!(
         digest_error,
         LayoutDecodeError::LayoutIdentity {
@@ -109,13 +114,13 @@ fn earlier_layout_laws_precede_zero_lengths_in_later_entry_decoding() -> Result<
     overwrite(&mut cardinality, 44, 103, bytes_between(&empty, 44, 103)?)?;
     overwrite(&mut cardinality, 152, 156, &[0_u8; 4])?;
     recompute_record_checksum(&mut cardinality)?;
-    let cardinality_error = require_error(
+    let cardinality_error = verification_decode::classified(require_error(
         AdmittedLayout::decode_record(
             &cardinality,
             LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM),
         ),
         "empty cardinality with a zero-length entry was admitted",
-    )?;
+    )?)?;
     assert!(matches!(
         cardinality_error,
         LayoutDecodeError::Validation {
@@ -130,13 +135,13 @@ fn earlier_layout_laws_precede_zero_lengths_in_later_entry_decoding() -> Result<
         .mutated_record()?;
     overwrite(&mut ordering, 284, 288, &[0_u8; 4])?;
     recompute_record_checksum(&mut ordering)?;
-    let ordering_error = require_error(
+    let ordering_error = verification_decode::classified(require_error(
         AdmittedLayout::decode_record(
             &ordering,
             LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM),
         ),
         "an earlier gap was hidden by a later zero-length entry",
-    )?;
+    )?)?;
     assert!(matches!(
         ordering_error,
         LayoutDecodeError::Validation {

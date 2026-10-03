@@ -1,0 +1,5 @@
+# Verification boundary rationale
+
+## Typed namespace observations
+
+Canonical membership and no-follow entry-kind observations belong to filesystem namespace admission, including the earlier platform directory traversal. Their typed source records a demonstrated contradiction; an I/O error alone does not. Verification consumes that evidence rather than parsing messages or broadly equating InvalidData, ELOOP or NotADirectory with corruption. Failed directory iteration remains operational before any membership inference. The shared guard leaves existing no-follow opens and opened-file checks intact and does not make later pathname operations conditional on inode identity. Catalog-selected segment I/O similarly retains its known digest and original cause, so absence identifies the missing evidence without renaming the present catalog. These additive diagnostic types enrich the public error surface; downstream exhaustive matches may need new arms, without changing durable formats or successful behavior.

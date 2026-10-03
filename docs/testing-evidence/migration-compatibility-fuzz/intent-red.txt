@@ -1,0 +1,73 @@
++ cd <isolated-build>
++ CARGO_TARGET_DIR=<isolated-build>
++ cargo test --all-features --locked --test store_migration_compatibility
+   Compiling rustix v1.1.4
+   Compiling linux-raw-sys v0.12.1
+   Compiling io-lifetimes v2.0.4
+   Compiling bitflags v2.13.1
+   Compiling io-lifetimes v3.0.1
+   Compiling proc-macro2 v1.0.107
+   Compiling io-extras v0.19.0
+   Compiling cap-primitives v4.0.2
+   Compiling shlex v2.0.1
+   Compiling quote v1.0.47
+   Compiling once_cell v1.21.4
+   Compiling find-msvc-tools v0.1.9
+   Compiling unicode-ident v1.0.24
+   Compiling ambient-authority v0.0.2
+   Compiling maybe-owned v0.3.4
+   Compiling ipnet v2.12.0
+   Compiling cap-std v4.0.2
+   Compiling cap-fs-ext v4.0.2
+   Compiling clap_lex v1.1.0
+   Compiling cfg-if v1.0.4
+   Compiling cc v1.3.0
+   Compiling libc v0.2.186
+   Compiling anstyle v1.0.14
+   Compiling arrayref v0.3.9
+   Compiling arrayvec v0.7.8
+   Compiling constant_time_eq v0.4.2
+   Compiling condtype v1.3.0
+   Compiling regex-lite v0.1.9
+   Compiling allocation-counter v0.8.1
+   Compiling clap_builder v4.6.2
+   Compiling syn v2.0.119
+   Compiling blake3 v1.8.5
+   Compiling clap v4.6.4
+   Compiling rustix-linux-procfs v0.1.1
+   Compiling fs-set-times v0.20.3
+   Compiling divan-macros v0.1.21
+   Compiling keep v0.0.0 (<isolated-build>)
+   Compiling divan v0.1.21
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.37s
+     Running tests/store_migration_compatibility.rs (<isolated-build>/debug/deps/store_migration_compatibility-fbb66f7c5fa9ff33)
+
+running 2 tests
+test unsupported_migration_versions_refuse_with_exact_coordinates ... FAILED
+test every_unknown_mandatory_flag_refuses_without_downgrade ... FAILED
+
+failures:
+
+---- unsupported_migration_versions_refuse_with_exact_coordinates stdout ----
+
+thread 'unsupported_migration_versions_refuse_with_exact_coordinates' (2069453) panicked at tests/store_migration_compatibility.rs:36:9:
+assertion `left == right` failed
+  left: Some(ChecksumMismatch { expected: [133, 68, 127, 122, 231, 209, 183, 129, 12, 27, 150, 206, 179, 58, 125, 26, 91, 117, 149, 153, 171, 142, 116, 148, 187, 207, 21, 50, 125, 116, 53, 155], observed: [123, 236, 16, 204, 140, 30, 239, 90, 176, 232, 232, 182, 163, 50, 64, 187, 162, 145, 37, 45, 66, 99, 20, 125, 241, 52, 6, 46, 183, 13, 63, 31] })
+ right: Some(UnsupportedVersion { expected: 2, observed: 0 })
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- every_unknown_mandatory_flag_refuses_without_downgrade stdout ----
+
+thread 'every_unknown_mandatory_flag_refuses_without_downgrade' (2069452) panicked at tests/store_migration_compatibility.rs:74:9:
+assertion `left == right` failed
+  left: Some(ChecksumMismatch { expected: [146, 191, 58, 134, 238, 87, 46, 110, 169, 158, 196, 30, 241, 211, 86, 58, 134, 88, 230, 64, 167, 53, 64, 238, 64, 23, 23, 129, 132, 179, 158, 13], observed: [123, 236, 16, 204, 140, 30, 239, 90, 176, 232, 232, 182, 163, 50, 64, 187, 162, 145, 37, 45, 66, 99, 20, 125, 241, 52, 6, 46, 183, 13, 63, 31] })
+ right: Some(UnsupportedFlags { observed: 1 })
+
+
+failures:
+    every_unknown_mandatory_flag_refuses_without_downgrade
+    unsupported_migration_versions_refuse_with_exact_coordinates
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--test store_migration_compatibility`

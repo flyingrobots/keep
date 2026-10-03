@@ -60,7 +60,7 @@ fn require_refusal(damage: Damage) -> Result<(), Box<dyn Error>> {
         .get_ref()
         .and_then(|source| source.downcast_ref::<CatalogRestartError>());
     let exact = match (damage, restart) {
-        (Damage::Missing, Some(CatalogRestartError::Io { phase, source })) => {
+        (Damage::Missing, Some(CatalogRestartError::SegmentIo { phase, source, .. })) => {
             *phase == CatalogRestartPhase::OpenSegment && source.kind() == io::ErrorKind::NotFound
         }
         (Damage::Corrupt, Some(CatalogRestartError::Segment { source, .. })) => matches!(

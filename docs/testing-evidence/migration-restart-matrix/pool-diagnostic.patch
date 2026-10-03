@@ -1,0 +1,50 @@
+diff --git a/src/adapters/store_migration/filesystem_migration_restart_test_fixture.rs b/src/adapters/store_migration/filesystem_migration_restart_test_fixture.rs
+--- a/src/adapters/store_migration/filesystem_migration_restart_test_fixture.rs
++++ b/src/adapters/store_migration/filesystem_migration_restart_test_fixture.rs
+@@ -41 +41 @@ pub(super) fn refusal(root: &Path) -> Result<Box<dyn Error>, Box<dyn Error>> {
+-    Ok(error)
++    Ok(wrong_diagnostic(error))
+@@ -89,0 +90,43 @@ fn visit(root: &Path, relative: &Path, entries: &mut Witness) -> Result<(), Box<
++
++// Calibration only: replace the observed refusal after the real restart and
++// unchanged complete witness check, preserving relevant outer error boundaries.
++fn wrong_diagnostic(error: Box<dyn Error>) -> Box<dyn Error> {
++    use super::{
++        FilesystemMigrationAuthorityError as Authority, FilesystemMigrationInventoryError as Inventory,
++        StoreMigrationFixedStage, StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError,
++    };
++    use crate::adapters::{PublicationHeadDecodeError, RecoveryPoolNameError};
++    let error = match error.downcast::<StoreMigrationRecoveryError>() {
++        Ok(_) => return Box::new(StoreMigrationRecoveryError::Ambiguity {
++            source: StoreMigrationRecoveryAmbiguity::StageOverlong {
++                stage: StoreMigrationFixedStage::Intent, observed: 0,
++            },
++        }),
++        Err(error) => error,
++    };
++    let authority = match error.downcast::<Authority>() {
++        Ok(authority) => *authority,
++        Err(error) => return error,
++    };
++    Box::new(match authority {
++        Authority::Namespace { .. } => Authority::Namespace {
++            source: std::io::Error::new(std::io::ErrorKind::PermissionDenied, "calibrated wrong namespace cause"),
++        },
++        Authority::Head { .. } => Authority::Head {
++            source: PublicationHeadDecodeError::InvalidMagic { observed: [0; 16] },
++        },
++        Authority::Inventory { source } => Authority::Inventory {
++            source: match source {
++                Inventory::Artifact { pool, name, source } => Inventory::Artifact {
++                    pool: match pool { super::MigrationInventoryPool::Segments => super::MigrationInventoryPool::Catalogs, super::MigrationInventoryPool::Catalogs => super::MigrationInventoryPool::Segments }, name, source,
++                },
++                Inventory::Name { pool, name, .. } => Inventory::Name {
++                    pool, name,
++                    source: RecoveryPoolNameError::WrongLength { expected: 0, observed: 0 },
++                },
++                source => source,
++            },
++        },
++        authority => authority,
++    })
++}
