@@ -14,6 +14,7 @@ mod blob_id_binary;
 mod blob_id_binary_error;
 mod blob_id_text;
 mod blob_id_text_error;
+mod blob_verification;
 mod canonical_catalog;
 mod canonical_publication_head;
 mod catalog_admission;
@@ -232,6 +233,8 @@ mod sync_capable_directory;
 #[cfg(test)]
 #[path = "../../tests/support/mod.rs"]
 mod test_support;
+mod verification_admission;
+mod verification_error;
 mod writer_lock_acquire_error;
 mod writer_lock_acquire_phase;
 
@@ -241,3 +244,5 @@ use catalog_encoding_entry::CatalogEncodingEntry;
 use catalog_entries::CatalogEntries;
 use catalog_record_binding::CatalogRecordBinding;
 use decoded_catalog_entry::DecodedCatalogEntry;
+
+pub use verification_error::{VerificationError, VerificationSource};

@@ -1,6 +1,7 @@
 //! This module owns read-only reports constructed after evidence admission.
 
 use super::{VerificationDepth, VerificationSubject};
+use crate::{CatalogDigest, CatalogGeneration};
 
 /// Evidence established for one subject, with no public construction or upgrade.
 ///
@@ -62,6 +63,7 @@ impl VerifiedSubject {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct VerificationReport {
     requested: VerificationDepth,
+    catalog: Option<(CatalogGeneration, CatalogDigest)>,
     subject: VerifiedSubject,
 }
 
@@ -76,12 +78,29 @@ impl VerificationReport {
         std::slice::from_ref(&self.subject)
     }
 
+    /// Returns the exact immutable catalog used by an operation, when applicable.
+    ///
+    /// This coordinate is evidence provenance, not a live fence or retention grant.
+    pub const fn catalog(&self) -> Option<(CatalogGeneration, CatalogDigest)> {
+        self.catalog
+    }
+
+    pub(crate) const fn in_catalog(
+        mut self,
+        generation: CatalogGeneration,
+        digest: CatalogDigest,
+    ) -> Self {
+        self.catalog = Some((generation, digest));
+        self
+    }
+
     pub(crate) const fn established(
         subject: VerificationSubject,
         depth: VerificationDepth,
     ) -> Self {
         Self {
             requested: depth,
+            catalog: None,
             subject: VerifiedSubject { subject, depth },
         }
     }

@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Added catalog-bound complete-blob and admitted-retention-root verification reports, preserving exact missing members, identity/profile contradictions, resource failures, and original typed causes (#114).
+
 - Added allocation-free verification reports for already-admitted physical segments and logical chunk/layout records, with explicit subject-specific supported depths; full durable verification remains in progress under #114.
 
 - Admitted catalog snapshots can report explicit framing, checksum, or catalog-reachability evidence with immutable subject coordinates; unsupported requests refuse without claiming blob completeness or retention closure (#114, initial report slice).

@@ -1,4 +1,8 @@
 //! This module owns evidence reporting over an already admitted catalog view.
+#![expect(
+    clippy::result_large_err,
+    reason = "bounded full diagnostic coordinates remain inline instead of adding refusal allocations"
+)]
 
 use super::CatalogSnapshot;
 use crate::{VerificationDepth, VerificationRefusal, VerificationReport, VerificationSubject};
@@ -43,6 +47,7 @@ impl CatalogSnapshot<'_, '_, '_> {
                 supported: SUPPORTED,
             });
         }
-        Ok(VerificationReport::established(subject, requested))
+        Ok(VerificationReport::established(subject, requested)
+            .in_catalog(self.generation(), self.catalog_digest()))
     }
 }

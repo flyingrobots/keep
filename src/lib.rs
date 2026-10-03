@@ -169,6 +169,7 @@ pub use adapters::{
     StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,
     StoreMigrationStageDecodeError, plan_store_migration_recovery, recover_store_migration,
 };
+pub use adapters::{VerificationError, VerificationSource};
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
     ByteRange, ByteRangeError,
@@ -201,6 +202,6 @@ pub use retention::{
     RootGeneration, RootGenerationError,
 };
 pub use verification::{
-    VerificationDepth, VerificationRefusal, VerificationReport, VerificationSubject,
-    VerifiedSubject,
+    VerificationDepth, VerificationObservation, VerificationRefusal, VerificationReport,
+    VerificationSubject, VerifiedSubject,
 };

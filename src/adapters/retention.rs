@@ -164,6 +164,7 @@ mod root_field_decoder;
 mod root_header_decoder;
 mod root_integrity;
 mod root_semantic_header;
+mod root_verification;
 mod successor_manifest;
 mod transition_disposition;
 mod transition_error;
@@ -274,3 +275,5 @@ pub use transition_preflight::{RetentionTransitionPreflight, preflight_retention
 pub use transition_preflight_error::RetentionTransitionPreflightError;
 pub use transition_readiness::RetentionTransitionReadiness;
 pub use verified_closure::VerifiedRetentionClosure;
+
+pub(super) use closure_profile_error::map as profile_verification_refusal;

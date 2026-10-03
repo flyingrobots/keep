@@ -4,11 +4,13 @@
 //! infer a different subject's properties, publication, or retention authority.
 
 mod depth;
+mod observation;
 mod refusal;
 mod report;
 mod subject;
 
 pub use depth::VerificationDepth;
+pub use observation::VerificationObservation;
 pub use refusal::VerificationRefusal;
 pub use report::{VerificationReport, VerifiedSubject};
 pub use subject::VerificationSubject;

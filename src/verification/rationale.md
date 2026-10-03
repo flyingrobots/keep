@@ -29,3 +29,9 @@ Segment reports certify only physical framing/checksum evidence; chunk and layou
 Logical-record reports use their admitted immutable payload evidence without claiming catalog membership or publication, including records prepared for writing but not persisted.
 
 The supported-depth matrix is explicit per subject, and reporting never uses enum ordering to accept a request.
+
+Logical verification now names its exact catalog provenance and constructs a report only after the requested work succeeds; no failing anchor can return a root-closure report.
+
+Blob discovery uses canonical layout order, matching the distinction between multiple lawful representations and conflicting evidence; it holds only one decoded layout at a time rather than constructing an additional whole-catalog index.
+
+The semantic refusal keeps bounded coordinates inline; narrowly scoped Clippy expectations preserve precise diagnostics without introducing extra allocation solely to reduce an error enum's stack footprint. Original adapter causes are boxed only on error and remain typed.

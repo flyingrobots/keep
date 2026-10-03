@@ -1,4 +1,8 @@
 //! This module owns evidence reporting over an already admitted segment.
+#![expect(
+    clippy::result_large_err,
+    reason = "bounded full diagnostic coordinates remain inline instead of adding refusal allocations"
+)]
 
 use super::AdmittedSegment;
 use crate::{VerificationDepth, VerificationRefusal, VerificationReport, VerificationSubject};

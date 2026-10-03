@@ -100,3 +100,37 @@ The execution receipts are `segment-first-check.log`, `segment-release-related-v
 Per-test resource enforcement remains the previously disclosed repository gap; allocation assertions measure reporting after admission, not total admission memory or process RSS.
 
 No existing runtime expectations were changed or tests removed, and the full durable failure/retention/aggregate and memory-ceiling obligations remain open.
+
+## Complete blob and admitted-root evidence
+
+Change kind: new feature, based on `d65c845a05a96bdf5f724c79f4a0aa211fdb1ca9`; these APIs did not exist on the parent, so a parent compile failure is not claimed as behavioral RED.
+
+The public `blob_verification` suite checks requested and achieved evidence, exact catalog provenance, canonical root coordinates, incomplete closure, absent blobs, contradictory complete blob identities, profile replay, unsupported-depth refusal, and resource-failure classification with original typed causes.
+
+The specified oracles are the subject/depth contract, the frozen one-zero layout, a one-one logical target paired with one-zero chunk bytes, and the permanent `profile-boundary-mismatch` corpus witness whose required/replayed boundary lengths are 262143 and 262144.
+
+All law bodies are small in-memory experiments; they use admitted segment/catalog records and real verification operations, with no sleeps, random schedule, ambient filesystem, network, clock or product mutation. Resource-ceiling enforcement remains the previously disclosed repository gap; classification tests are not a claim that a per-test sandbox has been implemented.
+
+| Protected claim | Calibration | Observed runtime failure |
+| --- | --- | --- |
+| Complete logical closure must execute. | Bypass blob closure while retaining callable production code. | Missing-chunk, wrong-identity and false-profile laws refuse the unexpected success. |
+| Root closure must execute before certification. | Skip root closure verification. | Missing-layout and resource-limit laws refuse the unexpected success. |
+| Each subject admits only its supported depths. | Disable blob/root policy guards independently. | Exact unsupported-depth laws fail. |
+| Reports retain catalog provenance. | Clear the catalog coordinate during report construction. | Blob/root report assertions fail with `None` instead of the exact coordinate. |
+| Achieved depth cannot be escalated. | Set achieved depth to `SnapshotBinding`. | Blob/root and shallow-evidence assertions fail. |
+| Expected and observed identities are not interchangeable. | Swap the identity coordinates in corruption mapping. | Exact complete-blob contradiction assertion fails. |
+| The original typed cause survives classification. | Remove the closure cause from refusals. | Missing-chunk, complete-blob and profile-source assertions fail. |
+| Resource refusal is not corruption. | Classify the closure limit as a content contradiction. | The operational-limit law fails. |
+| Correct bytes still require registered profile replay. | Bypass feed/finish checks while preserving complete hashing. | The permanent false-profile law fails. |
+
+The calibration ran in a separate copied Docker source tree, restoring the changed file after each isolated mutation and cleaning the Keep package's artifacts before recompilation; dependencies were reusable, while changed Keep artifacts were not accepted from cache. Every listed RED compiled and failed in the named runtime law. The candidate source was never mutated.
+
+The first calibration script stopped after a valid blob-closure runtime RED because `rg` was unavailable inside the container; the corrected remainder used `grep`. Both logs and the first valid RED are preserved. Initial empty-catalog setup incorrectly supplied an unreferenced empty segment and failed before verification; its corrected fixture supplies no segments. A separate wrong test-module path failed module resolution and is also excluded from product RED evidence.
+
+Raw receipts include `closure-laws-first.log`, `closure-laws-corrected.log`, `closure-clippy-corrected.log`, `closure-laws-complete.log`, `closure-laws-complete-corrected.log`, `closure-calibration.log`, `closure-calibration-remainder.log`, and each changed source, original source, build output and exit code under `closure-mutants`.
+
+Replay the focused suite with `cargo test --locked --test blob_verification` and its `--release` counterpart in the copied Linux arm64 Rust 1.96.0 Docker environment. Related catalog, segment and closure laws remain unchanged; no tests were deleted or prior success expectations weakened.
+
+This evidence establishes operations over admitted immutable views, not raw filesystem failure classification, publication-selected retention, aggregate reports, the catalog-ceiling memory bound, process-death recovery, or final exact-head review and CI for the complete #114 candidate. Those remaining obligations are still open and implementation continues within the same PR.
+
+After restoring the candidate, the blob, catalog, segment and existing retention-closure suites passed in debug and release, and all ordinary and compile-fail doctests passed. The first post-calibration command then stopped at the nonexistent `source-check` alias; the corrected `cargo xtask source-structure-check` and formatting check passed separately. All-target/all-feature Clippy with warnings denied passed after the focused suite. The corrected structure receipt is `closure-structure-corrected.log`; these local receipts do not replace the full validation chain on the final candidate.

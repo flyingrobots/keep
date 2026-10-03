@@ -19,15 +19,17 @@ Reports contain no plaintext, keys or filesystem paths and convey no publication
 | `AdmittedSegment::verify` | Exact physical segment digest | `Framing`, `Checksum` | The admitted immutable segment's physical representation; logical claims require record-specific reports. |
 | `AdmittedSegmentRecord::verify` for a chunk | Exact `ChunkId` | `Framing`, `Checksum`, `ChunkIdentity` | That record's complete chunk bytes; no blob or profile-boundary claim. |
 | `AdmittedSegmentRecord::verify` for a layout | Exact `LayoutId` | `Framing`, `Checksum`, `LayoutIdentity` | Canonical layout bytes and identity; no requirement that referenced chunks exist. |
+| `CatalogSnapshot::verify_blob` | Named logical blob in one catalog | `Framing`, `Checksum`, `ChunkIdentity`, `LayoutIdentity`, `CompleteBlobIdentity` | Canonical layout discovery; chunk presence at chunk depth; full profile replay and logical hash at complete depth. |
+| `AdmittedRetentionRoot::verify` | Exact namespace, root generation and root digest | `Framing`, `Checksum`, `RetentionClosure` | Closure depth checks every anchor against the supplied catalog and its admitted limits. |
 | `CatalogSnapshot::verify` | Selected catalog generation and digest | `Framing`, `Checksum`, `CatalogReachability` | Exact catalog-to-record bindings; no complete logical or retained closure claim. |
 
-Every other depth returns `VerificationRefusal::Unsupported` with the exact subject, request and supported set; the operation neither downgrades the request nor returns a success report.
+Every other depth returns `VerificationRefusal::Unsupported` (wrapped by `VerificationError` for blob/root operations) with the exact subject, request and supported set; the operation neither downgrades the request nor returns a success report.
 
 `SnapshotBinding` remains unsupported until its separate protocol exists; catalog/retention coordinates must not be mislabeled as that future proof.
 
 ## Costs and admission boundary
 
-Each current reporting call is constant time, allocates no heap memory, performs no I/O, does not block, and neither mutates nor synchronizes storage.
+Reporting physical segment, logical record and catalog evidence is constant time and allocation-free; shallow root reporting has the same costs. Blob discovery decodes catalogued layouts in canonical identity order, retaining at most one decoded layout at a time. Chunk verification looks up every referenced member; complete blob verification additionally streams every selected byte through profile replay and complete identity calculation. Retention closure uses its existing checked limits, an ordered member index bounded by the root node limit, and one decoded layout at a time. These operations perform no I/O, mutate no persistent bytes, and synchronize nothing.
 
 These costs exclude prerequisite admission: segment admission verifies all records, checksums and identities with bounded duplicate-detection allocation; layout record admission may allocate bounded layout metadata; catalog admission binds its entries to admitted segment records.
 
@@ -37,8 +39,16 @@ Records prepared for publication provide the same logical proof over their canon
 
 ## Remaining durable contract
 
-Raw durable loading-to-report failure classification, missing/corrupt/ambiguous/operational outcomes with preserved causes, complete-blob and retention reports, aggregate per-subject reports, and the catalog-ceiling memory campaign remain required by the [closure ledger](../../audits/114-durable-verification-scope.md).
+Raw durable loading-to-report failure classification, published-retention namespace selection, aggregate per-subject reports, and the catalog-ceiling memory campaign remain required by the [closure ledger](../../audits/114-durable-verification-scope.md).
 
 No serialization, repair, quarantine, GC execution or new durable report format is introduced here.
 
 [Evidence and calibration](../../testing-evidence/durable-verification.md) distinguish runtime laws, static/API restrictions and unimplemented acceptance obligations.
+
+## Logical refusal contract
+
+Blob and root verification distinguish missing catalog members, demonstrated contradictions, unsupported requests, and operational failures without returning partial reports. Original layout or closure causes retain their typed coordinates. Resource exhaustion is operational, not evidence of corruption.
+
+The report preserves the catalog generation/digest used by catalog, blob and root operations; this provenance is not a live fence. Multiple valid layouts for a blob are representations, not automatically ambiguity: discovery selects the first canonical identity.
+
+The refusal vocabulary contains bounded conflicting candidates, but the admitted immutable-view operations do not manufacture an ambiguity outcome merely to exercise that variant; durable observation classification remains part of the unfinished contract.

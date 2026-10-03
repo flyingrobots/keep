@@ -1,7 +1,10 @@
 //! This module owns the coordinates naming a verification subject.
 
 use crate::segment_digest::SegmentDigest;
-use crate::{CatalogDigest, CatalogGeneration, ChunkId, LayoutId};
+use crate::{
+    BlobId, CatalogDigest, CatalogGeneration, ChunkId, LayoutId, RetentionNamespaceDigest,
+    RetentionRootDigest, RootGeneration,
+};
 
 /// Subject to which a verification claim or refusal applies.
 ///
@@ -10,6 +13,21 @@ use crate::{CatalogDigest, CatalogGeneration, ChunkId, LayoutId};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum VerificationSubject {
+    /// A logical blob requested independently of its physical realization.
+    Blob {
+        /// Complete logical byte identity.
+        identity: BlobId,
+    },
+    /// An exact canonical retention root, without publication authority.
+    RetentionRoot {
+        /// Namespace authenticated by the root bytes.
+        namespace: RetentionNamespaceDigest,
+        /// Root generation authenticated by those same bytes.
+        generation: RootGeneration,
+        /// Exact canonical root digest.
+        digest: RetentionRootDigest,
+    },
+
     /// One exact immutable segment, without a publication or retention claim.
     Segment {
         /// Verified physical segment digest.

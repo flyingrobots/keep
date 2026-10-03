@@ -38,7 +38,7 @@ These are inspected implementation boundaries, not new execution receipts.
 
 ## Closure ledger
 
-Catalog, segment and logical-record reporting now have [runtime and static/API evidence](../testing-evidence/durable-verification.md); every full-issue obligation below remains open until its entire exit condition is met.
+Catalog, segment, logical-record, complete-blob and admitted-root reporting now have [runtime and static/API evidence](../testing-evidence/durable-verification.md); every full-issue obligation below remains open until its entire exit condition is met.
 
 | Obligation | Required implementation boundary | Concrete exit condition |
 | --- | --- | --- |
