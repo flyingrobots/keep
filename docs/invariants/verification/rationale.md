@@ -1,3 +1,4 @@
+# Verification boundary rationale
 
 ## Typed namespace observations
 

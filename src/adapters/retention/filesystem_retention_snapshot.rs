@@ -212,6 +212,9 @@ impl FilesystemRetentionSnapshot {
     /// when the entry is absent, unreadable, or not the selected root.
     /// A namespace contradiction preserves [`RetentionSelectedRootRefusal`]
     /// inside that error's I/O source, including expected and observed digests.
+    /// An observed wrong-kind namespace directory preserves
+    /// [`crate::FilesystemNamespaceRefusal`] with the exact entry kinds.
+    /// The no-follow metadata guard does not make the later open atomic with it.
     pub fn retained_root(
         &self,
         namespace: RetentionNamespaceDigest,
@@ -227,9 +230,7 @@ impl FilesystemRetentionSnapshot {
         else {
             return Ok(None);
         };
-        let directory = self
-            .roots
-            .open_dir_nofollow(pool_name::namespace(namespace))
+        let directory = selected_namespace_directory(&self.roots, namespace)
             .map_err(|source| Error::Root { source })?;
         let name = pool_name::root(entry.root_generation(), entry.root_digest());
         let length = directory
@@ -308,4 +309,13 @@ impl FilesystemRetentionSnapshot {
 
 fn selected_refusal(refusal: RetentionSelectedRootRefusal) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, refusal)
+}
+
+fn selected_namespace_directory(
+    roots: &Dir,
+    namespace: RetentionNamespaceDigest,
+) -> io::Result<Dir> {
+    let name = pool_name::namespace(namespace);
+    crate::adapters::filesystem_namespace_refusal::require_directory(roots, &name)?;
+    roots.open_dir_nofollow(name)
 }

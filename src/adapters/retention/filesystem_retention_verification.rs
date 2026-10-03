@@ -176,6 +176,8 @@ fn root_error(
             source: Some(Box::new(VerificationSource::Retention(error))),
         };
     }
+    let namespace =
+        cause.and_then(|cause| cause.downcast_ref::<crate::FilesystemNamespaceRefusal>());
     let root = cause.and_then(|cause| cause.downcast_ref::<RetentionRootDecodeError>());
     let exact = cause.and_then(|cause| cause.downcast_ref::<ExactRecordError>());
     let corrupt = matches!(
@@ -187,7 +189,11 @@ fn root_error(
         )
     ) || root
         .is_some_and(|source| !matches!(source, RetentionRootDecodeError::Allocation { .. }))
-        || matches!(exact, Some(ExactRecordError::Refused(_)));
+        || matches!(exact, Some(ExactRecordError::Refused(_)))
+        || matches!(
+            namespace,
+            Some(crate::FilesystemNamespaceRefusal::WrongKind { .. })
+        );
     if corrupt {
         VerificationError::Refused {
             refusal: verification_admission::structural(subject),

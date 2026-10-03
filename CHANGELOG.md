@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Retention verification refuses observed file or symlink substitutions of a selected namespace directory as typed corruption, preserving the original selected root evidence (#114).
+
 - Verification preserves typed canonical-namespace and no-follow entry-kind contradictions as corruption while leaving inconclusive observation failures operational (#114).
 
 - Filesystem verification names the missing catalog-selected segment and preserves its digest, failing I/O phase and original cause instead of labeling the present catalog missing (#114).
