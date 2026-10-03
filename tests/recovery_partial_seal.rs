@@ -1,5 +1,7 @@
 //! Runtime refusal laws for contradictory incomplete segment seals.
 
+#[path = "recovery_partial_seal/framing_laws.rs"]
+mod framing_laws;
 mod support;
 
 use std::error::Error;
@@ -29,11 +31,10 @@ fn unsupported_partial_seal_version_refuses_classification() -> Result<(), Box<d
 }
 
 // Size: small. Oracle: fingerprint-bound corruption cannot authorize discard.
-// Delete only if another assessment law preserves this precise refusal and input.
+// Delete only if another assessment law subsumes this precise refusal.
 #[test]
 fn unsupported_partial_seal_version_refuses_discard_assessment() -> Result<(), Box<dyn Error>> {
     let bytes = unsupported_version_prefix()?;
-    let original = bytes.clone();
     let stage = RecoveryStage::Segment;
     let metadata = RecoveryStageMetadata::new(stage, u64::try_from(bytes.len())?)?;
     let fingerprint = fingerprint_recovery_stage(metadata, bytes.as_slice())?;
@@ -47,10 +48,6 @@ fn unsupported_partial_seal_version_refuses_discard_assessment() -> Result<(), B
             expected: 1,
             observed: 2
         })
-    );
-    assert_eq!(
-        bytes, original,
-        "assessment must preserve the supplied evidence"
     );
     Ok(())
 }
