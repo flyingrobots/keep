@@ -1,0 +1,117 @@
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.32s
+     Running tests/recovery_partial_seal.rs (<isolated-build>/debug/deps/recovery_partial_seal-50cc4959e316d0ba)
+
+running 3 tests
+test unsupported_partial_seal_version_refuses_classification ... ok
+test unsupported_partial_seal_version_refuses_discard_assessment ... ok
+test framing_laws::available_fixed_seal_contradictions_refuse_every_later_short_boundary ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `release` profile [optimized] target(s) in 0.22s
+     Running tests/recovery_partial_seal.rs (<isolated-build>/release/deps/recovery_partial_seal-6b9a4d5315d5b74a)
+
+running 3 tests
+test unsupported_partial_seal_version_refuses_classification ... ok
+test unsupported_partial_seal_version_refuses_discard_assessment ... ok
+test framing_laws::available_fixed_seal_contradictions_refuse_every_later_short_boundary ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.40s
+     Running tests/recovery_segment_classification.rs (<isolated-build>/debug/deps/recovery_segment_classification-b554af50be399ceb)
+
+running 15 tests
+test refusal_laws::complete_invalid_header_is_a_typed_refusal ... ok
+test refusal_laws::complete_invalid_record_is_a_typed_refusal ... ok
+test refusal_laws::duplicate_reusable_records_are_never_resumable ... ok
+test refusal_laws::reusable_record_count_obeys_the_caller_limit ... ok
+test refusal_laws::fixed_width_tail_with_invalid_seal_magic_stays_a_seal_refusal ... ok
+test refusal_laws::every_corrupt_available_segment_header_byte_is_refused ... ok
+test state_laws::canonical_header_is_a_reusable_empty_stage ... ok
+test refusal_laws::every_corrupt_available_record_framing_byte_is_refused ... ok
+test state_laws::partial_fixed_header_is_exactly_truncated ... ok
+test state_laws::canonical_record_prefix_is_reusable_without_rewriting ... ok
+test state_laws::canonical_sealed_stage_is_a_complete_segment ... ok
+test refusal_laws::complete_invalid_seal_is_a_typed_refusal ... ok
+test state_laws::partial_record_header_is_exactly_truncated ... ok
+test state_laws::partial_record_body_is_exactly_truncated ... ok
+test state_laws::partial_seal_is_exactly_truncated ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/recovery_stage_assessment.rs (<isolated-build>/debug/deps/recovery_stage_assessment-d828aaa2a6508b53)
+
+running 6 tests
+test admission_laws::canonical_name_stage_mismatch_refuses_before_byte_admission ... ok
+test admission_laws::same_length_mutation_refuses_by_fingerprint ... ok
+test assessment_laws::matching_evidence_does_not_sanitize_corrupt_content ... ok
+test admission_laws::changed_length_refuses_before_fingerprint_comparison ... ok
+test assessment_laws::every_fixed_stage_dispatches_to_its_only_semantic_classifier ... ok
+test admission_laws::exact_stage_bytes_retain_their_prior_evidence ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/recovery_stage_discard.rs (<isolated-build>/debug/deps/recovery_stage_discard-ee3a70bf405c9e63)
+
+running 7 tests
+test execution_laws::retry_after_remove_before_parent_sync_is_idempotent ... ok
+test execution_laws::exact_evidence_is_removed_before_its_parent_is_synchronized ... ok
+test execution_laws::changed_evidence_refuses_without_removal_or_parent_sync ... ok
+test execution_laws::absent_exact_retry_still_synchronizes_the_selected_parent ... ok
+test planning_laws::every_exact_truncation_retains_its_reason_and_evidence ... ok
+test planning_laws::reusable_segment_prefix_cannot_form_a_discard_request ... ok
+test planning_laws::complete_stages_cannot_form_truncation_discard_requests ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `release` profile [optimized] target(s) in 0.27s
+     Running tests/recovery_segment_classification.rs (<isolated-build>/release/deps/recovery_segment_classification-a7fe10ff49d492c5)
+
+running 15 tests
+test refusal_laws::complete_invalid_header_is_a_typed_refusal ... ok
+test refusal_laws::complete_invalid_record_is_a_typed_refusal ... ok
+test refusal_laws::every_corrupt_available_record_framing_byte_is_refused ... ok
+test refusal_laws::reusable_record_count_obeys_the_caller_limit ... ok
+test refusal_laws::every_corrupt_available_segment_header_byte_is_refused ... ok
+test state_laws::canonical_header_is_a_reusable_empty_stage ... ok
+test state_laws::canonical_record_prefix_is_reusable_without_rewriting ... ok
+test state_laws::canonical_sealed_stage_is_a_complete_segment ... ok
+test state_laws::partial_fixed_header_is_exactly_truncated ... ok
+test state_laws::partial_record_header_is_exactly_truncated ... ok
+test state_laws::partial_seal_is_exactly_truncated ... ok
+test refusal_laws::fixed_width_tail_with_invalid_seal_magic_stays_a_seal_refusal ... ok
+test refusal_laws::complete_invalid_seal_is_a_typed_refusal ... ok
+test state_laws::partial_record_body_is_exactly_truncated ... ok
+test refusal_laws::duplicate_reusable_records_are_never_resumable ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/recovery_stage_assessment.rs (<isolated-build>/release/deps/recovery_stage_assessment-8592cb6a93edcc9c)
+
+running 6 tests
+test admission_laws::changed_length_refuses_before_fingerprint_comparison ... ok
+test admission_laws::canonical_name_stage_mismatch_refuses_before_byte_admission ... ok
+test admission_laws::same_length_mutation_refuses_by_fingerprint ... ok
+test assessment_laws::every_fixed_stage_dispatches_to_its_only_semantic_classifier ... ok
+test admission_laws::exact_stage_bytes_retain_their_prior_evidence ... ok
+test assessment_laws::matching_evidence_does_not_sanitize_corrupt_content ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/recovery_stage_discard.rs (<isolated-build>/release/deps/recovery_stage_discard-a4ec45a68810a67f)
+
+running 7 tests
+test execution_laws::absent_exact_retry_still_synchronizes_the_selected_parent ... ok
+test execution_laws::exact_evidence_is_removed_before_its_parent_is_synchronized ... ok
+test execution_laws::changed_evidence_refuses_without_removal_or_parent_sync ... ok
+test execution_laws::retry_after_remove_before_parent_sync_is_idempotent ... ok
+test planning_laws::reusable_segment_prefix_cannot_form_a_discard_request ... ok
+test planning_laws::every_exact_truncation_retains_its_reason_and_evidence ... ok
+test planning_laws::complete_stages_cannot_form_truncation_discard_requests ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

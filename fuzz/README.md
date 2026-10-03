@@ -70,16 +70,13 @@ retention-manifest, and retention-head decoders. The canonical one-root
 generation keeps mutations inside framing, semantic, ordering, checksum, and
 digest validation; every admitted value must retain its exact input bytes.
 
-The `migration_format` seeds select the public format-marker, migration-intent,
-and completion-receipt decoders. The receipt seed carries its exact marker and
-intent dependencies so mutations exercise integrity and cross-record binding;
-every admitted value must retain its exact input bytes.
+The `migration_format` seeds select public migration record decoders and bounded recovery planning. Receipt seeds carry exact marker and intent dependencies; malformed seeds exercise version, mandatory-flag and checksum refusals. Recovery seeds include valid prefixes and contradictory transition evidence. Properties require v1 admission only without migration evidence, precise pre-intent effect refusal, and complete success only with a full namespace and jointly admitted records. See [migration compatibility evidence](../docs/testing-evidence/migration-compatibility-fuzz.md) for the fuzz-only envelope, bounds, replay and oracle limits.
 
 The `segment_format` seeds select the public segment-header, record-header,
 complete-record, seal, and complete-segment boundaries. Canonical empty,
 one-record, and bundled segments keep mutations inside the nested parsers;
 every admitted fixed-width value must re-encode byte-for-byte, and every
-admitted segment must retain its exact bytes and declared record count. Run
+admitted segment must retain its exact bytes and declared record count. The recovery selector also invokes whole-byte stage classification and requires every available fixed seal byte in a discardable truncation to match the independently specified format. Its permanent unsupported-version counterexample lives in `tests/fixtures/recovery/` and is replayed by ordinary runtime tests as well as seeded fuzzing. Run
 the reviewed smoke campaign across every registered target with:
 
 ```bash

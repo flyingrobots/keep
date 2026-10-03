@@ -1,4 +1,4 @@
-//! Complete deterministic seed materialization evidence.
+//! Deterministic recovery-counterexample materialization evidence.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -17,8 +17,10 @@ const TABLES: [&str; 5] = [
     "capabilities.tsv",
 ];
 
+// Size: medium. Oracle: emitted version-2 partial seal triggers runtime refusal.
+// Delete if stronger emitted-artifact replay subsumes this stable counterexample.
 #[test]
-fn seed_preparation_materializes_the_complete_deterministic_set()
+fn seed_preparation_preserves_a_replayable_recovery_counterexample()
 -> Result<(), Box<dyn std::error::Error>> {
     use std::fs;
 
@@ -47,14 +49,7 @@ fn seed_preparation_materializes_the_complete_deterministic_set()
     prepare(root)?;
     let corpus = root.join("fuzz/corpus");
     let first = seed_contents(&corpus)?;
-    assert_eq!(first.len(), 47);
-    assert_eq!(target_seed_count(&first, "benchmark_report/"), 1);
-    assert_eq!(target_seed_count(&first, "catalog_format/"), 6);
-    assert_eq!(target_seed_count(&first, "golden_protocol/"), 9);
-    assert_eq!(target_seed_count(&first, "layout_record/"), 4);
-    assert_eq!(target_seed_count(&first, "migration_format/"), 3);
-    assert_eq!(target_seed_count(&first, "retention_format/"), 3);
-    assert_eq!(target_seed_count(&first, "segment_format/"), 8);
+    verify_recovery_counterexample(&first)?;
     prepare(root)?;
     assert_eq!(seed_contents(&corpus)?, first);
 
@@ -144,11 +139,29 @@ fn copy_version_two_fixtures(source_root: &Path, root: &Path) -> Result<(), Fuzz
     Ok(())
 }
 
-fn target_seed_count(contents: &BTreeMap<String, Vec<u8>>, prefix: &str) -> usize {
-    contents
-        .keys()
-        .filter(|name| name.starts_with(prefix))
-        .count()
+// Tool output is admitted by the real runtime classifier, not a seed-count oracle.
+fn verify_recovery_counterexample(
+    contents: &BTreeMap<String, Vec<u8>>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let bytes = contents
+        .get("segment_format/recovery-unsupported-partial-seal-version")
+        .ok_or("materialized recovery counterexample is missing")?;
+    let (&selector, input) = bytes.split_first().ok_or("counterexample is empty")?;
+    assert_eq!(selector, 5, "counterexample must reach the recovery parser");
+    let error = keep::classify_recovery_segment_stage(input, keep::SegmentReadPolicy::MAXIMUM)
+        .err()
+        .ok_or("materialized counterexample did not trigger corruption refusal")?;
+    let keep::RecoverySegmentStageError::Seal { source } = error else {
+        return Err(format!("wrong materialized corruption boundary: {error:?}").into());
+    };
+    assert_eq!(
+        source,
+        keep::SegmentSealError::UnsupportedVersion {
+            expected: 1,
+            observed: 2
+        }
+    );
+    Ok(())
 }
 
 fn seed_contents(root: &Path) -> Result<BTreeMap<String, Vec<u8>>, FuzzSeedError> {

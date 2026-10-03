@@ -1,0 +1,163 @@
+   Compiling rustix v1.1.4
+   Compiling proc-macro2 v1.0.107
+   Compiling bitflags v2.13.1
+   Compiling linux-raw-sys v0.12.1
+   Compiling io-lifetimes v2.0.4
+   Compiling io-lifetimes v3.0.1
+   Compiling io-extras v0.19.0
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.24
+   Compiling shlex v2.0.1
+   Compiling cap-primitives v4.0.2
+   Compiling once_cell v1.21.4
+   Compiling find-msvc-tools v0.1.9
+   Compiling ipnet v2.12.0
+   Compiling anstyle v1.0.14
+   Compiling maybe-owned v0.3.4
+   Compiling clap_lex v1.1.0
+   Compiling ambient-authority v0.0.2
+   Compiling libc v0.2.186
+   Compiling cap-std v4.0.2
+   Compiling cap-fs-ext v4.0.2
+   Compiling cc v1.3.0
+   Compiling clap_builder v4.6.2
+   Compiling cfg-if v1.0.4
+   Compiling constant_time_eq v0.4.2
+   Compiling arrayvec v0.7.8
+   Compiling arrayref v0.3.9
+   Compiling regex-lite v0.1.9
+   Compiling condtype v1.3.0
+   Compiling allocation-counter v0.8.1
+   Compiling syn v2.0.119
+   Compiling blake3 v1.8.5
+   Compiling clap v4.6.4
+   Compiling rustix-linux-procfs v0.1.1
+   Compiling fs-set-times v0.20.3
+   Compiling divan-macros v0.1.21
+   Compiling divan v0.1.21
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.37s
+     Running unittests src/lib.rs (<isolated-build>/debug/deps/keep-09abf1fe30bdfc46)
+
+running 22 tests
+
+thread 'adapters::store_migration::filesystem_migration_restart_order_tests::effects_without_durable_intent_preserve_restart_evidence' (1987485) panicked at src/adapters/store_migration/filesystem_migration_restart_order_tests.rs:26:9:
+reader.lock: Ambiguity { source: StageOverlong { stage: Intent, observed: 0 } }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test adapters::store_migration::filesystem_migration_restart_order_tests::effects_without_durable_intent_preserve_restart_evidence ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_order_tests::stages_surviving_later_effects_refuse_restart' (1987487) panicked at src/adapters/store_migration/filesystem_migration_restart_order_tests.rs:65:9:
+reader.lock: Ambiguity { source: StageOverlong { stage: Intent, observed: 0 } }
+
+thread 'adapters::store_migration::filesystem_migration_restart_pair_tests::byte_equal_stage_substitution_refuses_before_restart_effects' (1987488) panicked at src/adapters/store_migration/filesystem_migration_restart_pair_tests.rs:26:9:
+migration.intent.next: Ambiguity { source: StageOverlong { stage: Intent, observed: 0 } }
+test adapters::store_migration::filesystem_migration_restart_order_tests::stages_surviving_later_effects_refuse_restart ... FAILED
+test adapters::store_migration::filesystem_migration_restart_pair_tests::byte_equal_stage_substitution_refuses_before_restart_effects ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_pair_tests::conflicting_stage_bytes_preserve_both_records_on_restart' (1987489) panicked at src/adapters/store_migration/filesystem_migration_restart_pair_tests.rs:53:9:
+migration.intent.next: Ambiguity { source: StageOverlong { stage: Intent, observed: 0 } }
+test adapters::store_migration::filesystem_migration_restart_pair_tests::conflicting_stage_bytes_preserve_both_records_on_restart ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_pool_tests::a_damaged_current_head_preserves_all_restart_evidence' (1987490) panicked at src/adapters/store_migration/filesystem_migration_restart_pool_tests.rs:74:5:
+HEAD refusal lost its decoder coordinate: Head { source: InvalidMagic { observed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } }
+
+thread 'adapters::store_migration::filesystem_migration_restart_pool_tests::a_valid_segment_substitution_reports_both_digest_coordinates' (1987491) panicked at src/adapters/store_migration/filesystem_migration_restart_pool_tests.rs:120:5:
+Inventory { source: Artifact { pool: Segments, name: RecoveryEntryName { bytes: [98, 55, 53, 52, 50, 100, 99, 101, 100, 50, 97, 98, 55, 55, 48, 56, 57, 52, 97, 49, 52, 100, 49, 100, 48, 52, 98, 48, 54, 54, 101, 51, 97, 56, 57, 57, 57, 52, 50, 54, 48, 50, 99, 53, 57, 56, 54, 100, 51, 53, 98, 97, 54, 100, 102, 54, 99, 49, 97, 51, 53, 99, 102, 99, 46, 115, 101, 103] }, source: Catalog { source: InvalidMagic { observed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } } } }
+test adapters::store_migration::filesystem_migration_restart_pool_tests::a_damaged_current_head_preserves_all_restart_evidence ... FAILED
+test adapters::store_migration::filesystem_migration_restart_pool_tests::a_valid_segment_substitution_reports_both_digest_coordinates ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_pool_tests::damaged_immutable_pool_bytes_refuse_restart_before_effects' (1987493) panicked at src/adapters/store_migration/filesystem_migration_restart_pool_tests.rs:46:9:
+segments: exact decoder failure lost: Inventory { source: Artifact { pool: Segments, name: RecoveryEntryName { bytes: [98, 55, 53, 52, 50, 100, 99, 101, 100, 50, 97, 98, 55, 55, 48, 56, 57, 52, 97, 49, 52, 100, 49, 100, 48, 52, 98, 48, 54, 54, 101, 51, 97, 56, 57, 57, 57, 52, 50, 54, 48, 50, 99, 53, 57, 56, 54, 100, 51, 53, 98, 97, 54, 100, 102, 54, 99, 49, 97, 51, 53, 99, 102, 99, 46, 115, 101, 103] }, source: Catalog { source: InvalidMagic { observed: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] } } } }
+
+thread 'adapters::store_migration::filesystem_migration_restart_pool_tests::unknown_immutable_pool_names_refuse_with_the_exact_name' (1987494) panicked at src/adapters/store_migration/filesystem_migration_restart_pool_tests.rs:183:9:
+segments: Inventory { source: Name { pool: Segments, name: RecoveryEntryName { bytes: [117, 110, 107, 110, 111, 119, 110] }, source: WrongLength { expected: 0, observed: 0 } } }
+test adapters::store_migration::filesystem_migration_restart_pool_tests::damaged_immutable_pool_bytes_refuse_restart_before_effects ... FAILED
+test adapters::store_migration::filesystem_migration_restart_pool_tests::unknown_immutable_pool_names_refuse_with_the_exact_name ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_pool_tests::adding_a_valid_orphan_cannot_reuse_the_previous_migration_intent' (1987492) panicked at src/adapters/store_migration/filesystem_migration_restart_pool_tests.rs:152:5:
+changed immutable inventory must not inherit old intent: Ambiguity { source: StageOverlong { stage: Intent, observed: 0 } }
+test adapters::store_migration::filesystem_migration_restart_pool_tests::adding_a_valid_orphan_cannot_reuse_the_previous_migration_intent ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_record_tests::overlong_stages_refuse_restart_without_disposal' (1987497) panicked at src/adapters/store_migration/filesystem_migration_restart_record_tests.rs:127:9:
+migration.intent.next: Ambiguity { source: StageOverlong { stage: Intent, observed: 0 } }
+test adapters::store_migration::filesystem_migration_restart_record_tests::overlong_stages_refuse_restart_without_disposal ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_record_tests::checksum_damage_in_each_migration_record_preserves_restart_evidence' (1987496) panicked at src/adapters/store_migration/filesystem_migration_restart_record_tests.rs:36:9:
+assertion `left == right` failed: migration.intent.next: Ambiguity { source: StageOverlong { stage: Intent, observed: 0 } }
+  left: None
+ right: Some(([182, 113, 5, 102, 219, 211, 120, 126, 63, 118, 217, 159, 102, 152, 55, 32, 172, 64, 162, 43, 161, 87, 105, 166, 106, 171, 31, 54, 66, 194, 148, 89], [182, 113, 5, 102, 219, 211, 120, 126, 63, 118, 217, 159, 102, 152, 55, 32, 172, 64, 162, 43, 161, 87, 105, 166, 106, 171, 31, 54, 66, 194, 148, 88]))
+test adapters::store_migration::filesystem_migration_restart_record_tests::checksum_damage_in_each_migration_record_preserves_restart_evidence ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_namespace_tests::a_nonempty_reader_fence_preserves_its_exact_refusal' (1987477) panicked at src/adapters/store_migration/filesystem_migration_restart_namespace_tests.rs:121:5:
+Ambiguity { source: StageOverlong { stage: Intent, observed: 0 } }
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::a_nonempty_reader_fence_preserves_its_exact_refusal ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_root_tests::a_byte_equal_store_copy_refuses_the_persisted_root_identity' (1987498) panicked at src/adapters/store_migration/filesystem_migration_restart_root_tests.rs:20:5:
+copied root must not inherit migration authority: Ambiguity { source: StageOverlong { stage: Intent, observed: 0 } }
+test adapters::store_migration::filesystem_migration_restart_root_tests::a_byte_equal_store_copy_refuses_the_persisted_root_identity ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_namespace_tests::unknown_root_and_nested_entries_preserve_restart_evidence' (1987482) panicked at src/adapters/store_migration/filesystem_migration_restart_namespace_tests.rs:132:5:
+namespace refusal lost its typed boundary: Namespace { source: Custom { kind: PermissionDenied, error: "calibrated wrong namespace cause" } }
+
+thread 'adapters::store_migration::filesystem_migration_restart_namespace_tests::regular_files_at_protocol_directory_names_refuse_restart' (1987480) panicked at src/adapters/store_migration/filesystem_migration_restart_namespace_tests.rs:132:5:
+namespace refusal lost its typed boundary: Namespace { source: Custom { kind: PermissionDenied, error: "calibrated wrong namespace cause" } }
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::unknown_root_and_nested_entries_preserve_restart_evidence ... FAILED
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::regular_files_at_protocol_directory_names_refuse_restart ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_order_tests::namespace_holes_refuse_restart_at_the_exact_coordinates' (1987486) panicked at src/adapters/store_migration/filesystem_migration_restart_order_tests.rs:98:9:
+reader.lock: Ambiguity { source: StageOverlong { stage: Intent, observed: 0 } }
+test adapters::store_migration::filesystem_migration_restart_order_tests::namespace_holes_refuse_restart_at_the_exact_coordinates ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_order_tests::a_marker_before_namespace_completion_preserves_evidence' (1987483) panicked at src/adapters/store_migration/filesystem_migration_restart_order_tests.rs:117:5:
+Ambiguity { source: StageOverlong { stage: Intent, observed: 0 } }
+test adapters::store_migration::filesystem_migration_restart_order_tests::a_marker_before_namespace_completion_preserves_evidence ... FAILED
+test adapters::store_migration::filesystem_migration_restart_order_tests::a_receipt_without_its_marker_preserves_evidence ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_order_tests::a_receipt_without_its_marker_preserves_evidence' (1987484) panicked at src/adapters/store_migration/filesystem_migration_restart_order_tests.rs:137:5:
+Ambiguity { source: StageOverlong { stage: Intent, observed: 0 } }
+
+thread 'adapters::store_migration::filesystem_migration_restart_namespace_tests::symbolic_links_at_fixed_record_names_refuse_without_following_them' (1987481) panicked at src/adapters/store_migration/filesystem_migration_restart_namespace_tests.rs:132:5:
+namespace refusal lost its typed boundary: Namespace { source: Custom { kind: PermissionDenied, error: "calibrated wrong namespace cause" } }
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::symbolic_links_at_fixed_record_names_refuse_without_following_them ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_namespace_tests::completed_migration_refuses_unknown_reserved_entries_without_effects' (1987478) panicked at src/adapters/store_migration/filesystem_migration_restart_namespace_tests.rs:181:9:
+completed migration admitted invalid gc: Ambiguity { source: StageOverlong { stage: Intent, observed: 0 } }
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::completed_migration_refuses_unknown_reserved_entries_without_effects ... FAILED
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::directory_substitution_at_each_fixed_file_refuses_restart ... FAILED
+
+thread 'adapters::store_migration::filesystem_migration_restart_namespace_tests::directory_substitution_at_each_fixed_file_refuses_restart' (1987479) panicked at src/adapters/store_migration/filesystem_migration_restart_namespace_tests.rs:132:5:
+namespace refusal lost its typed boundary: Namespace { source: Custom { kind: PermissionDenied, error: "calibrated wrong namespace cause" } }
+
+thread 'adapters::store_migration::filesystem_migration_restart_record_tests::a_valid_foreign_receipt_refuses_its_conflicting_intent_digest' (1987495) panicked at src/adapters/store_migration/filesystem_migration_restart_record_tests.rs:154:5:
+Ambiguity { source: StageOverlong { stage: Intent, observed: 0 } }
+test adapters::store_migration::filesystem_migration_restart_record_tests::a_valid_foreign_receipt_refuses_its_conflicting_intent_digest ... FAILED
+
+failures:
+
+failures:
+    adapters::store_migration::filesystem_migration_restart_namespace_tests::a_nonempty_reader_fence_preserves_its_exact_refusal
+    adapters::store_migration::filesystem_migration_restart_namespace_tests::completed_migration_refuses_unknown_reserved_entries_without_effects
+    adapters::store_migration::filesystem_migration_restart_namespace_tests::directory_substitution_at_each_fixed_file_refuses_restart
+    adapters::store_migration::filesystem_migration_restart_namespace_tests::regular_files_at_protocol_directory_names_refuse_restart
+    adapters::store_migration::filesystem_migration_restart_namespace_tests::symbolic_links_at_fixed_record_names_refuse_without_following_them
+    adapters::store_migration::filesystem_migration_restart_namespace_tests::unknown_root_and_nested_entries_preserve_restart_evidence
+    adapters::store_migration::filesystem_migration_restart_order_tests::a_marker_before_namespace_completion_preserves_evidence
+    adapters::store_migration::filesystem_migration_restart_order_tests::a_receipt_without_its_marker_preserves_evidence
+    adapters::store_migration::filesystem_migration_restart_order_tests::effects_without_durable_intent_preserve_restart_evidence
+    adapters::store_migration::filesystem_migration_restart_order_tests::namespace_holes_refuse_restart_at_the_exact_coordinates
+    adapters::store_migration::filesystem_migration_restart_order_tests::stages_surviving_later_effects_refuse_restart
+    adapters::store_migration::filesystem_migration_restart_pair_tests::byte_equal_stage_substitution_refuses_before_restart_effects
+    adapters::store_migration::filesystem_migration_restart_pair_tests::conflicting_stage_bytes_preserve_both_records_on_restart
+    adapters::store_migration::filesystem_migration_restart_pool_tests::a_damaged_current_head_preserves_all_restart_evidence
+    adapters::store_migration::filesystem_migration_restart_pool_tests::a_valid_segment_substitution_reports_both_digest_coordinates
+    adapters::store_migration::filesystem_migration_restart_pool_tests::adding_a_valid_orphan_cannot_reuse_the_previous_migration_intent
+    adapters::store_migration::filesystem_migration_restart_pool_tests::damaged_immutable_pool_bytes_refuse_restart_before_effects
+    adapters::store_migration::filesystem_migration_restart_pool_tests::unknown_immutable_pool_names_refuse_with_the_exact_name
+    adapters::store_migration::filesystem_migration_restart_record_tests::a_valid_foreign_receipt_refuses_its_conflicting_intent_digest
+    adapters::store_migration::filesystem_migration_restart_record_tests::checksum_damage_in_each_migration_record_preserves_restart_evidence
+    adapters::store_migration::filesystem_migration_restart_record_tests::overlong_stages_refuse_restart_without_disposal
+    adapters::store_migration::filesystem_migration_restart_root_tests::a_byte_equal_store_copy_refuses_the_persisted_root_identity
+
+test result: FAILED. 0 passed; 22 failed; 0 ignored; 0 measured; 354 filtered out; finished in 0.10s
+
+error: test failed, to rerun pass `--lib`

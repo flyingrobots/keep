@@ -83,6 +83,11 @@ impl StoreMigrationRecoveryStorage for FilesystemStoreMigrationAuthority {
         filesystem_migration_residue::observe(self.root())
     }
 
+    fn verify_complete(&mut self) -> io::Result<()> {
+        filesystem_initialization_namespace::admit_version_two(self.root())
+            .map_err(|source| io::Error::new(source.kind(), Refusal::NamespacePreflight { source }))
+    }
+
     fn adopt_residue(
         &mut self,
         residue: &StoreMigrationResidue,
