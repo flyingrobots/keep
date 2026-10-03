@@ -29,7 +29,11 @@ The test source was committed as `c9b41e99fb7e89217afbd896732dbea09a0c97ab`, on 
 | Successor proof reports its admitted candidate | Return generation one from successor generation | Successor assertion |
 | Stale/skipped candidate reports the specified generation refusal | Invert the generation mismatch guard | Refused-operation check |
 | Wrong predecessor reports the specified digest refusal | Invert the predecessor mismatch guard | Refused-operation check |
+| Stale/skipped refusal retains its expected/observed coordinates | Swap generation coordinates while preserving refusal | Exact typed generation assertion |
+| Predecessor refusal retains its expected/observed coordinates | Swap predecessor coordinates while preserving refusal | Exact typed predecessor assertion |
 | Head and catalog generation mismatch remains precise | Invert the head generation mismatch guard | Exact typed generation assertion |
+
+Independent review of `343a6f9ac91056bad67134f2dad377f67a5783da` identified that the guard inversions only calibrated refusal existence. The two diagnostic-only mutations above preserve refusal and reach the existing exact-coordinate assertions; both fail at runtime. The reviewed test source is unchanged, and restored-production debug/release execution passes. No production fix or new expectation was needed.
 
 The original handwritten model passes the absent-record mutant: it checks present records but never queries an absent identity. The generated law fails against the same mutated production lookup. This is direct evidence that the additional runtime oracle catches a defect the original model missed; it is not a claim that main contained that production defect.
 
