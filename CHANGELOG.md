@@ -12,6 +12,8 @@ after its public API and format compatibility policies are established.
 
 - Migration restart laws preserve complete filesystem witnesses when rejecting damaged records and pools, conflicting or substituted stages, invalid ordering, copied-root identity, changed inventory, foreign receipts, unknown names and wrong kinds (#111).
 
+- Reader-fence process scenarios retain migration writer authority through collector preparation, removing a release/reacquire gap without changing production lock semantics (#174).
+
 - Linux public snapshot process laws verify reader-death fence release, persistent lock identity and exclusion of new readers during collection with kernel-observed ordering (#113).
 
 - Retention model histories now include release and restore, with expected generations and anchor sets derived independently from requested operations rather than copied from publication candidates; exact stale/retry refusals remain checked (#128).
