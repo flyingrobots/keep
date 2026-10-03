@@ -1,0 +1,6 @@
+diff --git a/tests/reader_fence_process.rs b/tests/reader_fence_process.rs
+--- a/tests/reader_fence_process.rs
++++ b/tests/reader_fence_process.rs
+@@ -41,0 +42,2 @@ fn reader_death_releases_collection_without_replacing_the_fence() -> Result<(),
++    let retained_authority = fs::File::open(&lock_path)?;
++    flock(&retained_authority, FlockOperation::LockShared)?;

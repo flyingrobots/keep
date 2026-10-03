@@ -151,6 +151,8 @@ mod layout_record_format;
 mod layout_record_framing;
 mod loaded_segment;
 mod lower_hex;
+#[cfg(feature = "repository-tasks")]
+mod observed_segment_stage;
 mod opened_reusable_segment;
 mod physical_pool_name;
 mod publication_head_decode_error;
@@ -213,6 +215,8 @@ mod segment_seal_hash;
 mod segment_stage;
 mod segment_stage_create_error;
 mod segment_stage_create_error_display;
+#[cfg(feature = "repository-tasks")]
+mod segment_stage_observer;
 mod segment_stage_write;
 mod segment_write_error;
 mod segment_write_error_display;
