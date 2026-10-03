@@ -8,7 +8,7 @@ use std::error::Error;
 use super::durable_fixture::{build, identify, policy};
 use keep::{
     AdmittedLayout, BlobId, ByteLength, ByteOffset, ByteRange, DurableReadError, DurableStore,
-    LayoutDecodePolicy, LayoutEntryLimit, ReaderAttemptLimit, ReconstructionError,
+    LayoutDecodePolicy, LayoutEntryLimit, RangeReadError, ReaderAttemptLimit, ReconstructionError,
     RegisteredStorageProfile,
 };
 
@@ -118,8 +118,8 @@ fn supplied_range_layouts_cannot_replace_the_catalogued_target_binding()
 }
 
 #[test]
-fn corrupt_layout_ingress_refuses_exact_checksum_coordinates_before_output()
--> Result<(), Box<dyn Error>> {
+fn supplied_corrupt_whole_record_reports_input_decode_before_output() -> Result<(), Box<dyn Error>>
+{
     let bytes = b"a canonical layout whose checksum will be damaged";
     let sandbox = build("durable-layout-checksum", &[bytes])?;
     let identified = identify(bytes)?;
@@ -132,22 +132,47 @@ fn corrupt_layout_ingress_refuses_exact_checksum_coordinates_before_output()
         DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
     let decode = LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM);
     let mut output = vec![0xAB];
+
     let failure = snapshot
         .reconstruct_record(&encoded, decode, &mut output)
         .err()
-        .ok_or("corrupt record reconstructed")?;
+        .ok_or("corrupt input reconstructed")?;
     assert!(
-        matches!(failure, DurableReadError::LayoutDecode(keep::LayoutDecodeError::ChecksumMismatch { expected: actual_expected, observed: actual_observed })
-        if actual_expected == expected && actual_observed == observed)
+        matches!(&failure, DurableReadError::Reconstruction(error)
+        if matches!(error.as_ref(), ReconstructionError::LayoutDecode(keep::LayoutDecodeError::ChecksumMismatch { expected: e, observed: o })
+        if *e == expected && *o == observed)),
+        "caller whole-record decode boundary: {failure:?}"
     );
+    assert_eq!(output, [0xAB]);
+    Ok(())
+}
+
+#[test]
+fn supplied_corrupt_range_record_reports_input_decode_before_output() -> Result<(), Box<dyn Error>>
+{
+    let bytes = b"a canonical layout whose checksum will be damaged";
+    let sandbox = build("durable-range-layout-checksum", &[bytes])?;
+    let identified = identify(bytes)?;
+    let mut encoded = identified.record.bytes().to_vec();
+    let offset = encoded.len().checked_sub(32).ok_or("checksum absent")?;
+    let expected: [u8; 32] = encoded.get(offset..).ok_or("checksum absent")?.try_into()?;
+    *encoded.last_mut().ok_or("record empty")? ^= 1;
+    let observed: [u8; 32] = encoded.get(offset..).ok_or("checksum absent")?.try_into()?;
+    let snapshot =
+        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let decode = LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM);
+    let mut output = vec![0xAB];
+
     let range = ByteRange::new(ByteOffset::new(0), ByteLength::new(1))?;
     let failure = snapshot
         .read_record_range(&encoded, decode, range, &mut output)
         .err()
-        .ok_or("corrupt record range succeeded")?;
+        .ok_or("corrupt input range succeeded")?;
     assert!(
-        matches!(failure, DurableReadError::LayoutDecode(keep::LayoutDecodeError::ChecksumMismatch { expected: actual_expected, observed: actual_observed })
-        if actual_expected == expected && actual_observed == observed)
+        matches!(&failure, DurableReadError::RangeRead(error)
+        if matches!(error.as_ref(), RangeReadError::LayoutDecode(keep::LayoutDecodeError::ChecksumMismatch { expected: e, observed: o })
+        if *e == expected && *o == observed)),
+        "caller range-record decode boundary: {failure:?}"
     );
     assert_eq!(output, [0xAB]);
     Ok(())

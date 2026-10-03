@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Caller-supplied malformed durable layout records now preserve the reconstruction or range input-decode boundary instead of reporting committed-layout corruption (#109).
+
 - Corrected durable-read allocation documentation: the caller's aggregate byte limit caps retained segment bytes; catalog bytes and decoded metadata have separate bounds and allocate additionally (#109).
 
 - Clarified the root-directory synchronization and precise admission-time I/O failure performed when opening a durable reader snapshot; the existing platform policy and runtime behavior are unchanged (#109).

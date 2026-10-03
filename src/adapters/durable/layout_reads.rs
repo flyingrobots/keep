@@ -63,8 +63,9 @@ impl DurableSnapshot {
     where
         W: Write + ?Sized,
     {
-        let layout = AdmittedLayout::decode_record(encoded, policy)
-            .map_err(DurableReadError::LayoutDecode)?;
+        let layout = AdmittedLayout::decode_record(encoded, policy).map_err(|source| {
+            DurableReadError::Reconstruction(Box::new(ReconstructionError::LayoutDecode(source)))
+        })?;
         self.reconstruct_admitted_layout(&layout, output)
     }
 
@@ -118,8 +119,9 @@ impl DurableSnapshot {
     where
         W: Write + ?Sized,
     {
-        let layout = AdmittedLayout::decode_record(encoded, policy)
-            .map_err(DurableReadError::LayoutDecode)?;
+        let layout = AdmittedLayout::decode_record(encoded, policy).map_err(|source| {
+            DurableReadError::RangeRead(Box::new(RangeReadError::LayoutDecode(source)))
+        })?;
         self.read_admitted_layout_range(&layout, requested, output)
     }
 }
