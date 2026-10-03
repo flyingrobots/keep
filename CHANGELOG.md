@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Linux public snapshot process laws verify reader-death fence release, persistent lock identity and exclusion of new readers during collection with kernel-observed ordering (#113).
+
 - Retention model histories now include release and restore, with expected generations and anchor sets derived independently from requested operations rather than copied from publication candidates; exact stale/retry refusals remain checked (#128).
 
 - Public filesystem-stage integration laws now exercise production ext4 admission, exclusive creation, canonical sealed bytes, and preservation of unsealed evidence through the promised `segment_filesystem_stage` target (#147).
