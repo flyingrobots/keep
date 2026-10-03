@@ -31,7 +31,7 @@ the living-documentation correction in #69 does not fulfill that requirement.
 The [catalog publication verdict](catalog-publication.md) adds T-12.2 at
 main `b50dbd4cb4cee286aea1aa0352152a232197dda1`: a public repository-task
 constructor bypasses production platform admission, reproduced independently
-and owned by #150. T-12.3 now has a separate verdict at main `6051abb25a9fd33ae7ee0de5614514b709a4d82a`: restart examples pass, but generated independent catalog-model evidence is missing; issue #166 owns that correction. T-12.1 now has a separate functional/codecs verdict on the same main revision, with its source-text scan-cost evidence gap owned by #168. Thirty-six remaining checked tasks now have recorded verdicts; twenty-eight other checked tasks and nineteen reopened entries still need full accounting.
+and owned by #150. T-12.3 now has a separate verdict at main `6051abb25a9fd33ae7ee0de5614514b709a4d82a`: restart examples pass, but generated independent catalog-model evidence is missing; issue #166 owns that correction. T-12.1 now has a separate functional/codecs verdict on the same main revision, with its source-text scan-cost evidence gap owned by #168. The [store initialization verdict](store-initialization.md) adds T-13.1 on that same main revision: the authority-producing path correctly propagates lock identity refusal, but its cited runtime evidence survives ignoring that refusal; issue #169 owns the acquisition-boundary evidence repair. Thirty-seven remaining checked tasks now have recorded verdicts; twenty-seven other checked tasks and nineteen reopened entries still need full accounting.
 
 ## Mainline delivery after the inspected snapshot
 
