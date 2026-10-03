@@ -269,4 +269,30 @@ Creating a local validation-copy commit corrected that environment without chang
 
 The affected exact law then passed, followed by complete debug/release workspace tests, doctests, documentation, MSRV and fuzz-target check/Clippy (`core-final-validation-corrected.log`, exit zero); the original failure remains in `core-final-validation.log` and is not counted as a product regression or silently retried away.
 
-Final-head hosted checks and independent confirmation of the documentation delta remain required; approval of a preceding SHA does not transfer.
+Current-head hosted checks and independent review outcomes are recorded in the [PR activity](https://github.com/flyingrobots/keep/pull/164); this committed implementation evidence does not substitute for those exact-head gates.
+
+## CodeRabbit fixture follow-up
+
+CodeRabbit's review of `0a19dde68b2e6bf0fd46610b753f7d5974df7c83` raised a live-status wording concern and two test-fixture isolation concerns; it introduced no new production-read finding.
+
+Change kind: test-infrastructure correction and documentation clarification; no production statement, API, format, assertion expectation or storage policy changes.
+
+| Review obligation | Disposition and evidence | Exit condition |
+| --- | --- | --- |
+| Avoid a stale pending-review sentence (`discussion_r4170862136`). | The committed document now points to current PR activity for exact-head status instead of anticipating approval of its own commit. Historical evidence remains pinned. | Current-head review and checks are recorded on the PR. |
+| Avoid tmpfs collisions after PID reuse (`discussion_r4170862139`). | Scratch creation atomically tries bounded deterministic suffixes, skips existing names and never removes a name it did not create. No clock, ambient randomness or dependency is added. | Existing platform laws pass with the initial scratch name deliberately occupied; occupied sentinel files remain unchanged. |
+| Restore cwd on failing isolated locator paths (`discussion_r4170862148`). | A scoped guard attempts restoration on error/unwind, while normal-path restoration remains checked. A child marker alone no longer enables in-process execution: its law name and complete single-law command arguments must match. | Existing debug/release locator laws pass even with an inherited stale child marker; independent inspection confirms guarded cleanup on early exits. |
+
+The tmpfs creation loop admits at most 1,024 candidate names before returning an explicit setup error; this is a finite setup-work cap, not a measured latency guarantee.
+
+A controlled subprocess occupied both the old PID-only path and the revised first-suffix path before executing the existing direct-reader law with that same PID.
+
+The old fixture failed with `AlreadyExists` before reaching its product assertion (`tmpfs-collision-before.log`); the revised fixture reached and passed the unchanged typed platform-refusal assertion (`tmpfs-collision-after.log`), leaving both occupied witnesses intact (`tmpfs-collision-preserved.log`).
+
+That before-state is fixture-setup failure evidence, not a product RED or additional proof of Keep's runtime semantics.
+
+The cwd guard's early-exit coverage is source inspection; normal-path runtime evidence still comes from the existing isolated public locator laws, not a new test of helper choreography.
+
+Focused platform and locator laws pass in debug/release and Clippy passes with warnings denied (`fixture-followup-validation-corrected.log`); an earlier edit-script mismatch left the source unchanged, so the preceding `fixture-followup-validation.log` is not evidence for the revised fixtures.
+
+No test was deleted, and no product expectation was weakened to obtain these passes.

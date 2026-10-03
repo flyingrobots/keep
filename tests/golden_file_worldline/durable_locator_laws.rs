@@ -7,7 +7,7 @@
 
 use std::error::Error;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use keep::{DurableStore, DurableStoreError, ReaderAttemptLimit};
@@ -35,14 +35,19 @@ fn an_unresolvable_relative_locator_preserves_its_io_cause() -> Result<(), Box<d
 }
 
 fn run_isolated(law: &str, operation: fn() -> TestResult) -> Result<(), Box<dyn Error>> {
-    if std::env::var_os(CHILD).is_some() {
+    let child_arguments = ["--exact", law, "--nocapture", "--test-threads=1"];
+    if std::env::var_os(CHILD).as_deref() == Some(std::ffi::OsStr::new(law))
+        && std::env::args_os()
+            .skip(1)
+            .eq(child_arguments.map(std::ffi::OsStr::new))
+    {
         return operation();
     }
     let output = Command::new("timeout")
         .arg("20s")
         .arg(std::env::current_exe()?)
-        .args(["--exact", law, "--nocapture", "--test-threads=1"])
-        .env(CHILD, "1")
+        .args(child_arguments)
+        .env(CHILD, law)
         .output()?;
     assert!(
         output.status.success(),
@@ -56,13 +61,13 @@ fn run_isolated(law: &str, operation: fn() -> TestResult) -> Result<(), Box<dyn 
 
 fn deleted_current_directory() -> Result<(), Box<dyn Error>> {
     let sandbox = TestDirectory::create("durable-locator-deleted-cwd")?;
-    let original = std::env::current_dir()?;
+    let restore = WorkingDirectory(std::env::current_dir()?);
     std::env::set_current_dir(sandbox.path())?;
     std::fs::remove_dir(sandbox.path())?;
 
     let result = DurableStore::open(Path::new("."), policy()?, ReaderAttemptLimit::DEFAULT);
 
-    std::env::set_current_dir(original)?;
+    restore.restore()?;
     let refusal = result
         .err()
         .ok_or("an unresolvable relative locator was accepted")?;
@@ -88,7 +93,7 @@ fn change_directory_after_open() -> Result<(), Box<dyn Error>> {
     let second = build("durable-locator-second", &[b"second store"])?;
     let first_blob = identify(b"first store")?.target;
     let second_blob = identify(b"second store")?.target;
-    let original = std::env::current_dir()?;
+    let restore = WorkingDirectory(std::env::current_dir()?);
     std::env::set_current_dir(first.path())?;
     let store = DurableStore::open(Path::new("."), policy()?, ReaderAttemptLimit::DEFAULT)?;
     assert!(
@@ -112,6 +117,23 @@ fn change_directory_after_open() -> Result<(), Box<dyn Error>> {
         output, b"first store",
         "relative locator must still read the original store's bytes"
     );
-    std::env::set_current_dir(original)?;
+    restore.restore()?;
     Ok(())
+}
+
+// The normal path checks restoration; Drop also attempts it on errors/unwind.
+// This guard does not make cwd mutation safe in a parallel shared process;
+// run_isolated admits only the exact single-law child invocation above.
+struct WorkingDirectory(PathBuf);
+
+impl WorkingDirectory {
+    fn restore(&self) -> io::Result<()> {
+        std::env::set_current_dir(&self.0)
+    }
+}
+
+impl Drop for WorkingDirectory {
+    fn drop(&mut self) {
+        let _ = self.restore();
+    }
 }

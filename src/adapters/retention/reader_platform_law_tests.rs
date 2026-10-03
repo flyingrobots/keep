@@ -70,16 +70,33 @@ fn reader_platform_admission_does_not_acquire_writer_authority() -> Result<(), B
 struct TmpfsStore(PathBuf);
 
 impl TmpfsStore {
+    // Atomically claim only a name we created; stale or concurrent fixtures
+    // remain untouched. The finite retry budget bounds test setup work.
+    fn reserve(name: &str) -> io::Result<Self> {
+        for attempt in 0_u16..1_024 {
+            let path = PathBuf::from("/dev/shm").join(format!(
+                "keep-reader-profile-{name}-{}-{attempt}",
+                std::process::id()
+            ));
+            match fs::create_dir(&path) {
+                Ok(()) => return Ok(Self(path)),
+                Err(source) if source.kind() == io::ErrorKind::AlreadyExists => {}
+                Err(source) => return Err(source),
+            }
+        }
+        Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            "tmpfs fixture names exhausted",
+        ))
+    }
+
     fn create(name: &str) -> Result<Self, Box<dyn Error>> {
         let filesystem = rustix::fs::fstatfs(&fs::File::open("/dev/shm")?)?;
         assert_eq!(
             filesystem.f_type, 0x0102_1994,
             "negative profile requires Linux tmpfs"
         );
-        let path = PathBuf::from("/dev/shm")
-            .join(format!("keep-reader-profile-{name}-{}", std::process::id()));
-        fs::create_dir(&path)?;
-        let store = Self(path);
+        let store = Self::reserve(name)?;
         let admission = FilesystemPlatformAdmission::initialize_unchecked_for_tests(&store.0)?;
         for (name, encoded) in [
             (
