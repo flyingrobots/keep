@@ -1,0 +1,5 @@
+diff --git a/src/adapters/retention/reader_fence.rs b/src/adapters/retention/reader_fence.rs
+--- a/src/adapters/retention/reader_fence.rs
++++ b/src/adapters/retention/reader_fence.rs
+@@ -49,0 +50 @@ impl ReaderFence {
++        root.open_with(READER_LOCK, cap_std::fs::OpenOptions::new().write(true))?.set_len(1)?;

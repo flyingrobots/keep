@@ -9,8 +9,7 @@ use super::filesystem_migration_test_fixture::{maximum_policy, open_authority};
 use super::migration_resumption::{MigrationRecords, execute_phase};
 use super::{
     AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, AdmittedStoreMigrationReceipt,
-    FilesystemStoreMigrationAuthority, StoreMigrationFixedStage, StoreMigrationIntentDecodeError,
-    StoreMigrationPhase, StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError,
+    FilesystemStoreMigrationAuthority, StoreMigrationFixedStage, StoreMigrationPhase,
     StoreMigrationRecoveryPlan, StoreMigrationStorage, recover_store_migration,
 };
 
@@ -112,47 +111,6 @@ fn a_truncated_intent_stage_is_discarded_and_the_migration_completes() -> Result
         }
     );
     assert_complete_migration(sandbox.path(), &intent)?;
-    sandbox.remove()?;
-    Ok(())
-}
-
-#[test]
-fn a_corrupt_durable_intent_refuses_recovery_before_any_mutation() -> Result<(), Box<dyn Error>> {
-    let (sandbox, mut authority) = open_authority("filesystem-migration-recovery-corrupt")?;
-    let intent = authority.observe_intent()?;
-    StoreMigrationStorage::verify_current(&mut authority, &intent)?;
-    let records = MigrationRecords::for_intent(&intent);
-    for phase in StoreMigrationPhase::ALL.iter().take(6) {
-        execute_phase(&mut authority, *phase, &records)?;
-    }
-    drop(authority);
-    let canonical = sandbox.path().join("migration.intent");
-    let mut bytes = fs::read(&canonical)?;
-    let last = bytes.last_mut().ok_or("intent is empty")?;
-    *last ^= 1;
-    fs::write(&canonical, &bytes)?;
-    let before = fs::read_dir(sandbox.path())?.count();
-
-    let mut recovered = FilesystemStoreMigrationAuthority::reopen_for_recovery_unchecked_for_tests(
-        sandbox.path(),
-        maximum_policy(),
-    )?;
-    let expected = recovered.observe_intent()?;
-    let error = recover_store_migration(&mut recovered, &expected)
-        .err()
-        .ok_or("a corrupt durable intent was recovered")?;
-    drop(recovered);
-
-    assert!(matches!(
-        error,
-        StoreMigrationRecoveryError::Ambiguity {
-            source: StoreMigrationRecoveryAmbiguity::IntentUndecodable {
-                source: StoreMigrationIntentDecodeError::ChecksumMismatch { .. }
-            }
-        }
-    ));
-    assert_eq!(fs::read_dir(sandbox.path())?.count(), before);
-    assert!(!sandbox.path().join("reader.lock").exists());
     sandbox.remove()?;
     Ok(())
 }

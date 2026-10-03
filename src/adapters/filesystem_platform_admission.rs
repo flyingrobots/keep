@@ -30,10 +30,13 @@ impl FilesystemPlatformAdmission {
     }
 
     #[cfg(feature = "repository-tasks")]
-    pub(super) fn unchecked_for_repository_tasks(
-        lock: FilesystemWriterLock,
-    ) -> std::io::Result<Self> {
-        Self::unchecked(lock)
+    pub(super) fn from_repository_writer_lock(lock: FilesystemWriterLock) -> std::io::Result<Self> {
+        // Writer capabilities may be O_PATH; profile ioctls require a readable
+        // descriptor of that same pinned directory, without an ambient reopen.
+        let pinned = lock.clone_directory()?;
+        let directory = super::sync_capable_directory::open(&pinned, ".")?;
+        let root_identity = super::filesystem_platform_profile::admit_locked_root(&directory)?;
+        Ok(Self::initialized(lock, root_identity))
     }
 
     pub(super) fn into_lock(self) -> FilesystemWriterLock {
@@ -44,10 +47,10 @@ impl FilesystemPlatformAdmission {
         (self.lock, self.root_identity)
     }
 
-    /// Grants authority without platform admission for tests and repository
-    /// tasks; the identity probe tolerates a kernel that reports no mount
+    /// Grants authority without platform admission only for private unit
+    /// tests; the identity probe tolerates a kernel that reports no mount
     /// identity so the bypass does not require `STATX_MNT_ID`.
-    #[cfg(any(test, feature = "repository-tasks"))]
+    #[cfg(test)]
     fn unchecked(lock: FilesystemWriterLock) -> std::io::Result<Self> {
         let directory = lock.clone_directory()?;
         let root_identity = super::filesystem_platform_profile::root_identity_lenient(&directory)?;

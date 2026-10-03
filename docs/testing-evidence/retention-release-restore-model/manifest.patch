@@ -1,0 +1,9 @@
+diff --git a/src/adapters/retention/filesystem_retention_snapshot.rs b/src/adapters/retention/filesystem_retention_snapshot.rs
+index 751aebc..7cbcc97 100644
+--- a/src/adapters/retention/filesystem_retention_snapshot.rs
++++ b/src/adapters/retention/filesystem_retention_snapshot.rs
+@@ -178,3 +178 @@ impl FilesystemRetentionSnapshot {
+-        self.retention
+-            .as_ref()
+-            .map(ObservedRetentionState::manifest)
++        None
