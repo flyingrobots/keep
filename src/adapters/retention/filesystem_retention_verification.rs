@@ -131,6 +131,12 @@ fn admission_is_corrupt(error: &io::Error) -> bool {
     let Some(source) = error.get_ref() else {
         return false;
     };
+    if source
+        .downcast_ref::<crate::FilesystemNamespaceRefusal>()
+        .is_some()
+    {
+        return true;
+    }
     if let Some(record) = source.downcast_ref::<VersionTwoRecordRefusal>() {
         return match record {
             VersionTwoRecordRefusal::LengthOverflow { .. } => false,

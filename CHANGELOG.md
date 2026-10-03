@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Verification preserves typed canonical-namespace and no-follow entry-kind contradictions as corruption while leaving inconclusive observation failures operational (#114).
+
 - Filesystem verification names the missing catalog-selected segment and preserves its digest, failing I/O phase and original cause instead of labeling the present catalog missing (#114).
 
 - Selected-root verification preserves observed non-regular file evidence as typed corruption instead of an inconclusive no-follow-open error (#114).

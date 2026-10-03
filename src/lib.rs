@@ -222,3 +222,5 @@ pub use verification::{
 
 pub use adapters::{RangeReadError, ReconstructionError};
 pub use authenticated_read::{RangeReadReceipt, ReconstructionReceipt};
+
+pub use adapters::{FilesystemEntryKind, FilesystemNamespaceRefusal};

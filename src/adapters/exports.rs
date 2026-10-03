@@ -108,3 +108,5 @@ pub use super::store_migration::*;
 pub use super::writer_lock_acquire_error::WriterLockAcquireError;
 pub use super::writer_lock_acquire_phase::WriterLockAcquirePhase;
 pub use crate::segment_digest::SegmentDigest;
+
+pub use super::filesystem_namespace_refusal::{FilesystemEntryKind, FilesystemNamespaceRefusal};

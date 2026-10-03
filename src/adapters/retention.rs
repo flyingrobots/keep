@@ -181,6 +181,8 @@ mod transition_preflight;
 mod transition_preflight_error;
 mod transition_readiness;
 #[cfg(test)]
+mod verification_namespace_law_tests;
+#[cfg(test)]
 mod verification_root_kind_tests;
 #[cfg(test)]
 mod verification_selection_law_tests;
