@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Sealed segment receipts no longer expose writable stages through `map_stage`. Repository crash injection uses a private-stage observation wrapper whose sealed conversion preserves stage identity and publisher authority without handing storage to callbacks (#146).
+
 - Incomplete version-one segment seals now refuse observed fixed-framing corruption before recovery assessment can authorize discard, preserving precise seal diagnostics (#171).
 
 - Retention recovery execution errors report the exact failed boundary, original typed cause, known namespace effects and uncertain effect/durability; retries freshly observe the store. Observed stage identity remains binding across reopening, and cleanup preserves verified pool evidence rather than promising the removed pathname survives (#99).
