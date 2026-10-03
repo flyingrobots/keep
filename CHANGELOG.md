@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Removed ordinal comparison traits from verification depths; callers use each subject’s explicit supported-depth set (#114).
+
 - Verification classifies typed migration-record and root-identity contradictions as corruption while preserving admission causes and keeping resource or unclassified I/O failures operational (#114).
 
 - Shallow retention-root verification reports no longer claim unused catalog provenance; catalog coordinates are attached only after successful closure verification (#114).

@@ -6,7 +6,7 @@ Status: durable verification candidate under [#114](https://github.com/flyingrob
 
 A report names the exact subject, the caller's requested depth and the evidence established for that subject.
 
-An ordinal depth comparison grants no inference about another subject: a catalog membership check cannot certify a blob, and a layout identity cannot certify its missing chunks.
+`VerificationDepth` has equality but no `Ord` or `PartialOrd`: a catalog membership check cannot certify a blob, and a layout identity cannot certify its missing chunks.
 
 Report fields and construction are private; callers can inspect or copy established evidence but cannot construct or deepen it.
 

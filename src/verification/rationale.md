@@ -2,7 +2,7 @@
 
 Status: durable verification candidate for #114.
 
-Verification reports name the evidence established for a subject; the enum's ordering does not turn a catalog-membership proof into complete logical blob verification.
+Verification reports name the evidence established for a subject; the depth enum deliberately has no ordering traits, so a catalog-membership proof cannot be compared ordinally with complete logical blob verification.
 
 The domain owns immutable report, subject, depth, and refusal vocabulary without importing storage adapters.
 

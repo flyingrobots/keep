@@ -2,10 +2,19 @@
 
 /// Requested verification work, interpreted for a specific subject.
 ///
-/// Operations document their supported depths. Ordering alone is not a proof:
+/// Operations document their supported depths. No total implication order exists:
 /// catalog reachability does not establish every referenced blob's identity,
 /// and retention closure does not establish a future snapshot-binding format.
-#[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
+///
+/// Depths have equality but no cross-subject implication order. Compare a
+/// request with the operation's explicit supported set, never an ordinal.
+///
+/// ```compile_fail,E0369
+/// use keep::VerificationDepth;
+/// let _ = VerificationDepth::CatalogReachability
+///     >= VerificationDepth::CompleteBlobIdentity;
+/// ```
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum VerificationDepth {
     /// Canonical record framing and structural bounds.
     Framing,
