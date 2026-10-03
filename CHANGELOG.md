@@ -8,6 +8,10 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Completed migration recovery now verifies the version-two namespace before reporting success, refusing unknown reserved GC/recovery entries without effects while preserving published retention state (#111). Recovery storage implementors must supply the new read-only `verify_complete` capability.
+
+- Migration restart laws preserve complete filesystem witnesses when rejecting damaged records and pools, conflicting or substituted stages, invalid ordering, copied-root identity, changed inventory, foreign receipts, unknown names and wrong kinds (#111).
+
 - Reader-fence process scenarios retain migration writer authority through collector preparation, removing a release/reacquire gap without changing production lock semantics (#174).
 
 - Linux public snapshot process laws verify reader-death fence release, persistent lock identity and exclusion of new readers during collection with kernel-observed ordering (#113).

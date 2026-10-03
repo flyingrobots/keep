@@ -66,6 +66,20 @@ mod filesystem_migration_repository_tasks;
 mod filesystem_migration_residue;
 #[cfg(test)]
 mod filesystem_migration_residue_kind_tests;
+#[cfg(all(test, unix))]
+mod filesystem_migration_restart_namespace_tests;
+#[cfg(all(test, unix))]
+mod filesystem_migration_restart_order_tests;
+#[cfg(all(test, unix))]
+mod filesystem_migration_restart_pair_tests;
+#[cfg(all(test, unix))]
+mod filesystem_migration_restart_pool_tests;
+#[cfg(all(test, unix))]
+mod filesystem_migration_restart_record_tests;
+#[cfg(all(test, unix))]
+mod filesystem_migration_restart_root_tests;
+#[cfg(all(test, unix))]
+mod filesystem_migration_restart_test_fixture;
 mod filesystem_migration_storage;
 #[cfg(test)]
 mod filesystem_migration_storage_tests;
