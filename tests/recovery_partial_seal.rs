@@ -53,19 +53,9 @@ fn unsupported_partial_seal_version_refuses_discard_assessment() -> Result<(), B
 }
 
 fn unsupported_version_prefix() -> Result<Vec<u8>, Box<dyn Error>> {
-    let mut bytes = support::decode_hex(
-        include_str!("../conformance/segment-store/v1/one-zero-segment.hex").trim(),
-    )?;
-    let version = bytes
-        .len()
-        .checked_sub(128)
-        .and_then(|start| start.checked_add(17))
-        .ok_or("fixture has no seal version")?;
-    *bytes
-        .get_mut(version)
-        .ok_or("fixture has no version byte")? = 2;
-    bytes.truncate(version.checked_add(1).ok_or("prefix length overflow")?);
-    Ok(bytes)
+    Ok(support::decode_hex(
+        include_str!("fixtures/recovery/unsupported-partial-seal-version.hex").trim(),
+    )?)
 }
 
 fn seal_cause<'a>(error: &'a (dyn Error + 'static)) -> Option<&'a SegmentSealError> {

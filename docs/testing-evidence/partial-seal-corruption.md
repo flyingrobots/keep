@@ -14,4 +14,20 @@ The finite sweep mutates each version, flags, embedded length, reserved and algo
 
 [Focused and adjacent recovery GREEN](partial-seal-corruption/recovery-green.txt) covers the new public laws and existing classification, assessment and discard laws in debug/release. [Framing validation](partial-seal-corruption/framing-green.txt) includes formatting, source structure, all-feature workspace/all-target Clippy and the new laws in debug/release. Commands execute in copied Linux Docker trees with Rust 1.96.0 and the committed lockfile; the laws are small, in-memory and deterministic. Per-test resource ceilings and denied-egress enforcement remain repository gaps, not claimed implemented controls.
 
-Receipt normalization replaces container source/target prefixes with `<isolated-build>` and removes redundant trailing blank lines; assertion diagnostics and outcomes are preserved. These receipts cover the implementation slice, not final acceptance. Parser fuzz/corpus extension, stable-candidate full validation and independent exact-head review remain required before this PR is ready. No physical power-loss, actual unlink, allocation benchmark or complete recovery audit claim is made.
+Receipt normalization replaces container source/target prefixes with `<isolated-build>` and removes redundant trailing blank lines; assertion diagnostics and outcomes are preserved. These receipts cover the implementation slice, not final acceptance. Stable-candidate full validation and independent exact-head review remain required before this PR is ready. No physical power-loss, actual unlink, allocation benchmark or complete recovery audit claim is made.
+
+## Permanent counterexample and parser exploration
+
+The regression is reduced to the empty-segment header, seal magic and unsupported version 2 in `tests/fixtures/recovery/unsupported-partial-seal-version.hex`. Removing the record and unused seal suffix preserves both public failures on main, as shown by the [reduced parent runtime RED](partial-seal-corruption/reduced-parent-runtime-red.txt). Earlier compiler/setup failures are excluded from this runtime receipt. The ordinary tests and deterministic fuzz-seed preparation both consume the retained input.
+
+The existing registered `segment_format` target adds selector 5 for the production recovery classifier. Its independent byte-table oracle requires every available fixed seal byte in a returned seal truncation to be canonical. The [fuzz parent RED](partial-seal-corruption/fuzz-parent-red.txt) records the version-byte assertion failing against main's classifier; this is a semantic oracle failure, not merely a parser crash. [Fuzz GREEN](partial-seal-corruption/fuzz-green.txt) records successful single-input replay followed by a seeded bounded campaign on the corrected implementation. Fuzz target Clippy and the instrumented target build also pass.
+
+Replay inside a copied Docker checkout with the pinned `nightly-2026-07-24` toolchain and `cargo-fuzz 0.13.2`:
+
+```sh
+cargo xtask prepare-fuzz-corpus
+cargo +nightly-2026-07-24 fuzz run segment_format fuzz/corpus/segment_format/recovery-unsupported-partial-seal-version -- -runs=1 -timeout=5 -rss_limit_mb=1024
+cargo +nightly-2026-07-24 fuzz run segment_format -- -seed=17101 -max_total_time=15 -timeout=5 -rss_limit_mb=1024 -max_len=1048576
+```
+
+The seed and commands were recorded before launch. The campaign uses cargo-fuzz's instrumented release profile and address sanitizer, with libFuzzer timeout/RSS/input bounds; it does not establish exhaustive input coverage, an allocation benchmark, or isolation of every ambient dependency. The baseline replay used unchanged main production with only the new oracle/input copied in; the ordinary parent regression remains separately committed and reproducible. Future fuzz findings retain minimized reproducers through the repository's existing corpus workflow.
