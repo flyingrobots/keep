@@ -176,3 +176,30 @@ The first broad copied-tree run passed product tests but stopped on two tooling-
 The singleton report interpretation is explicitly reconciled in the normative page and scope ledger: the original named interfaces each select one subject, and no whole-store aggregate enumeration is claimed.
 
 Final required checks and independent review remain pending for the exact committed/pushed candidate; earlier receipts do not transfer approval to a different head.
+
+## Independent-review corruption mapping closure
+
+The independent Codex review of `6504c869a379a18db907aed79f7fa3a3b375d9e9` requested complete mapping of existing corruption laws through production verification classification; it found no demonstrated production correctness defect and accepted the explicit singleton and incremental-memory scope reconciliation.
+
+The review is recorded at [PR #165 review comment](https://github.com/flyingrobots/keep/pull/165#issuecomment-5964309362), with the full checklist in `codex-review-6504c86.md`.
+
+The follow-up preserves original exact decoder assertions and routes their real decoded failures through the following public production boundaries; the test support only extracts the original cause after checking classification, never substitutes an expected error.
+
+| Existing corruption family | Production verification boundary | Retained oracle |
+| --- | --- | --- |
+| Complete-segment framing, record identity, nested header/checksum | `verify_segment` | Original `SegmentReadError` fields and nested causes in `tests/segment`. |
+| Canonical catalog mutation fields | `verify_catalog_bytes` | Same `CatalogDecodeError` as direct admission in `tests/catalog/mutation_support.rs`. |
+| Publication-head fields, width, checksum and coordinates | `collect_verification_view` | Original `PublicationHeadDecodeError` from real decoding in `tests/publication_head.rs`. |
+| Retention head and manifest framing, integrity and semantics | `collect_verification_view` | Original decoder error inside the same `RetentionCurrentStateRefusal` observation boundary. |
+| Root framing, integrity, anchor identity and semantic admission | Public `VerificationError::from(RetentionRootDecodeError)` used by raw root classification | Original `RetentionRootDecodeError` in `tests/retention_root_decoding.rs`. |
+| Layout mutation corpus, policy limit and expected identity | Public `VerificationError::from(LayoutDecodeError)` using the same layout classifier as blob verification | Original first-failure predicate and typed coordinates in `tests/layout_mutations.rs`. |
+
+The root and layout raw-error conversions name unadmitted input subjects, allocate only the error box and confer no verified report or identity; original typed resource failures remain operational.
+
+The mapped laws pass in debug and release, with all-target/all-feature Clippy denying warnings; receipts are `corruption-mapping-final-green.log` and the preceding setup/compiler failures, which remain excluded from behavioral RED evidence.
+
+Three isolated production mutations inverted raw root classification, inverted layout classification, and discarded known retention-observation classification; each compiled and produced the intended runtime failure in the existing corruption suites, recorded with original source and command under `corruption-mutants` and summarized in `corruption-calibration-corrected.log`.
+
+The earlier `6504c86` candidate passed the corrected local workspace debug/release, both feature-mode Clippy, doctests, documentation build, structure and formatting checks, and all four required hosted checks in [run 37087373122](https://github.com/flyingrobots/keep/actions/runs/37087373122).
+
+Those green results do not approve this subsequent mapping delta; the final pushed head requires its own independent confirmation and hosted checks before readiness.

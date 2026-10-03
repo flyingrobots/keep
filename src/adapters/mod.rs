@@ -235,6 +235,7 @@ mod sync_capable_directory;
 #[path = "../../tests/support/mod.rs"]
 mod test_support;
 mod verification_admission;
+mod verification_decode_error;
 mod verification_error;
 mod verification_failure_class;
 mod verification_ingress;

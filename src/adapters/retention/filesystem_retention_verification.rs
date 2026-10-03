@@ -92,15 +92,11 @@ fn decode_error(
     subject: VerificationSubject,
     source: RetentionRootDecodeError,
 ) -> VerificationError {
-    if matches!(source, RetentionRootDecodeError::Allocation { .. }) {
-        return VerificationError::Operational {
-            source: Box::new(VerificationSource::Root(source)),
-        };
+    let mut error = VerificationError::from(source);
+    if let VerificationError::Refused { refusal, .. } = &mut error {
+        *refusal = verification_admission::structural(subject);
     }
-    VerificationError::Refused {
-        refusal: verification_admission::structural(subject),
-        source: Some(Box::new(VerificationSource::Root(source))),
-    }
+    error
 }
 
 fn view_error(source: FilesystemRetentionSnapshotError) -> VerificationError {

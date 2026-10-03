@@ -1,8 +1,8 @@
 # Durable verification landing scope
 
-Status: implementation work in progress for [#114](https://github.com/flyingrobots/keep/issues/114), under verification parent [#20](https://github.com/flyingrobots/keep/issues/20).
+Status: implementation candidate for [#114](https://github.com/flyingrobots/keep/issues/114), under verification parent [#20](https://github.com/flyingrobots/keep/issues/20).
 
-This ledger reconciles the requested verification outcome with the code available at the branch baseline; it does not establish a runtime guarantee or mark an acceptance criterion complete.
+This ledger reconciles the requested verification outcome with the code available at the branch baseline; current closure dispositions and their evidence are recorded below.
 
 ## Source of authority
 
@@ -38,7 +38,7 @@ These are inspected implementation boundaries, not new execution receipts.
 
 ## Closure ledger
 
-Catalog, segment, logical-record, complete-blob and admitted-root reporting now have [runtime and static/API evidence](../testing-evidence/durable-verification.md); every full-issue obligation below remains open until its entire exit condition is met.
+The following table defines the unchanged acceptance exits; the disposition table below links their implementation and evidence.
 
 | Obligation | Required implementation boundary | Concrete exit condition |
 | --- | --- | --- |
@@ -66,7 +66,7 @@ The current root reader's message-only errors require a focused boundary decisio
 
 ## Evidence and exclusions
 
-This is documentation-only scope reconciliation, based on source inspection at the two commits above; no runtime RED/GREEN claim is made for this ledger.
+The initial ledger was documentation-only scope reconciliation at the two commits above; subsequent runtime evidence is retained in the consolidated execution document.
 
 New runtime assertions must be calibrated against the behavior they protect; absence of a new API on the parent is a compile failure, not a behavioral RED receipt.
 
@@ -85,3 +85,21 @@ The independent bounded preflight agreed that the original named interfaces do n
 Raw segment/catalog classification, owned filesystem catalog reports, selected-namespace retention reports, precise moving-view candidates, typed selected-root diagnostics, and the scoped catalog-ceiling allocation law are implemented in the current candidate.
 
 The [consolidated evidence](../testing-evidence/durable-verification.md) records their runtime checks and falsification; final full validation and independent exact-head review remain acceptance gates, not assumptions inferred from earlier green commits.
+
+The independent exact-head review of `6504c86` found one acceptance gap in existing corruption-law mapping; the follow-up retains those laws' exact assertions while exercising production verification classification, with focused debug/release and mutation evidence. Final delta review and pushed-head checks remain pending.
+
+## Implementation disposition
+
+| Obligation | Disposition and evidence |
+| --- | --- |
+| Subjects and depths | Implemented: explicit per-subject supported/refused matrix, v1/v2 corpus, empty evidence, absent members and complete blob/root closure laws. |
+| Requested versus achieved | Implemented: immutable private report construction, exact subject/request/depth runtime assertions and compile-fail API laws. |
+| Four failure classes | Implemented: raw and filesystem ingress, typed causes, original corruption-law mapping, exact bounded moving-view candidates; decoder/resource/classification mutations observed RED. |
+| Consistent snapshot | Implemented: existing double collection and fence, exact catalog/retention provenance, rejected moving views and namespace substitution; independent mutations observed RED. |
+| Bounded cost and contents | Implemented: documented ingress/admission costs and report authority, caller limits and precisely scoped catalog-ceiling allocation evidence. No total-process memory claim. |
+| Read-only behavior | Implemented: unchanged filesystem evidence on success/refusal; an injected production write fails the persistent-evidence assertion. |
+| Honest delivery | Normative contract, public rustdoc, rationale, requirement status and consolidated evidence reconciled. Mainline integration is not claimed before merge. |
+
+The independent-review finding on `6504c86` is implemented and calibrated in its follow-up; approval of that delta and required checks must be recorded against the resulting exact head in [PR #165](https://github.com/flyingrobots/keep/pull/165) before it leaves draft.
+
+This table closes implementation obligations, not the independent review or human merge gate; the PR is the live authority for those exact-head decisions.

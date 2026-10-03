@@ -15,6 +15,10 @@ use crate::{
 pub enum VerificationSubject {
     /// Supplied segment bytes that have not established a physical identity.
     SegmentInput,
+    /// Supplied layout bytes before canonical identity admission.
+    LayoutInput,
+    /// Supplied retention-root bytes before namespace and identity admission.
+    RetentionRootInput,
     /// The catalog selected by a store's publication head, before admission.
     PublishedCatalog,
     /// A published catalog/retention observation before its subject admits.

@@ -78,3 +78,5 @@ Blob and root verification distinguish missing catalog members, demonstrated con
 The report preserves the catalog generation/digest used by catalog, blob and root operations; this provenance is not a live fence. Multiple valid layouts for a blob are representations, not automatically ambiguity: discovery selects the first canonical identity.
 
 Immutable admitted-view operations have no moving observation to classify; ambiguity is produced by the durable collection path, retaining at most the last conflicting coordinate pair and the original attempt-limit cause.
+
+Raw layout/root decoder errors also convert into `VerificationError` without losing their typed causes; these conversions name unadmitted input subjects and cannot manufacture a report.
