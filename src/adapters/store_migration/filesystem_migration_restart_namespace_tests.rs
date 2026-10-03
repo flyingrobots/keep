@@ -165,3 +165,26 @@ fn symbolic_links_at_fixed_record_names_refuse_without_following_them() -> Resul
     }
     Ok(())
 }
+
+// Size: medium. Oracle: completed migration still admits only the reserved v2 namespace.
+// Delete only if that namespace contract is removed or stronger restart laws subsume this law.
+#[test]
+fn completed_migration_refuses_unknown_reserved_entries_without_effects()
+-> Result<(), Box<dyn Error>> {
+    for parent in ["gc", "recovery", "recovery/dispositions"] {
+        let store = prefix(
+            &format!("restart-complete-unknown-{}", parent.replace('/', "-")),
+            Phase::RemoveReceiptStage,
+        )?;
+        fs::write(store.path().join(parent).join("unexpected"), b"preserve")?;
+        let error = refusal(store.path())?;
+        assert!(
+            matches!(error.downcast_ref::<Recovery>(), Some(Recovery::Observation { source })
+            if matches!(source.get_ref().and_then(|source| source.downcast_ref::<Refusal>()),
+                Some(Refusal::NamespacePreflight { source }) if source.kind() == io::ErrorKind::InvalidData)),
+            "completed migration admitted invalid {parent}: {error:?}"
+        );
+        store.remove()?;
+    }
+    Ok(())
+}
