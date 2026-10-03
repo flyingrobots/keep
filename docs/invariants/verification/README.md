@@ -53,7 +53,7 @@ Filesystem loading blocks on reads and fence acquisition; the owner retains call
 
 Selected-root verification holds one bounded root buffer, decoded anchors and catalog indexes; closure adds its checked node-bounded member index and one decoded layout at a time, with no whole-blob output buffer.
 
-These operations do not publish, repair, synchronize, run recovery, or acquire writer authority; a retained incomplete stage is not disposed of by verification.
+These operations do not publish, repair, run recovery, or acquire writer authority; a retained incomplete stage is not disposed of by verification. Opening a retention verification snapshot uses the shared production filesystem admission path, including its fallible root-directory synchronization probe; verification over an already admitted snapshot performs no synchronization.
 
 Exhausted moving-view collection returns `Ambiguous` with the actual last before/after catalog and retention coordinates; no partial view or report is returned.
 

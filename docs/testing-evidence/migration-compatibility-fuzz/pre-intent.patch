@@ -1,0 +1,8 @@
+--- a/fuzz/fuzz_targets/migration_format/recovery.rs
++++ b/fuzz/fuzz_targets/migration_format/recovery.rs
+@@ -27 +27,4 @@ pub(super) fn exercise(input: &[u8]) -> Option<()> {
+-    let result = plan_store_migration_recovery(&expected, &residue);
++    let mut result = plan_store_migration_recovery(&expected, &residue);
++    if matches!(result, Err(StoreMigrationRecoveryAmbiguity::EffectBeforeIntent { effect: StoreMigrationEffect::Namespace })) {
++        result = Err(StoreMigrationRecoveryAmbiguity::EffectBeforeIntent { effect: StoreMigrationEffect::Marker });
++    }

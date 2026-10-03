@@ -40,13 +40,17 @@
 //! namespace transitions while retaining version-1 immutable bytes.
 //! Partial-prefix recovery now plans and resumes lawful migration residue,
 //! returning typed refusals and an ordered execution receipt. Filesystem
-//! retention publication is available; retention restart recovery, immutable
-//! reader snapshots, and garbage collection remain absent.
+//! retention publication, bounded restart recovery and fenced snapshots are
+//! available. [`DurableStore`] composes a fenced snapshot with authenticated
+//! reconstruction and exact-range reads; its snapshot allocation policy is
+//! explicit. Garbage collection remains absent. Complete durable read-law and
+//! Worldline acceptance remains tracked in issue #109.
 
 #[cfg(test)]
 extern crate self as keep;
 
 mod adapters;
+mod authenticated_read;
 mod blob;
 mod catalog;
 mod chunk;
@@ -57,9 +61,11 @@ mod retention;
 mod segment_digest;
 mod verification;
 
-#[cfg(feature = "repository-tasks")]
-#[doc(hidden)]
-pub use adapters::RepositoryInitializationStorage;
+pub use adapters::{
+    DurableOutcome, DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt,
+    DurableSnapshot, DurableStore, DurableStoreError, DurableView,
+};
+
 pub use adapters::{
     AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedSegment, AdmittedSegmentRecord,
     AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, AdmittedStoreMigrationReceipt,
@@ -170,6 +176,12 @@ pub use adapters::{
     StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,
     StoreMigrationStageDecodeError, plan_store_migration_recovery, recover_store_migration,
 };
+#[cfg(feature = "repository-tasks")]
+#[doc(hidden)]
+pub use adapters::{
+    ObservedSegmentStage, RepositoryInitializationStorage, SegmentStageDurabilityEvent,
+    SegmentStageObserver,
+};
 pub use adapters::{VerificationError, VerificationSource, verify_catalog_bytes, verify_segment};
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
@@ -185,10 +197,11 @@ pub use layout::{
     AdmittedLayout, LayoutEntry, LayoutEntryLimit, LayoutEntryLimitError, LayoutId,
     LayoutIdMismatch, LayoutRecordLength, LayoutValidationError, RangePlan, RangePlanError,
 };
-pub use profile::{RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId};
+pub use profile::{
+    ProfileBoundary, RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId,
+};
 pub use reference::{
-    IngestionAllocation, IngestionError, ProfileBoundary, PublishError, PublishedBlob,
-    RangeReadError, RangeReadReceipt, ReconstructionError, ReconstructionReceipt, ReferenceStore,
+    IngestionAllocation, IngestionError, PublishError, PublishedBlob, ReferenceStore,
     ReferenceStoreCapacity, StagedBlob,
 };
 pub use retention::{
@@ -206,3 +219,6 @@ pub use verification::{
     VerificationDepth, VerificationObservation, VerificationRefusal, VerificationReport,
     VerificationSubject, VerifiedSubject,
 };
+
+pub use adapters::{RangeReadError, ReconstructionError};
+pub use authenticated_read::{RangeReadReceipt, ReconstructionReceipt};

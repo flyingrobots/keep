@@ -1,0 +1,19 @@
+   Compiling xtask v0.0.0 (<isolated-build>/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.83s
+     Running unittests src/main.rs (<isolated-build>/debug/deps/xtask-b2c3eaacd20fcb12)
+
+running 1 test
+test fuzz_seed_corpus::tests::materialization::seed_preparation_preserves_a_replayable_recovery_counterexample ... FAILED
+
+failures:
+
+---- fuzz_seed_corpus::tests::materialization::seed_preparation_preserves_a_replayable_recovery_counterexample stdout ----
+Error: "materialized recovery counterexample is missing"
+
+
+failures:
+    fuzz_seed_corpus::tests::materialization::seed_preparation_preserves_a_replayable_recovery_counterexample
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 303 filtered out; finished in 0.12s
+
+error: test failed, to rerun pass `-p xtask --bin xtask`

@@ -26,6 +26,46 @@ after its public API and format compatibility policies are established.
 
 - Admitted catalog snapshots can report explicit framing, checksum, or catalog-reachability evidence with immutable subject coordinates; unsupported requests refuse without claiming blob completeness or retention closure (#114).
 
+- Durable read diagnostics render their boundary once while preserving each original typed source for error-chain reporters (#109).
+
+- Caller-supplied malformed durable layout records now preserve the reconstruction or range input-decode boundary instead of reporting committed-layout corruption (#109).
+
+- Corrected durable-read allocation documentation: the caller's aggregate byte limit caps catalog-selected segment bytes; catalog bytes and decoded metadata have separate bounds and allocate additionally (#109).
+
+- Clarified the root-directory synchronization and precise admission-time I/O failure performed when opening a durable reader snapshot; the existing platform policy and runtime behavior are unchanged (#109).
+
+- Reference and durable reads now share an inward authentication core and immutable chunk port, preserving public receipts, precise errors and codec admission at the adapter boundary (#109).
+
+- Retention and durable snapshot readers now enforce the existing version-two filesystem profile through the same opened directory capability, rejecting unsupported filesystems without acquiring writer authority (#109).
+
+- `DurableStore::open` now fixes an absolute locator and returns a typed result, preventing later working-directory changes from retargeting a handle; locator failures preserve their original I/O source (#109).
+
+- Selected retention-root reads now refuse a canonical root belonging to another namespace, preserving typed expected/observed namespace digests before durable snapshot admission or output (#109).
+
+- Added an in-progress fenced durable read API with view-bound reconstruction and range receipts; full read-law and Worldline acceptance remains tracked in #109.
+
+- Strengthened writer-lock replacement evidence with a private after-lock scheduling checkpoint, exact refusal and preserved file bytes; production lock ordering and public behavior are unchanged (#169).
+
+- Migration compatibility laws preserve version-one bytes and reject version-one authority at every forward prefix; public version/flag refusal tests and bounded seeded recovery-planner fuzzing extend transition evidence (#112).
+
+- Completed migration recovery now verifies the version-two namespace before reporting success, refusing unknown reserved GC/recovery entries without effects while preserving published retention state (#111). Recovery storage implementors must supply the new read-only `verify_complete` capability.
+
+- Migration restart laws preserve complete filesystem witnesses when rejecting damaged records and pools, conflicting or substituted stages, invalid ordering, copied-root identity, changed inventory, foreign receipts, unknown names and wrong kinds (#111).
+
+- Reader-fence process scenarios retain migration writer authority through collector preparation, removing a release/reacquire gap without changing production lock semantics (#174).
+
+- Linux public snapshot process laws verify reader-death fence release, persistent lock identity and exclusion of new readers during collection with kernel-observed ordering (#113).
+
+- Retention model histories now include release and restore, with expected generations and anchor sets derived independently from requested operations rather than copied from publication candidates; exact stale/retry refusals remain checked (#128).
+
+- Public filesystem-stage integration laws now exercise production ext4 admission, exclusive creation, canonical sealed bytes, and preservation of unsealed evidence through the promised `segment_filesystem_stage` target (#147).
+
+- Repository-task catalog publisher construction now enforces the production filesystem profile even when given an existing writer lock; catalog publication crash campaigns use ordinary platform admission (#150).
+
+- Sealed segment receipts no longer expose writable stages through `map_stage`. Repository crash injection uses a private-stage observation wrapper whose sealed conversion preserves stage identity and publisher authority without handing storage to callbacks (#146).
+
+- Incomplete version-one segment seals now refuse observed fixed-framing corruption before recovery assessment can authorize discard, preserving precise seal diagnostics (#171).
+
 - Retention recovery execution errors report the exact failed boundary, original typed cause, known namespace effects and uncertain effect/durability; retries freshly observe the store. Observed stage identity remains binding across reopening, and cleanup preserves verified pool evidence rather than promising the removed pathname survives (#99).
 
 - Retention recovery now preserves incomplete stages and requires explicit disposition before any recovery mutation or publication retry; automatic incomplete-stage disposal is deferred by maintainer decision (#99).
@@ -102,8 +142,8 @@ after its public API and format compatibility policies are established.
 ### Added
 
 - Model-based retention evidence: every three-operation sequence over initial
-  publications of two namespaces, a successor, a byte-identical retry, and a
-  stale initial (125 sequences, each in a fresh migrated store) agrees with a
+  publications of two namespaces, successor, release, restore, byte-identical
+  retry, and stale initial (343 sequences, each in a fresh migrated store) agrees with a
   deterministic namespace-to-(generation, anchor-set) map and liveness after
   every step, observed through the fenced reader view; a source contract
   keeps clocks, paths, environment, and identity out of the retention core.

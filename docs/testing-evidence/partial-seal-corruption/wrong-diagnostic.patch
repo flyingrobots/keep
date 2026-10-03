@@ -1,0 +1,10 @@
+--- a/src/adapters/recovery/recovery_segment_seal_framing.rs
++++ b/src/adapters/recovery/recovery_segment_seal_framing.rs
+@@ -62,6 +62,6 @@
+     if observed == expected {
+         Ok(())
+     } else {
+-        Err(error(expected, observed))
++        Err(error(expected, expected))
+     }
+ }

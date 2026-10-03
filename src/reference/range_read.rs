@@ -4,8 +4,8 @@ use std::io::Write;
 
 use crate::{AdmittedLayout, BlobId, ByteRange, LayoutDecodePolicy, LayoutId, ReferenceStore};
 
-use super::range_read_execution::read_admitted;
 use super::{RangeReadError, RangeReadReceipt};
+use crate::authenticated_read::read_admitted;
 
 impl ReferenceStore {
     /// Reads one exact logical byte range from a committed blob.
@@ -93,7 +93,7 @@ impl ReferenceStore {
             .ok_or(RangeReadError::LayoutMissing {
                 requested: layout_id,
             })?;
-        read_admitted(self, layout_id, layout, requested, output)
+        read_admitted(self, layout_id, layout, requested, output).map_err(RangeReadError::from)
     }
 
     /// Resolves a caller-supplied admitted layout to one committed range.
@@ -157,3 +157,7 @@ impl ReferenceStore {
         self.read_admitted_layout_range(&layout, requested, output)
     }
 }
+
+#[cfg(test)]
+#[path = "range_read_tests.rs"]
+mod tests;

@@ -4,6 +4,7 @@ use std::error::Error;
 use std::fmt;
 
 use super::{RecoveryStageMetadataError, SegmentHeaderError, SegmentReadError};
+use crate::adapters::SegmentSealError;
 
 /// Why complete supplied `current.seg` bytes could not be classified lawfully.
 #[derive(Debug)]
@@ -27,6 +28,11 @@ pub enum RecoverySegmentStageError {
     Record {
         /// Exact record or prefix refusal.
         source: SegmentReadError,
+    },
+    /// Available fixed framing in an incomplete seal is contradictory.
+    Seal {
+        /// Exact seal-framing refusal; absent bytes are not admitted.
+        source: SegmentSealError,
     },
     /// A complete-looking sealed segment was refused.
     Complete {
@@ -57,6 +63,9 @@ impl fmt::Display for RecoverySegmentStageError {
             Self::Complete { source } => {
                 write!(formatter, "complete segment stage was refused: {source}")
             }
+            Self::Seal { source } => {
+                write!(formatter, "incomplete segment seal was refused: {source}")
+            }
         }
     }
 }
@@ -66,6 +75,7 @@ impl Error for RecoverySegmentStageError {
         match self {
             Self::Metadata { source } => Some(source),
             Self::Header { source } => Some(source),
+            Self::Seal { source } => Some(source),
             Self::Record { source } | Self::Complete { source } => Some(source),
             Self::AddressSpace { .. } => None,
         }

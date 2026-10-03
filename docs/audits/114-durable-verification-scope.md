@@ -121,3 +121,13 @@ Reviews arriving after `b33c7da` reopened the acceptance gate. The earlier imple
 | Selected-root symlink classification | Hosted Codex and independent review verified that observed non-regular evidence became raw operational I/O. Public parent regression RED on `c003c89`; the existing metadata observation now preserves typed wrong-kind corruption, with focused debug/release GREEN. | Resulting-head independent review and final checks. |
 
 No finding is resolved merely because an earlier independent review approved the preceding head. No merge is authorized by this ledger.
+
+## Mainline landing integration
+
+The landing pass integrates main `1079551bc6b331eb9847823e7d22b22ea4c47b62`, including the reviewed durable-read API. The shared retention loader keeps verification's collector callback while using mainline's production filesystem admission and retained opened capability. Shared root admission retains namespace binding plus verification's typed generation/digest and file-kind diagnostics. Domain, durable and verification exports coexist; historical CHANGELOG entries are preserved.
+
+Retention verification snapshot admission now inherits the production root-directory synchronization probe. API and normative documentation distinguish that admission from later read-only verification; catalog-selected segment bytes are caller-bounded separately from catalog/metadata format allocations.
+
+The complete refreshed review queue contains three later source-verified obligations: classify demonstrated namespace contradictions precisely, preserve the identity of a missing selected segment, and distinguish an observed wrong-kind selected namespace directory from inconclusive I/O. Each requires an actual public runtime RED on the unfixed integration and focused GREEN; earlier ready status and review do not close them. Final full validation and independent review follow their coherent fixes.
+
+The integration's copied-Docker all-feature/all-target check, warnings-denied Clippy, structure check, existing verification laws and durable Worldline suite pass (`165-integration-focused-corrected.log`). The preceding run rejected symlinked scratch-path ancestors at production no-follow admission; the validation setup was corrected to ext4 bind mounts without changing product source or assertions. That initial setup failure is preserved in `165-integration-focused.log`, not counted as product RED. This focused integration check does not replace final full validation after the three fixes.

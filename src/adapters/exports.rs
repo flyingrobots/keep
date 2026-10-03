@@ -64,6 +64,8 @@ pub use super::layout_encode_error::LayoutEncodeError;
 pub use super::layout_id_binary_error::LayoutIdBinaryParseError;
 pub use super::layout_id_text_error::LayoutIdTextParseError;
 pub use super::layout_record::CanonicalLayoutRecord;
+#[cfg(feature = "repository-tasks")]
+pub use super::observed_segment_stage::ObservedSegmentStage;
 pub use super::opened_reusable_segment::OpenedReusableSegment;
 pub use super::publication_head_decode_error::PublicationHeadDecodeError;
 pub use super::recovery::*;
@@ -91,6 +93,8 @@ pub use super::segment_seal::SegmentSeal;
 pub use super::segment_seal_error::SegmentSealError;
 pub use super::segment_stage::SegmentStage;
 pub use super::segment_stage_create_error::SegmentStageCreateError;
+#[cfg(feature = "repository-tasks")]
+pub use super::segment_stage_observer::{SegmentStageDurabilityEvent, SegmentStageObserver};
 pub use super::segment_write_error::SegmentWriteError;
 pub use super::segment_write_phase::{SegmentDurabilityPhase, SegmentWritePhase};
 pub use super::staged_segment::StagedSegment;

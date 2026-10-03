@@ -20,8 +20,10 @@ impl FilesystemRetentionSnapshot {
     /// Loads an existing fenced retention view with verification classifications.
     ///
     /// Performs the same bounded filesystem observations and fence acquisition
-    /// as `load`; it never publishes, repairs or runs recovery. Catalog bytes
-    /// and segments are retained under `policy`; the shared fence is held for
+    /// as `load`, including its fallible root-directory synchronization probe; it
+    /// never publishes, repairs or runs recovery. Catalog-selected segment bytes
+    /// obey `policy`; catalog bytes and metadata have separate format bounds.
+    /// The shared fence is held for
     /// this owner's lifetime. Observation failures retain their original causes.
     ///
     /// # Errors

@@ -1,0 +1,25 @@
+   Compiling keep v0.0.0 (<isolated-build>)
+   Compiling xtask v0.0.0 (<isolated-build>/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.36s
+     Running unittests src/main.rs (<isolated-build>/debug/deps/xtask-b2c3eaacd20fcb12)
+
+running 1 test
+test fuzz_seed_corpus::tests::materialization::seed_preparation_preserves_a_replayable_recovery_counterexample ... FAILED
+
+failures:
+
+---- fuzz_seed_corpus::tests::materialization::seed_preparation_preserves_a_replayable_recovery_counterexample stdout ----
+
+thread 'fuzz_seed_corpus::tests::materialization::seed_preparation_preserves_a_replayable_recovery_counterexample' (1801843) panicked at xtask/src/fuzz_seed_corpus/tests/materialization.rs:150:5:
+assertion `left == right` failed: counterexample must reach the recovery parser
+  left: 4
+ right: 5
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    fuzz_seed_corpus::tests::materialization::seed_preparation_preserves_a_replayable_recovery_counterexample
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 303 filtered out; finished in 0.15s
+
+error: test failed, to rerun pass `-p xtask --bin xtask`
