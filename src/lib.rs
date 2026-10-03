@@ -55,9 +55,6 @@ mod profile;
 mod reference;
 mod retention;
 
-#[cfg(feature = "repository-tasks")]
-#[doc(hidden)]
-pub use adapters::RepositoryInitializationStorage;
 pub use adapters::{
     AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedSegment, AdmittedSegmentRecord,
     AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, AdmittedStoreMigrationReceipt,
@@ -166,6 +163,12 @@ pub use adapters::{
     StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError, StoreMigrationRecoveryPlan,
     StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,
     StoreMigrationStageDecodeError, plan_store_migration_recovery, recover_store_migration,
+};
+#[cfg(feature = "repository-tasks")]
+#[doc(hidden)]
+pub use adapters::{
+    ObservedSegmentStage, RepositoryInitializationStorage, SegmentStageDurabilityEvent,
+    SegmentStageObserver,
 };
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,

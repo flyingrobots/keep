@@ -68,6 +68,8 @@ fn classify_tail(
         }
         if is_seal_candidate(cursor.remaining) {
             if cursor.remaining.len() < SegmentSeal::ENCODED_LENGTH {
+                super::recovery_segment_seal_framing::validate(cursor.remaining)
+                    .map_err(|source| RecoverySegmentStageError::Seal { source })?;
                 return Ok(RecoverySegmentStage::Truncated(
                     RecoverySegmentTruncation::Seal {
                         offset: cursor.offset,

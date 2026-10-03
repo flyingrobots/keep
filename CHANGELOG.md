@@ -10,6 +10,16 @@ after its public API and format compatibility policies are established.
 
 - Linux public snapshot process laws verify reader-death fence release, persistent lock identity and exclusion of new readers during collection with kernel-observed ordering (#113).
 
+- Retention model histories now include release and restore, with expected generations and anchor sets derived independently from requested operations rather than copied from publication candidates; exact stale/retry refusals remain checked (#128).
+
+- Public filesystem-stage integration laws now exercise production ext4 admission, exclusive creation, canonical sealed bytes, and preservation of unsealed evidence through the promised `segment_filesystem_stage` target (#147).
+
+- Repository-task catalog publisher construction now enforces the production filesystem profile even when given an existing writer lock; catalog publication crash campaigns use ordinary platform admission (#150).
+
+- Sealed segment receipts no longer expose writable stages through `map_stage`. Repository crash injection uses a private-stage observation wrapper whose sealed conversion preserves stage identity and publisher authority without handing storage to callbacks (#146).
+
+- Incomplete version-one segment seals now refuse observed fixed-framing corruption before recovery assessment can authorize discard, preserving precise seal diagnostics (#171).
+
 - Retention recovery execution errors report the exact failed boundary, original typed cause, known namespace effects and uncertain effect/durability; retries freshly observe the store. Observed stage identity remains binding across reopening, and cleanup preserves verified pool evidence rather than promising the removed pathname survives (#99).
 
 - Retention recovery now preserves incomplete stages and requires explicit disposition before any recovery mutation or publication retry; automatic incomplete-stage disposal is deferred by maintainer decision (#99).
@@ -86,8 +96,8 @@ after its public API and format compatibility policies are established.
 ### Added
 
 - Model-based retention evidence: every three-operation sequence over initial
-  publications of two namespaces, a successor, a byte-identical retry, and a
-  stale initial (125 sequences, each in a fresh migrated store) agrees with a
+  publications of two namespaces, successor, release, restore, byte-identical
+  retry, and stale initial (343 sequences, each in a fresh migrated store) agrees with a
   deterministic namespace-to-(generation, anchor-set) map and liveness after
   every step, observed through the fenced reader view; a source contract
   keeps clocks, paths, environment, and identity out of the retention core.

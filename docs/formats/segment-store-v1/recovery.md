@@ -52,7 +52,7 @@ only regular files, and refuses entry replacement or length drift after
 reading. `classify_recovery_segment_stage` classifies complete caller-supplied
 stage bytes as a validated reusable prefix, a complete admitted segment, or an
 exact truncation only when every available segment- or record-header framing
-byte remains canonical. It preserves proven partial-framing and
+byte remains canonical. Recognized incomplete seals also validate available fixed version, flags, seal length, algorithm and reserved fields before returning truncation; failures preserve their precise seal cause through `RecoverySegmentStageError::Seal`. This does not prove future completion feasibility for every remaining coordinate. It preserves proven partial-framing and
 complete-looking corruption as typed refusals. Catalog- and
 next-head-stage classifiers apply the same available-fixed-framing rule before
 distinguishing exact truncation from complete canonical bytes. Every
