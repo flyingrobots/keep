@@ -178,6 +178,8 @@ mod transition_preflight_error;
 mod transition_readiness;
 #[cfg(test)]
 mod verification_selection_law_tests;
+#[cfg(test)]
+mod verification_store_admission_tests;
 mod verified_closure;
 
 #[cfg(test)]

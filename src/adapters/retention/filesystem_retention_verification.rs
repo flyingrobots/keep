@@ -8,10 +8,10 @@ use super::{AdmittedRetentionRoot, RetentionSelectedRootRefusal};
 use crate::adapters::filesystem_exact_record::ExactRecordError;
 use crate::adapters::{verification_admission, verification_ingress};
 use crate::{
-    CatalogRestartPolicy, FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError,
-    ReaderAttemptLimit, RetentionNamespaceDigest, RetentionRootDecodeError, VerificationDepth,
-    VerificationError, VerificationRefusal, VerificationReport, VerificationSource,
-    VerificationSubject,
+    CatalogRestartPolicy, FilesystemPlatformAdmissionError, FilesystemRetentionSnapshot,
+    FilesystemRetentionSnapshotError, ReaderAttemptLimit, RetentionNamespaceDigest,
+    RetentionRootDecodeError, VerificationDepth, VerificationError, VerificationRefusal,
+    VerificationReport, VerificationSource, VerificationSubject, VersionTwoRecordRefusal,
 };
 use std::io;
 
@@ -103,8 +103,41 @@ fn view_error(source: FilesystemRetentionSnapshotError) -> VerificationError {
     if let FilesystemRetentionSnapshotError::Catalog { source } = source {
         return verification_ingress::catalog_error(source);
     }
+    if matches!(&source, FilesystemRetentionSnapshotError::Admission { source } if admission_is_corrupt(source))
+    {
+        return VerificationError::Refused {
+            refusal: verification_admission::structural(VerificationSubject::PublishedView),
+            source: Some(Box::new(VerificationSource::Retention(source))),
+        };
+    }
     VerificationError::Operational {
         source: Box::new(VerificationSource::Retention(source)),
+    }
+}
+
+fn admission_is_corrupt(error: &io::Error) -> bool {
+    let Some(source) = error.get_ref() else {
+        return false;
+    };
+    if let Some(record) = source.downcast_ref::<VersionTwoRecordRefusal>() {
+        return match record {
+            VersionTwoRecordRefusal::LengthOverflow { .. } => false,
+            VersionTwoRecordRefusal::KindOrLength { .. }
+            | VersionTwoRecordRefusal::TrailingBytes { .. }
+            | VersionTwoRecordRefusal::Marker { .. }
+            | VersionTwoRecordRefusal::Intent { .. }
+            | VersionTwoRecordRefusal::Receipt { .. } => true,
+        };
+    }
+    match source.downcast_ref::<FilesystemPlatformAdmissionError>() {
+        Some(FilesystemPlatformAdmissionError::RootIdentityChanged { .. }) => true,
+        Some(
+            FilesystemPlatformAdmissionError::Platform { .. }
+            | FilesystemPlatformAdmissionError::WriterLock { .. }
+            | FilesystemPlatformAdmissionError::Namespace { .. }
+            | FilesystemPlatformAdmissionError::MigrationRecord { .. },
+        )
+        | None => false,
     }
 }
 
