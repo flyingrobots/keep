@@ -82,7 +82,7 @@ impl DurableSnapshot {
     /// synchronizes the root directory before fencing; a synchronization
     /// failure is preserved under the snapshot's admission error.
     ///
-    /// The aggregate byte limit in `policy` covers retained segment bytes only.
+    /// The aggregate byte limit in `policy` covers catalog-selected segment bytes only.
     /// Catalog bytes use [`crate::CatalogLength::MAXIMUM`] independently; decoded
     /// indexes and retention records allocate additionally under their format
     /// and record-count limits. Closure work is bounded per root by its persisted limits.

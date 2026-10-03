@@ -30,7 +30,7 @@ use crate::{BlobId, ByteRange, LayoutId};
 /// On Linux, read an already migrated version-two store with a retained blob.
 /// The caller owns output visibility: a failed write can leave an untrusted
 /// prefix. The receipt names the view; it does not extend retention after the
-/// snapshot is dropped. This example limits aggregate retained segment bytes;
+/// snapshot is dropped. This example limits aggregate catalog-selected segment bytes;
 /// catalog bytes and decoded metadata allocate separately.
 ///
 /// ```no_run
@@ -44,7 +44,7 @@ use crate::{BlobId, ByteRange, LayoutId};
 ///         CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, LayoutEntryLimit,
 ///         ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit,
 ///     };
-///     // Limit retained segment bytes; catalog and metadata allocate separately.
+///     // Limit catalog-selected segment bytes; catalog and metadata allocate separately.
 ///     let policy = CatalogRestartPolicy::new(
 ///         SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
 ///         CatalogRestartByteLimit::new(16_777_216)?,
@@ -189,8 +189,8 @@ pub enum DurableOutcome {
 impl std::fmt::Display for DurableOutcome {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Store(source) => write!(formatter, "{source}"),
-            Self::Read(source) => write!(formatter, "{source}"),
+            Self::Store(_) => formatter.write_str("durable store admission failed"),
+            Self::Read(_) => formatter.write_str("durable read failed"),
         }
     }
 }

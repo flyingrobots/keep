@@ -98,7 +98,7 @@ fn a_corrupt_selected_chunk_refuses_a_range_before_output() -> Result<(), Box<dy
             &mut output,
         )
         .err()
-        .ok_or("corrupt chunk reconstructed")?;
+        .ok_or("corrupt chunk produced a range")?;
     assert!(
         matches!(&failure, DurableOutcome::Store(DurableStoreError::Snapshot(snapshot))
         if matches!(snapshot.as_ref(), FilesystemRetentionSnapshotError::Catalog { source: CatalogRestartError::Segment { source, .. } }

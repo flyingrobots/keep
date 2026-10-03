@@ -112,9 +112,9 @@ impl fmt::Display for DurableReadError {
             Self::View(_) => formatter.write_str("the pinned view could not be re-admitted"),
             Self::BlobMissing { .. } => formatter.write_str("no retained root anchors the blob"),
             Self::LayoutMissing { .. } => formatter.write_str("the catalog names no such layout"),
-            Self::LayoutDecode(source) => write!(formatter, "committed layout refused: {source}"),
-            Self::Reconstruction(source) => write!(formatter, "reconstruction: {source}"),
-            Self::RangeRead(source) => write!(formatter, "range read: {source}"),
+            Self::LayoutDecode(_) => formatter.write_str("committed layout refused"),
+            Self::Reconstruction(_) => formatter.write_str("durable reconstruction failed"),
+            Self::RangeRead(_) => formatter.write_str("durable range read failed"),
         }
     }
 }

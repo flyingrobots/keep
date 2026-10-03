@@ -189,7 +189,7 @@ assert_eq!(output, b"exact bytes, or nothing");
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-On Linux with the admitted ext4 profile, read an existing migrated version-two store whose retention roots anchor the requested blob. The following example is also compiled in the `DurableStore` API documentation. Its 16 MiB limit applies to aggregate retained segment bytes; catalog bytes and decoded metadata allocate separately.
+On Linux with the admitted ext4 profile, read an existing migrated version-two store whose retention roots anchor the requested blob. The following example is also compiled in the `DurableStore` API documentation. Its 16 MiB limit applies to aggregate catalog-selected segment bytes; catalog bytes and decoded metadata allocate separately.
 
 ```rust
 #[cfg(target_os = "linux")]
@@ -202,7 +202,7 @@ fn copy_retained_blob(
         CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, LayoutEntryLimit,
         ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit,
     };
-    // Limit retained segment bytes; catalog and metadata allocate separately.
+    // Limit catalog-selected segment bytes; catalog and metadata allocate separately.
     let policy = CatalogRestartPolicy::new(
         SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
         CatalogRestartByteLimit::new(16_777_216)?,

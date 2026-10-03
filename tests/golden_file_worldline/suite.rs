@@ -22,6 +22,9 @@ mod durable_assertions;
 #[path = "durable_corruption_laws.rs"]
 mod durable_corruption_laws;
 #[cfg(target_os = "linux")]
+#[path = "durable_diagnostic_laws.rs"]
+mod durable_diagnostic_laws;
+#[cfg(target_os = "linux")]
 #[path = "durable_fixture.rs"]
 mod durable_fixture;
 #[cfg(target_os = "linux")]
