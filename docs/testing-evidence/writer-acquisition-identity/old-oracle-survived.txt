@@ -42,4 +42,3 @@ test adapters::filesystem_store_initializer_tests::published_reopen_requires_a_c
 test adapters::filesystem_store_initializer_tests::retained_initializer_authority_excludes_a_second_initializer ... ok
 
 test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 346 filtered out; finished in 0.04s
-

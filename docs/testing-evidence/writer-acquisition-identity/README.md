@@ -1,6 +1,6 @@
 # Acquisition calibration receipts
 
-These captured outputs and production mutation patches support [#169's evidence](../writer-acquisition-identity.md). Absolute container source/target prefixes in output are normalized to `<isolated-build>`; assertion messages, outcomes and diagnostics are otherwise retained. They are execution receipts, not golden expectations or tests of test-count totals.
+These captured outputs and production mutation patches support [#169's evidence](../writer-acquisition-identity.md). Absolute container source/target prefixes in output are normalized to `<isolated-build>`, and redundant trailing blank lines are removed; assertion messages, outcomes and diagnostics are otherwise retained. They are execution receipts, not golden expectations or tests of test-count totals.
 
 ## Coordinates and environment
 

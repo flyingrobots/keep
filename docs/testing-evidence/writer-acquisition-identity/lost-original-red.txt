@@ -21,4 +21,3 @@ failures:
     adapters::filesystem_writer_lock::tests::replaced_lock_entry_refuses_authority_after_kernel_acquisition
 
 test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 352 filtered out; finished in 0.00s
-
