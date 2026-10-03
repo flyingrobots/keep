@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Reader-fence process scenarios retain migration writer authority through collector preparation, removing a release/reacquire gap without changing production lock semantics (#174).
+
 - Linux public snapshot process laws verify reader-death fence release, persistent lock identity and exclusion of new readers during collection with kernel-observed ordering (#113).
 
 - Retention model histories now include release and restore, with expected generations and anchor sets derived independently from requested operations rather than copied from publication candidates; exact stale/retry refusals remain checked (#128).

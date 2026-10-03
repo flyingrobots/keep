@@ -7,7 +7,9 @@ use keep::{
 };
 use std::{error::Error, fs};
 
-pub(super) fn migrated(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
+pub(super) fn migrated(
+    name: &str,
+) -> Result<(TestDirectory, FilesystemStoreMigrationAuthority), Box<dyn Error>> {
     let sandbox = TestDirectory::create(name)?;
     let mut storage = RepositoryInitializationStorage::admit_unchecked(sandbox.path())?;
     let _initialized = initialize_store(&mut storage)?;
@@ -33,8 +35,10 @@ pub(super) fn migrated(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
     )?;
     let intent = migration.observe_intent()?;
     let _receipt = execute_store_migration(&mut migration, &intent)?;
-    drop(migration);
-    Ok(sandbox)
+    // Keep writer authority continuous while the caller arranges collection.
+    // A concurrent spawn may inherit lock descriptions until exec, so dropping
+    // and immediately reacquiring cannot assume all holders have disappeared.
+    Ok((sandbox, migration))
 }
 
 fn decode(hex: &str) -> Result<Vec<u8>, Box<dyn Error>> {
