@@ -23,7 +23,7 @@ pub(super) fn seeds(files: &RepositoryFiles) -> Result<Vec<Seed>, FuzzSeedError>
     let marker = segment_store_v2_fixture::read_hex(files, marker_fixture)?;
     let intent = segment_store_v2_fixture::read_hex(files, intent_fixture)?;
     let receipt = segment_store_v2_fixture::read_hex(files, receipt_fixture)?;
-    Ok(vec![
+    let mut seeds = vec![
         Seed::new(
             "migration_format",
             "format-marker",
@@ -39,7 +39,12 @@ pub(super) fn seeds(files: &RepositoryFiles) -> Result<Vec<Seed>, FuzzSeedError>
             "migration-receipt",
             receipt_seed(receipt_selector, &marker, &intent, &receipt)?,
         )?,
-    ])
+    ];
+    seeds.extend(malformed_seeds(&marker, &intent, &receipt)?);
+    seeds.extend(super::migration_recovery_seeds::seeds(
+        &marker, &intent, &receipt,
+    )?);
+    Ok(seeds)
 }
 
 fn receipt_seed(
@@ -66,6 +71,42 @@ fn receipt_seed(
     payload.extend_from_slice(intent);
     payload.extend_from_slice(receipt);
     prefixed(selector, &payload)
+}
+
+fn malformed_seeds(
+    marker: &[u8],
+    intent: &[u8],
+    receipt: &[u8],
+) -> Result<Vec<Seed>, FuzzSeedError> {
+    let mut bad_marker = marker.to_vec();
+    *bad_marker
+        .get_mut(17)
+        .ok_or_else(|| FuzzSeedError::violation("marker lacks version"))? = 3;
+    let mut bad_intent = intent.to_vec();
+    *bad_intent
+        .get_mut(23)
+        .ok_or_else(|| FuzzSeedError::violation("intent lacks flags"))? = 1;
+    let mut bad_receipt = receipt.to_vec();
+    *bad_receipt
+        .last_mut()
+        .ok_or_else(|| FuzzSeedError::violation("receipt lacks checksum"))? ^= 1;
+    Ok(vec![
+        Seed::new(
+            "migration_format",
+            "unsupported-marker-version",
+            prefixed(0, &bad_marker)?,
+        )?,
+        Seed::new(
+            "migration_format",
+            "unsupported-intent-flag",
+            prefixed(1, &bad_intent)?,
+        )?,
+        Seed::new(
+            "migration_format",
+            "corrupt-receipt-checksum",
+            receipt_seed(2, marker, intent, &bad_receipt)?,
+        )?,
+    ])
 }
 
 #[cfg(test)]
