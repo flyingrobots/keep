@@ -30,7 +30,8 @@ use crate::{BlobId, ByteRange, LayoutId};
 /// On Linux, read an already migrated version-two store with a retained blob.
 /// The caller owns output visibility: a failed write can leave an untrusted
 /// prefix. The receipt names the view; it does not extend retention after the
-/// snapshot is dropped. This example's byte budget is application policy.
+/// snapshot is dropped. This example limits aggregate retained segment bytes;
+/// catalog bytes and decoded metadata allocate separately.
 ///
 /// ```no_run
 /// #[cfg(target_os = "linux")]
@@ -43,7 +44,7 @@ use crate::{BlobId, ByteRange, LayoutId};
 ///         CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, LayoutEntryLimit,
 ///         ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit,
 ///     };
-///     // Explicit admission budget for the catalog and selected segment bytes.
+///     // Limit retained segment bytes; catalog and metadata allocate separately.
 ///     let policy = CatalogRestartPolicy::new(
 ///         SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
 ///         CatalogRestartByteLimit::new(16_777_216)?,

@@ -189,7 +189,7 @@ assert_eq!(output, b"exact bytes, or nothing");
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-On Linux with the admitted ext4 profile, read an existing migrated version-two store whose retention roots anchor the requested blob. The following example is also compiled in the `DurableStore` API documentation. Its 16 MiB admission budget is an explicit application choice, not a measured universal limit.
+On Linux with the admitted ext4 profile, read an existing migrated version-two store whose retention roots anchor the requested blob. The following example is also compiled in the `DurableStore` API documentation. Its 16 MiB limit applies to aggregate retained segment bytes; catalog bytes and decoded metadata allocate separately.
 
 ```rust
 #[cfg(target_os = "linux")]
@@ -202,7 +202,7 @@ fn copy_retained_blob(
         CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, LayoutEntryLimit,
         ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit,
     };
-    // Explicit admission budget for the catalog and selected segment bytes.
+    // Limit retained segment bytes; catalog and metadata allocate separately.
     let policy = CatalogRestartPolicy::new(
         SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
         CatalogRestartByteLimit::new(16_777_216)?,
@@ -213,7 +213,7 @@ fn copy_retained_blob(
 }
 ```
 
-Snapshot admission materializes the selected catalog and segment bytes under the supplied policy. Reads stream to the caller without an additional whole-blob buffer; a failed write may leave an untrusted prefix. Retain an explicit snapshot to make several reads against one fenced view. The receipt records that view but grants no retention after the snapshot is dropped. This read API performs no publication, repair or collection; see the [durable-read evidence and remaining acceptance work](docs/testing-evidence/durable-authenticated-reads.md).
+Snapshot admission materializes catalog bytes under the catalog format bounds and selected segment bytes under the supplied aggregate segment budget. Decoded indexes and retention records allocate additionally under separate format and record-count limits; the segment budget is not a total memory cap. Reads stream to the caller without an additional whole-blob buffer; a failed write may leave an untrusted prefix. Retain an explicit snapshot to make several reads against one fenced view. The receipt records that view but grants no retention after the snapshot is dropped. This read API performs no publication, repair or collection; see the [durable-read evidence and remaining acceptance work](docs/testing-evidence/durable-authenticated-reads.md).
 
 Run the full gate suite the way CI does:
 

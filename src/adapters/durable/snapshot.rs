@@ -23,9 +23,12 @@ use crate::{AdmittedLayout, BlobId, ByteRange, ChunkId, LayoutId};
 /// the pinned catalog and are authenticated by the domain read cores
 /// before a byte is emitted.
 ///
-/// Opening materializes the complete selected catalog and its segment bytes
-/// within `CatalogRestartPolicy`, plus their decoded indexes; it is not a
-/// lazy segment reader. Retained roots are decoded and their closures verified
+/// Opening materializes selected segment bytes within the aggregate segment-byte
+/// limit in `CatalogRestartPolicy`. Catalog bytes are bounded separately by
+/// [`crate::CatalogLength::MAXIMUM`]; decoded indexes allocate additionally under
+/// format and record-count limits. The segment-byte limit is not a total
+/// snapshot-memory cap, and this is not a lazy segment reader.
+/// Retained roots are decoded and their closures verified
 /// one at a time under their stored traversal limits. Reads decode one bounded
 /// layout and stream authenticated chunks to the caller without assembling an
 /// additional whole-blob buffer. Caller-owned output may allocate separately.
@@ -79,8 +82,10 @@ impl DurableSnapshot {
     /// synchronizes the root directory before fencing; a synchronization
     /// failure is preserved under the snapshot's admission error.
     ///
-    /// Catalog/segment memory and record counts are bounded by `policy` and
-    /// the format. Closure work is bounded per root by its persisted limits.
+    /// The aggregate byte limit in `policy` covers retained segment bytes only.
+    /// Catalog bytes use [`crate::CatalogLength::MAXIMUM`] independently; decoded
+    /// indexes and retention records allocate additionally under their format
+    /// and record-count limits. Closure work is bounded per root by its persisted limits.
     /// This is blocking filesystem I/O and CPU verification, not publication;
     /// it performs no namespace writes and establishes no new durability.
     ///

@@ -115,7 +115,7 @@ Full validation and independent review of the resulting candidate remain require
 
 `DurableStore` pins a fresh `DurableSnapshot` per convenience call. Snapshot admission keeps the existing shared reader fence, catalog, retention head and manifest view and verifies every selected retained closure against the catalog. Blob lookup scans selected roots one at a time and chooses the lowest retained layout identity; exact-layout reads use the catalog directly. Reconstruction and ranges use the shared immutable domain cores and return receipts with the view coordinates only after emission succeeds.
 
-The allocation, blocking and failure contract is in the public API documentation and [rationale](../../src/adapters/durable/rationale.md). Catalog and selected segment bytes are materialized under explicit caller policy; the API does not claim lazy segment reads or constant total memory. It adds no whole-blob output buffer or aggregate anchor index.
+The allocation, blocking and failure contract is in the public API documentation and [rationale](../../src/adapters/durable/rationale.md). Selected segment bytes are materialized under the caller's aggregate segment-byte limit. Catalog bytes are bounded separately by `CatalogLength::MAXIMUM`; decoded indexes and retention records allocate additionally under format and record-count limits. The segment limit is not a total snapshot-memory cap, and the API does not claim lazy segment reads or constant total memory. It adds no whole-blob output buffer or aggregate anchor index.
 
 ## Closure ledger
 
@@ -209,7 +209,7 @@ An isolated source/build mutation made range verification start with all layout 
 
 ## Acceptance documentation candidate
 
-The Linux README example mirrors a compiled `DurableStore` doctest and names an explicit 16 MiB application admission budget. Normative documents now identify the available API, typed outcomes, view coordinates, managed-namespace fence scope and materialization costs. Requirement rows 009 and 010 identify the candidate implementation and explicitly retain final #109 acceptance as pending; they do not certify an unreviewed release.
+The Linux README example mirrors a compiled `DurableStore` doctest and names an explicit 16 MiB aggregate retained-segment budget, with catalog bytes and decoded metadata allocated separately. Normative documents now identify the available API, typed outcomes, view coordinates, managed-namespace fence scope and materialization costs. Requirement rows 009 and 010 identify the candidate implementation and explicitly retain final #109 acceptance as pending; they do not certify an unreviewed release.
 
 Review queue inspection found no submitted review bodies or inline threads; the sole top-level comment reports that CodeRabbit skipped this draft. All retrieved connections were exhausted. Independent review must cover the whole diff, the raw receipts and the scope distinctions above; no absence of comments is treated as approval.
 
@@ -296,3 +296,9 @@ The cwd guard's early-exit coverage is source inspection; normal-path runtime ev
 Focused platform and locator laws pass in debug/release and Clippy passes with warnings denied (`fixture-followup-validation-corrected.log`); an earlier edit-script mismatch left the source unchanged, so the preceding `fixture-followup-validation.log` is not evidence for the revised fixtures.
 
 No test was deleted, and no product expectation was weakened to obtain these passes.
+
+## Landing allocation-contract correction
+
+The fresh landing review found that the README example and snapshot API documentation incorrectly included catalog bytes in the caller's aggregate byte budget. The unchanged loader reads the catalog under `CatalogLength::MAXIMUM` before applying `CatalogRestartPolicy::retained_segment_bytes` to selected segments; decoded indexes and retention records have separate bounds and allocate additionally.
+
+Change kind: documentation-only. The corrected README, API, normative requirements and current evidence distinguish these allocations without changing runtime admission or inventing a total-memory cap. Earlier runtime receipts remain historical evidence; their wording does not establish an aggregate cap covering the catalog. The source oracle is `catalog_restart_loader.rs:67–80`, `catalog_restart_segments.rs:75–85`, and `filesystem_catalog_snapshot.rs:61–96`; compiled examples, documentation checks and exact-head delta review validate the correction.
