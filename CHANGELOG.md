@@ -10,6 +10,12 @@ after its public API and format compatibility policies are established.
 
 - Public filesystem-stage integration laws now exercise production ext4 admission, exclusive creation, canonical sealed bytes, and preservation of unsealed evidence through the promised `segment_filesystem_stage` target (#147).
 
+- Repository-task catalog publisher construction now enforces the production filesystem profile even when given an existing writer lock; catalog publication crash campaigns use ordinary platform admission (#150).
+
+- Sealed segment receipts no longer expose writable stages through `map_stage`. Repository crash injection uses a private-stage observation wrapper whose sealed conversion preserves stage identity and publisher authority without handing storage to callbacks (#146).
+
+- Incomplete version-one segment seals now refuse observed fixed-framing corruption before recovery assessment can authorize discard, preserving precise seal diagnostics (#171).
+
 - Retention recovery execution errors report the exact failed boundary, original typed cause, known namespace effects and uncertain effect/durability; retries freshly observe the store. Observed stage identity remains binding across reopening, and cleanup preserves verified pool evidence rather than promising the removed pathname survives (#99).
 
 - Retention recovery now preserves incomplete stages and requires explicit disposition before any recovery mutation or publication retry; automatic incomplete-stage disposal is deferred by maintainer decision (#99).
