@@ -1,4 +1,4 @@
-//! This boundary module owns post-integrity retention header admission.
+//! This boundary module owns retention root header semantic admission.
 
 use super::RetentionRootDecodeError;
 use super::root_header_decoder::DecodedRootHeader;
@@ -17,12 +17,7 @@ pub(super) struct AdmittedRootHeader {
 pub(super) fn admit(
     header: &DecodedRootHeader,
 ) -> Result<AdmittedRootHeader, RetentionRootDecodeError> {
-    if header.anchor_count > RetentionRoot::MAXIMUM_ANCHOR_COUNT {
-        return Err(RetentionRootDecodeError::AnchorCountExceeded {
-            maximum: RetentionRoot::MAXIMUM_ANCHOR_COUNT,
-            observed: header.anchor_count,
-        });
-    }
+    admit_count(header.anchor_count)?;
     let generation = RootGeneration::new(header.generation)
         .map_err(|source| RetentionRootDecodeError::Generation { source })?;
     let profile = RegisteredRetentionProfile::admit(
@@ -52,4 +47,15 @@ fn predecessor(bytes: [u8; 32]) -> Option<RetentionRootDigest> {
     } else {
         Some(RetentionRootDigest::from_hash(bytes))
     }
+}
+
+/// Admits a complete count before either interrupted-stage discard or body allocation.
+pub(super) const fn admit_count(anchor_count: u32) -> Result<(), RetentionRootDecodeError> {
+    if anchor_count > RetentionRoot::MAXIMUM_ANCHOR_COUNT {
+        return Err(RetentionRootDecodeError::AnchorCountExceeded {
+            maximum: RetentionRoot::MAXIMUM_ANCHOR_COUNT,
+            observed: anchor_count,
+        });
+    }
+    Ok(())
 }

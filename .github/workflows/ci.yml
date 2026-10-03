@@ -25,6 +25,12 @@ jobs:
       - name: Install pinned toolchain
         run: rustup show
 
+      - name: Install Linux syscall observation tool
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes strace
+          strace --version
+
       - name: Install independent vector tool
         uses: taiki-e/install-action@41049aa56687c35e0afa74eed4f09cec4f9afabf # v2.85.2
         with:

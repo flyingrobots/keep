@@ -1,0 +1,18 @@
+437bc1971fc8a98f2d039e446b3f5008979974f9
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.03s
+     Running tests/store_migration_compatibility.rs (<isolated-build>/debug/deps/store_migration_compatibility-fbb66f7c5fa9ff33)
+
+running 2 tests
+test unsupported_migration_versions_refuse_with_exact_coordinates ... ok
+test every_unknown_mandatory_flag_refuses_without_downgrade ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+    Finished `release` profile [optimized] target(s) in 0.01s
+     Running tests/store_migration_compatibility.rs (<isolated-build>/release/deps/store_migration_compatibility-07447e856cc2ca90)
+
+running 2 tests
+test unsupported_migration_versions_refuse_with_exact_coordinates ... ok
+test every_unknown_mandatory_flag_refuses_without_downgrade ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

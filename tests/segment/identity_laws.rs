@@ -3,8 +3,8 @@
 use std::error::Error;
 
 use keep::{
-    AdmittedSegment, SegmentHeaderError, SegmentReadError, SegmentRecordAdmissionError,
-    SegmentRecordDecodeError, SegmentRecordHeaderError,
+    SegmentHeaderError, SegmentReadError, SegmentRecordAdmissionError, SegmentRecordDecodeError,
+    SegmentRecordHeaderError,
 };
 
 use super::format_oracle::seal_segment;
@@ -148,8 +148,5 @@ fn segment_header_refusal_precedes_outer_digest_admission() -> Result<(), Box<dy
 }
 
 fn refusal(encoded: &[u8]) -> Result<SegmentReadError, Box<dyn Error>> {
-    match AdmittedSegment::decode(encoded, maximum_policy()) {
-        Ok(_admitted) => Err("malformed complete segment was admitted".into()),
-        Err(error) => Ok(error),
-    }
+    super::verification_refusal(encoded, maximum_policy())
 }

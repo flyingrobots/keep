@@ -12,7 +12,9 @@ Read:
 
 1. [AGENTS.md](AGENTS.md);
 2. the normative [Keep Rust Engineering Standard](docs/Rust%20Standards.md);
-3. any ADR under [docs/adr/](docs/adr/), or colocated `rationale.md`,
+3. the binding [Keep Testing Standards](docs/Testing%20Standards.md) and their
+   [enforcement profile](docs/testing/enforcement.md);
+4. any ADR under [docs/adr/](docs/adr/), or colocated `rationale.md`,
    governing the affected identity, format, durability, recovery,
    concurrency, garbage-collection, encryption, or API boundary.
 

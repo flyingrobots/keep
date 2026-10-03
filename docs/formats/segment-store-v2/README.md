@@ -6,13 +6,7 @@ catalog, and publication-head byte while adding explicit retention state,
 reader fences, migration evidence, and reserved GC and recovery-disposition
 namespaces.
 
-ADR-0009 owns the cross-cutting retention and liveness decision. These pages
-own its durable representation. The one-way migration, version-two reopen, and
-forward retention publication are implemented with executable evidence;
-recovery of retained retention stages, reader fencing, and collection remain
-planned in issue #19, and the [requirements ledger](requirements.md) records
-exactly which requirements are proven. A version-1 store remains admitted until
-its owner migrates it.
+ADR-0009 owns the cross-cutting retention and liveness decision. These pages own its durable representation. The one-way migration, version-two reopen, forward retention publication, partial-prefix migration recovery, and the 68-case migration process-death matrix are implemented with executable evidence. Retention recovery and reader fencing are implemented in this branch; correctness remediation and independent acceptance remain tracked in PR #99. Collection remains planned in #21. The [requirements ledger](requirements.md) records requirements and their evidence status. A version-1 store remains admitted until its owner migrates it.
 
 ## Core laws
 
@@ -44,6 +38,7 @@ The following pages form one protocol:
   manifest, and retention-head rules.
 - [Retention publication](retention-publication.md) owns closure admission and
   the generation transition.
+- [Retention publication recovery](retention-recovery.md) owns interrupted stages, restart publication, and retention process-death boundaries.
 - [Closure verification](closure.md) owns deterministic traversal, exact
   resource accounting, authenticated reconstruction, and closure evidence.
 - [Closure corruption boundary](closure-corruption.md) owns the admitted-record
@@ -86,19 +81,27 @@ one pinned catalog, preflight, preparation, and the 17-phase publication port;
 fresh writer-locked filesystem migration through all 21 phases, refusing a
 version-one store that still holds a retained stage;
 `FilesystemVersionTwoAdmission::reopen`, which jointly admits the marker,
-intent, and receipt, binds the root's device, mount, and inode identity to the
-intent, and pins the retention directories it admitted; and
+intent, and receipt, binds the root's restart-stable device and inode identity
+to the intent, and pins the retention directories it admitted; and
 `FilesystemRetentionPublicationAuthority`, which publishes initial and
 successor generations against the observed head, binds this store's catalog
 head and the catalog it selects, and refuses superseded candidates, retained
 stages, replaced protocol directories, and every namespace or capacity
 violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 
-Not implemented: retention publication recovery and `KEEP-CRASH-036..052`
-process-death evidence, partial-prefix migration recovery and
-`KEEP-CRASH-053..073`, the reader fence, model-based transition evidence, and
-garbage collection. Issue #19 owns the first four and issue #21 the last;
-issue #97 owns the restart-stable root identity coordinate. A version-1 store
+Retention publication recovery, fenced reader snapshots and model-based transition evidence are implemented in this branch.
+
+Their bounded landing and independent acceptance remain tracked in PR #99 and the [landing ledger](../../testing-evidence/retention-landing.md). Incomplete retention stages are preserved pending explicit disposition; automatic disposal is deferred. Execution-failure reporting remains part of the [retention recovery contract](retention-recovery.md).
+
+The `KEEP-CRASH-036..052` initial-publication process-death sequence includes independent recovered-reader checks; its [evidence receipt](../../testing-evidence/retention-crash-reader-oracle.md) records the assertions, calibration, and scope.
+
+Partial-prefix migration recovery and the 68-case `KEEP-CRASH-053..073`
+process-death matrix are implemented. Broader migration restart corruption
+and compatibility coverage remain in #111 and #112; issue #21 owns garbage
+collection. Reopen compares only the restart-stable root coordinates, device
+and inode, against the intent; see
+[root identity across restart](recovery.md#root-identity-across-restart). A
+version-1 store
 remains admitted until its owner migrates it, and the
 [requirements ledger](requirements.md) is the authority on which requirements
 are proven.

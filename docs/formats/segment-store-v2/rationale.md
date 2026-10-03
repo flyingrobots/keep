@@ -96,3 +96,30 @@ would mutate the exact version-2 root grammar. Accepting placeholder bytes was
 also rejected. Version 2 reserves the names, while their presence remains an
 unsupported mandatory state until issue #21 supplies complete byte, parser,
 crash, recovery, corruption, and fuzz evidence.
+
+## Compare restart-stable root coordinates on reopen
+
+The migration intent records the root's device, mount, and inode identity.
+Only the first and last survive a remount: `statx.stx_mnt_id` is a mount
+instance, not a volume. Comparing it on reopen made a correctly remounted
+store refuse and would have made partial-prefix migration recovery reject
+the store's own intent after a reboot.
+
+Reopen therefore compares device and inode only, and future restart recovery
+must apply the same rule. Meanwhile,
+the migrating process still compares all three against its own observation.
+The intent bytes are unchanged.
+
+Rejected: removing the mount field. The definition digest covers the intent
+layout, so the change would re-derive the format marker, the receipt, and
+every version-2 fixture for no gain in restart safety. Rejected: the
+filesystem UUID as the device coordinate in this change. That would require
+separate platform admission, compatibility, and format decisions. Device
+renumbering remains a refusal; this change does not introduce re-admission or
+silently substitute a different identity coordinate.
+
+## Verify completed migration before reporting completion
+
+An exact receipt proves the migration records agree; it does not prove the current reserved namespace still admits. Recovery therefore invokes the read-only `StoreMigrationRecoveryStorage::verify_complete` capability after planning selects `Complete` and before returning success. The filesystem adapter reuses version-two namespace admission, retaining the original cause through `Observation` and `NamespacePreflight`. Existing corruption/planning refusals retain priority because this check follows planning. No namespace effect, synchronization or retention recovery is initiated.
+
+Completed stores may contain published retention roots, manifests and heads. Reusing the partial-migration empty-directory preflight would reject valid post-migration state, so completion uses the existing version-two admission policy instead. Migration completion verifies its root/reserved directory contract; retention owns the interpretation of retention artifacts and stages. This adds a required method to the public recovery storage port; external implementations must implement equivalent effect-free admission. On-disk formats and identities are unchanged.

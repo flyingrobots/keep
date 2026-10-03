@@ -1,0 +1,7 @@
+--- a/xtask/src/fuzz_seed_corpus/segment_seeds.rs
++++ b/xtask/src/fuzz_seed_corpus/segment_seeds.rs
+@@ -61,3 +61,3 @@
+         .map_err(|source| FuzzSeedError::violation(format!("recovery counterexample: {source}")))?;
+-    seed(5, "recovery-unsupported-partial-seal-version", &bytes)
++    seed(5, "missing-recovery-input", &bytes)
+ }

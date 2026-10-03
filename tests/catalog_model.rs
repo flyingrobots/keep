@@ -1,5 +1,8 @@
 //! Deterministic catalog transition and lookup model laws.
 
+#[path = "catalog_model/generated_histories.rs"]
+mod generated_histories;
+
 mod support;
 
 use std::collections::BTreeMap;

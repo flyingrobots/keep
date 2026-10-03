@@ -41,6 +41,8 @@ pub(super) fn seeds(files: &RepositoryFiles) -> Result<Vec<Seed>, FuzzSeedError>
         seed(2, "record-one-zero", record)?,
         seed(3, "seal-empty", &empty)?,
         seed(3, "seal-one-zero", &one)?,
+        seed(5, "recovery-complete-empty", &empty)?,
+        recovery_counterexample()?,
     ];
     for (name, segment) in [
         ("complete-empty", empty.as_slice()),
@@ -50,6 +52,14 @@ pub(super) fn seeds(files: &RepositoryFiles) -> Result<Vec<Seed>, FuzzSeedError>
         seeds.push(seed(4, name, segment)?);
     }
     Ok(seeds)
+}
+
+fn recovery_counterexample() -> Result<Seed, FuzzSeedError> {
+    let encoded =
+        include_str!("../../../tests/fixtures/recovery/unsupported-partial-seal-version.hex");
+    let bytes = decode_lower_hex(encoded.trim(), MAX_SEED_BYTES, EmptyHex::Refuse)
+        .map_err(|source| FuzzSeedError::violation(format!("recovery counterexample: {source}")))?;
+    seed(5, "recovery-unsupported-partial-seal-version", &bytes)
 }
 
 fn seed(selector: u8, name: &'static str, bytes: &[u8]) -> Result<Seed, FuzzSeedError> {

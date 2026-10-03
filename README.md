@@ -51,35 +51,48 @@ Keep is required to refuse all three, before mutating anything.
   generation-versioned catalogs, and a fixed-width `HEAD` are published
   through an ordered protocol whose every step is a named crash point.
   Platform admission is Linux ext4, non-casefolded, one writer.
-- **Proven restart recovery for version 1.** The crash matrix kills real
-  writer processes at 105 before/during/after coordinates
-  (`KEEP-CRASH-001`–`035`) and verifies the store lands in exactly one
-  documented lawful state each time.
+- **Process-death recovery evidence.** The crash matrix kills real writer processes
+  at 156 before/during/after coordinates (`KEEP-CRASH-001`–`052`) and
+  verifies the store lands in exactly one documented lawful state each time,
+  for version-1 publication and for version-2 retention publication.
 - **Version-2 retention and migration, forward path.** Explicit retention
   roots, deterministic closure verification, a one-way 21-phase migration,
   and a 17-phase retention publication — all with production filesystem
   writers, all preserving every version-1 byte. Reopening a migrated store
-  jointly admits its marker, intent, and receipt, binds the root's device,
-  mount, and inode identity to the intent, and pins the directories it
-  admitted. Publication binds this store's own catalog head and the catalog
-  it selects, and refuses retained stages, superseded candidates, substituted
+  jointly admits its marker, intent, and receipt, binds the root's device and
+  inode identity to the intent, and pins the directories it admitted. Mount
+  identity remains a check within the live migration process. Publication
+  binds this store's own catalog head and the catalog it selects, and refuses
+  retained stages, superseded candidates, substituted
   files, replaced protocol directories, and every namespace or capacity
   violation before it writes anything. Each refusal is a typed value, not a
   string.
+- **Migration restart recovery.** Recovery verifies current authority,
+  classifies the observed prefix, and resumes an exact persisted migration
+  intent through the remaining phases. An incomplete pre-effect intent stage
+  is discarded and rebuilt from freshly verified current intent. Its crash
+  matrix kills real writer processes
+  at 68 before/during/after coordinates (`KEEP-CRASH-053`–`073`), preserving
+  every version-1 byte. Broader hostile restart combinations remain in #111.
 
 ## What it does not do yet
 
-Version 2 writes correctly from a clean start and, if it finds the residue of
-an interrupted publication, refuses rather than guesses. Nothing yet recovers
-that residue, and readers have no fence, so **an interrupted version-2
-publication waits for a human until #19 lands.** A version-1 store stays
-admitted until its owner migrates it; migrate only if you accept that wait.
+Version-2 retention recovery, fenced reader snapshots and model-based transitions are implemented in this branch but still require the correctness corrections and independent acceptance review tracked in PR #99.
+
+The retention process-death sequence checks the recovered head generation and exact selected-root bytes before retry; its [evidence receipt](docs/testing-evidence/retention-crash-reader-oracle.md) bounds that claim to the declared initial-publication crash coordinates.
+
+Incomplete retention stages are preserved and block publication pending explicit disposition; automatic disposal is deferred. The [landing ledger](docs/testing-evidence/retention-landing.md) tracks execution-failure reporting and final acceptance under the [approved recovery contract](docs/formats/segment-store-v2/retention-recovery.md).
+
+Complete orphans remain recovery-protected until explicit disposition lands with garbage collection (#21).
+
+Migration restart recovery is implemented and does not grant retention authority.
+
+A version-1 store stays admitted until its owner migrates it.
 
 | Gap | Tracked |
 | --- | --- |
-| Restart recovery for retention publication and migration | [#19](https://github.com/flyingrobots/keep/issues/19) |
-| Restart-stable root identity coordinate in the migration intent | [#97](https://github.com/flyingrobots/keep/issues/97) |
-| Reader fence binding one consistent catalog + retention snapshot | [#19](https://github.com/flyingrobots/keep/issues/19) |
+| Retention recovery correctness remediation and broader migration corruption coverage | [PR #99](https://github.com/flyingrobots/keep/pull/99), [#111](https://github.com/flyingrobots/keep/issues/111) |
+| Fenced reader correctness remediation and independent acceptance | [PR #99](https://github.com/flyingrobots/keep/pull/99) |
 | Precise verification reports at explicit depths | [#20](https://github.com/flyingrobots/keep/issues/20) |
 | Garbage collection and identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |
 | Bounded production ingestion through the durable store | [#82](https://github.com/flyingrobots/keep/issues/82) |
@@ -176,6 +189,32 @@ assert_eq!(output, b"exact bytes, or nothing");
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
+On Linux with the admitted ext4 profile, read an existing migrated version-two store whose retention roots anchor the requested blob. The following example is also compiled in the `DurableStore` API documentation. Its 16 MiB limit applies to aggregate catalog-selected segment bytes; catalog bytes and decoded metadata allocate separately.
+
+```rust
+#[cfg(target_os = "linux")]
+fn copy_retained_blob(
+    root: &std::path::Path,
+    target: keep::BlobId,
+    output: &mut impl std::io::Write,
+) -> Result<keep::DurableReconstructionReceipt, Box<dyn std::error::Error>> {
+    use keep::{
+        CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, LayoutEntryLimit,
+        ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit,
+    };
+    // Limit catalog-selected segment bytes; catalog and metadata allocate separately.
+    let policy = CatalogRestartPolicy::new(
+        SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
+        CatalogRestartByteLimit::new(16_777_216)?,
+    );
+    let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT)?;
+    let snapshot = store.snapshot()?;
+    Ok(snapshot.reconstruct(target, output)?)
+}
+```
+
+Snapshot admission materializes catalog bytes under the catalog format bounds and selected segment bytes under the supplied aggregate segment budget. Decoded indexes and retention records allocate additionally under separate format and record-count limits; the segment budget is not a total memory cap. Reads stream to the caller without an additional whole-blob buffer; a failed write may leave an untrusted prefix. Retain an explicit snapshot to make several reads against one fenced view. The receipt records that view but grants no retention after the snapshot is dropped. This read API performs no publication, repair or collection; see the [durable-read evidence and remaining acceptance work](docs/testing-evidence/durable-authenticated-reads.md).
+
 Run the full gate suite the way CI does:
 
 ```bash
@@ -183,6 +222,22 @@ cargo test --workspace --all-features --locked
 cargo xtask durability-crash-matrix        # kills real writer processes
 cargo xtask golden-file-worldline-check
 cargo xtask conformance-check
+```
+
+Select a crash campaign with `--sequence NAME` using these exact CLI names:
+
+| Name | Campaign |
+| --- | --- |
+| `segment` | Segment publication |
+| `catalog` | Catalog publication |
+| `head` | Publication-head replacement |
+| `recovery-discard` | Explicit recovery evidence discard |
+| `initialization` | Writer-locked initialization |
+| `retention` | Retention root, manifest, and head publication |
+| `migration` | Version-one to version-two migration |
+
+```bash
+cargo xtask durability-crash-matrix --sequence retention
 ```
 
 ## Design boundary

@@ -1,0 +1,12 @@
+--- a/src/adapters/filesystem_writer_lock.rs
++++ b/src/adapters/filesystem_writer_lock.rs
+@@ -118,8 +118,8 @@
+         }
+         let expected_identity = FileIdentity::from(&metadata);
+         let lock_file = lock_file.into_std();
+-        acquire_lock(&lock_file, WriterLockAcquirePhase::Acquire)?;
+         after_acquire();
++        acquire_lock(&lock_file, WriterLockAcquirePhase::Acquire)?;
+         verify_current_identity(&directory, expected_identity)?;
+         Ok(Self {
+             directory,

@@ -4,8 +4,8 @@ use std::io::Write;
 
 use crate::{AdmittedLayout, BlobId, ByteRange, LayoutDecodePolicy, LayoutId, ReferenceStore};
 
-use super::range_read_execution::read_admitted;
 use super::{RangeReadError, RangeReadReceipt};
+use crate::authenticated_read::read_admitted;
 
 impl ReferenceStore {
     /// Reads one exact logical byte range from a committed blob.
@@ -13,8 +13,9 @@ impl ReferenceStore {
     /// The lowest canonical committed [`LayoutId`] is chosen deterministically
     /// when more than one layout names the blob. Only chunks overlapping
     /// `requested` are loaded. Every selected complete chunk is authenticated
-    /// before any output, then reauthenticated immediately before its
-    /// overlapping bytes are emitted.
+    /// once before any output. Emission then fetches each verified immutable
+    /// chunk by identity and writes only its overlapping bytes without hashing
+    /// it again; the in-memory view cannot change under `&self`.
     ///
     /// The receipt proves the requested bytes came from authenticated chunks
     /// under an admitted layout. It does not prove the complete blob identity,
@@ -92,7 +93,7 @@ impl ReferenceStore {
             .ok_or(RangeReadError::LayoutMissing {
                 requested: layout_id,
             })?;
-        read_admitted(self, layout_id, layout, requested, output)
+        read_admitted(self, layout_id, layout, requested, output).map_err(RangeReadError::from)
     }
 
     /// Resolves a caller-supplied admitted layout to one committed range.
@@ -156,3 +157,7 @@ impl ReferenceStore {
         self.read_admitted_layout_range(&layout, requested, output)
     }
 }
+
+#[cfg(test)]
+#[path = "range_read_tests.rs"]
+mod tests;

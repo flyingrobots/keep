@@ -1,0 +1,81 @@
++ git rev-parse 'HEAD^{tree}'
+13a6148d8b4ca1fc28b8342cd6a06bc46b9bb2a5
++ cargo test --lib --all-features --locked filesystem_migration_restart
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.03s
+     Running unittests src/lib.rs (<restored-target>/debug/deps/keep-09abf1fe30bdfc46)
+
+running 22 tests
+test adapters::store_migration::filesystem_migration_restart_pool_tests::a_valid_segment_substitution_reports_both_digest_coordinates ... ok
+test adapters::store_migration::filesystem_migration_restart_pool_tests::a_damaged_current_head_preserves_all_restart_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_pool_tests::adding_a_valid_orphan_cannot_reuse_the_previous_migration_intent ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::a_nonempty_reader_fence_preserves_its_exact_refusal ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::effects_without_durable_intent_preserve_restart_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_pool_tests::damaged_immutable_pool_bytes_refuse_restart_before_effects ... ok
+test adapters::store_migration::filesystem_migration_restart_pool_tests::unknown_immutable_pool_names_refuse_with_the_exact_name ... ok
+test adapters::store_migration::filesystem_migration_restart_root_tests::a_byte_equal_store_copy_refuses_the_persisted_root_identity ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::a_marker_before_namespace_completion_preserves_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::a_receipt_without_its_marker_preserves_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::stages_surviving_later_effects_refuse_restart ... ok
+test adapters::store_migration::filesystem_migration_restart_pair_tests::conflicting_stage_bytes_preserve_both_records_on_restart ... ok
+test adapters::store_migration::filesystem_migration_restart_pair_tests::byte_equal_stage_substitution_refuses_before_restart_effects ... ok
+test adapters::store_migration::filesystem_migration_restart_record_tests::overlong_stages_refuse_restart_without_disposal ... ok
+test adapters::store_migration::filesystem_migration_restart_record_tests::a_valid_foreign_receipt_refuses_its_conflicting_intent_digest ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::completed_migration_refuses_unknown_reserved_entries_without_effects ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::namespace_holes_refuse_restart_at_the_exact_coordinates ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::regular_files_at_protocol_directory_names_refuse_restart ... ok
+test adapters::store_migration::filesystem_migration_restart_record_tests::checksum_damage_in_each_migration_record_preserves_restart_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::unknown_root_and_nested_entries_preserve_restart_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::directory_substitution_at_each_fixed_file_refuses_restart ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::symbolic_links_at_fixed_record_names_refuse_without_following_them ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 354 filtered out; finished in 0.32s
+
++ cargo test --lib --all-features --release --locked filesystem_migration_restart
+    Finished `release` profile [optimized] target(s) in 0.01s
+     Running unittests src/lib.rs (<restored-target>/release/deps/keep-ab9e64645c5a4507)
+
+running 22 tests
+test adapters::store_migration::filesystem_migration_restart_pool_tests::a_damaged_current_head_preserves_all_restart_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_pool_tests::a_valid_segment_substitution_reports_both_digest_coordinates ... ok
+test adapters::store_migration::filesystem_migration_restart_pool_tests::adding_a_valid_orphan_cannot_reuse_the_previous_migration_intent ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::a_nonempty_reader_fence_preserves_its_exact_refusal ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::effects_without_durable_intent_preserve_restart_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_pool_tests::damaged_immutable_pool_bytes_refuse_restart_before_effects ... ok
+test adapters::store_migration::filesystem_migration_restart_pool_tests::unknown_immutable_pool_names_refuse_with_the_exact_name ... ok
+test adapters::store_migration::filesystem_migration_restart_root_tests::a_byte_equal_store_copy_refuses_the_persisted_root_identity ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::a_marker_before_namespace_completion_preserves_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::a_receipt_without_its_marker_preserves_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::stages_surviving_later_effects_refuse_restart ... ok
+test adapters::store_migration::filesystem_migration_restart_pair_tests::conflicting_stage_bytes_preserve_both_records_on_restart ... ok
+test adapters::store_migration::filesystem_migration_restart_pair_tests::byte_equal_stage_substitution_refuses_before_restart_effects ... ok
+test adapters::store_migration::filesystem_migration_restart_record_tests::overlong_stages_refuse_restart_without_disposal ... ok
+test adapters::store_migration::filesystem_migration_restart_record_tests::a_valid_foreign_receipt_refuses_its_conflicting_intent_digest ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::completed_migration_refuses_unknown_reserved_entries_without_effects ... ok
+test adapters::store_migration::filesystem_migration_restart_order_tests::namespace_holes_refuse_restart_at_the_exact_coordinates ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::regular_files_at_protocol_directory_names_refuse_restart ... ok
+test adapters::store_migration::filesystem_migration_restart_record_tests::checksum_damage_in_each_migration_record_preserves_restart_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::unknown_root_and_nested_entries_preserve_restart_evidence ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::directory_substitution_at_each_fixed_file_refuses_restart ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::symbolic_links_at_fixed_record_names_refuse_without_following_them ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 354 filtered out; finished in 0.24s
+
++ cargo test --lib --all-features --locked completed_migration
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (<restored-target>/debug/deps/keep-09abf1fe30bdfc46)
+
+running 2 tests
+test adapters::retention::filesystem_retention_migration_completion_tests::completed_migration_preserves_published_retention_state ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::completed_migration_refuses_unknown_reserved_entries_without_effects ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 374 filtered out; finished in 0.08s
+
++ cargo test --lib --all-features --release --locked completed_migration
+    Finished `release` profile [optimized] target(s) in 0.01s
+     Running unittests src/lib.rs (<restored-target>/release/deps/keep-ab9e64645c5a4507)
+
+running 2 tests
+test adapters::retention::filesystem_retention_migration_completion_tests::completed_migration_preserves_published_retention_state ... ok
+test adapters::store_migration::filesystem_migration_restart_namespace_tests::completed_migration_refuses_unknown_reserved_entries_without_effects ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 374 filtered out; finished in 0.08s

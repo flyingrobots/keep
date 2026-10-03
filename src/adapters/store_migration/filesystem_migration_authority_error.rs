@@ -3,7 +3,9 @@
 use std::io;
 
 use super::{FilesystemMigrationInventoryError, StoreMigrationIntentDigest};
-use crate::adapters::{CatalogDecodeError, CatalogRestartError, PublicationHeadDecodeError};
+use crate::adapters::{
+    CatalogDecodeError, CatalogRestartError, PublicationHeadDecodeError, WriterLockAcquireError,
+};
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
 /// Published version-1 artifact observed while establishing migration authority.
@@ -21,11 +23,16 @@ pub enum FilesystemMigrationAuthorityArtifact {
 }
 
 /// Physical store-root coordinate compared during migration admission.
+///
+/// `Device` and `File` are restart-stable and are compared on every reopen of
+/// a migrated store. `Mount` names a mount instance that can change across
+/// unmount, remount, and reboot; only the migrating process compares it, and
+/// only against the observation it made itself.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StoreRootIdentityCoordinate {
     /// Platform device coordinate.
     Device,
-    /// Platform mount coordinate.
+    /// Platform mount coordinate; same-process evidence only.
     Mount,
     /// Platform file coordinate.
     File,
@@ -34,6 +41,16 @@ pub enum StoreRootIdentityCoordinate {
 /// Failure to observe or revalidate exact filesystem migration authority.
 #[derive(Debug)]
 pub enum FilesystemMigrationAuthorityError {
+    /// The production platform refused the store root.
+    Platform {
+        /// Preserved platform source.
+        source: io::Error,
+    },
+    /// The existing writer lock could not be acquired.
+    WriterLock {
+        /// Preserved lock refusal.
+        source: WriterLockAcquireError,
+    },
     /// Complete immutable-pool inventory could not be admitted.
     Inventory {
         /// Preserved inventory refusal.

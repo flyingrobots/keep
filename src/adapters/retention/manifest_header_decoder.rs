@@ -6,8 +6,13 @@ use super::manifest_field_decoder::{
 };
 
 pub(super) const HEADER_LENGTH: usize = 160;
-const ENTRY_WIDTH: usize = 72;
-const TRAILER_LENGTH: usize = 64;
+pub(super) const ENTRY_WIDTH: usize = 72;
+pub(super) const TRAILER_LENGTH: usize = 64;
+
+/// Derives the read bound from the same framing admitted by this decoder.
+pub(super) fn maximum_encoded_length() -> Result<usize, RetentionManifestDecodeError> {
+    canonical_length(crate::RetentionManifest::MAXIMUM_ENTRY_COUNT)
+}
 
 pub(super) struct DecodedManifestHeader {
     pub(super) generation: u64,
@@ -63,6 +68,13 @@ fn validate_fixed_fields(encoded: &[u8]) -> Result<(), RetentionManifestDecodeEr
     })?;
     require_zero(encoded, 42, 2, "entry")?;
     require_zero(encoded, 112, 48, "trailing header")
+}
+
+/// Checks framing once the complete size fields of an interrupted header exist.
+pub(super) fn admit_prefix_length(encoded: &[u8]) -> Result<(), RetentionManifestDecodeError> {
+    let entry_count = read_u32(encoded, 44)?;
+    super::manifest_semantic_header::admit_count(entry_count)?;
+    require_declared_length(encoded, canonical_length(entry_count)?)
 }
 
 fn canonical_length(entry_count: u32) -> Result<usize, RetentionManifestDecodeError> {

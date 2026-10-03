@@ -3,8 +3,9 @@
 use std::path::Path;
 
 use keep::{
-    CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemCatalogPublisher, LayoutEntryLimit,
-    RepositoryInitializationStorage, SegmentReadPolicy, SegmentRecordLimit, initialize_store,
+    CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemCatalogPublisher,
+    FilesystemPlatformAdmission, LayoutEntryLimit, RepositoryInitializationStorage,
+    SegmentReadPolicy, SegmentRecordLimit, initialize_store,
 };
 
 use super::control::CrashControl;
@@ -25,17 +26,25 @@ pub(super) fn run(
         .map_err(|source| verification("execute production store initialization", source))
 }
 
-pub(super) fn publisher(
+/// Initializes a fresh store and returns its retained writer lock.
+pub(super) fn initialized_lock(
     store_root: &Path,
-) -> Result<FilesystemCatalogPublisher, DurabilityCrashMatrixError> {
+) -> Result<keep::FilesystemWriterLock, DurabilityCrashMatrixError> {
     let mut storage = RepositoryInitializationStorage::admit_unchecked(store_root)
         .map_err(|source| DurabilityCrashMatrixError::io("open initialization storage", source))?;
     let _receipt = initialize_store(&mut storage)
         .map_err(|source| verification("initialize production crash store", source))?;
-    let lock = storage.into_writer_lock().map_err(|source| {
-        DurabilityCrashMatrixError::io("retain initialized writer lock", source)
-    })?;
-    FilesystemCatalogPublisher::open_unchecked_for_repository_tasks(lock, restart_policy()?)
+    storage
+        .into_writer_lock()
+        .map_err(|source| DurabilityCrashMatrixError::io("retain initialized writer lock", source))
+}
+
+pub(super) fn publisher(
+    store_root: &Path,
+) -> Result<FilesystemCatalogPublisher, DurabilityCrashMatrixError> {
+    let admission = FilesystemPlatformAdmission::initialize(store_root)
+        .map_err(|source| verification("admit crash catalog publisher platform", source))?;
+    FilesystemCatalogPublisher::open(admission, restart_policy()?)
         .map_err(|source| DurabilityCrashMatrixError::io("open crash catalog publisher", source))
 }
 
@@ -45,6 +54,6 @@ pub(super) fn restart_policy() -> Result<CatalogRestartPolicy, DurabilityCrashMa
     Ok(CatalogRestartPolicy::new(segment_policy(), byte_limit))
 }
 
-pub(super) const fn segment_policy() -> SegmentReadPolicy {
+pub(in crate::durability_crash_matrix) const fn segment_policy() -> SegmentReadPolicy {
     SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM)
 }

@@ -4,21 +4,14 @@ use std::path::Path;
 use std::process::Command;
 
 use super::BenchmarkBaselineError;
-use super::host_environment::{self, CapturedHost};
+use super::host_environment;
 use super::process::{ProcessOutput, run};
 use super::tracked_source;
 
 const DIAGNOSTIC_LIMIT: usize = 65_536;
 const VALUE_LIMIT: usize = 4_096;
 
-#[derive(Eq, PartialEq)]
-pub(super) struct CapturedEnvironment {
-    pub(super) commit: String,
-    pub(super) tree: &'static str,
-    pub(super) rustc_version: String,
-    pub(super) target_triple: String,
-    pub(super) host: CapturedHost,
-}
+pub(super) use super::captured_environment::CapturedEnvironment;
 
 pub(super) fn capture(
     repository_root: &Path,
@@ -27,17 +20,7 @@ pub(super) fn capture(
         git(repository_root, &["rev-parse", "--verify", "HEAD"])?,
         "git-commit",
     )?;
-    let status = git(
-        repository_root,
-        &["status", "--porcelain=v1", "--untracked-files=all", "-z"],
-    )?;
-    require_silent(&status)?;
-    let tracked_matches_head = tracked_source::matches_head(repository_root)?;
-    let tree = if status.stdout.is_empty() && tracked_matches_head {
-        "clean"
-    } else {
-        "dirty"
-    };
+    let tree = source_tree_state(repository_root)?;
     let rustc_version = text(rustc(&["--version"])?, "rustc-version")?;
     let target_triple = text(rustc(&["--print", "host-tuple"])?, "target-triple")?;
     let host = host_environment::capture()?;
@@ -47,6 +30,24 @@ pub(super) fn capture(
         rustc_version,
         target_triple,
         host,
+    })
+}
+
+/// Captures exact Git-source cleanliness independently of compiler and hardware.
+/// Index hints cannot hide changed tracked bytes from benchmark admission.
+pub(super) fn source_tree_state(
+    repository_root: &Path,
+) -> Result<&'static str, BenchmarkBaselineError> {
+    let status = git(
+        repository_root,
+        &["status", "--porcelain=v1", "--untracked-files=all", "-z"],
+    )?;
+    require_silent(&status)?;
+    let tracked_matches_head = tracked_source::matches_head(repository_root)?;
+    Ok(if status.stdout.is_empty() && tracked_matches_head {
+        "clean"
+    } else {
+        "dirty"
     })
 }
 

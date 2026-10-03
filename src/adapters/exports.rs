@@ -64,6 +64,8 @@ pub use super::layout_encode_error::LayoutEncodeError;
 pub use super::layout_id_binary_error::LayoutIdBinaryParseError;
 pub use super::layout_id_text_error::LayoutIdTextParseError;
 pub use super::layout_record::CanonicalLayoutRecord;
+#[cfg(feature = "repository-tasks")]
+pub use super::observed_segment_stage::ObservedSegmentStage;
 pub use super::opened_reusable_segment::OpenedReusableSegment;
 pub use super::publication_head_decode_error::PublicationHeadDecodeError;
 pub use super::recovery::*;
@@ -71,7 +73,6 @@ pub use super::recovery::*;
 pub use super::repository_initialization_storage::RepositoryInitializationStorage;
 pub use super::retention::*;
 pub use super::sealed_segment::SealedSegment;
-pub use super::segment_digest::SegmentDigest;
 pub use super::segment_header::SegmentHeader;
 pub use super::segment_header_error::SegmentHeaderError;
 pub use super::segment_publication::SegmentPublication;
@@ -92,6 +93,8 @@ pub use super::segment_seal::SegmentSeal;
 pub use super::segment_seal_error::SegmentSealError;
 pub use super::segment_stage::SegmentStage;
 pub use super::segment_stage_create_error::SegmentStageCreateError;
+#[cfg(feature = "repository-tasks")]
+pub use super::segment_stage_observer::{SegmentStageDurabilityEvent, SegmentStageObserver};
 pub use super::segment_write_error::SegmentWriteError;
 pub use super::segment_write_phase::{SegmentDurabilityPhase, SegmentWritePhase};
 pub use super::staged_segment::StagedSegment;
@@ -104,3 +107,6 @@ pub use super::store_initialization_storage::StoreInitializationStorage;
 pub use super::store_migration::*;
 pub use super::writer_lock_acquire_error::WriterLockAcquireError;
 pub use super::writer_lock_acquire_phase::WriterLockAcquirePhase;
+pub use crate::segment_digest::SegmentDigest;
+
+pub use super::filesystem_namespace_refusal::{FilesystemEntryKind, FilesystemNamespaceRefusal};

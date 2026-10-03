@@ -14,8 +14,9 @@ use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_stage::FilesystemRetentionStage;
 use super::{
     AdmittedRetentionRoot, CanonicalRetentionHead, CanonicalRetentionManifest,
-    RetentionCurrentStateRefusal, RetentionNamespaceAdmission, RetentionPublicationPreparation,
-    RetentionPublicationStorage, RetentionTransitionDisposition,
+    FilesystemRetentionRecoveryError, RetentionCurrentStateRefusal, RetentionNamespaceAdmission,
+    RetentionPublicationPreparation, RetentionPublicationStorage, RetentionRecoveryOutcome,
+    RetentionTransitionDisposition,
 };
 use crate::RetentionGenerationExpectation;
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
@@ -27,7 +28,23 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
         preparation: &RetentionPublicationPreparation<'_>,
     ) -> io::Result<RetentionTransitionDisposition> {
         self.attempt = None;
-        require_pinned_directories(&self.root, &self.retention, &self.roots, &self.manifests)?;
+        let recovery = self.recover().map_err(|error| match error {
+            FilesystemRetentionRecoveryError::Observe { source } => {
+                RetentionCurrentStateRefusal::RecoveryObservationRefused { source }.into_io()
+            }
+            FilesystemRetentionRecoveryError::Plan { source } => {
+                RetentionCurrentStateRefusal::RecoveryRefused { source }.into_io()
+            }
+            FilesystemRetentionRecoveryError::Execute { source } => {
+                RetentionCurrentStateRefusal::RecoveryStepRefused { source }.into_io()
+            }
+        })?;
+        if matches!(
+            recovery.outcome(),
+            RetentionRecoveryOutcome::Protected { .. }
+        ) {
+            return Err(RetentionCurrentStateRefusal::RetainedStage.into_io());
+        }
         require_no_retained_stage(&self.retention)?;
         let census =
             filesystem_retention_namespace::admit(&self.retention, &self.roots, &self.manifests)?;
@@ -199,6 +216,7 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
         attempt::require_mut(&mut self.attempt)?
             .take_head_stage()?
             .replace(&self.retention, pool_name::HEAD)
+            .map_err(Into::into)
     }
 
     fn synchronize_retention_namespace(&mut self) -> io::Result<()> {
@@ -208,21 +226,25 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
     fn remove_root_stage(&mut self) -> io::Result<()> {
         let attempt = attempt::require_mut(&mut self.attempt)?;
         let stage = attempt.take_root_stage()?;
-        stage.remove(
-            &self.retention,
-            attempt.namespace()?,
-            attempt.retained_root_name()?,
-        )
+        stage
+            .remove(
+                &self.retention,
+                attempt.namespace()?,
+                attempt.retained_root_name()?,
+            )
+            .map_err(Into::into)
     }
 
     fn remove_manifest_stage(&mut self) -> io::Result<()> {
         let attempt = attempt::require_mut(&mut self.attempt)?;
         let stage = attempt.take_manifest_stage()?;
-        stage.remove(
-            &self.retention,
-            &self.manifests,
-            attempt.retained_manifest_name()?,
-        )
+        stage
+            .remove(
+                &self.retention,
+                &self.manifests,
+                attempt.retained_manifest_name()?,
+            )
+            .map_err(Into::into)
     }
 
     fn synchronize_cleanup(&mut self) -> io::Result<()> {
@@ -238,7 +260,7 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
 /// `roots`, or `manifests` entry renamed and replaced after admission means the
 /// store's namespace no longer describes the admitted state; publication
 /// refuses instead of writing into a directory no reader would find.
-fn require_pinned_directories(
+pub(super) fn require_pinned_directories(
     root: &Dir,
     retention: &Dir,
     roots: &Dir,

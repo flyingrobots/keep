@@ -1,0 +1,7 @@
+diff --git a/src/adapters/retention/filesystem_retention_snapshot.rs b/src/adapters/retention/filesystem_retention_snapshot.rs
+--- a/src/adapters/retention/filesystem_retention_snapshot.rs
++++ b/src/adapters/retention/filesystem_retention_snapshot.rs
+@@ -137,0 +138,3 @@ impl FilesystemRetentionSnapshot {
++        if root.exists("reader.lock") {
++            return Err(Error::Fence { source: io::Error::other("calibrated post-lock admission failure") });
++        }

@@ -6,7 +6,7 @@
 #[cfg(feature = "golden-protocol-fuzz")]
 extern crate self as xtask;
 
-#[cfg(feature = "golden-protocol-fuzz")]
+#[cfg(any(feature = "golden-protocol-fuzz", feature = "benchmark-report-fuzz"))]
 mod diagnostic;
 
 #[cfg(feature = "golden-protocol-fuzz")]
@@ -113,3 +113,38 @@ pub fn admit_repository_json(input: &[u8]) -> RepositoryJsonAdmission {
         RepositoryJsonAdmission::Refused
     }
 }
+
+#[cfg(feature = "benchmark-report-fuzz")]
+#[allow(
+    clippy::redundant_pub_crate,
+    reason = "the facade hides the production parser implementation"
+)]
+mod benchmark_report_fuzz;
+
+/// Whether the production benchmark-report parser admitted the fuzz input.
+#[cfg(feature = "benchmark-report-fuzz")]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BenchmarkReportAdmission {
+    /// The input is a complete canonical report for the fixed historical seed.
+    Admitted,
+    /// The production parser refused the input.
+    Refused,
+}
+
+/// Exercises bounded production report admission without host capture or I/O.
+///
+/// Source coordinates are fixed to the committed historical fuzz seed. No
+/// filesystem, process, clock or network operation occurs. Input exceeding one
+/// MiB refuses before decoding; admission does not publish any artifact.
+#[cfg(feature = "benchmark-report-fuzz")]
+#[must_use]
+pub fn admit_benchmark_report(input: &[u8]) -> BenchmarkReportAdmission {
+    if benchmark_report_fuzz::admit(input).is_ok() {
+        BenchmarkReportAdmission::Admitted
+    } else {
+        BenchmarkReportAdmission::Refused
+    }
+}
+
+#[cfg(all(test, feature = "benchmark-report-fuzz"))]
+mod benchmark_report_fuzz_tests;

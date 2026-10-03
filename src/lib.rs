@@ -38,14 +38,19 @@
 //! and the complete synchronization mask. Writer-locked filesystem authority
 //! now executes one fresh forward migration through exact fixed-record and
 //! namespace transitions while retaining version-1 immutable bytes.
-//! Partial-prefix migration recovery, filesystem retention execution,
-//! immutable reader snapshots, and garbage collection remain intentionally
-//! absent.
+//! Partial-prefix recovery now plans and resumes lawful migration residue,
+//! returning typed refusals and an ordered execution receipt. Filesystem
+//! retention publication, bounded restart recovery and fenced snapshots are
+//! available. [`DurableStore`] composes a fenced snapshot with authenticated
+//! reconstruction and exact-range reads; its snapshot allocation policy is
+//! explicit. Garbage collection remains absent. Complete durable read-law and
+//! Worldline acceptance remains tracked in issue #109.
 
 #[cfg(test)]
 extern crate self as keep;
 
 mod adapters;
+mod authenticated_read;
 mod blob;
 mod catalog;
 mod chunk;
@@ -53,10 +58,14 @@ mod layout;
 mod profile;
 mod reference;
 mod retention;
+mod segment_digest;
+mod verification;
 
-#[cfg(feature = "repository-tasks")]
-#[doc(hidden)]
-pub use adapters::RepositoryInitializationStorage;
+pub use adapters::{
+    DurableOutcome, DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt,
+    DurableSnapshot, DurableStore, DurableStoreError, DurableView,
+};
+
 pub use adapters::{
     AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedSegment, AdmittedSegmentRecord,
     AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, AdmittedStoreMigrationReceipt,
@@ -136,17 +145,44 @@ pub use adapters::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
     CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
     FilesystemRetentionAuthorityError, FilesystemRetentionPublicationAuthority,
-    ObservedRetentionState, PreparedRetentionPublication, RetentionAuthorityDirectory,
-    RetentionClosureVerificationError, RetentionCurrentStateRefusal, RetentionHeadDecodeError,
-    RetentionManifestDecodeError, RetentionManifestEncodeError, RetentionNamespaceAdmission,
-    RetentionPublicationError, RetentionPublicationOutcome, RetentionPublicationPhase,
-    RetentionPublicationPreparation, RetentionPublicationPreparationError,
-    RetentionPublicationReceipt, RetentionPublicationStorage, RetentionRootDecodeError,
-    RetentionRootEncodeError, RetentionTransitionDisposition, RetentionTransitionError,
-    RetentionTransitionPreflight, RetentionTransitionPreflightError, RetentionTransitionReadiness,
-    VerifiedRetentionClosure, execute_retention_publication, plan_retention_transition,
-    preflight_retention_transition, prepare_retention_publication, verify_retention_closure,
+    FilesystemRetentionRecoveryError, FilesystemRetentionSnapshot,
+    FilesystemRetentionSnapshotError, ObservedRetentionState, PreparedRetentionPublication,
+    ReaderAttemptLimit, RetentionAuthorityDirectory, RetentionClosureVerificationError,
+    RetentionCurrentStateRefusal, RetentionEffectDurability, RetentionFixedStage,
+    RetentionHeadDecodeError, RetentionHeadStageAssessment, RetentionKnownEffect,
+    RetentionManifestDecodeError, RetentionManifestEncodeError, RetentionManifestStageAssessment,
+    RetentionNamespaceAdmission, RetentionNamespaceEffect, RetentionPool,
+    RetentionPoolEntryObservation, RetentionPoolObservations, RetentionPublicationError,
+    RetentionPublicationOutcome, RetentionPublicationPhase, RetentionPublicationPreparation,
+    RetentionPublicationPreparationError, RetentionPublicationReceipt, RetentionPublicationStorage,
+    RetentionRecordRefusal, RetentionRecoveryError, RetentionRecoveryEvidence,
+    RetentionRecoveryOutcome, RetentionRecoveryPlan, RetentionRecoveryReceipt,
+    RetentionRecoveryRefusal, RetentionRecoveryStep, RetentionRecoveryStorage,
+    RetentionRootDecodeError, RetentionRootEncodeError, RetentionRootStageAssessment,
+    RetentionSelectedRootRefusal, RetentionStageAssessment, RetentionStageAssessments,
+    RetentionStorageBoundary, RetentionStorageError, RetentionStorageProgress,
+    RetentionTransitionDisposition, RetentionTransitionError, RetentionTransitionPreflight,
+    RetentionTransitionPreflightError, RetentionTransitionReadiness, RetentionViewCoordinates,
+    RetentionViewError, RetentionViewSource, VerifiedRetentionClosure, assess_head_stage,
+    assess_manifest_stage, assess_root_stage, collect_retention_view, collect_verification_view,
+    execute_retention_publication, execute_retention_recovery, plan_retention_recovery,
+    plan_retention_transition, preflight_retention_transition, prepare_retention_publication,
+    verify_retention_closure,
 };
+pub use adapters::{
+    FilesystemMigrationRecoveryRefusal, FilesystemMigrationResidueKind, MIGRATION_NAMESPACE_PREFIX,
+    StoreMigrationEffect, StoreMigrationFixedStage, StoreMigrationNamespacePrefix,
+    StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError, StoreMigrationRecoveryPlan,
+    StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,
+    StoreMigrationStageDecodeError, plan_store_migration_recovery, recover_store_migration,
+};
+#[cfg(feature = "repository-tasks")]
+#[doc(hidden)]
+pub use adapters::{
+    ObservedSegmentStage, RepositoryInitializationStorage, SegmentStageDurabilityEvent,
+    SegmentStageObserver,
+};
+pub use adapters::{VerificationError, VerificationSource, verify_catalog_bytes, verify_segment};
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
     ByteRange, ByteRangeError,
@@ -161,10 +197,11 @@ pub use layout::{
     AdmittedLayout, LayoutEntry, LayoutEntryLimit, LayoutEntryLimitError, LayoutId,
     LayoutIdMismatch, LayoutRecordLength, LayoutValidationError, RangePlan, RangePlanError,
 };
-pub use profile::{RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId};
+pub use profile::{
+    ProfileBoundary, RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId,
+};
 pub use reference::{
-    IngestionAllocation, IngestionError, ProfileBoundary, PublishError, PublishedBlob,
-    RangeReadError, RangeReadReceipt, ReconstructionError, ReconstructionReceipt, ReferenceStore,
+    IngestionAllocation, IngestionError, PublishError, PublishedBlob, ReferenceStore,
     ReferenceStoreCapacity, StagedBlob,
 };
 pub use retention::{
@@ -178,3 +215,12 @@ pub use retention::{
     RetentionProfileAdmissionError, RetentionRoot, RetentionRootDigest, RetentionRootError,
     RootGeneration, RootGenerationError,
 };
+pub use verification::{
+    VerificationDepth, VerificationObservation, VerificationRefusal, VerificationReport,
+    VerificationSubject, VerifiedSubject,
+};
+
+pub use adapters::{RangeReadError, ReconstructionError};
+pub use authenticated_read::{RangeReadReceipt, ReconstructionReceipt};
+
+pub use adapters::{FilesystemEntryKind, FilesystemNamespaceRefusal};

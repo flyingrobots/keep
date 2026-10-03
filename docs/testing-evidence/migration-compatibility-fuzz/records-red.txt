@@ -1,0 +1,89 @@
++ cd <isolated-build>
++ CARGO_TARGET_DIR=<isolated-build>
++ cargo +nightly-2026-07-24 fuzz run migration_format <isolated-build>/fuzz/corpus/migration_format/recovery-complete -- -runs=1 -seed=112 -max_len=4096 -timeout=5 -rss_limit_mb=1024
+   Compiling libc v0.2.186
+   Compiling find-msvc-tools v0.1.9
+   Compiling shlex v2.0.1
+   Compiling rustix v1.1.4
+   Compiling linux-raw-sys v0.12.1
+   Compiling bitflags v2.13.1
+   Compiling io-lifetimes v3.0.1
+   Compiling io-lifetimes v2.0.4
+   Compiling io-extras v0.19.0
+   Compiling serde_core v1.0.229
+   Compiling once_cell v1.21.4
+   Compiling cap-primitives v4.0.2
+   Compiling ambient-authority v0.0.2
+   Compiling cap-std v4.0.2
+   Compiling zmij v1.0.23
+   Compiling maybe-owned v0.3.4
+   Compiling ipnet v2.12.0
+   Compiling serde v1.0.229
+   Compiling cap-fs-ext v4.0.2
+   Compiling serde_json v1.0.151
+   Compiling memchr v2.8.3
+   Compiling arrayvec v0.7.8
+   Compiling arrayref v0.3.9
+   Compiling constant_time_eq v0.4.2
+   Compiling cfg-if v1.0.4
+   Compiling itoa v1.0.18
+   Compiling arbitrary v1.4.2
+   Compiling jobserver v0.1.35
+   Compiling cc v1.3.0
+   Compiling blake3 v1.8.5
+   Compiling libfuzzer-sys v0.4.13
+   Compiling fs-set-times v0.20.3
+   Compiling rustix-linux-procfs v0.1.1
+   Compiling xtask v0.0.0 (<isolated-build>/xtask)
+   Compiling keep v0.0.0 (<isolated-build>)
+   Compiling keep-fuzz v0.0.0 (<isolated-build>/fuzz)
+    Finished `release` profile [optimized + debuginfo] target(s) in 11.87s
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.01s
+     Running `<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format -artifact_prefix=<isolated-build>/fuzz/artifacts/migration_format/ -runs=1 -seed=112 -max_len=4096 -timeout=5 -rss_limit_mb=1024 <isolated-build>/fuzz/corpus/migration_format/recovery-complete`
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 112
+INFO: Loaded 1 modules   (68684 inline 8-bit counters): 68684 [0xaaaae1668aa0, 0xaaaae16796ec),
+INFO: Loaded 1 PC tables (68684 PCs): 68684 [0xaaaae16796f0,0xaaaae1785bb0),
+<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format: Running 1 inputs 1 time(s) each.
+Running: <isolated-build>/fuzz/corpus/migration_format/recovery-complete
+
+thread '<unnamed>' (2073028) panicked at fuzz_targets/migration_format/recovery.rs:114:5:
+complete migration needs jointly admitted records
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+==2073028== ERROR: libFuzzer: deadly signal
+    #0 0xaaaae10826b8  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x2b26b8) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #1 0xaaaae10cd7a0  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x2fd7a0) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #2 0xaaaae10bc50c  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x2ec50c) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #3 0xffff967e38bc  (linux-vdso.so.1+0x8bc) (BuildId: 91bd37d5562c97f21721e188c8617e7fb312061b)
+    #4 0xffff96307d7c  (/lib/aarch64-linux-gnu/libc.so.6+0x87d7c) (BuildId: 4c1eca4527d1163b2dde55860b69f270158febb4)
+    #5 0xffff962b693c  (/lib/aarch64-linux-gnu/libc.so.6+0x3693c) (BuildId: 4c1eca4527d1163b2dde55860b69f270158febb4)
+    #6 0xffff962a1a80  (/lib/aarch64-linux-gnu/libc.so.6+0x21a80) (BuildId: 4c1eca4527d1163b2dde55860b69f270158febb4)
+    #7 0xaaaae0fe8098  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x218098) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #8 0xaaaae0fe7ee8  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x217ee8) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #9 0xaaaae0fcf9fc  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x1ff9fc) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #10 0xaaaae14e9194  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x719194) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #11 0xaaaae14da160  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x70a160) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #12 0xaaaae14d4aac  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x704aac) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #13 0xaaaae14da6f8  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x70a6f8) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #14 0xaaaae0fe8740  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x218740) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #15 0xaaaae10aa864  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x2da864) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #16 0xaaaae10add24  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x2ddd24) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #17 0xaaaae10b4ee0  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x2e4ee0) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #18 0xaaaae10b5e30  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x2e5e30) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #19 0xaaaae10b6b7c  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x2e6b7c) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #20 0xaaaae10b5694  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x2e5694) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #21 0xaaaae10bca6c  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x2eca6c) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #22 0xaaaae10d67d0  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x3067d0) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #23 0xaaaae10df68c  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x30f68c) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #24 0xaaaae0fe8a00  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x218a00) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+    #25 0xffff962a2258  (/lib/aarch64-linux-gnu/libc.so.6+0x22258) (BuildId: 4c1eca4527d1163b2dde55860b69f270158febb4)
+    #26 0xffff962a2338  (/lib/aarch64-linux-gnu/libc.so.6+0x22338) (BuildId: 4c1eca4527d1163b2dde55860b69f270158febb4)
+    #27 0xaaaae0fe8b6c  (<isolated-build>/aarch64-unknown-linux-gnu/release/migration_format+0x218b6c) (BuildId: 7b934e98ea0f5cc8bae5cbe5e2e46cbe6a61b977)
+
+NOTE: libFuzzer has rudimentary signal handlers.
+      Combine libFuzzer with AddressSanitizer or similar for better crash reports.
+SUMMARY: libFuzzer: deadly signal
+MS: 0 ; base unit: 0000000000000000000000000000000000000000
+────────────────────────────────────────────────────────────────────────────────
+
+Error: Fuzz target exited with exit status: 77
