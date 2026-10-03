@@ -1,6 +1,6 @@
 # Authenticated Reconstruction Contract
 
-**Status:** Normative for every Keep operation that claims authenticated reconstruction. The public non-durable `ReferenceStore` implements the complete-object and exact-range forms. Linux `DurableStore` and `DurableSnapshot` compose those read cores with fenced version-two catalog and retained-root admission; final #109 acceptance remains recorded in the [evidence ledger](../../testing-evidence/durable-authenticated-reads.md).
+**Status:** Normative for every Keep operation that claims authenticated reconstruction. The public non-durable `ReferenceStore` implements the complete-object and exact-range forms. Linux `DurableStore` and `DurableSnapshot` compose those read cores with fenced version-two catalog and retained-root admission; delivery through merged [PR #164](https://github.com/flyingrobots/keep/pull/164) and its #109 acceptance evidence are recorded in the [evidence ledger](../../testing-evidence/durable-authenticated-reads.md).
 
 The [rationale](rationale.md) records the governed decisions and rejected
 alternatives. The [requirement ledger](requirements.md) maps each law to its
