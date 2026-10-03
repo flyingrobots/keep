@@ -11,7 +11,7 @@ use crate::{
     VerificationSubject,
 };
 
-const SUPPORTED: &[VerificationDepth] = &[
+pub(super) const SUPPORTED: &[VerificationDepth] = &[
     VerificationDepth::Framing,
     VerificationDepth::Checksum,
     VerificationDepth::RetentionClosure,

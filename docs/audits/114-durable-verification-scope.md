@@ -116,5 +116,7 @@ Reviews arriving after `b33c7da` reopened the acceptance gate. The earlier imple
 | Observation classification exhaustiveness | Every existing current-state variant is now explicit; classifications are unchanged and affected runtime laws pass. | Resulting-head review and final checks. |
 | Shared layout failure classification | Admission, closure and ingress use one exhaustive classifier. Generated differential receipts match the parent; affected debug/release laws and all-feature all-target Clippy pass. | Resulting-head review and final checks. |
 | Current documentation status | Current summary/changelog wording is reconciled; chronological evidence is explicitly historical, and current review/CI gates remain separate. | Markdown and documentation integrity checks on the final candidate. |
+| Exact admission diagnostic calibration | Independent review of `6802644` identified an evidence gap, not a production defect. Diagnostic-only magic and identity-coordinate mutations reach the intended assertions; restored debug/release laws pass. | Resulting-head independent confirmation. |
+| Unsupported retention request precedence | CodeRabbit's later global review identified evidence reads before request admission. A public regression is RED on `cc1e37b`; shared supported-depth admission now precedes selected-root access. | Focused GREEN, resulting-head review and final checks. |
 
 No finding is resolved merely because an earlier independent review approved the preceding head. No merge is authorized by this ledger.

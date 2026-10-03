@@ -4,6 +4,7 @@
     reason = "preserve bounded full refusal coordinates without extra allocations"
 )]
 
+use super::root_verification::SUPPORTED;
 use super::{AdmittedRetentionRoot, RetentionSelectedRootRefusal};
 use crate::adapters::filesystem_exact_record::ExactRecordError;
 use crate::adapters::{verification_admission, verification_ingress};
@@ -41,7 +42,8 @@ impl FilesystemRetentionSnapshot {
 
     /// Verifies the exact root selected for `namespace` in this fenced view.
     ///
-    /// Reads only the manifest-selected root, without following links, within
+    /// Unsupported depths refuse before root or catalog access. Supported
+    /// requests read only the manifest-selected root, without following links, within
     /// the root format bound. It checks namespace, generation and digest, then
     /// re-admits the owned catalog and applies `AdmittedRetentionRoot::verify`.
     /// Costs include one bounded root buffer, its decoded anchors and catalog
@@ -60,6 +62,14 @@ impl FilesystemRetentionSnapshot {
         requested: VerificationDepth,
     ) -> Result<VerificationReport, VerificationError> {
         let subject = VerificationSubject::RetentionNamespace { namespace };
+        if !SUPPORTED.contains(&requested) {
+            return Err(VerificationRefusal::Unsupported {
+                subject,
+                requested,
+                supported: SUPPORTED,
+            }
+            .into());
+        }
         let bytes = self
             .retained_root(namespace)
             .map_err(|source| root_error(subject, source))?

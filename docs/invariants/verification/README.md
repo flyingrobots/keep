@@ -25,6 +25,8 @@ Reports contain no plaintext, keys or filesystem paths and convey no publication
 
 Every other depth returns `VerificationRefusal::Unsupported` (wrapped by `VerificationError` for blob/root operations) with the exact subject, request and supported set; the operation neither downgrades the request nor returns a success report.
 
+`FilesystemRetentionSnapshot::verify_retention` accepts the same depths as direct root verification. Unsupported requests refuse with the requested namespace before reading its selected root or re-admitting the catalog, including when the namespace or root evidence is absent. Loading the fenced snapshot is a separate operation with its own admission failures.
+
 `SnapshotBinding` remains unsupported until its separate protocol exists; catalog/retention coordinates must not be mislabeled as that future proof.
 
 ## Costs and admission boundary

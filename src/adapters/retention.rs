@@ -180,6 +180,8 @@ mod transition_readiness;
 mod verification_selection_law_tests;
 #[cfg(test)]
 mod verification_store_admission_tests;
+#[cfg(test)]
+mod verification_unsupported_depth_tests;
 mod verified_closure;
 
 #[cfg(test)]
