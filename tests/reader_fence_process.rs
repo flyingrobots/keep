@@ -8,7 +8,7 @@ pub mod reader;
 #[path = "segment_filesystem_stage/sandbox.rs"]
 pub mod sandbox;
 
-use keep::FilesystemWriterLock;
+use keep::{FilesystemWriterLock, WriterLockAcquireError};
 use rustix::{
     fs::{FlockOperation, flock},
     io::Errno,
@@ -24,7 +24,14 @@ fn reader_death_releases_collection_without_replacing_the_fence() -> Result<(), 
     if reader::is_child() {
         return reader::serve();
     }
-    let store = fixture::migrated("reader-death")?;
+    let (store, writer) = fixture::migrated("reader-death")?;
+    assert!(
+        matches!(
+            FilesystemWriterLock::try_acquire(store.path()),
+            Err(WriterLockAcquireError::Busy)
+        ),
+        "collector preparation must continuously exclude competing writers"
+    );
     let lock_path = store.path().join("reader.lock");
     let before = fs::metadata(&lock_path)?;
     let mut reader = reader::Reader::spawn(
@@ -32,7 +39,6 @@ fn reader_death_releases_collection_without_replacing_the_fence() -> Result<(), 
         "reader_death_releases_collection_without_replacing_the_fence",
     )?;
     reader.await_snapshot()?;
-    let writer = FilesystemWriterLock::try_acquire(store.path())?;
     let collector = fs::File::open(&lock_path)?;
     assert_eq!(
         flock(&collector, FlockOperation::NonBlockingLockExclusive),
@@ -61,8 +67,14 @@ fn collection_excludes_a_new_snapshot_until_release() -> Result<(), Box<dyn Erro
     if reader::is_child() {
         return reader::serve();
     }
-    let store = fixture::migrated("collector-exclusion")?;
-    let writer = FilesystemWriterLock::try_acquire(store.path())?;
+    let (store, writer) = fixture::migrated("collector-exclusion")?;
+    assert!(
+        matches!(
+            FilesystemWriterLock::try_acquire(store.path()),
+            Err(WriterLockAcquireError::Busy)
+        ),
+        "collector preparation must continuously exclude competing writers"
+    );
     let collector = fs::File::open(store.path().join("reader.lock"))?;
     flock(&collector, FlockOperation::NonBlockingLockExclusive)?;
     let mut reader = reader::Reader::spawn(
