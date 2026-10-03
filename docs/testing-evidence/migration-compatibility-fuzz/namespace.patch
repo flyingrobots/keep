@@ -1,0 +1,9 @@
+--- a/fuzz/fuzz_targets/migration_format/recovery.rs
++++ b/fuzz/fuzz_targets/migration_format/recovery.rs
+@@ -17 +17 @@ pub(super) fn exercise(input: &[u8]) -> Option<()> {
+-    let residue = StoreMigrationResidue {
++    let mut residue = StoreMigrationResidue {
+@@ -27,0 +28,3 @@ pub(super) fn exercise(input: &[u8]) -> Option<()> {
++    if matches!(result, Ok(StoreMigrationRecoveryPlan::Complete)) {
++        residue.reader_fence = false;
++    }

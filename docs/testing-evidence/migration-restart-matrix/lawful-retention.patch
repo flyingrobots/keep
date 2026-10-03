@@ -1,0 +1,6 @@
+diff --git a/src/adapters/store_migration/filesystem_migration_recovery.rs b/src/adapters/store_migration/filesystem_migration_recovery.rs
+--- a/src/adapters/store_migration/filesystem_migration_recovery.rs
++++ b/src/adapters/store_migration/filesystem_migration_recovery.rs
+@@ -87 +87 @@ impl StoreMigrationRecoveryStorage for FilesystemStoreMigrationAuthority {
+-        filesystem_initialization_namespace::admit_version_two(self.root())
++        super::filesystem_migration_namespace::preflight_recovery_directories(self.root())

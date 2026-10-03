@@ -274,3 +274,6 @@ pub use transition_preflight::{RetentionTransitionPreflight, preflight_retention
 pub use transition_preflight_error::RetentionTransitionPreflightError;
 pub use transition_readiness::RetentionTransitionReadiness;
 pub use verified_closure::VerifiedRetentionClosure;
+
+#[cfg(all(test, feature = "repository-tasks"))]
+mod filesystem_retention_migration_completion_tests;

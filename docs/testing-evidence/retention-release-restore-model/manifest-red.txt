@@ -1,0 +1,61 @@
+   Compiling rustix v1.1.4
+   Compiling io-lifetimes v3.0.1
+   Compiling io-lifetimes v2.0.4
+   Compiling bitflags v2.13.1
+   Compiling proc-macro2 v1.0.107
+   Compiling linux-raw-sys v0.12.1
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.47
+   Compiling io-extras v0.19.0
+   Compiling cap-primitives v4.0.2
+   Compiling shlex v2.0.1
+   Compiling once_cell v1.21.4
+   Compiling find-msvc-tools v0.1.9
+   Compiling ambient-authority v0.0.2
+   Compiling ipnet v2.12.0
+   Compiling libc v0.2.186
+   Compiling cap-std v4.0.2
+   Compiling maybe-owned v0.3.4
+   Compiling clap_lex v1.1.0
+   Compiling anstyle v1.0.14
+   Compiling cc v1.3.0
+   Compiling cap-fs-ext v4.0.2
+   Compiling cfg-if v1.0.4
+   Compiling arrayvec v0.7.8
+   Compiling clap_builder v4.6.2
+   Compiling condtype v1.3.0
+   Compiling constant_time_eq v0.4.2
+   Compiling arrayref v0.3.9
+   Compiling regex-lite v0.1.9
+   Compiling allocation-counter v0.8.1
+   Compiling syn v2.0.119
+   Compiling blake3 v1.8.5
+   Compiling clap v4.6.4
+   Compiling rustix-linux-procfs v0.1.1
+   Compiling fs-set-times v0.20.3
+   Compiling divan-macros v0.1.21
+   Compiling divan v0.1.21
+   Compiling keep v0.0.0 (<calibration-source>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.46s
+     Running unittests src/lib.rs (<calibration-target>/debug/deps/keep-09abf1fe30bdfc46)
+
+running 1 test
+test adapters::retention::retention_model_tests::sequences_starting_with_an_initial_publication_of_a_agree_with_the_model ... FAILED
+
+failures:
+
+---- adapters::retention::retention_model_tests::sequences_starting_with_an_initial_publication_of_a_agree_with_the_model stdout ----
+
+thread 'adapters::retention::retention_model_tests::sequences_starting_with_an_initial_publication_of_a_agree_with_the_model' (1915979) panicked at src/adapters/retention/retention_model_tests.rs:350:5:
+assertion `left == right` failed: manifest disagrees with the model: [Initial(A), Initial(A), Initial(A)]
+  left: {}
+ right: {RetentionNamespaceDigest([221, 222, 42, 198, 92, 91, 163, 130, 155, 240, 251, 214, 243, 110, 144, 39, 45, 105, 160, 69, 159, 173, 233, 34, 114, 183, 40, 168, 13, 122, 230, 226]): 1}
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    adapters::retention::retention_model_tests::sequences_starting_with_an_initial_publication_of_a_agree_with_the_model
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 353 filtered out; finished in 0.04s
+
+error: test failed, to rerun pass `--lib`

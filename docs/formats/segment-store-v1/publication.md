@@ -134,10 +134,22 @@ which runs the ordered initialization protocol (`KEEP-RECOVERY-002`); a
 published store reacquires one through `FilesystemPlatformAdmission::reopen`,
 which mutates nothing and admits the production platform
 (`KEEP-RECOVERY-003`). Both are described in
-[Recovery and platform contract](recovery.md). The crash matrix harness opens
-an unchecked publisher only behind the `repository-tasks` Cargo feature,
-then wraps the publisher in fault-injecting decorators. This bypass is
-reserved for repository harnesses rather than production admission.
+[Recovery and platform contract](recovery.md).
+
+The crash matrix opens its catalog publisher through ordinary production
+initialization and admission, then wraps that publisher in fault-injecting
+decorators. Publication campaigns therefore require admitted Linux ext4 scratch
+storage.
+
+The feature-gated legacy `open_unchecked_for_repository_tasks` entry point now
+checks the same production filesystem profile against its retained root
+capability before constructing authority; its name no longer denotes a platform
+bypass. It reopens that pinned directory with a readable descriptor for profile
+ioctls, checks each existing protocol directory, and requires strict root identity.
+
+The pinned-root route does not re-admit an ambient pathname or claim to establish
+the historical spelling used to acquire the lock. Private unit-test construction
+remains separate and is not callable by external consumers.
 
 `publish_catalog_generation` performs complete semantic preflight before the
 first storage transition. With `FilesystemCatalogPublisher`, it then executes

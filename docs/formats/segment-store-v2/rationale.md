@@ -117,3 +117,9 @@ filesystem UUID as the device coordinate in this change. That would require
 separate platform admission, compatibility, and format decisions. Device
 renumbering remains a refusal; this change does not introduce re-admission or
 silently substitute a different identity coordinate.
+
+## Verify completed migration before reporting completion
+
+An exact receipt proves the migration records agree; it does not prove the current reserved namespace still admits. Recovery therefore invokes the read-only `StoreMigrationRecoveryStorage::verify_complete` capability after planning selects `Complete` and before returning success. The filesystem adapter reuses version-two namespace admission, retaining the original cause through `Observation` and `NamespacePreflight`. Existing corruption/planning refusals retain priority because this check follows planning. No namespace effect, synchronization or retention recovery is initiated.
+
+Completed stores may contain published retention roots, manifests and heads. Reusing the partial-migration empty-directory preflight would reject valid post-migration state, so completion uses the existing version-two admission policy instead. Migration completion verifies its root/reserved directory contract; retention owns the interpretation of retention artifacts and stages. This adds a required method to the public recovery storage port; external implementations must implement equivalent effect-free admission. On-disk formats and identities are unchanged.
