@@ -2,6 +2,8 @@
 
 #[path = "gc_retirement_intent/mutation_laws.rs"]
 mod mutation_laws;
+#[path = "gc_retirement_intent/opaque_coordinate_laws.rs"]
+mod opaque_coordinate_laws;
 mod support;
 
 use std::io;
