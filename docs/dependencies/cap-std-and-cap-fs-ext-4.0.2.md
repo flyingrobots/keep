@@ -1,7 +1,8 @@
-# Dependency Admission: cap-std, cap-fs-ext 4.0.2, and rustix 1.1.4
+# Dependency Admission: cap-std, cap-fs-ext 4.0.2, and rustix 1.1.5
 
 - Status: Accepted for repository-task and segment-store filesystem boundaries
 - Date: 2026-07-26
+- Rustix admission updated: 2026-10-03 (#102)
 - Owner: Keep repository verification
 - Upstream:
   [bytecodealliance/cap-std](https://github.com/bytecodealliance/cap-std)
@@ -10,7 +11,7 @@
 
 Keep admits the exactly pinned `cap-std` 4.0.2 and `cap-fs-ext` 4.0.2 packages
 for the library's segment-store filesystem adapter and behind the `xtask`
-crate's `repository-tasks` feature. The library also admits Rustix 1.1.4 for
+crate's `repository-tasks` feature. The library also admits Rustix 1.1.5 for
 safe Linux filesystem-profile inspection and no-symlink root opening; `xtask`
 uses the same exact version behind `repository-tasks`.
 
@@ -91,7 +92,7 @@ The locked non-Windows graph introduced for this boundary is:
 - `linux-raw-sys` 0.12.1;
 - `maybe-owned` 0.3.4;
 - `once_cell` 1.21.4;
-- `rustix` 1.1.4; and
+- `rustix` 1.1.5; and
 - `rustix-linux-procfs` 0.1.1.
 
 Windows resolution additionally retains the locked `windows-sys`,
@@ -108,9 +109,7 @@ license through repository policy. Rustix declares `Apache-2.0 OR MIT`.
 The locked `winx` 0.36.4 transitive package declares only
 `Apache-2.0 WITH LLVM-exception`, so `deny.toml` admits that exact package and
 license combination rather than broadening the global license allowlist.
-Their manifests declare no Rust-version floor. Compatibility is therefore
-established only by Keep's pinned stable, MSRV, debug, release, Clippy,
-dependency-policy, and advisory lanes.
+The cap-std and cap-fs-ext manifests declare no Rust-version floor. Rustix 1.1.5 declares Rust 1.65, below Keep's pinned Rust 1.96.0; its previous 1.1.4 release declared 1.63. The version floor is compatibility metadata, not execution evidence. Keep's debug, release, Clippy, dependency-policy and advisory lanes remain required for the updated graph.
 
 The admitted packages and their platform dependencies may contain unsafe code
 around operating-system calls and handles. Keep-owned code invokes only their
@@ -140,3 +139,9 @@ whole-process-group cleanup tests on every supported platform.
 Reopen this admission if either direct version, selected feature, resolved
 graph, license, supported platform, handle-retention invariant, or
 repository-task-only boundary changes.
+
+## Rustix 1.1.5 update
+
+The root, repository-task and isolated process-spawn manifests select the same exact Rustix version. The independently locked fuzz workspace also selects 1.1.5. The upgrade does not change selected features, Keep source or existing test expectations; filesystem admission, writer/reader locks, typed failures and bounded subprocess cleanup retain their existing contracts.
+
+Current validation must exercise the admitted Linux filesystem and process boundaries with the new graph. Historical recovery, crash and benchmark receipts remain evidence for their recorded builds, not new measurements of this dependency release. Finite conformance and regression runs do not establish universal equivalence or validation of every upstream platform.

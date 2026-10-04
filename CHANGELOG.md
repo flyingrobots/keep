@@ -8,6 +8,10 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Update rustix to 1.1.5 across the library, repository tools, process-spawn boundary and fuzz lockfile, retaining the existing filesystem and process contracts (#102).
+
+- Isolate durable locator subprocess laws from golden-store writer handoffs so their child launches cannot inherit another law's live lock descriptions (#178).
+
 - Update the repository-only YAML parser to yaml-rust2 0.13.0 and refresh its dependency admission, retaining existing workflow and Dependabot refusal expectations (#103).
 
 - Update the development-only Markdown validation graph and exact admission policy to markdownlint-cli2 0.23.3, addressing the js-yaml, smol-toml and markdown-it advisories while documenting the separate remaining braces advisory (#106).
