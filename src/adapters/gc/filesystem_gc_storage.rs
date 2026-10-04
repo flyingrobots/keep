@@ -6,13 +6,16 @@ use super::filesystem_gc_authority::GcExecutionContext;
 use super::filesystem_gc_residue::{INTENT, INTENT_STAGE, RECEIPT, RECEIPT_STAGE, invalid};
 use super::{
     AdmittedGcRetirementIntent, AdmittedGcRetirementReceipt, CanonicalGcRetirementReceipt,
-    FilesystemGcAuthority, PoolStateDigest, segment_pool_identity,
-    segment_pool_inventory,
+    FilesystemGcAuthority, PoolStateDigest, segment_pool_identity, segment_pool_inventory,
 };
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
 use crate::adapters::filesystem_exact_record::{self as exact_record, ExactRecordError};
 use crate::adapters::physical_pool_name;
-use crate::adapters::retention::{FilesystemRetentionStage, RetentionStorageBoundary as Boundary};
+use crate::adapters::retention::{
+    FilesystemRetentionStage, RetentionEffectDurability as Durability,
+    RetentionNamespaceEffect as Effect, RetentionStorageBoundary as Boundary,
+    RetentionStorageError as StorageError,
+};
 
 fn no_retirement() -> io::Error {
     invalid(super::FilesystemGcRefusal::NoRetirement)
@@ -135,7 +138,7 @@ impl FilesystemGcAuthority {
             .map_err(Into::into)
     }
 
-    pub(super) fn store_synchronize_gc_after_intent(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_gc_after_intent(&self) -> io::Result<()> {
         self.storage_checkpoint(Boundary::GcIntentSynchronization)?;
         synchronize_directory(&self.gc)
     }
@@ -150,12 +153,12 @@ impl FilesystemGcAuthority {
         stage.remove(&self.gc, &self.gc, INTENT).map_err(Into::into)
     }
 
-    pub(super) fn store_synchronize_gc_after_intent_cleanup(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_gc_after_intent_cleanup(&self) -> io::Result<()> {
         self.storage_checkpoint(Boundary::GcIntentCleanupSynchronization)?;
         synchronize_directory(&self.gc)
     }
 
-    pub(super) fn store_unlink_candidate(&mut self, index: usize) -> io::Result<()> {
+    pub(super) fn store_unlink_candidate(&self, index: usize) -> io::Result<()> {
         let context = self.context.as_ref().ok_or_else(no_retirement)?;
         let candidate = context
             .intent
@@ -177,13 +180,22 @@ impl FilesystemGcAuthority {
             self.policy.segment_read(),
         )
         .map_err(|source| io::Error::new(io::ErrorKind::InvalidData, source))?;
-        self.storage_checkpoint(Boundary::CandidateUnlink)?;
-        self.segments.remove_file(&name)?;
-        self.storage_checkpoint(Boundary::CandidateAbsence)?;
-        exact_record::require_absent(&self.segments, &name).map_err(ExactRecordError::into_io)
+        self.storage_checkpoint(Boundary::CandidateUnlink)
+            .and_then(|()| self.segments.remove_file(&name))
+            .map_err(|source| {
+                unlink_error(source, Boundary::CandidateUnlink, Effect::CandidateRemoved)
+            })?;
+        self.storage_checkpoint(Boundary::CandidateAbsence)
+            .and_then(|()| {
+                exact_record::require_absent(&self.segments, &name)
+                    .map_err(ExactRecordError::into_io)
+            })
+            .map_err(|source| {
+                absence_error(source, Boundary::CandidateAbsence, Effect::CandidateRemoved)
+            })
     }
 
-    pub(super) fn store_synchronize_segment_pool(&mut self, _index: usize) -> io::Result<()> {
+    pub(super) fn store_synchronize_segment_pool(&self, _index: usize) -> io::Result<()> {
         self.storage_checkpoint(Boundary::PoolSynchronization)?;
         synchronize_directory(&self.segments)
     }
@@ -224,7 +236,7 @@ impl FilesystemGcAuthority {
             .map_err(Into::into)
     }
 
-    pub(super) fn store_synchronize_gc_after_receipt(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_gc_after_receipt(&self) -> io::Result<()> {
         self.storage_checkpoint(Boundary::GcReceiptSynchronization)?;
         synchronize_directory(&self.gc)
     }
@@ -254,13 +266,19 @@ impl FilesystemGcAuthority {
             );
             self.context()?.receipt = Some(receipt);
         }
-        self.storage_checkpoint(Boundary::IntentUnlink)?;
-        self.gc.remove_file(INTENT)?;
-        self.storage_checkpoint(Boundary::IntentAbsence)?;
-        exact_record::require_absent(&self.gc, INTENT).map_err(ExactRecordError::into_io)
+        self.storage_checkpoint(Boundary::IntentUnlink)
+            .and_then(|()| self.gc.remove_file(INTENT))
+            .map_err(|source| {
+                unlink_error(source, Boundary::IntentUnlink, Effect::IntentRemoved)
+            })?;
+        self.storage_checkpoint(Boundary::IntentAbsence)
+            .and_then(|()| {
+                exact_record::require_absent(&self.gc, INTENT).map_err(ExactRecordError::into_io)
+            })
+            .map_err(|source| absence_error(source, Boundary::IntentAbsence, Effect::IntentRemoved))
     }
 
-    pub(super) fn store_synchronize_gc_after_intent_removal(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_gc_after_intent_removal(&self) -> io::Result<()> {
         self.storage_checkpoint(Boundary::GcIntentRemovalSynchronization)?;
         synchronize_directory(&self.gc)
     }
@@ -274,4 +292,18 @@ fn context_intent(
         .as_ref()
         .map(|context| context.intent.clone())
         .ok_or_else(no_retirement)
+}
+
+fn unlink_error(source: io::Error, boundary: Boundary, effect: Effect) -> io::Error {
+    StorageError::from(source)
+        .at(boundary)
+        .uncertain(effect)
+        .into()
+}
+
+fn absence_error(source: io::Error, boundary: Boundary, effect: Effect) -> io::Error {
+    StorageError::from(source)
+        .at(boundary)
+        .after(effect, Durability::Unconfirmed)
+        .into()
 }

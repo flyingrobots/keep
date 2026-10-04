@@ -1,0 +1,11 @@
+--- a/src/adapters/gc/filesystem_gc_execution_storage.rs
++++ b/src/adapters/gc/filesystem_gc_execution_storage.rs
+@@ -93,7 +93,7 @@
+         .and_then(StorageError::progress)
+         .is_some()
+     {
+-        source
++        StorageError::from(source).at(boundary).into()
+     } else {
+         StorageError::from(source).at(boundary).into()
+     }

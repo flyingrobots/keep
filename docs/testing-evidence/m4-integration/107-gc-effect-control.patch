@@ -1,0 +1,23 @@
+--- a/src/adapters/gc/filesystem_gc_storage.rs
++++ b/src/adapters/gc/filesystem_gc_storage.rs
+@@ -294,16 +294,16 @@
+         .ok_or_else(no_retirement)
+ }
+ 
+-fn unlink_error(source: io::Error, boundary: Boundary, effect: Effect) -> io::Error {
++fn unlink_error(source: io::Error, boundary: Boundary, _effect: Effect) -> io::Error {
+     StorageError::from(source)
+         .at(boundary)
+-        .uncertain(effect)
++        .uncertain(Effect::StageRemoved)
+         .into()
+ }
+ 
+-fn absence_error(source: io::Error, boundary: Boundary, effect: Effect) -> io::Error {
++fn absence_error(source: io::Error, boundary: Boundary, _effect: Effect) -> io::Error {
+     StorageError::from(source)
+         .at(boundary)
+-        .after(effect, Durability::Unconfirmed)
++        .after(Effect::StageRemoved, Durability::Unconfirmed)
+         .into()
+ }

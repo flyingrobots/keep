@@ -1,0 +1,6 @@
+Launch contract recorded before execution
+Worker=/keep-validation Image=rust:1.96.0 CPU-nanocores=4000000000 Memory-bytes=8589934592 Logs={"Config":{"max-file":"5","max-size":"20m"},"Type":"json-file"}
+Lock=/var/lock/keep-validation.lock; owned outputs=/keep-validation-cache,/tmp,/usr/local/cargo plus owned /build growth and host keep-landing receipts. /input is read-only.
+Measured KiB: data=3567984 build-baseline=8283392 aggregate=13352632 host-scratch=375532 host-free=745838852 VM-free=708809548; log bytes=31006614 plus host=10039415
+Limits: build20GiB,data4GiB,logs128MiB; min free50GiB host+VM; timeout900s. Guard polls every2s and stops keep-validation plus children on monitor error/timeout/breach.
+Cargo jobs2,incremental0,offline; existing target and 20GiB ext4 cache. Command: cargo test --lib filesystem_gc_tests 

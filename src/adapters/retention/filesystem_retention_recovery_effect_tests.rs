@@ -152,10 +152,11 @@ fn apply_expected_effects(
     let publication = preparation.publication().ok_or("publication absent")?;
     for &(effect, _) in case.effects {
         match effect {
-            Effect::StageCreated | Effect::ReceiptReplaced | Effect::CandidateRemoved | Effect::IntentRemoved => {
-                return Err(
-                    "creation or receipt replacement is outside this recovery fixture".into(),
-                );
+            Effect::StageCreated
+            | Effect::ReceiptReplaced
+            | Effect::CandidateRemoved
+            | Effect::IntentRemoved => {
+                return Err("effect is outside this retention recovery fixture".into());
             }
             Effect::NamespaceCreated => assert!(
                 root_pool_path(store, preparation.candidate())

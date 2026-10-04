@@ -1,0 +1,137 @@
+    Checking keep v0.0.0 (/keep-validation-cache/source)
+    Checking repository-process-spawn v0.0.0 (/keep-validation-cache/source/repository-process-spawn)
+error: unused `self` argument
+  --> src/adapters/gc/filesystem_gc_execution_storage.rs:10:38
+   |
+10 |     pub(super) fn storage_checkpoint(&self, boundary: Boundary) -> io::Result<()> {
+   |                                      ^^^^^
+   |
+   = help: consider refactoring to an associated function
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#unused_self
+   = note: `-D clippy::unused-self` implied by `-D clippy::pedantic`
+   = help: to override `-D clippy::pedantic` add `#[allow(clippy::unused_self)]`
+
+error: this could be a `const fn`
+  --> src/adapters/gc/filesystem_gc_execution_storage.rs:10:5
+   |
+10 | /     pub(super) fn storage_checkpoint(&self, boundary: Boundary) -> io::Result<()> {
+11 | |         #[cfg(test)]
+12 | |         if self.storage_failure == Some(boundary) {
+13 | |             return Err(io::Error::from_raw_os_error(5));
+...  |
+16 | |         Ok(())
+17 | |     }
+   | |_____^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#missing_const_for_fn
+   = note: `-D clippy::missing-const-for-fn` implied by `-D clippy::nursery`
+   = help: to override `-D clippy::nursery` add `#[allow(clippy::missing_const_for_fn)]`
+help: make the function `const`
+   |
+10 |     pub(super) const fn storage_checkpoint(&self, boundary: Boundary) -> io::Result<()> {
+   |                +++++
+
+error: this function's return value is unnecessary
+  --> src/adapters/gc/filesystem_gc_execution_storage.rs:10:5
+   |
+10 |     pub(super) fn storage_checkpoint(&self, boundary: Boundary) -> io::Result<()> {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#unnecessary_wraps
+   = note: `-D clippy::unnecessary-wraps` implied by `-D clippy::pedantic`
+   = help: to override `-D clippy::pedantic` add `#[allow(clippy::unnecessary_wraps)]`
+help: remove the return type...
+   |
+10 -     pub(super) fn storage_checkpoint(&self, boundary: Boundary) -> io::Result<()> {
+10 +     pub(super) fn storage_checkpoint(&self, boundary: Boundary) -> () {
+   |
+help: ...and then remove returned values
+   |
+16 -         Ok(())
+   |
+
+error: this parameter is a mutable reference but is not used mutably
+   --> src/adapters/gc/filesystem_gc_storage.rs:141:53
+    |
+141 |     pub(super) fn store_synchronize_gc_after_intent(&mut self) -> io::Result<()> {
+    |                                                     ^----^^^^
+    |                                                      |
+    |                                                      help: consider removing this `mut`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#needless_pass_by_ref_mut
+    = note: `-D clippy::needless-pass-by-ref-mut` implied by `-D clippy::nursery`
+    = help: to override `-D clippy::nursery` add `#[allow(clippy::needless_pass_by_ref_mut)]`
+
+error: this parameter is a mutable reference but is not used mutably
+   --> src/adapters/gc/filesystem_gc_storage.rs:156:61
+    |
+156 |     pub(super) fn store_synchronize_gc_after_intent_cleanup(&mut self) -> io::Result<()> {
+    |                                                             ^----^^^^
+    |                                                              |
+    |                                                              help: consider removing this `mut`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#needless_pass_by_ref_mut
+
+error: this parameter is a mutable reference but is not used mutably
+   --> src/adapters/gc/filesystem_gc_storage.rs:161:42
+    |
+161 |     pub(super) fn store_unlink_candidate(&mut self, index: usize) -> io::Result<()> {
+    |                                          ^----^^^^
+    |                                           |
+    |                                           help: consider removing this `mut`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#needless_pass_by_ref_mut
+
+error: this parameter is a mutable reference but is not used mutably
+   --> src/adapters/gc/filesystem_gc_storage.rs:198:50
+    |
+198 |     pub(super) fn store_synchronize_segment_pool(&mut self, _index: usize) -> io::Result<()> {
+    |                                                  ^----^^^^
+    |                                                   |
+    |                                                   help: consider removing this `mut`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#needless_pass_by_ref_mut
+
+error: this parameter is a mutable reference but is not used mutably
+   --> src/adapters/gc/filesystem_gc_storage.rs:239:54
+    |
+239 |     pub(super) fn store_synchronize_gc_after_receipt(&mut self) -> io::Result<()> {
+    |                                                      ^----^^^^
+    |                                                       |
+    |                                                       help: consider removing this `mut`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#needless_pass_by_ref_mut
+
+error: this parameter is a mutable reference but is not used mutably
+   --> src/adapters/gc/filesystem_gc_storage.rs:281:61
+    |
+281 |     pub(super) fn store_synchronize_gc_after_intent_removal(&mut self) -> io::Result<()> {
+    |                                                             ^----^^^^
+    |                                                              |
+    |                                                              help: consider removing this `mut`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#needless_pass_by_ref_mut
+
+error: could not compile `keep` (lib) due to 9 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: this argument is passed by value, but not consumed in the function body
+   --> src/adapters/gc/filesystem_gc_effect_tests.rs:141:26
+    |
+141 | fn require_failure(case: Case) -> Result<(), Box<dyn Error>> {
+    |                          ^^^^
+    |
+help: or consider marking this type as `Copy`
+   --> src/adapters/gc/filesystem_gc_effect_tests.rs:14:1
+    |
+ 14 | struct Case {
+    | ^^^^^^^^^^^
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#needless_pass_by_value
+    = note: requested on the command line with `-D clippy::needless-pass-by-value`
+help: consider taking a reference instead
+    |
+141 | fn require_failure(case: &Case) -> Result<(), Box<dyn Error>> {
+    |                          +
+
+error: could not compile `keep` (lib test) due to 7 previous errors
+
+Guarded command exit: 101

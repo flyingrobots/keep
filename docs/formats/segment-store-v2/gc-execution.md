@@ -37,8 +37,6 @@ publication refuses `GcIntentRetained` and another retirement refuses
 blocking port, one capability per phase, and `execute_gc` and
 `resume_gc_execution` drive it from the start or from any point.
 
-<!-- markdownlint-disable MD013 -->
-
 | Identifier | Phase | Effect |
 | --- | --- | --- |
 | `KEEP-CRASH-074` | `write-intent-stage` | exclusively create `gc/intent.next` with the complete intent |
@@ -56,11 +54,17 @@ blocking port, one capability per phase, and `execute_gc` and
 | `KEEP-CRASH-086` | `remove-intent` | remove `gc/intent` after proving `gc/receipt` completes it |
 | `KEEP-CRASH-087` | `sync-gc-after-intent-removal` | synchronize `gc`; the retirement is complete |
 
-<!-- markdownlint-enable MD013 -->
-
 The receipt replaces by rename, as `retention/HEAD` does, so `gc/receipt`
 always holds the last completed retirement and the next intent's generation
 is its successor. The receipt's synchronization count is one per candidate.
+
+## Execution failure reporting
+
+Pre-effect observation or plan refusal initiates no execution mutation. An execution error can follow namespace effects and never implies rollback. `GcExecutionError::point()` names the failed phase; `executed()` lists earlier calls that returned success, not proof that they created new entries or synchronized them. Mutation and directory synchronization are separate phases.
+
+For the filesystem adapter, `storage_progress()` reports the failed capability's exact boundary, known effects with directory-durability status, and any uncertain attempted effect. Shared stage reports and original typed causes are preserved. Candidate or intent unlink failure is uncertain; a successful unlink followed by failed absence verification is known removal with unconfirmed durability. A directory-sync failure has no new namespace effect of its own, and does not undo earlier calls. `None` means an implementation supplied no effect report, not that no changes occurred.
+
+Execution stops at the first error. Public filesystem execution invalidates its context; recovery requires fresh observation. A restart that finds an existing complete receipt returns that receipt without claiming that a previously failed synchronization was successful. The supported mutation model remains cooperating writers under Keep authority, with no isolation guarantee against arbitrary concurrent raw namespace mutation. The [failure rationale](../../../src/adapters/gc/rationale.md#execution-failures-and-namespace-evidence) records these diagnostic distinctions.
 
 ## State and recovery
 
@@ -68,8 +72,6 @@ is its successor. The receipt's synchronization count is one per candidate.
 byte past its maximum length, and the presence of each candidate the durable
 intent names. `plan_gc_recovery` is pure; `FilesystemGcAuthority::recover`
 reads the residue, plans, and acts.
-
-<!-- markdownlint-disable MD013 -->
 
 | State | Evidence | Recovery |
 | --- | --- | --- |
@@ -83,8 +85,6 @@ reads the residue, plans, and acts.
 | receipt staged | completion pending beside a receipt stage that completes the intent | resume at `sync-receipt-stage` |
 | receipt transition | exact intent and the receipt that completes it | resume at `sync-gc-after-receipt` |
 | truncated stage | an intent stage before any authority, or a receipt stage after completion pending, shorter than its record | discard the stage, synchronize `gc`, replan |
-
-<!-- markdownlint-enable MD013 -->
 
 A `gc/receipt` whose generation the durable intent succeeds is the prior
 retirement's and constrains nothing. Every other residue is a typed

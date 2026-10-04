@@ -10,6 +10,8 @@ after its public API and format compatibility policies are established.
 
 ### Roadmap audit corrections
 
+- Expose GC failing-capability progress, preserve original stage reports, and distinguish pre-effect refusal, uncertain unlink, known removal and separate directory-sync failures without implying rollback (#107).
+
 - Report created stages and precise failure boundaries after stage initialization errors; distinguish GC receipt replacement from head replacement while preserving original causes and unconfirmed directory durability (#107).
 
 - Preserve corruption classification and the original exact-record cause when verification observes malformed retention records through the integrated typed-error adapters (#133, #107).

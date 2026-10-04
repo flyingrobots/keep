@@ -5,6 +5,8 @@
 
 #[path = "filesystem_gc_effect_tests.rs"]
 mod effect_tests;
+#[path = "filesystem_gc_stage_identity_tests.rs"]
+mod stage_identity_tests;
 
 use std::error::Error;
 use std::fs;

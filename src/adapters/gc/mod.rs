@@ -26,10 +26,10 @@ mod execution_phase;
 mod execution_storage;
 mod filesystem_gc_authority;
 mod filesystem_gc_error;
+mod filesystem_gc_execution_storage;
 mod filesystem_gc_refusal;
 mod filesystem_gc_residue;
 mod filesystem_gc_storage;
-mod filesystem_gc_execution_storage;
 #[cfg(test)]
 mod filesystem_gc_tests;
 mod intent;

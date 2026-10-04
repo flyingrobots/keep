@@ -1,0 +1,8 @@
+markdownlint-cli2 v0.23.3 (markdownlint v0.41.1)
+Finding: CHANGELOG.md docs/formats/segment-store-v2/gc-execution.md docs/testing-evidence/m4-integration.md src/adapters/gc/rationale.md **/*.md
+Linting: 4 files
+Summary: 4 issues in 1 file
+docs/formats/segment-store-v2/gc-execution.md:67:81 error MD013/line-length Line length [Expected: 80; Actual: 377]
+docs/formats/segment-store-v2/gc-execution.md:69:81 error MD013/line-length Line length [Expected: 80; Actual: 583]
+docs/formats/segment-store-v2/gc-execution.md:71:81 error MD013/line-length Line length [Expected: 80; Actual: 574]
+docs/formats/segment-store-v2/gc-execution.md:75 error MD012/no-multiple-blanks Multiple consecutive blank lines [Expected: 1; Actual: 2]

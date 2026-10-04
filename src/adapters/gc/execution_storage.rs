@@ -5,10 +5,15 @@ use std::io;
 
 /// Durable capabilities GC execution calls in [`GcExecutionPhase::ALL`] order.
 ///
-/// Each owns its complete effect and the synchronization that makes it
-/// durable; the intent, receipt, and candidate list belong to the
-/// implementation's context. Every method returns the exact filesystem
-/// failure or the implementation's typed refusal as an [`io::Error`].
+/// Mutation and synchronization are separate capabilities in this protocol.
+/// Returning success from a mutation does not certify directory durability.
+/// The intent, receipt, and candidate list belong to the implementation's
+/// context. Every method preserves its original filesystem failure or typed
+/// refusal as an [`io::Error`]; the filesystem adapter supplies a
+/// [`RetentionStorageError`](crate::adapters::retention::RetentionStorageError)
+/// payload reporting known or uncertain effects of its failing capability.
+/// Other implementations may omit that report; omission means unknown effects.
+/// No subsequent capability should run after failure without fresh observation.
 ///
 /// [`GcExecutionPhase::ALL`]: super::GcExecutionPhase::ALL
 #[expect(

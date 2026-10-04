@@ -4,27 +4,27 @@
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum RetentionStorageBoundary {
-/// Context and evidence were prepared before a namespace operation.
-Preparation,
-/// A GC candidate was verified before removal.
-CandidateVerification,
-/// A GC candidate unlink was attempted.
-CandidateUnlink,
-/// A removed GC candidate pathname was checked for absence.
-CandidateAbsence,
-/// A completed GC intent unlink was attempted.
-IntentUnlink,
-/// A completed GC intent pathname was checked for absence.
-IntentAbsence,
-/// The GC directory was synchronized after linking an intent.
-GcIntentSynchronization,
-/// The GC directory was synchronized after intent-stage cleanup.
-GcIntentCleanupSynchronization,
-/// The GC directory was synchronized after replacing a receipt.
-GcReceiptSynchronization,
-/// The GC directory was synchronized after removing an intent.
-GcIntentRemovalSynchronization,
-/// Exclusive creation of the stage pathname.
+    /// Context and evidence were prepared before a namespace operation.
+    Preparation,
+    /// A GC candidate was verified before removal.
+    CandidateVerification,
+    /// A GC candidate unlink was attempted.
+    CandidateUnlink,
+    /// A removed GC candidate pathname was checked for absence.
+    CandidateAbsence,
+    /// A completed GC intent unlink was attempted.
+    IntentUnlink,
+    /// A completed GC intent pathname was checked for absence.
+    IntentAbsence,
+    /// The GC directory was synchronized after linking an intent.
+    GcIntentSynchronization,
+    /// The GC directory was synchronized after intent-stage cleanup.
+    GcIntentCleanupSynchronization,
+    /// The GC directory was synchronized after replacing a receipt.
+    GcReceiptSynchronization,
+    /// The GC directory was synchronized after removing an intent.
+    GcIntentRemovalSynchronization,
+    /// Exclusive creation of the stage pathname.
     StageCreation,
     /// The newly created stage handle identity was recorded.
     StageIdentity,

@@ -23,7 +23,9 @@ impl GcExecutionReceipt {
     }
 }
 
-/// An execution point that refused, with the points completed before it.
+/// An execution failure, with successful earlier calls and the original cause.
+///
+/// A failed capability may already have changed the namespace; this is not rollback.
 #[derive(Debug)]
 pub struct GcExecutionError {
     point: GcExecutionPoint,
@@ -32,24 +34,29 @@ pub struct GcExecutionError {
 }
 
 impl GcExecutionError {
-/// Progress reported by the failing storage capability.
-///
-/// `None` means unreported effects, never absence of effects. Earlier
-/// successful calls are listed separately by [`Self::executed`].
-#[must_use]
-pub fn storage_progress(&self) -> Option<&RetentionStorageProgress> {
-    self.source.get_ref()
-        .and_then(|source| source.downcast_ref::<RetentionStorageError>())
-        .and_then(RetentionStorageError::progress)
-}
+    /// Progress reported by the failing storage capability.
+    ///
+    /// `None` means unreported effects, never absence of effects. Earlier
+    /// successful calls are listed separately by [`Self::executed`].
+    #[must_use]
+    pub fn storage_progress(&self) -> Option<&RetentionStorageProgress> {
+        self.source
+            .get_ref()
+            .and_then(|source| source.downcast_ref::<RetentionStorageError>())
+            .and_then(RetentionStorageError::progress)
+    }
 
-/// The refused point.
+    /// The refused point.
     #[must_use]
     pub const fn point(&self) -> GcExecutionPoint {
         self.point
     }
 
-    /// The points completed before the refusal.
+    /// Earlier capability calls that returned success, in order.
+    ///
+    /// Success here does not imply a new namespace effect or directory durability.
+    /// In particular, a link may already exist and its sync is a separate call.
+    /// Effects inside the failing call are reported by [`Self::storage_progress`].
     #[must_use]
     pub fn executed(&self) -> &[GcExecutionPoint] {
         &self.executed
@@ -60,7 +67,7 @@ impl fmt::Display for GcExecutionError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             formatter,
-            "{} refused for candidate {} after {} completed points",
+            "{} failed for candidate {} after {} successful calls",
             self.point.phase,
             self.point.candidate,
             self.executed.len()
@@ -99,9 +106,11 @@ fn points(candidate_count: usize) -> Vec<GcExecutionPoint> {
 /// Executes every point from `from` onwards for `candidate_count`
 /// candidates, in order.
 ///
-/// A refused point leaves the completed points' effects in place and names
-/// itself; the caller re-observes the residue and resumes rather than
-/// continuing from stale evidence.
+/// Execution stops at the first error. Earlier successful calls and the failing
+/// call may have effects; a failed synchronization never rolls them back.
+/// The caller must reobserve residue before another attempt. The completed-call
+/// list does not itself certify effects or durability; inspect the failing
+/// capability report when supplied by the storage implementation.
 ///
 /// # Errors
 ///

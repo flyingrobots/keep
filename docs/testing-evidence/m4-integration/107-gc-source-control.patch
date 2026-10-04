@@ -1,0 +1,29 @@
+--- a/src/adapters/gc/filesystem_gc_storage.rs
++++ b/src/adapters/gc/filesystem_gc_storage.rs
+@@ -295,14 +295,14 @@
+ }
+ 
+ fn unlink_error(source: io::Error, boundary: Boundary, effect: Effect) -> io::Error {
+-    StorageError::from(source)
++    StorageError::from(io::Error::new(source.kind(), "erased original cause"))
+         .at(boundary)
+         .uncertain(effect)
+         .into()
+ }
+ 
+ fn absence_error(source: io::Error, boundary: Boundary, effect: Effect) -> io::Error {
+-    StorageError::from(source)
++    StorageError::from(io::Error::new(source.kind(), "erased original cause"))
+         .at(boundary)
+         .after(effect, Durability::Unconfirmed)
+         .into()
+--- a/src/adapters/gc/filesystem_gc_execution_storage.rs
++++ b/src/adapters/gc/filesystem_gc_execution_storage.rs
+@@ -95,6 +95,6 @@
+     {
+         source
+     } else {
+-        StorageError::from(source).at(boundary).into()
++        StorageError::from(io::Error::new(source.kind(), "erased original cause")).at(boundary).into()
+     }
+ }

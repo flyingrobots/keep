@@ -81,7 +81,7 @@ impl RetentionStorageError {
         }
     }
 
-    pub(super) fn at(self, boundary: RetentionStorageBoundary) -> Self {
+    pub(in crate::adapters) fn at(self, boundary: RetentionStorageBoundary) -> Self {
         match self {
             Self::Operation { .. } => self,
             source => Self::Operation {
@@ -95,7 +95,7 @@ impl RetentionStorageError {
         }
     }
 
-    pub(super) fn after(
+    pub(in crate::adapters) fn after(
         mut self,
         effect: RetentionNamespaceEffect,
         durability: RetentionEffectDurability,
@@ -108,7 +108,7 @@ impl RetentionStorageError {
         self
     }
 
-    pub(super) const fn uncertain(mut self, effect: RetentionNamespaceEffect) -> Self {
+    pub(in crate::adapters) const fn uncertain(mut self, effect: RetentionNamespaceEffect) -> Self {
         if let Self::Operation { progress, .. } = &mut self {
             progress.uncertain = Some(effect);
         }
