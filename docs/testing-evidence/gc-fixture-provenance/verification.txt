@@ -1,0 +1,90 @@
+rustc 1.96.0 (ac68faa20 2026-05-25)
+binary: rustc
+commit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96
+commit-date: 2026-05-25
+host: aarch64-unknown-linux-gnu
+release: 1.96.0
+LLVM version: 22.1.2
+cargo 1.96.0 (30a34c682 2026-05-25)
+release: 1.96.0
+commit-hash: 30a34c6821b57de0aaec83a901aca39f88f6778c
+commit-date: 2026-05-25
+host: aarch64-unknown-linux-gnu
+libgit2: 1.9.2 (sys:0.20.4 vendored)
+libcurl: 8.19.0-DEV (sys:0.4.87+curl-8.19.0 vendored ssl:OpenSSL/3.5.4)
+ssl: OpenSSL 3.5.4 30 Sep 2025
+os: Debian 13.0.0 [64-bit]
+b3sum 1.8.5
+candidate-set computed=6676bc9d70134a74cc9dfe397fb8a033fc45ebd903290d29b93018a097ee2b50 stored=6676bc9d70134a74cc9dfe397fb8a033fc45ebd903290d29b93018a097ee2b50
+intent computed=a9dd523326a686b89ac8f0c410421766afc221f2963bdafd430dce7f59edc701 stored=a9dd523326a686b89ac8f0c410421766afc221f2963bdafd430dce7f59edc701
+intent-checksum computed=cefd325fbf7b1900e1a208c9c66ec5cfd03e565ea04a3bf9011338e9dabae749 stored=cefd325fbf7b1900e1a208c9c66ec5cfd03e565ea04a3bf9011338e9dabae749
+receipt-checksum computed=d3dd8ddeea9ce78a278b39a3bdf61b957fff8f6cfee647f138fc720091389147 stored=d3dd8ddeea9ce78a278b39a3bdf61b957fff8f6cfee647f138fc720091389147
+db1c1c1a50613ef11f7c0ee0882e37b6d24e2db2ca57783d01197ba51b61ce59
+a4a010cee5da8aa3ba153c5034f436b92742c6c1f7cf6b43d890ad5fd5b5cf89
+d43762ca27e4b5853bb1de8cb3f6f87afcab313fffe39284cb5631782c9d20af  conformance/segment-store/v2/one-candidate-gc-intent.hex
+33a6999604e6fb3bcbd0b6f12c9fe123d151d31af6a4ce33571c78451dc359a7  conformance/segment-store/v2/one-candidate-gc-receipt.hex
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+   Compiling xtask v0.0.0 (/build/keep107-coordinate-source/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.04s
+     Running tests/retention_store_v2_format_oracle.rs (/build/keep107-coordinate-target/debug/deps/retention_store_v2_format_oracle-2a6d5511749a3dcb)
+
+running 1 test
+test golden_artifacts_match_the_independent_oracle ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.06s
+     Running tests/gc_retirement_intent.rs (/build/keep107-coordinate-target/debug/deps/gc_retirement_intent-6de0a7d49b53f247)
+
+running 5 tests
+test mutation_laws::intent_framing_refuses_truncation_and_trailing_data ... ok
+test semantic_intent_refuses_empty_and_repeated_candidate_sets ... ok
+test frozen_intent_decodes_and_reencodes_canonically ... ok
+test mutation_laws::every_intent_field_has_one_exact_first_refusal ... ok
+test mutation_laws::candidate_order_and_count_bounds_refuse_after_complete_integrity ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s
+
+     Running tests/gc_retirement_receipt.rs (/build/keep107-coordinate-target/debug/deps/gc_retirement_receipt-b07035724611f35c)
+
+running 4 tests
+test frozen_receipt_completes_the_frozen_intent_and_reencodes_canonically ... ok
+test pool_state_digest_is_carried_not_bound_to_the_intent ... ok
+test receipt_framing_refuses_any_length_but_the_fixed_width ... ok
+test every_receipt_field_has_one_exact_first_refusal ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+   Compiling xtask v0.0.0 (/build/keep107-coordinate-source/xtask)
+    Finished `release` profile [optimized] target(s) in 4.12s
+     Running tests/retention_store_v2_format_oracle.rs (/build/keep107-coordinate-target/release/deps/retention_store_v2_format_oracle-0f938c44dbe97a05)
+
+running 1 test
+test golden_artifacts_match_the_independent_oracle ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+    Finished `release` profile [optimized] target(s) in 2.65s
+     Running tests/gc_retirement_intent.rs (/build/keep107-coordinate-target/release/deps/gc_retirement_intent-16dd92d184650f31)
+
+running 5 tests
+test semantic_intent_refuses_empty_and_repeated_candidate_sets ... ok
+test mutation_laws::intent_framing_refuses_truncation_and_trailing_data ... ok
+test mutation_laws::every_intent_field_has_one_exact_first_refusal ... ok
+test frozen_intent_decodes_and_reencodes_canonically ... ok
+test mutation_laws::candidate_order_and_count_bounds_refuse_after_complete_integrity ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/gc_retirement_receipt.rs (/build/keep107-coordinate-target/release/deps/gc_retirement_receipt-7af42e76dc359ac8)
+
+running 4 tests
+test frozen_receipt_completes_the_frozen_intent_and_reencodes_canonically ... ok
+test pool_state_digest_is_carried_not_bound_to_the_intent ... ok
+test every_receipt_field_has_one_exact_first_refusal ... ok
+test receipt_framing_refuses_any_length_but_the_fixed_width ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
