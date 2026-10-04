@@ -21,7 +21,7 @@ The manifest disables default features and enables exactly:
 - `pure`, which forces upstream's pure-Rust build path instead of its
   handwritten assembly or C implementations.
 
-Production streaming paths use `Hasher::new`, `Hasher::update`, and `Hasher::finalize`. The migration receipt's initial-state digests additionally use the one-shot `blake3::hash` over fixed domains in `migration_receipt_initial_state.rs`; repository tasks also use one-shot hashing for deterministic seed naming. The `std` feature is not part of content identity and may be removed in a dedicated dependency-policy change if Keep adopts a `no_std` lower layer. The `pure` feature is also not part of identity. Any future change to either feature must reproduce every identity vector exactly.
+Production streaming paths use `Hasher::new`, `Hasher::update`, and `Hasher::finalize`; the segment digest builder clones bounded Hasher state before appending its seal suffix. The migration receipt's initial-state digests additionally use the one-shot `blake3::hash` over fixed domains in `migration_receipt_initial_state.rs`; repository tasks also use one-shot hashing for deterministic seed naming and reviewed Node installer/lock byte admission. The `std` feature is not part of content identity and may be removed in a dedicated dependency-policy change if Keep adopts a `no_std` lower layer. The `pure` feature is also not part of identity. Any future change to either feature must reproduce every identity vector exactly.
 
 `pure` does not mean “free of unsafe code.” It selects Rust implementations, including platform intrinsics and dispatch that contain upstream-audited unsafe blocks. The upstream Rust-2024 build script also contains a small unsafe environment update. The Keep identity crate remains `unsafe_code = "forbid"`.
 
@@ -74,6 +74,8 @@ The admitted normal dependency graph for supported targets is:
 - `cfg-if` 1.0.4;
 - `cpufeatures` 0.3.0 on x86 and x86_64, as selected by upstream's target dependency;
 - `constant_time_eq` 0.4.2 with `std`.
+
+On x86/x86_64, cpufeatures supplies runtime SSE2/SSE4.1/AVX2 detection even with `pure`. Its published manifest declares Rust 1.85 and an MIT OR Apache-2.0 license choice, within Keep's Rust 1.96.0 and Apache-2.0 policy.
 
 The target-independent lockfile also records libc 0.2.186 in cpufeatures' dependency metadata for certain non-x86 targets. BLAKE3 selects cpufeatures only on x86/x86_64, where that libc edge is inactive. Other workspace dependencies can independently activate libc; lockfile presence alone does not establish an active BLAKE3 path.
 
