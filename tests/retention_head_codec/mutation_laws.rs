@@ -1,11 +1,13 @@
 //! Field-by-field corruption matrix for the version-2 retention head.
 //!
-//! Every field of the fixed 144-byte head has one mutation and one exact
-//! first refusal (`KEEP-RETENTION-003`).
+//! Selected malformed head fields report their named refusal (KEEP-RETENTION-003). Generation and manifest-length cases assert complete nested diagnostics; the opaque manifest digest has a separate admission law.
 
 use std::io;
 
-use keep::{ChecksummedRetentionHead, RetentionHeadDecodeError as Refusal, RetentionHeadError};
+use keep::{
+    ChecksummedRetentionHead, LivenessGenerationError, RetentionHeadDecodeError as Refusal,
+    RetentionHeadError, RetentionManifestLengthError,
+};
 
 use super::{CHECKSUM_OFFSET, ONE_ROOT_HEAD, fixture_bytes};
 use crate::support::{domain_hash, flip, patch};
@@ -67,7 +69,14 @@ const MATRIX: &[Mutation] = &[
         field: "liveness generation zero",
         seal: Seal::Checksum,
         mutate: |bytes| patch(bytes, 24, &0_u64.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::LivenessGeneration { .. }),
+        refuses: |error| {
+            matches!(
+                error,
+                Refusal::LivenessGeneration {
+                    source: LivenessGenerationError::Zero
+                }
+            )
+        },
     },
     Mutation {
         field: "liveness generation two without predecessor",
@@ -86,13 +95,31 @@ const MATRIX: &[Mutation] = &[
         field: "manifest length below bound",
         seal: Seal::Checksum,
         mutate: |bytes| patch(bytes, 32, &223_u64.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::ManifestLength { .. }),
+        refuses: |error| {
+            matches!(
+                error,
+                Refusal::ManifestLength {
+                    source: RetentionManifestLengthError::OutOfBounds {
+                        minimum: 224,
+                        maximum: 295_136,
+                        observed: 223
+                    }
+                }
+            )
+        },
     },
     Mutation {
         field: "manifest length not congruent",
         seal: Seal::Checksum,
         mutate: |bytes| patch(bytes, 32, &225_u64.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::ManifestLength { .. }),
+        refuses: |error| {
+            matches!(
+                error,
+                Refusal::ManifestLength {
+                    source: RetentionManifestLengthError::NotCongruent { observed: 225 }
+                }
+            )
+        },
     },
     Mutation {
         field: "predecessor digest at generation one",
@@ -122,7 +149,7 @@ const MATRIX: &[Mutation] = &[
 ];
 
 #[test]
-fn every_head_field_has_one_exact_first_refusal() -> Result<(), Box<dyn std::error::Error>> {
+fn malformed_head_fields_report_the_named_refusal() -> Result<(), Box<dyn std::error::Error>> {
     for mutation in MATRIX {
         let mut bytes = fixture_bytes(ONE_ROOT_HEAD)?;
         (mutation.mutate)(&mut bytes)?;

@@ -1,13 +1,14 @@
 //! Field-by-field corruption matrix for version-2 retention roots.
 //!
-//! Every structural field of the root header, body, and trailer has one
-//! mutation and one exact first refusal (`KEEP-RETENTION-003`). The sealed
-//! matrix recomputes every digest and checksum that the mutation did not
-//! target, so each case proves the named field check and nothing else.
+//! Selected malformed root fields report their named refusal (KEEP-RETENTION-003). Profile, closure-limit and generation cases assert complete nested diagnostics; other cases retain their stated variant-level oracles.
 
 use std::io;
 
-use keep::{AdmittedRetentionRoot, RetentionRootDecodeError as Refusal, RetentionRootError};
+use keep::{
+    AdmittedRetentionRoot, RetentionClosureLimit, RetentionClosureLimitError,
+    RetentionProfileAdmissionError, RetentionRootDecodeError as Refusal, RetentionRootError,
+    RootGenerationError,
+};
 
 use super::{ANCHOR_BODY_OFFSET, ANCHOR_SET_DIGEST_OFFSET, ROOT_DIGEST_OFFSET, fixture_bytes};
 use crate::support::{counted_domain_hash, domain_hash, flip, patch, read_u16, read_u32};
@@ -31,7 +32,7 @@ struct Mutation {
     field: &'static str,
     seal: Seal,
     mutate: fn(&mut Vec<u8>) -> io::Result<()>,
-    refuses: fn(&Refusal) -> bool,
+    refuses: fn(&Refusal, &[u8], &[u8]) -> bool,
 }
 
 const MATRIX: &[Mutation] = &[
@@ -39,13 +40,13 @@ const MATRIX: &[Mutation] = &[
         field: "magic",
         seal: Seal::Everything,
         mutate: |bytes| flip(bytes, 15),
-        refuses: |error| matches!(error, Refusal::InvalidMagic { .. }),
+        refuses: |error, _, _| matches!(error, Refusal::InvalidMagic { .. }),
     },
     Mutation {
         field: "version",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 16, &3_u16.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::UnsupportedVersion {
@@ -59,7 +60,7 @@ const MATRIX: &[Mutation] = &[
         field: "header length",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 18, &191_u16.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::InvalidHeaderLength {
@@ -73,13 +74,13 @@ const MATRIX: &[Mutation] = &[
         field: "flags",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 20, &1_u32.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::UnsupportedFlags { observed: 1 }),
+        refuses: |error, _, _| matches!(error, Refusal::UnsupportedFlags { observed: 1 }),
     },
     Mutation {
         field: "total record length",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 24, &377_u64.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::DeclaredLengthMismatch {
@@ -93,13 +94,20 @@ const MATRIX: &[Mutation] = &[
         field: "root generation zero",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 32, &0_u64.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::Generation { .. }),
+        refuses: |error, _, _| {
+            matches!(
+                error,
+                Refusal::Generation {
+                    source: RootGenerationError::Zero
+                }
+            )
+        },
     },
     Mutation {
         field: "root generation two without predecessor",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 32, &2_u64.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::Semantic {
@@ -112,7 +120,7 @@ const MATRIX: &[Mutation] = &[
         field: "anchor width",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 42, &118_u16.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::InvalidAnchorWidth {
@@ -126,7 +134,7 @@ const MATRIX: &[Mutation] = &[
         field: "anchor count participates in the declared length",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, ANCHOR_COUNT_OFFSET, &2_u32.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::DeclaredLengthMismatch {
@@ -140,55 +148,117 @@ const MATRIX: &[Mutation] = &[
         field: "profile identity",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 48, &2_u32.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::Profile { .. }),
+        refuses: |error, _, _| {
+            matches!(
+                error,
+                Refusal::Profile {
+                    source: RetentionProfileAdmissionError::UnsupportedCoordinate {
+                        expected_identity: 1,
+                        expected_version: 1,
+                        observed_identity: 2,
+                        observed_version: 1
+                    }
+                }
+            )
+        },
     },
     Mutation {
         field: "profile version",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 52, &2_u32.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::Profile { .. }),
+        refuses: |error, _, _| {
+            matches!(
+                error,
+                Refusal::Profile {
+                    source: RetentionProfileAdmissionError::UnsupportedCoordinate {
+                        expected_identity: 1,
+                        expected_version: 1,
+                        observed_identity: 1,
+                        observed_version: 2
+                    }
+                }
+            )
+        },
     },
     Mutation {
         field: "profile-definition digest",
         seal: Seal::Everything,
         mutate: |bytes| flip(bytes, 56),
-        refuses: |error| matches!(error, Refusal::Profile { .. }),
+        refuses: |error, original, mutated| matches!(error, Refusal::Profile { source: RetentionProfileAdmissionError::DefinitionDigestMismatch { expected, observed } } if Some(expected.as_slice()) == original.get(56..88) && Some(observed.as_slice()) == mutated.get(56..88)),
     },
     Mutation {
         field: "closure-node limit zero",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 88, &0_u64.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::ClosureLimit { .. }),
+        refuses: |error, _, _| {
+            matches!(
+                error,
+                Refusal::ClosureLimit {
+                    source: RetentionClosureLimitError::Zero {
+                        limit: RetentionClosureLimit::Nodes
+                    }
+                }
+            )
+        },
     },
     Mutation {
         field: "closure-depth limit above ceiling",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 96, &9_u16.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::ClosureLimit { .. }),
+        refuses: |error, _, _| {
+            matches!(
+                error,
+                Refusal::ClosureLimit {
+                    source: RetentionClosureLimitError::AboveMaximum {
+                        limit: RetentionClosureLimit::Depth,
+                        maximum: 8,
+                        observed: 9
+                    }
+                }
+            )
+        },
     },
     Mutation {
         field: "reserved limit bytes",
         seal: Seal::Everything,
         mutate: |bytes| flip(bytes, 98),
-        refuses: |error| matches!(error, Refusal::NonZeroReserved { field: "limit" }),
+        refuses: |error, _, _| matches!(error, Refusal::NonZeroReserved { field: "limit" }),
     },
     Mutation {
         field: "encoded-byte limit zero",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 100, &0_u64.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::ClosureLimit { .. }),
+        refuses: |error, _, _| {
+            matches!(
+                error,
+                Refusal::ClosureLimit {
+                    source: RetentionClosureLimitError::Zero {
+                        limit: RetentionClosureLimit::EncodedBytes
+                    }
+                }
+            )
+        },
     },
     Mutation {
         field: "physical-byte limit zero",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 108, &0_u64.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::ClosureLimit { .. }),
+        refuses: |error, _, _| {
+            matches!(
+                error,
+                Refusal::ClosureLimit {
+                    source: RetentionClosureLimitError::Zero {
+                        limit: RetentionClosureLimit::PhysicalBytes
+                    }
+                }
+            )
+        },
     },
     Mutation {
         field: "predecessor digest at generation one",
         seal: Seal::Everything,
         mutate: |bytes| flip(bytes, 116),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::Semantic {
@@ -201,13 +271,13 @@ const MATRIX: &[Mutation] = &[
         field: "anchor-set digest",
         seal: Seal::Digests,
         mutate: |bytes| flip(bytes, ANCHOR_SET_DIGEST_OFFSET),
-        refuses: |error| matches!(error, Refusal::AnchorSetDigestMismatch { .. }),
+        refuses: |error, _, _| matches!(error, Refusal::AnchorSetDigestMismatch { .. }),
     },
     Mutation {
         field: "reserved trailing header bytes",
         seal: Seal::Everything,
         mutate: |bytes| flip(bytes, 191),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::NonZeroReserved {
@@ -220,30 +290,30 @@ const MATRIX: &[Mutation] = &[
         field: "anchor blob identity",
         seal: Seal::Everything,
         mutate: |bytes| flip(bytes, ANCHOR_BODY_OFFSET),
-        refuses: |error| matches!(error, Refusal::BlobId { index: 0, .. }),
+        refuses: |error, _, _| matches!(error, Refusal::BlobId { index: 0, .. }),
     },
     Mutation {
         field: "anchor layout identity",
         seal: Seal::Everything,
         mutate: |bytes| flip(bytes, ANCHOR_BODY_OFFSET + 59),
-        refuses: |error| matches!(error, Refusal::LayoutId { index: 0, .. }),
+        refuses: |error, _, _| matches!(error, Refusal::LayoutId { index: 0, .. }),
     },
     Mutation {
         field: "root digest",
         seal: Seal::Checksum,
         mutate: |bytes| flip(bytes, ROOT_DIGEST_OFFSET),
-        refuses: |error| matches!(error, Refusal::RootDigestMismatch { .. }),
+        refuses: |error, _, _| matches!(error, Refusal::RootDigestMismatch { .. }),
     },
     Mutation {
         field: "checksum",
         seal: Seal::Nothing,
         mutate: |bytes| flip(bytes, 377),
-        refuses: |error| matches!(error, Refusal::ChecksumMismatch { .. }),
+        refuses: |error, _, _| matches!(error, Refusal::ChecksumMismatch { .. }),
     },
 ];
 
 #[test]
-fn every_root_field_has_one_exact_first_refusal() -> Result<(), Box<dyn std::error::Error>> {
+fn malformed_root_fields_report_the_named_refusal() -> Result<(), Box<dyn std::error::Error>> {
     for mutation in MATRIX {
         let mut bytes = fixture_bytes()?;
         (mutation.mutate)(&mut bytes)?;
@@ -252,7 +322,7 @@ fn every_root_field_has_one_exact_first_refusal() -> Result<(), Box<dyn std::err
             return Err(format!("mutated {} was admitted", mutation.field).into());
         };
         assert!(
-            (mutation.refuses)(&error),
+            (mutation.refuses)(&error, &fixture_bytes()?, &bytes),
             "{} refused with {error:?}",
             mutation.field
         );

@@ -1,12 +1,12 @@
 //! Field-by-field corruption matrix for version-2 retention manifests.
 //!
-//! Every structural field of the manifest header, entry body, and trailer
-//! has one mutation and one exact first refusal (`KEEP-RETENTION-003`).
+//! Selected malformed manifest fields report their named refusal (KEEP-RETENTION-003). Generation cases assert complete nested diagnostics; other cases retain their stated variant-level oracles.
 
 use std::io;
 
 use keep::{
-    AdmittedRetentionManifest, RetentionManifestDecodeError as Refusal, RetentionManifestError,
+    AdmittedRetentionManifest, LivenessGenerationError, RetentionManifestDecodeError as Refusal,
+    RetentionManifestError, RootGenerationError,
 };
 
 use super::{
@@ -95,7 +95,14 @@ const MATRIX: &[Mutation] = &[
         field: "liveness generation zero",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 32, &0_u64.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::LivenessGeneration { .. }),
+        refuses: |error| {
+            matches!(
+                error,
+                Refusal::LivenessGeneration {
+                    source: LivenessGenerationError::Zero
+                }
+            )
+        },
     },
     Mutation {
         field: "liveness generation two without predecessor",
@@ -180,7 +187,15 @@ const MATRIX: &[Mutation] = &[
         field: "entry root generation zero",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, ENTRY_BODY_OFFSET + 32, &0_u64.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::RootGeneration { index: 0, .. }),
+        refuses: |error| {
+            matches!(
+                error,
+                Refusal::RootGeneration {
+                    index: 0,
+                    source: RootGenerationError::Zero
+                }
+            )
+        },
     },
     Mutation {
         field: "manifest digest",
@@ -197,7 +212,7 @@ const MATRIX: &[Mutation] = &[
 ];
 
 #[test]
-fn every_manifest_field_has_one_exact_first_refusal() -> Result<(), Box<dyn std::error::Error>> {
+fn malformed_manifest_fields_report_the_named_refusal() -> Result<(), Box<dyn std::error::Error>> {
     for mutation in MATRIX {
         let mut bytes = fixture_bytes(ONE_ROOT_MANIFEST)?;
         (mutation.mutate)(&mut bytes)?;
