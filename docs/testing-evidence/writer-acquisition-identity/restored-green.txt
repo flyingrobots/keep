@@ -1,0 +1,94 @@
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.93s
+     Running unittests src/lib.rs (<isolated-build>/debug/deps/keep-882caa9da157737f)
+
+running 1 test
+test adapters::filesystem_writer_lock::tests::replaced_lock_entry_refuses_authority_after_kernel_acquisition ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 352 filtered out; finished in 0.00s
+
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `release` profile [optimized] target(s) in 4.71s
+     Running unittests src/lib.rs (<isolated-build>/release/deps/keep-8ca1b588e6dfe3ea)
+
+running 1 test
+test adapters::filesystem_writer_lock::tests::replaced_lock_entry_refuses_authority_after_kernel_acquisition ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 352 filtered out; finished in 0.00s
+
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.42s
+     Running tests/catalog_writer_lock.rs (<isolated-build>/debug/deps/catalog_writer_lock-ef4d33dbd86a9529)
+
+running 4 tests
+test lock_acquisition_never_follows_a_symbolic_link ... ok
+test replacing_the_lock_entry_cannot_split_live_writer_authority ... ok
+test missing_lock_evidence_is_never_created_by_acquisition ... ok
+test one_persistent_lock_excludes_every_second_writer ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `release` profile [optimized] target(s) in 2.46s
+     Running tests/catalog_writer_lock.rs (<isolated-build>/release/deps/catalog_writer_lock-54abf0417acf05a7)
+
+running 4 tests
+test lock_acquisition_never_follows_a_symbolic_link ... ok
+test one_persistent_lock_excludes_every_second_writer ... ok
+test replacing_the_lock_entry_cannot_split_live_writer_authority ... ok
+test missing_lock_evidence_is_never_created_by_acquisition ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.26s
+     Running tests/store_initialization.rs (<isolated-build>/debug/deps/store_initialization-6a5a96730e6049bf)
+
+running 2 tests
+test initialization_admits_platform_before_every_namespace_transition ... ok
+test initialization_stops_at_and_preserves_every_exact_failure_phase ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `release` profile [optimized] target(s) in 0.14s
+     Running tests/store_initialization.rs (<isolated-build>/release/deps/store_initialization-1b3d949930a31f32)
+
+running 2 tests
+test initialization_stops_at_and_preserves_every_exact_failure_phase ... ok
+test initialization_admits_platform_before_every_namespace_transition ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (<isolated-build>/debug/deps/keep-882caa9da157737f)
+
+running 7 tests
+test adapters::filesystem_store_initializer_tests::unknown_namespace_refuses_before_writer_file_creation ... ok
+test adapters::filesystem_store_initializer_tests::published_reopen_requires_a_complete_root_namespace ... ok
+test adapters::filesystem_store_initializer_tests::linux_initializer_synchronizes_an_opath_root ... ok
+test adapters::filesystem_store_initializer_tests::partial_canonical_namespace_is_completed_without_replacing_evidence ... ok
+test adapters::filesystem_store_initializer_tests::empty_namespace_is_admitted_only_with_the_complete_root_shape ... ok
+test adapters::filesystem_store_initializer_tests::published_reopen_refuses_unknown_root_evidence ... ok
+test adapters::filesystem_store_initializer_tests::retained_initializer_authority_excludes_a_second_initializer ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 346 filtered out; finished in 0.04s
+
+    Finished `release` profile [optimized] target(s) in 0.01s
+     Running unittests src/lib.rs (<isolated-build>/release/deps/keep-8ca1b588e6dfe3ea)
+
+running 7 tests
+test adapters::filesystem_store_initializer_tests::unknown_namespace_refuses_before_writer_file_creation ... ok
+test adapters::filesystem_store_initializer_tests::empty_namespace_is_admitted_only_with_the_complete_root_shape ... ok
+test adapters::filesystem_store_initializer_tests::partial_canonical_namespace_is_completed_without_replacing_evidence ... ok
+test adapters::filesystem_store_initializer_tests::published_reopen_refuses_unknown_root_evidence ... ok
+test adapters::filesystem_store_initializer_tests::published_reopen_requires_a_complete_root_namespace ... ok
+test adapters::filesystem_store_initializer_tests::linux_initializer_synchronizes_an_opath_root ... ok
+test adapters::filesystem_store_initializer_tests::retained_initializer_authority_excludes_a_second_initializer ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 346 filtered out; finished in 0.01s
+
+    Checking keep v0.0.0 (<isolated-build>)
+    Checking xtask v0.0.0 (<isolated-build>/xtask)
+    Checking keep-benchmark v0.0.0 (<isolated-build>/benchmark)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.24s

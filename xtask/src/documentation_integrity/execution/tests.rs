@@ -145,7 +145,7 @@ fn unreviewed_version_stops_before_tool_execution() {
         result,
         Err(DocumentationError::VersionMismatch {
             program: "markdownlint-cli2",
-            expected: "markdownlint-cli2 v0.23.2 (markdownlint v0.41.1)",
+            expected: "markdownlint-cli2 v0.23.3 (markdownlint v0.41.1)",
             ref observed,
         }) if observed == "markdownlint-cli2 v999.0.0"
     ));

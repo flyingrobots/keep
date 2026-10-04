@@ -35,24 +35,31 @@ impl RetentionClosureLimits {
         encoded_bytes: u64,
         physical_bytes: u64,
     ) -> Result<Self, RetentionClosureLimitError> {
-        let nodes = admit_u64(RetentionClosureLimit::Nodes, nodes, Self::MAXIMUM_NODES)?;
+        let nodes = Self::admit_limit(RetentionClosureLimit::Nodes, nodes)?;
         let depth = admit_depth(depth)?;
-        let encoded_bytes = admit_u64(
-            RetentionClosureLimit::EncodedBytes,
-            encoded_bytes,
-            Self::MAXIMUM_ENCODED_BYTES,
-        )?;
-        let physical_bytes = admit_u64(
-            RetentionClosureLimit::PhysicalBytes,
-            physical_bytes,
-            Self::MAXIMUM_PHYSICAL_BYTES,
-        )?;
+        let encoded_bytes = Self::admit_limit(RetentionClosureLimit::EncodedBytes, encoded_bytes)?;
+        let physical_bytes =
+            Self::admit_limit(RetentionClosureLimit::PhysicalBytes, physical_bytes)?;
         Ok(Self {
             nodes,
             depth,
             encoded_bytes,
             physical_bytes,
         })
+    }
+
+    /// Admits one resource independently for interrupted boundary records.
+    pub(crate) fn admit_limit(
+        limit: RetentionClosureLimit,
+        observed: u64,
+    ) -> Result<NonZeroU64, RetentionClosureLimitError> {
+        let maximum = match limit {
+            RetentionClosureLimit::Nodes => Self::MAXIMUM_NODES,
+            RetentionClosureLimit::Depth => u64::from(Self::MAXIMUM_DEPTH),
+            RetentionClosureLimit::EncodedBytes => Self::MAXIMUM_ENCODED_BYTES,
+            RetentionClosureLimit::PhysicalBytes => Self::MAXIMUM_PHYSICAL_BYTES,
+        };
+        admit_u64(limit, observed, maximum)
     }
 
     /// Returns the positive closure node limit.
@@ -98,13 +105,6 @@ fn admit_u64(
 
 fn admit_depth(observed: u16) -> Result<NonZeroU16, RetentionClosureLimitError> {
     let limit = RetentionClosureLimit::Depth;
-    let value = NonZeroU16::new(observed).ok_or(RetentionClosureLimitError::Zero { limit })?;
-    if observed > RetentionClosureLimits::MAXIMUM_DEPTH {
-        return Err(RetentionClosureLimitError::AboveMaximum {
-            limit,
-            maximum: u64::from(RetentionClosureLimits::MAXIMUM_DEPTH),
-            observed: u64::from(observed),
-        });
-    }
-    Ok(value)
+    let _admitted = RetentionClosureLimits::admit_limit(limit, u64::from(observed))?;
+    NonZeroU16::new(observed).ok_or(RetentionClosureLimitError::Zero { limit })
 }

@@ -15,6 +15,43 @@ mod scenario_corpus;
 #[path = "storage_assertions.rs"]
 mod storage_assertions;
 
+#[cfg(target_os = "linux")]
+#[path = "durable_assertions.rs"]
+mod durable_assertions;
+#[cfg(target_os = "linux")]
+#[path = "durable_corruption_laws.rs"]
+mod durable_corruption_laws;
+#[cfg(target_os = "linux")]
+#[path = "durable_diagnostic_laws.rs"]
+mod durable_diagnostic_laws;
+#[cfg(target_os = "linux")]
+#[path = "durable_fixture.rs"]
+mod durable_fixture;
+#[cfg(target_os = "linux")]
+#[path = "durable_layout_laws.rs"]
+mod durable_layout_laws;
+#[cfg(target_os = "linux")]
+#[path = "durable_locator_laws.rs"]
+mod durable_locator_laws;
+#[cfg(target_os = "linux")]
+#[path = "durable_namespace_laws.rs"]
+mod durable_namespace_laws;
+#[cfg(target_os = "linux")]
+#[path = "durable_output_laws.rs"]
+mod durable_output_laws;
+#[cfg(target_os = "linux")]
+#[path = "durable_range_properties.rs"]
+mod durable_range_properties;
+#[cfg(target_os = "linux")]
+#[path = "durable_read_memory.rs"]
+mod durable_read_memory;
+#[cfg(target_os = "linux")]
+#[path = "durable_refusal_laws.rs"]
+mod durable_refusal_laws;
+#[cfg(target_os = "linux")]
+#[path = "../segment_filesystem_stage/sandbox.rs"]
+mod durable_sandbox;
+
 use std::error::Error;
 use std::io::ErrorKind;
 
@@ -216,3 +253,11 @@ fn reader_failures_preserve_precise_boundaries_and_sources() -> TestResult {
     ));
     Ok(())
 }
+
+#[cfg(target_os = "linux")]
+#[path = "durable_writer_failures.rs"]
+mod durable_writer_failures;
+
+#[cfg(target_os = "linux")]
+#[path = "durable_closure_refusal.rs"]
+mod durable_closure_refusal;

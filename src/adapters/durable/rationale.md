@@ -1,0 +1,25 @@
+# Fenced durable authenticated reads
+
+The read adapter composes the existing immutable catalog snapshot, shared reader fence, retention root admission and authenticated reconstruction cores. It performs no publication, deletion or repair. An opened store handle is a locator; only snapshot admission establishes a readable view.
+
+Handle construction resolves a relative locator to an absolute path once and preserves any resolution failure as a typed locator error. Resolving on every read was rejected because an unrelated working-directory change could silently select another valid store. This does not canonicalize or pin a directory capability, and every snapshot still admits the named store. The new constructor is fallible; resolving a relative path may query the current directory but does not open or verify the store.
+
+A durable snapshot keeps the fence and selected catalog alive for every borrowed read. Snapshot admission verifies every manifest-selected retained closure against that catalog. Blob lookup chooses the lowest canonical retained layout identity; exact-layout reads may name any layout in the admitted catalog, including an unretained one, while the fence protects the view.
+
+The existing catalog loader materializes selected segment bytes under the caller's aggregate segment-byte policy. It separately materializes catalog bytes under `CatalogLength::MAXIMUM`, with additional decoded indexes bounded by format and record-count limits. The segment budget does not cap total snapshot memory. This cost is explicit in the API documentation; it is not a lazy segment reader. Reconstruction adds no whole-blob buffer. Selected roots are loaded one at a time rather than accumulating a second index of all anchors. The format bounds each root and manifest, and each root supplies traversal counters. This bounds memory without inventing another on-disk limit.
+
+The [domain read core](../../authenticated_read/rationale.md) owns the shared verification and emission policy; both storage adapters depend inward on it. Codec-bearing public errors are assembled at the shared adapter boundary without changing their variants or sources.
+
+The shared crate-private chunk source must return immutable bytes throughout verification and emission. The reference map and durable catalog satisfy this requirement through owned immutable storage. Both cores preserve the verify-before-output contract and single hash pass; no public mutable or callback-provided source is admitted through this internal boundary.
+
+Refusal and operational failure remain distinct typed sources. Missing logical content is evidenced against an admitted view; inability to open a physical segment is a catalog I/O failure. Output failures preserve the exact accepted prefix through the existing reconstruction/range errors. A receipt is constructed only after successful emission and includes the complete admitted retention head and catalog coordinates.
+
+The writer lock and reader fence coordinate cooperating Keep operations in a managed namespace. They do not isolate arbitrary concurrent raw filesystem mutation. Existing exact-byte, identity, namespace and corruption checks remain in force, including selected-root re-admission during lookup.
+
+Readers reuse version-two platform admission before consuming migration records and retain the admitted directory capability through collection. Consistent record bytes alone cannot establish the filesystem semantics assumed by the shared fence and immutable pools. Reusing writer authority for this check was rejected because readers must coexist with a writer; the platform check itself acquires no writer lock. Unsupported filesystems now refuse through the existing admission error boundary.
+
+Platform admission performs a blocking root-directory synchronization before acquiring the shared fence. A synchronization failure preserves its original I/O cause under reader `Admission`, nested under the durable snapshot error. This probe does not publish content, flush caller output or grant a new content-durability guarantee. An existing snapshot read does not repeat this platform probe; a convenience read opens a new snapshot and therefore pays it again.
+
+Selected-root admission binds the canonical root's namespace to the selecting manifest entry in addition to its digest and generation. A canonical root with a valid complete closure still refuses if another namespace selects it; the existing root error retains typed expected and observed namespace digests. This check belongs to the shared root-read boundary so initial admission and subsequent anchor lookup enforce the same rule.
+
+The delivery checklist and remaining evidence obligations are recorded in [the #109 evidence ledger](../../../docs/testing-evidence/durable-authenticated-reads.md). This rationale does not assert that the issue's acceptance checks are already complete.

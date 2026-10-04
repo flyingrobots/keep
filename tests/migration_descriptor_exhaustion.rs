@@ -1,0 +1,85 @@
+//! This module owns migration admission diagnostics under descriptor exhaustion.
+
+#![cfg(all(feature = "repository-tasks", target_os = "linux"))]
+
+#[path = "segment_filesystem_stage/sandbox.rs"]
+pub mod sandbox;
+
+use std::error::Error;
+use std::fs::File;
+use std::process::Command;
+
+use keep::{
+    FilesystemMigrationAuthorityError as AuthorityError, FilesystemStoreMigrationAuthority,
+    RepositoryInitializationStorage, SegmentReadPolicy, initialize_store,
+};
+
+const CHILD: &str = "KEEP_MIGRATION_DESCRIPTOR_CHILD";
+const TEST: &str = "a_root_clone_failure_reports_the_namespace_boundary";
+
+// Size: medium. Oracle: capability duplication failure is Namespace with its original EMFILE.
+// The isolated child owns a 64-descriptor ceiling and a 20-second execution ceiling.
+// Delete when repository-task migration admission is removed or stronger kernel-fault coverage subsumes it.
+#[test]
+fn a_root_clone_failure_reports_the_namespace_boundary() -> Result<(), Box<dyn Error>> {
+    if std::env::var_os(CHILD).is_some() {
+        return exhaust_descriptors();
+    }
+    let output = Command::new("timeout")
+        .args([
+            "20s",
+            "/bin/sh",
+            "-c",
+            "ulimit -n 64; exec \"$@\"",
+            "migration-descriptor-test",
+        ])
+        .arg(std::env::current_exe()?)
+        .args(["--exact", TEST, "--nocapture", "--test-threads=1"])
+        .env(CHILD, "1")
+        .output()?;
+    assert!(
+        output.status.success(),
+        "isolated migration clone-failure law failed: {:?}\n{}\n{}",
+        output.status.code(),
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    Ok(())
+}
+
+fn exhaust_descriptors() -> Result<(), Box<dyn Error>> {
+    let sandbox = sandbox::TestDirectory::create("migration-clone-descriptor-exhaustion")?;
+    let mut storage = RepositoryInitializationStorage::admit_unchecked(sandbox.path())?;
+    let _initialized = initialize_store(&mut storage)?;
+    let lock = storage.into_writer_lock()?;
+    let descriptors = fill_descriptors()?;
+    let result = FilesystemStoreMigrationAuthority::open_unchecked_for_repository_tasks(
+        lock,
+        SegmentReadPolicy::MAXIMUM,
+    );
+    drop(descriptors);
+    let error = result
+        .err()
+        .ok_or("descriptor exhaustion unexpectedly admitted migration")?;
+    assert!(
+        matches!(error, AuthorityError::Namespace { ref source }
+        if source.raw_os_error() == Some(rustix::io::Errno::MFILE.raw_os_error())),
+        "root clone failure must retain Namespace and EMFILE: {error:?}"
+    );
+    sandbox.remove()?;
+    Ok(())
+}
+
+fn fill_descriptors() -> Result<Vec<File>, Box<dyn Error>> {
+    let mut descriptors = Vec::with_capacity(64);
+    for _ in 0..128 {
+        match File::open("/dev/null") {
+            Ok(file) => descriptors.push(file),
+            Err(error) if error.raw_os_error() == Some(rustix::io::Errno::MFILE.raw_os_error()) => {
+                return Ok(descriptors);
+            }
+            Err(error) => return Err(error.into()),
+        }
+    }
+    Err("the child descriptor ceiling was not enforced".into())
+}

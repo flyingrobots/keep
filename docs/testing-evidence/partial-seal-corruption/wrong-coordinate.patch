@@ -1,0 +1,11 @@
+--- a/src/adapters/recovery/recovery_segment_classifier.rs
++++ b/src/adapters/recovery/recovery_segment_classifier.rs
+@@ -74,7 +74,7 @@
+                     RecoverySegmentTruncation::Seal {
+                         offset: cursor.offset,
+                         required: SegmentSeal::ENCODED_LENGTH,
+-                        observed: cursor.remaining.len(),
++                        observed: 0,
+                     },
+                 ));
+             }

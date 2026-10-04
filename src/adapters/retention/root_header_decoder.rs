@@ -7,8 +7,8 @@ use super::root_field_decoder::{
 };
 
 pub(super) const HEADER_LENGTH: usize = 192;
-const ANCHOR_WIDTH: usize = 119;
-const TRAILER_LENGTH: usize = 64;
+pub(super) const ANCHOR_WIDTH: usize = 119;
+pub(super) const TRAILER_LENGTH: usize = 64;
 /// Longest canonical root: the header, a namespace at
 /// `RetentionNamespace::MAXIMUM_BYTE_LENGTH` (255), `RetentionRoot::
 /// MAXIMUM_ANCHOR_COUNT` (65,536) anchors, and the trailer. Pinned against the
@@ -85,6 +85,14 @@ fn validate_fixed_fields(encoded: &[u8]) -> Result<(), RetentionRootDecodeError>
     })?;
     require_zero(encoded, 98, 2, "limit")?;
     require_zero(encoded, 180, 12, "trailing header")
+}
+
+/// Checks framing once the complete size fields of an interrupted header exist.
+pub(super) fn admit_prefix_length(encoded: &[u8]) -> Result<(), RetentionRootDecodeError> {
+    let namespace_length = usize::from(read_u16(encoded, 40)?);
+    let anchor_count = read_u32(encoded, 44)?;
+    super::root_semantic_header::admit_count(anchor_count)?;
+    require_declared_length(encoded, canonical_length(namespace_length, anchor_count)?)
 }
 
 fn canonical_length(

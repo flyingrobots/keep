@@ -67,9 +67,11 @@ fn spawn(
         .current_dir(repository_root)
         .arg("__durability-crash-child")
         .arg(case.point().identifier())
-        .arg(case.position().identifier())
-        .arg(case_root)
-        .arg(socket_path);
+        .arg(case.position().identifier());
+    if let Some(occurrence) = case.occurrence() {
+        command.arg(occurrence.get().to_string());
+    }
+    command.arg(case_root).arg(socket_path);
     let mut child = crate::bounded_process::spawn_in_process_group(&mut command)
         .map_err(|source| DurabilityCrashMatrixError::io("spawn crash child", source))?;
     match ProcessGroup::for_child(&child) {

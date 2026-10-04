@@ -1,0 +1,8 @@
+--- a/src/adapters/store_migration/migration_intent_decoder.rs
++++ b/src/adapters/store_migration/migration_intent_decoder.rs
+@@ -52 +52 @@ fn validate_fixed_fields(encoded: &[u8]) -> Result<(), StoreMigrationIntentDecod
+-    if version != format::VERSION {
++    if false && version != format::VERSION {
+@@ -66 +66 @@ fn validate_fixed_fields(encoded: &[u8]) -> Result<(), StoreMigrationIntentDecod
+-    if flags != 0 {
++    if false && flags != 0 {

@@ -32,6 +32,15 @@ impl LayoutRecordLength {
         Some(Self(value))
     }
 
+    /// Returns the greatest canonical length no greater than a boundary's bound.
+    pub(crate) fn greatest_at_most(upper: u64) -> Option<Self> {
+        let bounded = upper.min(Self::MAXIMUM.get());
+        let remainder = bounded
+            .checked_sub(HEADER_AND_CHECKSUM_LENGTH)?
+            .checked_rem(ENTRY_LENGTH)?;
+        Self::from_wire(bounded.checked_sub(remainder)?)
+    }
+
     /// Returns the exact encoded byte count.
     #[must_use]
     pub const fn get(self) -> u64 {

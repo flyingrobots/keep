@@ -57,6 +57,24 @@ impl ObservedRetentionState {
     }
 }
 
+#[cfg(test)]
+impl ObservedRetentionState {
+    /// Builds the observed state from exact head and manifest bytes.
+    pub(super) fn for_tests(head: &[u8], manifest: &[u8]) -> io::Result<Self> {
+        let decoded = ChecksummedRetentionHead::decode(head)
+            .map_err(|source| RetentionCurrentStateRefusal::HeadRefused { source }.into_io())?;
+        let admitted = AdmittedRetentionManifest::decode(manifest)
+            .map_err(|source| RetentionCurrentStateRefusal::ManifestRefused { source }.into_io())?;
+        require_binding(decoded.head(), &admitted)?;
+        Ok(Self {
+            head: Box::from(head),
+            manifest: Box::from(manifest),
+            decoded_head: *decoded.head(),
+            decoded_manifest: admitted.manifest().clone(),
+        })
+    }
+}
+
 /// The verified relationship between one preparation and the observed state.
 #[derive(Clone, Copy)]
 pub(super) enum ObservedDisposition<'state> {
@@ -97,14 +115,7 @@ pub(super) fn observe(
         .ok_or_else(|| RetentionCurrentStateRefusal::ManifestAbsent.into_io())?;
     let admitted = AdmittedRetentionManifest::decode(&manifest)
         .map_err(|source| RetentionCurrentStateRefusal::ManifestRefused { source }.into_io())?;
-    if admitted.digest() != selected.manifest_digest()
-        || admitted.manifest().generation() != selected.generation()
-    {
-        return Err(RetentionCurrentStateRefusal::ManifestDisagreed.into_io());
-    }
-    if admitted.manifest().predecessor() != selected.predecessor() {
-        return Err(RetentionCurrentStateRefusal::HeadPredecessorDisagreed.into_io());
-    }
+    require_binding(selected, &admitted)?;
     let decoded_head = *selected;
     let decoded_manifest = admitted.manifest().clone();
     Ok(Some(ObservedRetentionState {
@@ -291,4 +302,25 @@ pub(super) fn read_exact_optional(
         }
         .into_io()),
     }
+}
+
+/// Keeps production observation and byte-built recovery fixtures under one contract.
+fn require_binding(
+    selected: &RetentionHead,
+    admitted: &AdmittedRetentionManifest<'_>,
+) -> io::Result<()> {
+    let length = usize::try_from(selected.manifest_length().get())
+        .map_err(|_source| RetentionCurrentStateRefusal::RecordLengthOverflow.into_io())?;
+    if admitted.encoded().len() != length {
+        return Err(RetentionCurrentStateRefusal::RecordKindOrLength.into_io());
+    }
+    if admitted.digest() != selected.manifest_digest()
+        || admitted.manifest().generation() != selected.generation()
+    {
+        return Err(RetentionCurrentStateRefusal::ManifestDisagreed.into_io());
+    }
+    if admitted.manifest().predecessor() != selected.predecessor() {
+        return Err(RetentionCurrentStateRefusal::HeadPredecessorDisagreed.into_io());
+    }
+    Ok(())
 }

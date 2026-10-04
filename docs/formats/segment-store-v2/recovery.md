@@ -62,8 +62,9 @@ corpus `definition.tsv` bytes. The format-marker digest is BLAKE3-256 of
 `CanonicalStoreMigrationIntent` retains typed intent coordinates; `CanonicalStoreMigrationReceipt` binds completion; admitted record types verify both.
 `StoreMigrationStorage` names all 21 durability capabilities; `execute_store_migration` verifies current authority first and returns only after final synchronization.
 `FilesystemStoreMigrationInventoryReader` inventories version-1 bytes under
-retained writer authority. The fresh writer executes once; partial-prefix
-recovery is absent; version-1 reopen and recovery both refuse a migrated root.
+retained writer authority. The fresh writer executes once; separate migration
+recovery plans and executes the lawful remaining suffix after process death.
+Version-1 reopen and version-1 recovery both refuse a migrated root.
 
 ## Reader fence
 
@@ -87,8 +88,6 @@ Migration is a one-way explicit migration under exclusive writer authority.
 
 `migration.intent` is exactly 256 bytes:
 
-<!-- markdownlint-disable MD013 -->
-
 | Offset | Width | Field | Canonical value |
 | ---: | ---: | --- | --- |
 | 0 | 16 | magic | `KEEP:MIG:INT2\0\0\0` |
@@ -106,8 +105,6 @@ Migration is a one-way explicit migration under exclusive writer authority.
 | 160 | 32 | target format-definition digest | exact registered v2 digest |
 | 192 | 32 | new store identifier | deterministic derivation below |
 | 224 | 32 | checksum | BLAKE3-256 over bytes `0..224` |
-
-<!-- markdownlint-enable MD013 -->
 
 The checksum domain is `keep.store-migration-intent-checksum/v2\0`. The
 receipt's intent digest is BLAKE3-256 of
@@ -139,9 +136,46 @@ identity, caller identity, path, and time do not enter the identifier. The
 migration intent separately binds the physical root coordinates so in-place
 recovery refuses a substituted store.
 
-`migration.receipt` is exactly 256 bytes:
+### Root identity across restart
 
-<!-- markdownlint-disable MD013 -->
+The three root coordinates the intent records do not have the same lifetime.
+`statx.stx_mnt_id` names a mount instance: it can change when a filesystem
+is unmounted and mounted again or after a reboot. A restart path must not
+require the historical mount identifier. The device and inode coordinates
+name the volume and the root directory and survive remounts on the admitted
+platform.
+
+The Linux [statx reference](https://man7.org/linux/man-pages/man2/statx.2.html)
+defines the mount identifier separately from device and inode coordinates.
+The lifetime distinction above is the reason Keep does not use it as restart
+authority.
+
+The restart-stable root identity is therefore the pair `(device, file)`:
+
+- `FilesystemStoreMigrationAuthority` compares all three coordinates, but
+  only against the observation it made itself when it opened the root in the
+  same process; that comparison catches a root swapped underneath a running
+  migration and never crosses a restart.
+- `FilesystemVersionTwoAdmission::reopen` compares device and
+  file only and refuses with `RootIdentityChanged { coordinate: Device | File,
+  .. }`. A remounted store admits; a store copied to another device or
+  restored into a different directory refuses.
+
+Partial-prefix migration recovery uses the same restart comparison; its
+authority and resumption protocol are specified in
+[the executable recovery boundary](migration-recovery.md#executable-recovery-boundary).
+
+The mount coordinate stays in the record as the migration-time observation.
+It remains evidence for same-process migration checks, not restart authority.
+
+Limit: `dev_t` is stable across reboots only while the block device keeps its
+major and minor numbers. A device-mapper or hot-plug renumbering makes a
+correct store refuse with `RootIdentityChanged { coordinate: Device, .. }`;
+version 2 defines no re-admission for that case, and a successor coordinate
+(the filesystem UUID) is the rationale's recorded alternative if it proves
+necessary.
+
+`migration.receipt` is exactly 256 bytes:
 
 | Offset | Width | Field | Canonical value |
 | ---: | ---: | --- | --- |
@@ -158,8 +192,6 @@ recovery refuses a substituted store.
 | 216 | 8 | completed synchronization mask | every mandatory bit set |
 | 224 | 32 | checksum | BLAKE3-256 over bytes `0..224` |
 
-<!-- markdownlint-enable MD013 -->
-
 Its checksum domain is `keep.store-migration-receipt-checksum/v2\0`. Unknown
 synchronization bits, a missing mandatory bit, or any mismatch with the intent
 refuses.
@@ -174,70 +206,14 @@ recovery instead. Direct version-2 initialization is undefined.
 
 The exact offsets and fixtures are requirement `KEEP-MIGRATION-002`. The fresh
 writer emits only those canonical records; success is not restart evidence.
-A migrated store is admitted for forward publication, but partial-prefix
-recovery and `KEEP-MIGRATION-007` process-death evidence remain absent, so an
-interrupted migration waits for recovery instead of continuing.
+A migrated store is admitted for forward publication. Partial-prefix recovery
+now plans and executes the lawful remaining migration suffix under writer
+authority; the 68-case migration process-death matrix supplies restart evidence.
+Broader hostile restart and compatibility coverage remain tracked in #111 and
+issue #112.
 
 ## Retention publication recovery
 
-At restart, a fixed retention stage is classified from its exact framing and
-transitive evidence:
+[Retention publication recovery](retention-recovery.md) owns fixed-stage classification, synchronization before publication, exact retained evidence, and the `KEEP-CRASH-036` through `052` process-death boundaries.
 
-The forward protocol guarantees that `root.next` is durable before a new
-namespace directory is created. A new digest-named directory is created
-exclusively, verified as the exact regular directory rather than a link, and
-followed by synchronization of `retention/roots` before the immutable root is
-linked. An existing exact directory is idempotent; any wrong kind, substituted
-namespace, or unexpected entry refuses. Directory existence alone never proves
-a retained root.
-
-<!-- markdownlint-disable MD013 -->
-
-| Fixed stage | Complete evidence | Recovery |
-| --- | --- | --- |
-| `root.next` | canonical successor root, matching namespace and closure proof | finalize its immutable pool link and retain the stage |
-| `manifest.next` | canonical successor manifest naming only admitted roots | finalize its immutable pool link and retain both stages |
-| `head.next` | canonical successor head naming the staged manifest | finalize the head, synchronize it, then remove retained stages |
-
-<!-- markdownlint-enable MD013 -->
-
-A pre-effect incomplete stage may be removed only when every later-ordered
-effect is absent and all earlier evidence admits exactly. Recovery pins that
-regular file, removes it, synchronizes `retention`, and returns a typed discard
-report. Any later effect, stale generation, mismatched digest, missing
-transitive member, reappeared stage, conflicting pool entry, or other
-corruption is a typed refusal. A complete valid orphan remains
-recovery-protected until explicit disposition.
-
-The retention crash points are:
-
-| Identifier | Boundary |
-| --- | --- |
-| `KEEP-CRASH-036` | root stage write |
-| `KEEP-CRASH-037` | root stage synchronization |
-| `KEEP-CRASH-038` | new namespace-directory creation or exact admission |
-| `KEEP-CRASH-039` | namespace-pool synchronization after creation |
-| `KEEP-CRASH-040` | immutable root link |
-| `KEEP-CRASH-041` | root namespace-directory synchronization |
-| `KEEP-CRASH-042` | manifest stage write |
-| `KEEP-CRASH-043` | manifest stage synchronization |
-| `KEEP-CRASH-044` | immutable manifest link |
-| `KEEP-CRASH-045` | manifest pool synchronization |
-| `KEEP-CRASH-046` | retention-head stage write |
-| `KEEP-CRASH-047` | retention-head stage synchronization |
-| `KEEP-CRASH-048` | retention-head atomic replacement |
-| `KEEP-CRASH-049` | committed retention namespace synchronization |
-| `KEEP-CRASH-050` | retained root-stage removal |
-| `KEEP-CRASH-051` | retained manifest-stage removal |
-| `KEEP-CRASH-052` | retention cleanup synchronization |
-
-`RetentionPublicationPhase::ALL` freezes this exact order as a typed public
-vocabulary. Storage execution and process-death evidence remain unimplemented.
-
-Each point requires before, during, and after process-death evidence. Restart
-must establish exact catalog visibility, retention head, namespace generation,
-orphan classification, stage disposition, and recovery report.
-
-`GcRetirementIntent`, `GcRetirementReceipt`, and
-`RecoveryDispositionReceipt` are owned by the [GC specification](gc.md). Until
-issue #21 implements them, any such artifact is unsupported and refuses.
+`GcRetirementIntent`, `GcRetirementReceipt`, and `RecoveryDispositionReceipt` are owned by the [GC specification](gc.md). Until issue #21 implements them, any such artifact is unsupported and refuses.

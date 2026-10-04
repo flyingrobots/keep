@@ -4,7 +4,6 @@
 use std::fs::File;
 #[cfg(target_os = "linux")]
 use std::io::Read;
-use std::num::NonZeroUsize;
 use std::path::Path;
 use std::process::Command;
 
@@ -20,12 +19,7 @@ const VALUE_LIMIT: usize = 4_096;
 #[cfg(target_os = "linux")]
 const CPUINFO_READ_LIMIT: u64 = 65_536;
 
-#[derive(Eq, PartialEq)]
-pub(super) struct CapturedHost {
-    pub(super) os_description: String,
-    pub(super) cpu_model: String,
-    pub(super) logical_cpu_count: NonZeroUsize,
-}
+pub(super) use super::captured_environment::CapturedHost;
 
 pub(super) fn capture() -> Result<CapturedHost, BenchmarkBaselineError> {
     let logical_cpu_count =

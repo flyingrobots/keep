@@ -5,14 +5,15 @@ use std::path::Path;
 
 use keep::{
     AdmittedSegment, AdmittedSegmentRecord, CanonicalCatalog, CatalogGeneration,
-    CatalogPublicationExpectation, SegmentRecordLimit, StagedSegment, publish_catalog_generation,
+    CatalogPublicationExpectation, ObservedSegmentStage, SegmentRecordLimit, StagedSegment,
+    publish_catalog_generation,
 };
 use xtask::DurabilityCrashPoint;
 
 use super::control::{CrashControl, DuringTiming};
 use super::initialization;
 use super::publication_storage::CrashPublicationStorage;
-use super::segment_stage::CrashSegmentStage;
+use super::segment_stage::CrashSegmentObserver;
 use super::{DurabilityCrashMatrixError, verification};
 
 pub(super) fn run(
@@ -31,7 +32,7 @@ pub(super) fn run(
         .after(point, DuringTiming::After)
         .map_err(crash_gate)?;
 
-    let stage = CrashSegmentStage::new(stage, control);
+    let stage = ObservedSegmentStage::new(stage, CrashSegmentObserver::new(control));
     let record = AdmittedSegmentRecord::for_chunk(&[0])
         .map_err(|source| verification("admit crash segment record", source))?;
     let sealed = StagedSegment::begin(stage, SegmentRecordLimit::MAXIMUM)
@@ -40,7 +41,7 @@ pub(super) fn run(
         .map_err(|source| verification("append production segment record", source))?
         .seal()
         .map_err(|source| verification("seal production segment", source))?
-        .map_stage(CrashSegmentStage::into_inner);
+        .without_observer();
 
     let segment_bytes = fs::read(store_root.join("staging/current.seg"))
         .map_err(|source| DurabilityCrashMatrixError::io("read sealed crash segment", source))?;

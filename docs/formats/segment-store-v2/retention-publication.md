@@ -20,9 +20,9 @@ the current manifest and derives exact canonical successors.
 ordered durability phases, and returns the complete receipt only after cleanup;
 exact already-committed retry revalidates authority and performs no mutation.
 
-Version-2 catalog publication holds the same writer authority and proves every
-current retained closure against its candidate catalog before replacing the
-catalog `HEAD`.
+Version-2 catalog publication must hold the same writer authority and prove every current retained closure against its candidate catalog before replacing the catalog `HEAD`.
+
+That general candidate-catalog gate remains unimplemented and is tracked in [#125](https://github.com/flyingrobots/keep/issues/125). The implemented retention publication and complete-stage retention recovery paths reverify a root's closure against the current catalog; this does not establish that an arbitrary successor catalog preserves every retained root.
 
 ## Generation transition
 

@@ -1,10 +1,12 @@
 //! Public decoding and integrity laws for version-2 retention roots.
 
 mod support;
+#[path = "verification_corruption/root_decode.rs"]
+mod verification_decode;
 
 use std::io;
 
-use keep::{AdmittedRetentionRoot, RetentionRootDecodeError};
+use keep::RetentionRootDecodeError;
 
 const ONE_ANCHOR_ROOT: &str = include_str!("../conformance/segment-store/v2/one-anchor-root.hex");
 const ANCHOR_SET_DIGEST_OFFSET: usize = 148;
@@ -17,7 +19,7 @@ const CHECKSUM_OFFSET: usize = 346;
 fn frozen_root_decodes_to_one_complete_semantic_generation()
 -> Result<(), Box<dyn std::error::Error>> {
     let bytes = fixture_bytes()?;
-    let admitted = AdmittedRetentionRoot::decode(&bytes)?;
+    let admitted = verification_decode::decode(&bytes)??;
     assert_eq!(admitted.encoded(), bytes);
     assert_eq!(admitted.root().namespace().as_bytes(), &[0x00, 0x2f, 0xff]);
     assert_eq!(admitted.root().generation().get(), 1);
@@ -44,7 +46,7 @@ fn root_framing_refuses_truncation_trailing_data_and_magic_substitution()
     let mut truncated = bytes.clone();
     assert!(truncated.pop().is_some());
     assert!(matches!(
-        AdmittedRetentionRoot::decode(&truncated),
+        verification_decode::decode(&truncated)?,
         Err(RetentionRootDecodeError::Truncated {
             expected: 378,
             observed: 377,
@@ -54,7 +56,7 @@ fn root_framing_refuses_truncation_trailing_data_and_magic_substitution()
     let mut trailing = bytes.clone();
     trailing.push(0);
     assert!(matches!(
-        AdmittedRetentionRoot::decode(&trailing),
+        verification_decode::decode(&trailing)?,
         Err(RetentionRootDecodeError::TrailingData {
             expected: 378,
             observed: 379,
@@ -67,7 +69,7 @@ fn root_framing_refuses_truncation_trailing_data_and_magic_substitution()
         .ok_or_else(|| io::Error::other("frozen retention root is empty"))?;
     *first ^= 1;
     assert!(matches!(
-        AdmittedRetentionRoot::decode(&wrong_magic),
+        verification_decode::decode(&wrong_magic)?,
         Err(RetentionRootDecodeError::InvalidMagic { .. })
     ));
     Ok(())
@@ -83,7 +85,7 @@ fn root_checksum_and_digest_have_distinct_integrity_refusals()
         .ok_or_else(|| io::Error::other("frozen retention root is empty"))?;
     *last ^= 1;
     assert!(matches!(
-        AdmittedRetentionRoot::decode(&checksum_corruption),
+        verification_decode::decode(&checksum_corruption)?,
         Err(RetentionRootDecodeError::ChecksumMismatch { .. })
     ));
 
@@ -94,7 +96,7 @@ fn root_checksum_and_digest_have_distinct_integrity_refusals()
     *digest_byte ^= 1;
     refresh_checksum(&mut digest_corruption)?;
     assert!(matches!(
-        AdmittedRetentionRoot::decode(&digest_corruption),
+        verification_decode::decode(&digest_corruption)?,
         Err(RetentionRootDecodeError::RootDigestMismatch { .. })
     ));
     Ok(())
@@ -109,13 +111,13 @@ fn semantic_fields_are_admitted_only_after_complete_integrity()
         .ok_or_else(|| io::Error::other("frozen retention root lacks generation bytes"))?
         .fill(0);
     assert!(matches!(
-        AdmittedRetentionRoot::decode(&bytes),
+        verification_decode::decode(&bytes)?,
         Err(RetentionRootDecodeError::ChecksumMismatch { .. })
     ));
 
     refresh_root_digest_and_checksum(&mut bytes)?;
     assert!(matches!(
-        AdmittedRetentionRoot::decode(&bytes),
+        verification_decode::decode(&bytes)?,
         Err(RetentionRootDecodeError::Generation { .. })
     ));
     Ok(())
@@ -131,14 +133,14 @@ fn anchor_set_integrity_precedes_nested_identity_admission()
     *first_anchor_byte ^= 1;
     refresh_root_digest_and_checksum(&mut bytes)?;
     assert!(matches!(
-        AdmittedRetentionRoot::decode(&bytes),
+        verification_decode::decode(&bytes)?,
         Err(RetentionRootDecodeError::AnchorSetDigestMismatch { .. })
     ));
 
     refresh_anchor_set_digest(&mut bytes)?;
     refresh_root_digest_and_checksum(&mut bytes)?;
     assert!(matches!(
-        AdmittedRetentionRoot::decode(&bytes),
+        verification_decode::decode(&bytes)?,
         Err(RetentionRootDecodeError::BlobId { index: 0, .. })
     ));
     Ok(())

@@ -5,6 +5,8 @@ mod refusal_laws;
 #[path = "segment_filesystem_stage/sandbox.rs"]
 pub mod sandbox;
 mod support;
+#[path = "catalog_restart/verification_laws.rs"]
+mod verification_laws;
 
 use std::error::Error;
 use std::fs;
