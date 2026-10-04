@@ -230,7 +230,14 @@ fn anchors(
         let bytes = view
             .retained_root(namespace)
             .map_err(|source| refused(io::Error::other(source)))?
-            .ok_or_else(|| refused(io::Error::other("the selected root is absent")))?;
+            .ok_or_else(|| {
+                refused(io::Error::other(
+                    crate::RetentionSnapshotRefusal::SelectedRootAbsent {
+                        expected_generation: entry.root_generation(),
+                        expected_digest: entry.root_digest(),
+                    },
+                ))
+            })?;
         let root = AdmittedRetentionRoot::decode(&bytes)
             .map_err(|source| refused(io::Error::new(io::ErrorKind::InvalidData, source)))?;
         for anchor in root.root().anchors() {

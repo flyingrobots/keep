@@ -63,6 +63,17 @@ fn byte_equal_substituted_canonical_intent_is_refused() -> Result<(), Box<dyn Er
         .ok_or("substituted canonical intent was unexpectedly admitted")?;
 
     assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        error
+            .get_ref()
+            .and_then(|source| source
+                .downcast_ref::<crate::adapters::filesystem_exact_record::ExactRecordError>()),
+        Some(
+            crate::adapters::filesystem_exact_record::ExactRecordError::Refused(
+                crate::adapters::filesystem_exact_record::ExactRecordRefusal::KindLengthOrIdentity
+            )
+        )
+    ));
     drop(authority);
     sandbox.remove()?;
     Ok(())

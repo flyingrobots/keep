@@ -54,7 +54,10 @@ impl PinnedRecoveryDirectory {
             RecoveryInventoryOperation::VerifyNamespace,
             io::Error::new(
                 io::ErrorKind::InvalidData,
-                "recovery namespace changed identity after it was pinned",
+                super::FilesystemOperationRefusal::IdentityChanged {
+                    expected: self.identity.coordinates(),
+                    observed: observed.coordinates(),
+                },
             ),
         ))
     }

@@ -32,10 +32,16 @@ pub(super) fn write_prefix(
     head: &CanonicalPublicationHead,
     prefix: usize,
 ) -> io::Result<()> {
-    let bytes = head
-        .encoded()
-        .get(..prefix)
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "head prefix exceeds bytes"))?;
+    let bytes = head.encoded().get(..prefix).ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            super::FilesystemOperationRefusal::PrefixBound {
+                artifact: CatalogRestartArtifact::Head,
+                maximum: head.encoded().len(),
+                observed: prefix,
+            },
+        )
+    })?;
     write_bytes(publisher, bytes)
 }
 

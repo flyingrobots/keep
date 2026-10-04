@@ -185,6 +185,21 @@ enum Failure<E> {
     Accounting,
 }
 
+#[derive(Clone, Copy, Debug)]
+enum TransferStop {
+    Sink,
+    Cancelled,
+    Accounting,
+}
+
+impl std::fmt::Display for TransferStop {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "transfer stopped: {self:?}")
+    }
+}
+
+impl std::error::Error for TransferStop {}
+
 /// The writer the read cores emit into. Each `write` is one verified slice
 /// of an immutable chunk, handed to the sink as a segment without a copy.
 struct WindowedWriter<'sink, K: TransferSink + ?Sized, C: ?Sized> {
@@ -211,8 +226,13 @@ where
     }
 
     fn fail(&mut self, failure: Failure<K::Error>) -> io::Error {
+        let reason = match &failure {
+            Failure::Sink(_) => TransferStop::Sink,
+            Failure::Cancelled => TransferStop::Cancelled,
+            Failure::Accounting => TransferStop::Accounting,
+        };
         self.failure = Some(failure);
-        io::Error::other("the transfer stopped")
+        io::Error::other(reason)
     }
 
     fn apply(&mut self, bytes: &[u8]) -> io::Result<()> {

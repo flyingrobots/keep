@@ -66,6 +66,12 @@ mod retention;
 mod store;
 mod verification;
 
+pub use adapters::CompactionRecoveryRefusal;
+pub use adapters::FilesystemOperationRefusal;
+pub use adapters::{
+    FilesystemGcRefusal, FilesystemMigrationRefusal, FilesystemRetentionStageRefusal,
+};
+
 #[cfg(feature = "repository-tasks")]
 #[doc(hidden)]
 pub use adapters::RepositoryInitializationStorage;
@@ -172,25 +178,26 @@ pub use adapters::{
     FilesystemRetentionAuthorityError, FilesystemRetentionDispositionError,
     FilesystemRetentionPublicationAuthority, FilesystemRetentionRecoveryError,
     FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError, ObservedRetentionState,
-    PreparedRetentionPublication, ReaderAttemptLimit, ReaderFence, RecoveryDispositionAmbiguity,
-    RecoveryDispositionError, RecoveryDispositionExecutionReceipt, RecoveryDispositionPhase,
-    RecoveryDispositionPlan, RecoveryDispositionRefusal, RecoveryDispositionRequest,
-    RecoveryDispositionStorage, RecoveryDispositionTarget, RetentionAuthorityDirectory,
-    RetentionClosureVerificationError, RetentionCurrentStateRefusal, RetentionFixedStage,
-    RetentionHeadDecodeError, RetentionHeadStageAssessment, RetentionManifestDecodeError,
-    RetentionManifestEncodeError, RetentionManifestStageAssessment, RetentionNamespaceAdmission,
-    RetentionPool, RetentionPoolEntryObservation, RetentionPoolObservations,
-    RetentionPublicationError, RetentionPublicationOutcome, RetentionPublicationPhase,
-    RetentionPublicationPreparation, RetentionPublicationPreparationError,
-    RetentionPublicationReceipt, RetentionPublicationStorage, RetentionRecoveryError,
-    RetentionRecoveryEvidence, RetentionRecoveryOutcome, RetentionRecoveryPlan,
-    RetentionRecoveryReceipt, RetentionRecoveryRefusal, RetentionRecoveryStep,
-    RetentionRecoveryStorage, RetentionRootDecodeError, RetentionRootEncodeError,
-    RetentionRootStageAssessment, RetentionStageAssessment, RetentionStageAssessments,
-    RetentionTransitionDisposition, RetentionTransitionError, RetentionTransitionPreflight,
-    RetentionTransitionPreflightError, RetentionTransitionReadiness, RetentionViewCoordinates,
-    RetentionViewError, RetentionViewSource, VerifiedRetentionClosure, assess_head_stage,
-    assess_manifest_stage, assess_root_stage, collect_retention_view, execute_recovery_disposition,
+    PreparedRetentionPublication, ReaderAttemptLimit, ReaderFence, ReaderFenceKind,
+    ReaderFenceRefusal, RecoveryDispositionAmbiguity, RecoveryDispositionError,
+    RecoveryDispositionExecutionReceipt, RecoveryDispositionPhase, RecoveryDispositionPlan,
+    RecoveryDispositionRefusal, RecoveryDispositionRequest, RecoveryDispositionStorage,
+    RecoveryDispositionTarget, RetentionAuthorityDirectory, RetentionClosureVerificationError,
+    RetentionCurrentStateRefusal, RetentionFixedStage, RetentionHeadDecodeError,
+    RetentionHeadStageAssessment, RetentionManifestDecodeError, RetentionManifestEncodeError,
+    RetentionManifestStageAssessment, RetentionNamespaceAdmission, RetentionPool,
+    RetentionPoolEntryObservation, RetentionPoolObservations, RetentionPublicationError,
+    RetentionPublicationOutcome, RetentionPublicationPhase, RetentionPublicationPreparation,
+    RetentionPublicationPreparationError, RetentionPublicationReceipt, RetentionPublicationStorage,
+    RetentionRecoveryError, RetentionRecoveryEvidence, RetentionRecoveryOutcome,
+    RetentionRecoveryPlan, RetentionRecoveryReceipt, RetentionRecoveryRefusal,
+    RetentionRecoveryStep, RetentionRecoveryStorage, RetentionRootDecodeError,
+    RetentionRootEncodeError, RetentionRootStageAssessment, RetentionSnapshotRefusal,
+    RetentionStageAssessment, RetentionStageAssessments, RetentionTransitionDisposition,
+    RetentionTransitionError, RetentionTransitionPreflight, RetentionTransitionPreflightError,
+    RetentionTransitionReadiness, RetentionViewCoordinates, RetentionViewError,
+    RetentionViewSource, VerifiedRetentionClosure, assess_head_stage, assess_manifest_stage,
+    assess_root_stage, collect_retention_view, execute_recovery_disposition,
     execute_retention_publication, execute_retention_recovery, plan_recovery_disposition,
     plan_retention_recovery, plan_retention_transition, preflight_retention_transition,
     prepare_retention_publication, resume_recovery_disposition, verify_retention_closure,

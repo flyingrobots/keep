@@ -5,7 +5,7 @@
 //! FIFO or device planted at a protocol name refuses by kind instead of
 //! hanging under the writer lock. Every read is bounded by the caller's exact
 //! expected length and refuses trailing bytes. Callers map each
-//! [`ExactRecordRefusal`] to their own typed refusal or message, so the
+//! [`ExactRecordRefusal`] to their own typed refusal or retain it as a source, so the
 //! primitives carry no protocol vocabulary of their own.
 
 use std::error::Error;
@@ -23,6 +23,11 @@ pub(super) struct EntryIdentity {
 }
 
 impl EntryIdentity {
+    /// The exact device and inode coordinates recorded at admission.
+    pub(super) const fn coordinates(self) -> (u64, u64) {
+        (self.device, self.inode)
+    }
+
     /// Reads the identity behind an open file handle.
     pub(super) fn of_file(file: &File) -> io::Result<Self> {
         file.metadata().map(|metadata| Self::from(&metadata))
@@ -69,6 +74,16 @@ pub(super) enum ExactRecordError {
     Io(io::Error),
     /// The entry exists but is not the expected record.
     Refused(ExactRecordRefusal),
+}
+
+impl ExactRecordError {
+    /// Keeps operational failures unchanged and semantic refusals downcastable.
+    pub(super) fn into_io(self) -> io::Error {
+        match self {
+            Self::Io(source) => source,
+            refusal @ Self::Refused(_) => io::Error::new(io::ErrorKind::InvalidData, refusal),
+        }
+    }
 }
 
 impl fmt::Display for ExactRecordRefusal {

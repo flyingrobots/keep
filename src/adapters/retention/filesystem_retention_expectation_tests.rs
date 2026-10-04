@@ -156,7 +156,14 @@ fn successor_refuses_when_the_predecessor_root_bytes_changed() -> Result<(), Box
 
     assert!(matches!(
         refusal(&error),
-        Some(RetentionCurrentStateRefusal::PredecessorRootChanged)
+        Some(RetentionCurrentStateRefusal::PredecessorRootRefused { .. })
+    ));
+    let cause = refusal(&error)
+        .and_then(Error::source)
+        .and_then(|source| source.downcast_ref::<crate::RetentionRootDecodeError>());
+    assert!(matches!(
+        cause,
+        Some(crate::RetentionRootDecodeError::ChecksumMismatch { .. })
     ));
     Ok(())
 }
