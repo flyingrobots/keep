@@ -30,7 +30,7 @@ fn check_failure(outcome: RecoveryStageDiscardOutcome) -> Result<(), Box<dyn Err
     fs::write(fixture.stage_path(stage), &bytes)?;
     let mut storage = FailParentSync(fixture.discarder()?);
     if outcome == RecoveryStageDiscardOutcome::AlreadyAbsent {
-        execute_recovery_stage_discard(&mut storage.0, request)?;
+        let _receipt = execute_recovery_stage_discard(&mut storage.0, request)?;
     }
 
     let error = execute_recovery_stage_discard(&mut storage, request)

@@ -28,7 +28,7 @@ fn check_failure(outcome: RecoveryNextHeadFinalizationOutcome) -> Result<(), Box
     let request = fixture.install_generation_two_candidate()?;
     let mut storage = FailRootSync(fixture.finalizer()?);
     if outcome == RecoveryNextHeadFinalizationOutcome::AlreadyFinalized {
-        execute_recovery_next_head_finalization(&mut storage.0, request)?;
+        let _receipt = execute_recovery_next_head_finalization(&mut storage.0, request)?;
     }
 
     let error = execute_recovery_next_head_finalization(&mut storage, request)
