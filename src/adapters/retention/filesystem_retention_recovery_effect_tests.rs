@@ -155,7 +155,9 @@ fn apply_expected_effects(
             Effect::StageCreated
             | Effect::ReceiptReplaced
             | Effect::CandidateRemoved
-            | Effect::IntentRemoved => {
+            | Effect::IntentRemoved
+            | Effect::PoolEntryRemoved
+            | Effect::NamespaceRemoved => {
                 return Err("effect is outside this retention recovery fixture".into());
             }
             Effect::NamespaceCreated => assert!(

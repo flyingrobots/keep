@@ -416,3 +416,6 @@ fn readers_admit_a_store_with_receipts_and_refuse_a_stray_disposition_entry()
     sandbox.remove()?;
     Ok(())
 }
+
+#[path = "filesystem_retention_disposition_effect_tests.rs"]
+mod effect_tests;

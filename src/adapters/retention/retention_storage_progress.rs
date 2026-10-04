@@ -4,6 +4,22 @@
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum RetentionStorageBoundary {
+    /// The disposition receipt directory was synchronized.
+    DispositionSynchronization,
+    /// The recovery directory was synchronized after stage cleanup.
+    RecoverySynchronization,
+    /// A disposed pool artifact unlink was attempted.
+    PoolUnlink,
+    /// A disposed pool artifact pathname was checked for absence.
+    PoolAbsence,
+    /// A root namespace was synchronized after artifact removal.
+    NamespaceSynchronization,
+    /// The remaining root namespace entries were observed.
+    NamespaceEnumeration,
+    /// An empty root namespace removal was attempted.
+    NamespaceRemoval,
+    /// A removed root namespace pathname was checked for absence.
+    NamespaceAbsence,
     /// Context and evidence were prepared before a namespace operation.
     Preparation,
     /// A GC candidate was verified before removal.
@@ -69,6 +85,10 @@ pub enum RetentionStorageBoundary {
 /// A namespace effect whose occurrence or attempted occurrence is reported.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RetentionNamespaceEffect {
+    /// A disposed artifact pathname was removed from its immutable pool.
+    PoolEntryRemoved,
+    /// An empty root namespace pathname was removed.
+    NamespaceRemoved,
     /// A GC candidate segment pathname was removed.
     CandidateRemoved,
     /// A completed GC intent pathname was removed.

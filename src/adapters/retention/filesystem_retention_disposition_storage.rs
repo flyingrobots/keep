@@ -10,7 +10,9 @@ use super::filesystem_retention_current::read_exact_optional;
 use super::filesystem_retention_disposition::PoolEntry;
 use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_stage::{FilesystemRetentionStage, invalid_data};
-use super::{RecoveryDispositionStorage, RecoveryDispositionTarget, RetentionRecoveryStorage};
+use super::{
+    RecoveryDispositionTarget, RetentionRecoveryStorage, RetentionStorageBoundary as Boundary,
+};
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
 use crate::adapters::filesystem_exact_record as exact_record;
 
@@ -19,7 +21,13 @@ fn no_disposition() -> io::Error {
 }
 
 /// Removes `name` from `directory` after proving it still holds `expected`.
-fn unlink_verified(directory: &Dir, name: &str, expected: &[u8]) -> io::Result<()> {
+fn unlink_verified(
+    authority: &FilesystemRetentionPublicationAuthority,
+    directory: &Dir,
+    name: &str,
+    expected: &[u8],
+) -> io::Result<()> {
+    authority.disposition_checkpoint(Boundary::PoolVerification)?;
     let observed = read_exact_optional(directory, name, expected.len())?
         .ok_or_else(|| invalid_data(super::FilesystemRetentionStageRefusal::PoolEntryAbsent))?;
     if observed.as_ref() != expected {
@@ -27,12 +35,14 @@ fn unlink_verified(directory: &Dir, name: &str, expected: &[u8]) -> io::Result<(
             super::FilesystemRetentionStageRefusal::PoolEntryChanged,
         ));
     }
+    authority.disposition_checkpoint(Boundary::PoolUnlink)?;
     directory.remove_file(name)?;
+    authority.disposition_checkpoint(Boundary::PoolAbsence)?;
     exact_record::require_absent(directory, name).map_err(exact_record::ExactRecordError::into_io)
 }
 
-impl RecoveryDispositionStorage for FilesystemRetentionPublicationAuthority {
-    fn write_disposition_stage(&mut self) -> io::Result<()> {
+impl FilesystemRetentionPublicationAuthority {
+    pub(super) fn store_write_disposition_stage(&mut self) -> io::Result<()> {
         let context = self.disposition.as_mut().ok_or_else(no_disposition)?;
         context.stage = Some(FilesystemRetentionStage::create(
             &context.recovery,
@@ -42,7 +52,7 @@ impl RecoveryDispositionStorage for FilesystemRetentionPublicationAuthority {
         Ok(())
     }
 
-    fn synchronize_disposition_stage(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_disposition_stage(&mut self) -> io::Result<()> {
         let context = self.disposition.as_mut().ok_or_else(no_disposition)?;
         if context.stage.is_none() {
             context.stage = Some(FilesystemRetentionStage::reopen(
@@ -60,7 +70,7 @@ impl RecoveryDispositionStorage for FilesystemRetentionPublicationAuthority {
         stage.synchronize(&context.recovery).map_err(Into::into)
     }
 
-    fn link_disposition_receipt(&mut self) -> io::Result<()> {
+    pub(super) fn store_link_disposition_receipt(&mut self) -> io::Result<()> {
         let context = self.disposition.as_ref().ok_or_else(no_disposition)?;
         let stage = context.stage.as_ref().ok_or_else(no_disposition)?;
         stage
@@ -69,12 +79,13 @@ impl RecoveryDispositionStorage for FilesystemRetentionPublicationAuthority {
             .map_err(Into::into)
     }
 
-    fn synchronize_dispositions(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_dispositions(&mut self) -> io::Result<()> {
+        self.disposition_checkpoint(Boundary::DispositionSynchronization)?;
         let context = self.disposition.as_ref().ok_or_else(no_disposition)?;
         synchronize_directory(&context.dispositions)
     }
 
-    fn remove_disposition_stage(&mut self) -> io::Result<()> {
+    pub(super) fn store_remove_disposition_stage(&mut self) -> io::Result<()> {
         let context = self.disposition.as_mut().ok_or_else(no_disposition)?;
         if context.stage.is_none() {
             context.stage = Some(FilesystemRetentionStage::reopen(
@@ -94,12 +105,13 @@ impl RecoveryDispositionStorage for FilesystemRetentionPublicationAuthority {
             .map_err(Into::into)
     }
 
-    fn synchronize_recovery(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_recovery(&mut self) -> io::Result<()> {
+        self.disposition_checkpoint(Boundary::RecoverySynchronization)?;
         let context = self.disposition.as_ref().ok_or_else(no_disposition)?;
         synchronize_directory(&context.recovery)
     }
 
-    fn remove_retained_stage(&mut self) -> io::Result<()> {
+    pub(super) fn store_remove_retained_stage(&mut self) -> io::Result<()> {
         let target = self.disposition.as_ref().ok_or_else(no_disposition)?.target;
         match target {
             RecoveryDispositionTarget::Root => {
@@ -111,30 +123,36 @@ impl RecoveryDispositionStorage for FilesystemRetentionPublicationAuthority {
         }
     }
 
-    fn synchronize_retention_after_disposition(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_retention_after_disposition(&mut self) -> io::Result<()> {
+        self.disposition_checkpoint(Boundary::RetentionSynchronization)?;
         synchronize_directory(&self.retention)
     }
 
-    fn remove_pool_entry(&mut self) -> io::Result<()> {
+    pub(super) fn store_remove_pool_entry(&mut self) -> io::Result<()> {
         let context = self.disposition.as_ref().ok_or_else(no_disposition)?;
         match &context.pool {
             PoolEntry::Root { namespace, name } => {
                 let directory = self.roots.open_dir_nofollow(namespace)?;
-                unlink_verified(&directory, name, &context.artifact)?;
+                unlink_verified(self, &directory, name, &context.artifact)?;
+                self.disposition_checkpoint(Boundary::NamespaceSynchronization)?;
                 synchronize_directory(&directory)?;
+                self.disposition_checkpoint(Boundary::NamespaceEnumeration)?;
                 if directory.entries()?.next().is_none() {
                     drop(directory);
+                    self.disposition_checkpoint(Boundary::NamespaceRemoval)?;
                     self.roots.remove_dir(namespace)?;
+                    self.disposition_checkpoint(Boundary::NamespaceAbsence)?;
                 }
                 Ok(())
             }
             PoolEntry::Manifest { name } => {
-                unlink_verified(&self.manifests, name, &context.artifact)
+                unlink_verified(self, &self.manifests, name, &context.artifact)
             }
         }
     }
 
-    fn synchronize_pool(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_pool(&mut self) -> io::Result<()> {
+        self.disposition_checkpoint(Boundary::PoolSynchronization)?;
         let context = self.disposition.as_ref().ok_or_else(no_disposition)?;
         match context.pool {
             PoolEntry::Root { .. } => synchronize_directory(&self.roots),

@@ -31,6 +31,18 @@ pub struct RecoveryDispositionError {
 }
 
 impl RecoveryDispositionError {
+    /// Progress inside the failing storage capability, when reported.
+    ///
+    /// `None` means unreported effects, not absence of effects. Earlier successful
+    /// calls are listed separately by [`Self::executed`].
+    #[must_use]
+    pub fn storage_progress(&self) -> Option<&super::RetentionStorageProgress> {
+        self.source
+            .get_ref()
+            .and_then(|source| source.downcast_ref::<super::RetentionStorageError>())
+            .and_then(super::RetentionStorageError::progress)
+    }
+
     /// The refused phase.
     #[must_use]
     pub const fn phase(&self) -> RecoveryDispositionPhase {
