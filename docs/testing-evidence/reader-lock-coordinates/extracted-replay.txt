@@ -1,0 +1,22 @@
+282248b48feab6230f18fe2e88eefb24639b8820b248a899474c4d1c53c2e719  src/main.rs
+   Compiling coordinate-observation v0.0.0 (/build/keep107-coordinate-extracted/driver-parent)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.42s
+282248b48feab6230f18fe2e88eefb24639b8820b248a899474c4d1c53c2e719  src/main.rs
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+   Compiling coordinate-observation v0.0.0 (/build/keep107-coordinate-extracted/driver-current)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.90s
+81de2e366a4fa2293f4020e0267b3be6584f02c34ae7eaeb4f21d6f1f48f9678  /build/keep107-coordinate-extracted/single-parent.bin
+81de2e366a4fa2293f4020e0267b3be6584f02c34ae7eaeb4f21d6f1f48f9678  /build/keep107-coordinate-extracted/single-current.bin
+  1180 /build/keep107-coordinate-extracted/single-parent.bin
+310340 /build/keep107-coordinate-extracted/full-parent.bin
+311520 total
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+   Compiling coordinate-observation v0.0.0 (/build/keep107-coordinate-extracted/driver-current)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.82s
+/build/keep107-coordinate-extracted/single-parent.bin /build/keep107-coordinate-extracted/single-mutant.bin differ: char 276, line 1
+Extracted single-triple mutation comparison exit: 1
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+   Compiling coordinate-observation v0.0.0 (/build/keep107-coordinate-extracted/driver-current)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.81s
+Reduced runtime counterexample: 0,1,0
+Replay: /build/keep107-coordinate-extracted/driver-mutant.bin /build/keep107-coordinate-extracted/reduced/replay.bin 107c00d 0 1 0

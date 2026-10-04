@@ -26,7 +26,14 @@ Observation runs are medium, single-machine experiments with owned files and no 
 
 Compiler/API calibration has a 120-second outer deadline with a 5-second kill grace. It and the existing Cargo suites retain their existing resource profiles; this receipt does not assert per-test sandbox or resource-ceiling compliance. The filesystem runs use owned scratch on ext4; [mount evidence](reader-lock-coordinates/filesystem-profile.txt) records the bind mounts for both possible test scratch roots. Filesystem success is not physical power-loss evidence.
 
+## Archive replay correction
+
+Independent review of `b1eaa592989eeab683f3a2e323a09da31d1ec4cb` found that both archived buildable projects retained an older driver without single-triple argument handling. The separately archived `driver.rs` and actually executed Docker sources were current, so the full-corpus observations remain valid, but building the original archive would ignore reduction inputs. This was an evidence-packaging defect; no Keep production source or runtime expectation changes in its correction.
+
+Both archived project sources now match the executed driver SHA-256 `282248b48feab6230f18fe2e88eefb24639b8820b248a899474c4d1c53c2e719`; their older snapshots remain as `driver-parent-before-replay-fix.rs` and `driver-current-before-replay-fix.rs`. [Direct extracted-project replay](reader-lock-coordinates/extracted-replay.txt) rebuilds both manifests, retains full fixed-corpus equality and emits the single 1180-byte observation for `(0,1,0)`. Both restored outputs have SHA-256 `81de2e366a4fa2293f4020e0267b3be6584f02c34ae7eaeb4f21d6f1f48f9678`. The extracted mutant differs at character 276, comparison exit 1, and reduction again reaches `(0,1,0)`. The archive includes the replay script and original output. These are direct public-codec observations under the same limits, not new tests of harness cardinality.
+
 ## Validation and acceptance boundary
+
 
 [Focused final validation](reader-lock-coordinates/validation-final.txt) passes workspace formatting, workspace Clippy with all features and with no default features, public constructor doctests, public intent/receipt/disposition codec laws, GC filesystem laws, retention-disposition filesystem laws and the independent format oracle in debug and release, plus GC fuzz-target Clippy. The [first attempt](reader-lock-coordinates/validation.txt) stopped at Clippy's redundant `must_use` attributes on typed-return getters; removing those redundant method attributes preserved the type-level requirement. That was a lint failure, not a flaky runtime failure. Final validation used the corrected source. Static type-erasure calibration preceded that metadata-only cleanup; the final examples pass after it.
 
