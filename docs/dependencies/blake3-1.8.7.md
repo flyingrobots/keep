@@ -10,7 +10,7 @@
 
 ## Admitted use
 
-Keep admits the `blake3` crate at locked version 1.8.7 to calculate the 32-byte digests in the `BlobId` and `ChunkId` version-1 preimages. Keep uses the incremental `Hasher` API only. No dependency-owned type appears in Keep's public API.
+Keep admits the `blake3` crate at locked version 1.8.7 for the 32-byte `BlobId` and `ChunkId` version-1 digests and the existing domain-separated segment, catalog, layout, retention and migration hashes. No dependency-owned type appears in Keep's public API.
 
 The private `xtask` crate also uses the same pinned implementation to recompute Golden File Worldline digest witnesses directly from corpus source bytes and to name deterministic fuzz seeds. The oracle does not import Keep production types or hashing wrappers. This separation independently checks preimage framing, length encoding, canonical text and binary encodings, mutation semantics, and committed witness bytes. For every identity and content mutation, the repository checker also streams the canonical preimage through external `b3sum`; a mismatch with the in-process result is a refusal. Golden File Worldline and protocol conformance share one deadline-bounded process adapter, but retain separate preimage construction. The [Golden File Worldline reference model](../conformance/golden-file-worldline.md#reference-model) records the process-adapter contract. The checked-in vectors and runtime cross-check therefore cover the algorithm boundary without claiming that the Rust path independently implements the BLAKE3 compression function.
 
@@ -21,7 +21,7 @@ The manifest disables default features and enables exactly:
 - `pure`, which forces upstream's pure-Rust build path instead of its
   handwritten assembly or C implementations.
 
-The production Keep call paths use only `Hasher::new`, `Hasher::update`, and `Hasher::finalize`; repository tasks additionally use the one-shot `hash` function for deterministic seed naming. The `std` feature is not part of content identity and may be removed in a dedicated dependency-policy change if Keep adopts a `no_std` lower layer. The `pure` feature is also not part of identity. Any future change to either feature must reproduce every identity vector exactly.
+Production streaming paths use `Hasher::new`, `Hasher::update`, and `Hasher::finalize`. The migration receipt's initial-state digests additionally use the one-shot `blake3::hash` over fixed domains in `migration_receipt_initial_state.rs`; repository tasks also use one-shot hashing for deterministic seed naming. The `std` feature is not part of content identity and may be removed in a dedicated dependency-policy change if Keep adopts a `no_std` lower layer. The `pure` feature is also not part of identity. Any future change to either feature must reproduce every identity vector exactly.
 
 `pure` does not mean “free of unsafe code.” It selects Rust implementations, including platform intrinsics and dispatch that contain upstream-audited unsafe blocks. The upstream Rust-2024 build script also contains a small unsafe environment update. The Keep identity crate remains `unsafe_code = "forbid"`.
 
@@ -72,7 +72,10 @@ The admitted normal dependency graph for supported targets is:
 - `blake3` 1.8.7 with `std` and `pure`;
 - `arrayvec` 0.7.8;
 - `cfg-if` 1.0.4;
+- `cpufeatures` 0.3.0 on x86 and x86_64, as selected by upstream's target dependency;
 - `constant_time_eq` 0.4.2 with `std`.
+
+The target-independent lockfile also records libc 0.2.186 in cpufeatures' dependency metadata for certain non-x86 targets. BLAKE3 selects cpufeatures only on x86/x86_64, where that libc edge is inactive. Other workspace dependencies can independently activate libc; lockfile presence alone does not establish an active BLAKE3 path.
 
 The admitted build dependency graph is:
 
