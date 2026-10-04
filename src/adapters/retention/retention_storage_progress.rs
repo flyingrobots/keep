@@ -4,6 +4,18 @@
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum RetentionStorageBoundary {
+    /// Exclusive creation of the stage pathname.
+    StageCreation,
+    /// The newly created stage handle identity was recorded.
+    StageIdentity,
+    /// Stage contents were written.
+    StageWrite,
+    /// Staged writes were flushed without establishing directory durability.
+    StageFlush,
+    /// A receipt stage was renamed onto the published receipt.
+    ReceiptRename,
+    /// The replaced receipt identity and exact bytes were checked.
+    ReceiptVerification,
     /// No active recovery context or required stage was available.
     RecoveryContext,
     /// The retained source handle and pathname were checked.
@@ -37,6 +49,10 @@ pub enum RetentionStorageBoundary {
 /// A namespace effect whose occurrence or attempted occurrence is reported.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RetentionNamespaceEffect {
+    /// A stage pathname was created; this does not imply complete contents.
+    StageCreated,
+    /// A published receipt pathname was replaced.
+    ReceiptReplaced,
     /// A new root namespace directory was created.
     NamespaceCreated,
     /// A new immutable pool link was created.

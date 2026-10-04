@@ -5,11 +5,16 @@ use super::{
     RetentionStorageBoundary as Boundary,
 };
 use super::{RetentionRecordRefusal, RetentionStorageError};
-use std::io::{self, Write};
+use std::io;
 
 use cap_std::fs::{Dir, File};
 
-use crate::adapters::filesystem_catalog_artifact;
+#[path = "filesystem_retention_stage_io.rs"]
+mod stage_io;
+pub(in crate::adapters) use stage_io::StageReplacement;
+#[cfg(test)]
+#[path = "filesystem_retention_stage_effect_tests.rs"]
+mod effect_tests;
 use crate::adapters::filesystem_exact_record::{
     self as exact_record, EntryIdentity, ExactRecordError, ExactRecordRefusal,
 };
@@ -50,16 +55,7 @@ impl FilesystemRetentionStage {
         name: &'static str,
         expected: &[u8],
     ) -> Result<Self, RetentionStorageError> {
-        let mut file = filesystem_catalog_artifact::create_exclusive(root, name)?;
-        let identity = EntryIdentity::of_file(&file)?;
-        file.write_all(expected)?;
-        file.flush()?;
-        Ok(Self {
-            name,
-            expected: Box::from(expected),
-            identity,
-            file,
-        })
+        Self::create_with(root, name, expected, |_, _| Ok(()))
     }
 
     /// Reopens a retained stage whose exact bytes restart already read.
@@ -154,24 +150,9 @@ impl FilesystemRetentionStage {
         &self,
         root: &Dir,
         name: &str,
+        purpose: StageReplacement,
     ) -> Result<(), RetentionStorageError> {
-        self.verify_stage(root)
-            .map_err(|error| error.at(Boundary::SourceVerification))?;
-        root.rename(self.name, root, name).map_err(|source| {
-            RetentionStorageError::from(source)
-                .at(Boundary::HeadRename)
-                .uncertain(Effect::HeadReplaced)
-        })?;
-        exact_record::require_absent(root, self.name).map_err(|error| {
-            retention_error(error)
-                .at(Boundary::StageAbsence)
-                .after(Effect::HeadReplaced, Durability::Unconfirmed)
-        })?;
-        verify_named_record(root, name, &self.expected, self.identity).map_err(|error| {
-            error
-                .at(Boundary::HeadVerification)
-                .after(Effect::HeadReplaced, Durability::Unconfirmed)
-        })
+        self.replace_with(root, name, purpose, || Ok(()))
     }
 
     fn require_handle(&self) -> Result<(), RetentionStorageError> {

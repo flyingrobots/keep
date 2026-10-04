@@ -221,7 +221,11 @@ impl RetentionPublicationStorage for FilesystemRetentionPublicationAuthority {
     fn replace_head(&mut self) -> io::Result<()> {
         attempt::require_mut(&mut self.attempt)?
             .take_head_stage()?
-            .replace(&self.retention, pool_name::HEAD)
+            .replace(
+                &self.retention,
+                pool_name::HEAD,
+                super::StageReplacement::Head,
+            )
             .map_err(Into::into)
     }
 

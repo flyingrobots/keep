@@ -308,7 +308,11 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
         let (stage, _name, _namespace) = take_complete(&mut context.head)?;
         stage.synchronize(&self.retention)?;
-        stage.replace(&self.retention, pool_name::HEAD)?;
+        stage.replace(
+            &self.retention,
+            pool_name::HEAD,
+            super::StageReplacement::Head,
+        )?;
         synchronize_recovery_directory(
             &self.retention,
             super::RetentionStorageBoundary::RetentionSynchronization,

@@ -210,7 +210,13 @@ impl GcExecutionStorage for FilesystemGcAuthority {
             .receipt_stage
             .take()
             .ok_or_else(no_retirement)?;
-        stage.replace(&self.gc, RECEIPT).map_err(Into::into)
+        stage
+            .replace(
+                &self.gc,
+                RECEIPT,
+                crate::adapters::retention::StageReplacement::Receipt,
+            )
+            .map_err(Into::into)
     }
 
     fn synchronize_gc_after_receipt(&mut self) -> io::Result<()> {

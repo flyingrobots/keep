@@ -281,7 +281,9 @@ pub use filesystem_retention_recovery_error::FilesystemRetentionRecoveryError;
 pub use filesystem_retention_refusal::RetentionCurrentStateRefusal;
 pub use filesystem_retention_snapshot::FilesystemRetentionSnapshot;
 pub use filesystem_retention_snapshot_error::FilesystemRetentionSnapshotError;
-pub(in crate::adapters) use filesystem_retention_stage::FilesystemRetentionStage;
+pub(in crate::adapters) use filesystem_retention_stage::{
+    FilesystemRetentionStage, StageReplacement,
+};
 pub use filesystem_retention_stage_refusal::FilesystemRetentionStageRefusal;
 pub use head_decode_error::RetentionHeadDecodeError;
 pub use manifest_decode_error::RetentionManifestDecodeError;
