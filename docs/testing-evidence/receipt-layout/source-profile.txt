@@ -1,0 +1,5 @@
+Parent: 65c0707ba52ecd95e56474a9675ada4ec634701b
+a5567851360c0c860d2b3ee2abf53d8e4631e433936f885fecee447361af70a3  src/adapters/gc/receipt_encoder.rs  (host/Docker match after controls restored)
+2a8a71ea564bfe50938c8c552232c6c0559e388b80e26d73c297b0d0c149433e  src/adapters/gc/receipt_format.rs  (host/Docker match after controls restored)
+c495a3bfc923f11e9369d4d8f962a12b30187043fa314199b9caa85e06aa2e9a  src/adapters/gc/canonical_receipt.rs  (host/Docker match after controls restored)
+38b21a4007e16637d303addf660ad5a56186ceda19e48f4bf59dc2fe6abcee80  driver.rs (top-level, both archived projects and both executed Docker sources match)

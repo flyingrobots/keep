@@ -1,0 +1,2 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running `/build/keep107-coordinate-target/debug/xtask source-structure-check`

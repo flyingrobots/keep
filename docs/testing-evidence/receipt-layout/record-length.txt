@@ -1,0 +1,9 @@
+    Checking keep v0.0.0 (/build/keep107-coordinate-source)
+error[E0080]: evaluation panicked: assertion failed: RECORD_LENGTH == 320 && ENCODED_LENGTH == 320
+  --> src/adapters/gc/receipt_format.rs:11:15
+   |
+11 | const _: () = assert!(RECORD_LENGTH == 320 && ENCODED_LENGTH == 320);
+   |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ evaluation of `adapters::gc::receipt_format::_` failed here
+
+For more information about this error, try `rustc --explain E0080`.
+error: could not compile `keep` (lib) due to 1 previous error

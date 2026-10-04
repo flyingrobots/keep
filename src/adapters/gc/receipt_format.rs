@@ -7,6 +7,8 @@ pub(super) const RECORD_LENGTH: u16 = 320;
 pub(super) const VERSION: u16 = 2;
 pub(super) const RESERVED_OFFSET: usize = 240;
 pub(super) const RESERVED_LENGTH: usize = 48;
+// The fixed grammar records the same byte length as its owned representation.
+const _: () = assert!(RECORD_LENGTH == 320 && ENCODED_LENGTH == 320);
 const CHECKSUM_DOMAIN: &[u8] = b"keep.gc-retirement-receipt-checksum/v2\0";
 
 pub(super) fn checksum(preimage: &[u8]) -> [u8; 32] {

@@ -1,0 +1,25 @@
+    Checking keep v0.0.0 (/build/keep107-coordinate-source)
+error[E0308]: mismatched types
+  --> src/adapters/gc/receipt_encoder.rs:10:34
+   |
+10 |           const _: [(); $length] = [(); 0 $(+ $width)+];
+   |                    -------------   ^^^^^^^^^^^^^^^^^^^^ expected an array with a size of 288, found one with a size of 289
+   |                    |
+   |                    expected because of the type of the constant
+...
+24 |       let preimage = receipt_bytes!(format::CHECKSUM_OFFSET;
+   |  ____________________-
+25 | |         format::RESERVED_OFFSET => fields(&receipt),
+26 | |         format::RESERVED_LENGTH => [0; format::RESERVED_LENGTH],
+27 | |     );
+   | |_____- in this macro invocation
+   |
+   = note: this error originates in the macro `receipt_bytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: consider specifying the actual array length
+   |
+24 -     let preimage = receipt_bytes!(format::CHECKSUM_OFFSET;
+24 +     let preimage = receipt_bytes!(289;
+   |
+
+For more information about this error, try `rustc --explain E0308`.
+error: could not compile `keep` (lib) due to 1 previous error

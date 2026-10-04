@@ -1,0 +1,24 @@
+   Compiling keep v0.0.0 (/build/keep107-receipt-parent)
+   Compiling coordinate-observation v0.0.0 (/build/keep107-receipt-driver-parent)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.59s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+Replay subject=parent corpus=fixed seed=0x107c00d cases=7+256 deadline=30 kill-grace=5 address-space=536870912 network=unshare
+Replay subject=parent corpus=random seed=0xd12c1871b6c62734 cases=7+256 deadline=30 kill-grace=5 address-space=536870912 network=unshare
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+   Compiling coordinate-observation v0.0.0 (/build/keep107-receipt-driver-current)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.33s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+Replay subject=current corpus=fixed seed=0x107c00d cases=7+256 deadline=30 kill-grace=5 address-space=536870912 network=unshare
+Replay subject=current corpus=random seed=0xd12c1871b6c62734 cases=7+256 deadline=30 kill-grace=5 address-space=536870912 network=unshare
+Exact sampled public output comparison fixed: equal
+8b0902b546ae47cdcebf93bfe8c99d6269ce2c28f70eaffba8181c17b59a9a1d  /build/keep107-receipt-evidence/parent-fixed.bin
+8b0902b546ae47cdcebf93bfe8c99d6269ce2c28f70eaffba8181c17b59a9a1d  /build/keep107-receipt-evidence/current-fixed.bin
+310340 /build/keep107-receipt-evidence/parent-fixed.bin
+310340 /build/keep107-receipt-evidence/current-fixed.bin
+620680 total
+Exact sampled public output comparison random: equal
+8d798c0c121eb3dba3015fa074956f28f0c7398bc86a9888f08d9c8dabb7ba83  /build/keep107-receipt-evidence/parent-random.bin
+8d798c0c121eb3dba3015fa074956f28f0c7398bc86a9888f08d9c8dabb7ba83  /build/keep107-receipt-evidence/current-random.bin
+310340 /build/keep107-receipt-evidence/parent-random.bin
+310340 /build/keep107-receipt-evidence/current-random.bin
+620680 total

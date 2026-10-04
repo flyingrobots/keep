@@ -10,6 +10,7 @@ after its public API and format compatibility policies are established.
 
 ### Roadmap audit corrections
 
+- GC retirement receipts now use compile-time-checked fixed array construction in place of panicking slice splits, preserving their infallible API and canonical bytes (#107).
 - Tighten the new GC reader-lock API with distinct device, mount and file coordinate types; constructors and accessors now name each role explicitly while preserving the encoded values and runtime refusals (#107).
 - Replace tautological GC fuzz assertions with public canonical re-encoding checks for retirement intents, retirement receipts and recovery-disposition receipts (#107).
 - Preserve typed failure sources through durable and compaction I/O boundaries.

@@ -2,46 +2,53 @@
 
 use super::{CanonicalGcRetirementReceipt, GcRetirementReceipt, receipt_format as format};
 
+// Every emitted expression must have its declared array width, and their total
+// must equal the destination. Together these compile-time checks prove that the
+// iterator writes cannot truncate or leave a slot unfilled. No input sets a width.
+macro_rules! receipt_bytes {
+    ($length:expr; $($width:expr => $value:expr),+ $(,)?) => {{
+        const _: [(); $length] = [(); 0 $(+ $width)+];
+        let mut encoded = [0_u8; $length];
+        let mut slots = encoded.iter_mut();
+        $(
+            let bytes: [u8; $width] = $value;
+            for (slot, byte) in slots.by_ref().take($width).zip(bytes) {
+                *slot = byte;
+            }
+        )+
+        encoded
+    }};
+}
+
 pub(super) fn encode(receipt: GcRetirementReceipt) -> CanonicalGcRetirementReceipt {
-    let mut encoded = [0_u8; format::ENCODED_LENGTH];
-    let (preimage, checksum_slot) = encoded.split_at_mut(format::CHECKSUM_OFFSET);
-    write_preimage(preimage, &receipt);
-    checksum_slot.copy_from_slice(&format::checksum(preimage));
+    let preimage = receipt_bytes!(format::CHECKSUM_OFFSET;
+        format::RESERVED_OFFSET => fields(&receipt),
+        format::RESERVED_LENGTH => [0; format::RESERVED_LENGTH],
+    );
+    let encoded = receipt_bytes!(format::ENCODED_LENGTH;
+        format::CHECKSUM_OFFSET => preimage,
+        32 => format::checksum(&preimage),
+    );
     CanonicalGcRetirementReceipt::admitted(&encoded, receipt)
 }
 
-fn write_preimage(output: &mut [u8], receipt: &GcRetirementReceipt) {
-    let (magic, output) = output.split_at_mut(16);
-    magic.copy_from_slice(&format::MAGIC);
-    let (version, output) = output.split_at_mut(2);
-    version.copy_from_slice(&format::VERSION.to_be_bytes());
-    let (record_length, output) = output.split_at_mut(2);
-    record_length.copy_from_slice(&format::RECORD_LENGTH.to_be_bytes());
-    let (flags, output) = output.split_at_mut(4);
-    flags.copy_from_slice(&0_u32.to_be_bytes());
-    let (generation, output) = output.split_at_mut(8);
-    generation.copy_from_slice(&receipt.generation().get().to_be_bytes());
-    let (intent_digest, output) = output.split_at_mut(32);
-    intent_digest.copy_from_slice(receipt.intent_digest().as_bytes());
-    let (retired_set, output) = output.split_at_mut(32);
-    retired_set.copy_from_slice(receipt.retired_candidate_set_digest().as_bytes());
-    let (pool_state, output) = output.split_at_mut(32);
-    pool_state.copy_from_slice(receipt.pool_state_digest().as_bytes());
-    let (liveness, output) = output.split_at_mut(8);
-    liveness.copy_from_slice(&receipt.liveness_generation().get().to_be_bytes());
-    let (manifest_digest, output) = output.split_at_mut(32);
-    manifest_digest.copy_from_slice(receipt.manifest_digest().as_bytes());
-    let (catalog_generation, output) = output.split_at_mut(8);
-    catalog_generation.copy_from_slice(&receipt.catalog_generation().get().to_be_bytes());
-    let (catalog_digest, output) = output.split_at_mut(32);
-    catalog_digest.copy_from_slice(receipt.catalog_digest().as_bytes());
-    let (device, output) = output.split_at_mut(8);
-    device.copy_from_slice(&receipt.reader_lock().device().get().to_be_bytes());
-    let (mount, output) = output.split_at_mut(8);
-    mount.copy_from_slice(&receipt.reader_lock().mount().get().to_be_bytes());
-    let (file, output) = output.split_at_mut(8);
-    file.copy_from_slice(&receipt.reader_lock().file().get().to_be_bytes());
-    let (synchronization_count, reserved) = output.split_at_mut(8);
-    synchronization_count.copy_from_slice(&receipt.synchronization_count().to_be_bytes());
-    reserved.fill(0);
+fn fields(receipt: &GcRetirementReceipt) -> [u8; format::RESERVED_OFFSET] {
+    receipt_bytes!(format::RESERVED_OFFSET;
+        16 => format::MAGIC,
+        2 => format::VERSION.to_be_bytes(),
+        2 => format::RECORD_LENGTH.to_be_bytes(),
+        4 => 0_u32.to_be_bytes(),
+        8 => receipt.generation().get().to_be_bytes(),
+        32 => *receipt.intent_digest().as_bytes(),
+        32 => *receipt.retired_candidate_set_digest().as_bytes(),
+        32 => *receipt.pool_state_digest().as_bytes(),
+        8 => receipt.liveness_generation().get().to_be_bytes(),
+        32 => *receipt.manifest_digest().as_bytes(),
+        8 => receipt.catalog_generation().get().to_be_bytes(),
+        32 => *receipt.catalog_digest().as_bytes(),
+        8 => receipt.reader_lock().device().get().to_be_bytes(),
+        8 => receipt.reader_lock().mount().get().to_be_bytes(),
+        8 => receipt.reader_lock().file().get().to_be_bytes(),
+        8 => receipt.synchronization_count().to_be_bytes(),
+    )
 }

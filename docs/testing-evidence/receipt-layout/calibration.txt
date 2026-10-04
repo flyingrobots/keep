@@ -1,0 +1,11 @@
+Static layout control=field-array expected compiler rejection
+Compiler exit=101
+error[E0308]: mismatched types
+Static layout control=field-total expected compiler rejection
+Compiler exit=101
+error[E0308]: mismatched types
+Static layout control=preimage-total expected compiler rejection
+Compiler exit=101
+error[E0308]: mismatched types
+Static layout control=record-length expected compiler rejection
+Compiler exit=101

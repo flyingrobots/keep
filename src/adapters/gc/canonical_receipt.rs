@@ -19,6 +19,10 @@ pub struct CanonicalGcRetirementReceipt {
 
 impl CanonicalGcRetirementReceipt {
     /// Constructs the one receipt that completes `intent`.
+    ///
+    /// Encodes fixed-size stack arrays without allocation, blocking or I/O.
+    /// The layout is checked at compile time; encoding does not perform
+    /// publication or establish that the recorded effects occurred.
     pub fn from_intent(
         intent: &CanonicalGcRetirementIntent,
         pool_state_digest: PoolStateDigest,

@@ -1,0 +1,4 @@
+Reduced runtime counterexample: 1,0,0
+Replay: /build/keep107-receipt-evidence/driver-mutant /build/keep107-receipt-evidence/reduced/replay.bin 107c00d 1 0 0
+2bdf93c2a8b13ce8be6fe51bdb5835e6a4717efa6a4172acff96d274b6f7a701  /build/keep107-receipt-evidence/reduced-parent.bin
+2bdf93c2a8b13ce8be6fe51bdb5835e6a4717efa6a4172acff96d274b6f7a701  /build/keep107-receipt-evidence/reduced-restored.bin

@@ -1,0 +1,16 @@
+Static layout control=record-length expected compiler rejection
+Compiler exit=101
+error[E0080]: evaluation panicked: assertion failed: RECORD_LENGTH == 320 && ENCODED_LENGTH == 320
+    Checking keep v0.0.0 (/build/keep107-coordinate-source)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.21s
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+   Compiling coordinate-observation v0.0.0 (/build/keep107-receipt-driver-current)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.04s
+Runtime pool-retention control seed=0x107c00d
+/build/keep107-receipt-evidence/parent-fixed.bin /build/keep107-receipt-evidence/pool-mutant.bin differ: char 1765, line 3
+Runtime comparison exit=1
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+   Compiling coordinate-observation v0.0.0 (/build/keep107-receipt-driver-current)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.00s
+Restored runtime comparison: equal
+8b0902b546ae47cdcebf93bfe8c99d6269ce2c28f70eaffba8181c17b59a9a1d  /build/keep107-receipt-evidence/restored.bin
