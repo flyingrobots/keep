@@ -222,9 +222,10 @@ pub use adapters::{
 };
 pub use adapters::{
     CompactionObservation, CompactionPlan, CompactionPublish, CompactionReceipt,
-    CompactionRecovery, CompactionRefusal, CompactionSegmentDisposition,
-    FilesystemCompactionAuthority, FilesystemCompactionError, FilesystemCompactionRecoveryError,
-    observe_compaction, plan_compaction, recover_compaction,
+    CompactionRecovery, CompactionRecoveryAction, CompactionRecoveryBoundary,
+    CompactionRecoveryEffects, CompactionRecoveryExecution, CompactionRefusal,
+    CompactionSegmentDisposition, FilesystemCompactionAuthority, FilesystemCompactionError,
+    FilesystemCompactionRecoveryError, observe_compaction, plan_compaction, recover_compaction,
 };
 pub use adapters::{
     DurableIngestionError, DurableIngestionReceipt, DurableOutcome, DurableRangeReadReceipt,

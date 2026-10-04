@@ -23,6 +23,10 @@ mod recovery;
 mod recovery_identity_tests;
 mod recovery_observation;
 mod recovery_preflight;
+mod recovery_progress;
+#[cfg(test)]
+mod recovery_progress_tests;
+mod recovery_schedule;
 #[cfg(test)]
 mod test_fixture;
 
@@ -34,3 +38,8 @@ pub use plan::{CompactionPlan, CompactionRefusal, CompactionSegmentDisposition, 
 pub(in crate::adapters) use recovery::recover_compaction_unchecked_for_tests;
 pub use recovery::{CompactionRecovery, FilesystemCompactionRecoveryError, recover_compaction};
 pub(in crate::adapters) use recovery::{CompleteStageEvidence, recover_with};
+
+pub use recovery_progress::{
+    CompactionRecoveryAction, CompactionRecoveryBoundary, CompactionRecoveryEffects,
+    CompactionRecoveryExecution,
+};

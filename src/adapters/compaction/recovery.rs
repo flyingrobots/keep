@@ -51,6 +51,7 @@ impl CompactionRecovery {
 pub struct FilesystemCompactionRecoveryError {
     phase: &'static str,
     source: Box<dyn Error + Send + Sync>,
+    execution: Option<super::CompactionRecoveryExecution>,
 }
 
 impl fmt::Display for FilesystemCompactionRecoveryError {
@@ -73,6 +74,13 @@ pub(super) fn refused(
 }
 
 impl FilesystemCompactionRecoveryError {
+    /// Progress of a failing execution action, or `None` for admission refusal.
+    /// A preflight refusal initiates no recovery mutation.
+    #[must_use]
+    pub const fn execution(&self) -> Option<&super::CompactionRecoveryExecution> {
+        self.execution.as_ref()
+    }
+
     pub(in crate::adapters) fn refused(
         phase: &'static str,
         source: impl Error + Send + Sync + 'static,
@@ -80,6 +88,7 @@ impl FilesystemCompactionRecoveryError {
         Self {
             phase,
             source: Box::new(source),
+            execution: None,
         }
     }
 }
@@ -148,10 +157,22 @@ pub(in crate::adapters) fn recover_with(
 
 /// The callback supplies a deterministic observation/execution interleaving.
 pub(super) fn recover_after_preflight(
+    discarder: FilesystemRecoveryStageDiscarder,
+    policy: CatalogRestartPolicy,
+    evidence: CompleteStageEvidence,
+    after_preflight: impl FnOnce() -> io::Result<()>,
+) -> Result<CompactionRecovery, FilesystemCompactionRecoveryError> {
+    recover_scheduled(discarder, policy, evidence, after_preflight, &mut |_, _| {
+        Ok(())
+    })
+}
+
+pub(super) fn recover_scheduled(
     mut discarder: FilesystemRecoveryStageDiscarder,
     policy: CatalogRestartPolicy,
     evidence: CompleteStageEvidence,
     after_preflight: impl FnOnce() -> io::Result<()>,
+    schedule: &mut super::recovery_schedule::Schedule<'_>,
 ) -> Result<CompactionRecovery, FilesystemCompactionRecoveryError> {
     let mut plan = super::recovery_preflight::prepare(&discarder, policy, evidence)?;
     after_preflight().map_err(|source| refused("observation interleaving", source))?;
@@ -163,12 +184,19 @@ pub(super) fn recover_after_preflight(
     for mut stage in plan.stages {
         match stage.action {
             super::recovery_preflight::StageAction::Derivable => {
-                discard_derivable(&discarder, &mut stage.observed)?;
+                discard_derivable(&discarder, &mut stage.observed, schedule)?;
             }
             super::recovery_preflight::StageAction::Truncated(request) => {
                 stage.observed.verify(&discarder)?;
-                let _receipt = execute_recovery_stage_discard(&mut discarder, request)
-                    .map_err(|source| refused("discard stage", source))?;
+                let _receipt = execute_recovery_stage_discard(
+                    &mut super::recovery_schedule::ScheduledDiscard {
+                        inner: &mut discarder,
+                        stage: stage.observed.stage(),
+                        schedule,
+                    },
+                    request,
+                )
+                .map_err(|source| refused("discard stage", source))?;
             }
         }
         recovery.discarded.push(stage.observed.stage());
@@ -179,12 +207,22 @@ pub(super) fn recover_after_preflight(
     next.observed.verify(&discarder)?;
     match next.action {
         super::recovery_preflight::NextHeadAction::Discard(request) => {
-            let _receipt = execute_recovery_stage_discard(&mut discarder, request)
-                .map_err(|source| refused("discard head.next", source))?;
+            let _receipt = execute_recovery_stage_discard(
+                &mut super::recovery_schedule::ScheduledDiscard {
+                    inner: &mut discarder,
+                    stage: RecoveryStage::NextHead,
+                    schedule,
+                },
+                request,
+            )
+            .map_err(|source| refused("discard head.next", source))?;
             recovery.discarded.push(RecoveryStage::NextHead);
         }
         super::recovery_preflight::NextHeadAction::Finalize(request) => {
-            let mut finalizer = FilesystemRecoveryNextHeadFinalizer { discarder, policy };
+            let mut finalizer = super::recovery_schedule::ScheduledFinalization {
+                inner: FilesystemRecoveryNextHeadFinalizer { discarder, policy },
+                schedule,
+            };
             let _receipt = execute_recovery_next_head_finalization(&mut finalizer, request)
                 .map_err(|source| refused("finalize head.next", source))?;
             recovery.finalized = Some(request.target().generation());
@@ -211,16 +249,23 @@ pub(super) fn admitted_stage(
 fn discard_derivable(
     discarder: &FilesystemRecoveryStageDiscarder,
     observed: &mut super::recovery_observation::ObservedStage,
+    schedule: &mut super::recovery_schedule::Schedule<'_>,
 ) -> Result<(), FilesystemCompactionRecoveryError> {
     let stage = observed.stage();
     let staging = discarder
         .inventory
         .parent_directory(RecoveryStageParent::Staging);
     observed.verify(discarder)?;
+    schedule(stage, super::CompactionRecoveryBoundary::RemoveStage)
+        .map_err(|source| refused("before stage removal", source))?;
     staging
         .remove_file(stage.file_name())
         .map_err(|source| refused("discard stage", source))?;
+    schedule(stage, super::CompactionRecoveryBoundary::ConfirmStageAbsent)
+        .map_err(|source| refused("confirm stage absence", source))?;
     exact_record::require_absent(staging, stage.file_name())
         .map_err(|source| refused("discard stage", io::Error::other(source)))?;
+    schedule(stage, super::CompactionRecoveryBoundary::SynchronizeParent)
+        .map_err(|source| refused("synchronize staging", source))?;
     synchronize_directory(staging).map_err(|source| refused("synchronize staging", source))
 }
