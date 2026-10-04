@@ -7,13 +7,5 @@
 
 #![cfg(target_os = "linux")]
 
-#[path = "golden_file_worldline/durable_fixture.rs"]
-#[allow(
-    dead_code,
-    reason = "locator laws share complete-store setup; other golden laws own partial-record cases"
-)]
-mod durable_fixture;
-#[path = "golden_file_worldline/durable_locator_laws.rs"]
-mod durable_locator_laws;
-#[path = "segment_filesystem_stage/sandbox.rs"]
-mod durable_sandbox;
+#[path = "durable_locator/suite.rs"]
+mod suite;
