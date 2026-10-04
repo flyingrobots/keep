@@ -18,7 +18,7 @@ use super::durable_sandbox::TestDirectory;
 type TestResult = Result<(), Box<dyn Error>>;
 
 const CHILD: &str = "KEEP_DURABLE_LOCATOR_CHILD";
-const LAW: &str = "suite::durable_locator_laws::relative_store_handles_keep_their_initial_store_after_a_directory_change";
+const LAW: &str = "durable_locator_laws::relative_store_handles_keep_their_initial_store_after_a_directory_change";
 
 #[test]
 fn relative_store_handles_keep_their_initial_store_after_a_directory_change()
@@ -29,7 +29,7 @@ fn relative_store_handles_keep_their_initial_store_after_a_directory_change()
 #[test]
 fn an_unresolvable_relative_locator_preserves_its_io_cause() -> Result<(), Box<dyn Error>> {
     run_isolated(
-        "suite::durable_locator_laws::an_unresolvable_relative_locator_preserves_its_io_cause",
+        "durable_locator_laws::an_unresolvable_relative_locator_preserves_its_io_cause",
         deleted_current_directory,
     )
 }
