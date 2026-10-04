@@ -1,0 +1,13 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.01s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 4 tests
+test adapters::filesystem_recovery_stage_discard_tests::sync_failure_laws::failed_parent_sync_reports_the_completed_removal ... ok
+test adapters::filesystem_recovery_stage_discard_tests::sync_failure_laws::failed_parent_sync_reports_an_already_absent_retry ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::sync_failure_laws::failed_root_sync_reports_the_completed_replacement ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::sync_failure_laws::failed_root_sync_reports_an_already_current_retry ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 476 filtered out; finished in 0.01s
+

@@ -1,0 +1,13 @@
+Diff in /keep-validation-cache/source/src/adapters/filesystem_recovery_next_head_finalization_tests.rs:1:
+ //! Filesystem next-head finalization laws.
+ 
+ mod fixture;
+-mod sync_failure_laws;
+ mod namespace_laws;
+ mod refusal_laws;
+ mod replacement_laws;
+Diff in /keep-validation-cache/source/src/adapters/filesystem_recovery_next_head_finalization_tests.rs:8:
++mod sync_failure_laws;
+ 
+ use std::error::Error;
+ use std::fs;

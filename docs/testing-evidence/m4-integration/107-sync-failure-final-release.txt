@@ -1,0 +1,12 @@
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `release` profile [optimized] target(s) in 12.89s
+     Running unittests src/lib.rs (/keep-validation-cache/target/release/deps/keep-8ca1b588e6dfe3ea)
+
+running 4 tests
+test adapters::filesystem_recovery_stage_discard_tests::sync_failure_laws::failed_parent_sync_reports_the_completed_removal ... ok
+test adapters::filesystem_recovery_stage_discard_tests::sync_failure_laws::failed_parent_sync_reports_an_already_absent_retry ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::sync_failure_laws::failed_root_sync_reports_the_completed_replacement ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::sync_failure_laws::failed_root_sync_reports_an_already_current_retry ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 476 filtered out; finished in 0.02s
+

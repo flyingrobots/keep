@@ -10,6 +10,8 @@ after its public API and format compatibility policies are established.
 
 ### Roadmap audit corrections
 
+- Preserve removal and head-finalization outcomes in recovery directory-sync errors, distinguishing effects from already-completed retries while retaining the original I/O cause and unconfirmed durability; exhaustive public error patterns must admit the new `outcome` field (#107).
+
 - Retain original compaction recovery stage handles through execution and refuse byte-identical substitution before cleanup, including later-stage substitution before earlier effects (#107).
 - Reject oversized compaction recovery stages before content allocation, preserving the exact metadata refusal and retained evidence (#107).
 - Preflight all compaction recovery residue before effects and preserve current-catalog errors instead of treating them as an uninitialized store (#107).

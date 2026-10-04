@@ -1,0 +1,44 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.89s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 4 tests
+test adapters::filesystem_recovery_stage_discard_tests::sync_failure_laws::failed_parent_sync_reports_the_completed_removal ... FAILED
+test adapters::filesystem_recovery_stage_discard_tests::sync_failure_laws::failed_parent_sync_reports_an_already_absent_retry ... FAILED
+test adapters::filesystem_recovery_next_head_finalization_tests::sync_failure_laws::failed_root_sync_reports_the_completed_replacement ... FAILED
+test adapters::filesystem_recovery_next_head_finalization_tests::sync_failure_laws::failed_root_sync_reports_an_already_current_retry ... FAILED
+
+failures:
+
+---- adapters::filesystem_recovery_stage_discard_tests::sync_failure_laws::failed_parent_sync_reports_the_completed_removal stdout ----
+
+thread 'adapters::filesystem_recovery_stage_discard_tests::sync_failure_laws::failed_parent_sync_reports_the_completed_removal' (778) panicked at src/adapters/filesystem_recovery_stage_discard_tests/sync_failure_laws.rs:49:5:
+typed discard effects must remain available
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- adapters::filesystem_recovery_stage_discard_tests::sync_failure_laws::failed_parent_sync_reports_an_already_absent_retry stdout ----
+
+thread 'adapters::filesystem_recovery_stage_discard_tests::sync_failure_laws::failed_parent_sync_reports_an_already_absent_retry' (777) panicked at src/adapters/filesystem_recovery_stage_discard_tests/sync_failure_laws.rs:49:5:
+typed discard effects must remain available
+
+---- adapters::filesystem_recovery_next_head_finalization_tests::sync_failure_laws::failed_root_sync_reports_the_completed_replacement stdout ----
+
+thread 'adapters::filesystem_recovery_next_head_finalization_tests::sync_failure_laws::failed_root_sync_reports_the_completed_replacement' (776) panicked at src/adapters/filesystem_recovery_next_head_finalization_tests/sync_failure_laws.rs:52:5:
+typed publication effects must remain available
+
+---- adapters::filesystem_recovery_next_head_finalization_tests::sync_failure_laws::failed_root_sync_reports_an_already_current_retry stdout ----
+
+thread 'adapters::filesystem_recovery_next_head_finalization_tests::sync_failure_laws::failed_root_sync_reports_an_already_current_retry' (775) panicked at src/adapters/filesystem_recovery_next_head_finalization_tests/sync_failure_laws.rs:52:5:
+typed publication effects must remain available
+
+
+failures:
+    adapters::filesystem_recovery_next_head_finalization_tests::sync_failure_laws::failed_root_sync_reports_an_already_current_retry
+    adapters::filesystem_recovery_next_head_finalization_tests::sync_failure_laws::failed_root_sync_reports_the_completed_replacement
+    adapters::filesystem_recovery_stage_discard_tests::sync_failure_laws::failed_parent_sync_reports_an_already_absent_retry
+    adapters::filesystem_recovery_stage_discard_tests::sync_failure_laws::failed_parent_sync_reports_the_completed_removal
+
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 476 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `--lib`

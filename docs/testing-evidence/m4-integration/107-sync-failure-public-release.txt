@@ -1,0 +1,32 @@
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `release` profile [optimized] target(s) in 6.10s
+     Running tests/recovery_next_head_finalization.rs (/keep-validation-cache/target/release/deps/recovery_next_head_finalization-0cfc0372be9ba139)
+
+running 11 tests
+test execution_laws::ready_candidate_replaces_head_before_root_synchronization ... ok
+test execution_laws::already_current_retry_only_resynchronizes_root ... ok
+test execution_laws::retry_after_replace_before_root_sync_is_already_finalized ... ok
+test execution_laws::candidate_sync_failure_stops_before_head_replacement ... ok
+test execution_laws::verification_and_replacement_failures_stop_later_mutation ... ok
+test planning_laws::candidate_must_be_the_exact_expected_successor ... ok
+test planning_laws::candidate_snapshot_must_match_the_assessed_head ... ok
+test planning_laws::generation_one_candidate_extends_an_uninitialized_root ... ok
+test planning_laws::generation_two_candidate_extends_the_exact_current_snapshot ... ok
+test planning_laws::only_a_complete_next_head_can_enter_finalization ... ok
+test planning_laws::noninitial_candidate_cannot_extend_an_uninitialized_root ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/recovery_stage_discard.rs (/keep-validation-cache/target/release/deps/recovery_stage_discard-a4ec45a68810a67f)
+
+running 7 tests
+test execution_laws::absent_exact_retry_still_synchronizes_the_selected_parent ... ok
+test execution_laws::changed_evidence_refuses_without_removal_or_parent_sync ... ok
+test execution_laws::exact_evidence_is_removed_before_its_parent_is_synchronized ... ok
+test execution_laws::retry_after_remove_before_parent_sync_is_idempotent ... ok
+test planning_laws::complete_stages_cannot_form_truncation_discard_requests ... ok
+test planning_laws::every_exact_truncation_retains_its_reason_and_evidence ... ok
+test planning_laws::reusable_segment_prefix_cannot_form_a_discard_request ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

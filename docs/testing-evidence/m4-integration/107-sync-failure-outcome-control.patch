@@ -1,0 +1,28 @@
+--- a/src/adapters/recovery/recovery_stage_discard_executor.rs
++++ b/src/adapters/recovery/recovery_stage_discard_executor.rs
+@@ -29,7 +29,10 @@
+         .synchronize_parent(stage.parent())
+         .map_err(|source| RecoveryStageDiscardError::Synchronize {
+             stage,
+-            outcome,
++            outcome: match outcome {
++                super::RecoveryStageDiscardOutcome::Removed => super::RecoveryStageDiscardOutcome::AlreadyAbsent,
++                super::RecoveryStageDiscardOutcome::AlreadyAbsent => super::RecoveryStageDiscardOutcome::Removed,
++            },
+             source,
+         })?;
+     Ok(RecoveryStageDiscardReceipt::new(request, outcome))
+--- a/src/adapters/recovery/recovery_next_head_finalization_executor.rs
++++ b/src/adapters/recovery/recovery_next_head_finalization_executor.rs
+@@ -57,7 +57,10 @@
+     storage.synchronize_root().map_err(|source| {
+         RecoveryNextHeadFinalizationError::SynchronizeRoot {
+             target,
+-            outcome,
++            outcome: match outcome {
++                RecoveryNextHeadFinalizationOutcome::Finalized => RecoveryNextHeadFinalizationOutcome::AlreadyFinalized,
++                RecoveryNextHeadFinalizationOutcome::AlreadyFinalized => RecoveryNextHeadFinalizationOutcome::Finalized,
++            },
+             source,
+         }
+     })?;

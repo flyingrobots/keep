@@ -1,0 +1,26 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+error: unused `recovery_next_head_finalization_receipt::RecoveryNextHeadFinalizationReceipt` that must be used
+  --> src/adapters/filesystem_recovery_next_head_finalization_tests/sync_failure_laws.rs:31:9
+   |
+31 |         execute_recovery_next_head_finalization(&mut storage.0, request)?;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: requested on the command line with `-D unused-must-use`
+help: use `let _ = ...` to ignore the resulting value
+   |
+31 |         let _ = execute_recovery_next_head_finalization(&mut storage.0, request)?;
+   |         +++++++
+
+error: unused `recovery_stage_discard_receipt::RecoveryStageDiscardReceipt` that must be used
+  --> src/adapters/filesystem_recovery_stage_discard_tests/sync_failure_laws.rs:33:9
+   |
+33 |         execute_recovery_stage_discard(&mut storage.0, request)?;
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+help: use `let _ = ...` to ignore the resulting value
+   |
+33 |         let _ = execute_recovery_stage_discard(&mut storage.0, request)?;
+   |         +++++++
+
+error: could not compile `keep` (lib test) due to 2 previous errors

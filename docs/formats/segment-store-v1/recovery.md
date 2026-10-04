@@ -299,6 +299,8 @@ request either removes the reappeared exact stage, synchronizes an already
 absent name in the correct parent, or refuses different evidence as
 unrecoverable ambiguity.
 
+A `RecoveryStageDiscardError::Synchronize` retains its exact stage, original I/O cause and `outcome`: `Removed` means this invocation unlinked the stage; `AlreadyAbsent` means it admitted an absent name. Neither is a durable discard receipt when parent synchronization fails. Removal is not rolled back, and the failed sync leaves directory durability unconfirmed. A removal-capability failure is a different boundary and does not itself prove absence of effects. A retry must re-observe the name and exact evidence.
+
 ## Leftover next head
 
 Recovery opens an existing `head.next` without following links and validates
@@ -322,6 +324,8 @@ synchronized and reverified before it atomically replaces `HEAD`; an
 already-finalized retry requires `head.next` to be absent and skips replacement.
 Both paths synchronize the root before returning
 `RecoveryNextHeadFinalizationReceipt`.
+
+A `RecoveryNextHeadFinalizationError::SynchronizeRoot` retains the exact target, original I/O cause and `outcome`: `Finalized` means this invocation replaced `HEAD`; `AlreadyFinalized` means it admitted the candidate as already current. These outcomes describe known namespace state before the failed sync, not confirmed directory durability. A failed sync does not restore the original `HEAD` or recreate `head.next`. A replacement-capability failure does not itself prove that replacement had no effects. Retry revalidates the current head and candidate state before proceeding.
 
 `FilesystemRecoveryNextHeadFinalizer` binds this port to pinned root, writer,
 staging, segment-pool, and catalog-pool capabilities. It revalidates namespace

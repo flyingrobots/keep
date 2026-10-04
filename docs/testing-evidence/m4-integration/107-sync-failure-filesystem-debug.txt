@@ -1,0 +1,61 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.02s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 54 tests
+test adapters::filesystem_recovery_inventory_tests::filesystem_inventory_never_follows_protocol_directory_links ... ok
+test adapters::filesystem_recovery_inventory_tests::filesystem_inventory_preserves_raw_linux_name_bytes ... ok
+test adapters::filesystem_recovery_inventory_tests::filesystem_count_stops_at_the_first_global_excess_entry ... ok
+test adapters::filesystem_recovery_inventory_tests::replaced_protocol_directory_refuses_the_pinned_inventory ... ok
+test adapters::filesystem_recovery_inventory_tests::filesystem_inventory_returns_deterministic_name_order ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::one_writer_excludes_a_second_finalizer ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::namespace_laws::replaced_catalog_namespace_refuses_candidate_loading ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::refusal_laws::absent_candidate_reports_typed_missing_without_creating_head ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::refusal_laws::changed_candidate_is_refused_at_the_replacement_boundary ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::refusal_laws::disappeared_current_head_refuses_successor_without_mutation ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::refusal_laws::corrupt_candidate_catalog_refuses_before_head_replacement ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::refusal_laws::symbolic_candidate_is_never_followed_or_published ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::replacement_laws::exact_successor_atomically_replaces_the_current_head ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::refusal_laws::already_finalized_retry_refuses_a_reappeared_candidate ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::generation_one_finalizes_and_retries_without_replacement ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::replacement_laws::successor_retry_admits_the_exact_published_view ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::sync_failure_laws::failed_root_sync_reports_the_completed_replacement ... ok
+test adapters::filesystem_recovery_segment_resume_tests::refusal_laws::absent_stage_is_a_typed_refusal ... ok
+test adapters::filesystem_recovery_segment_resume_tests::refusal_laws::byte_replacement_at_the_writable_handoff_is_preserved_and_refused ... ok
+test adapters::filesystem_recovery_segment_resume_tests::refusal_laws::changed_stage_is_refused_before_a_write ... ok
+test adapters::filesystem_recovery_segment_resume_tests::refusal_laws::replaced_staging_namespace_is_refused_before_stage_open ... ok
+test adapters::filesystem_recovery_segment_resume_tests::refusal_laws::replacement_at_the_writable_handoff_is_preserved_and_refused ... ok
+test adapters::filesystem_recovery_segment_resume_tests::refusal_laws::symbolic_stage_is_never_followed ... ok
+test adapters::filesystem_recovery_segment_resume_tests::empty_prefix_resumes_and_seals_as_an_empty_segment ... ok
+test adapters::filesystem_recovery_stage_completion_tests::refusal_laws::absent_stage_and_pool_refuse_without_creating_state ... ok
+test adapters::filesystem_recovery_stage_completion_tests::refusal_laws::changed_stage_is_refused_before_a_pool_link_is_created ... ok
+test adapters::filesystem_recovery_next_head_finalization_tests::sync_failure_laws::failed_root_sync_reports_an_already_current_retry ... ok
+test adapters::filesystem_recovery_segment_resume_tests::exact_prefix_resumes_seals_and_retains_writer_authority ... ok
+test adapters::filesystem_recovery_stage_completion_tests::refusal_laws::symbolic_stage_is_never_followed_or_linked ... ok
+test adapters::filesystem_recovery_stage_completion_tests::replacement_laws::replacement_after_pool_open_is_preserved_and_refused ... ok
+test adapters::filesystem_recovery_stage_completion_tests::replacement_laws::replacement_after_stage_open_is_preserved_and_refused ... ok
+test adapters::filesystem_recovery_stage_completion_tests::retained_completer_authority_excludes_a_second_writer ... ok
+test adapters::filesystem_recovery_stage_discard_tests::changed_stage_evidence_is_preserved_and_refused_before_unlink ... ok
+test adapters::filesystem_recovery_stage_completion_tests::refusal_laws::conflicting_pool_is_refused_without_removing_the_exact_stage ... ok
+test adapters::filesystem_recovery_stage_discard_tests::replacement_after_observation_refuses_without_removing_the_new_entry ... ok
+test adapters::filesystem_recovery_stage_discard_tests::replacement_after_open_refuses_without_removing_the_new_entry ... ok
+test adapters::filesystem_recovery_stage_discard_tests::retained_discarder_authority_excludes_a_second_writer ... ok
+test adapters::filesystem_recovery_stage_discard_tests::symbolic_stage_is_never_followed_or_removed ... ok
+test adapters::filesystem_recovery_stage_completion_tests::refusal_laws::symbolic_pool_is_never_followed_or_admitted ... ok
+test adapters::filesystem_recovery_stage_discard_tests::sync_failure_laws::failed_parent_sync_reports_the_completed_removal ... ok
+test adapters::filesystem_recovery_stage_materialization::tests::read_and_position_rejects_short_stage ... ok
+test adapters::filesystem_recovery_stage_materialization::tests::read_and_position_rejects_trailing_bytes ... ok
+test adapters::filesystem_recovery_stage_materialization::tests::read_exact_reads_expected_bytes_without_trailing ... ok
+test adapters::filesystem_recovery_stage_tests::fixed_stage_symbolic_link_is_never_followed ... ok
+test adapters::filesystem_recovery_stage_tests::non_regular_stage_is_refused_before_fingerprinting ... ok
+test adapters::filesystem_recovery_stage_tests::oversized_sparse_stage_refuses_from_metadata ... ok
+test adapters::filesystem_recovery_stage_tests::pinned_stage_is_fingerprinted_without_mutation ... ok
+test adapters::filesystem_recovery_stage_tests::replaced_stage_entry_refuses_the_opened_evidence ... ok
+test adapters::filesystem_recovery_stage_tests::stage_length_drift_refuses_the_streamed_evidence ... ok
+test adapters::filesystem_recovery_stage_discard_tests::sync_failure_laws::failed_parent_sync_reports_an_already_absent_retry ... ok
+test adapters::filesystem_recovery_stage_discard_tests::exact_stage_discard_and_absent_retry_are_durable_for_every_parent ... ok
+test adapters::filesystem_recovery_stage_completion_tests::exact_segment_and_catalog_complete_to_durable_orphans ... ok
+test adapters::retention::filesystem_recovery_admission_tests::recovery_inventory_reader_refuses_a_migrated_root ... ok
+test adapters::retention::filesystem_recovery_admission_tests::recovery_stage_discarder_refuses_a_migrated_root ... ok
+
+test result: ok. 54 passed; 0 failed; 0 ignored; 0 measured; 426 filtered out; finished in 0.10s
+
