@@ -17,6 +17,11 @@ if [[ "$(docker inspect --format '{{.State.Running}}' "$container")" != true ]];
   exit 1
 fi
 
-tar -C "$source_dir" --exclude=.git --exclude=target --exclude=node_modules \
-  --exclude=.DS_Store -cf - . |
+(
+  cd "$source_dir"
+  find . \( -path './.git' -o -path './target' -o -path './fuzz/target' \
+    -o -path './xtask/target' -o -name node_modules \) -prune \
+    -o \( -type f -o -type l \) ! -name .DS_Store -print0
+) |
+  COPYFILE_DISABLE=1 tar -C "$source_dir" --null --no-recursion -T - -cf - |
   docker exec -i "$container" bash -c "$(cat "$script_dir/cargo-worker.sh")" keep-cargo "$@"
