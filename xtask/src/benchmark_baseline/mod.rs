@@ -3,10 +3,19 @@
 mod artifact;
 mod artifact_publication;
 mod build_environment;
+mod captured_environment;
+mod counter_widths;
 mod environment;
 mod error;
 mod host_environment;
+mod metadata_policy;
+mod metadata_uniqueness;
+mod metric_error;
+mod metric_relations;
 mod process;
+mod report_grammar;
+mod report_input;
+mod report_schema;
 mod tracked_source;
 
 use std::path::Path;
@@ -15,7 +24,7 @@ use std::process::Command;
 pub(crate) use error::BenchmarkBaselineError;
 
 const DIAGNOSTIC_LIMIT: usize = 262_144;
-const REPORT_LIMIT: usize = 1_048_576;
+const REPORT_LIMIT: usize = report_input::MAXIMUM_REPORT_BYTES;
 
 pub(crate) fn run(repository_root: &Path) -> Result<(), BenchmarkBaselineError> {
     build_environment::admit(repository_root)?;
@@ -60,8 +69,8 @@ pub(crate) fn run(repository_root: &Path) -> Result<(), BenchmarkBaselineError> 
             reason: "successful-benchmark-wrote-diagnostics",
         });
     }
-    artifact::validate(&output.stdout, &environment)?;
-    artifact_publication::persist(repository_root, &output.stdout)
+    let report = artifact::validate(&output.stdout, &environment)?;
+    artifact_publication::persist(repository_root, &report)
 }
 
 fn admit_clean_source(

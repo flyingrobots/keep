@@ -1,0 +1,137 @@
+# Durable verification landing scope
+
+Status: implemented on main for [#114](https://github.com/flyingrobots/keep/issues/114), under verification parent [#20](https://github.com/flyingrobots/keep/issues/20).
+
+Delivered in [PR #165](https://github.com/flyingrobots/keep/pull/165), merged as `2efc131e8466b458088eaf5de0a5981e636d8f85`. [Independent review](https://github.com/flyingrobots/keep/pull/165#issuecomment-5974504658), [Code Lawyer closure](https://github.com/flyingrobots/keep/pull/165#issuecomment-5974510981) and all four [candidate checks](https://github.com/flyingrobots/keep/actions/runs/37160522753) cover exact head `1f3991f86fa66783d88b9ac8dbb79ecd0d9a9554`; the signed merge preserves that tree.
+
+The sections below preserve chronological implementation and review records. Earlier pending gates and open-finding tables describe their named intermediate heads; final closure above supersedes those statuses without expanding their historical evidence claims.
+
+This ledger reconciles the requested verification outcome with the code available at the branch baseline; current closure dispositions and their evidence are recorded below.
+
+## Source of authority
+
+The branch starts at `origin/main` commit `6051abb25a9fd33ae7ee0de5614514b709a4d82a`.
+
+The original T-21.1 task fields in `ROADMAP.md` at prepared-branch commit `66c0e4653424cd36e55a868c24d94898a40aca59` remain authoritative, including per-subject achieved depth, typed diagnostic coordinates, unsupported-depth refusal, immutable report construction, bounded costs, and no repair.
+
+The prepared branch's `docs/invariants/verification/requirements.md` marks `KEEP-VERIFY-006` Planned; its other Implemented entries describe that branch and must not be copied into main as evidence of delivery.
+
+## Dependency finding
+
+Main has durable catalog admission, fenced version-two retention snapshots, and retention-closure verification, but no `src/verification/` report domain.
+
+The issue's reference to an existing policy/report domain therefore describes an unmerged prerequisite, not an available mainline API.
+
+The implementation must explicitly supply the required domain within this coherent change or wait for its separately reviewed mainline integration; it must not import the unrelated prepared feature branch wholesale.
+
+PR #164's authenticated read conveniences are not an established prerequisite: the relevant catalog and retention evidence boundaries already exist on this baseline.
+
+No new tracker dependency is recorded by this document.
+
+## Existing evidence boundaries
+
+| Boundary | What the inspected code establishes | What it does not establish |
+| --- | --- | --- |
+| `AdmittedSegment::decode` through `segment_reader` | Header/seal admission, bounded record admission, physical segment digest, and logical record identities. | Full reconstruction of every blob described by a layout. |
+| `FilesystemCatalogSnapshot::load` and `snapshot` | Exact head-selected catalog coordinates, selected segment admission, and catalog-to-record bindings; owned segment bytes are bounded by caller policy. | Retention authority, every layout's chunk closure, or a general shallow-depth diagnostic pass. |
+| `FilesystemRetentionSnapshot::load` | Version-two admission, shared reader fence, and bounded double collection of catalog and retention coordinates. | Closure verification of all roots selected by the manifest. |
+| `FilesystemRetentionSnapshot::retained_root` | Manifest-selected root bytes, canonical decoding, and selected generation/digest agreement. | Complete root closure; some failures currently lose structured coordinates in message-only I/O errors. |
+| `verify_retention_closure` | Bounded root traversal, required catalog members, anchor-to-layout binding, profile replay, and complete blob identity for each anchor. | A whole-store completeness claim for unretained records or a reusable general verification report. |
+
+These are inspected implementation boundaries, not new execution receipts.
+
+## Closure ledger
+
+The following table defines the unchanged acceptance exits; the disposition table below links their implementation and evidence.
+
+| Obligation | Required implementation boundary | Concrete exit condition |
+| --- | --- | --- |
+| Required subjects and depths | Domain vocabulary and adapters over segment, catalog, layout/blob, and retention evidence. | Every original durable subject/depth has a documented supported operation or precise unsupported result; v1/v2 corpus and empty-store outcomes establish the advertised matrix. |
+| Requested versus achieved evidence | Private report construction with a verified entry per subject; adapters construct entries only after the corresponding checks finish. | A shallow request cannot certify an unchecked deeper claim; unsupported requests refuse; external callers cannot construct or deepen evidence. Runtime laws and static/API laws are identified separately. |
+| Missing, corrupt, ambiguous, operational | Semantic error admission at durable boundaries, preserving original typed causes. | Absence, demonstrated contradiction, conflicting evidence, and failed observation produce distinct public outcomes with the available expected/observed coordinates and bounded conflict evidence. No classification depends on parsing a message. |
+| Consistent snapshot | Existing immutable catalog ownership and fenced retention collection. | Reports bind the exact observed coordinates; moving views cannot combine evidence from different attempts; retained-root closure is checked against that same catalog. |
+| Bounded cost and report contents | Caller-bounded catalog/segment loading, root-at-a-time work where applicable, and bounded report data. | Public documentation states I/O, allocations, memory, blocking, and complexity per supported operation; catalog-ceiling evidence checks the stated bound; reports contain no plaintext, keys, or unbounded paths. |
+| Read-only behavior | Verification uses observation and admission capabilities. | Refusals and success leave persistent bytes unchanged; no repair, recovery, retention publication, or GC is triggered. |
+| Honest delivery claim | Normative verification page, rationale, requirement ledger, public rustdoc, and consolidated execution evidence. | `KEEP-VERIFY-006` becomes Implemented only when the durable contract is implemented and verified; mainline delivery is recorded only after integration. |
+
+## Design constraints for implementation
+
+Depths describe checks on a particular subject; the ordinal position of `CatalogReachability` must not be used as evidence that every catalogued layout reconstructs a complete blob.
+
+An already admitted snapshot may contain evidence beyond a shallow request, but its construction cost and refusal behavior must be disclosed; it cannot be presented as a framing-only scan that succeeds despite a deeper checksum failure.
+
+A report must distinguish requested policy from established evidence without treating failed or unattempted work as verified.
+
+Snapshot binding from the original future F-19 obligation must not be conflated with the existing catalog and retention coordinates.
+
+The prepared reference report only names blob/layout subjects and reserves ambiguity without candidate coordinates; copying it unchanged would not satisfy the original durable acceptance criteria.
+
+The current root reader's message-only errors require a focused boundary decision before they can feed truthful typed verification refusals; this does not authorize a repository-wide filesystem audit.
+
+## Evidence and exclusions
+
+The initial ledger was documentation-only scope reconciliation at the two commits above; subsequent runtime evidence is retained in the consolidated execution document.
+
+New runtime assertions must be calibrated against the behavior they protect; absence of a new API on the parent is a compile failure, not a behavioral RED receipt.
+
+Bug fixes discovered at existing boundaries require a runtime regression observed on the unfixed revision, preserving the original failure artifact.
+
+Durable report serialization, a new report decoder, repair, GC execution, remote attestation, application trust policy, and unrelated prepared-branch features remain outside this issue.
+
+## Interface reconciliation and current candidate
+
+The original T-21.1 acceptance requires one `VerifiedSubject` per verified subject and explicitly names `verify_blob`, `verify_catalog`, and `verify_retention`; these operations select one subject each, so a truthful singleton subject list satisfies that contract.
+
+The earlier normative-page references to aggregate reporting were an implementation-plan inference, now corrected; this candidate does not expose or claim a whole-store enumeration API, CLI, MCP tool or durable report serialization.
+
+The independent bounded preflight agreed that the original named interfaces do not establish a mandatory aggregate enumerator; final exact-head review must still verify this reconciliation and the concrete subject/depth matrix.
+
+Raw segment/catalog classification, owned filesystem catalog reports, selected-namespace retention reports, precise moving-view candidates, typed selected-root diagnostics, and the scoped catalog-ceiling allocation law are implemented in the current candidate.
+
+The [consolidated evidence](../testing-evidence/durable-verification.md) records their runtime checks and falsification; final full validation and independent exact-head review remain acceptance gates, not assumptions inferred from earlier green commits.
+
+The independent exact-head review of `6504c86` found one acceptance gap in existing corruption-law mapping; the follow-up retains those laws' exact assertions while exercising production verification classification, with focused debug/release and mutation evidence. That delta received independent approval and green pushed-head checks at `b33c7da`; later hosted review reopened the finite queue below.
+
+## Pre-readiness implementation disposition
+
+| Obligation | Disposition and evidence |
+| --- | --- |
+| Subjects and depths | Implemented: explicit per-subject supported/refused matrix, v1/v2 corpus, empty evidence, absent members and complete blob/root closure laws. |
+| Requested versus achieved | Implemented: immutable private report construction, exact subject/request/depth runtime assertions and compile-fail API laws. |
+| Four failure classes | Implemented: raw and filesystem ingress, typed causes, original corruption-law mapping, exact bounded moving-view candidates; decoder/resource/classification mutations observed RED. |
+| Consistent snapshot | Implemented: existing double collection and fence, exact catalog/retention provenance, rejected moving views and namespace substitution; independent mutations observed RED. |
+| Bounded cost and contents | Implemented: documented ingress/admission costs and report authority, caller limits and precisely scoped catalog-ceiling allocation evidence. No total-process memory claim. |
+| Read-only behavior | Implemented: unchanged filesystem evidence on success/refusal; an injected production write fails the persistent-evidence assertion. |
+| Honest delivery | Normative contract, public rustdoc, rationale, requirement status and consolidated evidence reconciled. Mainline integration is not claimed before merge. |
+
+The independent-review finding on `6504c86` is implemented and calibrated in its follow-up; approval of that delta and required checks must be recorded against the resulting exact head in [PR #165](https://github.com/flyingrobots/keep/pull/165) before acceptance; earlier approvals and checks do not transfer to a changed head.
+
+This table closes implementation obligations, not the independent review or human merge gate; the PR is the live authority for those exact-head decisions.
+
+## Post-readiness review queue
+
+Reviews arriving after `b33c7da` reopened the acceptance gate. The earlier implementation-disposition table is the pre-review candidate's account; it does not supersede these concrete obligations or establish current readiness. The complete review bodies, global discussion and inline findings are included, regardless of thread age.
+
+| Obligation | Current evidence and disposition | Exit condition |
+| --- | --- | --- |
+| Shallow root provenance | Verified bug: framing/checksum attached an unconsulted catalog. Public parent regression RED; direct and publication-selected laws GREEN after attaching coordinates only for successful closure. | Fix pushed, review of resulting head, final required checks. |
+| Store-admission contradictions | Verified and corrected: public loader regressions RED on `26d3522`; typed record/root-identity contradictions now remain corrupt with their causes; host-width and unclassified I/O remain operational, with distinct calibration. | Fix pushed, resulting-head review and final checks. |
+| Verification-depth ordering | Removed `Ord`/`PartialOrd`; the public compile-fail law is RED on `665ffb3` because comparison compiled, then GREEN after removal. Runtime supported-depth laws remain GREEN. | Resulting-head review and final checks. |
+| Observation classification exhaustiveness | Every existing current-state variant is now explicit; classifications are unchanged and affected runtime laws pass. | Resulting-head review and final checks. |
+| Shared layout failure classification | Admission, closure and ingress use one exhaustive classifier. Generated differential receipts match the parent; affected debug/release laws and all-feature all-target Clippy pass. | Resulting-head review and final checks. |
+| Current documentation status | Current summary/changelog wording is reconciled; chronological evidence is explicitly historical, and current review/CI gates remain separate. | Markdown and documentation integrity checks on the final candidate. |
+| Exact admission diagnostic calibration | Independent review of `6802644` identified an evidence gap, not a production defect. Diagnostic-only magic and identity-coordinate mutations reach the intended assertions; restored debug/release laws pass. | Resulting-head independent confirmation. |
+| Unsupported retention request precedence | CodeRabbit's later global review identified evidence reads before request admission. A public regression is RED on `cc1e37b`; shared supported-depth admission now precedes selected-root access. | Focused GREEN, resulting-head review and final checks. |
+| Selected-root symlink classification | Hosted Codex and independent review verified that observed non-regular evidence became raw operational I/O. Public parent regression RED on `c003c89`; the existing metadata observation now preserves typed wrong-kind corruption, with focused debug/release GREEN. | Resulting-head independent review and final checks. |
+
+No finding is resolved merely because an earlier independent review approved the preceding head. No merge is authorized by this ledger.
+
+## Mainline landing integration
+
+The landing pass integrates main `1079551bc6b331eb9847823e7d22b22ea4c47b62`, including the reviewed durable-read API. The shared retention loader keeps verification's collector callback while using mainline's production filesystem admission and retained opened capability. Shared root admission retains namespace binding plus verification's typed generation/digest and file-kind diagnostics. Domain, durable and verification exports coexist; historical CHANGELOG entries are preserved.
+
+Retention verification snapshot admission now inherits the production root-directory synchronization probe. API and normative documentation distinguish that admission from later read-only verification; catalog-selected segment bytes are caller-bounded separately from catalog/metadata format allocations.
+
+The complete refreshed review queue contains three later source-verified obligations: classify demonstrated namespace contradictions precisely, preserve the identity of a missing selected segment, and distinguish an observed wrong-kind selected namespace directory from inconclusive I/O. Each requires an actual public runtime RED on the unfixed integration and focused GREEN; earlier ready status and review do not close them. Final full validation and independent review follow their coherent fixes.
+
+The integration's copied-Docker all-feature/all-target check, warnings-denied Clippy, structure check, existing verification laws and durable Worldline suite pass (`165-integration-focused-corrected.log`). The preceding run rejected symlinked scratch-path ancestors at production no-follow admission; the validation setup was corrected to ext4 bind mounts without changing product source or assertions. That initial setup failure is preserved in `165-integration-focused.log`, not counted as product RED. This focused integration check does not replace final full validation after the three fixes.

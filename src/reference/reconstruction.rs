@@ -2,14 +2,10 @@
 
 use std::io::Write;
 
-use crate::{
-    AdmittedLayout, BlobHasher, BlobId, BlobLength, LayoutDecodePolicy, LayoutId, ReferenceStore,
-};
+use crate::{AdmittedLayout, BlobId, LayoutDecodePolicy, LayoutId, ReferenceStore};
 
-use super::chunk_verification::{ChunkVerificationError, verified_chunk};
-use super::output_write::{OutputWriteError, write_all};
-use super::profile_verification::ProfileVerifier;
 use super::{ReconstructionError, ReconstructionReceipt};
+use crate::authenticated_read::reconstruct_admitted;
 
 impl ReferenceStore {
     /// Reconstructs the exact bytes named by `target`.
@@ -17,9 +13,10 @@ impl ReferenceStore {
     /// The lowest canonical committed [`LayoutId`] is chosen deterministically
     /// when more than one layout names the blob. Reconstruction first verifies
     /// every chunk, the registered storage-profile boundaries, and the complete
-    /// logical [`BlobId`] without writing. It then reverifies each immutable
-    /// reference-store chunk immediately before emitting it, so no
-    /// unauthenticated byte reaches `output`.
+    /// logical [`BlobId`] without writing, hashing each chunk exactly once. It
+    /// then emits each verified immutable chunk by identity without hashing it
+    /// again: the in-memory view cannot change under `&self`, so no
+    /// unauthenticated byte reaches `output` and no chunk pays for two hashes.
     ///
     /// Short writes are completed and interrupted writes are retried. This
     /// synchronous blocking operation allocates no adapter-owned heap memory,
@@ -68,7 +65,7 @@ impl ReferenceStore {
             .ok_or(ReconstructionError::LayoutMissing {
                 requested: layout_id,
             })?;
-        reconstruct_admitted(self, layout_id, layout, output)
+        reconstruct_admitted(self, layout_id, layout, output).map_err(ReconstructionError::from)
     }
 
     /// Reconstructs through a caller-supplied admitted semantic layout.
@@ -95,7 +92,7 @@ impl ReferenceStore {
             .encode_record()
             .map_err(ReconstructionError::LayoutEncoding)?
             .id();
-        reconstruct_admitted(self, layout_id, layout, output)
+        reconstruct_admitted(self, layout_id, layout, output).map_err(ReconstructionError::from)
     }
 
     /// Decodes and reconstructs one exact canonical layout record.
@@ -123,161 +120,6 @@ impl ReferenceStore {
         let layout = AdmittedLayout::decode_record(encoded, policy)
             .map_err(ReconstructionError::LayoutDecode)?;
         self.reconstruct_admitted_layout(&layout, output)
-    }
-}
-
-fn reconstruct_admitted<W>(
-    store: &ReferenceStore,
-    layout_id: LayoutId,
-    layout: &AdmittedLayout,
-    output: &mut W,
-) -> Result<ReconstructionReceipt, ReconstructionError>
-where
-    W: Write + ?Sized,
-{
-    verify_complete_blob(store, layout_id, layout)?;
-    let written = emit_authenticated(store, layout_id, layout, output)?;
-    let expected = layout.target().logical_length();
-    if written != expected {
-        return Err(ReconstructionError::WrittenLengthMismatch {
-            layout: layout_id,
-            expected,
-            observed: written,
-        });
-    }
-    Ok(ReconstructionReceipt::new(
-        layout.target(),
-        layout_id,
-        written,
-    ))
-}
-
-fn verify_complete_blob(
-    store: &ReferenceStore,
-    layout_id: LayoutId,
-    layout: &AdmittedLayout,
-) -> Result<(), ReconstructionError> {
-    let mut hasher = BlobHasher::new();
-    let mut profile = ProfileVerifier::new(layout_id, layout)?;
-    for (index, entry) in layout.entries().iter().copied().enumerate() {
-        let bytes =
-            verified_chunk(store, layout_id, index, entry).map_err(reconstruction_chunk_error)?;
-        profile.feed(bytes)?;
-        hasher
-            .update(bytes)
-            .map_err(ReconstructionError::BlobHash)?;
-    }
-    profile.finish()?;
-    let observed = hasher.finish();
-    let expected = layout.target();
-    if observed != expected {
-        return Err(ReconstructionError::BlobIdentityMismatch {
-            layout: layout_id,
-            expected,
-            observed,
-        });
-    }
-    Ok(())
-}
-
-fn emit_authenticated<W>(
-    store: &ReferenceStore,
-    layout_id: LayoutId,
-    layout: &AdmittedLayout,
-    output: &mut W,
-) -> Result<BlobLength, ReconstructionError>
-where
-    W: Write + ?Sized,
-{
-    let mut written = 0_u64;
-    for (index, entry) in layout.entries().iter().copied().enumerate() {
-        let bytes =
-            verified_chunk(store, layout_id, index, entry).map_err(reconstruction_chunk_error)?;
-        write_chunk(output, layout_id, bytes, &mut written)?;
-    }
-    Ok(BlobLength::new(written))
-}
-
-fn write_chunk<W>(
-    output: &mut W,
-    layout_id: LayoutId,
-    bytes: &[u8],
-    written: &mut u64,
-) -> Result<(), ReconstructionError>
-where
-    W: Write + ?Sized,
-{
-    write_all(output, bytes, written).map_err(|error| reconstruction_output_error(layout_id, error))
-}
-
-const fn reconstruction_chunk_error(error: ChunkVerificationError) -> ReconstructionError {
-    match error {
-        ChunkVerificationError::Missing {
-            layout,
-            index,
-            requested,
-        } => ReconstructionError::ChunkMissing {
-            layout,
-            index,
-            requested,
-        },
-        ChunkVerificationError::Hash {
-            layout,
-            index,
-            expected,
-            source,
-        } => ReconstructionError::ChunkHash {
-            layout,
-            index,
-            expected,
-            source,
-        },
-        ChunkVerificationError::IdentityMismatch {
-            layout,
-            index,
-            expected,
-            observed,
-        } => ReconstructionError::ChunkIdentityMismatch {
-            layout,
-            index,
-            expected,
-            observed,
-        },
-    }
-}
-
-fn reconstruction_output_error(layout: LayoutId, error: OutputWriteError) -> ReconstructionError {
-    match error {
-        OutputWriteError::WriteZero { bytes_written } => ReconstructionError::WriteZero {
-            layout,
-            bytes_written: BlobLength::new(bytes_written),
-        },
-        OutputWriteError::InvalidWriteCount {
-            maximum,
-            observed,
-            bytes_written,
-        } => ReconstructionError::InvalidWriteCount {
-            layout,
-            maximum,
-            observed,
-            bytes_written: BlobLength::new(bytes_written),
-        },
-        OutputWriteError::Write {
-            bytes_written,
-            source,
-        } => ReconstructionError::Write {
-            layout,
-            bytes_written: BlobLength::new(bytes_written),
-            source,
-        },
-        OutputWriteError::LengthOverflow {
-            bytes_written,
-            incoming,
-        } => ReconstructionError::WrittenLengthOverflow {
-            layout,
-            bytes_written: BlobLength::new(bytes_written),
-            incoming,
-        },
     }
 }
 

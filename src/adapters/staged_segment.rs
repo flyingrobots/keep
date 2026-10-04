@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use super::recovery_segment_resume_state::RecoverySegmentResumeState;
+use super::recovery::recovery_segment_resume_state::RecoverySegmentResumeState;
 use super::segment_digest_builder::SegmentDigestBuilder;
 use super::{
     AdmittedSegmentRecord, RecoverySegmentResumeRequest, SealedSegment, SegmentDurabilityPhase,

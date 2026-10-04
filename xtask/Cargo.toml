@@ -9,6 +9,7 @@ publish = false
 [features]
 default = ["repository-tasks"]
 golden-protocol-fuzz = []
+benchmark-report-fuzz = []
 repository-json-fuzz = ["dep:serde", "dep:serde_json"]
 repository-tasks = [
     "dep:blake3",
@@ -36,7 +37,7 @@ md-5 = { version = "=0.11.0", default-features = false, optional = true }
 # Dedicated unsafe boundary sets exact child working directories by descriptor.
 repository-process-spawn = { path = "../repository-process-spawn", optional = true }
 # Safe POSIX descriptor flags and process-group signaling bound repository tools.
-rustix = { version = "=1.1.4", default-features = false, features = ["fs", "process", "std"], optional = true }
+rustix = { version = "=1.1.5", default-features = false, features = ["fs", "process", "std"], optional = true }
 # Serde drives duplicate-refusing repository JSON admission; no types escape xtask.
 serde = { version = "=1.0.229", default-features = false, features = ["std"], optional = true }
 # Typed JSON admission checks the committed documentation-tool lock graph.
@@ -44,7 +45,7 @@ serde_json = { version = "=1.0.151", default-features = false, features = ["std"
 # Safe self-pipe delivery forwards terminal signals to active child groups.
 signal-hook = { version = "=0.4.4", default-features = false, features = ["iterator"], optional = true }
 # Pure Rust YAML admission identifies executable GitHub Actions steps.
-yaml-rust2 = { version = "=0.11.0", default-features = false, optional = true }
+yaml-rust2 = { version = "=0.13.0", default-features = false, optional = true }
 
 [[bin]]
 name = "xtask"

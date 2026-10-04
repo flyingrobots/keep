@@ -3,9 +3,9 @@
 use super::layout_id_binary_error::LayoutIdBinaryParseError;
 use crate::{LayoutId, LayoutRecordLength};
 
-const BINARY_MAGIC: [u8; 16] = *b"KEEP:LAYOUT:ID\0\0";
-const IDENTITY_VERSION: u16 = 1;
-const LAYOUT_CODEC: u16 = 1;
+pub(super) const BINARY_MAGIC: [u8; 16] = *b"KEEP:LAYOUT:ID\0\0";
+pub(super) const IDENTITY_VERSION: u16 = 1;
+pub(super) const LAYOUT_CODEC: u16 = 1;
 const BINARY_BYTES: usize = 60;
 
 impl LayoutId {
@@ -108,7 +108,9 @@ const fn validate_codec(observed: u16) -> Result<(), LayoutIdBinaryParseError> {
     })
 }
 
-fn validate_plan_length(observed: u64) -> Result<LayoutRecordLength, LayoutIdBinaryParseError> {
+pub(super) fn validate_plan_length(
+    observed: u64,
+) -> Result<LayoutRecordLength, LayoutIdBinaryParseError> {
     if !(LayoutRecordLength::MINIMUM.get()..=LayoutRecordLength::MAXIMUM.get()).contains(&observed)
     {
         return Err(LayoutIdBinaryParseError::PlanLengthOutOfBounds {

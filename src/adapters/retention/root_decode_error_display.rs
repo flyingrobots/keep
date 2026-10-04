@@ -1,0 +1,167 @@
+//! This boundary module owns retention root decode diagnostics and sources.
+
+use std::{error::Error, fmt};
+
+use super::RetentionRootDecodeError;
+impl fmt::Display for RetentionRootDecodeError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::FramingPrefixImpossible { observed } => write!(
+                formatter,
+                "retention root size fields have no canonical completion at {observed} bytes"
+            ),
+            Self::Truncated { expected, observed } => {
+                write!(
+                    formatter,
+                    "retention root has {observed} bytes; expected {expected}"
+                )
+            }
+            Self::TrailingData { expected, observed } => write!(
+                formatter,
+                "retention root has trailing data: expected {expected} bytes, observed {observed}"
+            ),
+            Self::PrefixByteMismatch {
+                offset,
+                expected,
+                observed,
+            } => prefix_failure(formatter, *offset, *expected, *observed),
+            Self::InvalidMagic { observed } => {
+                write!(formatter, "invalid retention root magic {observed:02x?}")
+            }
+            Self::UnsupportedVersion { expected, observed } => write!(
+                formatter,
+                "unsupported retention root version {observed}; expected {expected}"
+            ),
+            Self::InvalidHeaderLength { expected, observed } => write!(
+                formatter,
+                "retention root header length {observed}; expected {expected}"
+            ),
+            Self::UnsupportedFlags { observed } => {
+                write!(
+                    formatter,
+                    "unsupported retention root flags {observed:#010x}"
+                )
+            }
+            Self::DeclaredLengthMismatch { expected, observed } => write!(
+                formatter,
+                "retention root declares {observed} bytes; canonical fields require {expected}"
+            ),
+            Self::LengthOverflow => formatter.write_str("retention root length overflow"),
+            Self::InvalidAnchorWidth { expected, observed } => write!(
+                formatter,
+                "retention root anchor width {observed}; expected {expected}"
+            ),
+            Self::NonZeroReserved { field } => {
+                write!(
+                    formatter,
+                    "retention root {field} reserved bytes are nonzero"
+                )
+            }
+            Self::Generation { source } => write!(formatter, "invalid root generation: {source}"),
+            Self::Namespace { source } => write!(formatter, "invalid root namespace: {source}"),
+            Self::AnchorCountExceeded { maximum, observed } => write!(
+                formatter,
+                "retention root declares {observed} anchors; maximum is {maximum}"
+            ),
+            Self::Profile { source } => write!(formatter, "invalid root profile: {source}"),
+            Self::ClosureLimit { source } => {
+                write!(formatter, "invalid root closure limit: {source}")
+            }
+            Self::ClosureLimitPrefixAboveMaximum {
+                limit,
+                minimum,
+                maximum,
+            } => write!(
+                formatter,
+                "retention root {limit} prefix requires at least {minimum}; maximum is {maximum}"
+            ),
+            Self::BlobId { index, source } => identity_failure(formatter, "BlobId", *index, source),
+            Self::LayoutLengthPrefixAboveMaximum {
+                index,
+                minimum,
+                maximum,
+            } => write!(
+                formatter,
+                "retention anchor {index} layout-length prefix requires at least {minimum}; maximum is {maximum}"
+            ),
+            Self::LayoutId { index, source } => {
+                identity_failure(formatter, "LayoutId", *index, source)
+            }
+            Self::NonCanonicalAnchorOrder { index, .. } => write!(
+                formatter,
+                "retention anchor {index} is not greater than its predecessor"
+            ),
+            Self::Allocation { .. } => {
+                formatter.write_str("retention root anchor allocation failed")
+            }
+            Self::AnchorSetDigestMismatch { .. } => {
+                formatter.write_str("retention root anchor-set digest mismatch")
+            }
+            Self::RootDigestMismatch { .. } => {
+                formatter.write_str("retention root digest mismatch")
+            }
+            Self::ChecksumMismatch { .. } => {
+                formatter.write_str("retention root checksum mismatch")
+            }
+            Self::Semantic { source } => write!(formatter, "invalid semantic root: {source}"),
+        }
+    }
+}
+
+fn prefix_failure(
+    formatter: &mut fmt::Formatter<'_>,
+    offset: usize,
+    expected: u8,
+    observed: u8,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "retention stage byte {offset} is {observed:#04x}; expected {expected:#04x}"
+    )
+}
+
+fn identity_failure(
+    formatter: &mut fmt::Formatter<'_>,
+    kind: &str,
+    index: u32,
+    source: &dyn Error,
+) -> fmt::Result {
+    write!(
+        formatter,
+        "invalid {kind} in retention anchor {index}: {source}"
+    )
+}
+
+impl Error for RetentionRootDecodeError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Generation { source } => Some(source),
+            Self::Namespace { source } => Some(source),
+            Self::Profile { source } => Some(source),
+            Self::ClosureLimit { source } => Some(source),
+            Self::BlobId { source, .. } => Some(source),
+            Self::LayoutId { source, .. } => Some(source),
+            Self::Allocation { source } => Some(source),
+            Self::Semantic { source } => Some(source),
+            Self::Truncated { .. }
+            | Self::TrailingData { .. }
+            | Self::PrefixByteMismatch { .. }
+            | Self::FramingPrefixImpossible { .. }
+            | Self::ClosureLimitPrefixAboveMaximum { .. }
+            | Self::LayoutLengthPrefixAboveMaximum { .. }
+            | Self::InvalidMagic { .. }
+            | Self::UnsupportedVersion { .. }
+            | Self::InvalidHeaderLength { .. }
+            | Self::UnsupportedFlags { .. }
+            | Self::DeclaredLengthMismatch { .. }
+            | Self::LengthOverflow
+            | Self::InvalidAnchorWidth { .. }
+            | Self::NonZeroReserved { .. }
+            | Self::AnchorCountExceeded { .. }
+            | Self::NonCanonicalAnchorOrder { .. }
+            | Self::AnchorSetDigestMismatch { .. }
+            | Self::RootDigestMismatch { .. }
+            | Self::ChecksumMismatch { .. } => None,
+        }
+    }
+}

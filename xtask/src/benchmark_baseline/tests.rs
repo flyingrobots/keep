@@ -116,6 +116,10 @@ fn captured_source_identity_detects_assume_unchanged_bytes() -> Result<(), Box<d
     fs::write(&source, b"law\n")?;
     git(directory.path(), &["add", "tracked.txt"])?;
     git(directory.path(), &["commit", "--quiet", "-m", "fixture"])?;
+    assert_eq!(environment::source_tree_state(directory.path())?, "clean");
+    fs::write(&source, b"rot\n")?;
+    assert_eq!(environment::source_tree_state(directory.path())?, "dirty");
+    fs::write(&source, b"law\n")?;
     git(
         directory.path(),
         &["update-index", "--assume-unchanged", "tracked.txt"],
@@ -127,7 +131,7 @@ fn captured_source_identity_detects_assume_unchanged_bytes() -> Result<(), Box<d
         &["status", "--porcelain=v1", "--untracked-files=all"],
     )?;
     assert!(status.is_empty());
-    assert_eq!(environment::capture(directory.path())?.tree, "dirty");
+    assert_eq!(environment::source_tree_state(directory.path())?, "dirty");
     directory.close()?;
     Ok(())
 }
@@ -166,32 +170,131 @@ fn host() -> CapturedHost {
     }
 }
 
+const HISTORICAL_BASELINE: &str =
+    include_str!("../../../benchmark/baselines/c529c07-aarch64-apple-darwin.tsv");
+
 fn report(environment: &CapturedEnvironment, scenarios: usize, profiles: usize) -> String {
-    let mut report = format!(
-        "schema\tkeep.streaming-cas-baseline/v1\n\
-         metadata\tgit-commit\t{}\n\
-         metadata\tgit-tree\t{}\n\
-         metadata\trustc-version\t{}\n\
-         metadata\ttarget-triple\t{}\n\
-         metadata\tos-description\t{}\n\
-         metadata\tcpu-model\t{}\n\
-         metadata\tlogical-cpu-count\t{}\n\
-         metadata\tbuild-profile\toptimized-release\n\
-         threshold\tall-performance-metrics\tunconfigured\t\
-         requires-controlled-baseline-history\n",
-        environment.commit,
-        environment.tree,
-        environment.rustc_version,
-        environment.target_triple,
-        environment.host.os_description,
-        environment.host.cpu_model,
-        environment.host.logical_cpu_count
-    );
-    for index in 0..scenarios {
-        let _written = writeln!(report, "scenario\t{index}");
+    let admitted_scenarios: Vec<_> = HISTORICAL_BASELINE
+        .lines()
+        .filter(|line| line.starts_with("scenario\t"))
+        .take(scenarios)
+        .collect();
+    let admitted_profiles: Vec<_> = HISTORICAL_BASELINE
+        .lines()
+        .filter(|line| line.starts_with("profile\t"))
+        .take(profiles)
+        .collect();
+    let mut output = String::new();
+    for line in HISTORICAL_BASELINE.lines() {
+        if line.starts_with("scenario\t") && !admitted_scenarios.contains(&line) {
+            continue;
+        }
+        if line.starts_with("profile\t") && !admitted_profiles.contains(&line) {
+            continue;
+        }
+        let _written = writeln!(output, "{line}");
     }
-    for index in 0..profiles {
-        let _written = writeln!(report, "profile\t{index}");
-    }
-    report
+    output
+        .replace(
+            "c529c07f385b5bcd76a4e57c1987001d496f9135",
+            &environment.commit,
+        )
+        .replace(
+            "rustc 1.96.0 (ac68faa20 2026-05-25)",
+            &environment.rustc_version,
+        )
+        .replace(
+            "metadata\tlogical-cpu-count\t10",
+            "metadata\tlogical-cpu-count\t1",
+        )
 }
+
+#[test]
+fn report_admission_refuses_conflicting_and_identical_source_duplicates() {
+    let environment = environment();
+    for commit in [
+        &environment.commit,
+        &String::from("ffffffffffffffffffffffffffffffffffffffff"),
+    ] {
+        let mut bytes = report(&environment, 13, 5);
+        let _written = writeln!(bytes, "metadata\tgit-commit\t{commit}");
+        assert!(matches!(
+            artifact::validate(bytes.as_bytes(), &environment),
+            Err(BenchmarkBaselineError::DuplicateReportMetadata { coordinate })
+                if coordinate == "git-commit"
+        ));
+    }
+}
+
+#[test]
+fn report_admission_requires_exact_headers_and_canonical_numbers() {
+    let environment = environment();
+    let valid = report(&environment, 13, 5);
+    let header = super::report_schema::SCENARIO_HEADER;
+    for (malformed, expected, observed) in [
+        (
+            valid.replace("scenario-header\tname", "scenario-header\tnames"),
+            header,
+            header.replace("\tname\t", "\tnames\t"),
+        ),
+        (
+            valid.replace(
+                "scenario\tcold-ingest\tingest-chunk-and-blob-identity\t100",
+                "scenario\tcold-ingest\tingest-chunk-and-blob-identity\t0100",
+            ),
+            "canonical unsigned decimal",
+            String::from("0100"),
+        ),
+        (
+            format!("{valid}unexpected\trow\n"),
+            "end of report",
+            String::from("unexpected\trow"),
+        ),
+    ] {
+        assert!(matches!(
+            artifact::validate(malformed.as_bytes(), &environment),
+            Err(BenchmarkBaselineError::InvalidReportRow { expected: actual_expected, observed: actual_observed })
+                if actual_expected == expected && actual_observed == observed
+        ));
+    }
+    assert!(artifact::validate(valid.as_bytes(), &environment).is_ok());
+}
+
+#[test]
+fn malformed_report_rows_cannot_forge_diagnostic_lines() {
+    let error = BenchmarkBaselineError::InvalidReportRow {
+        expected: "canonical unsigned decimal",
+        observed: String::from("1\nforged\tvalue"),
+    };
+    assert_eq!(
+        error.to_string(),
+        "benchmark report expected canonical unsigned decimal, observed `1\\nforged\\tvalue`"
+    );
+}
+
+#[path = "numeric_format_tests.rs"]
+mod numeric_format_tests;
+
+#[path = "metadata_policy_tests.rs"]
+mod metadata_policy_tests;
+
+#[path = "metric_relation_tests.rs"]
+mod metric_relation_tests;
+
+#[path = "counter_width_tests.rs"]
+mod counter_width_tests;
+
+#[path = "report_input_tests.rs"]
+mod report_input_tests;
+
+#[path = "row_mutation_tests.rs"]
+mod row_mutation_tests;
+
+#[path = "report_compatibility_tests.rs"]
+mod report_compatibility_tests;
+
+#[path = "catalog_membership_tests.rs"]
+mod catalog_membership_tests;
+
+#[path = "completeness_tests.rs"]
+mod completeness_tests;

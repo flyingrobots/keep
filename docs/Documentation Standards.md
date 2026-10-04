@@ -45,6 +45,8 @@ Keep keeps its durable truth in a small set of known places.
 | `AGENTS.md` | Normative engineering contract for contributors and agents: governing doctrine, hexagonal boundaries, and hard rules. |
 | `docs/Rust Standards.md` | The full normative Rust Engineering Standard that `AGENTS.md` summarizes. |
 | `docs/Documentation Standards.md` | This standard. |
+| `docs/Testing Standards.md` | Binding standards for behavioral evidence, independent oracles, falsification, isolation, faults and trustworthy gates. |
+| `docs/testing/enforcement.md` | Test evidence declarations, accountable owners, current enforcing mechanisms and unresolved automation gaps. |
 | `docs/architecture/` | Current architecture: hexagonal boundaries, dependency direction, and core/port/adapter ownership, by subsystem. |
 | `docs/invariants/` | Living statement of what Keep currently guarantees: identity, format, durability, and recovery invariants. |
 | `docs/formats/` | Durable format specifications: magic bytes, versioning, canonical encoding, bounds, and golden fixtures. |
@@ -539,7 +541,7 @@ git diff --check
 git diff --cached --check
 ```
 
-Use `markdownlint-cli2` 0.23.2. The repository-owned configuration records
+Use `markdownlint-cli2` 0.23.3. The repository-owned configuration records
 deliberate rule choices. The Rust checker selects tracked Markdown plus
 nonignored new Markdown, disables configuration globs for that invocation,
 and refuses a different tool version. It also runs `lychee` 0.21.0 offline

@@ -36,7 +36,7 @@ impl DocumentationTools {
         tools.install(
             "markdownlint-cli2",
             "--version",
-            "markdownlint-cli2 v0.23.2 (markdownlint v0.41.1)",
+            "markdownlint-cli2 v0.23.3 (markdownlint v0.41.1)",
         )?;
         tools.install("lychee", "--version", "lychee 0.21.0")?;
         tools.install("actionlint", "-version", "1.7.12")?;

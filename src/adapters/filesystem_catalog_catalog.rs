@@ -61,7 +61,7 @@ pub(super) fn link(
         filesystem_catalog_publisher::CURRENT_CATALOG,
         catalog,
     )?;
-    filesystem_catalog_artifact::link_without_replacement(
+    super::filesystem_exact_record::link_without_replacement(
         &publisher.staging,
         filesystem_catalog_publisher::CURRENT_CATALOG,
         &publisher.catalogs,

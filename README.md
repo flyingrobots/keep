@@ -3,237 +3,300 @@
 **Correctness-first content-addressed storage.**
 
 > For a given content identity, Keep must return exactly the bytes named by
-> that identity—or refuse.
+> that identity — or refuse.
 
-The [authenticated reconstruction contract](docs/invariants/authenticated-reconstruction/README.md)
-defines the proof scopes, output-failure rule, receipt posture, and precise
-limits of that promise.
+Everything else in this repository exists to make that sentence true under
+power loss, process death, corrupted disks, and byte-identical files swapped
+in underneath it. The [authenticated reconstruction contract][reconstruction]
+states the promise precisely, including its limits.
 
-Keep is a standalone Rust library for durable, content-addressed storage. It is
-intended to provide streaming ingestion, content-defined chunking, physical
-deduplication, exact range reads, explicit retention, integrity verification,
-crash recovery, and garbage collection without relying on Git or subprocesses
-in the storage path.
+Keep is a standalone Rust library. It is the storage layer beneath
+[Graft](https://github.com/flyingrobots/graft) and
+[Echo](https://github.com/flyingrobots/echo), and it is built so that neither
+of them — nor anything else — can weaken its guarantee by leaning on it.
 
-## Status
+## Why it exists
 
-Keep exposes strict, versioned `BlobId`, `ChunkId`, `StorageProfileId`, and
-`LayoutId` coordinates. It implements the frozen `fastcdc-64k-v1` detector and
-the canonical `keep.flat-chunks/v1` layout codec with language-neutral golden
-and mutation corpora.
+Most storage answers *"did you save my bytes?"* with a return code and a
+shrug. The write returned zero; the file is probably on disk; if the machine
+lost power between the write and the flush, you find out later.
 
-The public
-[non-durable reference CAS](docs/architecture/reference-store/README.md)
-provides capacity-bounded blocking ingestion, identity-based chunk
-deduplication, an explicit staged-to-visible transition, authenticated
-whole-blob reconstruction, and authenticated exact byte-range reads.
-Reconstruction verifies every chunk, replays the registered storage profile,
-and verifies the complete named `BlobId` before writing any bytes. Range reads
-load only the minimal overlapping chunks and state their narrower verification
-claim explicitly.
+Keep refuses to shrug. If it cannot prove it holds the exact bytes a name
+refers to, it fails loudly instead of returning a plausible approximation.
+That posture is called **fail-closed**, and it is much harder than it sounds:
 
-The public `keep.segment-store/v1` boundary provides exact segment, record,
-seal, catalog, and publication-head codecs plus explicit immutable-segment and
-catalog-generation transitions. `StagedSegment` writes only content-admitted
-chunk or layout records, while `AdmittedSegment` exposes payloads only after
-complete framing, checksum, logical-identity, duplicate, and physical-digest
-verification. A platform-admitted `FilesystemCatalogPublisher` exclusively
-creates the fixed `current.seg` stage without truncating existing evidence,
-and the `FilesystemSegmentStage` lifetime keeps that writer authority borrowed
-until the writable stage closes. Publisher construction consumes an
-unforgeable `FilesystemPlatformAdmission`. On Linux, its public initializer
-admits only one writable, non-casefolded ext4 store profile, requires every
-existing protocol directory to share the root's filesystem and mount identity,
-refuses unknown, aliased, or foreign namespace entries before mutation, creates
-or verifies the canonical `writer.lock`, `staging`, `segments`, and `catalogs`
-shape, and returns only after root synchronization with the writer lock
-retained. After publication, `FilesystemPlatformAdmission::reopen` reacquires
-the existing writer lock without mutation and requires that exact initialized
-shape plus a regular `HEAD` before returning new publisher authority.
+- a disk that returns a corrupted block does not announce itself;
+- a process killed mid-update leaves state that *looks* finished;
+- a byte-for-byte identical file substituted at the same path reads as the
+  original.
 
-`FilesystemCatalogPublisher` retains one kernel-managed writer lock and pinned
-root, staging, segment-pool, and catalog-pool capabilities for the complete
-blocking publication. It reopens and verifies synchronized stages, uses
-no-replacement immutable-pool links, synchronizes every required file and
-directory, verifies the complete `head.next` view, atomically replaces `HEAD`,
-and returns a receipt only after root synchronization. New filesystem segment
-publication requires `FilesystemCatalogPublisher::select_segment` to consume
-the sealed writable stage, prove that this publisher created it, and bind its
-synchronized metadata to exact admitted bytes. A storage-agnostic
-`ClosedSegment` receipt alone cannot authorize a retained filesystem stage.
-`FilesystemCatalogSnapshot` follows only the exact checksummed head, catalog,
-and segment coordinates and retains caller-bounded immutable bytes for pinned
-logical reads.
+Keep is required to refuse all three, before mutating anything.
 
-The reference CAS is executable evidence for M2 storage laws, not a durable
-backend. Its committed state is process memory; process death loses it all.
-The durable boundary can initialize or reopen and platform-admit a store only
-under the documented Linux ext4 contract. Acquiring `FilesystemWriterLock`
-alone cannot construct a filesystem publisher. Ambiguous crash states remain
-explicit recovery work. An absent `HEAD` is admitted for first publication
-only when both immutable pools are empty. The public storage-independent
-recovery inventory counts all four protocol namespaces before retaining names,
-applies a configurable ceiling no greater than 2,097,152 entries, and returns
-duplicate-free deterministic raw name order.
-`FilesystemRecoveryInventoryReader` implements that contract with pinned,
-no-follow namespace capabilities and pre/post identity verification on the
-admitted Linux ext4 profile. Its bounded stage-fingerprint operation opens
-fixed stages relative to those capabilities, refuses links and nonregular
-files, and verifies entry identity and length after reading. Complete
-caller-supplied segment-stage bytes can be classified as a reusable prefix,
-complete admitted segment, or exact truncation only while every available
-fixed-framing byte remains canonical. Catalog and next-head stages apply the
-same prefix rule before distinguishing truncation from complete canonical
-bytes.
-Materialized bytes enter read-only semantic assessment only after their stage,
-length, and recomputed fingerprint match prior observation evidence.
-An exact reusable segment assessment can authorize storage-independent
-continuation: the executor consumes writer authority, re-admits the complete
-bounded prefix, rebuilds digest and duplicate-identity state, and returns the
-ordinary append-only stage without rewriting admitted bytes.
-`FilesystemRecoverySegmentResumer` implements that contract with pinned
-namespaces and writer authority, no-follow read-write reopening, exact bounded
-materialization, final streamed fingerprint plus entry and namespace
-revalidation, and an append position equal to the admitted prefix length.
+## What it guarantees today
 
-Exact truncation assessments can authorize durable, evidence-bound discard.
-Complete segment and catalog assessments can authorize verified immutable-pool
-completion through `FilesystemRecoveryStageCompleter`; its receipt proves a
-valid orphan, not reachability. A complete `head.next` and its transitive
-`CatalogSnapshot` can authorize storage-independent finalization only when the
-candidate is generation one over an uninitialized root or the exact successor
-of the expected current snapshot. The executor distinguishes first
-finalization from an already-finalized retry and returns only after root
-synchronization. `FilesystemRecoveryNextHeadFinalizer` retains pinned writer
-authority, reconstructs the complete current and candidate views without
-following links, verifies namespace and stage identity, synchronizes and
-reverifies the exact candidate, atomically replaces `HEAD`, and synchronizes
-the root. An already-finalized retry requires `head.next` to be absent.
-The repository-owned process-death matrix executes all 105
-`KEEP-CRASH-001`–`KEEP-CRASH-035` before/during/after coordinates in isolated
-process groups. Crash children execute the production initialization,
-segment-writing, catalog-publication, and recovery-discard protocols through
-fault-injecting port decorators; they do not synthesize the target namespace.
-Restart verification compares the exact Golden File Worldline namespace and
-bytes, checks hard-link identity and writer-lock release, runs the production
-recovery classifiers and immutable-artifact admission, and reconstructs the
-exact published generation and visible one-zero chunk when `HEAD` exists. This
-matrix proves application process-death behavior; it does not simulate host
-power loss. Retention, compaction, and garbage collection remain planned.
-Presence in the reference CAS does not claim retention, crash recovery, or
-durability.
+- **Exact identity.** `BlobId`, `ChunkId`, `LayoutId`, and
+  `StorageProfileId` are strict, versioned, and canonically encoded, with
+  language-neutral golden and mutation corpora.
+- **Deterministic chunking.** The frozen `fastcdc-64k-v1` profile splits
+  input by content, so an insertion near the front of a file leaves the
+  chunks after it untouched and deduplicated.
+- **Authenticated reads.** Whole-blob reconstruction verifies every chunk,
+  replays the storage profile, and verifies the complete `BlobId` before a
+  single byte reaches the caller. It also provides
+  authenticated exact byte-range reads that load only the overlapping chunks
+  and state their narrower claim explicitly.
+- **Durable version-1 segment store.** `StagedSegment` writes only
+  content-admitted records; `AdmittedSegment` exposes payloads only after
+  complete framing, checksum, and identity verification. Immutable segments,
+  generation-versioned catalogs, and a fixed-width `HEAD` are published
+  through an ordered protocol whose every step is a named crash point.
+  Platform admission is Linux ext4, non-casefolded, one writer.
+- **Process-death recovery evidence.** The crash matrix kills real writer processes
+  at 156 before/during/after coordinates (`KEEP-CRASH-001`–`052`) and
+  verifies the store lands in exactly one documented lawful state each time,
+  for version-1 publication and for version-2 retention publication.
+- **Version-2 retention and migration, forward path.** Explicit retention
+  roots, deterministic closure verification, a one-way 21-phase migration,
+  and a 17-phase retention publication — all with production filesystem
+  writers, all preserving every version-1 byte. Reopening a migrated store
+  jointly admits its marker, intent, and receipt, binds the root's device and
+  inode identity to the intent, and pins the directories it admitted. Mount
+  identity remains a check within the live migration process. Publication
+  binds this store's own catalog head and the catalog it selects, and refuses
+  retained stages, superseded candidates, substituted
+  files, replaced protocol directories, and every namespace or capacity
+  violation before it writes anything. Each refusal is a typed value, not a
+  string.
+- **Migration restart recovery.** Recovery verifies current authority,
+  classifies the observed prefix, and resumes an exact persisted migration
+  intent through the remaining phases. An incomplete pre-effect intent stage
+  is discarded and rebuilt from freshly verified current intent. Its crash
+  matrix kills real writer processes
+  at 68 before/during/after coordinates (`KEEP-CRASH-053`–`073`), preserving
+  every version-1 byte. The [restart matrix](docs/testing-evidence/migration-restart-matrix.md) records additional hostile-prefix evidence and its limits.
 
-Run the complete debug-profile matrix:
+Version-2 complete-stage retention recovery, fenced retention snapshots and model-based transitions are implemented on main through [PR #99](https://github.com/flyingrobots/keep/pull/99).
 
-```bash
-cargo xtask durability-crash-matrix
+The retention process-death sequence checks the recovered head generation and exact selected-root bytes before retry; its [evidence receipt](docs/testing-evidence/retention-crash-reader-oracle.md) bounds that claim to the declared initial-publication crash coordinates.
+
+Recovery failures retain their typed cause and report known effects separately from uncertain effects or durability under the [approved recovery contract](docs/formats/segment-store-v2/retention-recovery.md).
+
+Writer authority coordinates cooperating writers in a managed namespace; it does not isolate arbitrary concurrent out-of-band filesystem mutation.
+
+`DurableStore` supplies fenced authenticated whole-blob reconstruction and exact-range reads, delivered through [PR #164](https://github.com/flyingrobots/keep/pull/164); its [read contract](docs/invariants/authenticated-reconstruction/README.md) distinguishes complete-blob and range evidence and separate allocation limits.
+
+[Explicit verification reports](docs/invariants/verification/README.md) name the subject, requested depth and evidence actually established, delivered through [PR #165](https://github.com/flyingrobots/keep/pull/165). Unsupported depths refuse; a report grants no live retention authority.
+
+[Reader-fence process-death evidence](docs/testing-evidence/reader-fence-process.md) verifies the lock lifecycle and preserved fence bytes; it is not physical power-loss evidence.
+
+## What it does not do yet
+
+Incomplete retention stages are preserved and block publication pending explicit disposition; automatic disposal remains deferred in [#155](https://github.com/flyingrobots/keep/issues/155).
+
+Complete orphans remain recovery-protected until explicit disposition lands with garbage collection (#21).
+
+Migration restart recovery is implemented and does not grant retention authority.
+
+A version-1 store stays admitted until its owner migrates it.
+
+| Gap | Tracked |
+| --- | --- |
+| Candidate-catalog preservation of every retained closure | [#125](https://github.com/flyingrobots/keep/issues/125) |
+| Garbage collection and identity-preserving compaction | [#21](https://github.com/flyingrobots/keep/issues/21) |
+| Bounded production ingestion through the durable store | [#82](https://github.com/flyingrobots/keep/issues/82) |
+| Encrypted representations | [#86](https://github.com/flyingrobots/keep/issues/86) |
+
+Keep also does not claim secure deletion. Releasing a retention root
+publishes a successor generation; it does not assert that bytes were
+destroyed.
+
+The authoritative status of every requirement, with the test that proves it,
+is the [requirements ledger][ledger]. Its first rule: *a planned case is not
+evidence.*
+
+## How it works
+
+Three layers. Names point down into storage; proofs point back up. Every
+physical thing is named by a hash of what it contains, and every retention
+claim is verified by walking down to the bytes. Only two files are ever
+replaced in place:
+
+```mermaid
+flowchart TB
+    IN([bytes in]) --> CHUNK
+
+    subgraph LOGICAL["Logical"]
+        CHUNK["chunk<br/>fastcdc-64k-v1"] --> CID["ChunkId"]
+        CID --> ASM["assemble<br/>flat-chunks/v1"] --> LID["LayoutId"]
+        LID --> BID["BlobId<br/>the whole payload"]
+    end
+
+    subgraph PHYSICAL["Physical"]
+        HEAD["HEAD · 128 B<br/>the only file v1 ever replaces"]
+        CAT["catalog @ generation N<br/>identity → location"]
+        SEG["immutable segments<br/>sealed, never edited"]
+        HEAD --> CAT --> SEG
+    end
+
+    subgraph RETENTION["Retention"]
+        RHEAD["retention/HEAD · 144 B<br/>the only file v2 adds to that list"]
+        MAN["manifest<br/>namespace → root generation"]
+        ROOT["root<br/>anchors are BlobIds, generation-checked"]
+        RHEAD --> MAN --> ROOT
+    end
+
+    CID -- "stored as records in" --> SEG
+    LID -- "stored as records in" --> SEG
+    ROOT -. "closure walk proves every anchor reconstructs" .-> BID
+    BID --> OUT([exact bytes out — or a refusal])
+
+    classDef mutable stroke-width:3px
+    class HEAD,RHEAD mutable
 ```
 
-CI also runs the command through an optimized `xtask` build.
+The core protocol logic knows nothing about filesystems. It is written
+against capability traits — `RetentionPublicationStorage`, for example, names
+seventeen durability capabilities and nothing more. Filesystem behaviour lives
+in adapters that implement those traits. The ordering laws are proved
+exhaustively against fault-injecting fakes, and separately against real disks.
+
+Every durable change runs as a numbered phase sequence. Files are staged,
+synchronised, hard-linked into place without replacement, and only then is a
+fixed-width head replaced atomically. Cleanup happens after the commit, never
+before. Staged files are verified by device and inode identity at every
+transition, so a substituted byte-identical file refuses.
+
+The core holds no clock, no caller identity, no paths, and no application
+policy. Retention proves a *physical reconstruction* claim only — never what
+the content means, who owns it, or whether deleting it is legally safe.
+
+## Try it
+
+Keep is `0.0.0` and unpublished; build from source. The in-memory
+[non-durable reference CAS](docs/architecture/reference-store/README.md) is
+executable evidence for the storage laws, not a durable backend — process
+death loses everything in it.
 
 ```rust
-use keep::BlobId;
+use std::io::Cursor;
+use keep::{LayoutEntryLimit, ReferenceStore, ReferenceStoreCapacity};
 
-let identity = BlobId::hash_bytes(b"exact bytes")?;
-let canonical = identity.to_string();
-assert_eq!(canonical.parse::<BlobId>()?, identity);
+let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+
+// Stage: chunk, hash, and hold the bytes without making them visible.
+let mut source = Cursor::new(b"exact bytes, or nothing");
+let staged = store.stage(&mut source, LayoutEntryLimit::MAXIMUM)?;
+
+// Commit: the explicit staged-to-visible transition.
+let published = staged.commit(&mut store)?;
+
+// Read back: every chunk verified, the complete BlobId verified, then bytes.
+let mut output = Vec::new();
+store.reconstruct(published.target(), &mut output)?;
+assert_eq!(output, b"exact bytes, or nothing");
 # Ok::<(), Box<dyn std::error::Error>>(())
+```
+
+On Linux with the admitted ext4 profile, read an existing migrated version-two store whose retention roots anchor the requested blob. The following example is also compiled in the `DurableStore` API documentation. Its 16 MiB limit applies to aggregate catalog-selected segment bytes; catalog bytes and decoded metadata allocate separately.
+
+```rust
+#[cfg(target_os = "linux")]
+fn copy_retained_blob(
+    root: &std::path::Path,
+    target: keep::BlobId,
+    output: &mut impl std::io::Write,
+) -> Result<keep::DurableReconstructionReceipt, Box<dyn std::error::Error>> {
+    use keep::{
+        CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, LayoutEntryLimit,
+        ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit,
+    };
+    // Limit catalog-selected segment bytes; catalog and metadata allocate separately.
+    let policy = CatalogRestartPolicy::new(
+        SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
+        CatalogRestartByteLimit::new(16_777_216)?,
+    );
+    let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT)?;
+    let snapshot = store.snapshot()?;
+    Ok(snapshot.reconstruct(target, output)?)
+}
+```
+
+Snapshot admission materializes catalog bytes under the catalog format bounds and selected segment bytes under the supplied aggregate segment budget. Decoded indexes and retention records allocate additionally under separate format and record-count limits; the segment budget is not a total memory cap. Reads stream to the caller without an additional whole-blob buffer; a failed write may leave an untrusted prefix. Retain an explicit snapshot to make several reads against one fenced view. The receipt records that view but grants no retention after the snapshot is dropped. This read API performs no publication, repair or collection; see the [durable-read evidence and remaining acceptance work](docs/testing-evidence/durable-authenticated-reads.md).
+
+Run the full gate suite the way CI does:
+
+```bash
+cargo test --workspace --all-features --locked
+cargo xtask durability-crash-matrix        # kills real writer processes
+cargo xtask golden-file-worldline-check
+cargo xtask conformance-check
+```
+
+Select a crash campaign with `--sequence NAME` using these exact CLI names:
+
+| Name | Campaign |
+| --- | --- |
+| `segment` | Segment publication |
+| `catalog` | Catalog publication |
+| `head` | Publication-head replacement |
+| `recovery-discard` | Explicit recovery evidence discard |
+| `initialization` | Writer-locked initialization |
+| `retention` | Retention root, manifest, and head publication |
+| `migration` | Version-one to version-two migration |
+
+```bash
+cargo xtask durability-crash-matrix --sequence retention
 ```
 
 ## Design boundary
 
-Keep owns physical content storage:
+Keep owns physical content storage: exact byte identity; chunking and
+physical representation; streaming and range reads; retention roots and
+storage generations; verification, recovery, compaction, and garbage
+collection; optional storage encryption.
 
-- exact byte identity;
-- chunking and physical representation;
-- streaming and range reads;
-- retention roots and storage generations;
-- verification, recovery, compaction, and garbage collection;
-- optional storage encryption.
-
-Keep does not own application semantics. In particular, the core library must
-remain independent of Echo, Git, Graft, WARP, command-line interfaces, and
-application policy.
-
-An application may give stored bytes causal meaning, authority, provenance, or
-publication status. Keep reports only what its physical evidence can support.
+Keep does not own application semantics. The core stays independent of Echo,
+Git, Graft, WARP, command-line interfaces, and application policy. An
+application may give stored bytes causal meaning, authority, or provenance;
+Keep reports only what its physical evidence supports.
 
 ## Engineering standard
 
-Development is governed by the normative
-[Keep Rust Engineering Standard](docs/Rust%20Standards.md). Correctness,
+Development follows the normative
+[Keep Rust Engineering Standard](docs/Rust%20Standards.md): correctness,
 recoverability, auditability, and maintainability outrank performance and
-convenience.
+convenience. Stable Rust 1.96, edition 2024, `#![forbid(unsafe_code)]`,
+one writer and many readers, synchronous core APIs, versioned canonical
+formats. Every pedantic lint is an error. Modules are capped at 500 lines
+and functions at 60.
 
-Documentation is governed by the
-[Keep Documentation Standard](docs/Documentation%20Standards.md), which maps
-reader tasks onto Keep's architecture, invariant, format, and recovery
-corpus.
+Documentation follows the
+[Keep Documentation Standard](docs/Documentation%20Standards.md). Each page
+has one job; this one is the front door.
 
-The initial implementation will use:
+## Where to go next
 
-- stable Rust 1.96.0;
-- Rust edition 2024;
-- one writer and many readers unless a stronger concurrency model is designed;
-- synchronous core APIs until a demonstrated consumer requires otherwise;
-- versioned, canonical, independently testable durable formats;
-- no unsafe Rust in Keep-owned version-1 crates; dependency unsafe requires an
-  explicit review and cannot alter canonical identity.
+| You want to… | Read |
+| --- | --- |
+| Understand what is proved and what is not | [`docs/invariants/`](docs/invariants/) |
+| Read the byte-level formats | [`docs/formats/`](docs/formats/) |
+| See the architecture and port boundaries | [`docs/architecture/`](docs/architecture/) |
+| Follow the crash and recovery rules | [`segment-store-v1/recovery.md`](docs/formats/segment-store-v1/recovery.md) · [`segment-store-v2/recovery.md`](docs/formats/segment-store-v2/recovery.md) · [`segment-store-v2/migration-recovery.md`](docs/formats/segment-store-v2/migration-recovery.md) |
+| See how a retention generation is published | [`segment-store-v2/retention-publication.md`](docs/formats/segment-store-v2/retention-publication.md) |
+| Check reproducible performance evidence | [`docs/benchmarks/`](docs/benchmarks/) |
+| Run the language-neutral corpora | [`conformance/`](conformance/) |
+| See what changed | [`CHANGELOG.md`](CHANGELOG.md) |
 
-## Golden File Worldline
+## Contributing, security, license
 
-The first executable vertical is split into deliberately narrow milestones. M1
-proves that exact finite logical bytes have one canonical versioned identity,
-that calculation is invariant to tested input partitioning, that malformed or
-unsupported identity encodings are refused precisely, and that a bounded
-reference model returns exactly the bytes named by an admitted identity or
-refuses.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Every change must preserve the core
+law and pass the repository's formatting, linting, testing, and documentation
+gates.
 
-The complete Golden File Worldline is planned to demonstrate that Keep can:
-
-1. ingest exact logical bytes;
-2. retain and recover multiple nearby versions;
-3. reuse stable chunks after an early insertion;
-4. read an exact byte range without materializing the whole blob;
-5. refuse corrupted or ambiguous storage;
-6. recover to a documented lawful state after interruption.
-
-Items 1 through 6 describe the multi-milestone destination. M1 establishes the
-canonical identity boundary. M2 now provides deterministic chunk detection,
-canonical layouts, capacity-bounded ingestion, and authenticated whole-blob
-reconstruction and minimal exact range reads through the non-durable reference
-CAS. M3 now provides exact immutable-segment construction and verified
-admission. Catalog publication, durable retention and recovery, nearby-version
-workflows, complete namespace verification, and restart recovery remain future
-milestones.
-
-See the [M1 conformance contract](docs/conformance/golden-file-worldline.md),
-the [CDC profile corpus](conformance/cdc-profile/v1/README.md), the
-[chunk identity invariant](docs/invariants/chunk-identity/README.md), the
-[Flat Chunk Layout v1 specification](docs/formats/flat-chunk-layout-v1/README.md),
-the [layout corpus](conformance/layout/v1/README.md), and the
-[reference CAS contract](docs/architecture/reference-store/README.md) for the
-implemented proof boundaries and explicit nonclaims. The
-[Durable Segment Store v1 specification](docs/formats/segment-store-v1/README.md)
-and [segment-store corpus](conformance/segment-store/v1/README.md) define the
-implemented segment boundary and the still-planned publication and recovery
-work. The
-[streaming CAS baseline protocol](docs/benchmarks/streaming-cas-baseline-v1/README.md)
-defines reproducible performance evidence without treating measurements as
-correctness proof or weakening verification.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md). Every change must preserve Keep's core
-law and satisfy the repository's formatting, linting, testing, and review
-standards.
-
-## Security
-
-Please report vulnerabilities using the process in [SECURITY.md](SECURITY.md).
-Do not include plaintext content, keys, or other sensitive material in a public
-issue.
-
-## License
+Report vulnerabilities through [SECURITY.md](SECURITY.md). Do not include
+plaintext content, keys, or sensitive paths in a public issue.
 
 Licensed under the [Apache License 2.0](LICENSE).
+
+[reconstruction]: docs/invariants/authenticated-reconstruction/README.md
+[ledger]: docs/formats/segment-store-v2/requirements.md

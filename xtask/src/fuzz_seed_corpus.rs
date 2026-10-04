@@ -1,11 +1,16 @@
 //! This module owns deterministic fuzz seed recipes and materialization.
 
+mod benchmark_report_seeds;
 mod catalog_seeds;
 mod cdc_seeds;
 mod filesystem;
 mod identity_seeds;
 mod layout_seeds;
+mod migration_recovery_seeds;
+mod migration_seeds;
+mod retention_seeds;
 mod segment_seeds;
+mod segment_store_v2_fixture;
 
 use std::error::Error;
 use std::fmt;
@@ -65,10 +70,13 @@ impl Seed {
 pub(super) fn prepare(repository_root: &Path) -> Result<(), FuzzSeedError> {
     let files = RepositoryFiles::open(repository_root)?;
     let mut seeds = identity_seeds::seeds(&files)?;
+    seeds.extend(benchmark_report_seeds::seeds()?);
     seeds.extend(catalog_seeds::seeds(&files)?);
     seeds.extend(cdc_seeds::seeds()?);
     seeds.extend(golden_protocol_seeds_from(&files)?);
     seeds.extend(layout_seeds::seeds(&files)?);
+    seeds.extend(migration_seeds::seeds(&files)?);
+    seeds.extend(retention_seeds::seeds(&files)?);
     seeds.extend(segment_seeds::seeds(&files)?);
     files.write_seeds(&seeds)
 }

@@ -127,10 +127,29 @@ existing store root plus `staging`, `segments`, and `catalogs`. Both operations
 perform blocking filesystem I/O. Neither operation repairs, enumerates, or
 removes protocol state.
 
-Issue #16 defines the proof type but deliberately exposes no public producer.
-The filesystem transition suite uses a crate-private, test-only unchecked proof
-to exercise publication mechanics. Issue #17 must implement initialization and
-the platform contract before production callers can obtain admission.
+`FilesystemPlatformAdmission` has private fields, so only Keep's own
+initialization and platform-admission boundary can produce a production value.
+A new store obtains one through `FilesystemPlatformAdmission::initialize`,
+which runs the ordered initialization protocol (`KEEP-RECOVERY-002`); a
+published store reacquires one through `FilesystemPlatformAdmission::reopen`,
+which mutates nothing and admits the production platform
+(`KEEP-RECOVERY-003`). Both are described in
+[Recovery and platform contract](recovery.md).
+
+The crash matrix opens its catalog publisher through ordinary production
+initialization and admission, then wraps that publisher in fault-injecting
+decorators. Publication campaigns therefore require admitted Linux ext4 scratch
+storage.
+
+The feature-gated legacy `open_unchecked_for_repository_tasks` entry point now
+checks the same production filesystem profile against its retained root
+capability before constructing authority; its name no longer denotes a platform
+bypass. It reopens that pinned directory with a readable descriptor for profile
+ioctls, checks each existing protocol directory, and requires strict root identity.
+
+The pinned-root route does not re-admit an ambient pathname or claim to establish
+the historical spelling used to acquire the lock. Private unit-test construction
+remains separate and is not callable by external consumers.
 
 `publish_catalog_generation` performs complete semantic preflight before the
 first storage transition. With `FilesystemCatalogPublisher`, it then executes
@@ -161,12 +180,13 @@ head-selected coordinates, refuses symbolic links and nonregular artifacts,
 checks every length before allocation, and reconstructs logical bindings only
 after all canonical bytes and physical coordinates verify.
 
-Issue #16 does not implement store-root initialization, platform admission, or
-explicit recovery. A future admission producer must prove the exact canonical
-directories and persistent lock file before opening a publisher. Any retained
-`head.next` or `current.cat`, and any `current.seg` not owned by the selected
-staged segment, causes publication to refuse before mutation and requires issue
-recovery under #17. When `HEAD` is absent, the publisher probes both immutable pools
+Publication never initializes, admits, or recovers on its own. Admission
+proves the exact canonical directories and the persistent lock file before a
+publisher opens. Any retained `head.next` or `current.cat`, and any
+`current.seg` not owned by the selected staged segment, causes publication to
+refuse before mutation; the explicit recovery boundaries in
+[Recovery and platform contract](recovery.md) classify and resolve that
+residue. When `HEAD` is absent, the publisher probes both immutable pools
 and admits first publication only when both are empty; any entry is preserved
 as recovery evidence and refuses the operation. An already-current retry
 refuses every fixed-name stage.

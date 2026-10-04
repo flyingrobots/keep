@@ -1,0 +1,22 @@
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.20s
+     Running unittests src/lib.rs (<isolated-build>/debug/deps/keep-882caa9da157737f)
+
+running 1 test
+test adapters::filesystem_writer_lock::tests::replaced_lock_entry_refuses_authority_after_kernel_acquisition ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 352 filtered out; finished in 0.00s
+
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `release` profile [optimized] target(s) in 4.03s
+     Running unittests src/lib.rs (<isolated-build>/release/deps/keep-8ca1b588e6dfe3ea)
+
+running 1 test
+test adapters::filesystem_writer_lock::tests::replaced_lock_entry_refuses_authority_after_kernel_acquisition ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 352 filtered out; finished in 0.00s
+
+    Checking keep v0.0.0 (<isolated-build>)
+    Checking xtask v0.0.0 (<isolated-build>/xtask)
+    Checking keep-benchmark v0.0.0 (<isolated-build>/benchmark)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.60s

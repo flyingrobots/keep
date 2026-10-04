@@ -11,9 +11,10 @@ use super::{
     FilesystemRecoveryStageError, RecoveryEntryName, RecoveryInventory, RecoveryInventoryError,
     RecoveryInventoryLimit, RecoveryInventoryOperation, RecoveryInventoryStorage,
     RecoveryNamespace, RecoveryStage, RecoveryStageCompletionPool, RecoveryStageEvidence,
-    RecoveryStageNamespacePhase, RecoveryStageParent, filesystem_platform_profile,
-    filesystem_recovery_inventory_scan, filesystem_recovery_namespace::PinnedRecoveryDirectory,
-    filesystem_recovery_stage, read_recovery_inventory,
+    RecoveryStageNamespacePhase, RecoveryStageParent, filesystem_initialization_namespace,
+    filesystem_platform_profile, filesystem_recovery_inventory_scan,
+    filesystem_recovery_namespace::PinnedRecoveryDirectory, filesystem_recovery_stage,
+    read_recovery_inventory,
 };
 
 const STAGING_NAME: &str = "staging";
@@ -70,6 +71,13 @@ impl FilesystemRecoveryInventoryReader {
     }
 
     pub(super) fn from_root(root: Dir) -> Result<Self, RecoveryInventoryError> {
+        filesystem_initialization_namespace::admit_recoverable(&root).map_err(|source| {
+            RecoveryInventoryError::io(
+                RecoveryNamespace::Root,
+                RecoveryInventoryOperation::OpenNamespace,
+                source,
+            )
+        })?;
         let staging =
             PinnedRecoveryDirectory::open(&root, RecoveryNamespace::Staging, STAGING_NAME)?;
         let segments =
