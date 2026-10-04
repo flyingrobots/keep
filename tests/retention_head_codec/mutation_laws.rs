@@ -10,9 +10,14 @@ use keep::{ChecksummedRetentionHead, RetentionHeadDecodeError as Refusal, Retent
 use super::{CHECKSUM_OFFSET, ONE_ROOT_HEAD, fixture_bytes};
 use crate::support::{domain_hash, flip, patch};
 
+enum Seal {
+    Checksum,
+    Nothing,
+}
+
 struct Mutation {
     field: &'static str,
-    reseal: bool,
+    seal: Seal,
     mutate: fn(&mut Vec<u8>) -> io::Result<()>,
     refuses: fn(&Refusal) -> bool,
 }
@@ -20,13 +25,13 @@ struct Mutation {
 const MATRIX: &[Mutation] = &[
     Mutation {
         field: "magic",
-        reseal: true,
+        seal: Seal::Checksum,
         mutate: |bytes| flip(bytes, 15),
         refuses: |error| matches!(error, Refusal::InvalidMagic { .. }),
     },
     Mutation {
         field: "version",
-        reseal: true,
+        seal: Seal::Checksum,
         mutate: |bytes| patch(bytes, 16, &3_u16.to_be_bytes()),
         refuses: |error| {
             matches!(
@@ -40,7 +45,7 @@ const MATRIX: &[Mutation] = &[
     },
     Mutation {
         field: "record length",
-        reseal: true,
+        seal: Seal::Checksum,
         mutate: |bytes| patch(bytes, 18, &143_u16.to_be_bytes()),
         refuses: |error| {
             matches!(
@@ -54,19 +59,19 @@ const MATRIX: &[Mutation] = &[
     },
     Mutation {
         field: "flags",
-        reseal: true,
+        seal: Seal::Checksum,
         mutate: |bytes| patch(bytes, 20, &1_u32.to_be_bytes()),
         refuses: |error| matches!(error, Refusal::UnsupportedFlags { observed: 1 }),
     },
     Mutation {
         field: "liveness generation zero",
-        reseal: true,
+        seal: Seal::Checksum,
         mutate: |bytes| patch(bytes, 24, &0_u64.to_be_bytes()),
         refuses: |error| matches!(error, Refusal::LivenessGeneration { .. }),
     },
     Mutation {
         field: "liveness generation two without predecessor",
-        reseal: true,
+        seal: Seal::Checksum,
         mutate: |bytes| patch(bytes, 24, &2_u64.to_be_bytes()),
         refuses: |error| {
             matches!(
@@ -79,19 +84,19 @@ const MATRIX: &[Mutation] = &[
     },
     Mutation {
         field: "manifest length below bound",
-        reseal: true,
+        seal: Seal::Checksum,
         mutate: |bytes| patch(bytes, 32, &223_u64.to_be_bytes()),
         refuses: |error| matches!(error, Refusal::ManifestLength { .. }),
     },
     Mutation {
         field: "manifest length not congruent",
-        reseal: true,
+        seal: Seal::Checksum,
         mutate: |bytes| patch(bytes, 32, &225_u64.to_be_bytes()),
         refuses: |error| matches!(error, Refusal::ManifestLength { .. }),
     },
     Mutation {
         field: "predecessor digest at generation one",
-        reseal: true,
+        seal: Seal::Checksum,
         mutate: |bytes| flip(bytes, 72),
         refuses: |error| {
             matches!(
@@ -104,13 +109,13 @@ const MATRIX: &[Mutation] = &[
     },
     Mutation {
         field: "reserved bytes",
-        reseal: true,
+        seal: Seal::Checksum,
         mutate: |bytes| flip(bytes, 111),
         refuses: |error| matches!(error, Refusal::NonZeroReserved { .. }),
     },
     Mutation {
         field: "checksum",
-        reseal: false,
+        seal: Seal::Nothing,
         mutate: |bytes| flip(bytes, 143),
         refuses: |error| matches!(error, Refusal::ChecksumMismatch { .. }),
     },
@@ -121,8 +126,9 @@ fn every_head_field_has_one_exact_first_refusal() -> Result<(), Box<dyn std::err
     for mutation in MATRIX {
         let mut bytes = fixture_bytes(ONE_ROOT_HEAD)?;
         (mutation.mutate)(&mut bytes)?;
-        if mutation.reseal {
-            reseal(&mut bytes)?;
+        match mutation.seal {
+            Seal::Checksum => reseal(&mut bytes)?,
+            Seal::Nothing => {}
         }
         let Err(error) = ChecksummedRetentionHead::decode(&bytes) else {
             return Err(format!("mutated {} was admitted", mutation.field).into());
