@@ -5,7 +5,7 @@
 Keep uses three development-only tools to enforce deterministic documentation
 and GitHub Actions facts:
 
-- `markdownlint-cli2` 0.23.2 validates Markdown structure;
+- `markdownlint-cli2` 0.23.3 validates Markdown structure;
 - `lychee` 0.21.0 validates local links and fragments with network access
   disabled;
 - `actionlint` 1.7.12 validates GitHub Actions syntax and expressions.
@@ -20,8 +20,7 @@ The CI job pins Node.js 24.18.0 and installs exact tool releases. The committed
 `scripts/documentation-tools/package-lock.json` pins every Markdownlint
 transitive archive and Subresource Integrity digest. The installer uses
 `npm ci` with lifecycle scripts disabled and refuses lockfile drift.
-`markdownlint-cli2` 0.23.2 directly admits the patched `js-yaml` 5.2.2
-release.
+`markdownlint-cli2` 0.23.3 admits `js-yaml` 5.4.1, `smol-toml` 1.8.0 and `markdown-it` 15.0.1, addressing the corresponding previously reported parser advisories. The lock graph retains `braces` 3.0.3; [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) has no patched version listed as of 2026-10-03. Follow-up [#176](https://github.com/flyingrobots/keep/issues/176) tracks its disposition; this development-tool update does not claim a clean npm audit. The production documentation command supplies explicit Git-selected paths with `--no-globs`; its bounded runner reports tool failure rather than admitting failed validation.
 
 `scripts/install_documentation_tools.sh` verifies the native release archives
 before extraction:
