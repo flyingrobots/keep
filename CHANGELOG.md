@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Update the in-process BLAKE3 dependency to 1.8.7 in both locked workspaces, remove the unused arrayref license exception and renew its admission while retaining the external b3sum oracle and version-one identity contract (#94).
+
 - Update rustix to 1.1.5 across the library, repository tools, process-spawn boundary and fuzz lockfile, retaining the existing filesystem and process contracts (#102).
 
 - Isolate durable locator subprocess laws from golden-store writer handoffs so their child launches cannot inherit another law's live lock descriptions (#178).

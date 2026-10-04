@@ -11,7 +11,7 @@ const BOUNDED_PROCESS_GROUP_TESTS: &str =
     include_str!("../src/bounded_process/process_group/tests.rs");
 const BOUNDED_PROCESS_READER: &str = include_str!("../src/bounded_process/reader.rs");
 const BOUNDED_PROCESS_TESTS: &str = include_str!("../src/bounded_process/tests.rs");
-const BLAKE3_ADMISSION: &str = include_str!("../../docs/dependencies/blake3-1.8.5.md");
+const BLAKE3_ADMISSION: &str = include_str!("../../docs/dependencies/blake3-1.8.7.md");
 const CONFORMANCE_B3SUM: &str = include_str!("../src/protocol_conformance/external_digest.rs");
 const EXTERNAL_DIGEST: &str = include_str!("../src/external_digest.rs");
 const EXTERNAL_DIGEST_TESTS: &str = include_str!("../src/external_digest/tests.rs");
