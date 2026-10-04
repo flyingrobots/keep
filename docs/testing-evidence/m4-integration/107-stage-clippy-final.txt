@@ -1,0 +1,8 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+    Checking keep v0.0.0 (/keep-validation-cache/source)
+    Checking repository-process-spawn v0.0.0 (/keep-validation-cache/source/repository-process-spawn)
+    Checking xtask v0.0.0 (/keep-validation-cache/source/xtask)
+    Checking keep-benchmark v0.0.0 (/keep-validation-cache/source/benchmark)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.17s
+
+Guarded command exit: 0

@@ -1,0 +1,45 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+error[E0425]: cannot find function `require_progress` in this scope
+   --> src/adapters/retention/filesystem_retention_stage_effect_tests.rs:58:9
+    |
+ 58 |         require_progress(&error, boundary, Some(Effect::StageCreated))?;
+    |         ^^^^^^^^^^^^^^^^ not found in this scope
+    |
+note: function `crate::adapters::retention::filesystem_retention_recovery::effect_tests::require_progress` exists but is inaccessible
+   --> src/adapters/retention/filesystem_retention_recovery_effect_tests.rs:118:1
+    |
+118 | / fn require_progress(
+119 | |     error: &crate::RetentionRecoveryError,
+120 | |     case: &Case,
+121 | | ) -> Result<(), Box<dyn Error>> {
+...   |
+142 | |     Ok(())
+143 | | }
+    | |_^ not accessible
+
+error: unused imports: `Durability` and `StageReplacement`
+ --> src/adapters/retention/filesystem_retention_stage_effect_tests.rs:4:15
+  |
+4 |     Boundary, Durability, Effect, FilesystemRetentionStage as Stage, RetentionStorageError,
+  |               ^^^^^^^^^^
+5 |     StageReplacement,
+  |     ^^^^^^^^^^^^^^^^
+  |
+note: the lint level is defined here
+ --> src/lib.rs:1:9
+  |
+1 | #![deny(warnings)]
+  |         ^^^^^^^^
+  = note: `#[deny(unused_imports)]` implied by `#[deny(warnings)]`
+
+error: unused import: `crate::adapters::retention::RetentionRecordRefusal`
+ --> src/adapters/retention/filesystem_retention_stage_effect_tests.rs:8:5
+  |
+8 | use crate::adapters::retention::RetentionRecordRefusal;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+For more information about this error, try `rustc --explain E0425`.
+error: could not compile `keep` (lib test) due to 3 previous errors
+
+Guarded command exit: 101

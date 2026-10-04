@@ -10,6 +10,8 @@ after its public API and format compatibility policies are established.
 
 ### Roadmap audit corrections
 
+- Report created stages and precise failure boundaries after stage initialization errors; distinguish GC receipt replacement from head replacement while preserving original causes and unconfirmed directory durability (#107).
+
 - Preserve corruption classification and the original exact-record cause when verification observes malformed retention records through the integrated typed-error adapters (#133, #107).
 
 - Bound compaction rereads by admitted catalog lengths and sealed-stage receipts; refuse changed lengths before allocation and retain typed materialization failures without publishing a successor (#107).

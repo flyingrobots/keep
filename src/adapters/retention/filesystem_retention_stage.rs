@@ -50,6 +50,10 @@ pub(in crate::adapters) struct FilesystemRetentionStage {
 
 impl FilesystemRetentionStage {
     /// Exclusively creates the named stage and writes its complete bytes.
+    ///
+    /// Failure retains any created stage and its possibly partial contents.
+    /// Reported creation is a namespace effect, not proof of complete bytes or
+    /// directory durability; the original operational cause is preserved.
     pub(in crate::adapters) fn create(
         root: &Dir,
         name: &'static str,
@@ -146,6 +150,9 @@ impl FilesystemRetentionStage {
     }
 
     /// Renames the verified stage onto `name`, replacing it atomically.
+    ///
+    /// The purpose identifies head versus receipt effects. Failure after rename
+    /// does not restore the source pathname or establish directory durability.
     pub(in crate::adapters) fn replace(
         &self,
         root: &Dir,

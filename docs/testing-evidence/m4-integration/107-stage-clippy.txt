@@ -1,0 +1,53 @@
+    Checking keep v0.0.0 (/keep-validation-cache/source)
+    Checking repository-process-spawn v0.0.0 (/keep-validation-cache/source/repository-process-spawn)
+    Checking xtask v0.0.0 (/keep-validation-cache/source/xtask)
+    Checking keep-benchmark v0.0.0 (/keep-validation-cache/source/benchmark)
+error: this could be rewritten as `let...else`
+  --> src/adapters/retention/filesystem_retention_stage_effect_tests.rs:49:5
+   |
+49 | /     let error = match result {
+50 | |         Err(error) => error,
+51 | |         Ok(_) => return Err("failure was swallowed".into()),
+52 | |     };
+   | |______^ help: consider writing: `let Err(error) = result else { return Err("failure was swallowed".into()) };`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#manual_let_else
+   = note: `-D clippy::manual-let-else` implied by `-D clippy::pedantic`
+   = help: to override `-D clippy::pedantic` add `#[allow(clippy::manual_let_else)]`
+
+error: consider adding a `;` to the last statement for consistent formatting
+  --> src/adapters/retention/filesystem_retention_stage_effect_tests.rs:62:17
+   |
+62 |                 assert_eq!(source.raw_os_error(), Some(28), "original I/O cause")
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: add a `;` here: `assert_eq!(source.raw_os_error(), Some(28), "original I/O cause");`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#semicolon_if_nothing_returned
+   = note: `-D clippy::semicolon-if-nothing-returned` implied by `-D clippy::pedantic`
+   = help: to override `-D clippy::pedantic` add `#[allow(clippy::semicolon_if_nothing_returned)]`
+
+error: this could be rewritten as `let...else`
+  --> src/adapters/retention/filesystem_retention_stage_effect_tests.rs:78:5
+   |
+78 | /     let error = match Stage::create(&dir, "stage", b"replacement") {
+79 | |         Err(error) => error,
+80 | |         Ok(_) => return Err("exclusive creation replaced evidence".into()),
+81 | |     };
+   | |______^ help: consider writing: `let Err(error) = Stage::create(&dir, "stage", b"replacement") else { return Err("exclusive creation replaced evidence".into()) };`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#manual_let_else
+
+error: this could be rewritten as `let...else`
+   --> src/adapters/retention/filesystem_retention_stage_effect_tests.rs:120:9
+    |
+120 | /         let error = match result {
+121 | |             Err(error) => error,
+122 | |             Ok(()) => return Err("post-rename corruption must refuse".into()),
+123 | |         };
+    | |__________^ help: consider writing: `let Err(error) = result else { return Err("post-rename corruption must refuse".into()) };`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#manual_let_else
+
+error: could not compile `keep` (lib test) due to 4 previous errors
+warning: build failed, waiting for other jobs to finish...
+
+Guarded command exit: 101

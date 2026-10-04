@@ -1,0 +1,40 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.74s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 5 tests
+
+thread 'adapters::retention::filesystem_retention_stage::effect_tests::flush_failure_preserves_written_stage' (6903) panicked at src/adapters/retention/filesystem_retention_stage_effect_tests.rs:62:21:
+assertion `left == right` failed: original I/O cause
+  left: None
+ right: Some(28)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'adapters::retention::filesystem_retention_stage::effect_tests::identity_failure_preserves_created_stage' (6904) panicked at src/adapters/retention/filesystem_retention_stage_effect_tests.rs:62:21:
+assertion `left == right` failed: original I/O cause
+  left: None
+ right: Some(28)
+
+thread 'adapters::retention::filesystem_retention_stage::effect_tests::write_failure_preserves_partial_stage' (6906) panicked at src/adapters/retention/filesystem_retention_stage_effect_tests.rs:62:21:
+assertion `left == right` failed: original I/O cause
+  left: None
+ right: Some(28)
+test adapters::retention::filesystem_retention_stage::effect_tests::an_existing_stage_is_preserved_on_exclusive_creation_refusal ... ok
+test adapters::retention::filesystem_retention_stage::effect_tests::flush_failure_preserves_written_stage ... FAILED
+test adapters::retention::filesystem_retention_stage::effect_tests::identity_failure_preserves_created_stage ... FAILED
+test adapters::retention::filesystem_retention_stage::effect_tests::write_failure_preserves_partial_stage ... FAILED
+test adapters::retention::filesystem_retention_stage::effect_tests::replacement_failure_identifies_the_published_record_that_changed ... ok
+
+failures:
+
+failures:
+    adapters::retention::filesystem_retention_stage::effect_tests::flush_failure_preserves_written_stage
+    adapters::retention::filesystem_retention_stage::effect_tests::identity_failure_preserves_created_stage
+    adapters::retention::filesystem_retention_stage::effect_tests::write_failure_preserves_partial_stage
+
+test result: FAILED. 2 passed; 3 failed; 0 ignored; 0 measured; 493 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`
+
+Guarded command exit: 101
