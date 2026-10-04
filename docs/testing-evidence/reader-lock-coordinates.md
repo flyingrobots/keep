@@ -34,7 +34,6 @@ Both archived project sources now match the executed driver SHA-256 `282248b48fe
 
 ## Validation and acceptance boundary
 
-
 [Focused final validation](reader-lock-coordinates/validation-final.txt) passes workspace formatting, workspace Clippy with all features and with no default features, public constructor doctests, public intent/receipt/disposition codec laws, GC filesystem laws, retention-disposition filesystem laws and the independent format oracle in debug and release, plus GC fuzz-target Clippy. The [first attempt](reader-lock-coordinates/validation.txt) stopped at Clippy's redundant `must_use` attributes on typed-return getters; removing those redundant method attributes preserved the type-level requirement. That was a lint failure, not a flaky runtime failure. Final validation used the corrected source. Static type-erasure calibration preceded that metadata-only cleanup; the final examples pass after it.
 
 [Final source hashes](reader-lock-coordinates/source-final.txt) match every changed Rust file between the working candidate and the Docker copy after controls were restored. The [original-record archive](reader-lock-coordinates/original-records.tar.gz) preserves original output and experiment source; readable text copies remove trailing whitespace and terminal blank lines only. No original runtime diagnostic or failure is erased.
