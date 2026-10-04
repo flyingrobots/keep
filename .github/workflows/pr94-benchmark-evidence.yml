@@ -1,0 +1,73 @@
+name: PR 94 benchmark evidence
+
+on:
+  push:
+    branches: [validation/94-hosted-benchmark]
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Fetch immutable source history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run existing benchmarks in an owned Docker copy
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p evidence
+          git bundle create "$RUNNER_TEMP/keep-source.bundle" HEAD
+          image='rust@sha256:58fe97504a0e4cbba5d85599619a589923d3e779472a6fb0840d58d1c4ba99d7'
+          docker pull "$image"
+          docker image inspect "$image" > evidence/image.json
+          docker run --detach --name keep-pr94-benchmark --cpus 2 --memory 6g "$image" sleep 2400
+          trap 'docker logs keep-pr94-benchmark > evidence/container.log 2>&1; docker stop keep-pr94-benchmark >/dev/null' EXIT
+          docker cp "$RUNNER_TEMP/keep-source.bundle" keep-pr94-benchmark:/tmp/keep-source.bundle
+          docker exec keep-pr94-benchmark bash -c '
+            set -euo pipefail
+            unset CARGO_TARGET_DIR
+            git clone --quiet /tmp/keep-source.bundle /baseline
+            git clone --quiet /tmp/keep-source.bundle /candidate
+            git -C /baseline checkout --quiet --detach 11bc72c41cc379944766adbdef60f046e786b820
+            git -C /candidate checkout --quiet --detach 9a7a46ec6d5043f61222c2f75fc7c49a16002cd3
+            for source in /baseline /candidate; do
+              cd "$source"
+              git rev-parse HEAD "HEAD^{tree}"
+              test -z "$(git status --porcelain)"
+              cargo fetch --locked
+              cargo build --locked --package xtask
+              cargo build --release --locked --target x86_64-unknown-linux-gnu --package keep-benchmark --bin keep-benchmark-baseline
+            done
+            rustc --version
+            uname -a
+            cat /proc/cpuinfo
+          ' > evidence/preparation.log 2>&1
+          docker network disconnect bridge keep-pr94-benchmark
+          docker inspect keep-pr94-benchmark > evidence/container-profile.json
+          for coordinate in baseline-1 candidate-1 candidate-2 baseline-2; do
+            source="${coordinate%-*}"
+            docker exec --workdir "/$source" keep-pr94-benchmark env -u CARGO_TARGET_DIR bash -c '
+              set -euo pipefail
+              git rev-parse HEAD "HEAD^{tree}"
+              test -z "$(git status --porcelain)"
+              cargo xtask benchmark-baseline
+              test -z "$(git status --porcelain)"
+            ' > "evidence/$coordinate.log" 2>&1
+            docker cp "keep-pr94-benchmark:/$source/target/benchmark/streaming-cas-baseline-v1.tsv" "evidence/$coordinate.tsv"
+          done
+
+      - name: Retain measurements and original failures
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr94-benchmark-evidence
+          path: evidence/
+          retention-days: 30
+          if-no-files-found: error
