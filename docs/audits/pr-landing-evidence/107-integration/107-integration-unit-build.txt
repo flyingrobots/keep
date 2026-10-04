@@ -1,0 +1,602 @@
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+error[E0433]: cannot find `filesystem_retention_test_fixture` in `super`
+  --> src/adapters/retention/filesystem_retention_recovery_effect_tests.rs:92:16
+   |
+92 |         super::filesystem_retention_test_fixture::catalog_policy()?,
+   |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ could not find `filesystem_retention_test_fixture` in `super`
+   |
+help: consider importing this module through its public re-export
+   |
+ 3 + use crate::adapters::filesystem_retention_test_fixture;
+   |
+help: if you import `filesystem_retention_test_fixture`, refer to it directly
+   |
+92 -         super::filesystem_retention_test_fixture::catalog_policy()?,
+92 +         filesystem_retention_test_fixture::catalog_policy()?,
+   |
+
+error[E0433]: cannot find `filesystem_retention_test_fixture` in `super`
+   --> src/adapters/retention/filesystem_retention_recovery_storage_error_tests.rs:248:16
+    |
+248 |         super::filesystem_retention_test_fixture::catalog_policy()?,
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ could not find `filesystem_retention_test_fixture` in `super`
+    |
+help: consider importing this module through its public re-export
+    |
+  3 + use crate::adapters::filesystem_retention_test_fixture;
+    |
+help: if you import `filesystem_retention_test_fixture`, refer to it directly
+    |
+248 -         super::filesystem_retention_test_fixture::catalog_policy()?,
+248 +         filesystem_retention_test_fixture::catalog_policy()?,
+    |
+
+error[E0599]: no associated function or constant named `reopen_unchecked_for_tests` found for struct `filesystem_version_two_admission::FilesystemVersionTwoAdmission` in the current scope
+   --> src/adapters/compaction/filesystem_tests.rs:102:52
+    |
+102 |     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+    |                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^ associated function or constant not found in `filesystem_version_two_admission::FilesystemVersionTwoAdmission`
+    |
+   ::: src/adapters/filesystem_version_two_admission.rs:29:1
+    |
+ 29 | pub struct FilesystemVersionTwoAdmission {
+    | ---------------------------------------- associated function or constant `reopen_unchecked_for_tests` not found for this struct
+    |
+note: if you're trying to build a new `filesystem_version_two_admission::FilesystemVersionTwoAdmission` consider using one of the following associated functions:
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks
+   --> src/adapters/filesystem_version_two_admission.rs:51:5
+    |
+ 51 |       pub fn reopen(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+ 68 | /     pub fn reopen_unchecked_for_repository_tasks(
+ 69 | |         store_root: &Path,
+ 70 | |     ) -> Result<Self, FilesystemPlatformAdmissionError> {
+    | |_______________________________________________________^
+help: there is an associated function `reopen_unchecked_for_repository_tasks` with a similar name
+    |
+102 -     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+102 +     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
+    |
+
+error[E0599]: no associated function or constant named `reopen_unchecked_for_tests` found for struct `filesystem_version_two_admission::FilesystemVersionTwoAdmission` in the current scope
+  --> src/adapters/compaction/test_fixture.rs:75:52
+   |
+75 |     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+   |                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^ associated function or constant not found in `filesystem_version_two_admission::FilesystemVersionTwoAdmission`
+   |
+  ::: src/adapters/filesystem_version_two_admission.rs:29:1
+   |
+29 | pub struct FilesystemVersionTwoAdmission {
+   | ---------------------------------------- associated function or constant `reopen_unchecked_for_tests` not found for this struct
+   |
+note: if you're trying to build a new `filesystem_version_two_admission::FilesystemVersionTwoAdmission` consider using one of the following associated functions:
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks
+  --> src/adapters/filesystem_version_two_admission.rs:51:5
+   |
+51 |       pub fn reopen(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+68 | /     pub fn reopen_unchecked_for_repository_tasks(
+69 | |         store_root: &Path,
+70 | |     ) -> Result<Self, FilesystemPlatformAdmissionError> {
+   | |_______________________________________________________^
+help: there is an associated function `reopen_unchecked_for_repository_tasks` with a similar name
+   |
+75 -     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+75 +     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
+   |
+
+error[E0599]: no associated function or constant named `reopen_unchecked_for_tests` found for struct `filesystem_version_two_admission::FilesystemVersionTwoAdmission` in the current scope
+   --> src/adapters/compaction/test_fixture.rs:159:52
+    |
+159 |     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(root)?;
+    |                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^ associated function or constant not found in `filesystem_version_two_admission::FilesystemVersionTwoAdmission`
+    |
+   ::: src/adapters/filesystem_version_two_admission.rs:29:1
+    |
+ 29 | pub struct FilesystemVersionTwoAdmission {
+    | ---------------------------------------- associated function or constant `reopen_unchecked_for_tests` not found for this struct
+    |
+note: if you're trying to build a new `filesystem_version_two_admission::FilesystemVersionTwoAdmission` consider using one of the following associated functions:
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks
+   --> src/adapters/filesystem_version_two_admission.rs:51:5
+    |
+ 51 |       pub fn reopen(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+ 68 | /     pub fn reopen_unchecked_for_repository_tasks(
+ 69 | |         store_root: &Path,
+ 70 | |     ) -> Result<Self, FilesystemPlatformAdmissionError> {
+    | |_______________________________________________________^
+help: there is an associated function `reopen_unchecked_for_repository_tasks` with a similar name
+    |
+159 -     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(root)?;
+159 +     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(root)?;
+    |
+
+error[E0599]: no associated function or constant named `reopen_unchecked_for_tests` found for struct `filesystem_version_two_admission::FilesystemVersionTwoAdmission` in the current scope
+  --> src/adapters/durable/ingestion_bound_tests.rs:18:52
+   |
+18 |     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+   |                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^ associated function or constant not found in `filesystem_version_two_admission::FilesystemVersionTwoAdmission`
+   |
+  ::: src/adapters/filesystem_version_two_admission.rs:29:1
+   |
+29 | pub struct FilesystemVersionTwoAdmission {
+   | ---------------------------------------- associated function or constant `reopen_unchecked_for_tests` not found for this struct
+   |
+note: if you're trying to build a new `filesystem_version_two_admission::FilesystemVersionTwoAdmission` consider using one of the following associated functions:
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks
+  --> src/adapters/filesystem_version_two_admission.rs:51:5
+   |
+51 |       pub fn reopen(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+68 | /     pub fn reopen_unchecked_for_repository_tasks(
+69 | |         store_root: &Path,
+70 | |     ) -> Result<Self, FilesystemPlatformAdmissionError> {
+   | |_______________________________________________________^
+help: there is an associated function `reopen_unchecked_for_repository_tasks` with a similar name
+   |
+18 -     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+18 +     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
+   |
+
+error[E0599]: no variant named `RetainedRoot` found for enum `durable::error::DurableStoreError`
+  --> src/adapters/durable/refusal_source_tests.rs:33:49
+   |
+33 |     assert!(matches!(&error, DurableStoreError::RetainedRoot { .. }));
+   |                                                 ^^^^^^^^^^^^ variant not found in `durable::error::DurableStoreError`
+   |
+  ::: src/adapters/durable/error.rs:17:1
+   |
+17 | pub enum DurableStoreError {
+   | -------------------------- variant `RetainedRoot` not found here
+
+error[E0599]: no associated function or constant named `reopen_unchecked_for_tests` found for struct `filesystem_version_two_admission::FilesystemVersionTwoAdmission` in the current scope
+  --> src/adapters/durable/test_fixture.rs:89:52
+   |
+89 |     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+   |                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^ associated function or constant not found in `filesystem_version_two_admission::FilesystemVersionTwoAdmission`
+   |
+  ::: src/adapters/filesystem_version_two_admission.rs:29:1
+   |
+29 | pub struct FilesystemVersionTwoAdmission {
+   | ---------------------------------------- associated function or constant `reopen_unchecked_for_tests` not found for this struct
+   |
+note: if you're trying to build a new `filesystem_version_two_admission::FilesystemVersionTwoAdmission` consider using one of the following associated functions:
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks
+  --> src/adapters/filesystem_version_two_admission.rs:51:5
+   |
+51 |       pub fn reopen(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+68 | /     pub fn reopen_unchecked_for_repository_tasks(
+69 | |         store_root: &Path,
+70 | |     ) -> Result<Self, FilesystemPlatformAdmissionError> {
+   | |_______________________________________________________^
+help: there is an associated function `reopen_unchecked_for_repository_tasks` with a similar name
+   |
+89 -     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+89 +     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
+   |
+
+error[E0308]: mismatched types
+   --> src/adapters/durable/tests.rs:24:8
+    |
+ 24 |       Ok(DurableStore::open(
+    |  _____--_^
+    | |     |
+    | |     arguments to this enum variant are incorrect
+ 25 | |         root,
+ 26 | |         catalog_policy()?,
+ 27 | |         ReaderAttemptLimit::DEFAULT,
+ 28 | |     ))
+    | |_____^ expected `DurableStore`, found `Result<DurableStore, DurableStoreError>`
+    |
+    = note: expected struct `durable::store::DurableStore`
+                 found enum `Result<durable::store::DurableStore, durable::error::DurableStoreError>`
+help: the type constructed contains `Result<durable::store::DurableStore, durable::error::DurableStoreError>` due to the type of the argument passed
+   --> src/adapters/durable/tests.rs:24:5
+    |
+ 24 |        Ok(DurableStore::open(
+    |   _____^  -
+    |  |________|
+ 25 | ||         root,
+ 26 | ||         catalog_policy()?,
+ 27 | ||         ReaderAttemptLimit::DEFAULT,
+ 28 | ||     ))
+    | ||_____-^
+    | |______|
+    |        this argument influences the type of `Ok`
+note: tuple variant defined here
+   --> /usr/local/rustup/toolchains/1.96.0-aarch64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/result.rs:561:5
+    |
+561 |     Ok(#[stable(feature = "rust1", since = "1.0.0")] T),
+    |     ^^
+help: use the `?` operator to extract the `Result<durable::store::DurableStore, durable::error::DurableStoreError>` value, propagating a `Result::Err` value to the caller
+    |
+ 28 |     )?)
+    |      +
+
+error[E0308]: mismatched types
+  --> src/adapters/durable/tests.rs:48:9
+   |
+47 |         snapshot.view().retention(),
+   |         --------------------------- this expression has type `Option<RetentionHead>`
+48 |         crate::adapters::GcRetentionState::Published { generation, .. } if generation.get() == 1
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Option<RetentionHead>`, found `GcRetentionState`
+   |
+   = note: expected enum `Option<RetentionHead>`
+              found enum `liveness_coordinates::GcRetentionState`
+
+error[E0600]: cannot apply unary operator `!` to type `Result<bool, durable::error::DurableStoreError>`
+   --> src/adapters/durable/tests.rs:51:9
+    |
+ 51 |         assert!(snapshot.contains_blob(entry.target));
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot apply unary operator `!`
+    |
+note: `Result<bool, durable::error::DurableStoreError>` does not implement `Not`
+   --> /usr/local/rustup/toolchains/1.96.0-aarch64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/result.rs:557:1
+    |
+557 | pub enum Result<T, E> {
+    | ^^^^^^^^^^^^^^^^^^^^^ `Result<bool, durable::error::DurableStoreError>` is defined in another crate
+
+error[E0600]: cannot apply unary operator `!` to type `Result<bool, durable::error::DurableStoreError>`
+   --> src/adapters/durable/tests.rs:104:13
+    |
+104 |     assert!(!snapshot.contains_blob(unanchored.target));
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot apply unary operator `!`
+    |
+note: `Result<bool, durable::error::DurableStoreError>` does not implement `Not`
+   --> /usr/local/rustup/toolchains/1.96.0-aarch64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/result.rs:557:1
+    |
+557 | pub enum Result<T, E> {
+    | ^^^^^^^^^^^^^^^^^^^^^ `Result<bool, durable::error::DurableStoreError>` is defined in another crate
+
+error[E0308]: mismatched types
+   --> src/adapters/durable/tests.rs:135:9
+    |
+134 |     let view = FilesystemRetentionSnapshot::load_under_writer_authority(
+    |                -------------------------------------------------------- arguments to this function are incorrect
+135 |         sandbox.path(),
+    |         ^^^^^^^^^^^^^^ expected `&Dir`, found `&Path`
+    |
+    = note: expected reference `&cap_std::fs::Dir`
+               found reference `&Path`
+note: associated function defined here
+   --> src/adapters/retention/filesystem_retention_snapshot.rs:159:32
+    |
+159 |     pub(in crate::adapters) fn load_under_writer_authority(
+    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+160 |         root: &Dir,
+    |         ----------
+
+error[E0599]: no associated function or constant named `reopen_unchecked_for_tests` found for struct `filesystem_version_two_admission::FilesystemVersionTwoAdmission` in the current scope
+   --> src/adapters/durable/tests.rs:141:52
+    |
+141 |     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+    |                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^ associated function or constant not found in `filesystem_version_two_admission::FilesystemVersionTwoAdmission`
+    |
+   ::: src/adapters/filesystem_version_two_admission.rs:29:1
+    |
+ 29 | pub struct FilesystemVersionTwoAdmission {
+    | ---------------------------------------- associated function or constant `reopen_unchecked_for_tests` not found for this struct
+    |
+note: if you're trying to build a new `filesystem_version_two_admission::FilesystemVersionTwoAdmission` consider using one of the following associated functions:
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks
+   --> src/adapters/filesystem_version_two_admission.rs:51:5
+    |
+ 51 |       pub fn reopen(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+ 68 | /     pub fn reopen_unchecked_for_repository_tasks(
+ 69 | |         store_root: &Path,
+ 70 | |     ) -> Result<Self, FilesystemPlatformAdmissionError> {
+    | |_______________________________________________________^
+help: there is an associated function `reopen_unchecked_for_repository_tasks` with a similar name
+    |
+141 -     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+141 +     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
+    |
+
+error[E0308]: mismatched types
+   --> src/adapters/durable/tests.rs:165:9
+    |
+164 |     let fenced = FilesystemRetentionSnapshot::load_under_writer_authority(
+    |                  -------------------------------------------------------- arguments to this function are incorrect
+165 |         sandbox.path(),
+    |         ^^^^^^^^^^^^^^ expected `&Dir`, found `&Path`
+    |
+    = note: expected reference `&cap_std::fs::Dir`
+               found reference `&Path`
+note: associated function defined here
+   --> src/adapters/retention/filesystem_retention_snapshot.rs:159:32
+    |
+159 |     pub(in crate::adapters) fn load_under_writer_authority(
+    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+160 |         root: &Dir,
+    |         ----------
+
+error[E0599]: no associated function or constant named `reopen_unchecked_for_tests` found for struct `filesystem_version_two_admission::FilesystemVersionTwoAdmission` in the current scope
+   --> src/adapters/durable/tests.rs:180:52
+    |
+180 |     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+    |                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^ associated function or constant not found in `filesystem_version_two_admission::FilesystemVersionTwoAdmission`
+    |
+   ::: src/adapters/filesystem_version_two_admission.rs:29:1
+    |
+ 29 | pub struct FilesystemVersionTwoAdmission {
+    | ---------------------------------------- associated function or constant `reopen_unchecked_for_tests` not found for this struct
+    |
+note: if you're trying to build a new `filesystem_version_two_admission::FilesystemVersionTwoAdmission` consider using one of the following associated functions:
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks
+   --> src/adapters/filesystem_version_two_admission.rs:51:5
+    |
+ 51 |       pub fn reopen(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+ 68 | /     pub fn reopen_unchecked_for_repository_tasks(
+ 69 | |         store_root: &Path,
+ 70 | |     ) -> Result<Self, FilesystemPlatformAdmissionError> {
+    | |_______________________________________________________^
+help: there is an associated function `reopen_unchecked_for_repository_tasks` with a similar name
+    |
+180 -     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+180 +     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
+    |
+
+error[E0599]: no method named `snapshot` found for enum `Result<T, E>` in the current scope
+   --> src/adapters/durable/transfer_tests.rs:32:6
+    |
+ 27 |       let snapshot = DurableStore::open(
+    |  ____________________-
+ 28 | |         sandbox.path(),
+ 29 | |         catalog_policy()?,
+ 30 | |         ReaderAttemptLimit::DEFAULT,
+ 31 | |     )
+ 32 | |     .snapshot()?;
+    | |     -^^^^^^^^ method not found in `Result<durable::store::DurableStore, durable::error::DurableStoreError>`
+    | |_____|
+    |
+    |
+note: the method `snapshot` exists on the type `durable::store::DurableStore`
+   --> src/adapters/durable/store.rs:106:5
+    |
+106 |     pub fn snapshot(&self) -> Result<DurableSnapshot, DurableStoreError> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: use the `?` operator to extract the `durable::store::DurableStore` value, propagating a `Result::Err` value to the caller
+    |
+ 31 |     )?
+    |      +
+
+error[E0599]: no associated function or constant named `reopen_unchecked_for_tests` found for struct `filesystem_version_two_admission::FilesystemVersionTwoAdmission` in the current scope
+  --> src/adapters/durable/transfer_tests.rs:64:52
+   |
+64 |     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+   |                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^ associated function or constant not found in `filesystem_version_two_admission::FilesystemVersionTwoAdmission`
+   |
+  ::: src/adapters/filesystem_version_two_admission.rs:29:1
+   |
+29 | pub struct FilesystemVersionTwoAdmission {
+   | ---------------------------------------- associated function or constant `reopen_unchecked_for_tests` not found for this struct
+   |
+note: if you're trying to build a new `filesystem_version_two_admission::FilesystemVersionTwoAdmission` consider using one of the following associated functions:
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks
+  --> src/adapters/filesystem_version_two_admission.rs:51:5
+   |
+51 |       pub fn reopen(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+68 | /     pub fn reopen_unchecked_for_repository_tasks(
+69 | |         store_root: &Path,
+70 | |     ) -> Result<Self, FilesystemPlatformAdmissionError> {
+   | |_______________________________________________________^
+help: there is an associated function `reopen_unchecked_for_repository_tasks` with a similar name
+   |
+64 -     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+64 +     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
+   |
+
+error[E0599]: no method named `snapshot` found for enum `Result<T, E>` in the current scope
+   --> src/adapters/durable/transfer_tests.rs:80:6
+    |
+ 75 |       let snapshot = DurableStore::open(
+    |  ____________________-
+ 76 | |         sandbox.path(),
+ 77 | |         catalog_policy()?,
+ 78 | |         ReaderAttemptLimit::DEFAULT,
+ 79 | |     )
+ 80 | |     .snapshot()?;
+    | |     -^^^^^^^^ method not found in `Result<durable::store::DurableStore, durable::error::DurableStoreError>`
+    | |_____|
+    |
+    |
+note: the method `snapshot` exists on the type `durable::store::DurableStore`
+   --> src/adapters/durable/store.rs:106:5
+    |
+106 |     pub fn snapshot(&self) -> Result<DurableSnapshot, DurableStoreError> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: use the `?` operator to extract the `durable::store::DurableStore` value, propagating a `Result::Err` value to the caller
+    |
+ 79 |     )?
+    |      +
+
+error[E0599]: no associated function or constant named `reopen_unchecked_for_tests` found for struct `filesystem_version_two_admission::FilesystemVersionTwoAdmission` in the current scope
+  --> src/adapters/durable/writer_tests.rs:23:52
+   |
+23 |     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(root)?;
+   |                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^ associated function or constant not found in `filesystem_version_two_admission::FilesystemVersionTwoAdmission`
+   |
+  ::: src/adapters/filesystem_version_two_admission.rs:29:1
+   |
+29 | pub struct FilesystemVersionTwoAdmission {
+   | ---------------------------------------- associated function or constant `reopen_unchecked_for_tests` not found for this struct
+   |
+note: if you're trying to build a new `filesystem_version_two_admission::FilesystemVersionTwoAdmission` consider using one of the following associated functions:
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks
+  --> src/adapters/filesystem_version_two_admission.rs:51:5
+   |
+51 |       pub fn reopen(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+68 | /     pub fn reopen_unchecked_for_repository_tasks(
+69 | |         store_root: &Path,
+70 | |     ) -> Result<Self, FilesystemPlatformAdmissionError> {
+   | |_______________________________________________________^
+help: there is an associated function `reopen_unchecked_for_repository_tasks` with a similar name
+   |
+23 -     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(root)?;
+23 +     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(root)?;
+   |
+
+error[E0599]: no method named `snapshot` found for enum `Result<T, E>` in the current scope
+   --> src/adapters/durable/writer_tests.rs:67:6
+    |
+ 62 |       let snapshot = DurableStore::open(
+    |  ____________________-
+ 63 | |         sandbox.path(),
+ 64 | |         catalog_policy()?,
+ 65 | |         ReaderAttemptLimit::DEFAULT,
+ 66 | |     )
+ 67 | |     .snapshot()?;
+    | |     -^^^^^^^^ method not found in `Result<durable::store::DurableStore, durable::error::DurableStoreError>`
+    | |_____|
+    |
+    |
+note: the method `snapshot` exists on the type `durable::store::DurableStore`
+   --> src/adapters/durable/store.rs:106:5
+    |
+106 |     pub fn snapshot(&self) -> Result<DurableSnapshot, DurableStoreError> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: use the `?` operator to extract the `durable::store::DurableStore` value, propagating a `Result::Err` value to the caller
+    |
+ 66 |     )?
+    |      +
+
+error[E0599]: no method named `snapshot` found for enum `Result<T, E>` in the current scope
+   --> src/adapters/durable/writer_tests.rs:119:6
+    |
+114 |       let snapshot = DurableStore::open(
+    |  ____________________-
+115 | |         sandbox.path(),
+116 | |         catalog_policy()?,
+117 | |         ReaderAttemptLimit::DEFAULT,
+118 | |     )
+119 | |     .snapshot()?;
+    | |     -^^^^^^^^ method not found in `Result<durable::store::DurableStore, durable::error::DurableStoreError>`
+    | |_____|
+    |
+    |
+note: the method `snapshot` exists on the type `durable::store::DurableStore`
+   --> src/adapters/durable/store.rs:106:5
+    |
+106 |     pub fn snapshot(&self) -> Result<DurableSnapshot, DurableStoreError> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: use the `?` operator to extract the `durable::store::DurableStore` value, propagating a `Result::Err` value to the caller
+    |
+118 |     )?
+    |      +
+
+error[E0599]: no method named `snapshot` found for enum `Result<T, E>` in the current scope
+   --> src/adapters/durable/writer_tests.rs:165:6
+    |
+160 |       let snapshot = DurableStore::open(
+    |  ____________________-
+161 | |         sandbox.path(),
+162 | |         catalog_policy()?,
+163 | |         ReaderAttemptLimit::DEFAULT,
+164 | |     )
+165 | |     .snapshot()?;
+    | |     -^^^^^^^^ method not found in `Result<durable::store::DurableStore, durable::error::DurableStoreError>`
+    | |_____|
+    |
+    |
+note: the method `snapshot` exists on the type `durable::store::DurableStore`
+   --> src/adapters/durable/store.rs:106:5
+    |
+106 |     pub fn snapshot(&self) -> Result<DurableSnapshot, DurableStoreError> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: use the `?` operator to extract the `durable::store::DurableStore` value, propagating a `Result::Err` value to the caller
+    |
+164 |     )?
+    |      +
+
+error[E0599]: no method named `snapshot` found for enum `Result<T, E>` in the current scope
+   --> src/adapters/durable/writer_tests.rs:242:6
+    |
+237 |       let snapshot = DurableStore::open(
+    |  ____________________-
+238 | |         sandbox.path(),
+239 | |         catalog_policy()?,
+240 | |         ReaderAttemptLimit::DEFAULT,
+241 | |     )
+242 | |     .snapshot()?;
+    | |     -^^^^^^^^ method not found in `Result<durable::store::DurableStore, durable::error::DurableStoreError>`
+    | |_____|
+    |
+    |
+note: the method `snapshot` exists on the type `durable::store::DurableStore`
+   --> src/adapters/durable/store.rs:106:5
+    |
+106 |     pub fn snapshot(&self) -> Result<DurableSnapshot, DurableStoreError> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: use the `?` operator to extract the `durable::store::DurableStore` value, propagating a `Result::Err` value to the caller
+    |
+241 |     )?
+    |      +
+
+error[E0600]: cannot apply unary operator `!` to type `Result<bool, _>`
+   --> src/adapters/durable/writer_tests.rs:244:5
+    |
+244 |     assert!(ContentReads::contains_blob(&snapshot, anchored.target));
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot apply unary operator `!`
+    |
+note: `Result<bool, _>` does not implement `Not`
+   --> /usr/local/rustup/toolchains/1.96.0-aarch64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/result.rs:557:1
+    |
+557 | pub enum Result<T, E> {
+    | ^^^^^^^^^^^^^^^^^^^^^ `Result<bool, _>` is defined in another crate
+
+error[E0599]: no associated function or constant named `reopen_unchecked_for_tests` found for struct `filesystem_version_two_admission::FilesystemVersionTwoAdmission` in the current scope
+  --> src/adapters/gc/filesystem_gc_tests.rs:57:52
+   |
+57 |     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(root)?;
+   |                                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^ associated function or constant not found in `filesystem_version_two_admission::FilesystemVersionTwoAdmission`
+   |
+  ::: src/adapters/filesystem_version_two_admission.rs:29:1
+   |
+29 | pub struct FilesystemVersionTwoAdmission {
+   | ---------------------------------------- associated function or constant `reopen_unchecked_for_tests` not found for this struct
+   |
+note: if you're trying to build a new `filesystem_version_two_admission::FilesystemVersionTwoAdmission` consider using one of the following associated functions:
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen
+      filesystem_version_two_admission::FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks
+  --> src/adapters/filesystem_version_two_admission.rs:51:5
+   |
+51 |       pub fn reopen(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+68 | /     pub fn reopen_unchecked_for_repository_tasks(
+69 | |         store_root: &Path,
+70 | |     ) -> Result<Self, FilesystemPlatformAdmissionError> {
+   | |_______________________________________________________^
+help: there is an associated function `reopen_unchecked_for_repository_tasks` with a similar name
+   |
+57 -     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(root)?;
+57 +     let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(root)?;
+   |
+
+Some errors have detailed explanations: E0308, E0433, E0599, E0600.
+For more information about an error, try `rustc --explain E0308`.
+error: could not compile `keep` (lib test) due to 26 previous errors

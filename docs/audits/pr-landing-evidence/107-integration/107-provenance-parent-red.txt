@@ -1,0 +1,70 @@
+   Compiling rustix v1.1.4
+   Compiling bitflags v2.13.1
+   Compiling io-lifetimes v2.0.4
+   Compiling io-lifetimes v3.0.1
+   Compiling linux-raw-sys v0.12.1
+   Compiling io-extras v0.19.0
+   Compiling proc-macro2 v1.0.107
+   Compiling find-msvc-tools v0.1.9
+   Compiling once_cell v1.21.4
+   Compiling cap-primitives v4.0.2
+   Compiling shlex v2.0.1
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.47
+   Compiling ambient-authority v0.0.2
+   Compiling maybe-owned v0.3.4
+   Compiling cap-std v4.0.2
+   Compiling ipnet v2.12.0
+   Compiling libc v0.2.186
+   Compiling anstyle v1.0.14
+   Compiling clap_lex v1.1.0
+   Compiling cc v1.3.0
+   Compiling cap-fs-ext v4.0.2
+   Compiling cfg-if v1.0.4
+   Compiling clap_builder v4.6.2
+   Compiling arrayref v0.3.9
+   Compiling arrayvec v0.7.8
+   Compiling constant_time_eq v0.4.2
+   Compiling condtype v1.3.0
+   Compiling regex-lite v0.1.9
+   Compiling allocation-counter v0.8.1
+   Compiling syn v2.0.119
+   Compiling blake3 v1.8.5
+   Compiling clap v4.6.4
+   Compiling fs-set-times v0.20.3
+   Compiling rustix-linux-procfs v0.1.1
+   Compiling divan-macros v0.1.21
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+   Compiling divan v0.1.21
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.12s
+     Running tests/verification_provenance_regression.rs (/build/keep107-root-binding-parent-target/debug/deps/verification_provenance_regression-3769290823161818)
+
+running 2 tests
+test reference_refusal_must_not_acquire_unrelated_durable_provenance ... FAILED
+test reference_report_must_not_acquire_unrelated_durable_provenance ... FAILED
+
+failures:
+
+---- reference_refusal_must_not_acquire_unrelated_durable_provenance stdout ----
+
+thread 'reference_refusal_must_not_acquire_unrelated_durable_provenance' (893) panicked at tests/verification_provenance_regression.rs:33:5:
+assertion `left != right` failed: reference refusal must not acquire unrelated durable provenance
+  left: Durable { catalog_generation: CatalogGeneration(2), catalog_digest: CatalogDigest([234, 125, 0, 85, 253, 33, 240, 14, 217, 72, 9, 239, 78, 103, 29, 114, 250, 46, 106, 74, 93, 158, 206, 251, 35, 243, 163, 32, 162, 218, 217, 147]), retention: Published { generation: LivenessGeneration(1), manifest_digest: RetentionManifestDigest([244, 107, 150, 162, 191, 51, 121, 50, 12, 245, 158, 138, 241, 91, 157, 16, 141, 224, 96, 37, 196, 21, 48, 123, 40, 149, 55, 20, 189, 122, 128, 235]) } }
+ right: Durable { catalog_generation: CatalogGeneration(2), catalog_digest: CatalogDigest([234, 125, 0, 85, 253, 33, 240, 14, 217, 72, 9, 239, 78, 103, 29, 114, 250, 46, 106, 74, 93, 158, 206, 251, 35, 243, 163, 32, 162, 218, 217, 147]), retention: Published { generation: LivenessGeneration(1), manifest_digest: RetentionManifestDigest([244, 107, 150, 162, 191, 51, 121, 50, 12, 245, 158, 138, 241, 91, 157, 16, 141, 224, 96, 37, 196, 21, 48, 123, 40, 149, 55, 20, 189, 122, 128, 235]) } }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- reference_report_must_not_acquire_unrelated_durable_provenance stdout ----
+
+thread 'reference_report_must_not_acquire_unrelated_durable_provenance' (894) panicked at tests/verification_provenance_regression.rs:20:5:
+assertion `left != right` failed: reference report must not acquire unrelated durable provenance
+  left: Durable { catalog_generation: CatalogGeneration(2), catalog_digest: CatalogDigest([234, 125, 0, 85, 253, 33, 240, 14, 217, 72, 9, 239, 78, 103, 29, 114, 250, 46, 106, 74, 93, 158, 206, 251, 35, 243, 163, 32, 162, 218, 217, 147]), retention: Published { generation: LivenessGeneration(1), manifest_digest: RetentionManifestDigest([244, 107, 150, 162, 191, 51, 121, 50, 12, 245, 158, 138, 241, 91, 157, 16, 141, 224, 96, 37, 196, 21, 48, 123, 40, 149, 55, 20, 189, 122, 128, 235]) } }
+ right: Durable { catalog_generation: CatalogGeneration(2), catalog_digest: CatalogDigest([234, 125, 0, 85, 253, 33, 240, 14, 217, 72, 9, 239, 78, 103, 29, 114, 250, 46, 106, 74, 93, 158, 206, 251, 35, 243, 163, 32, 162, 218, 217, 147]), retention: Published { generation: LivenessGeneration(1), manifest_digest: RetentionManifestDigest([244, 107, 150, 162, 191, 51, 121, 50, 12, 245, 158, 138, 241, 91, 157, 16, 141, 224, 96, 37, 196, 21, 48, 123, 40, 149, 55, 20, 189, 122, 128, 235]) } }
+
+
+failures:
+    reference_refusal_must_not_acquire_unrelated_durable_provenance
+    reference_report_must_not_acquire_unrelated_durable_provenance
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--test verification_provenance_regression`
