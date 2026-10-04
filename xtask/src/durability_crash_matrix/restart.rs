@@ -1,6 +1,11 @@
 //! This module owns independent post-process-death store verification.
 
 mod expectation;
+mod migration;
+mod migration_expectation;
+mod retention;
+mod retention_incomplete;
+mod retention_snapshot;
 mod semantic;
 
 use std::collections::BTreeSet;
@@ -11,12 +16,18 @@ use std::path::{Path, PathBuf};
 use super::DurabilityCrashMatrixError;
 use super::production_protocol::fixture::GoldenFixture;
 use expectation::ExpectedStoreState;
-use xtask::DurabilityCrashCase;
+use xtask::{DurabilityCrashCase, DurabilityCrashSequence};
 
 pub(super) fn verify(
     store_root: &Path,
     case: DurabilityCrashCase,
 ) -> Result<(), DurabilityCrashMatrixError> {
+    if case.point().sequence() == xtask::DurabilityCrashSequence::Retention {
+        return retention::verify(store_root, case);
+    }
+    if case.point().sequence() == DurabilityCrashSequence::Migration {
+        return migration::verify(store_root, case);
+    }
     let expected = ExpectedStoreState::for_case(case)?;
     let observed_paths = inventory(store_root)?;
     if observed_paths != expected.paths() {
@@ -47,7 +58,7 @@ pub(super) fn verify(
     Ok(())
 }
 
-fn inventory(store_root: &Path) -> Result<BTreeSet<String>, DurabilityCrashMatrixError> {
+pub(super) fn inventory(store_root: &Path) -> Result<BTreeSet<String>, DurabilityCrashMatrixError> {
     let mut paths = BTreeSet::new();
     let mut pending = vec![PathBuf::new()];
     while let Some(relative_parent) = pending.pop() {

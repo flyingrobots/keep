@@ -1,0 +1,15 @@
+# Bounded retention recovery landing
+
+Status: accepted maintainer decision for #99. This decision supersedes earlier retention automatic-discard requirements and claims, without changing durable record formats or the migration recovery protocol.
+
+Incomplete retained stages are preserved. Planning refuses before recovery effects with a precise demonstrated-corruption cause or a typed disposition-required result. Available checks finding no contradiction do not prove that a complete canonical record exists. The accepted availability cost is blocked publication until explicit disposition is designed; users must not be instructed to delete evidence blindly.
+
+Automatic incomplete-stage disposition and stronger completion feasibility belong to a focused follow-up. Adding a quarantine namespace, journal or durable format to this landing is rejected. Existing useful partial validation remains diagnostic evidence, not disposal authorization.
+
+The supported namespace mutation model consists of cooperating writers under Keep authority. No writer-lock isolation is promised against arbitrary concurrent raw mutation. Keep retains no-follow, identity, exact-byte, namespace and corruption checks, and rejects observed substitution. Retaining a handle and checking metadata do not make pathname unlink or rename identity-conditional.
+
+Pre-effect refusal initiates no recovery mutation. Execution failure is not rollback: completed earlier steps and the failing capability's known or uncertain effects must be distinguished, with original typed causes and durability uncertainty retained. No later recovery steps execute after failure; a new attempt must observe again. An empty completed-step list says nothing about whether the failing capability changed the namespace.
+
+Complete-stage cleanup verifies its source and surviving pool evidence while retaining the opened stage. Its guarantee is preservation of verified surviving pool evidence under the supported mutation model, not preservation of a stage pathname that cleanup intentionally removes. Directory synchronization failure cannot undo an earlier unlink, link or rename.
+
+The finite review scope is the existing recovery capabilities, shared stage operations, executor and error boundaries. The closure ledger and stable-candidate validation live in [retention-landing.md](../testing-evidence/retention-landing.md). Independent review assesses this approved contract; unrelated improvements are follow-ups. Implementation stops when the ledger closes, exact-head independent approval is recorded and required checks are green; human merge approval remains required.

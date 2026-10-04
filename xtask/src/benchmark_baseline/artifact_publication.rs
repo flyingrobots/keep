@@ -10,7 +10,11 @@ const LOCK_NAME: &str = ".streaming-cas-baseline-v1.lock";
 const OUTPUT_RELATIVE_PATH: &str = "target/benchmark/streaming-cas-baseline-v1.tsv";
 const STAGE_NAME: &str = ".streaming-cas-baseline-v1.tsv.stage";
 
-pub(super) fn persist(repository_root: &Path, bytes: &[u8]) -> Result<(), BenchmarkBaselineError> {
+pub(super) fn persist(
+    repository_root: &Path,
+    report: &super::artifact::AdmittedReport<'_>,
+) -> Result<(), BenchmarkBaselineError> {
+    let bytes = report.bytes();
     let output = repository_root.join(OUTPUT_RELATIVE_PATH);
     let parent = output
         .parent()

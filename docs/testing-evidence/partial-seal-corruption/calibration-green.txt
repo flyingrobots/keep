@@ -1,0 +1,26 @@
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.94s
+     Running tests/recovery_partial_seal.rs (<isolated-build>/debug/deps/recovery_partial_seal-50cc4959e316d0ba)
+
+running 3 tests
+test unsupported_partial_seal_version_refuses_classification ... ok
+test unsupported_partial_seal_version_refuses_discard_assessment ... ok
+test framing_laws::available_fixed_seal_contradictions_refuse_every_later_short_boundary ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `release` profile [optimized] target(s) in 2.37s
+     Running tests/recovery_partial_seal.rs (<isolated-build>/release/deps/recovery_partial_seal-6b9a4d5315d5b74a)
+
+running 3 tests
+test unsupported_partial_seal_version_refuses_classification ... ok
+test unsupported_partial_seal_version_refuses_discard_assessment ... ok
+test framing_laws::available_fixed_seal_contradictions_refuse_every_later_short_boundary ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+    Checking keep v0.0.0 (<isolated-build>)
+    Checking xtask v0.0.0 (<isolated-build>/xtask)
+    Checking keep-benchmark v0.0.0 (<isolated-build>/benchmark)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.65s

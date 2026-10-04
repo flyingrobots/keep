@@ -1,8 +1,8 @@
 //! This module owns crash injection around the production segment-stage port.
 
-use std::io::{self, Write};
+use std::io;
 
-use keep::SegmentStage;
+use keep::{SegmentStageDurabilityEvent, SegmentStageObserver};
 use xtask::{DurabilityCrashPoint, DurabilityCrashPosition};
 
 use super::control::{CrashControl, DuringTiming};
@@ -14,23 +14,17 @@ const RECORD_INTERRUPTION: usize = 136;
 const SEAL_END: usize = 337;
 const SEAL_INTERRUPTION: usize = 273;
 
-pub(super) struct CrashSegmentStage<'control, S> {
-    inner: S,
+pub(super) struct CrashSegmentObserver<'control> {
     control: &'control mut CrashControl,
     bytes_written: usize,
 }
 
-impl<'control, S> CrashSegmentStage<'control, S> {
-    pub(super) const fn new(inner: S, control: &'control mut CrashControl) -> Self {
+impl<'control> CrashSegmentObserver<'control> {
+    pub(super) const fn new(control: &'control mut CrashControl) -> Self {
         Self {
-            inner,
             control,
             bytes_written: 0,
         }
-    }
-
-    pub(super) fn into_inner(self) -> S {
-        self.inner
     }
 
     fn write_boundary(&self) -> io::Result<(DurabilityCrashPoint, usize, usize)> {
@@ -71,11 +65,8 @@ impl<'control, S> CrashSegmentStage<'control, S> {
     }
 }
 
-impl<S> Write for CrashSegmentStage<'_, S>
-where
-    S: SegmentStage,
-{
-    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+impl SegmentStageObserver for CrashSegmentObserver<'_> {
+    fn before_write(&mut self, requested: usize) -> io::Result<usize> {
         let (point, interruption, end) = self.write_boundary()?;
         let position = self.control.position(point);
         if position == Some(DurabilityCrashPosition::Before) {
@@ -89,11 +80,12 @@ where
         let remaining = limit
             .checked_sub(self.bytes_written)
             .ok_or_else(|| io::Error::other("segment crash boundary moved backward"))?;
-        let allowed = remaining.min(bytes.len());
-        let prefix = bytes
-            .get(..allowed)
-            .ok_or_else(|| io::Error::other("segment write prefix exceeded input"))?;
-        let written = self.inner.write(prefix)?;
+        Ok(remaining.min(requested))
+    }
+
+    fn after_write(&mut self, written: usize) -> io::Result<()> {
+        let (point, interruption, end) = self.write_boundary()?;
+        let position = self.control.position(point);
         self.bytes_written = self
             .bytes_written
             .checked_add(written)
@@ -103,31 +95,32 @@ where
         {
             self.control.await_process_death()?;
         }
-        Ok(written)
+        Ok(())
     }
 
-    fn flush(&mut self) -> io::Result<()> {
-        let point = self.durability_point(
-            DurabilityCrashPoint::FlushSegmentRecordPrefix,
-            DurabilityCrashPoint::FlushSealedSegment,
-        )?;
-        self.control.before(point, DuringTiming::Before)?;
-        self.inner.flush()?;
-        self.control.after(point, DuringTiming::Before)
-    }
-}
-
-impl<S> SegmentStage for CrashSegmentStage<'_, S>
-where
-    S: SegmentStage,
-{
-    fn synchronize(&mut self) -> io::Result<()> {
-        let point = self.durability_point(
-            DurabilityCrashPoint::SynchronizeSegmentRecordPrefix,
-            DurabilityCrashPoint::SynchronizeSealedSegment,
-        )?;
-        self.control.before(point, DuringTiming::Before)?;
-        self.inner.synchronize()?;
-        self.control.after(point, DuringTiming::Before)
+    fn durability(&mut self, event: SegmentStageDurabilityEvent) -> io::Result<()> {
+        let point = match event {
+            SegmentStageDurabilityEvent::BeforeFlush | SegmentStageDurabilityEvent::AfterFlush => {
+                self.durability_point(
+                    DurabilityCrashPoint::FlushSegmentRecordPrefix,
+                    DurabilityCrashPoint::FlushSealedSegment,
+                )?
+            }
+            SegmentStageDurabilityEvent::BeforeSynchronize
+            | SegmentStageDurabilityEvent::AfterSynchronize => self.durability_point(
+                DurabilityCrashPoint::SynchronizeSegmentRecordPrefix,
+                DurabilityCrashPoint::SynchronizeSealedSegment,
+            )?,
+        };
+        match event {
+            SegmentStageDurabilityEvent::BeforeFlush
+            | SegmentStageDurabilityEvent::BeforeSynchronize => {
+                self.control.before(point, DuringTiming::Before)
+            }
+            SegmentStageDurabilityEvent::AfterFlush
+            | SegmentStageDurabilityEvent::AfterSynchronize => {
+                self.control.after(point, DuringTiming::Before)
+            }
+        }
     }
 }

@@ -17,7 +17,7 @@ pub(super) fn link(
         segment,
         publisher.policy.segment_read(),
     )?;
-    filesystem_catalog_artifact::link_without_replacement(
+    super::filesystem_exact_record::link_without_replacement(
         &publisher.staging,
         filesystem_catalog_publisher::CURRENT_SEGMENT,
         &publisher.segments,

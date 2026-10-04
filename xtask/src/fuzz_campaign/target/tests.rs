@@ -23,6 +23,7 @@ fn checked_in_harness_set_is_exact_and_sorted() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         targets.iter().map(FuzzTarget::as_str).collect::<Vec<_>>(),
         [
+            "benchmark_report",
             "blob_hasher",
             "blob_id_binary",
             "blob_id_text",
@@ -30,7 +31,9 @@ fn checked_in_harness_set_is_exact_and_sorted() -> Result<(), Box<dyn Error>> {
             "fast_cdc",
             "golden_protocol",
             "layout_record",
+            "migration_format",
             "repository_json",
+            "retention_format",
             "segment_format",
         ]
     );

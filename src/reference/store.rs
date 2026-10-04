@@ -46,6 +46,8 @@ pub struct ReferenceStore {
     pub(super) materialized_bytes: usize,
     #[cfg(test)]
     pub(super) observed_chunk_reads: RefCell<Vec<ChunkId>>,
+    #[cfg(test)]
+    pub(super) observed_chunk_hashes: RefCell<Vec<ChunkId>>,
 }
 
 impl ReferenceStore {
@@ -60,6 +62,8 @@ impl ReferenceStore {
             materialized_bytes: 0,
             #[cfg(test)]
             observed_chunk_reads: RefCell::new(Vec::new()),
+            #[cfg(test)]
+            observed_chunk_hashes: RefCell::new(Vec::new()),
         }
     }
 
