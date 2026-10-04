@@ -33,7 +33,7 @@ impl RetentionManifest {
         predecessor: Option<RetentionManifestDigest>,
         mut entries: Vec<RetentionManifestEntry>,
     ) -> Result<Self, RetentionManifestError> {
-        admit_predecessor(generation, predecessor)?;
+        Self::admit_predecessor(generation, predecessor)?;
         let observed = entries.len();
         let entry_count =
             u32::try_from(observed).map_err(|_| RetentionManifestError::EntryCountExceeded {
@@ -77,19 +77,22 @@ impl RetentionManifest {
     }
 }
 
-fn admit_predecessor(
-    generation: LivenessGeneration,
-    predecessor: Option<RetentionManifestDigest>,
-) -> Result<(), RetentionManifestError> {
-    if generation.get() == 1 {
-        return predecessor.map_or(Ok(()), |observed| {
-            Err(RetentionManifestError::InitialGenerationHasPredecessor { observed })
-        });
-    }
-    if predecessor.is_some() {
-        Ok(())
-    } else {
-        Err(RetentionManifestError::MissingPredecessor { generation })
+impl RetentionManifest {
+    /// Admits generation history independently of an unavailable record body.
+    pub(crate) fn admit_predecessor(
+        generation: LivenessGeneration,
+        predecessor: Option<RetentionManifestDigest>,
+    ) -> Result<(), RetentionManifestError> {
+        if generation.get() == 1 {
+            return predecessor.map_or(Ok(()), |observed| {
+                Err(RetentionManifestError::InitialGenerationHasPredecessor { observed })
+            });
+        }
+        if predecessor.is_some() {
+            Ok(())
+        } else {
+            Err(RetentionManifestError::MissingPredecessor { generation })
+        }
     }
 }
 

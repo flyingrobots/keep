@@ -4,10 +4,13 @@ use std::io::{self, Write};
 
 use cap_std::fs::{Dir, File};
 
+use super::filesystem_migration_recovery_refusal::{
+    FilesystemMigrationRecoveryRefusal as Refusal, invalid,
+};
 use super::{format_marker_decoder, migration_intent_format, migration_receipt_format};
 use crate::adapters::filesystem_catalog_artifact;
 use crate::adapters::filesystem_exact_record::{
-    self as exact_record, EntryIdentity, ExactRecordError, ExactRecordRefusal,
+    self as exact_record, EntryIdentity, ExactRecordError,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -18,7 +21,7 @@ pub(super) enum FilesystemMigrationFixedArtifact {
 }
 
 impl FilesystemMigrationFixedArtifact {
-    const fn stage_name(self) -> &'static str {
+    pub(super) const fn stage_name(self) -> &'static str {
         match self {
             Self::Intent => "migration.intent.next",
             Self::Marker => "FORMAT.next",
@@ -26,7 +29,7 @@ impl FilesystemMigrationFixedArtifact {
         }
     }
 
-    const fn canonical_name(self) -> &'static str {
+    pub(super) const fn canonical_name(self) -> &'static str {
         match self {
             Self::Intent => "migration.intent",
             Self::Marker => "FORMAT",
@@ -34,7 +37,7 @@ impl FilesystemMigrationFixedArtifact {
         }
     }
 
-    const fn encoded_length(self) -> usize {
+    pub(super) const fn encoded_length(self) -> usize {
         match self {
             Self::Intent => migration_intent_format::ENCODED_LENGTH,
             Self::Marker => format_marker_decoder::ENCODED_LENGTH,
@@ -67,6 +70,31 @@ impl FilesystemMigrationFixedStage {
             identity,
             file,
         })
+    }
+
+    /// Creates the stage exclusively and writes only `expected[..end]`,
+    /// leaving an unsynchronized incomplete pre-effect stage behind. The
+    /// handle is dropped: repository crash tasks kill the process next.
+    #[cfg(feature = "repository-tasks")]
+    pub(super) fn create_prefix(
+        root: &Dir,
+        artifact: FilesystemMigrationFixedArtifact,
+        expected: &[u8],
+        end: usize,
+    ) -> io::Result<()> {
+        require_length(artifact, expected)?;
+        let prefix = expected
+            .get(..end)
+            .filter(|prefix| prefix.len() < expected.len())
+            .ok_or_else(|| {
+                invalid(Refusal::StagePrefix {
+                    complete_length: expected.len(),
+                    observed: end,
+                })
+            })?;
+        let mut file = filesystem_catalog_artifact::create_exclusive(root, artifact.stage_name())?;
+        file.write_all(prefix)?;
+        file.flush()
     }
 
     pub(super) fn synchronize(&self, root: &Dir) -> io::Result<()> {
@@ -170,29 +198,59 @@ fn verify_named_record(
 
 /// Maps a shared exact-record failure onto this protocol's refusal messages.
 fn migration_error(error: ExactRecordError) -> io::Error {
-    match error {
-        ExactRecordError::Io(source) => source,
-        ExactRecordError::Refused(refusal) => invalid_data(match refusal {
-            ExactRecordRefusal::LengthOverflow => "migration fixed-record length exceeded u64",
-            ExactRecordRefusal::KindOrLength | ExactRecordRefusal::KindLengthOrIdentity => {
-                "migration fixed-record kind, length, or identity disagreed"
-            }
-            ExactRecordRefusal::Bytes | ExactRecordRefusal::TrailingBytes => {
-                "migration fixed-record bytes disagreed"
-            }
-            ExactRecordRefusal::RemainedVisible => "removed migration stage remained visible",
-        }),
-    }
+    error.into_io()
 }
 
 fn require_length(artifact: FilesystemMigrationFixedArtifact, expected: &[u8]) -> io::Result<()> {
     if expected.len() == artifact.encoded_length() {
         Ok(())
     } else {
-        Err(invalid_data("migration fixed-record length disagreed"))
+        Err(invalid(Refusal::RecordLength {
+            expected: artifact.encoded_length(),
+            observed: expected.len(),
+        }))
     }
 }
 
 fn invalid_data(message: &'static str) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, message)
+}
+
+impl FilesystemMigrationFixedStage {
+    /// Reopens an existing exact stage by identity for a resumed migration.
+    pub(super) fn reopen_stage(
+        root: &Dir,
+        artifact: FilesystemMigrationFixedArtifact,
+        expected: &[u8],
+    ) -> io::Result<Self> {
+        Self::reopen(root, artifact, artifact.stage_name(), expected)
+    }
+
+    /// Reopens an existing exact canonical record by identity, as the
+    /// published handle a resumed migration verifies against.
+    pub(super) fn reopen_canonical(
+        root: &Dir,
+        artifact: FilesystemMigrationFixedArtifact,
+        expected: &[u8],
+    ) -> io::Result<Self> {
+        Self::reopen(root, artifact, artifact.canonical_name(), expected)
+    }
+
+    fn reopen(
+        root: &Dir,
+        artifact: FilesystemMigrationFixedArtifact,
+        name: &str,
+        expected: &[u8],
+    ) -> io::Result<Self> {
+        require_length(artifact, expected)?;
+        let file = exact_record::open_regular(root, name)?;
+        let identity = EntryIdentity::of_file(&file)?;
+        verify_named_record(root, name, expected, identity)?;
+        Ok(Self {
+            artifact,
+            expected: Box::from(expected),
+            identity,
+            file,
+        })
+    }
 }

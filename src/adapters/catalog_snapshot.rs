@@ -52,6 +52,10 @@ impl<'head, 'catalog, 'records> CatalogSnapshot<'head, 'catalog, 'records> {
         self.catalog.record(identity)
     }
 
+    pub(super) fn records(&self) -> impl Iterator<Item = AdmittedSegmentRecord<'records>> + '_ {
+        self.catalog.records()
+    }
+
     pub(super) const fn new(
         head: ChecksummedPublicationHead<'head>,
         catalog: AdmittedCatalog<'catalog, 'records>,

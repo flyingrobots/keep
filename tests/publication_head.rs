@@ -1,4 +1,7 @@
-//! Public publication-head framing and checksum laws.
+//! Codec laws with public verification classification of every corrupt input.
+
+#[path = "verification_corruption/observation.rs"]
+mod verification_observation;
 
 mod support;
 
@@ -33,7 +36,7 @@ const CHECKSUM_OFFSET: usize = 96;
 #[test]
 fn frozen_publication_heads_are_checksum_verified_exactly() -> Result<(), Box<dyn Error>> {
     let generation_one = head_bytes(GENERATION_ONE_HEX)?;
-    let first = ChecksummedPublicationHead::decode(&generation_one)?;
+    let first = verification_decode(&generation_one)??;
     assert_eq!(first.generation().get(), 1);
     assert_eq!(first.catalog_length().get(), 352);
     assert_eq!(
@@ -43,7 +46,7 @@ fn frozen_publication_heads_are_checksum_verified_exactly() -> Result<(), Box<dy
     assert_eq!(first.encoded(), generation_one);
 
     let generation_two = head_bytes(GENERATION_TWO_HEX)?;
-    let second = ChecksummedPublicationHead::decode(&generation_two)?;
+    let second = verification_decode(&generation_two)??;
     assert_eq!(second.generation().get(), 2);
     assert_eq!(second.catalog_length().get(), 352);
     assert_eq!(
@@ -52,7 +55,7 @@ fn frozen_publication_heads_are_checksum_verified_exactly() -> Result<(), Box<dy
     );
 
     let bundle = head_bytes(BUNDLE_HEX)?;
-    let bundle_head = ChecksummedPublicationHead::decode(&bundle)?;
+    let bundle_head = verification_decode(&bundle)??;
     assert_eq!(bundle_head.generation().get(), 1);
     assert_eq!(bundle_head.catalog_length().get(), 512);
     assert_eq!(
@@ -141,7 +144,7 @@ fn publication_head_refuses_wrong_width_and_checksum() -> Result<(), Box<dyn Err
     let _last = encoded.pop().ok_or("head fixture is empty")?;
     assert_eq!(
         require_error(
-            ChecksummedPublicationHead::decode(&encoded),
+            verification_decode(&encoded)?,
             "truncated head was admitted"
         )?,
         PublicationHeadDecodeError::WrongLength {
@@ -157,7 +160,7 @@ fn publication_head_refuses_wrong_width_and_checksum() -> Result<(), Box<dyn Err
     *checksum_byte ^= 1;
     assert!(matches!(
         require_error(
-            ChecksummedPublicationHead::decode(&corrupt),
+            verification_decode(&corrupt)?,
             "corrupt head checksum was admitted"
         )?,
         PublicationHeadDecodeError::ChecksumMismatch { .. }
@@ -175,10 +178,7 @@ fn assert_refusal(
         .get_mut(offset)
         .ok_or("head fixture lacks the mutation offset")?;
     *field = value;
-    let error = require_error(
-        ChecksummedPublicationHead::decode(&encoded),
-        "mutated head was admitted",
-    )?;
+    let error = require_error(verification_decode(&encoded)?, "mutated head was admitted")?;
     assert!(predicate(error), "unexpected refusal: {error:?}");
     Ok(())
 }
@@ -193,10 +193,7 @@ fn assert_u64_refusal(
         .get_mut(offset..offset.checked_add(8).ok_or("test offset overflow")?)
         .ok_or("head fixture lacks the u64 mutation field")?;
     field.copy_from_slice(&value.to_be_bytes());
-    let error = require_error(
-        ChecksummedPublicationHead::decode(&encoded),
-        "mutated head was admitted",
-    )?;
+    let error = require_error(verification_decode(&encoded)?, "mutated head was admitted")?;
     assert!(predicate(error), "unexpected refusal: {error:?}");
     Ok(())
 }
@@ -207,4 +204,21 @@ fn head_bytes(hex: &str) -> Result<Vec<u8>, Box<dyn Error>> {
             .ok_or("head fixture must end in one LF")?,
     )
     .map_err(Into::into)
+}
+
+// Size: small. The original typed assertions remain the corruption oracle.
+fn verification_decode(
+    bytes: &[u8],
+) -> Result<
+    Result<ChecksummedPublicationHead<'_>, PublicationHeadDecodeError>,
+    Box<dyn std::error::Error>,
+> {
+    let error = match ChecksummedPublicationHead::decode(bytes) {
+        Ok(value) => return Ok(Ok(value)),
+        Err(error) => error,
+    };
+    Ok(Err(verification_observation::classify(
+        error,
+        keep::VerificationSubject::PublishedCatalog,
+    )?))
 }

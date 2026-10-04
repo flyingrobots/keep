@@ -21,9 +21,10 @@ const HEAD_LENGTH: usize = crate::adapters::publication_head_decoder::ENCODED_LE
 /// lost a pool entry. Publication must not proceed unless this store's own
 /// `HEAD` names exactly that catalog generation and digest and the selected
 /// catalog pool entry reopens under this authority, bounded by the head's
-/// declared length, and decodes to that generation and digest. Closure-member
-/// segments are not re-read here: every read authenticates them, and their
-/// re-verification under authority belongs to retention recovery.
+/// declared length, and decodes to that generation and digest. Live closure
+/// verification then reloads all selected segments with the explicit default
+/// catalog byte policy and replays the candidate anchors under writer authority.
+/// The fresh proof must remain bound to the prepared catalog coordinates.
 pub(super) fn require_current_catalog(
     root: &Dir,
     preparation: &RetentionPublicationPreparation<'_>,
@@ -47,7 +48,23 @@ pub(super) fn require_current_catalog(
         }
         .into_io());
     }
-    require_selected_catalog(root, head)
+    require_selected_catalog(root, head)?;
+    let policy = super::filesystem_retention_recovery_policy::default_catalog_policy()?;
+    let live = super::filesystem_retention_closure_admission::verify(
+        root,
+        preparation.candidate().root(),
+        policy,
+    )?;
+    if live.catalog_generation() != expected_generation
+        || live.catalog_digest() != closure.catalog_digest()
+    {
+        return Err(RetentionCurrentStateRefusal::CatalogDisagreed {
+            expected_generation,
+            observed_generation: Some(live.catalog_generation()),
+        }
+        .into_io());
+    }
+    Ok(())
 }
 
 /// Reopens the catalog pool entry `head` selects and requires it to be that catalog.

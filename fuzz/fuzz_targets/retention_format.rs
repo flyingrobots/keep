@@ -17,18 +17,21 @@ fuzz_target!(|bytes: &[u8]| {
 });
 
 fn root(input: &[u8]) {
+    let _ = keep::assess_root_stage(Some(input));
     if let Ok(root) = AdmittedRetentionRoot::decode(input) {
         assert_eq!(root.encoded(), input);
     }
 }
 
 fn manifest(input: &[u8]) {
+    let _ = keep::assess_manifest_stage(Some(input));
     if let Ok(manifest) = AdmittedRetentionManifest::decode(input) {
         assert_eq!(manifest.encoded(), input);
     }
 }
 
 fn head(input: &[u8]) {
+    let _ = keep::assess_head_stage(Some(input));
     if let Ok(head) = ChecksummedRetentionHead::decode(input) {
         assert_eq!(head.encoded(), input);
     }

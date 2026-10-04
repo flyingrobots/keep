@@ -103,3 +103,53 @@ fn one_record_bytes() -> Result<Vec<u8>, Box<dyn Error>> {
         .map(<[u8]>::to_vec)
         .ok_or_else(|| "segment fixture lacks its complete record".into())
 }
+
+// Each existing malformed-segment law crosses the verification ingress and
+// then applies its original exact typed oracle to the retained decoder cause.
+fn verification_refusal(
+    encoded: &[u8],
+    policy: SegmentReadPolicy,
+) -> Result<keep::SegmentReadError, Box<dyn Error>> {
+    let error = keep::verify_segment(encoded, policy, keep::VerificationDepth::Framing)
+        .err()
+        .ok_or("malformed segment received a verification report")?;
+    let source = match error {
+        keep::VerificationError::Operational { source } => {
+            assert!(
+                matches!(
+                    *source,
+                    keep::VerificationSource::Segment(keep::SegmentReadError::RecordCountLimit {
+                        maximum: 0,
+                        observed: 1
+                    })
+                ),
+                "only the explicit configured limit is operational in this corpus"
+            );
+            source
+        }
+        keep::VerificationError::Refused {
+            refusal: keep::VerificationRefusal::Corrupt { .. },
+            source: Some(source),
+        } => {
+            assert!(
+                !matches!(
+                    *source,
+                    keep::VerificationSource::Segment(
+                        keep::SegmentReadError::RecordCountLimit { .. }
+                    )
+                ),
+                "resource limits must not become corruption"
+            );
+            source
+        }
+        other => {
+            return Err(
+                format!("segment contradiction lost classification or source: {other:?}").into(),
+            );
+        }
+    };
+    let keep::VerificationSource::Segment(source) = *source else {
+        return Err("original segment cause lost".into());
+    };
+    Ok(source)
+}

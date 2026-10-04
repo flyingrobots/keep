@@ -103,9 +103,9 @@ fn dangling_catalog_and_segment_paths_refuse_exactly() -> Result<(), Box<dyn Err
     )?;
     assert!(matches!(
         error,
-        CatalogRestartError::Io {
+        CatalogRestartError::SegmentIo {
             phase: CatalogRestartPhase::OpenSegment,
-            ref source,
+            ref source, ..
         } if source.kind() == ErrorKind::NotFound
     ));
     missing_segment.remove()

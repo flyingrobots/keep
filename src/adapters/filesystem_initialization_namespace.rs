@@ -3,6 +3,9 @@
 use std::ffi::OsStr;
 use std::io;
 
+use super::filesystem_namespace_refusal::{
+    self as namespace, FilesystemEntryKind, FilesystemNamespaceRefusal,
+};
 use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
 
@@ -136,42 +139,37 @@ fn admit_version_two_protocol_directories(directory: &Dir) -> io::Result<()> {
 }
 
 fn admit_optional_file(directory: &Dir, name: &str) -> io::Result<()> {
-    admit_optional_kind(directory, name, cap_std::fs::FileType::is_file)
+    admit_optional_kind(directory, name, FilesystemEntryKind::File)
 }
 
 fn admit_optional_directory(directory: &Dir, name: &str) -> io::Result<()> {
-    admit_optional_kind(directory, name, cap_std::fs::FileType::is_dir)
+    admit_optional_kind(directory, name, FilesystemEntryKind::Directory)
 }
 
 fn admit_required_file(directory: &Dir, name: &str) -> io::Result<()> {
-    admit_required_kind(directory, name, cap_std::fs::FileType::is_file)
+    admit_required_kind(directory, name, FilesystemEntryKind::File)
 }
 
 fn admit_required_directory(directory: &Dir, name: &str) -> io::Result<()> {
-    admit_required_kind(directory, name, cap_std::fs::FileType::is_dir)
+    admit_required_kind(directory, name, FilesystemEntryKind::Directory)
 }
 
 fn admit_required_kind(
     directory: &Dir,
     name: &str,
-    expected: fn(&cap_std::fs::FileType) -> bool,
+    expected: FilesystemEntryKind,
 ) -> io::Result<()> {
     let metadata = directory.symlink_metadata(name)?;
-    if expected(&metadata.file_type()) {
-        Ok(())
-    } else {
-        Err(ambiguous_namespace())
-    }
+    namespace::require_kind(metadata.file_type(), expected)
 }
 
 fn admit_optional_kind(
     directory: &Dir,
     name: &str,
-    expected: fn(&cap_std::fs::FileType) -> bool,
+    expected: FilesystemEntryKind,
 ) -> io::Result<()> {
     match directory.symlink_metadata(name) {
-        Ok(metadata) if expected(&metadata.file_type()) => Ok(()),
-        Ok(_) => Err(ambiguous_namespace()),
+        Ok(metadata) => namespace::require_kind(metadata.file_type(), expected),
         Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(()),
         Err(source) => Err(source),
     }
@@ -180,11 +178,14 @@ fn admit_optional_kind(
 fn admit_membership(directory: &Dir, canonical_names: &[&str]) -> io::Result<()> {
     let mut observed = 0_usize;
     for entry in directory.entries()? {
-        observed = observed.checked_add(1).ok_or_else(ambiguous_namespace)?;
+        let entry = entry?;
+        observed = observed
+            .checked_add(1)
+            .ok_or_else(|| io::Error::other("namespace entry count overflow"))?;
         if observed > canonical_names.len() {
             return Err(ambiguous_namespace());
         }
-        let name = entry?.file_name();
+        let name = entry.file_name();
         if !is_canonical(&name, canonical_names) {
             return Err(ambiguous_namespace());
         }
@@ -197,8 +198,37 @@ fn is_canonical(name: &OsStr, canonical_names: &[&str]) -> bool {
 }
 
 fn ambiguous_namespace() -> io::Error {
-    io::Error::new(
-        io::ErrorKind::InvalidData,
-        "store root is not an empty or partial canonical initialization namespace",
-    )
+    FilesystemNamespaceRefusal::UnexpectedEntry.into_io()
+}
+
+/// Admits a published version-1 root carrying any subset of migration
+/// residue, for migration recovery only.
+///
+/// The five published names are required with their kinds; every migration
+/// record, stage, the reader fence, and the three protocol directories are
+/// optional but must have their kinds; anything else refuses. Which subsets
+/// are lawful is the recovery planner's decision, not this admission's.
+pub(super) fn admit_migrating(directory: &Dir) -> io::Result<()> {
+    admit_required_file(directory, LOCK_NAME)?;
+    admit_required_directory(directory, STAGING_NAME)?;
+    admit_required_directory(directory, SEGMENTS_NAME)?;
+    admit_required_directory(directory, CATALOGS_NAME)?;
+    admit_required_file(directory, HEAD_NAME)?;
+    for name in [
+        READER_LOCK_NAME,
+        MARKER_NAME,
+        "FORMAT.next",
+        INTENT_NAME,
+        "migration.intent.next",
+        RECEIPT_NAME,
+        "migration.receipt.next",
+    ] {
+        admit_optional_file(directory, name)?;
+    }
+    for name in [RETENTION_NAME, GC_NAME, RECOVERY_NAME] {
+        admit_optional_directory(directory, name)?;
+    }
+    let mut allowed: Vec<&str> = PUBLISHED_NAMES.to_vec();
+    allowed.extend_from_slice(&VERSION_TWO_MARKERS);
+    admit_membership(directory, &allowed)
 }

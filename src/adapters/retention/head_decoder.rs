@@ -16,15 +16,20 @@ pub(super) fn decode(
     require_length(encoded)?;
     validate_fixed_fields(encoded)?;
     verify_checksum(encoded)?;
+    let head = admit_fields(encoded)?;
+    Ok(ChecksummedRetentionHead::admitted(encoded, head))
+}
+
+/// Admits complete semantic fields, including those preceding an interrupted checksum.
+pub(super) fn admit_fields(encoded: &[u8]) -> Result<RetentionHead, RetentionHeadDecodeError> {
     let generation = LivenessGeneration::new(read_u64(encoded, 24)?)
         .map_err(|source| RetentionHeadDecodeError::LivenessGeneration { source })?;
     let manifest_length = RetentionManifestLength::new(read_u64(encoded, 32)?)
         .map_err(|source| RetentionHeadDecodeError::ManifestLength { source })?;
     let manifest_digest = RetentionManifestDigest::from_hash(read_array(encoded, 40)?);
     let predecessor = predecessor(read_array(encoded, 72)?);
-    let head = RetentionHead::new(generation, manifest_length, manifest_digest, predecessor)
-        .map_err(|source| RetentionHeadDecodeError::Semantic { source })?;
-    Ok(ChecksummedRetentionHead::admitted(encoded, head))
+    RetentionHead::new(generation, manifest_length, manifest_digest, predecessor)
+        .map_err(|source| RetentionHeadDecodeError::Semantic { source })
 }
 
 fn validate_fixed_fields(encoded: &[u8]) -> Result<(), RetentionHeadDecodeError> {
@@ -107,7 +112,7 @@ fn read_u32(encoded: &[u8], offset: usize) -> Result<u32, RetentionHeadDecodeErr
     read_array(encoded, offset).map(u32::from_be_bytes)
 }
 
-fn read_u64(encoded: &[u8], offset: usize) -> Result<u64, RetentionHeadDecodeError> {
+pub(super) fn read_u64(encoded: &[u8], offset: usize) -> Result<u64, RetentionHeadDecodeError> {
     read_array(encoded, offset).map(u64::from_be_bytes)
 }
 

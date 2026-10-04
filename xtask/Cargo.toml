@@ -9,6 +9,7 @@ publish = false
 [features]
 default = ["repository-tasks"]
 golden-protocol-fuzz = []
+benchmark-report-fuzz = []
 repository-json-fuzz = ["dep:serde", "dep:serde_json"]
 repository-tasks = [
     "dep:blake3",

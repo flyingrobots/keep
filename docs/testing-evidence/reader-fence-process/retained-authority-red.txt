@@ -1,0 +1,53 @@
+   Compiling rustix v1.1.4
+   Compiling io-lifetimes v2.0.4
+   Compiling io-lifetimes v3.0.1
+   Compiling linux-raw-sys v0.12.1
+   Compiling bitflags v2.13.1
+   Compiling proc-macro2 v1.0.107
+   Compiling io-extras v0.19.0
+   Compiling quote v1.0.47
+   Compiling shlex v2.0.1
+   Compiling cap-primitives v4.0.2
+   Compiling unicode-ident v1.0.24
+   Compiling find-msvc-tools v0.1.9
+   Compiling once_cell v1.21.4
+   Compiling ambient-authority v0.0.2
+   Compiling ipnet v2.12.0
+   Compiling maybe-owned v0.3.4
+   Compiling cap-std v4.0.2
+   Compiling cap-fs-ext v4.0.2
+   Compiling anstyle v1.0.14
+   Compiling cfg-if v1.0.4
+   Compiling clap_lex v1.1.0
+   Compiling cc v1.3.0
+   Compiling libc v0.2.186
+   Compiling arrayref v0.3.9
+   Compiling arrayvec v0.7.8
+   Compiling constant_time_eq v0.4.2
+   Compiling condtype v1.3.0
+   Compiling clap_builder v4.6.2
+   Compiling regex-lite v0.1.9
+   Compiling allocation-counter v0.8.1
+   Compiling syn v2.0.119
+   Compiling blake3 v1.8.5
+   Compiling clap v4.6.4
+   Compiling rustix-linux-procfs v0.1.1
+   Compiling fs-set-times v0.20.3
+   Compiling divan-macros v0.1.21
+   Compiling keep v0.0.0 (<calibration-source>)
+   Compiling divan v0.1.21
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.37s
+     Running tests/reader_fence_process.rs (<calibration-target>/debug/deps/reader_fence_process-d5b0d43619bf3bf3)
+
+running 1 test
+Error: Os { code: 11, kind: WouldBlock, message: "Resource temporarily unavailable" }
+test reader_death_releases_collection_without_replacing_the_fence ... FAILED
+
+failures:
+
+failures:
+    reader_death_releases_collection_without_replacing_the_fence
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.05s
+
+error: test failed, to rerun pass `--test reader_fence_process`

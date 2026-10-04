@@ -165,8 +165,9 @@ implements root, manifest, and head codecs with a typed verified anchor-set
 digest, expected-state transition planning, deterministic closure verification,
 a blocking publication storage capability port, and ordered storage-port
 orchestration. `FilesystemRetentionPublicationAuthority` publishes initial and
-successor generations against its observed head and refuses superseded
-candidates and retained stages; recovery, fencing, and collection remain absent.
+successor generations against its observed head, recovers retained stages
+first, and refuses superseded candidates and protected orphans; fencing and
+collection remain absent.
 
 ## Global retention manifest
 

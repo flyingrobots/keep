@@ -3,14 +3,19 @@
 use std::collections::TryReserveError;
 
 use crate::{
-    BlobIdBinaryParseError, LayoutIdBinaryParseError, RetentionClosureLimitError,
-    RetentionNamespaceError, RetentionProfileAdmissionError, RetentionRootError,
-    RootGenerationError,
+    BlobIdBinaryParseError, LayoutIdBinaryParseError, RetentionClosureLimit,
+    RetentionClosureLimitError, RetentionNamespaceError, RetentionProfileAdmissionError,
+    RetentionRootError, RootGenerationError,
 };
 
 /// Failure to decode and admit one version-2 retention root.
 #[derive(Debug)]
 pub enum RetentionRootDecodeError {
+    /// Available size-field bytes admit no canonical completion.
+    FramingPrefixImpossible {
+        /// Actual byte length of the interrupted stage.
+        observed: usize,
+    },
     /// The byte string ended before its required exact length.
     Truncated {
         /// Required byte length.
@@ -24,6 +29,15 @@ pub enum RetentionRootDecodeError {
         expected: usize,
         /// Observed byte length.
         observed: usize,
+    },
+    /// An available byte contradicts a fixed or computed integrity field in an interrupted stage.
+    PrefixByteMismatch {
+        /// Absolute byte offset in the observed stage.
+        offset: usize,
+        /// The canonical byte required at this offset.
+        expected: u8,
+        /// The byte actually present at this offset.
+        observed: u8,
     },
     /// The fixed record magic was not canonical.
     InvalidMagic {
@@ -97,12 +111,30 @@ pub enum RetentionRootDecodeError {
         /// Preserved limit failure.
         source: RetentionClosureLimitError,
     },
+    /// An interrupted limit cannot be completed within its resource ceiling.
+    ClosureLimitPrefixAboveMaximum {
+        /// Resource whose available bytes already exceed its ceiling.
+        limit: RetentionClosureLimit,
+        /// Smallest value possible when all unavailable bytes are zero.
+        minimum: u64,
+        /// Largest admitted value for this resource.
+        maximum: u64,
+    },
     /// One anchor contained a malformed `BlobId`.
     BlobId {
         /// Zero-based anchor index.
         index: u32,
         /// Preserved coordinate failure.
         source: BlobIdBinaryParseError,
+    },
+    /// An incomplete layout length cannot fit within its format ceiling.
+    LayoutLengthPrefixAboveMaximum {
+        /// Zero-based anchor index.
+        index: u32,
+        /// Smallest completion of the available big-endian length bytes.
+        minimum: u64,
+        /// Maximum admitted layout record length.
+        maximum: u64,
     },
     /// One anchor contained a malformed `LayoutId`.
     LayoutId {
