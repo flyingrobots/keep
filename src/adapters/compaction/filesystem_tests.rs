@@ -99,7 +99,8 @@ fn compaction_preserves_every_identity_and_closure_and_frees_the_mixed_segment()
             ))
         );
     }
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+    let admission =
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
     let mut collector = FilesystemGcAuthority::open(admission, sandbox.path(), catalog_policy()?)?;
     let _retired = collector.execute(&gc)?;
     drop(collector);

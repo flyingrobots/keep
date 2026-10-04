@@ -7,6 +7,8 @@
 //! policy.
 
 mod admitted_catalog;
+mod authenticated_read;
+pub use authenticated_read::{RangeReadError, ReconstructionError};
 mod admitted_recovery_stage_bytes;
 mod admitted_segment;
 mod admitted_segment_record;
@@ -14,12 +16,14 @@ mod blob_id_binary;
 mod blob_id_binary_error;
 mod blob_id_text;
 mod blob_id_text_error;
+mod blob_verification;
 mod canonical_catalog;
 mod canonical_publication_head;
 mod catalog_admission;
 mod catalog_admission_error;
 mod catalog_admission_error_display;
 mod catalog_allocation_phase;
+mod catalog_byte_verification;
 mod catalog_decode_error;
 mod catalog_decode_error_display;
 mod catalog_decoder;
@@ -60,6 +64,7 @@ mod catalog_snapshot_error;
 mod catalog_successor;
 mod catalog_transition;
 mod catalog_transition_error;
+mod catalog_verification;
 mod checksummed_catalog;
 mod checksummed_publication_head;
 mod checksummed_segment_record;
@@ -83,6 +88,7 @@ mod filesystem_catalog_storage;
 mod filesystem_exact_record;
 mod filesystem_initialization_namespace;
 mod filesystem_initialization_storage;
+mod filesystem_namespace_refusal;
 mod filesystem_platform_admission;
 mod filesystem_platform_admission_error;
 mod filesystem_platform_profile;
@@ -122,10 +128,12 @@ mod filesystem_recovery_stage_materialization;
 mod filesystem_recovery_stage_sync;
 #[cfg(all(test, unix))]
 mod filesystem_recovery_stage_tests;
+mod filesystem_root_binding;
 mod filesystem_root_identity;
 mod filesystem_segment_stage;
 #[cfg(test)]
 mod filesystem_segment_stage_tests;
+mod filesystem_stage_observation;
 mod filesystem_store_initializer;
 #[cfg(test)]
 mod filesystem_store_initializer_tests;
@@ -154,6 +162,8 @@ mod layout_record_format;
 mod layout_record_framing;
 mod loaded_segment;
 mod lower_hex;
+#[cfg(feature = "repository-tasks")]
+mod observed_segment_stage;
 mod opened_reusable_segment;
 mod physical_pool_name;
 mod pipeline;
@@ -166,7 +176,6 @@ mod recovery;
 mod repository_initialization_storage;
 mod retention;
 mod sealed_segment;
-mod segment_digest;
 mod segment_digest_builder;
 mod segment_header;
 mod segment_header_admission;
@@ -203,6 +212,7 @@ mod segment_record_kind;
 mod segment_record_length;
 mod segment_record_limit;
 mod segment_record_payload_length;
+mod segment_record_verification;
 mod segment_records;
 mod segment_seal;
 mod segment_seal_admission;
@@ -217,7 +227,10 @@ mod segment_seal_hash;
 mod segment_stage;
 mod segment_stage_create_error;
 mod segment_stage_create_error_display;
+#[cfg(feature = "repository-tasks")]
+mod segment_stage_observer;
 mod segment_stage_write;
+mod segment_verification;
 mod segment_write_error;
 mod segment_write_error_display;
 mod segment_write_phase;
@@ -234,6 +247,11 @@ mod sync_capable_directory;
 #[cfg(test)]
 #[path = "../../tests/support/mod.rs"]
 mod test_support;
+mod verification_admission;
+mod verification_decode_error;
+mod verification_error;
+mod verification_failure_class;
+mod verification_ingress;
 mod verification_receipt;
 mod writer_lock_acquire_error;
 mod writer_lock_acquire_phase;
@@ -244,3 +262,9 @@ use catalog_encoding_entry::CatalogEncodingEntry;
 use catalog_entries::CatalogEntries;
 use catalog_record_binding::CatalogRecordBinding;
 use decoded_catalog_entry::DecodedCatalogEntry;
+
+pub use verification_error::{VerificationError, VerificationSource};
+
+pub use verification_ingress::verify_segment;
+
+pub use catalog_byte_verification::verify_catalog_bytes;

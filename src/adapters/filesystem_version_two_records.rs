@@ -28,8 +28,8 @@ impl BoundRootIdentity {
     /// Binds the two restart-stable root coordinates the intent persists.
     ///
     /// The intent also records the mount identity observed during migration,
-    /// but `statx.stx_mnt_id` changes across unmount, remount, and reboot, so
-    /// no reopen path reads it; the migration authority compares it only
+    /// but `statx.stx_mnt_id` can change across mount instances and reboots, so
+    /// reopen does not compare it; the migration authority compares it only
     /// inside the process that observed it.
     pub(super) const fn new(device: u64, file: u64) -> Self {
         Self { device, file }

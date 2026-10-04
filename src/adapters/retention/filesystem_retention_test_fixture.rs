@@ -8,12 +8,12 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use super::RetentionPublicationStorage;
 use super::filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
 use super::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionRoot,
     RetentionCurrentStateRefusal, RetentionPublicationPreparation, RetentionTransitionDisposition,
 };
+use super::{RetentionPublicationPhase as Phase, RetentionPublicationStorage};
 use crate::LayoutEntryLimit;
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
 use crate::adapters::test_support::decode_hex;
@@ -69,7 +69,7 @@ pub(in crate::adapters) fn open_authority(
 pub(in crate::adapters) fn reopen_authority(
     root: &Path,
 ) -> Result<FilesystemRetentionPublicationAuthority, Box<dyn Error>> {
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(root)?;
+    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(root)?;
     FilesystemRetentionPublicationAuthority::open(admission, catalog_policy()?).map_err(Into::into)
 }
 
@@ -189,11 +189,18 @@ pub(super) fn successor_root(
     CanonicalRetentionRoot::from_root(&root).map_err(Into::into)
 }
 
-/// Extracts the typed current-state refusal carried by a verification error.
+/// Extracts the underlying current-state cause, traversing recovery observation.
+/// Tests of the observation boundary itself inspect the outer error directly.
 pub(super) fn refusal(source: &io::Error) -> Option<&RetentionCurrentStateRefusal> {
-    source
+    let refusal = source
         .get_ref()
-        .and_then(|inner| inner.downcast_ref::<RetentionCurrentStateRefusal>())
+        .and_then(|inner| inner.downcast_ref::<RetentionCurrentStateRefusal>())?;
+    match refusal {
+        RetentionCurrentStateRefusal::RecoveryObservationRefused { source } => {
+            self::refusal(source)
+        }
+        other => Some(other),
+    }
 }
 
 pub(super) fn head_path(root: &Path) -> PathBuf {
@@ -285,11 +292,8 @@ const fn maximum_policy() -> SegmentReadPolicy {
     SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM)
 }
 
-type PublicationPhase<'a> =
-    &'a mut dyn FnMut(&mut FilesystemRetentionPublicationAuthority) -> io::Result<()>;
-
 /// The number of storage-port phases one publication executes.
-pub(super) const PUBLICATION_PHASE_COUNT: usize = 18;
+pub(super) const PUBLICATION_PHASE_COUNT: usize = Phase::ALL.len() + 1;
 
 /// Executes publication phases 1 through `count` and stops, like a crash there.
 ///
@@ -305,28 +309,30 @@ pub(super) fn drive_publication(
         .publication()
         .ok_or("preparation carries no publication")?;
     let root = preparation.candidate();
-    let phases: [PublicationPhase<'_>; PUBLICATION_PHASE_COUNT] = [
-        &mut |a| a.verify_current(preparation).map(|_| ()),
-        &mut |a| a.write_root_stage(root),
-        &mut |a| a.synchronize_root_stage(),
-        &mut |a| a.admit_root_namespace(root).map(|_| ()),
-        &mut |a| a.synchronize_roots_after_namespace(),
-        &mut |a| a.link_root(root),
-        &mut |a| a.synchronize_root_namespace(root),
-        &mut |a| a.write_manifest_stage(publication.manifest()),
-        &mut |a| a.synchronize_manifest_stage(),
-        &mut |a| a.link_manifest(publication.manifest()),
-        &mut |a| a.synchronize_manifest_pool(),
-        &mut |a| a.write_head_stage(publication.head()),
-        &mut |a| a.synchronize_head_stage(),
-        &mut |a| a.replace_head(),
-        &mut |a| a.synchronize_retention_namespace(),
-        &mut |a| a.remove_root_stage(),
-        &mut |a| a.remove_manifest_stage(),
-        &mut |a| a.synchronize_cleanup(),
-    ];
-    for phase in phases.into_iter().take(count) {
-        phase(authority)?;
+    let Some(storage_count) = count.checked_sub(1) else {
+        return Ok(());
+    };
+    let _verification = authority.verify_current(preparation)?;
+    for phase in Phase::ALL.into_iter().take(storage_count) {
+        match phase {
+            Phase::WriteRootStage => authority.write_root_stage(root),
+            Phase::SynchronizeRootStage => authority.synchronize_root_stage(),
+            Phase::AdmitRootNamespace => authority.admit_root_namespace(root).map(|_| ()),
+            Phase::SynchronizeRootsAfterNamespace => authority.synchronize_roots_after_namespace(),
+            Phase::LinkRoot => authority.link_root(root),
+            Phase::SynchronizeRootNamespace => authority.synchronize_root_namespace(root),
+            Phase::WriteManifestStage => authority.write_manifest_stage(publication.manifest()),
+            Phase::SynchronizeManifestStage => authority.synchronize_manifest_stage(),
+            Phase::LinkManifest => authority.link_manifest(publication.manifest()),
+            Phase::SynchronizeManifestPool => authority.synchronize_manifest_pool(),
+            Phase::WriteHeadStage => authority.write_head_stage(publication.head()),
+            Phase::SynchronizeHeadStage => authority.synchronize_head_stage(),
+            Phase::ReplaceHead => authority.replace_head(),
+            Phase::SynchronizeRetentionNamespace => authority.synchronize_retention_namespace(),
+            Phase::RemoveRootStage => authority.remove_root_stage(),
+            Phase::RemoveManifestStage => authority.remove_manifest_stage(),
+            Phase::SynchronizeCleanup => authority.synchronize_cleanup(),
+        }?;
     }
     Ok(())
 }

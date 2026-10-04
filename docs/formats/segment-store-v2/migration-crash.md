@@ -24,15 +24,17 @@ For each pair, migration:
 
 The verified stage is linked without replacement. The canonical target is
 immutable. Recovery never truncates, replaces, or repairs it. An exact stage
-with an absent target resumes at the link. Exact stage and target bytes resume
-at the required synchronization or cleanup. Different bytes, a substituted
-inode, a link, or a wrong file kind refuse.
+with an absent target resumes at stage synchronization. Exact stage and target
+bytes resume at the required synchronization or cleanup. Different bytes, a
+substituted inode, a link, or a wrong file kind refuse.
 
 A pre-effect incomplete stage may be removed only when its canonical target and
 every later-ordered migration effect are absent and every earlier effect admits
-exactly. Recovery pins the stage, removes it, synchronizes the store root, and
-returns a typed discard report. Any later effect makes incomplete or corrupt
-stage bytes unrecoverable ambiguity.
+exactly. Migration recovery revalidates the present stage's regular kind and
+strictly incomplete length immediately before removal, removes it, synchronizes
+the store root, and returns a typed discard report. It does not retain an
+incomplete-stage handle. Any later effect makes incomplete or corrupt stage
+bytes unrecoverable ambiguity.
 
 The fixed stage is not authority. `migration.intent` becomes migration
 authority only after its canonical link and store-root synchronization.
@@ -103,28 +105,17 @@ prefix length. Restart must classify exact stages, canonical targets, namespace
 prefix, marker, receipt, and cleanup state without depending on a clock,
 filesystem iteration order, or file existence alone.
 
-`StoreMigrationPhase::ALL` freezes the 21 boundaries above in exact order.
-Fresh writer-locked filesystem execution implements that exact order and has
-deterministic in-process storage-fault and corruption laws. The restart
-classifier and resuming storage are implemented and proven in-process for
-every prefix of the 21 phases (see
-[partial migration recovery](migration-recovery.md)).
+Namespace occurrence coordinates are zero-based: `during` accepts zero
+through five, while `before` and `after` accept only zero. Invalid coordinates
+refuse at crash-case admission before a child starts. Segment record
+occurrences remain dependent on the write's record count.
 
-The before, during, and after process-death matrix runs as
-`cargo xtask durability-crash-matrix --sequence migration`. For each of the
-68 cases (21 boundaries at three positions, plus one `during` case per
-admitted directory-prefix length for `KEEP-CRASH-060`) an isolated child
-process publishes the Golden File Worldline version-1 store, executes the
-production migration protocol with the selected boundary gated, and is killed
-by its process group. The parent then compares the exact root inventory
-against an independent expected-state model, reopens the root for recovery
-the way a restarted writer would, requires the production planner to report
-the plan the
-[recovery table](migration-recovery.md#partial-migration-recovery) predicts,
-runs that recovery (or the forward retry after an untouched version-1 store
-admits), and requires one complete migration with every version-1 byte intact
-and a second recovery that reports `Complete`. The
-[transitions ledger](../../../conformance/segment-store/v2/transitions.tsv)
-records each boundary's pre-state, interrupted class, post-state, and recovery
-posture. The matrix proves application process death; host power loss
-remains outside its claim.
+`StoreMigrationPhase::ALL` freezes the 21 boundaries above in exact order.
+The production recovery planner and filesystem adapter execute the lawful
+remaining suffix. `cargo xtask durability-crash-matrix --sequence migration`
+runs 68 process-death cases: before/during/after each boundary, with all six
+directory-prefix occurrences at `KEEP-CRASH-060`. The existing CI matrix
+runs these cases in debug and release builds.
+
+These cases establish recovery after process death; they do not simulate power
+loss. The [restart corruption matrix](../../testing-evidence/migration-restart-matrix.md) and [compatibility/fuzz evidence](../../testing-evidence/migration-compatibility-fuzz.md) record the coverage delivered for #111 and #112 and its limits.

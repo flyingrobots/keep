@@ -15,8 +15,45 @@ use crate::{BlobId, ByteRange, LayoutId};
 ///
 /// The handle holds no fence and no view; every read pins a fresh
 /// [`DurableSnapshot`] unless the caller pins one with [`Self::snapshot`]
-/// and reads through it. `open` takes no authority and touches nothing;
-/// admission happens when a snapshot is pinned.
+/// and reads through it. `open` resolves a relative locator against the current
+/// directory once and takes no store authority; admission happens when a
+/// snapshot is pinned.
+/// Every convenience read pays the complete snapshot admission and allocation
+/// cost described by [`DurableSnapshot`]; callers doing repeated reads should
+/// retain an explicit snapshot. Snapshot admission performs a blocking
+/// root-directory synchronization as part of the platform check and may
+/// fail at that admission boundary. These methods do not publish content or
+/// flush caller output; a read receipt grants no new content-durability claim.
+///
+/// # Example
+///
+/// On Linux, read an already migrated version-two store with a retained blob.
+/// The caller owns output visibility: a failed write can leave an untrusted
+/// prefix. The receipt names the view; it does not extend retention after the
+/// snapshot is dropped. This example limits aggregate catalog-selected segment bytes;
+/// catalog bytes and decoded metadata allocate separately.
+///
+/// ```no_run
+/// #[cfg(target_os = "linux")]
+/// fn copy_retained_blob(
+///     root: &std::path::Path,
+///     target: keep::BlobId,
+///     output: &mut impl std::io::Write,
+/// ) -> Result<keep::DurableReconstructionReceipt, Box<dyn std::error::Error>> {
+///     use keep::{
+///         CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, LayoutEntryLimit,
+///         ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit,
+///     };
+///     // Limit catalog-selected segment bytes; catalog and metadata allocate separately.
+///     let policy = CatalogRestartPolicy::new(
+///         SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
+///         CatalogRestartByteLimit::new(16_777_216)?,
+///     );
+///     let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT)?;
+///     let snapshot = store.snapshot()?;
+///     Ok(snapshot.reconstruct(target, output)?)
+/// }
+/// ```
 #[must_use]
 #[derive(Clone, Debug)]
 pub struct DurableStore {
@@ -28,15 +65,33 @@ pub struct DurableStore {
 impl DurableStore {
     /// Names the store at `root`, reading under `policy` and collecting a
     /// consistent view within `limit` attempts.
-    pub fn open(root: &Path, policy: CatalogRestartPolicy, limit: ReaderAttemptLimit) -> Self {
-        Self {
-            root: root.to_path_buf(),
+    ///
+    /// Allocates an absolute locator and queries the current directory for a
+    /// relative path. It does not open the store or prove that it exists.
+    /// Later working-directory changes cannot retarget this handle. The path
+    /// remains a locator, not a content identity or a pinned directory handle;
+    /// snapshot admission still checks the named store on every call.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DurableStoreError::Locator`] with the original I/O cause when
+    /// the absolute locator cannot be established, including a deleted current
+    /// directory for a relative path.
+    pub fn open(
+        root: &Path,
+        policy: CatalogRestartPolicy,
+        limit: ReaderAttemptLimit,
+    ) -> Result<Self, DurableStoreError> {
+        let root =
+            std::path::absolute(root).map_err(|source| DurableStoreError::Locator { source })?;
+        Ok(Self {
+            root,
             policy,
             limit,
-        }
+        })
     }
 
-    /// The store root.
+    /// The absolute store locator fixed at handle construction.
     #[must_use]
     pub fn root(&self) -> &Path {
         &self.root
@@ -58,16 +113,15 @@ impl DurableStore {
     ///
     /// As [`Self::snapshot`].
     pub fn contains_blob(&self, target: BlobId) -> Result<bool, DurableStoreError> {
-        Ok(self.snapshot()?.contains_blob(target))
+        self.snapshot()?.contains_blob(target)
     }
 
     /// Reconstructs `target` against a fresh view.
     ///
     /// # Errors
     ///
-    /// Returns the snapshot refusal as [`DurableReadError::View`]'s
-    /// operational counterpart through [`DurableStoreError`], or the read's
-    /// own refusal.
+    /// Returns snapshot admission through [`DurableOutcome::Store`] or the
+    /// exact read failure through [`DurableOutcome::Read`], preserving sources.
     pub fn reconstruct<W>(
         &self,
         target: BlobId,
@@ -135,8 +189,8 @@ pub enum DurableOutcome {
 impl std::fmt::Display for DurableOutcome {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Store(source) => write!(formatter, "{source}"),
-            Self::Read(source) => write!(formatter, "{source}"),
+            Self::Store(_) => formatter.write_str("durable store admission failed"),
+            Self::Read(_) => formatter.write_str("durable read failed"),
         }
     }
 }

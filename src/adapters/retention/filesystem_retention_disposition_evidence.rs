@@ -1,7 +1,7 @@
 //! This module owns the evidence one disposition binds: the disposed
 //! artifact, its pool identity, its receipt, and the residue reads.
 
-use std::io::{self, Read};
+use std::io;
 
 use cap_std::fs::Dir;
 
@@ -15,13 +15,12 @@ use super::filesystem_retention_stage::invalid_data;
 use super::{AdmittedRetentionManifest, AdmittedRetentionRoot, RecoveryDispositionTarget};
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
 use crate::adapters::filesystem_exact_record as exact_record;
+use crate::adapters::filesystem_stage_observation::StageObservation;
 use crate::adapters::{
     ArtifactIdentityDigest, CanonicalRecoveryDispositionReceipt, DecisionEvidenceDigest,
     RecoveryArtifactKind, RecoveryClassification, RecoveryDispositionArtifact,
     RecoveryDispositionCoordinates, RecoveryDispositionDecision, RecoveryDispositionReceipt,
 };
-
-const RECEIPT_LENGTH: usize = 320;
 
 /// A directory entry name with its complete bytes.
 type NamedEntry = (String, Box<[u8]>);
@@ -137,25 +136,14 @@ pub(super) fn entry_with_suffix(directory: &Dir, suffix: &str) -> io::Result<Opt
     Ok(None)
 }
 
-/// Reads `recovery/disposition.next` up to one byte past the receipt length.
-pub(super) fn read_bounded(recovery: &Dir, name: &str) -> io::Result<Option<Vec<u8>>> {
-    let mut file = match exact_record::open_read(recovery, name) {
-        Ok(file) => file,
-        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(source) => return Err(source),
-    };
-    if !file.metadata()?.is_file() {
-        return Err(invalid_data("disposition stage is not a regular file"));
-    }
-    let mut bytes = Vec::new();
-    let limit = u64::try_from(RECEIPT_LENGTH)
-        .map_err(invalid_data_from)?
-        .saturating_add(1);
-    file.by_ref().take(limit).read_to_end(&mut bytes)?;
-    Ok(Some(bytes))
-}
-
-pub(super) fn discard_stage(recovery: &Dir) -> io::Result<()> {
+pub(super) fn discard_stage(recovery: &Dir, observed: &StageObservation) -> io::Result<()> {
+    exact_record::verify_named(
+        recovery,
+        pool_name::DISPOSITION_STAGE,
+        observed.bytes(),
+        observed.identity(),
+    )
+    .map_err(exact_record::ExactRecordError::into_io)?;
     recovery.remove_file(pool_name::DISPOSITION_STAGE)?;
     exact_record::require_absent(recovery, pool_name::DISPOSITION_STAGE)
         .map_err(|_source| invalid_data("discarded disposition stage remained visible"))?;

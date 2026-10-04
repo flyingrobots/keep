@@ -224,6 +224,11 @@ pub(super) fn verify_receipt_view(root: &Dir) -> io::Result<()> {
 fn preflight_prefix(root: &Dir) -> io::Result<()> {
     require_allowed_membership(root, &PREFIX_ROOT)?;
     require_base_namespace(root)?;
+    preflight_recovery_directories(root)
+}
+
+/// Checks nested migration residue before any stage adoption or removal.
+pub(super) fn preflight_recovery_directories(root: &Dir) -> io::Result<()> {
     let retention = optional_directory(root, RETENTION)?;
     let gc = optional_directory(root, GC)?;
     let recovery = optional_directory(root, RECOVERY)?;

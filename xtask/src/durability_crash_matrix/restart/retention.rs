@@ -3,8 +3,8 @@
 //! After the child dies at its coordinate, restart reopens the migrated store
 //! through the same admission a production caller would use, runs retention
 //! recovery, and requires the documented steps and outcome for that exact
-//! prefix; then it requires the forward retry to report the outcome recovery
-//! predicts.
+//! prefix; then it independently reads the persistent snapshot before requiring
+//! the forward retry to report the outcome recovery predicts.
 
 use std::io;
 use std::path::Path;
@@ -41,6 +41,9 @@ pub(super) fn verify(
     store_root: &Path,
     case: DurabilityCrashCase,
 ) -> Result<(), DurabilityCrashMatrixError> {
+    if let Some(stage) = prefix(case).1 {
+        return super::retention_incomplete::verify(store_root, stage);
+    }
     let (steps, outcome, retry) = expected(case);
     let mut authority = reopened_authority(store_root)?;
     let receipt = authority
@@ -56,6 +59,8 @@ pub(super) fn verify(
         )));
     }
     let root = GoldenFixture::retention_root()?;
+    let generation = (prefix(case).0 >= 12).then_some(1);
+    super::retention_snapshot::verify(store_root, root.bytes(), generation)?;
     let preparation = preparation(root.bytes())?;
     match (
         retry,
@@ -127,8 +132,8 @@ const fn atomic(point: DurabilityCrashPoint) -> bool {
 
 /// The documented recovery for the prefix a coordinate leaves behind.
 fn expected(case: DurabilityCrashCase) -> (Vec<Step>, Outcome, Retry) {
-    let (count, truncated) = prefix(case);
-    let (mut steps, outcome, retry) = match count {
+    let (count, _) = prefix(case);
+    let (steps, outcome, retry) = match count {
         0 | 1 => (vec![], Outcome::Clean, Retry::Published),
         2..=5 => (vec![Step::LinkRoot], PROTECTED_ROOT, Retry::Refused),
         6 | 7 => (vec![], PROTECTED_ROOT, Retry::Refused),
@@ -155,8 +160,5 @@ fn expected(case: DurabilityCrashCase) -> (Vec<Step>, Outcome, Retry) {
         ),
         _ => (vec![], Outcome::Clean, Retry::AlreadyCommitted),
     };
-    if let Some(discard) = truncated {
-        steps.insert(0, discard);
-    }
     (steps, outcome, retry)
 }

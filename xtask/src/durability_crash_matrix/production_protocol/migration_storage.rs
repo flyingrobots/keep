@@ -10,6 +10,12 @@ use xtask::{DurabilityCrashPoint, DurabilityCrashPosition};
 
 use super::control::{CrashControl, DuringTiming};
 
+#[cfg(test)]
+#[path = "migration_stage_prefix_laws.rs"]
+mod stage_prefix_laws;
+
+// The fixture law below admits all three records and requires these fixed
+// interruption offsets to remain nonempty strict prefixes of their encodings.
 const INTENT_INTERRUPTION: usize = 128;
 const MARKER_INTERRUPTION: usize = 48;
 const RECEIPT_INTERRUPTION: usize = 128;

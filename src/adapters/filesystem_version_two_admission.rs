@@ -54,16 +54,6 @@ impl FilesystemVersionTwoAdmission {
         Self::admit(root)
     }
 
-    #[cfg(test)]
-    pub(super) fn reopen_unchecked_for_tests(
-        store_root: &Path,
-    ) -> Result<Self, FilesystemPlatformAdmissionError> {
-        let root = Dir::open_ambient_dir(store_root, ambient_authority())
-            .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
-        Self::admit(root)
-    }
-
-    /// Releases the writer lock and the three pinned retention capabilities.
     /// Reopens a migrated root without platform admission for repository tasks.
     ///
     /// The crash matrix and other repository tools run on hosts outside the
@@ -74,7 +64,7 @@ impl FilesystemVersionTwoAdmission {
     ///
     /// Returns [`FilesystemPlatformAdmissionError`] exactly as [`Self::reopen`]
     /// does for every boundary after platform admission.
-    #[cfg(feature = "repository-tasks")]
+    #[cfg(any(test, feature = "repository-tasks"))]
     pub fn reopen_unchecked_for_repository_tasks(
         store_root: &Path,
     ) -> Result<Self, FilesystemPlatformAdmissionError> {
@@ -83,6 +73,7 @@ impl FilesystemVersionTwoAdmission {
         Self::admit(root)
     }
 
+    /// Releases the writer lock and the three pinned retention capabilities.
     pub(super) fn into_parts(self) -> (FilesystemWriterLock, Dir, Dir, Dir) {
         (self.lock, self.retention, self.roots, self.manifests)
     }
@@ -123,7 +114,7 @@ fn pin(parent: &Dir, name: &str) -> Result<Dir, FilesystemPlatformAdmissionError
 ///
 /// Only the restart-stable coordinates are compared: the root's device and its
 /// inode. The mount identity the intent also records is a same-process
-/// observation (`statx.stx_mnt_id` changes across unmount, remount, and
+/// observation (`statx.stx_mnt_id` can change across mount instances and
 /// reboot), so a legitimately remounted store admits, while a relocated or
 /// restored store refuses rather than receiving retention authority over a
 /// root whose intent describes a different volume or inode.

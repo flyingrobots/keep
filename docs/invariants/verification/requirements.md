@@ -1,18 +1,20 @@
-# Verification Requirements
+# Verification requirements
 
-This ledger maps the verification vocabulary to stable laws and executable
-evidence. A planned case is not evidence.
+The [original task](../../audits/114-durable-verification-scope.md) remains authoritative; partial subject reporting does not satisfy the full durable requirement.
 
-<!-- markdownlint-disable MD013 -->
-
-| ID | Exact law | Evidence | Status |
+| ID | Requirement | Status | Evidence and remaining work |
 | --- | --- | --- | --- |
-| `KEEP-VERIFY-001` | Verification depth is one ordered enumeration; a report establishes exactly the requested depth and exposes no way to deepen it | `tests/verification_report.rs`; `VerificationReport` has private fields and crate-only construction | Implemented |
-| `KEEP-VERIFY-002` | A view refuses a depth it cannot establish as `Unsupported`, naming its supported range, instead of reporting a shallower depth | `tests/verification_report.rs` | Implemented for `ReferenceStore` |
-| `KEEP-VERIFY-003` | Missing, corrupt, and ambiguous evidence are distinct refusals; each carries the exact expected and observed coordinates it can | `tests/verification_report.rs`, `src/reference/verification_tests.rs`; every durable structural field's corruption maps to one exact first refusal and stage (`framing`, `checksum`, `identity`, `binding`) in `conformance/segment-store/{v1,v2}/mutations.tsv` via `tests/segment_store_mutations.rs` | Implemented for `ReferenceStore`; `Ambiguous` has no producer yet |
-| `KEEP-VERIFY-004` | A lower-stage refusal is reported before a deeper one, and the single chunk pass hashes every chunk once | `tests/verification_report.rs` (profile-boundary and target contradictions succeed at `ChunkIdentity` and refuse only at `CompleteBlobIdentity`) | Implemented for `ReferenceStore` |
-| `KEEP-VERIFY-005` | Verification never repairs, substitutes, quarantines, or rewrites physical state | `ReferenceStore::verify` takes `&self`; `src/reference/verification_tests.rs` observes the tampered chunk unchanged | Implemented for `ReferenceStore` |
-| `KEEP-VERIFY-006` | Durable views establish `Framing`, `Checksum`, `CatalogReachability`, and `RetentionClosure` against one fenced snapshot and may report `Ambiguous` for conflicting evidence | durable read surface and snapshot laws | Planned in [#20](https://github.com/flyingrobots/keep/issues/20) |
-| `KEEP-VERIFY-007` | A durable, replayable verification receipt binds the subject, view coordinates, depth, and refusal classification | `CanonicalVerificationReceipt` over `keep.verification-receipt/v1` ([format](../../formats/verification-receipt-v1/README.md)); golden oracle, cross-process admission, every reference-store outcome round-tripping, a field-complete corruption matrix, and report/refusal exclusivity in `tests/verification_receipt.rs`; the `verification_receipt` fuzz target | Implemented |
+| `KEEP-VERIFY-006` | Durable verification at explicit subject-specific achieved depths, with precise refusals, immutable reports and bounded costs. | Implemented on main through #165 | The implementation provides subject-specific catalog, segment, record, blob and retained-namespace reports, typed durable ingress outcomes and bounded conflict evidence; focused runtime/calibration and catalog-ceiling evidence are recorded. Exact-head validation, independent acceptance and mainline integration are recorded on [PR #165](https://github.com/flyingrobots/keep/pull/165); the signed merge preserves the independently reviewed candidate tree. See the [closure ledger](../../audits/114-durable-verification-scope.md) and [execution evidence](../../testing-evidence/durable-verification.md). |
 
-<!-- markdownlint-enable MD013 -->
+## Reference and receipt integration
+
+The following additions are implemented in the #107 integration candidate; final acceptance still requires the complete integration review and validation.
+
+| ID | Requirement | Evidence and scope |
+| --- | --- | --- |
+| `KEEP-VERIFY-001` | Reports establish exactly the requested, subject-supported depth without a public upgrade capability or global depth ordering. | `tests/verification_report.rs`; private report construction; `VerificationDepth` compile-fail ordering law. |
+| `KEEP-VERIFY-002` | Unsupported requests name their exact supported set rather than silently downgrading. | `tests/verification_report.rs`; reference supports chunk, layout and complete-blob identity only. |
+| `KEEP-VERIFY-003` | Missing, corrupt and ambiguous evidence remain distinct, with typed causes and observed coordinates. | Reference report/refusal laws, durable ingress laws and the existing #165 evidence above; reference views do not produce ambiguity. |
+| `KEEP-VERIFY-004` | The reference verifier authenticates chunks once and preserves chunk-refusal precedence over profile/complete-blob failures. | `tests/verification_report.rs`, `src/reference/verification_tests.rs`; no ordering implication is made across unrelated subjects. |
+| `KEEP-VERIFY-005` | Verification does not repair, substitute, quarantine or rewrite evidence. | Immutable reference API and tampered-chunk preservation laws; durable snapshot evidence remains governed by #165. |
+| `KEEP-VERIFY-007` | Canonical v1 receipts preserve their frozen subject, view, depth and refusal vocabulary without manufacturing runtime provenance. | `tests/verification_receipt.rs`, frozen fixtures and receipt fuzz target. Checked live projection supports reference-origin evidence only; historical durable-view decoding is a codec capability, not live durable-report projection. |

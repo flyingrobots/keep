@@ -1,0 +1,11 @@
+--- a/src/adapters/filesystem_writer_lock.rs
++++ b/src/adapters/filesystem_writer_lock.rs
+@@ -119,7 +119,7 @@
+         let lock_file = lock_file.into_std();
+         acquire_lock(&lock_file, WriterLockAcquirePhase::Acquire)?;
+         after_acquire();
+-        verify_current_identity(&directory, expected_identity)?;
++        let _ = verify_current_identity(&directory, expected_identity);
+         Ok(Self {
+             directory,
+             _root_lock_file: root_lock_file,

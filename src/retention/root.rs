@@ -40,7 +40,7 @@ impl RetentionRoot {
         predecessor: Option<RetentionRootDigest>,
         mut anchors: Vec<RetentionAnchor>,
     ) -> Result<Self, RetentionRootError> {
-        admit_predecessor(generation, predecessor)?;
+        Self::admit_predecessor(generation, predecessor)?;
         let observed = anchors.len();
         let anchor_count =
             u32::try_from(observed).map_err(|_| RetentionRootError::AnchorCountExceeded {
@@ -103,16 +103,19 @@ impl RetentionRoot {
     }
 }
 
-const fn admit_predecessor(
-    generation: RootGeneration,
-    predecessor: Option<RetentionRootDigest>,
-) -> Result<(), RetentionRootError> {
-    match (generation.get(), predecessor) {
-        (1, Some(observed)) => {
-            Err(RetentionRootError::InitialGenerationHasPredecessor { observed })
+impl RetentionRoot {
+    /// Admits generation history independently of an unavailable record body.
+    pub(crate) const fn admit_predecessor(
+        generation: RootGeneration,
+        predecessor: Option<RetentionRootDigest>,
+    ) -> Result<(), RetentionRootError> {
+        match (generation.get(), predecessor) {
+            (1, Some(observed)) => {
+                Err(RetentionRootError::InitialGenerationHasPredecessor { observed })
+            }
+            (1, None) | (_, Some(_)) => Ok(()),
+            (_, None) => Err(RetentionRootError::MissingPredecessor { generation }),
         }
-        (1, None) | (_, Some(_)) => Ok(()),
-        (_, None) => Err(RetentionRootError::MissingPredecessor { generation }),
     }
 }
 

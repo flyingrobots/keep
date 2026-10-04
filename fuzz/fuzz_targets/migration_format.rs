@@ -2,6 +2,9 @@
 
 //! This target owns canonical store-migration record parser fuzzing.
 
+#[path = "migration_format/recovery.rs"]
+pub mod recovery;
+
 use keep::{
     AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, AdmittedStoreMigrationReceipt,
 };
@@ -17,6 +20,9 @@ fuzz_target!(|bytes: &[u8]| {
     match selector {
         0 => marker(input),
         1 => intent(input),
+        3 => {
+            let _ = recovery::exercise(input);
+        }
         _ => receipt(input),
     }
 });

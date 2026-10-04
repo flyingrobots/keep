@@ -3,8 +3,9 @@
 use std::path::Path;
 
 use keep::{
-    CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemCatalogPublisher, LayoutEntryLimit,
-    RepositoryInitializationStorage, SegmentReadPolicy, SegmentRecordLimit, initialize_store,
+    CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemCatalogPublisher,
+    FilesystemPlatformAdmission, LayoutEntryLimit, RepositoryInitializationStorage,
+    SegmentReadPolicy, SegmentRecordLimit, initialize_store,
 };
 
 use super::control::CrashControl;
@@ -41,8 +42,9 @@ pub(super) fn initialized_lock(
 pub(super) fn publisher(
     store_root: &Path,
 ) -> Result<FilesystemCatalogPublisher, DurabilityCrashMatrixError> {
-    let lock = initialized_lock(store_root)?;
-    FilesystemCatalogPublisher::open_unchecked_for_repository_tasks(lock, restart_policy()?)
+    let admission = FilesystemPlatformAdmission::initialize(store_root)
+        .map_err(|source| verification("admit crash catalog publisher platform", source))?;
+    FilesystemCatalogPublisher::open(admission, restart_policy()?)
         .map_err(|source| DurabilityCrashMatrixError::io("open crash catalog publisher", source))
 }
 

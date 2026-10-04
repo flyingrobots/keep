@@ -27,8 +27,17 @@ pub enum StoreMigrationRecoveryAmbiguity {
         /// The earliest effect found.
         effect: StoreMigrationEffect,
     },
+    /// A stage survived an effect that requires its prior removal.
+    StageAfterEffect {
+        /// The surviving stage.
+        stage: StoreMigrationFixedStage,
+        /// The later effect.
+        effect: StoreMigrationEffect,
+    },
     /// A complete-length stage does not decode as a canonical record.
     StageUndecodable {
+        /// Preserved stage decoder failure.
+        source: super::StoreMigrationStageDecodeError,
         /// The stage.
         stage: StoreMigrationFixedStage,
     },

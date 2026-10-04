@@ -59,7 +59,7 @@ fn the_reference_backend_round_trips_through_the_port() -> Result<(), Box<dyn Er
     let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(CAPACITY));
     let (target, output) = round_trip(&mut store, &bytes)?;
     assert_eq!(output, bytes);
-    assert!(ContentReads::contains_blob(&store, target));
+    assert!(ContentReads::contains_blob(&store, target)?);
     let requested = ByteRange::new(ByteOffset::new(70_000), ByteLength::new(3_000))?;
     let mut range = Vec::new();
     let _receipt = ContentReads::read_range(&store, target, requested, &mut range)?;
@@ -78,7 +78,7 @@ fn staging_refuses_the_byte_limit_before_anything_is_visible() -> Result<(), Box
         Err(IngestionError::ByteLimitExceeded { limit, .. }) if limit.get() == 64 * 1024
     ));
     let (target, _) = round_trip(&mut store, &bytes)?;
-    assert!(ContentReads::contains_blob(&store, target));
+    assert!(ContentReads::contains_blob(&store, target)?);
     Ok(())
 }
 

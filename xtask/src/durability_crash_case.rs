@@ -21,12 +21,19 @@ impl DurabilityCrashCase {
     /// Returns [`DurabilityCrashCaseError::MissingOccurrence`] when a repeated
     /// transition lacks an occurrence, or
     /// [`DurabilityCrashCaseError::UnexpectedOccurrence`] when a non-repeated
-    /// transition receives one.
+    /// transition receives one. Namespace admission also returns
+    /// [`DurabilityCrashCaseError::OccurrenceOutOfRange`] outside its six
+    /// `during` occurrences or sole `before` and `after` occurrences.
     pub const fn new(
         point: DurabilityCrashPoint,
         position: DurabilityCrashPosition,
         occurrence: Option<DurabilityCrashOccurrence>,
     ) -> Result<Self, DurabilityCrashCaseError> {
+        if let Some(observed) = occurrence
+            && let Err(source) = validate_fixed_range(point, position, observed)
+        {
+            return Err(source);
+        }
         match (point.occurrence_counted(), occurrence) {
             (true, None) => Err(DurabilityCrashCaseError::MissingOccurrence { point }),
             (false, Some(observed)) => {
@@ -105,4 +112,27 @@ impl DurabilityCrashCase {
             },
         }
     }
+}
+
+const fn validate_fixed_range(
+    point: DurabilityCrashPoint,
+    position: DurabilityCrashPosition,
+    observed: DurabilityCrashOccurrence,
+) -> Result<(), DurabilityCrashCaseError> {
+    if !matches!(point, DurabilityCrashPoint::MigrationAdmitNamespacePrefix) {
+        return Ok(());
+    }
+    let exclusive_limit = if matches!(position, DurabilityCrashPosition::During) {
+        point.during_occurrences()
+    } else {
+        1
+    };
+    if observed.get() >= exclusive_limit {
+        return Err(DurabilityCrashCaseError::OccurrenceOutOfRange {
+            point,
+            observed,
+            exclusive_limit,
+        });
+    }
+    Ok(())
 }

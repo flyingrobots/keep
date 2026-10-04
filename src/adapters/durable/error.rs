@@ -9,29 +9,54 @@ use std::io;
 use crate::adapters::{CatalogRestartError, FilesystemRetentionSnapshotError};
 use crate::{
     BlobId, LayoutDecodeError, LayoutId, RangeReadError, ReconstructionError,
-    RetentionNamespaceDigest,
+    RetentionClosureVerificationError, RetentionNamespaceDigest, RetentionRootDecodeError,
 };
 
 /// Why a durable store or snapshot could not be opened.
 #[derive(Debug)]
 pub enum DurableStoreError {
+    /// The store locator could not be resolved at handle construction.
+    Locator {
+        /// Original path-resolution failure, preserved without stringification.
+        source: io::Error,
+    },
     /// The root did not admit as a version-two store, the fence could not
     /// be taken, or one consistent view could not be collected.
     Snapshot(Box<FilesystemRetentionSnapshotError>),
-    /// A retained root the manifest selects could not be read or decoded.
-    RetainedRoot {
+    /// The pinned catalog could not be re-admitted.
+    Catalog(Box<CatalogRestartError>),
+    /// The manifest-selected root was unexpectedly absent.
+    RootMissing {
+        /// The namespace selected by the manifest.
+        namespace: RetentionNamespaceDigest,
+    },
+    /// A selected root failed canonical admission.
+    RootDecode {
         /// The namespace whose root refused.
         namespace: RetentionNamespaceDigest,
         /// The exact refusal.
-        source: io::Error,
+        source: RetentionRootDecodeError,
+    },
+    /// A retained closure could not be proven against the pinned catalog.
+    Closure {
+        /// The namespace whose closure refused.
+        namespace: RetentionNamespaceDigest,
+        /// The exact closure refusal.
+        source: Box<RetentionClosureVerificationError>,
     },
 }
 
 impl fmt::Display for DurableStoreError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Locator { .. } => {
+                formatter.write_str("the durable store locator could not be resolved")
+            }
             Self::Snapshot(_) => formatter.write_str("the durable view could not be pinned"),
-            Self::RetainedRoot { .. } => formatter.write_str("a retained root refused"),
+            Self::Catalog(_) => formatter.write_str("the pinned catalog refused"),
+            Self::RootMissing { .. } => formatter.write_str("the selected root is absent"),
+            Self::RootDecode { .. } => formatter.write_str("a retained root refused"),
+            Self::Closure { .. } => formatter.write_str("a retained closure refused"),
         }
     }
 }
@@ -39,21 +64,26 @@ impl fmt::Display for DurableStoreError {
 impl Error for DurableStoreError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::Locator { source } => Some(source),
             Self::Snapshot(source) => Some(source.as_ref()),
-            Self::RetainedRoot { source, .. } => Some(source),
+            Self::Catalog(source) => Some(source.as_ref()),
+            Self::RootMissing { .. } => None,
+            Self::RootDecode { source, .. } => Some(source),
+            Self::Closure { source, .. } => Some(source.as_ref()),
         }
     }
 }
 
 /// Why one durable read did not return a receipt.
 ///
-/// `View` is the one operational failure: the pinned catalog could not be
-/// re-admitted, so nothing about content follows. Every other variant is an
-/// evidenced refusal against the complete pinned view, or, inside the
-/// reference read errors, the output failure those errors already keep
-/// distinct.
+/// Source variants retain the exact admission, corruption or I/O boundary;
+/// they must not all be interpreted as content corruption. Missing identities
+/// are evidenced against the admitted view. Reconstruction and range errors
+/// preserve output failures separately from content refusal.
 #[derive(Debug)]
 pub enum DurableReadError {
+    /// Retained anchor evidence could not be read or admitted.
+    Retention(Box<DurableStoreError>),
     /// The pinned catalog could not be re-admitted for this read.
     View(Box<CatalogRestartError>),
     /// No retained root anchors the blob in this view.
@@ -78,12 +108,13 @@ pub enum DurableReadError {
 impl fmt::Display for DurableReadError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Retention(_) => formatter.write_str("the retained anchor evidence refused"),
             Self::View(_) => formatter.write_str("the pinned view could not be re-admitted"),
             Self::BlobMissing { .. } => formatter.write_str("no retained root anchors the blob"),
             Self::LayoutMissing { .. } => formatter.write_str("the catalog names no such layout"),
-            Self::LayoutDecode(source) => write!(formatter, "committed layout refused: {source}"),
-            Self::Reconstruction(source) => write!(formatter, "reconstruction: {source}"),
-            Self::RangeRead(source) => write!(formatter, "range read: {source}"),
+            Self::LayoutDecode(_) => formatter.write_str("committed layout refused"),
+            Self::Reconstruction(_) => formatter.write_str("durable reconstruction failed"),
+            Self::RangeRead(_) => formatter.write_str("durable range read failed"),
         }
     }
 }
@@ -91,6 +122,7 @@ impl fmt::Display for DurableReadError {
 impl Error for DurableReadError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::Retention(source) => Some(source.as_ref()),
             Self::View(source) => Some(source.as_ref()),
             Self::LayoutDecode(source) => Some(source),
             Self::Reconstruction(source) => Some(source.as_ref()),

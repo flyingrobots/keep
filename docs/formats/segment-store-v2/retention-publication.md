@@ -20,16 +20,11 @@ the current manifest and derives exact canonical successors.
 ordered durability phases, and returns the complete receipt only after cleanup;
 exact already-committed retry revalidates authority and performs no mutation.
 
-Version-2 catalog publication must hold the same writer authority and prove
-every current retained closure against its candidate catalog before replacing
-the catalog `HEAD`. `FilesystemCatalogPublisher::open_version_two` now accepts
-`FilesystemVersionTwoAdmission`; `DurableWriter` preserves the current catalog's
-records in its successor, and compaction verifies the retained closures against
-its replacement records. The low-level catalog publisher does not itself
-verify current retained closures against an arbitrary candidate catalog.
-That general publication gate remains a gap under
-[#82](https://github.com/flyingrobots/keep/issues/82); the existence of a
-version-two publisher is not evidence that the gate is implemented.
+Version-2 catalog publication must hold the same writer authority and prove every current retained closure against its candidate catalog before replacing the catalog `HEAD`.
+
+`DurableWriter` preserves the current catalog's records in its successor, and compaction verifies retained closures against replacement records. The low-level version-two catalog publisher accepts version-two admission but does not itself verify current retained closures against an arbitrary candidate catalog.
+
+That general candidate-catalog gate remains unimplemented and is tracked in [#125](https://github.com/flyingrobots/keep/issues/125). The implemented retention publication and complete-stage retention recovery paths reverify a root's closure against the current catalog; this does not establish that an arbitrary successor catalog preserves every retained root.
 
 ## Generation transition
 

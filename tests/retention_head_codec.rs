@@ -1,4 +1,7 @@
-//! Public semantic and canonical-codec laws for the retention head.
+//! Codec laws with public verification classification of every corrupt input.
+
+#[path = "verification_corruption/observation.rs"]
+mod verification_observation;
 
 #[path = "retention_head_codec/mutation_laws.rs"]
 mod mutation_laws;
@@ -35,7 +38,7 @@ fn one_root_head_has_one_semantic_and_canonical_representation()
     let head_bytes = fixture_bytes(ONE_ROOT_HEAD)?;
     assert_eq!(canonical.encoded(), head_bytes.as_slice());
 
-    let checksummed = ChecksummedRetentionHead::decode(&head_bytes)?;
+    let checksummed = verification_decode(&head_bytes)??;
     assert_eq!(checksummed.encoded(), head_bytes);
     assert_eq!(checksummed.head(), &head);
     Ok(())
@@ -56,7 +59,7 @@ fn manifest_length_and_head_history_are_admitted_exactly() -> Result<(), Box<dyn
     ));
 
     let head_bytes = fixture_bytes(ONE_ROOT_HEAD)?;
-    let head = ChecksummedRetentionHead::decode(&head_bytes)?;
+    let head = verification_decode(&head_bytes)??;
     assert!(matches!(
         RetentionHead::new(
             LivenessGeneration::new(1)?,
@@ -85,7 +88,7 @@ fn head_framing_and_integrity_have_exact_first_refusals() -> Result<(), Box<dyn 
     let mut truncated = bytes.clone();
     assert!(truncated.pop().is_some());
     assert!(matches!(
-        ChecksummedRetentionHead::decode(&truncated),
+        verification_decode(&truncated)?,
         Err(RetentionHeadDecodeError::WrongLength {
             expected: 144,
             observed: 143,
@@ -95,7 +98,7 @@ fn head_framing_and_integrity_have_exact_first_refusals() -> Result<(), Box<dyn 
     let mut trailing = bytes.clone();
     trailing.push(0);
     assert!(matches!(
-        ChecksummedRetentionHead::decode(&trailing),
+        verification_decode(&trailing)?,
         Err(RetentionHeadDecodeError::WrongLength {
             expected: 144,
             observed: 145,
@@ -108,7 +111,7 @@ fn head_framing_and_integrity_have_exact_first_refusals() -> Result<(), Box<dyn 
         .ok_or_else(|| io::Error::other("frozen retention head is empty"))?;
     *first ^= 1;
     assert!(matches!(
-        ChecksummedRetentionHead::decode(&wrong_magic),
+        verification_decode(&wrong_magic)?,
         Err(RetentionHeadDecodeError::InvalidMagic { .. })
     ));
 
@@ -118,7 +121,7 @@ fn head_framing_and_integrity_have_exact_first_refusals() -> Result<(), Box<dyn 
         .ok_or_else(|| io::Error::other("frozen retention head is empty"))?;
     *last ^= 1;
     assert!(matches!(
-        ChecksummedRetentionHead::decode(&checksum_corruption),
+        verification_decode(&checksum_corruption)?,
         Err(RetentionHeadDecodeError::ChecksumMismatch { .. })
     ));
     Ok(())
@@ -132,13 +135,13 @@ fn complete_integrity_precedes_head_semantics() -> Result<(), Box<dyn std::error
         .ok_or_else(|| io::Error::other("frozen retention head lacks generation bytes"))?
         .fill(0);
     assert!(matches!(
-        ChecksummedRetentionHead::decode(&bytes),
+        verification_decode(&bytes)?,
         Err(RetentionHeadDecodeError::ChecksumMismatch { .. })
     ));
 
     refresh_checksum(&mut bytes)?;
     assert!(matches!(
-        ChecksummedRetentionHead::decode(&bytes),
+        verification_decode(&bytes)?,
         Err(RetentionHeadDecodeError::LivenessGeneration { .. })
     ));
 
@@ -149,7 +152,7 @@ fn complete_integrity_precedes_head_semantics() -> Result<(), Box<dyn std::error
         .copy_from_slice(&225_u64.to_be_bytes());
     refresh_checksum(&mut noncanonical_length)?;
     assert!(matches!(
-        ChecksummedRetentionHead::decode(&noncanonical_length),
+        verification_decode(&noncanonical_length)?,
         Err(RetentionHeadDecodeError::ManifestLength { .. })
     ));
 
@@ -160,7 +163,7 @@ fn complete_integrity_precedes_head_semantics() -> Result<(), Box<dyn std::error
         .copy_from_slice(&2_u64.to_be_bytes());
     refresh_checksum(&mut missing_predecessor)?;
     assert!(matches!(
-        ChecksummedRetentionHead::decode(&missing_predecessor),
+        verification_decode(&missing_predecessor)?,
         Err(RetentionHeadDecodeError::Semantic {
             source: RetentionHeadError::MissingPredecessor { .. },
         })
@@ -187,4 +190,25 @@ fn refresh_checksum(bytes: &mut [u8]) -> Result<(), io::Error> {
     hasher.update(preimage);
     checksum.copy_from_slice(hasher.finalize().as_bytes());
     Ok(())
+}
+
+// Size: small. The original typed assertions remain the corruption oracle.
+fn verification_decode(
+    bytes: &[u8],
+) -> Result<
+    Result<ChecksummedRetentionHead<'_>, RetentionHeadDecodeError>,
+    Box<dyn std::error::Error>,
+> {
+    let error = match ChecksummedRetentionHead::decode(bytes) {
+        Ok(value) => return Ok(Ok(value)),
+        Err(error) => error,
+    };
+    let observed = verification_observation::classify(
+        keep::RetentionCurrentStateRefusal::HeadRefused { source: error },
+        keep::VerificationSubject::PublishedView,
+    )?;
+    let keep::RetentionCurrentStateRefusal::HeadRefused { source } = observed else {
+        return Err("decoder boundary changed".into());
+    };
+    Ok(Err(source))
 }

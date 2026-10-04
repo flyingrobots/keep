@@ -7,25 +7,15 @@ use std::fmt;
 use std::io;
 use std::path::Path;
 
-use cap_std::fs::Dir;
-
 use crate::CatalogGeneration;
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
 use crate::adapters::filesystem_exact_record as exact_record;
 use crate::adapters::{
-    AdmittedSegment, CatalogPublicationExpectation, CatalogRestartPolicy, ChecksummedCatalog,
-    FilesystemRecoveryNextHeadFinalizer, FilesystemRecoveryStageDiscarder, RecoveryCatalogStage,
-    RecoveryNextHeadStage, RecoverySegmentStage, RecoveryStage, RecoveryStageAssessment,
-    RecoveryStageMetadata, RecoveryStageParent, admit_recovery_stage_bytes, assess_recovery_stage,
-    catalog_restart_loader, execute_recovery_next_head_finalization,
-    execute_recovery_stage_discard, fingerprint_recovery_stage,
-    plan_recovery_next_head_finalization, plan_recovery_stage_discard,
+    CatalogRestartPolicy, FilesystemRecoveryNextHeadFinalizer, FilesystemRecoveryStageDiscarder,
+    RecoveryStage, RecoveryStageMetadata, RecoveryStageParent, admit_recovery_stage_bytes,
+    execute_recovery_next_head_finalization, execute_recovery_stage_discard,
+    fingerprint_recovery_stage,
 };
-
-const SEGMENT_STAGE: &str = "current.seg";
-const CATALOG_STAGE: &str = "current.cat";
-const NEXT_HEAD: &str = "head.next";
-const HEAD: &str = "HEAD";
 
 /// What recovery found and did.
 #[must_use]
@@ -55,7 +45,8 @@ impl CompactionRecovery {
     }
 }
 
-/// Why recovery refused; the store is left as found.
+/// Why recovery could not complete. Planning failures precede all recovery effects.
+/// Execution failures may follow changes; returning an error is not rollback.
 #[derive(Debug)]
 pub struct FilesystemCompactionRecoveryError {
     phase: &'static str,
@@ -64,7 +55,7 @@ pub struct FilesystemCompactionRecoveryError {
 
 impl fmt::Display for FilesystemCompactionRecoveryError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "compaction recovery refused at {}", self.phase)
+        write!(formatter, "compaction recovery failed at {}", self.phase)
     }
 }
 
@@ -74,7 +65,7 @@ impl Error for FilesystemCompactionRecoveryError {
     }
 }
 
-fn refused(
+pub(super) fn refused(
     phase: &'static str,
     source: impl Error + Send + Sync + 'static,
 ) -> FilesystemCompactionRecoveryError {
@@ -102,10 +93,19 @@ impl FilesystemCompactionRecoveryError {
 /// otherwise. Every step runs the version-one recovery protocol it belongs
 /// to, with its evidence binding.
 ///
+/// # Allocation and I/O
+///
+/// Each stage is opened without following links and rejected above its format
+/// length limit before materialization. Preflight retains bounded segment and
+/// catalog bytes; cleanup may materialize one additional stage copy. Catalog
+/// verification allocates separately under its format and caller policy limits.
+/// These limits are not a total process memory cap.
+///
 /// # Errors
 ///
 /// Returns [`FilesystemCompactionRecoveryError`] at the exact open,
-/// assessment, planning, or execution refusal.
+/// assessment, planning, or execution failure. All residue is assessed and planned
+/// before mutation begins. A later execution error does not roll back prior effects.
 pub fn recover_compaction(
     store_root: &Path,
     policy: CatalogRestartPolicy,
@@ -142,87 +142,78 @@ pub(in crate::adapters) fn recover_with(
     policy: CatalogRestartPolicy,
     evidence: CompleteStageEvidence,
 ) -> Result<CompactionRecovery, FilesystemCompactionRecoveryError> {
+    let plan = super::recovery_preflight::prepare(&discarder, policy, evidence)?;
     let mut recovery = CompactionRecovery {
         discarded: Vec::new(),
         finalized: None,
     };
-    for (stage, name) in [
-        (RecoveryStage::Segment, SEGMENT_STAGE),
-        (RecoveryStage::Catalog, CATALOG_STAGE),
-    ] {
-        if let Some(bytes) = read_stage(&discarder, RecoveryStageParent::Staging, name)? {
-            resolve_staging(&mut discarder, (stage, name), &bytes, policy, evidence)?;
-            recovery.discarded.push(stage);
+    for stage in plan.stages {
+        match stage.action {
+            super::recovery_preflight::StageAction::Derivable => {
+                discard_derivable(&discarder, stage.stage, &stage.bytes)?;
+            }
+            super::recovery_preflight::StageAction::Truncated(request) => {
+                let _receipt = execute_recovery_stage_discard(&mut discarder, request)
+                    .map_err(|source| refused("discard stage", source))?;
+            }
+        }
+        recovery.discarded.push(stage.stage);
+    }
+    match plan.next {
+        super::recovery_preflight::NextHeadAction::Absent => {}
+        super::recovery_preflight::NextHeadAction::Discard(request) => {
+            let _receipt = execute_recovery_stage_discard(&mut discarder, request)
+                .map_err(|source| refused("discard head.next", source))?;
+            recovery.discarded.push(RecoveryStage::NextHead);
+        }
+        super::recovery_preflight::NextHeadAction::Finalize(request) => {
+            let mut finalizer = FilesystemRecoveryNextHeadFinalizer { discarder, policy };
+            let _receipt = execute_recovery_next_head_finalization(&mut finalizer, request)
+                .map_err(|source| refused("finalize head.next", source))?;
+            recovery.finalized = Some(request.target().generation());
         }
     }
-    let Some(bytes) = read_stage(&discarder, RecoveryStageParent::Root, NEXT_HEAD)? else {
-        return Ok(recovery);
-    };
-    let admitted = admitted_stage(RecoveryStage::NextHead, &bytes)?;
-    let assessment = assess_recovery_stage(&admitted, policy.segment_read())
-        .map_err(|source| refused("assess head.next", source))?;
-    let complete = matches!(
-        assessment,
-        RecoveryStageAssessment::NextHead {
-            state: RecoveryNextHeadStage::Complete(_),
-            ..
-        }
-    );
-    if !complete {
-        let request = plan_recovery_stage_discard(&assessment)
-            .map_err(|source| refused("plan head.next discard", source))?;
-        let _receipt = execute_recovery_stage_discard(&mut discarder, request)
-            .map_err(|source| refused("discard head.next", source))?;
-        recovery.discarded.push(RecoveryStage::NextHead);
-        return Ok(recovery);
-    }
-    let root = discarder
-        .inventory
-        .parent_directory(RecoveryStageParent::Root)
-        .try_clone()
-        .map_err(|source| refused("clone root", source))?;
-    let candidate = catalog_restart_loader::load_from_directory(&root, NEXT_HEAD, policy)
-        .map_err(|source| refused("load head.next successor", source))?;
-    let candidate_snapshot = candidate
-        .snapshot()
-        .map_err(|source| refused("admit head.next successor", source))?;
-    let expectation = match catalog_restart_loader::load_from_directory(&root, HEAD, policy) {
-        Ok(current) => {
-            let snapshot = current
-                .snapshot()
-                .map_err(|source| refused("admit current catalog", source))?;
-            CatalogPublicationExpectation::successor_of(&snapshot)
-        }
-        Err(_absent) => CatalogPublicationExpectation::uninitialized(),
-    };
-    let request =
-        plan_recovery_next_head_finalization(&assessment, &candidate_snapshot, expectation)
-            .map_err(|source| refused("plan head.next finalization", source))?;
-    let mut finalizer = FilesystemRecoveryNextHeadFinalizer { discarder, policy };
-    let _receipt = execute_recovery_next_head_finalization(&mut finalizer, request)
-        .map_err(|source| refused("finalize head.next", source))?;
-    recovery.finalized = Some(candidate_snapshot.generation());
     Ok(recovery)
 }
 
-fn read_stage(
+pub(super) fn read_stage(
     discarder: &FilesystemRecoveryStageDiscarder,
-    parent: RecoveryStageParent,
-    name: &str,
-) -> Result<Option<Vec<u8>>, FilesystemCompactionRecoveryError> {
-    let directory = discarder.inventory.parent_directory(parent);
-    let mut file = match crate::adapters::filesystem_exact_record::open_read(directory, name) {
-        Ok(file) => file,
-        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(source) => return Err(refused("open stage", source)),
+    stage: RecoveryStage,
+) -> Result<Option<Box<[u8]>>, FilesystemCompactionRecoveryError> {
+    use crate::adapters::{FilesystemRecoveryStageError, RecoveryStageNamespacePhase};
+    let inventory = &discarder.inventory;
+    inventory
+        .verify_stage_namespaces(stage, RecoveryStageNamespacePhase::BeforeObservation)
+        .map_err(|source| refused("verify stage namespace", source))?;
+    let directory = inventory.stage_directory(stage);
+    let observation = crate::adapters::filesystem_recovery_stage::observe(directory, stage);
+    inventory
+        .verify_stage_namespaces(stage, RecoveryStageNamespacePhase::AfterObservation)
+        .map_err(|source| refused("verify stage namespace", source))?;
+    let mut observed = match observation {
+        Ok(observed) => observed,
+        Err(FilesystemRecoveryStageError::Open { source, .. })
+            if source.kind() == io::ErrorKind::NotFound =>
+        {
+            return Ok(None);
+        }
+        Err(source) => return Err(refused("observe stage", source)),
     };
-    let mut bytes = Vec::new();
-    std::io::Read::read_to_end(&mut file, &mut bytes)
+    let bytes = observed
+        .materialize_and_position(stage)
         .map_err(|source| refused("read stage", source))?;
+    let _admitted = admit_recovery_stage_bytes(stage, observed.evidence(), &bytes)
+        .map_err(|source| refused("verify stage bytes", source))?;
+    observed
+        .verify(directory, stage.file_name(), stage)
+        .map_err(|source| refused("verify stage entry", source))?;
+    inventory
+        .verify_stage_namespaces(stage, RecoveryStageNamespacePhase::AfterObservation)
+        .map_err(|source| refused("verify stage namespace", source))?;
     Ok(Some(bytes))
 }
 
-fn admitted_stage(
+pub(super) fn admitted_stage(
     stage: RecoveryStage,
     bytes: &[u8],
 ) -> Result<crate::adapters::AdmittedRecoveryStageBytes<'_>, FilesystemCompactionRecoveryError> {
@@ -235,173 +226,28 @@ fn admitted_stage(
         .map_err(|source| refused("admit stage bytes", source))
 }
 
-/// Resolves one staging residue: a truncated stage through the version-one
-/// discard protocol; a complete or reusable stage through compaction's own
-/// evidence-bound discard, after proving it carries nothing the current
-/// catalog does not already name.
-fn resolve_staging(
-    discarder: &mut FilesystemRecoveryStageDiscarder,
-    (stage, name): (RecoveryStage, &str),
-    bytes: &[u8],
-    policy: CatalogRestartPolicy,
-    evidence: CompleteStageEvidence,
-) -> Result<(), FilesystemCompactionRecoveryError> {
-    let admitted = admitted_stage(stage, bytes)?;
-    let assessment = assess_recovery_stage(&admitted, policy.segment_read())
-        .map_err(|source| refused("assess stage", source))?;
-    let derivable = match &assessment {
-        RecoveryStageAssessment::Segment {
-            state: RecoverySegmentStage::Complete(segment),
-            ..
-        } => {
-            match evidence {
-                CompleteStageEvidence::Derivable => {
-                    require_derivable_segment(discarder, segment, policy)?;
-                }
-                CompleteStageEvidence::Unpublished => {
-                    require_unpublished_segment(discarder, segment, policy)?;
-                }
-            }
-            true
-        }
-        RecoveryStageAssessment::Segment {
-            state: RecoverySegmentStage::Reusable(_),
-            ..
-        } => true,
-        RecoveryStageAssessment::Catalog {
-            state: RecoveryCatalogStage::Complete(catalog),
-            ..
-        } => {
-            require_successor_candidate(discarder, catalog, policy)?;
-            true
-        }
-        _ => false,
-    };
-    if derivable {
-        return discard_derivable(discarder, name, bytes);
-    }
-    let request = plan_recovery_stage_discard(&assessment)
-        .map_err(|source| refused("plan stage discard", source))?;
-    let _receipt = execute_recovery_stage_discard(discarder, request)
-        .map_err(|source| refused("discard stage", source))?;
-    Ok(())
-}
-
-const fn root_directory(discarder: &FilesystemRecoveryStageDiscarder) -> &Dir {
-    discarder
-        .inventory
-        .parent_directory(RecoveryStageParent::Root)
-}
-
-/// A complete staged segment is derivable when the current catalog names
-/// every record it holds with byte-identical content: it is a copy the next
-/// compaction reproduces exactly.
-fn require_derivable_segment(
-    discarder: &FilesystemRecoveryStageDiscarder,
-    segment: &AdmittedSegment<'_>,
-    policy: CatalogRestartPolicy,
-) -> Result<(), FilesystemCompactionRecoveryError> {
-    let current =
-        catalog_restart_loader::load_from_directory(root_directory(discarder), HEAD, policy)
-            .map_err(|source| refused("load current catalog", source))?;
-    let snapshot = current
-        .snapshot()
-        .map_err(|source| refused("admit current catalog", source))?;
-    for record in segment.records() {
-        let record = record.map_err(|source| refused("reread staged record", source))?;
-        let named = snapshot.record(record.identity()).ok_or_else(|| {
-            refused(
-                "derivable segment",
-                io::Error::other("a staged record is not named"),
-            )
-        })?;
-        if named.header() != record.header()
-            || named.payload() != record.payload()
-            || named.checksum() != record.checksum()
-        {
-            return Err(refused(
-                "derivable segment",
-                io::Error::other("a staged record differs from the named record"),
-            ));
-        }
-    }
-    Ok(())
-}
-
-/// A complete staged segment is unpublished when the current catalog names
-/// none of its records: an ingestion stage that never reached commit.
-fn require_unpublished_segment(
-    discarder: &FilesystemRecoveryStageDiscarder,
-    segment: &AdmittedSegment<'_>,
-    policy: CatalogRestartPolicy,
-) -> Result<(), FilesystemCompactionRecoveryError> {
-    let current =
-        catalog_restart_loader::load_from_directory(root_directory(discarder), HEAD, policy)
-            .map_err(|source| refused("load current catalog", source))?;
-    let snapshot = current
-        .snapshot()
-        .map_err(|source| refused("admit current catalog", source))?;
-    for record in segment.records() {
-        let record = record.map_err(|source| refused("reread staged record", source))?;
-        if snapshot.record(record.identity()).is_some() {
-            return Err(refused(
-                "unpublished segment",
-                io::Error::other("a staged record is already named"),
-            ));
-        }
-    }
-    Ok(())
-}
-
-/// A complete staged catalog is derivable when it is exactly the successor
-/// candidate of the current head: never published, reproduced by the next
-/// compaction.
-fn require_successor_candidate(
-    discarder: &FilesystemRecoveryStageDiscarder,
-    catalog: &ChecksummedCatalog<'_>,
-    policy: CatalogRestartPolicy,
-) -> Result<(), FilesystemCompactionRecoveryError> {
-    let current =
-        catalog_restart_loader::load_from_directory(root_directory(discarder), HEAD, policy)
-            .map_err(|source| refused("load current catalog", source))?;
-    let successor = current
-        .generation()
-        .successor()
-        .map_err(|source| refused("successor generation", source))?;
-    if catalog.generation() == successor
-        && catalog.previous_catalog_digest() == Some(current.catalog_digest())
-    {
-        Ok(())
-    } else {
-        Err(refused(
-            "successor candidate",
-            io::Error::other("the staged catalog is not the current head's successor"),
-        ))
-    }
-}
-
 /// Unlinks one derivable stage only while its bytes are exactly as assessed,
 /// and synchronizes `staging`.
 fn discard_derivable(
     discarder: &FilesystemRecoveryStageDiscarder,
-    name: &str,
+    stage: RecoveryStage,
     expected: &[u8],
 ) -> Result<(), FilesystemCompactionRecoveryError> {
     let staging = discarder
         .inventory
         .parent_directory(RecoveryStageParent::Staging);
-    let observed = read_stage(discarder, RecoveryStageParent::Staging, name)?
+    let observed = read_stage(discarder, stage)?
         .ok_or_else(|| refused("discard stage", io::Error::other("the stage vanished")))?;
-    if observed != expected {
+    if observed.as_ref() != expected {
         return Err(refused(
             "discard stage",
             io::Error::other("the stage changed after assessment"),
         ));
     }
     staging
-        .remove_file(name)
+        .remove_file(stage.file_name())
         .map_err(|source| refused("discard stage", source))?;
-    exact_record::require_absent(staging, name)
+    exact_record::require_absent(staging, stage.file_name())
         .map_err(|source| refused("discard stage", io::Error::other(source)))?;
     synchronize_directory(staging).map_err(|source| refused("synchronize staging", source))
 }

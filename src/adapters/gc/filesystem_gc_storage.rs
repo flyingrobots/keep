@@ -77,6 +77,11 @@ impl FilesystemGcAuthority {
                 &gc,
                 RECEIPT_STAGE,
                 receipt.encoded(),
+                context
+                    .receipt_observation
+                    .as_ref()
+                    .ok_or_else(no_retirement)?
+                    .identity(),
             )?);
         }
         Ok(())
@@ -90,6 +95,11 @@ impl FilesystemGcAuthority {
                 &gc,
                 INTENT_STAGE,
                 context.intent.encoded(),
+                context
+                    .intent_observation
+                    .as_ref()
+                    .ok_or_else(no_retirement)?
+                    .identity(),
             )?);
         }
         Ok(())
@@ -110,12 +120,17 @@ impl GcExecutionStorage for FilesystemGcAuthority {
 
     fn synchronize_intent_stage(&mut self) -> io::Result<()> {
         self.reopen_intent_stage()?;
-        self.intent_stage()?.synchronize(&self.gc)
+        self.intent_stage()?
+            .synchronize(&self.gc)
+            .map_err(Into::into)
     }
 
     fn link_intent(&mut self) -> io::Result<()> {
         self.reopen_intent_stage()?;
-        self.intent_stage()?.link(&self.gc, &self.gc, INTENT)
+        self.intent_stage()?
+            .link(&self.gc, &self.gc, INTENT)
+            .map(|_outcome| ())
+            .map_err(Into::into)
     }
 
     fn synchronize_gc_after_intent(&mut self) -> io::Result<()> {
@@ -129,7 +144,7 @@ impl GcExecutionStorage for FilesystemGcAuthority {
             .intent_stage
             .take()
             .ok_or_else(no_retirement)?;
-        stage.remove(&self.gc, &self.gc, INTENT)
+        stage.remove(&self.gc, &self.gc, INTENT).map_err(Into::into)
     }
 
     fn synchronize_gc_after_intent_cleanup(&mut self) -> io::Result<()> {
@@ -184,7 +199,9 @@ impl GcExecutionStorage for FilesystemGcAuthority {
 
     fn synchronize_receipt_stage(&mut self) -> io::Result<()> {
         self.reopen_receipt_stage()?;
-        self.receipt_stage()?.synchronize(&self.gc)
+        self.receipt_stage()?
+            .synchronize(&self.gc)
+            .map_err(Into::into)
     }
 
     fn replace_receipt(&mut self) -> io::Result<()> {
@@ -194,7 +211,7 @@ impl GcExecutionStorage for FilesystemGcAuthority {
             .receipt_stage
             .take()
             .ok_or_else(no_retirement)?;
-        stage.replace(&self.gc, RECEIPT)
+        stage.replace(&self.gc, RECEIPT).map_err(Into::into)
     }
 
     fn synchronize_gc_after_receipt(&mut self) -> io::Result<()> {

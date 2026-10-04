@@ -4,9 +4,9 @@ use std::collections::BTreeMap;
 
 use super::{
     AdmittedCatalog, AdmittedSegmentRecord, CatalogDecodeError, ChecksummedPublicationHead,
-    SegmentDigest, SegmentRecordIdentity,
+    SegmentRecordIdentity,
 };
-use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
+use crate::{CatalogDigest, CatalogGeneration, CatalogLength, SegmentDigest};
 
 /// One complete immutable catalog generation pinned by a checksummed head.
 ///
@@ -55,11 +55,8 @@ impl<'head, 'catalog, 'records> CatalogSnapshot<'head, 'catalog, 'records> {
         self.catalog.record(identity)
     }
 
-    /// Maps every logical identity to the physical segment that holds it.
-    pub(crate) fn record_segments(
-        &self,
-    ) -> Result<BTreeMap<SegmentRecordIdentity, SegmentDigest>, CatalogDecodeError> {
-        self.catalog.record_segments()
+    pub(super) fn records(&self) -> impl Iterator<Item = AdmittedSegmentRecord<'records>> + '_ {
+        self.catalog.records()
     }
 
     pub(super) const fn new(
@@ -67,5 +64,11 @@ impl<'head, 'catalog, 'records> CatalogSnapshot<'head, 'catalog, 'records> {
         catalog: AdmittedCatalog<'catalog, 'records>,
     ) -> Self {
         Self { head, catalog }
+    }
+    /// Maps every admitted logical record to its physical segment deterministically.
+    pub(crate) fn record_segments(
+        &self,
+    ) -> Result<BTreeMap<SegmentRecordIdentity, SegmentDigest>, CatalogDecodeError> {
+        self.catalog.record_segments()
     }
 }

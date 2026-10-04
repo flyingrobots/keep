@@ -14,7 +14,13 @@ mod decoder_semantics;
 mod encoder;
 mod enums;
 mod format;
+mod projection;
+mod projection_error;
 mod receipt;
+mod subject;
+pub use enums::ReceiptVerificationDepth;
+pub use projection_error::VerificationReceiptProjectionError;
+pub use subject::ReceiptSubject;
 
 pub use canonical::CanonicalVerificationReceipt;
 pub use decode_error::{VerificationReceiptDecodeError, VerificationReceiptField};

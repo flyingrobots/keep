@@ -1,4 +1,6 @@
 //! Public verification-report laws over the reference view.
+//! Size: Small. Oracle: explicit verification claims and preserved refusal evidence.
+//! Delete only when the reference verification contract is removed or subsumed.
 
 #[path = "layout_mutations/support.rs"]
 mod layout_mutation_support;
@@ -10,8 +12,9 @@ use std::io::Cursor;
 use keep::{
     AdmittedLayout, BlobHasher, BlobId, ChunkSpan, CorruptionEvidence, FastCdc, LayoutDecodePolicy,
     LayoutEntryLimit, MissingEvidence, PublishedBlob, ReferenceStore, ReferenceStoreCapacity,
-    RegisteredStorageProfile, VerificationDepth, VerificationError, VerificationRefusal,
-    VerificationReport, VerificationSubject,
+    ReferenceVerificationContext, ReferenceVerificationEvidence, ReferenceVerificationSource,
+    RegisteredStorageProfile, VerificationDepth, VerificationError, VerificationObservation,
+    VerificationRefusal, VerificationReport, VerificationSource, VerificationSubject,
 };
 
 use layout_mutation_support::mutation_cases;
@@ -30,47 +33,64 @@ fn a_report_establishes_exactly_the_requested_depth() -> Result<(), Box<dyn Erro
         VerificationDepth::CompleteBlobIdentity,
     ] {
         for subject in [
-            VerificationSubject::Blob(published.target()),
-            VerificationSubject::Layout(published.layout_id()),
+            VerificationSubject::Blob {
+                identity: published.target(),
+            },
+            VerificationSubject::Layout {
+                identity: published.layout_id(),
+            },
         ] {
             let report = store.verify(subject, depth)?;
-            assert_eq!(report.depth(), depth, "{subject:?} at {depth:?}");
-            assert_eq!(report.subject(), subject);
-            assert_eq!(report.layout(), published.layout_id());
-            assert_eq!(report.target(), published.target());
-            assert_eq!(report.chunks_verified(), 1);
+            assert_eq!(report.requested(), depth, "{subject:?} at {depth:?}");
+            let [claim] = report.subjects() else {
+                return Err("expected one subject claim".into());
+            };
+            assert_eq!(claim.subject(), subject);
+            assert_eq!(claim.depth(), depth);
+            let details = report
+                .reference_details()
+                .ok_or("reference evidence missing")?;
+            assert_eq!(details.layout(), published.layout_id());
+            assert_eq!(details.target(), published.target());
+            assert_eq!(details.chunks_verified(), 1);
+            assert_eq!(report.catalog(), None);
+            assert_eq!(report.retention_head(), None);
         }
     }
-    assert!(
-        VerificationDepth::ALL
-            .windows(2)
-            .all(|pair| matches!(pair, [shallower, deeper] if shallower < deeper))
-    );
     Ok(())
 }
 
 #[test]
-fn unsupported_depths_refuse_with_the_supported_range() -> Result<(), Box<dyn Error>> {
+fn unsupported_depths_refuse_with_the_exact_supported_set() -> Result<(), Box<dyn Error>> {
     let (store, published) = published_store(SOURCE)?;
-    let subject = VerificationSubject::Blob(published.target());
+    let subject = VerificationSubject::Blob {
+        identity: published.target(),
+    };
     for depth in [
         VerificationDepth::Framing,
         VerificationDepth::Checksum,
         VerificationDepth::CatalogReachability,
         VerificationDepth::RetentionClosure,
+        VerificationDepth::SnapshotBinding,
     ] {
-        let refusal = refusal_of(store.verify(subject, depth))?;
-        assert!(
-            matches!(
-                refusal,
-                VerificationRefusal::Unsupported {
-                    requested,
-                    supported_minimum: VerificationDepth::ChunkIdentity,
-                    supported_maximum: VerificationDepth::CompleteBlobIdentity,
-                    ..
-                } if requested == depth
-            ),
-            "{depth:?} refused with {refusal:?}"
+        let (refusal, context) = refusal_of(store.verify(subject, depth))?;
+        assert_eq!(
+            refusal,
+            VerificationRefusal::Unsupported {
+                subject,
+                requested: depth,
+                supported: &[
+                    VerificationDepth::ChunkIdentity,
+                    VerificationDepth::LayoutIdentity,
+                    VerificationDepth::CompleteBlobIdentity,
+                ],
+            }
+        );
+        assert_eq!(context.subject(), subject);
+        assert_eq!(context.stage(), depth);
+        assert_eq!(
+            context.evidence(),
+            ReferenceVerificationEvidence::Unsupported
         );
     }
     Ok(())
@@ -85,30 +105,27 @@ fn absent_subjects_are_missing_evidence_against_the_complete_view() -> Result<()
     let absent_layout = staged.layout_id();
     drop(staged);
 
-    let refusal = refusal_of(store.verify(
-        VerificationSubject::Blob(absent_blob),
-        VerificationDepth::ChunkIdentity,
-    ))?;
-    assert!(matches!(
-        refusal,
-        VerificationRefusal::Missing {
-            stage: VerificationDepth::ChunkIdentity,
-            evidence: MissingEvidence::Blob(blob),
-            ..
-        } if blob == absent_blob
-    ));
+    let subject = VerificationSubject::Blob {
+        identity: absent_blob,
+    };
+    let (refusal, context) = refusal_of(store.verify(subject, VerificationDepth::ChunkIdentity))?;
+    assert_eq!(refusal, VerificationRefusal::Missing { subject });
+    assert_eq!(context.stage(), VerificationDepth::ChunkIdentity);
+    assert_eq!(
+        context.evidence(),
+        ReferenceVerificationEvidence::Missing(MissingEvidence::Blob(absent_blob))
+    );
 
-    let refusal = refusal_of(store.verify(
-        VerificationSubject::Layout(absent_layout),
-        VerificationDepth::CompleteBlobIdentity,
-    ))?;
-    assert!(matches!(
-        refusal,
-        VerificationRefusal::Missing {
-            evidence: MissingEvidence::Layout(layout),
-            ..
-        } if layout == absent_layout
-    ));
+    let subject = VerificationSubject::Layout {
+        identity: absent_layout,
+    };
+    let (refusal, context) =
+        refusal_of(store.verify(subject, VerificationDepth::CompleteBlobIdentity))?;
+    assert_eq!(refusal, VerificationRefusal::Missing { subject });
+    assert_eq!(
+        context.evidence(),
+        ReferenceVerificationEvidence::Missing(MissingEvidence::Layout(absent_layout))
+    );
 
     let (never_staged, spans) = identify(b"chunks this store never held")?;
     let layout = AdmittedLayout::from_spans(
@@ -117,16 +134,28 @@ fn absent_subjects_are_missing_evidence_against_the_complete_view() -> Result<()
         spans,
         LayoutEntryLimit::MAXIMUM,
     )?;
-    let refusal =
+    let (refusal, context) =
         refusal_of(store.verify_admitted_layout(&layout, VerificationDepth::ChunkIdentity))?;
-    assert!(matches!(
+    let chunk = layout
+        .entries()
+        .first()
+        .ok_or("layout has no chunk")?
+        .chunk_id();
+    assert_eq!(
         refusal,
         VerificationRefusal::Missing {
-            stage: VerificationDepth::ChunkIdentity,
-            evidence: MissingEvidence::Chunk { index: 0, .. },
-            ..
+            subject: VerificationSubject::Chunk { identity: chunk }
         }
-    ));
+    );
+    assert_eq!(context.stage(), VerificationDepth::ChunkIdentity);
+    assert_eq!(
+        context.evidence(),
+        ReferenceVerificationEvidence::Missing(MissingEvidence::Chunk {
+            layout: layout.encode_record()?.id(),
+            index: 0,
+            chunk,
+        })
+    );
     Ok(())
 }
 
@@ -149,19 +178,37 @@ fn a_wrong_target_passes_chunk_identity_and_fails_only_the_complete_blob()
     )?;
 
     let shallow = store.verify_admitted_layout(&layout, VerificationDepth::ChunkIdentity)?;
-    assert_eq!(shallow.depth(), VerificationDepth::ChunkIdentity);
-    assert_eq!(shallow.target(), wrong_target);
+    assert_eq!(shallow.requested(), VerificationDepth::ChunkIdentity);
+    assert_eq!(
+        shallow
+            .reference_details()
+            .ok_or("reference evidence missing")?
+            .target(),
+        wrong_target
+    );
 
-    let refusal =
+    let (refusal, context) =
         refusal_of(store.verify_admitted_layout(&layout, VerificationDepth::CompleteBlobIdentity))?;
-    assert!(matches!(
+    let layout_id = layout.encode_record()?.id();
+    assert_eq!(
         refusal,
         VerificationRefusal::Corrupt {
-            stage: VerificationDepth::CompleteBlobIdentity,
-            evidence: CorruptionEvidence::BlobIdentity { expected, observed, .. },
-            ..
-        } if expected == wrong_target && observed == real_target
-    ));
+            subject: VerificationSubject::Layout {
+                identity: layout_id
+            },
+            expected: VerificationObservation::Blob(wrong_target),
+            observed: VerificationObservation::Blob(real_target),
+        }
+    );
+    assert_eq!(context.stage(), VerificationDepth::CompleteBlobIdentity);
+    assert_eq!(
+        context.evidence(),
+        ReferenceVerificationEvidence::Corrupt(CorruptionEvidence::BlobIdentity {
+            layout: layout_id,
+            expected: wrong_target,
+            observed: real_target,
+        })
+    );
     Ok(())
 }
 
@@ -184,16 +231,30 @@ fn false_profile_boundaries_pass_chunk_identity_and_fail_only_the_complete_blob(
     let layout = AdmittedLayout::decode_record(&encoded, policy)?;
 
     let shallow = store.verify_admitted_layout(&layout, VerificationDepth::ChunkIdentity)?;
-    assert_eq!(shallow.depth(), VerificationDepth::ChunkIdentity);
-    assert_eq!(shallow.chunks_verified(), 2);
+    assert_eq!(shallow.requested(), VerificationDepth::ChunkIdentity);
+    assert_eq!(
+        shallow
+            .reference_details()
+            .ok_or("reference evidence missing")?
+            .chunks_verified(),
+        2
+    );
 
-    let refusal =
+    let (refusal, context) =
         refusal_of(store.verify_admitted_layout(&layout, VerificationDepth::CompleteBlobIdentity))?;
+    assert_eq!(context.stage(), VerificationDepth::CompleteBlobIdentity);
+    assert!(matches!(
+        context.evidence(),
+        ReferenceVerificationEvidence::Corrupt(CorruptionEvidence::ProfileBoundary {
+            index: 0,
+            ..
+        })
+    ));
     assert!(matches!(
         refusal,
         VerificationRefusal::Corrupt {
-            stage: VerificationDepth::CompleteBlobIdentity,
-            evidence: CorruptionEvidence::ProfileBoundary { index: 0, .. },
+            expected: VerificationObservation::ProfileBoundary(_),
+            observed: VerificationObservation::ProfileBoundary(_),
             ..
         }
     ));
@@ -202,12 +263,18 @@ fn false_profile_boundaries_pass_chunk_identity_and_fail_only_the_complete_blob(
 
 fn refusal_of(
     outcome: Result<VerificationReport, VerificationError>,
-) -> Result<VerificationRefusal, Box<dyn Error>> {
+) -> Result<(VerificationRefusal, ReferenceVerificationContext), Box<dyn Error>> {
     match outcome {
-        Err(VerificationError::Refused(refusal)) => Ok(*refusal),
-        Err(VerificationError::Operational(failure)) => {
-            Err(format!("operational failure instead of a refusal: {failure:?}").into())
-        }
+        Err(VerificationError::Refused {
+            refusal,
+            source: Some(source),
+        }) => match *source {
+            VerificationSource::Reference(ReferenceVerificationSource::Refusal(context)) => {
+                Ok((refusal, context))
+            }
+            other => Err(format!("unexpected verification source: {other:?}").into()),
+        },
+        Err(failure) => Err(format!("missing reference refusal context: {failure:?}").into()),
         Ok(report) => Err(format!("report instead of a refusal: {report:?}").into()),
     }
 }

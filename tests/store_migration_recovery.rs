@@ -91,11 +91,18 @@ fn an_intent_stage_alone_resumes_when_exact_and_is_discarded_when_incomplete()
         intent_stage: Some(corrupt),
         ..StoreMigrationResidue::VERSION_ONE
     };
+    let error = plan_store_migration_recovery(&expected, &corrupt)
+        .err()
+        .ok_or("corrupt stage admitted")?;
+    assert!(error.source().and_then(|source| source.source()).is_some());
     assert!(matches!(
-        plan_store_migration_recovery(&expected, &corrupt),
-        Err(Ambiguity::StageUndecodable {
-            stage: Stage::Intent
-        })
+        error,
+        Ambiguity::StageUndecodable {
+            stage: Stage::Intent,
+            source: keep::StoreMigrationStageDecodeError::Intent {
+                source: keep::StoreMigrationIntentDecodeError::ChecksumMismatch { .. }
+            }
+        }
     ));
     Ok(())
 }
@@ -157,7 +164,9 @@ fn a_durable_intent_resumes_after_its_cleanup_and_binds_restart_stable_coordinat
     }
     assert!(matches!(
         plan_store_migration_recovery(&expected, &corrupt),
-        Err(Ambiguity::IntentUndecodable { .. })
+        Err(Ambiguity::IntentUndecodable {
+            source: keep::StoreMigrationIntentDecodeError::ChecksumMismatch { .. }
+        })
     ));
     Ok(())
 }
@@ -390,7 +399,9 @@ fn the_receipt_completes_the_migration_only_when_exact_and_alone() -> Result<(),
     };
     assert!(matches!(
         plan_store_migration_recovery(&expected, &conflicting),
-        Err(Ambiguity::ReceiptUndecodable { .. })
+        Err(Ambiguity::ReceiptUndecodable {
+            source: keep::StoreMigrationReceiptDecodeError::ChecksumMismatch { .. }
+        })
     ));
     Ok(())
 }

@@ -51,26 +51,34 @@ store used during staging. Those bytes may grow with blob length up to
 `ReferenceStoreCapacity`. The API and type documentation expose that
 materialization; input beyond the configured capacity refuses.
 
-### Bounded memory
+## Staging memory contract
 
-Staging memory has an explicit, checked ceiling and floor:
+`ReferenceStore::STAGING_SCRATCH_LIMIT_BYTES` names the fixed read/chunk
+buffers and stream state. It excludes staged payloads, map/layout metadata,
+caller input, and allocator overhead; it is not a process-RSS bound.
 
-- **Ceiling.** Peak adapter-owned memory during one `stage` call never
-  exceeds `ReferenceStore::STAGING_SCRATCH_LIMIT_BYTES` (the 8 KiB read
-  buffer, one maximum-length chunk buffer, and the detector's retained state)
-  plus the capacity the store has not yet materialized plus layout metadata
-  proportional to the entry limit. The adapter checks committed bytes plus
-  pending bytes plus the incoming chunk against the capacity *before* copying
-  the chunk, so a refusal reports `CapacityExceeded { capacity, attempted }`
-  with `attempted` at most one maximum chunk beyond the capacity, and pending
-  bytes never cross it. A refusal retains nothing.
-- **Floor.** A source whose every chunk the store already owns stages with
-  zero pending bytes and allocates only the scratch and layout metadata; no
-  chunk is copied to be compared.
+Committed payload bytes plus pending unique payload bytes cannot exceed
+`ReferenceStoreCapacity`. Capacity is checked before copying each new chunk;
+an ordinary capacity refusal reports an attempted total at most one maximum
+chunk beyond capacity. Arithmetic overflow is a separate refusal path.
+Metadata remains bounded by `LayoutEntryLimit`, rather than by logical bytes.
 
-The ceiling is a refusal, not a window. The [rationale](rationale.md#why-staging-materializes-up-to-capacity)
-records why this in-memory adapter cannot stage a bounded window of a larger
-blob without either publishing a prefix or becoming a durable adapter.
+The allocation laws measure incremental live heap during `stage`, excluding
+caller input and previously committed data. They cover over-capacity refusal
+with no retained heap, source failure after a staged chunk with preserved
+committed content, already-committed deduplication, and a synthetic stream
+sixteen times capacity whose repeated content stages one unique chunk. A
+synthetic 4 GiB source refuses on its first oversized chunk after consuming
+256 KiB, with bounded heap and no caller-side source allocation. The
+fixture's 1 KiB allowance per possible entry accounts for map/layout metadata
+in these measurements; it is an empirical test allowance, not a format limit
+or a universal allocator theorem.
+
+Fully deduplicated staging has zero pending payload bytes, but still allocates
+the bounded chunk buffer and layout metadata. This adapter materializes every
+new unique chunk until commit; it does not accept arbitrary unique content at
+constant memory. The [rationale](rationale.md#why-staging-materializes-up-to-capacity)
+records why spilling or publishing prefixes requires a different protocol.
 
 ## Publication
 

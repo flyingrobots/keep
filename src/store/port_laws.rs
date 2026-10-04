@@ -19,7 +19,7 @@ pub(crate) fn reconstructs_exactly<C: ContentReads>(
     layout_id: LayoutId,
     expected: &[u8],
 ) -> Result<(), Box<dyn Error>> {
-    assert!(view.contains_blob(target));
+    assert!(view.contains_blob(target)?);
     let mut output = Vec::new();
     let receipt = view
         .reconstruct(target, &mut output)
@@ -63,9 +63,13 @@ pub(crate) fn ranges_exactly<C: ContentReads>(
 }
 
 /// An absent blob is refused with nothing written.
-pub(crate) fn absence_refuses<C: ContentReads>(view: &C, absent: BlobId) {
-    assert!(!view.contains_blob(absent));
+pub(crate) fn absence_refuses<C: ContentReads>(
+    view: &C,
+    absent: BlobId,
+) -> Result<(), Box<dyn Error>> {
+    assert!(!view.contains_blob(absent)?);
     let mut output = Vec::new();
     assert!(view.reconstruct(absent, &mut output).is_err());
     assert!(output.is_empty());
+    Ok(())
 }

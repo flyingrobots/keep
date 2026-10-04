@@ -1,10 +1,13 @@
 //! Verification laws that need to tamper with the reference view's bytes.
+//! Size: Small. Oracle: tampering must refuse at chunk identity before deeper claims.
+//! Delete only if reference verification is removed or stronger coverage subsumes it.
 
 use std::io::Cursor;
 
 use crate::{
     CorruptionEvidence, LayoutEntryLimit, ReferenceStore, ReferenceStoreCapacity,
-    VerificationDepth, VerificationError, VerificationRefusal, VerificationSubject,
+    ReferenceVerificationEvidence, ReferenceVerificationSource, VerificationDepth,
+    VerificationError, VerificationRefusal, VerificationSource, VerificationSubject,
 };
 
 #[test]
@@ -34,17 +37,21 @@ fn tampered_stored_chunk_is_corrupt_at_the_chunk_identity_stage()
         VerificationDepth::ChunkIdentity,
         VerificationDepth::CompleteBlobIdentity,
     ] {
-        let outcome = store.verify(VerificationSubject::Blob(published.target()), depth);
+        let outcome = store.verify(
+            VerificationSubject::Blob {
+                identity: published.target(),
+            },
+            depth,
+        );
         assert!(
             matches!(
                 &outcome,
-                Err(VerificationError::Refused(refusal)) if matches!(
-                    **refusal,
-                    VerificationRefusal::Corrupt {
-                        stage: VerificationDepth::ChunkIdentity,
-                        evidence: CorruptionEvidence::ChunkIdentity { index: 0, .. },
-                        ..
-                    }
+                Err(VerificationError::Refused {
+                    refusal: VerificationRefusal::Corrupt { .. }, source: Some(source),
+                }) if matches!(source.as_ref(),
+                    VerificationSource::Reference(ReferenceVerificationSource::Refusal(context))
+                    if context.stage() == VerificationDepth::ChunkIdentity && matches!(context.evidence(),
+                        ReferenceVerificationEvidence::Corrupt(CorruptionEvidence::ChunkIdentity { index: 0, .. }))
                 )
             ),
             "depth {depth:?} did not report the chunk-identity contradiction: {outcome:?}"

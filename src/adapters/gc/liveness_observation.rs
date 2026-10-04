@@ -55,6 +55,15 @@ pub fn observe_gc_liveness(
     view: &FilesystemRetentionSnapshot,
     policy: CatalogRestartPolicy,
 ) -> Result<GcLivenessSnapshot, Error> {
+    crate::adapters::filesystem_root_binding::require_locator(view.root_directory(), store_root)
+        .map_err(|source| Error::pool("bind store root", source))?;
+    observe_gc_liveness_from_view(view, policy)
+}
+
+pub(in crate::adapters) fn observe_gc_liveness_from_view(
+    view: &FilesystemRetentionSnapshot,
+    policy: CatalogRestartPolicy,
+) -> Result<GcLivenessSnapshot, Error> {
     let catalog = view
         .catalog()
         .snapshot()
@@ -72,8 +81,7 @@ pub fn observe_gc_liveness(
         snapshot.name_segment(*segment);
     }
     retain_closures(view, &catalog, &record_segments, &mut snapshot)?;
-    let root = Dir::open_ambient_dir(store_root, cap_std::ambient_authority())
-        .map_err(|source| Error::pool("open store root", source))?;
+    let root = view.root_directory();
     let segments = root
         .open_dir_nofollow(SEGMENTS)
         .map_err(|source| Error::pool("open segment pool", source))?;

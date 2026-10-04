@@ -59,5 +59,9 @@ pub enum CorruptionEvidence {
         layout: LayoutId,
         /// Zero-based boundary index at which replay diverged.
         index: usize,
+        /// The boundary named by the admitted layout.
+        expected: Option<crate::ProfileBoundary>,
+        /// The boundary produced by profile replay.
+        observed: Option<crate::ProfileBoundary>,
     },
 }

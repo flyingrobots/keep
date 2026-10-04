@@ -50,16 +50,24 @@ impl RecoveryDispositionStorage for FilesystemRetentionPublicationAuthority {
                 &context.recovery,
                 pool_name::DISPOSITION_STAGE,
                 context.receipt.encoded(),
+                context
+                    .stage_observation
+                    .as_ref()
+                    .ok_or_else(no_disposition)?
+                    .identity(),
             )?);
         }
         let stage = context.stage.as_ref().ok_or_else(no_disposition)?;
-        stage.synchronize(&context.recovery)
+        stage.synchronize(&context.recovery).map_err(Into::into)
     }
 
     fn link_disposition_receipt(&mut self) -> io::Result<()> {
         let context = self.disposition.as_ref().ok_or_else(no_disposition)?;
         let stage = context.stage.as_ref().ok_or_else(no_disposition)?;
-        stage.link(&context.recovery, &context.dispositions, &context.name)
+        stage
+            .link(&context.recovery, &context.dispositions, &context.name)
+            .map(|_outcome| ())
+            .map_err(Into::into)
     }
 
     fn synchronize_dispositions(&mut self) -> io::Result<()> {
@@ -74,10 +82,17 @@ impl RecoveryDispositionStorage for FilesystemRetentionPublicationAuthority {
                 &context.recovery,
                 pool_name::DISPOSITION_STAGE,
                 context.receipt.encoded(),
+                context
+                    .stage_observation
+                    .as_ref()
+                    .ok_or_else(no_disposition)?
+                    .identity(),
             )?);
         }
         let stage = context.stage.take().ok_or_else(no_disposition)?;
-        stage.remove(&context.recovery, &context.dispositions, &context.name)
+        stage
+            .remove(&context.recovery, &context.dispositions, &context.name)
+            .map_err(Into::into)
     }
 
     fn synchronize_recovery(&mut self) -> io::Result<()> {
@@ -88,9 +103,11 @@ impl RecoveryDispositionStorage for FilesystemRetentionPublicationAuthority {
     fn remove_retained_stage(&mut self) -> io::Result<()> {
         let target = self.disposition.as_ref().ok_or_else(no_disposition)?.target;
         match target {
-            RecoveryDispositionTarget::Root => RetentionRecoveryStorage::remove_root_stage(self),
+            RecoveryDispositionTarget::Root => {
+                RetentionRecoveryStorage::remove_root_stage(self).map_err(Into::into)
+            }
             RecoveryDispositionTarget::Manifest => {
-                RetentionRecoveryStorage::remove_manifest_stage(self)
+                RetentionRecoveryStorage::remove_manifest_stage(self).map_err(Into::into)
             }
         }
     }

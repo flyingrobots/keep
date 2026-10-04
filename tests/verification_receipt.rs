@@ -21,10 +21,10 @@ use std::io::Cursor;
 use keep::{
     AdmittedRetentionManifest, BlobId, CanonicalVerificationReceipt, ChecksummedCatalog,
     GcRetentionState, LayoutEntryLimit, LayoutId, ReceiptCorruption, ReceiptRefusal,
-    ReferenceStore, ReferenceStoreCapacity, VERIFICATION_CONTRACT_VERSION, VerificationDepth,
-    VerificationError, VerificationOutcome, VerificationReceipt,
-    VerificationReceiptDecodeError as DecodeError, VerificationRefusal, VerificationSubject,
-    VerificationView,
+    ReceiptSubject, ReceiptVerificationDepth, ReferenceStore, ReferenceStoreCapacity,
+    VERIFICATION_CONTRACT_VERSION, VerificationDepth, VerificationError, VerificationOutcome,
+    VerificationReceipt, VerificationReceiptDecodeError as DecodeError,
+    VerificationReceiptProjectionError, VerificationRefusal, VerificationSubject, VerificationView,
 };
 use matrix::{CORRUPT, MATRIX, REPORT};
 use oracle::{BLOB_ID, LAYOUT_ID, golden_receipts};
@@ -131,8 +131,8 @@ fn the_golden_report_and_refusals_state_exactly_their_frozen_coordinates()
     assert_eq!(
         report.receipt().outcome(),
         VerificationOutcome::Established {
-            subject: VerificationSubject::Blob(blob),
-            depth: VerificationDepth::CompleteBlobIdentity,
+            subject: ReceiptSubject::Blob(blob),
+            depth: ReceiptVerificationDepth::CompleteBlobIdentity,
             layout,
             target: blob,
             chunks_verified: 1,
@@ -145,8 +145,8 @@ fn the_golden_report_and_refusals_state_exactly_their_frozen_coordinates()
     assert_eq!(
         corrupt.receipt().outcome(),
         VerificationOutcome::Refused(ReceiptRefusal::Corrupt {
-            subject: VerificationSubject::Layout(layout),
-            stage: VerificationDepth::ChunkIdentity,
+            subject: ReceiptSubject::Layout(layout),
+            stage: ReceiptVerificationDepth::ChunkIdentity,
             evidence: ReceiptCorruption::ChunkIdentity { layout, index: 0 },
         })
     );
@@ -157,10 +157,10 @@ fn the_golden_report_and_refusals_state_exactly_their_frozen_coordinates()
     assert_eq!(
         unsupported.receipt().outcome(),
         VerificationOutcome::Refused(ReceiptRefusal::Unsupported {
-            subject: VerificationSubject::Blob(blob),
-            requested: VerificationDepth::Framing,
-            supported_minimum: VerificationDepth::ChunkIdentity,
-            supported_maximum: VerificationDepth::CompleteBlobIdentity,
+            subject: ReceiptSubject::Blob(blob),
+            requested: ReceiptVerificationDepth::Framing,
+            supported_minimum: ReceiptVerificationDepth::ChunkIdentity,
+            supported_maximum: ReceiptVerificationDepth::CompleteBlobIdentity,
         })
     );
     assert_eq!(VERIFICATION_CONTRACT_VERSION, 1);
@@ -174,13 +174,15 @@ fn every_reference_store_outcome_projects_and_round_trips() -> Result<(), Box<dy
     let published = store
         .stage(&mut source, LayoutEntryLimit::MAXIMUM)?
         .commit(&mut store)?;
-    let subject = VerificationSubject::Blob(published.target());
+    let subject = VerificationSubject::Blob {
+        identity: published.target(),
+    };
     let mut receipts = Vec::new();
-    for depth in VerificationDepth::ALL {
-        let receipt = match store.verify(subject, depth) {
-            Ok(report) => VerificationReceipt::from_report(&report, VerificationView::Reference),
-            Err(VerificationError::Refused(refusal)) => {
-                VerificationReceipt::from_refusal(refusal.as_ref(), VerificationView::Reference)
+    for depth in ReceiptVerificationDepth::ALL.iter().copied() {
+        let receipt = match store.verify(subject, depth.into()) {
+            Ok(report) => VerificationReceipt::from_report(&report, VerificationView::Reference)?,
+            Err(error @ VerificationError::Refused { .. }) => {
+                VerificationReceipt::from_error(&error, VerificationView::Reference)?
             }
             Err(other) => return Err(other.into()),
         };
@@ -191,16 +193,19 @@ fn every_reference_store_outcome_projects_and_round_trips() -> Result<(), Box<dy
         .stage(&mut staged, LayoutEntryLimit::MAXIMUM)?
         .target();
     match store.verify(
-        VerificationSubject::Blob(absent),
+        VerificationSubject::Blob { identity: absent },
         VerificationDepth::ChunkIdentity,
     ) {
-        Err(VerificationError::Refused(refusal))
-            if matches!(*refusal, VerificationRefusal::Missing { .. }) =>
-        {
-            receipts.push(VerificationReceipt::from_refusal(
-                refusal.as_ref(),
-                durable_view()?,
-            ));
+        Err(
+            error @ VerificationError::Refused {
+                refusal: VerificationRefusal::Missing { .. },
+                ..
+            },
+        ) => {
+            receipts.push(VerificationReceipt::from_error(
+                &error,
+                VerificationView::Reference,
+            )?);
         }
         other => return Err(format!("absent blob was not missing: {other:?}").into()),
     }
@@ -256,5 +261,112 @@ fn a_refusal_never_decodes_as_a_report_and_a_report_never_as_a_refusal()
         CanonicalVerificationReceipt::decode(&report),
         Err(DecodeError::Semantic { .. })
     ));
+    Ok(())
+}
+
+/// Size: small. Oracle: reference verification establishes no durable view coordinates.
+#[test]
+fn a_reference_report_cannot_be_relabeled_as_durable() -> Result<(), Box<dyn Error>> {
+    let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+    let published = store
+        .stage(&mut Cursor::new(SOURCE), LayoutEntryLimit::MAXIMUM)?
+        .commit(&mut store)?;
+    let report = store.verify(
+        VerificationSubject::Blob {
+            identity: published.target(),
+        },
+        VerificationDepth::CompleteBlobIdentity,
+    )?;
+    assert_eq!(
+        VerificationReceipt::from_report(&report, durable_view()?),
+        Err(VerificationReceiptProjectionError::ViewMismatch)
+    );
+    let receipt = VerificationReceipt::from_report(&report, VerificationView::Reference)?;
+    assert_eq!(receipt.view(), VerificationView::Reference);
+    Ok(())
+}
+
+/// Size: small. Oracle: absence in the reference view proves nothing about a durable catalog.
+#[test]
+fn a_reference_refusal_cannot_be_relabeled_as_durable() -> Result<(), Box<dyn Error>> {
+    let store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+    let absent = BlobId::hash_bytes(SOURCE)?;
+    let error = store
+        .verify(
+            VerificationSubject::Blob { identity: absent },
+            VerificationDepth::CompleteBlobIdentity,
+        )
+        .err()
+        .ok_or("absent blob was reported present")?;
+    assert_eq!(
+        VerificationReceipt::from_error(&error, durable_view()?),
+        Err(VerificationReceiptProjectionError::ViewMismatch)
+    );
+    Ok(())
+}
+
+/// Size: small. Oracle: v1 registers exactly depth codes 1 through 7; `SnapshotBinding` has no slot.
+#[test]
+fn snapshot_binding_is_refused_instead_of_encoded_as_another_depth() -> Result<(), Box<dyn Error>> {
+    let store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+    let absent = BlobId::hash_bytes(SOURCE)?;
+    let error = store
+        .verify(
+            VerificationSubject::Blob { identity: absent },
+            VerificationDepth::SnapshotBinding,
+        )
+        .err()
+        .ok_or("reference view established snapshot binding")?;
+    assert_eq!(
+        VerificationReceipt::from_error(&error, VerificationView::Reference),
+        Err(VerificationReceiptProjectionError::Depth(
+            VerificationDepth::SnapshotBinding
+        ))
+    );
+    Ok(())
+}
+
+/// Size: small. Oracle: the independent one-zero conformance record, not this encoder.
+#[test]
+fn live_reference_verification_reproduces_the_frozen_report() -> Result<(), Box<dyn Error>> {
+    let mut store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+    let published = store
+        .stage(&mut Cursor::new([0_u8]), LayoutEntryLimit::MAXIMUM)?
+        .commit(&mut store)?;
+    let report = store.verify(
+        VerificationSubject::Blob {
+            identity: published.target(),
+        },
+        VerificationDepth::CompleteBlobIdentity,
+    )?;
+    let receipt = VerificationReceipt::from_report(&report, VerificationView::Reference)?;
+    assert_eq!(
+        CanonicalVerificationReceipt::encode(&receipt)
+            .encoded()
+            .as_slice(),
+        fixture_bytes("reference-complete-blob-report.hex")?
+    );
+    Ok(())
+}
+
+/// Size: small. Oracle: the independent unsupported-framing conformance record.
+#[test]
+fn live_reference_refusal_reproduces_the_frozen_supported_interval() -> Result<(), Box<dyn Error>> {
+    let store = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
+    let target = BlobId::parse_binary(&BLOB_ID)?;
+    let error = store
+        .verify(
+            VerificationSubject::Blob { identity: target },
+            VerificationDepth::Framing,
+        )
+        .err()
+        .ok_or("reference framing unexpectedly supported")?;
+    let receipt = VerificationReceipt::from_error(&error, VerificationView::Reference)?;
+    assert_eq!(
+        CanonicalVerificationReceipt::encode(&receipt)
+            .encoded()
+            .as_slice(),
+        fixture_bytes("reference-unsupported-framing-refusal.hex")?
+    );
     Ok(())
 }

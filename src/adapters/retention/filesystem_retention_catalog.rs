@@ -51,7 +51,8 @@ pub(super) fn require_current_catalog(
         }
         .into_io());
     }
-    require_selected_catalog(root, head)
+    require_selected_catalog(root, head)?;
+    Ok(())
 }
 
 /// Reopens the catalog pool entry `head` selects and requires it to be that catalog.

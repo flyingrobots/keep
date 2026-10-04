@@ -35,7 +35,7 @@ fn a_fifo_at_the_format_marker_refuses_instead_of_blocking() -> Result<(), Box<d
     let path = sandbox.path().to_path_buf();
 
     let outcome = completes_within(move || {
-        FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(&path).map(|_| ())
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(&path).map(|_| ())
     })?;
 
     assert!(

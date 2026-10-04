@@ -1,8 +1,8 @@
 //! The reference store as a transfer source.
 
 use super::ReferenceStore;
-use super::chunk_reader::ChunkReader;
 use crate::LayoutId;
+use crate::authenticated_read::ChunkReader;
 use crate::store::{StreamConsumer, TransferSource, TransferSourceError};
 
 impl crate::store::SealedTransferSource for ReferenceStore {}

@@ -13,12 +13,13 @@ use crate::{
 };
 
 impl ContentReads for DurableSnapshot {
+    type ContainsError = super::DurableStoreError;
     type ReconstructionReceipt = DurableReconstructionReceipt;
     type RangeReceipt = DurableRangeReadReceipt;
     type ReconstructionError = DurableReadError;
     type RangeError = DurableReadError;
 
-    fn contains_blob(&self, target: BlobId) -> bool {
+    fn contains_blob(&self, target: BlobId) -> Result<bool, Self::ContainsError> {
         Self::contains_blob(self, target)
     }
 

@@ -4,7 +4,7 @@ use super::snapshot::CatalogChunks;
 use super::{DurableReadError, DurableSnapshot};
 use crate::LayoutId;
 use crate::adapters::{StreamConsumer, TransferSource, TransferSourceError};
-use crate::reference::ChunkReader;
+use crate::authenticated_read::ChunkReader;
 
 impl crate::store::SealedTransferSource for DurableSnapshot {}
 

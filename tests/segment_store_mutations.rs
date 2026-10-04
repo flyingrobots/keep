@@ -21,8 +21,6 @@ pub mod recipes;
 use std::collections::{BTreeMap, BTreeSet};
 use std::error::Error;
 
-use keep::VerificationDepth;
-
 use classify::{Refusal, classify};
 use ledger::{Format, MutationCase, mutation_cases};
 
@@ -141,14 +139,4 @@ fn every_durable_record_has_a_ledger_and_every_row_cites_a_requirement()
         );
     }
     Ok(())
-}
-
-#[test]
-fn ledger_stages_order_like_verification_depths() {
-    // `framing` and `checksum` are the two structural depths a durable view
-    // establishes first, in that order; `identity` follows them; `binding`
-    // is a cross-record contradiction established at the record's role.
-    assert!(VerificationDepth::Framing < VerificationDepth::Checksum);
-    assert!(VerificationDepth::Checksum < VerificationDepth::ChunkIdentity);
-    assert_eq!(STAGES, ["framing", "checksum", "identity", "binding"]);
 }

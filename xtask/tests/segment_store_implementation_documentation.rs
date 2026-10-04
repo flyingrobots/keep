@@ -9,6 +9,14 @@ const RECOVERY: &str = include_str!("../../docs/formats/segment-store-v1/recover
 const CORPUS_README: &str = include_str!("../../conformance/segment-store/v1/README.md");
 
 #[test]
+fn version_one_crash_evidence_is_distinguished_from_the_complete_command() {
+    assert!(
+        RECOVERY.contains("105 version-one cases are a subset"),
+        "the unqualified crash command also executes version-two migration cases"
+    );
+}
+
+#[test]
 fn living_documentation_names_the_implemented_segment_boundary() {
     for (document, claim) in [
         (ROOT_README, "`StagedSegment`"),
@@ -33,6 +41,14 @@ fn living_documentation_names_the_implemented_segment_boundary() {
         );
     }
     assert!(!ROOT_README.contains("Durable segment storage, retention"));
+}
+
+#[test]
+fn recovery_documentation_does_not_assign_materialization_to_the_inventory_reader() {
+    assert!(
+        !RECOVERY.contains("bytes that the inventory\nreader materializes"),
+        "inventory fingerprinting returns evidence, not materialized stage bytes"
+    );
 }
 
 #[test]

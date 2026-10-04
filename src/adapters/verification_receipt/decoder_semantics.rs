@@ -13,10 +13,10 @@ use super::receipt::{
     ReceiptCorruption, ReceiptMissing, ReceiptRefusal, VerificationOutcome, VerificationReceipt,
     VerificationView,
 };
+use super::{ReceiptSubject as VerificationSubject, ReceiptVerificationDepth as VerificationDepth};
 use crate::adapters::GcRetentionState;
 use crate::{
     CatalogDigest, CatalogGeneration, LayoutId, LivenessGeneration, RetentionManifestDigest,
-    VerificationDepth, VerificationSubject,
 };
 
 const fn law(law: &'static str) -> Error {
@@ -229,11 +229,11 @@ fn unsupported(
             observed: fields.supported_maximum,
         })?;
     require(
-        supported_minimum <= supported_maximum,
+        fields.supported_minimum <= fields.supported_maximum,
         "the supported range is ordered",
     )?;
     require(
-        requested < supported_minimum || requested > supported_maximum,
+        fields.depth < fields.supported_minimum || fields.depth > fields.supported_maximum,
         "an unsupported depth lies outside the supported range",
     )?;
     Ok(ReceiptRefusal::Unsupported {

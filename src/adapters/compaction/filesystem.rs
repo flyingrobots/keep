@@ -4,21 +4,17 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Read;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use super::plan::superseded_set;
-use super::{
-    CompactionPlan, FilesystemCompactionError as Error, observe_compaction, plan_compaction,
-};
-use crate::adapters::gc::{
-    GcLimits, GcSegmentClassification, GcUnreachableEvidence, observe_gc_liveness, plan_gc,
-};
+use super::{CompactionPlan, FilesystemCompactionError as Error, plan_compaction};
+use crate::adapters::gc::{GcLimits, GcSegmentClassification, GcUnreachableEvidence, plan_gc};
 use crate::adapters::{
     AdmittedSegment, CanonicalCatalog, CatalogPublicationError, CatalogPublicationExpectation,
     CatalogPublicationReceipt, CatalogRestartPolicy, FilesystemCatalogPublisher,
-    FilesystemCatalogSnapshot, FilesystemRetentionSnapshot, FilesystemVersionTwoAdmission,
-    ReaderAttemptLimit, SegmentDigest, SegmentPublication, SegmentRecordLimit, StagedSegment,
-    filesystem_exact_record as exact_record, physical_pool_name, publish_catalog_generation,
+    FilesystemRetentionSnapshot, FilesystemVersionTwoAdmission, ReaderAttemptLimit, SegmentDigest,
+    SegmentPublication, SegmentRecordLimit, StagedSegment, filesystem_exact_record as exact_record,
+    physical_pool_name, publish_catalog_generation,
 };
 use crate::{CatalogDigest, CatalogGeneration};
 
@@ -84,7 +80,6 @@ impl CompactionReceipt {
 #[must_use]
 pub struct FilesystemCompactionAuthority {
     publisher: FilesystemCatalogPublisher,
-    store_root: PathBuf,
     policy: CatalogRestartPolicy,
 }
 
@@ -102,11 +97,9 @@ impl FilesystemCompactionAuthority {
     ) -> Result<Self, Error> {
         let publisher = FilesystemCatalogPublisher::open_version_two(admission, policy)
             .map_err(|source| Error::Observe { source })?;
-        Ok(Self {
-            publisher,
-            store_root: store_root.to_path_buf(),
-            policy,
-        })
+        crate::adapters::filesystem_root_binding::require_locator(&publisher.root, store_root)
+            .map_err(|source| Error::Observe { source })?;
+        Ok(Self { publisher, policy })
     }
 
     /// Executes `plan` completely.
@@ -144,8 +137,12 @@ impl FilesystemCompactionAuthority {
         publish: CompactionPublish<'_>,
     ) -> Result<CompactionReceipt, Error> {
         self.reprove(plan)?;
-        let catalog = FilesystemCatalogSnapshot::load(&self.store_root, self.policy)
-            .map_err(|source| Error::Catalog(Box::new(source)))?;
+        let catalog = crate::adapters::catalog_restart_loader::load_from_directory(
+            &self.publisher.root,
+            "HEAD",
+            self.policy,
+        )
+        .map_err(|source| Error::Catalog(Box::new(source)))?;
         let snapshot = catalog
             .snapshot()
             .map_err(|source| Error::Catalog(Box::new(source)))?;
@@ -208,7 +205,7 @@ impl FilesystemCompactionAuthority {
 
     fn view(&self) -> Result<FilesystemRetentionSnapshot, Error> {
         FilesystemRetentionSnapshot::load_under_writer_authority(
-            &self.store_root,
+            &self.publisher.root,
             self.policy,
             ReaderAttemptLimit::DEFAULT,
         )
@@ -217,7 +214,7 @@ impl FilesystemCompactionAuthority {
 
     fn reprove(&self, plan: &CompactionPlan) -> Result<(), Error> {
         let view = self.view()?;
-        let observation = observe_compaction(&self.store_root, &view, self.policy)
+        let observation = super::observation::observe_compaction_from_view(&view, self.policy)
             .map_err(|source| Error::Liveness(Box::new(source)))?;
         let fresh = plan_compaction(&observation).map_err(Error::Refused)?;
         if fresh == *plan {
@@ -289,7 +286,7 @@ impl FilesystemCompactionAuthority {
     /// retirement candidate and every retained closure must still verify.
     fn revalidate(&self, plan: &CompactionPlan) -> Result<(), Error> {
         let view = self.view()?;
-        let liveness = observe_gc_liveness(&self.store_root, &view, self.policy)
+        let liveness = crate::adapters::gc::observe_gc_liveness_from_view(&view, self.policy)
             .map_err(|source| Error::Liveness(Box::new(source)))?;
         let gc_plan = plan_gc(&liveness, GcLimits::MAXIMUM).map_err(Error::Revalidation)?;
         let superseded: BTreeMap<SegmentDigest, GcSegmentClassification> = superseded_set(plan)

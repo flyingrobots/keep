@@ -12,7 +12,11 @@ impl fmt::Display for StoreMigrationRecoveryAmbiguity {
                 formatter,
                 "migration {effect:?} effect exists without a durable intent"
             ),
-            Self::StageUndecodable { stage } => {
+            Self::StageAfterEffect { stage, effect } => write!(
+                formatter,
+                "migration {stage:?} stage survived later {effect:?} effect"
+            ),
+            Self::StageUndecodable { stage, .. } => {
                 write!(
                     formatter,
                     "complete migration {stage:?} stage does not decode"
@@ -55,6 +59,7 @@ impl fmt::Display for StoreMigrationRecoveryAmbiguity {
 impl Error for StoreMigrationRecoveryAmbiguity {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
+            Self::StageUndecodable { source, .. } => Some(source),
             Self::IntentUndecodable { source } => Some(source),
             Self::MarkerUndecodable { source } => Some(source),
             Self::ReceiptUndecodable { source } => Some(source),

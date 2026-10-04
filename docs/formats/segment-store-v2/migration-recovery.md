@@ -44,8 +44,6 @@ only version-2 migration recovery may continue.
 
 The migration recovery boundary admits only these ordered prefixes:
 
-<!-- markdownlint-disable MD013 -->
-
 | State | Required response |
 | --- | --- |
 | no migration artifact | admit exact version 1 |
@@ -56,7 +54,11 @@ The migration recovery boundary admits only these ordered prefixes:
 | marker without receipt | reopen full v2 view and publish receipt |
 | exact receipt with optional exact receipt stage | clean the stage and admit complete migration |
 
-<!-- markdownlint-enable MD013 -->
+Every row also requires the admission checks in
+[Executable recovery boundary](#executable-recovery-boundary). An intent stage
+surviving a namespace effect, or a marker stage surviving a receipt effect,
+refuses as `StageAfterEffect`. When a stage and canonical target both exist,
+exact bytes and one shared device/inode identity are required before resumption.
 
 A partial migration retry revalidates intent and existing bytes, resumes at the
 first absent canonical step, and never replaces an entry. A missing predecessor,
@@ -66,34 +68,35 @@ receipt, unknown entry, or changed root identity is unrecoverable ambiguity.
 Death before durable intent leaves v1 plus at most its non-authoritative stage.
 Death after durable intent leaves recovery-required v2 migration state.
 
-### Recovery planning
+## Executable recovery boundary
 
-`plan_store_migration_recovery` is the storage-independent form of the table.
-It takes the intent the version-1 store derives today and one
-`StoreMigrationResidue`, the observed presence and exact bytes of every fixed
-name, and returns the one `StoreMigrationRecoveryPlan` the row prescribes:
-admit version 1, discard one incomplete pre-effect stage and resume, resume
-at the earliest forward phase the residue cannot prove complete, or complete.
-Every other residue is a typed `StoreMigrationRecoveryAmbiguity`. The
-persisted intent is compared on every coordinate but the mount identity, so
-a rebooted root does not reject its own intent.
+`FilesystemStoreMigrationAuthority::reopen_for_recovery` reacquires writer
+authority without granting version-1 publication admission.
+`recover_store_migration` revalidates the caller's freshly derived current
+intent, then observes bounded residue and applies
+`plan_store_migration_recovery` before adopting records or discarding stages.
+Nested directory membership is checked before mutating recovery. An intent
+stage surviving namespace creation, or a marker stage surviving receipt
+publication, is refused as `StageAfterEffect`.
 
-The planner reads no storage. `recover_store_migration` drives it: a
-`StoreMigrationRecoveryStorage` observes the residue, the plan is taken
-against the intent the version-1 store derives today, the exact stage and
-canonical handles the resume point needs are adopted by reopening them by
-device and inode identity, an incomplete pre-effect stage is removed if the
-plan says so, and `resume_store_migration` runs every later phase with the
-persisted intent, never the freshly derived one.
-`FilesystemStoreMigrationAuthority::reopen_for_recovery` is the filesystem
-form. It acquires the writer lock over a root carrying any lawful residue
-without minting a version-1 platform admission, so the version-1 publisher
-can never run against a partly migrated root.
+When both a stage and its canonical target exist, adoption verifies they share
+the same device and inode as well as exact bytes before any forward phase,
+including directory synchronization.
 
-Every forward prefix of zero through twenty-one phases, and each incomplete
-pre-effect stage, recovers in-process to exactly one complete migration with
-every version-1 byte intact; a corrupt durable intent refuses before any
-mutation. The before, during, and after process-death matrix for
-`KEEP-CRASH-053..073` kills real writer processes at every boundary and
-verifies the same outcome from the restarted root; see
-[migration crash points](migration-crash.md#process-death-matrix).
+The receipt retains the exact observed namespace prefix and bound intent
+digest, names the admitted plan, and lists the executed forward phases
+through `executed_phases()`. The plan records the earliest unproven boundary;
+it does not infer which synchronization calls completed before process death.
+For `VersionOne`, `intent_digest()` returns `None`: no migration intent was
+admitted. Every other plan reports the intent used by recovery. An incomplete
+pre-effect intent stage has no complete persisted intent, so its discard path
+uses the freshly verified current intent.
+Restart compares device and inode identity; mount identity is same-process
+evidence. Whenever an exact intent survives, recovery continues with its
+persisted bytes.
+
+The filesystem laws cover every forward prefix, every strict byte-prefix truncation of all three stages and unchanged version-1 bytes. The [restart ambiguity matrix](../../testing-evidence/migration-restart-matrix.md) covers corrupt records, contradictory and byte-equal substituted stages, invalid ordering, copied-root identity, immutable-pool and current-head damage, changed inventory, foreign receipts, unknown names and wrong kinds. Each new refusal retains a complete before/after witness of names, file identities and bytes and checks the existing typed failure boundary. The evidence record distinguishes kernel/filesystem behavior from platform-admission, process-death and power-loss claims.
+
+## Completed namespace admission
+
+After a plan selects `Complete`, recovery calls `StoreMigrationRecoveryStorage::verify_complete` before returning its receipt. The filesystem implementation applies existing version-two namespace admission: reserved GC/recovery entries must match the current protocol, while owned retention state is permitted. A refusal retains the original cause under `StoreMigrationRecoveryError::Observation` and `FilesystemMigrationRecoveryRefusal::NamespacePreflight`, before any recovery effect. This is namespace admission, not verification or recovery of retained content; retention remains the owner of those records and stages.

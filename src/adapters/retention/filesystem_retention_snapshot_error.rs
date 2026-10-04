@@ -11,9 +11,9 @@ use crate::adapters::CatalogRestartError;
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum FilesystemRetentionSnapshotError {
-    /// The root is not an exactly admitted version-two store.
+    /// The platform profile or exact version-two root admission failed.
     Admission {
-        /// The exact namespace or record refusal.
+        /// The exact platform I/O, namespace, or record failure.
         source: io::Error,
     },
     /// The reader fence could not be acquired.
@@ -21,12 +21,12 @@ pub enum FilesystemRetentionSnapshotError {
         /// The exact filesystem failure.
         source: io::Error,
     },
-    /// The heads never agreed, or a head read failed.
+    /// The heads never agreed, or a coordinate or retention read failed.
     View {
         /// The exact collection refusal.
         source: RetentionViewError,
     },
-    /// The catalog `HEAD` selects a catalog that does not admit.
+    /// Stable collected heads select a catalog that does not admit.
     Catalog {
         /// The exact restart refusal.
         source: CatalogRestartError,

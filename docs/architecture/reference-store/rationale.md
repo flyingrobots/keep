@@ -29,35 +29,25 @@ chunks omitted by that deduplication.
 
 ## Why staging materializes up to capacity
 
-Issue #74 asked for a bounded-memory staging path that does not retain the
-complete missing-chunk set of a blob, or an explicit rationale for why that
-materialization is unavoidable. For this adapter it is unavoidable, and the
-bound is enforced as a refusal.
+Issue #74 permits an explicit rationale for unavoidable materialization.
+The reference store owns process memory. Keeping new chunks invisible until
+the entire stream has an admitted layout and verified blob identity requires
+the staged value to own those chunks; moving them into the visible store
+earlier would publish a prefix. A separate unpublished spill store could avoid
+that heap cost, but it would be a new storage adapter with its own failure,
+publication, cleanup, and recovery protocol.
 
-The store is process memory. A staged chunk has exactly two possible homes:
-the invisible `StagedBlob` or the visible store map. Moving a chunk from the
-first to the second before the complete `BlobId` and admitted layout exist
-would publish a prefix, which the stage-before-commit rule below forbids.
-Holding it anywhere else, a spill file or a durable segment, is the durable
-staged-ingestion adapter (issue #82), not this one. So every new unique chunk
-of a blob must be owned by its `StagedBlob` until the one synchronous commit,
-and the only honest bound is the store's own capacity.
+The existing adapter checks committed plus pending plus incoming payload bytes
+against capacity before copying. Stream buffers/state are fixed, and map and
+layout metadata are bounded by the entry limit. The public scratch allowance
+and allocation regressions make those separate resource terms explicit.
+Neither a large capacity nor bounded payload bytes proves low process RSS.
 
-That bound is explicit and checked. The adapter compares committed bytes plus
-pending bytes plus the incoming chunk against `ReferenceStoreCapacity` before
-it copies the chunk, so pending bytes never cross the capacity and a refusal
-retains nothing. `ReferenceStore::STAGING_SCRATCH_LIMIT_BYTES` names the fixed
-scratch the streaming engine holds beyond those bytes. Peak staging memory is
-therefore capacity not yet materialized, plus that scratch, plus layout
-metadata bounded by the entry limit; `tests/streaming_cas_memory.rs` measures
-both the ceiling and the deduplicated floor.
-
-Rejected: a staging window that commits full chunks as it fills. It would
-make a chunk visible under no admitted layout and no verified `BlobId`, and a
-later source failure would leave orphaned chunks that only a garbage
-collector could reclaim. Rejected: spilling the window to disk. That adapter
-needs publication order, crash states, and recovery evidence, which is the
-durable ingestion feature, not a defect fix in the reference adapter.
+A streaming publication window was rejected because a later source or identity
+failure must leave no visible prefix. A filesystem spill was rejected here
+because maintaining the in-memory adapter's current API does not establish
+safe durable publication or recovery. Those requirements belong to a separate
+durable ingestion implementation, not an implicit reference-store fallback.
 
 ## Why stage before commit
 
@@ -79,8 +69,8 @@ output, hashing each chunk exactly once. It then emits each verified chunk by
 identity without hashing it again: the in-memory view cannot change under
 `&self`, so a second hash would prove nothing the first did not.
 
-Rejected: reverifying on emission (issue #71). It doubled the CPU of every
-full and large-range read for an adapter whose chunks are immutable for the
+Rejected: reverifying on emission (issue #71). It doubled chunk-hash work for
+full and large-range reads for an adapter whose chunks are immutable for the
 duration of the call. A durable adapter, whose bytes can change between
 passes, must reverify on emission or pin what it verified.
 

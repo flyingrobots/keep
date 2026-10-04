@@ -1,7 +1,7 @@
 //! This module owns exact writer-locked, reader-fenced filesystem GC
 //! execution and recovery over one admitted version-two root.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
@@ -13,8 +13,9 @@ use super::{
     CanonicalGcRetirementReceipt, FilesystemGcError as Error, GcExecutionPhase, GcExecutionPoint,
     GcFixedStage, GcIntentEvidence, GcLimits, GcPlan, GcRecoveryPlan, GcRetirementReceipt,
     ReaderLockDevice, ReaderLockFile, ReaderLockIdentity, ReaderLockMount, derive_gc_intent,
-    observe_gc_liveness, plan_gc, plan_gc_recovery, resume_gc_execution,
+    observe_gc_liveness_from_view, plan_gc, plan_gc_recovery, resume_gc_execution,
 };
+use crate::adapters::filesystem_stage_observation::StageObservation;
 use crate::adapters::retention::{FilesystemRetentionStage, ReaderFence};
 use crate::adapters::{
     CatalogRestartPolicy, FilesystemRetentionSnapshot, FilesystemVersionTwoAdmission,
@@ -31,6 +32,8 @@ pub(super) struct GcExecutionContext {
     pub(super) receipt: Option<CanonicalGcRetirementReceipt>,
     pub(super) intent_stage: Option<FilesystemRetentionStage>,
     pub(super) receipt_stage: Option<FilesystemRetentionStage>,
+    pub(super) intent_observation: Option<StageObservation>,
+    pub(super) receipt_observation: Option<StageObservation>,
     _fence: ReaderFence,
 }
 
@@ -85,7 +88,6 @@ pub struct FilesystemGcAuthority {
     pub(super) segments: Dir,
     pub(super) policy: CatalogRestartPolicy,
     pub(super) context: Option<GcExecutionContext>,
-    store_root: PathBuf,
     _lock: FilesystemWriterLock,
 }
 
@@ -93,8 +95,9 @@ impl FilesystemGcAuthority {
     /// Pins one admitted version-two root for GC.
     ///
     /// `store_root` must be the path `admission` was reopened from; the
-    /// liveness view re-admits it on every retirement. The constructor
-    /// mutates nothing.
+    /// constructor checks that identity, then every liveness observation and
+    /// mutation uses the retained capability rather than reopening the locator.
+    /// The constructor performs no protocol mutation.
     ///
     /// # Errors
     ///
@@ -107,6 +110,8 @@ impl FilesystemGcAuthority {
     ) -> Result<Self, Error> {
         let (lock, _retention, _roots, _manifests) = admission.into_parts();
         let root = lock.clone_directory().map_err(observe)?;
+        crate::adapters::filesystem_root_binding::require_locator(&root, store_root)
+            .map_err(observe)?;
         let gc = root.open_dir_nofollow(GC).map_err(observe)?;
         let segments = root.open_dir_nofollow(SEGMENTS).map_err(observe)?;
         Ok(Self {
@@ -115,7 +120,6 @@ impl FilesystemGcAuthority {
             segments,
             policy,
             context: None,
-            store_root: store_root.to_path_buf(),
             _lock: lock,
         })
     }
@@ -133,8 +137,9 @@ impl FilesystemGcAuthority {
     /// fence, or phase refusal.
     pub fn recover(&mut self) -> Result<GcRecoveryReport, Error> {
         self.context = None;
-        let residue = residue::read(&self.gc, &self.segments).map_err(observe)?;
-        let plan = plan_gc_recovery(&residue).map_err(Error::Ambiguity)?;
+        let observation = residue::read(&self.gc, &self.segments).map_err(observe)?;
+        let residue = &observation.residue;
+        let plan = plan_gc_recovery(residue).map_err(Error::Ambiguity)?;
         let receipt = match plan {
             GcRecoveryPlan::Idle => None,
             GcRecoveryPlan::Complete => residue
@@ -164,7 +169,17 @@ impl FilesystemGcAuthority {
                 let intent = CanonicalGcRetirementIntent::from_intent(admitted.intent())
                     .map_err(Error::Encode)?;
                 let count = admitted.intent().candidates().len();
-                Some(self.run(intent, count, from)?.receipt().to_owned())
+                let fence = acquire_fence(&self.root)?;
+                self.context = Some(GcExecutionContext {
+                    intent,
+                    receipt: None,
+                    intent_stage: None,
+                    receipt_stage: None,
+                    intent_observation: observation.intent_stage,
+                    receipt_observation: observation.receipt_stage,
+                    _fence: fence,
+                });
+                Some(self.run(count, from)?.receipt().to_owned())
             }
         };
         Ok(GcRecoveryReport { plan, receipt })
@@ -183,8 +198,9 @@ impl FilesystemGcAuthority {
     /// differently, or the intent refuses.
     pub fn prepare(&mut self, plan: &GcPlan) -> Result<PreparedGcExecution, Error> {
         self.context = None;
-        let residue = residue::read(&self.gc, &self.segments).map_err(observe)?;
-        let generation = match plan_gc_recovery(&residue).map_err(Error::Ambiguity)? {
+        let observation = residue::read(&self.gc, &self.segments).map_err(observe)?;
+        let residue = &observation.residue;
+        let generation = match plan_gc_recovery(residue).map_err(Error::Ambiguity)? {
             GcRecoveryPlan::Idle => GcGeneration::new(1).map_err(Error::Generation)?,
             GcRecoveryPlan::Complete => prior_generation(residue.receipt.as_deref())?
                 .successor()
@@ -208,6 +224,8 @@ impl FilesystemGcAuthority {
             receipt: None,
             intent_stage: None,
             receipt_stage: None,
+            intent_observation: None,
+            receipt_observation: None,
             _fence: fence,
         });
         Ok(PreparedGcExecution { candidate_count })
@@ -222,10 +240,7 @@ impl FilesystemGcAuthority {
     /// [`Self::recover`].
     pub fn execute(&mut self, plan: &GcPlan) -> Result<CanonicalGcRetirementReceipt, Error> {
         let prepared = self.prepare(plan)?;
-        let context = self.context.take().ok_or(Error::NothingToRetire)?;
-        let intent = context.intent.clone();
-        self.context = Some(context);
-        self.run(intent, prepared.candidate_count, GcExecutionPoint::START)
+        self.run(prepared.candidate_count, GcExecutionPoint::START)
     }
 
     /// The intent [`Self::prepare`] bound, until execution completes or
@@ -243,19 +258,11 @@ impl FilesystemGcAuthority {
 
     fn run(
         &mut self,
-        intent: CanonicalGcRetirementIntent,
         candidate_count: usize,
         from: GcExecutionPoint,
     ) -> Result<CanonicalGcRetirementReceipt, Error> {
         if self.context.is_none() {
-            let fence = acquire_fence(&self.root)?;
-            self.context = Some(GcExecutionContext {
-                intent,
-                receipt: None,
-                intent_stage: None,
-                receipt_stage: None,
-                _fence: fence,
-            });
+            return Err(Error::NothingToRetire);
         }
         let result = resume_gc_execution(self, candidate_count, from).map_err(Error::Execute);
         let receipt = self.context.take().and_then(|context| context.receipt);
@@ -264,12 +271,12 @@ impl FilesystemGcAuthority {
 
     fn reobserve(&self) -> Result<super::GcLivenessSnapshot, Error> {
         let view = FilesystemRetentionSnapshot::load_under_writer_authority(
-            &self.store_root,
+            &self.root,
             self.policy,
             ReaderAttemptLimit::DEFAULT,
         )
         .map_err(|source| Error::Snapshot(Box::new(source)))?;
-        observe_gc_liveness(&self.store_root, &view, self.policy)
+        observe_gc_liveness_from_view(&view, self.policy)
             .map_err(|source| Error::Liveness(Box::new(source)))
     }
 

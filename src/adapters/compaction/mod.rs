@@ -19,6 +19,7 @@ mod interruption_tests;
 mod observation;
 mod plan;
 mod recovery;
+mod recovery_preflight;
 #[cfg(test)]
 mod test_fixture;
 

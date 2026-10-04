@@ -17,17 +17,28 @@ mod disposition_execution;
 mod disposition_plan;
 mod disposition_storage;
 #[cfg(test)]
+mod durable_read_law_tests;
+#[cfg(test)]
+mod durable_view_law_tests;
+#[cfg(test)]
 mod filesystem_recovery_admission_tests;
+#[cfg(test)]
+mod filesystem_retention_anchor_order_prefix_tests;
 mod filesystem_retention_attempt;
 #[cfg(test)]
 mod filesystem_retention_attempt_tests;
 mod filesystem_retention_authority;
 mod filesystem_retention_authority_error;
 #[cfg(test)]
+mod filesystem_retention_body_prefix_tests;
+#[cfg(test)]
 mod filesystem_retention_capacity_tests;
 mod filesystem_retention_catalog;
 #[cfg(test)]
 mod filesystem_retention_catalog_tests;
+mod filesystem_retention_closure_admission;
+#[cfg(test)]
+mod filesystem_retention_closure_prefix_tests;
 mod filesystem_retention_current;
 #[cfg(test)]
 mod filesystem_retention_current_tests;
@@ -41,21 +52,83 @@ mod filesystem_retention_expectation_tests;
 #[cfg(all(test, target_os = "linux"))]
 mod filesystem_retention_fifo_tests;
 #[cfg(test)]
+mod filesystem_retention_framing_prefix_tests;
+#[cfg(test)]
+mod filesystem_retention_generation_refusal_tests;
+#[cfg(test)]
+mod filesystem_retention_incomplete_disposition_tests;
+#[cfg(test)]
 mod filesystem_retention_member_tests;
 mod filesystem_retention_namespace;
 #[cfg(test)]
 mod filesystem_retention_namespace_tests;
+#[cfg(test)]
+mod filesystem_retention_observation_error_tests;
+#[cfg(test)]
+mod filesystem_retention_partial_anchor_tests;
+#[cfg(test)]
+mod filesystem_retention_partial_entry_tests;
+#[cfg(test)]
+mod filesystem_retention_partial_history_tests;
+#[cfg(test)]
+mod filesystem_retention_partial_integrity_tests;
+#[cfg(test)]
+mod filesystem_retention_partial_profile_tests;
 mod filesystem_retention_pool_name;
+#[cfg(test)]
+mod filesystem_retention_publication_closure_tests;
 mod filesystem_retention_recovery;
+#[cfg(test)]
+mod filesystem_retention_recovery_closure_law_tests;
+#[cfg(test)]
+mod filesystem_retention_recovery_closure_tests;
+#[cfg(test)]
+mod filesystem_retention_recovery_directory_tests;
+#[cfg(test)]
+mod filesystem_retention_recovery_discard_prefix_tests;
+#[cfg(test)]
+mod filesystem_retention_recovery_entry_set_tests;
 mod filesystem_retention_recovery_error;
+#[cfg(test)]
+mod filesystem_retention_recovery_head_binding_tests;
+#[cfg(test)]
+mod filesystem_retention_recovery_history_domain_tests;
+#[cfg(test)]
+mod filesystem_retention_recovery_history_tests;
+#[cfg(test)]
+mod filesystem_retention_recovery_identity_tests;
+#[cfg(test)]
+mod filesystem_retention_recovery_namespace_tests;
 mod filesystem_retention_recovery_observation;
+mod filesystem_retention_recovery_policy;
+#[cfg(test)]
+mod filesystem_retention_recovery_policy_tests;
+#[cfg(test)]
+mod filesystem_retention_recovery_predecessor_tests;
 #[cfg(test)]
 mod filesystem_retention_recovery_prefix_tests;
+mod filesystem_retention_recovery_roots;
 #[cfg(test)]
 mod filesystem_retention_recovery_tests;
 mod filesystem_retention_refusal;
+#[cfg(test)]
+mod filesystem_retention_short_count_tests;
+#[cfg(test)]
+mod filesystem_retention_short_framing_tests;
+#[cfg(test)]
+mod filesystem_retention_short_head_tests;
+#[cfg(test)]
+mod filesystem_retention_short_history_tests;
+#[cfg(test)]
+mod filesystem_retention_short_namespace_tests;
+#[cfg(test)]
+mod filesystem_retention_short_policy_tests;
 mod filesystem_retention_snapshot;
 mod filesystem_retention_snapshot_error;
+#[cfg(test)]
+mod filesystem_retention_snapshot_error_tests;
+#[cfg(test)]
+mod filesystem_retention_snapshot_identity_tests;
 #[cfg(test)]
 mod filesystem_retention_snapshot_tests;
 mod filesystem_retention_stage;
@@ -66,6 +139,9 @@ mod filesystem_retention_storage_tests;
 mod filesystem_retention_successor_tests;
 #[cfg(test)]
 pub(super) mod filesystem_retention_test_fixture;
+mod filesystem_retention_verification;
+#[cfg(test)]
+mod filesystem_verification_law_tests;
 #[cfg(test)]
 mod filesystem_version_two_admission_tests;
 mod head_decode_error;
@@ -94,6 +170,8 @@ mod publication_preparation_error;
 mod publication_receipt;
 mod publication_storage;
 mod root_anchor_decoder;
+mod root_anchor_order_prefix;
+mod root_anchor_prefix;
 mod root_decode_error;
 mod root_decode_error_display;
 mod root_decoder;
@@ -103,6 +181,8 @@ mod root_field_decoder;
 mod root_header_decoder;
 mod root_integrity;
 mod root_semantic_header;
+mod root_verification;
+mod selected_root_refusal;
 mod successor_manifest;
 mod transition_disposition;
 mod transition_error;
@@ -110,14 +190,33 @@ mod transition_planner;
 mod transition_preflight;
 mod transition_preflight_error;
 mod transition_readiness;
+#[cfg(test)]
+mod verification_namespace_kind_tests;
+#[cfg(test)]
+mod verification_namespace_law_tests;
+#[cfg(test)]
+mod verification_root_kind_tests;
+#[cfg(test)]
+mod verification_selection_law_tests;
+#[cfg(test)]
+mod verification_store_admission_tests;
+#[cfg(test)]
+mod verification_unsupported_depth_tests;
 mod verified_closure;
 
+#[cfg(test)]
+mod filesystem_retention_forward_error_tests;
 mod reader_attempt_limit;
 mod reader_fence;
+#[cfg(all(test, target_os = "linux"))]
+mod reader_platform_law_tests;
 mod recovery_evidence;
 mod recovery_execution;
 #[cfg(test)]
 mod recovery_execution_tests;
+#[cfg(test)]
+mod recovery_head_length_tests;
+mod recovery_manifest_entries;
 mod recovery_plan;
 mod recovery_planner;
 #[cfg(test)]
@@ -127,9 +226,24 @@ mod recovery_stage_assessment;
 mod recovery_storage;
 #[cfg(test)]
 mod retention_model_tests;
+mod retention_record_refusal;
+mod retention_storage_error;
+#[cfg(test)]
+mod retention_storage_error_law_tests;
+mod retention_storage_progress;
 mod retention_view_collector;
 #[cfg(test)]
 mod retention_view_collector_tests;
+mod stage_closure_limit_admission;
+mod stage_fixed_field_admission;
+mod stage_framing_prefix;
+mod stage_generation_admission;
+mod stage_history_admission;
+mod stage_prefix_admission;
+mod stage_record_integrity;
+mod stage_root_policy_admission;
+mod verification_observation_error;
+mod verification_view_collector;
 pub use admitted_manifest::AdmittedRetentionManifest;
 pub use admitted_root::AdmittedRetentionRoot;
 pub use canonical_head::CanonicalRetentionHead;
@@ -178,7 +292,7 @@ pub use publication_preparation_error::RetentionPublicationPreparationError;
 pub use publication_receipt::RetentionPublicationReceipt;
 pub use publication_storage::RetentionPublicationStorage;
 pub use reader_attempt_limit::ReaderAttemptLimit;
-pub use reader_fence::ReaderFence;
+pub(in crate::adapters) use reader_fence::ReaderFence;
 pub use recovery_evidence::{
     RetentionPoolEntryObservation, RetentionPoolObservations, RetentionRecoveryEvidence,
     RetentionStageAssessments,
@@ -194,11 +308,18 @@ pub use recovery_stage_assessment::{
     RetentionStageAssessment, assess_head_stage, assess_manifest_stage, assess_root_stage,
 };
 pub use recovery_storage::RetentionRecoveryStorage;
+pub use retention_record_refusal::RetentionRecordRefusal;
+pub use retention_storage_error::RetentionStorageError;
+pub use retention_storage_progress::{
+    RetentionEffectDurability, RetentionKnownEffect, RetentionNamespaceEffect,
+    RetentionStorageBoundary, RetentionStorageProgress,
+};
 pub use retention_view_collector::{
     RetentionViewCoordinates, RetentionViewError, RetentionViewSource, collect_retention_view,
 };
 pub use root_decode_error::RetentionRootDecodeError;
 pub use root_encode_error::RetentionRootEncodeError;
+pub use selected_root_refusal::RetentionSelectedRootRefusal;
 pub use transition_disposition::RetentionTransitionDisposition;
 pub use transition_error::RetentionTransitionError;
 pub use transition_planner::plan_retention_transition;
@@ -206,3 +327,10 @@ pub use transition_preflight::{RetentionTransitionPreflight, preflight_retention
 pub use transition_preflight_error::RetentionTransitionPreflightError;
 pub use transition_readiness::RetentionTransitionReadiness;
 pub use verified_closure::VerifiedRetentionClosure;
+
+pub(super) use closure_profile_error::map as profile_verification_refusal;
+
+pub use verification_view_collector::collect_verification_view;
+
+#[cfg(all(test, feature = "repository-tasks"))]
+mod filesystem_retention_migration_completion_tests;

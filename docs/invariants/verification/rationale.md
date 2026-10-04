@@ -1,46 +1,17 @@
-# Verification Rationale
+# Verification boundary rationale
 
-This note records the governed decisions behind the verification vocabulary.
+## Typed namespace observations
 
-## An ordered enumeration, not flags
+Canonical membership and no-follow entry-kind observations belong to filesystem namespace admission, including the earlier platform directory traversal. Their typed source records a demonstrated contradiction; an I/O error alone does not. Verification consumes that evidence rather than parsing messages or broadly equating InvalidData, ELOOP or NotADirectory with corruption. Failed directory iteration remains operational before any membership inference. The shared guard leaves existing no-follow opens and opened-file checks intact and does not make later pathname operations conditional on inode identity. Catalog-selected segment I/O similarly retains its known digest and original cause, so absence identifies the missing evidence without renaming the present catalog. These additive diagnostic types enrich the public error surface; downstream exhaustive matches may need new arms, without changing durable formats or successful behavior.
 
-A policy of boolean flags (`check_chunks`, `check_blob`, ...) lets a caller
-ask for a combination nothing establishes and lets a report be read as more
-than it says. One ordered depth makes both impossible: the request is one
-value, the report is one value, and the deeper value implies the shallower
-ones the view supports.
+## Subject-specific supported sets
 
-Rejected: a bit set of independent checks. Rejected: a boolean `deep`
-parameter, which collapses five distinct propositions into two.
+Verification depth has equality and no total ordering. Catalog reachability, layout identity and retention closure describe different subjects; ordering enum discriminants would falsely imply proofs an operation did not establish. Each operation declares its exact supported set and returns the requested depth or a typed unsupported refusal. The reference verifier's three supported depths retain their local validation prerequisites without imposing an ordering on unrelated durable subjects.
 
-## Refuse an unsupported depth instead of degrading
+## Reference refusal precedence
 
-A view that silently verified to the deepest depth it could would return a
-report whose depth the caller did not ask for, and a caller comparing
-`report.depth() >= requested` would be the only defense. Refusing with the
-supported range keeps the report's depth equal to the request by law.
+The reference verifier authenticates chunks and, at complete-blob depth, replays the profile and computes complete identity in one pass. A profile contradiction is retained until chunk authentication finishes so a chunk-identity refusal is not obscured. Repeating the chunk hash pass was rejected because the reference view already owns immutable bytes.
 
-## Report the lowest stage first
+## Frozen receipt projection
 
-The reference store folds complete-blob hashing and profile replay into the
-single chunk pass so that no chunk is hashed twice. A profile-boundary
-contradiction can therefore surface before the last chunk has been
-authenticated. It is held until the pass completes, so a chunk-identity
-contradiction (a lower stage) is the one reported when both exist. Callers
-can rely on the stage order without knowing the pass structure.
-
-Rejected: two passes, one per stage, which doubles the work the read path
-already avoids.
-
-## Missing, corrupt, and ambiguous stay distinct
-
-The authenticated reconstruction contract separates evidenced refusal from
-operational failure. Verification refines the refusal into absence,
-contradiction, and conflict because each authorizes a different next step:
-absence can be resolved by ingestion, contradiction by restoring from another
-copy, and conflict only by a human reading both sides. Collapsing them into
-one `Invalid` would push that distinction into prose.
-
-`Ambiguous` is defined now with no reference-store producer so that durable
-views, which can hold conflicting catalog and retention evidence, do not
-introduce a fourth vocabulary later.
+The v1 receipt codec owns closed wire subjects and depths separately from the expanding runtime vocabulary. Checked projection rejects unsupported coordinates and reference-to-durable provenance substitution. Accepting an arbitrary caller-supplied view would turn serialization into fabricated evidence. Historical durable-view records remain decodable without treating their bytes as a newly established live report.

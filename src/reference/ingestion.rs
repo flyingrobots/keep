@@ -50,22 +50,21 @@ const MAXIMUM_CHUNK_BYTES: usize = maximum_chunk_bytes!();
 const _: () = assert!(maximum_chunk_bytes!() == FastCdc::MAXIMUM_CHUNK_LENGTH.get());
 
 impl ReferenceStore {
-    /// Fixed scratch memory that one [`ReferenceStore::stage`] call may hold
-    /// beyond the new unique chunk bytes it stages.
+    /// Fixed buffer and stream-state allowance for one staging invocation.
     ///
-    /// The scratch is the 8 KiB read buffer, one buffer sized to
-    /// [`FastCdc::MAXIMUM_CHUNK_LENGTH`], and the detector's retained state.
-    /// It does not grow with the source length. Layout metadata proportional
-    /// to the caller's [`LayoutEntryLimit`] is accounted separately.
+    /// Includes the 8 KiB read buffer, one maximum-length chunk buffer, and
+    /// the stream state's detector, hasher, and bookkeeping. The value does
+    /// not grow with source length. It excludes staged unique chunk payloads,
+    /// map nodes, layout metadata, caller-owned input, and allocator overhead.
+    /// Layout and map metadata are bounded separately by [`LayoutEntryLimit`].
     ///
-    /// Together with the capacity check this gives the staging memory
-    /// ceiling: peak adapter-owned memory never exceeds this scratch plus the
-    /// capacity not yet materialized by the store plus the layout metadata,
-    /// because the store refuses with [`IngestionError::CapacityExceeded`]
-    /// before copying a chunk that would cross the capacity.
+    /// Staged payloads cannot exceed the store's remaining capacity: the
+    /// adapter checks capacity before copying each new unique chunk. This
+    /// allowance is a resource contract, not a promise of constant total
+    /// memory or a measurement of process RSS.
     pub const STAGING_SCRATCH_LIMIT_BYTES: usize = READ_BUFFER_BYTES
         .saturating_add(MAXIMUM_CHUNK_BYTES)
-        .saturating_add(FastCdc::RETAINED_STATE_LIMIT_BYTES);
+        .saturating_add(std::mem::size_of::<StreamState>());
 
     /// Reads one logical stream into invisible, validated staged work.
     ///

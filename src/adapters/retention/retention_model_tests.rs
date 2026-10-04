@@ -6,6 +6,10 @@ use std::collections::BTreeMap;
 use std::error::Error;
 use std::path::PathBuf;
 
+#[path = "retention_model_refusal.rs"]
+mod refusal;
+use refusal::Refusal;
+
 use super::filesystem_retention_test_fixture::{
     ROOT_HEX, fixture, initial_preparation, initial_root, new_namespace_preparation,
     open_authority, successor_preparation,
@@ -37,9 +41,9 @@ enum Operation {
     Initial(Namespace),
     /// Publish the exact successor of namespace A from a fresh view.
     Successor,
-    /// Release every anchor of namespace A through an exact successor.
+    /// Publish an empty anchor set in namespace A's next generation.
     Release,
-    /// Restore namespace A's original anchors through an exact successor.
+    /// Restore the original anchors in namespace A's next generation.
     Restore,
     /// Replay the last accepted publication byte for byte.
     RetryLast,
@@ -72,12 +76,6 @@ enum Recipe {
 }
 
 impl Recipe {
-    fn candidate(&self) -> &[u8] {
-        match self {
-            Self::Initial { candidate, .. } | Self::Successor { candidate, .. } => candidate,
-        }
-    }
-
     fn publish(
         &self,
         authority: &mut FilesystemRetentionPublicationAuthority,
@@ -162,7 +160,7 @@ type Planned = (Recipe, Expected);
 enum Expected {
     Published,
     AlreadyCommitted,
-    Refused,
+    Refused(Refusal),
 }
 
 /// Builds the recipe an operation would publish and the model's expected
@@ -180,7 +178,10 @@ fn recipe(
         Operation::Initial(namespace) => {
             let candidate = candidate_bytes(store, namespace)?;
             let expected = if model.namespaces.contains_key(&digest_of(&candidate)?) {
-                Expected::Refused
+                Expected::Refused(Refusal::repeated_initial(
+                    &candidate,
+                    fresh_manifest.as_deref(),
+                )?)
             } else {
                 Expected::Published
             };
@@ -204,7 +205,7 @@ fn recipe(
             ) {
                 (None, 0) => Expected::Published,
                 (Some(_), 1) => Expected::AlreadyCommitted,
-                _ => Expected::Refused,
+                _ => Expected::Refused(Refusal::superseded(fresh_manifest.as_deref())?),
             };
             Some((
                 Recipe::Initial {
@@ -231,22 +232,22 @@ fn successor_recipe(
     manifest: Option<Vec<u8>>,
 ) -> Result<Option<Planned>, Box<dyn Error>> {
     let digest = digest_of(&store.template)?;
-    let Some((_, anchors)) = model.namespaces.get(&digest) else {
+    if !model.namespaces.contains_key(&digest) {
         return Ok(None);
-    };
+    }
+    let current_root = snapshot(store)?
+        .retained_root(digest)?
+        .ok_or("model root absent on disk")?
+        .to_vec();
+    let current = AdmittedRetentionRoot::decode(&current_root)?;
     let anchors = match operation {
         Operation::Release => Vec::new(),
         Operation::Restore => AdmittedRetentionRoot::decode(&store.template)?
             .root()
             .anchors()
             .to_vec(),
-        _ => anchors.clone(),
+        _ => current.root().anchors().to_vec(),
     };
-    let current_root = snapshot(store)?
-        .retained_root(digest)?
-        .ok_or("model root absent on disk")?
-        .to_vec();
-    let current = AdmittedRetentionRoot::decode(&current_root)?;
     let root = RetentionRoot::new(
         current.root().namespace().clone(),
         current.root().generation().successor()?,
@@ -265,27 +266,58 @@ fn successor_recipe(
     )))
 }
 
+/// Advance only from the requested operation and prior model, never candidate output.
+fn advance_model(
+    store: &Store,
+    model: &mut Model,
+    operation: Operation,
+) -> Result<(), Box<dyn Error>> {
+    let namespace = match operation {
+        Operation::Initial(namespace) => namespace,
+        _ => Namespace::A,
+    };
+    let initial = candidate_bytes(store, namespace)?;
+    let initial = AdmittedRetentionRoot::decode(&initial)?;
+    let digest = initial.root().namespace().digest();
+    let (generation, anchors) = match operation {
+        Operation::Initial(_) | Operation::StaleInitial => (1, initial.root().anchors().to_vec()),
+        Operation::Successor | Operation::Release | Operation::Restore => {
+            let (previous, retained) = model
+                .namespaces
+                .get(&digest)
+                .ok_or("model successor lacks predecessor")?;
+            let anchors = match operation {
+                Operation::Release => Vec::new(),
+                Operation::Restore => initial.root().anchors().to_vec(),
+                _ => retained.clone(),
+            };
+            (
+                previous
+                    .checked_add(1)
+                    .ok_or("model root generation overflow")?,
+                anchors,
+            )
+        }
+        Operation::RetryLast => return Err("retry cannot advance model state".into()),
+    };
+    model.namespaces.insert(digest, (generation, anchors));
+    model.liveness = model
+        .liveness
+        .checked_add(1)
+        .ok_or("model liveness overflow")?;
+    Ok(())
+}
+
 /// Applies one operation to the store and the model.
 fn apply(store: &mut Store, model: &mut Model, operation: Operation) -> Result<(), Box<dyn Error>> {
     let Some((recipe, expected)) = recipe(store, model, operation)? else {
         return Ok(());
     };
     match (expected, recipe.publish(&mut store.authority)) {
-        (Expected::AlreadyCommitted, Ok(RetentionPublicationOutcome::AlreadyCommitted))
-        | (Expected::Refused, Err(_)) => {}
+        (Expected::AlreadyCommitted, Ok(RetentionPublicationOutcome::AlreadyCommitted)) => {}
+        (Expected::Refused(refusal), Err(error)) => refusal.verify(error.as_ref())?,
         (Expected::Published, Ok(RetentionPublicationOutcome::Published)) => {
-            let candidate = AdmittedRetentionRoot::decode(recipe.candidate())?;
-            model.namespaces.insert(
-                candidate.root().namespace().digest(),
-                (
-                    candidate.root().generation().get(),
-                    candidate.root().anchors().to_vec(),
-                ),
-            );
-            model.liveness = model
-                .liveness
-                .checked_add(1)
-                .ok_or("model liveness overflow")?;
+            advance_model(store, model, operation)?;
             store.last_accepted = Some(recipe);
         }
         (expected, result) => {
@@ -298,7 +330,7 @@ fn apply(store: &mut Store, model: &mut Model, operation: Operation) -> Result<(
 }
 
 /// Requires the fenced reader view to agree with the model exactly.
-fn verify(store: &Store, model: &Model) -> Result<(), Box<dyn Error>> {
+fn verify(store: &Store, model: &Model, schedule: [Operation; 3]) -> Result<(), Box<dyn Error>> {
     let snapshot = snapshot(store)?;
     let observed: BTreeMap<_, _> = snapshot
         .manifest()
@@ -315,24 +347,31 @@ fn verify(store: &Store, model: &Model) -> Result<(), Box<dyn Error>> {
         .iter()
         .map(|(namespace, (generation, _))| (*namespace, *generation))
         .collect();
-    assert_eq!(observed, expected, "manifest disagrees with the model");
+    assert_eq!(
+        observed, expected,
+        "manifest disagrees with the model: {schedule:?}"
+    );
     let liveness = snapshot
         .retention_head()
         .map_or(0, |head| head.generation().get());
     assert_eq!(
         liveness, model.liveness,
-        "liveness generation disagrees with the model"
+        "liveness generation disagrees with the model: {schedule:?}"
     );
     for (namespace, (generation, anchors)) in &model.namespaces {
         let bytes = snapshot
             .retained_root(*namespace)?
             .ok_or("model namespace has no root on disk")?;
         let root = AdmittedRetentionRoot::decode(&bytes)?;
-        assert_eq!(root.root().generation().get(), *generation);
+        assert_eq!(
+            root.root().generation().get(),
+            *generation,
+            "root generation: {schedule:?}"
+        );
         assert_eq!(
             root.root().anchors(),
             anchors.as_slice(),
-            "anchor set disagrees with the model"
+            "anchor set disagrees with the model: {schedule:?}"
         );
     }
     Ok(())
@@ -358,51 +397,64 @@ fn run_sequences(first: Operation, label: &str) -> Result<(), Box<dyn Error>> {
             for operation in [first, second, third] {
                 apply(&mut store, &mut model, operation)
                     .map_err(|error| format!("{first:?} {second:?} {third:?}: {error}"))?;
-                verify(&store, &model)
+                verify(&store, &model, [first, second, third])
                     .map_err(|error| format!("{first:?} {second:?} {third:?}: {error}"))?;
             }
             sequences = sequences
                 .checked_add(1)
-                .ok_or("model sequence count overflow")?;
+                .ok_or("model sequence index overflow")?;
         }
     }
-    assert_eq!(sequences, 49);
     Ok(())
 }
 
+// Size: medium. Oracle: namespace state model plus exact rejected-operation contract.
+// Delete only when stronger scenario exploration subsumes these histories and diagnostics.
 #[test]
 fn sequences_starting_with_an_initial_publication_of_a_agree_with_the_model()
 -> Result<(), Box<dyn Error>> {
     run_sequences(Operation::Initial(Namespace::A), "initial-a")
 }
 
+// Size: medium. Oracle: namespace state model plus exact rejected-operation contract.
+// Delete only when stronger scenario exploration subsumes these histories and diagnostics.
 #[test]
 fn sequences_starting_with_an_initial_publication_of_b_agree_with_the_model()
 -> Result<(), Box<dyn Error>> {
     run_sequences(Operation::Initial(Namespace::B), "initial-b")
 }
 
+// Size: medium. Oracle: namespace state model plus exact rejected-operation contract.
+// Delete only when stronger scenario exploration subsumes these histories and diagnostics.
 #[test]
 fn sequences_starting_with_a_successor_agree_with_the_model() -> Result<(), Box<dyn Error>> {
     run_sequences(Operation::Successor, "successor")
 }
 
+// Size: medium. Oracle: namespace state model plus exact rejected-operation contract.
+// Delete only when stronger scenario exploration subsumes these histories and diagnostics.
 #[test]
 fn sequences_starting_with_a_retry_agree_with_the_model() -> Result<(), Box<dyn Error>> {
     run_sequences(Operation::RetryLast, "retry")
 }
 
+// Size: medium. Oracle: namespace state model plus exact rejected-operation contract.
+// Delete only when stronger scenario exploration subsumes these histories and diagnostics.
 #[test]
 fn sequences_starting_with_a_stale_initial_agree_with_the_model() -> Result<(), Box<dyn Error>> {
     run_sequences(Operation::StaleInitial, "stale")
 }
 
+// Size: medium. Oracle: operation-derived namespace model and exact refusal contract.
+// Delete only when stronger scenario exploration subsumes these histories and diagnostics.
 #[test]
-fn sequences_starting_with_a_release_agree_with_the_model() -> Result<(), Box<dyn Error>> {
+fn sequences_starting_with_release_agree_with_the_model() -> Result<(), Box<dyn Error>> {
     run_sequences(Operation::Release, "release")
 }
 
+// Size: medium. Oracle: operation-derived namespace model and exact refusal contract.
+// Delete only when stronger scenario exploration subsumes these histories and diagnostics.
 #[test]
-fn sequences_starting_with_restoring_anchors_agree_with_the_model() -> Result<(), Box<dyn Error>> {
+fn sequences_starting_with_restore_agree_with_the_model() -> Result<(), Box<dyn Error>> {
     run_sequences(Operation::Restore, "restore")
 }

@@ -25,7 +25,7 @@ fn store(root: &std::path::Path) -> Result<DurableStore, Box<dyn Error>> {
         root,
         catalog_policy()?,
         ReaderAttemptLimit::DEFAULT,
-    ))
+    )?)
 }
 
 fn range(offset: u64, length: u64) -> Result<ByteRange, Box<dyn Error>> {
@@ -45,10 +45,10 @@ fn every_anchored_blob_reconstructs_exactly_with_a_receipt_naming_the_view()
     assert_eq!(snapshot.view().catalog_generation().get(), 2);
     assert!(matches!(
         snapshot.view().retention(),
-        crate::adapters::GcRetentionState::Published { generation, .. } if generation.get() == 1
+        Some(head) if head.generation().get() == 1
     ));
     for (bytes, entry) in contents.iter().zip(&published).take(2) {
-        assert!(snapshot.contains_blob(entry.target));
+        assert!(snapshot.contains_blob(entry.target)?);
         let mut output = Vec::new();
         let receipt = snapshot.reconstruct(entry.target, &mut output)?;
         assert_eq!(output.as_slice(), *bytes);
@@ -101,7 +101,7 @@ fn absence_is_evidence_against_the_pinned_view() -> Result<(), Box<dyn Error>> {
     let (sandbox, published) = durable_store("durable-absent", &contents)?;
     let snapshot = store(sandbox.path())?.snapshot()?;
     let unanchored = published.get(1).ok_or("published")?;
-    assert!(!snapshot.contains_blob(unanchored.target));
+    assert!(!snapshot.contains_blob(unanchored.target)?);
     let mut output = Vec::new();
     let error = snapshot
         .reconstruct(unanchored.target, &mut output)
@@ -131,14 +131,12 @@ fn a_pinned_snapshot_keeps_its_view_beside_a_successor_and_blocks_collection()
     assert_eq!(pinned.view().catalog_generation().get(), 2);
 
     // A compaction successor publishes beside the pinned reader.
-    let view = FilesystemRetentionSnapshot::load_under_writer_authority(
-        sandbox.path(),
-        policy,
-        ReaderAttemptLimit::DEFAULT,
-    )?;
+    let view =
+        FilesystemRetentionSnapshot::load(sandbox.path(), policy, ReaderAttemptLimit::DEFAULT)?;
     let plan = plan_compaction(&observe_compaction(sandbox.path(), &view, policy)?)?;
     drop(view);
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+    let admission =
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
     let receipt =
         FilesystemCompactionAuthority::open(admission, sandbox.path(), policy)?.execute(&plan)?;
     assert_eq!(receipt.generation().get(), 3);
@@ -161,11 +159,8 @@ fn a_pinned_snapshot_keeps_its_view_beside_a_successor_and_blocks_collection()
     drop(fresh);
 
     // Collection refuses while the pinned view lives, then retires.
-    let fenced = FilesystemRetentionSnapshot::load_under_writer_authority(
-        sandbox.path(),
-        policy,
-        ReaderAttemptLimit::DEFAULT,
-    )?;
+    let fenced =
+        FilesystemRetentionSnapshot::load(sandbox.path(), policy, ReaderAttemptLimit::DEFAULT)?;
     let gc = plan_gc(
         &observe_gc_liveness(sandbox.path(), &fenced, policy)?,
         GcLimits::MAXIMUM,
@@ -177,7 +172,8 @@ fn a_pinned_snapshot_keeps_its_view_beside_a_successor_and_blocks_collection()
         usize::try_from(gc.candidate_count())?,
         receipt.superseded().len()
     );
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+    let admission =
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
     let mut collector = FilesystemGcAuthority::open(admission, sandbox.path(), policy)?;
     let error = collector
         .execute(&gc)

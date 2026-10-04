@@ -69,19 +69,30 @@ fn a_clean_store_needs_nothing() -> Result<(), Box<dyn Error>> {
 }
 
 #[test]
-fn a_truncated_root_stage_with_no_later_effect_is_discarded() -> Result<(), Box<dyn Error>> {
+fn a_truncated_root_stage_requires_disposition() -> Result<(), Box<dyn Error>> {
     let records = generation_one()?;
     let partial = records
         .root
         .get(..100)
         .ok_or("root fixture shorter than 100 bytes")?;
-    let plan = plan_retention_recovery(evidence(
+    let result = plan_retention_recovery(evidence(
         None,
         (Some(partial), None, None),
         (Pool::Absent, Pool::Absent),
-    ))?;
-    assert_eq!(plan.steps(), [Step::DiscardRootStage]);
-    assert_eq!(plan.outcome(), Outcome::Clean);
+    ));
+    assert!(
+        matches!(
+            result,
+            Err(
+                RetentionRecoveryRefusal::IncompleteStageRequiresDisposition {
+                    stage: RetentionFixedStage::Root,
+                    expected: 192,
+                    observed: 100
+                }
+            )
+        ),
+        "incomplete root requires disposition: {result:?}"
+    );
     Ok(())
 }
 
@@ -101,8 +112,10 @@ fn a_truncated_stage_with_a_later_effect_refuses() -> Result<(), Box<dyn Error>>
     .ok_or("a truncated manifest with a pool link was discarded")?;
     assert!(matches!(
         error,
-        RetentionRecoveryRefusal::TruncatedStageWithLaterEffect {
-            stage: RetentionFixedStage::Manifest
+        RetentionRecoveryRefusal::IncompleteStageRequiresDisposition {
+            stage: RetentionFixedStage::Manifest,
+            expected: 160,
+            observed: 100
         }
     ));
     Ok(())
@@ -229,25 +242,30 @@ fn a_complete_head_stage_over_linked_stages_is_finalized() -> Result<(), Box<dyn
 }
 
 #[test]
-fn a_truncated_head_stage_is_discarded_and_the_orphans_stay_protected() -> Result<(), Box<dyn Error>>
-{
+fn a_truncated_head_stage_requires_disposition_despite_complete_earlier_evidence()
+-> Result<(), Box<dyn Error>> {
     let records = generation_one()?;
     let partial = records
         .head
         .get(..40)
         .ok_or("head fixture shorter than 40 bytes")?;
-    let plan = plan_retention_recovery(evidence(
+    let result = plan_retention_recovery(evidence(
         None,
         (Some(&records.root), Some(&records.manifest), Some(partial)),
         (Pool::Identical, Pool::Identical),
-    ))?;
-    assert_eq!(plan.steps(), [Step::DiscardHeadStage]);
-    assert_eq!(
-        plan.outcome(),
-        Outcome::Protected {
-            root_stage: true,
-            manifest_stage: true
-        }
+    ));
+    assert!(
+        matches!(
+            result,
+            Err(
+                RetentionRecoveryRefusal::IncompleteStageRequiresDisposition {
+                    stage: RetentionFixedStage::Head,
+                    expected: 144,
+                    observed: 40
+                }
+            )
+        ),
+        "incomplete head requires disposition: {result:?}"
     );
     Ok(())
 }

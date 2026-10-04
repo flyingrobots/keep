@@ -37,6 +37,8 @@ pub struct FilesystemRetentionPublicationAuthority {
     pub(super) attempt: Option<PublicationAttempt>,
     pub(super) recovery: Option<RetentionRecoveryContext>,
     pub(super) disposition: Option<DispositionContext>,
+    #[cfg(test)]
+    pub(super) recovery_sync_failure: Option<super::RetentionStorageBoundary>,
     _lock: FilesystemWriterLock,
 }
 
@@ -83,6 +85,8 @@ impl FilesystemRetentionPublicationAuthority {
             attempt: None,
             recovery: None,
             disposition: None,
+            #[cfg(test)]
+            recovery_sync_failure: None,
             _lock: lock,
         })
     }

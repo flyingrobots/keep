@@ -130,3 +130,5 @@ pub use retirement_intent::{
 };
 pub use segment_classification::{GcSegmentClassification, GcUnreachableEvidence};
 pub(in crate::adapters) use segment_pool_inventory::read as read_segment_pool_inventory;
+
+pub(in crate::adapters) use liveness_observation::observe_gc_liveness_from_view;

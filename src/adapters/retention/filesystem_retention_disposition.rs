@@ -12,7 +12,7 @@ use cap_std::fs::Dir;
 use super::filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
 use super::filesystem_retention_current::{self, read_exact_optional};
 use super::filesystem_retention_disposition_evidence::{
-    discard_stage, disposed_artifact, entry_with_suffix, pool_identity, read_bounded, receipt_for,
+    discard_stage, disposed_artifact, entry_with_suffix, pool_identity, receipt_for,
 };
 use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_recovery::RetentionRecoveryContext;
@@ -24,6 +24,7 @@ use super::{
     RecoveryDispositionRequest, RecoveryDispositionTarget, plan_recovery_disposition,
     plan_retention_recovery, resume_recovery_disposition,
 };
+use crate::adapters::filesystem_stage_observation::StageObservation;
 use crate::adapters::{
     AdmittedRecoveryDispositionReceipt, ArtifactIdentityDigest,
     CanonicalRecoveryDispositionReceipt, ChecksummedPublicationHead, GcRetentionState,
@@ -136,6 +137,7 @@ pub(super) struct DispositionContext {
     pub(super) recovery: Dir,
     pub(super) dispositions: Dir,
     pub(super) stage: Option<FilesystemRetentionStage>,
+    pub(super) stage_observation: Option<StageObservation>,
     _fence: ReaderFence,
 }
 
@@ -202,8 +204,8 @@ impl FilesystemRetentionPublicationAuthority {
             artifact,
             pool,
         };
-        let context = self.disposition_context(inputs, fence).map_err(observe)?;
-        let from = resume_phase(&context)?;
+        let mut context = self.disposition_context(inputs, fence).map_err(observe)?;
+        let from = resume_phase(&mut context)?;
         self.run_disposition(context, from)
     }
 
@@ -272,6 +274,7 @@ impl FilesystemRetentionPublicationAuthority {
                 recovery,
                 dispositions,
                 stage: None,
+                stage_observation: None,
                 _fence: fence,
             };
             return self.run_disposition(context, RecoveryDispositionPhase::RemovePoolEntry);
@@ -379,6 +382,7 @@ impl FilesystemRetentionPublicationAuthority {
             recovery,
             dispositions,
             stage: None,
+            stage_observation: None,
             _fence: fence,
         })
     }
@@ -390,10 +394,19 @@ impl FilesystemRetentionPublicationAuthority {
 /// at stage removal; the identical receipt alone resumes at the retained
 /// retention stage. A truncated stage with no receipt is discarded first.
 fn resume_phase(
-    context: &DispositionContext,
+    context: &mut DispositionContext,
 ) -> Result<RecoveryDispositionPhase, FilesystemRetentionDispositionError> {
     let expected = context.receipt.encoded();
-    let stage = read_bounded(&context.recovery, pool_name::DISPOSITION_STAGE).map_err(observe)?;
+    context.stage_observation = StageObservation::read(
+        &context.recovery,
+        pool_name::DISPOSITION_STAGE,
+        RECEIPT_LENGTH + 1,
+    )
+    .map_err(observe)?;
+    let stage = context
+        .stage_observation
+        .as_ref()
+        .map(StageObservation::bytes);
     let receipt = read_exact_optional(&context.dispositions, &context.name, RECEIPT_LENGTH)
         .map_err(|source| {
             if source.kind() == io::ErrorKind::InvalidData {
@@ -409,11 +422,16 @@ fn resume_phase(
             RecoveryDispositionAmbiguity::ReceiptDiffers,
         ));
     }
-    match (stage.as_deref(), receipt.is_some()) {
+    match (stage, receipt.is_some()) {
         (None, false) => Ok(RecoveryDispositionPhase::WriteStage),
         (Some(bytes), false) if bytes == expected => Ok(RecoveryDispositionPhase::SynchronizeStage),
         (Some(bytes), false) if expected.starts_with(bytes) => {
-            discard_stage(&context.recovery).map_err(observe)?;
+            let observed = context
+                .stage_observation
+                .as_ref()
+                .ok_or_else(|| observe(invalid_data("disposition stage observation absent")))?;
+            discard_stage(&context.recovery, observed).map_err(observe)?;
+            context.stage_observation = None;
             Ok(RecoveryDispositionPhase::WriteStage)
         }
         (Some(bytes), true) if bytes == expected => Ok(RecoveryDispositionPhase::RemoveStage),

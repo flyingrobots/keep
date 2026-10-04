@@ -27,13 +27,14 @@ impl ReferenceStagedContent<'_> {
 }
 
 impl ContentReads for ReferenceStore {
+    type ContainsError = std::convert::Infallible;
     type ReconstructionReceipt = ReconstructionReceipt;
     type RangeReceipt = RangeReadReceipt;
     type ReconstructionError = ReconstructionError;
     type RangeError = RangeReadError;
 
-    fn contains_blob(&self, target: BlobId) -> bool {
-        Self::contains_blob(self, target)
+    fn contains_blob(&self, target: BlobId) -> Result<bool, Self::ContainsError> {
+        Ok(Self::contains_blob(self, target))
     }
 
     fn reconstruct(

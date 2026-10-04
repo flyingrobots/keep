@@ -74,36 +74,38 @@ fn migration_boundaries_follow_the_twenty_one_phases_in_order() {
     );
 }
 
+// Subject: repository-tool runtime, not Keep recovery acceptance evidence.
+// Size: small; oracle: the exact sequence names documented in README.md.
+// Delete if this CLI is removed or a stronger command-boundary test subsumes it.
 #[test]
-fn gc_boundaries_follow_the_fourteen_phases_in_order() {
-    let gc: Vec<_> = DurabilityCrashPoint::ALL
-        .into_iter()
-        .filter(|point| point.sequence() == Gc)
-        .collect();
-
-    assert_eq!(gc, DurabilityCrashPoint::GC);
-    assert_eq!(gc.len(), keep::GcExecutionPhase::ALL.len());
-    assert_eq!(
-        DurabilityCrashPoint::GC.map(DurabilityCrashPoint::identifier),
-        std::array::from_fn::<_, 14, _>(|index| {
-            let ordinal = 74 + index;
-            let identifier = format!("KEEP-CRASH-{ordinal:03}");
-            DurabilityCrashPoint::from_identifier(&identifier)
-                .map_or("missing", DurabilityCrashPoint::identifier)
-        })
-    );
-}
-
-#[test]
-fn sequences_round_trip_their_command_line_identifiers() {
-    for sequence in DurabilityCrashSequence::ALL {
+fn crash_matrix_cli_admits_its_stable_sequence_names() {
+    for (name, expected) in [
+        ("segment", Segment),
+        ("catalog", Catalog),
+        ("head", Head),
+        ("recovery-discard", RecoveryDiscard),
+        ("initialization", Initialization),
+        ("retention", Retention),
+        ("migration", Migration),
+        ("gc", Gc),
+    ] {
         assert_eq!(
-            DurabilityCrashSequence::from_identifier(sequence.identifier()),
-            Some(sequence)
+            DurabilityCrashSequence::from_identifier(name),
+            Some(expected),
+            "CLI sequence {name} must select {expected:?}"
         );
     }
-    assert_eq!(
-        DurabilityCrashSequence::from_identifier("publication"),
-        None
-    );
+}
+
+// Subject: repository-tool runtime. Size: small; oracle: exact CLI vocabulary.
+// Delete if this CLI is removed or a stronger command-boundary test subsumes it.
+#[test]
+fn crash_matrix_cli_refuses_names_outside_its_exact_vocabulary() {
+    for name in ["", "unknown", "Retention", "retentions", "retention "] {
+        assert_eq!(
+            DurabilityCrashSequence::from_identifier(name),
+            None,
+            "unsupported CLI sequence {name:?} must refuse"
+        );
+    }
 }

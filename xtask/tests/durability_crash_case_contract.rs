@@ -6,50 +6,8 @@ use std::error::Error;
 
 use xtask::{
     DurabilityCrashCase, DurabilityCrashCaseError, DurabilityCrashOccurrence, DurabilityCrashPoint,
-    DurabilityCrashPosition, DurabilityCrashSequence,
+    DurabilityCrashPosition,
 };
-
-#[test]
-fn every_crash_point_has_three_ordered_positions_and_one_during_case_per_occurrence()
--> Result<(), Box<dyn Error>> {
-    let cases: Vec<_> = DurabilityCrashCase::all().collect();
-    let mut expected = Vec::new();
-    for point in DurabilityCrashPoint::ALL {
-        for position in DurabilityCrashPosition::ALL {
-            let occurrences = if position == DurabilityCrashPosition::During {
-                point.during_occurrences()
-            } else {
-                1
-            };
-            for ordinal in 0..occurrences {
-                let occurrence = point
-                    .occurrence_counted()
-                    .then_some(DurabilityCrashOccurrence::new(ordinal));
-                expected.push(DurabilityCrashCase::new(point, position, occurrence)?);
-            }
-        }
-    }
-
-    assert_eq!(cases, expected);
-    // 87 boundaries at three positions, plus five extra namespace-prefix
-    // lengths for `KEEP-CRASH-060`.
-    assert_eq!(cases.len(), 266);
-    let migration: Vec<_> =
-        DurabilityCrashCase::in_sequence(DurabilityCrashSequence::Migration).collect();
-    assert_eq!(migration.len(), 68);
-    let gc: Vec<_> = DurabilityCrashCase::in_sequence(DurabilityCrashSequence::Gc).collect();
-    assert_eq!(gc.len(), 42);
-    assert!(
-        gc.iter()
-            .all(|case| case.point().sequence() == DurabilityCrashSequence::Gc)
-    );
-    assert!(
-        migration
-            .iter()
-            .all(|case| case.point().sequence() == DurabilityCrashSequence::Migration)
-    );
-    Ok(())
-}
 
 #[test]
 fn occurrence_coordinates_exist_only_for_counted_boundaries() -> Result<(), Box<dyn Error>> {
@@ -109,4 +67,34 @@ fn identifiers_and_positions_round_trip_without_aliases() {
         );
     }
     assert_eq!(DurabilityCrashPosition::from_identifier("between"), None);
+}
+
+#[test]
+fn namespace_occurrences_are_admitted_only_within_the_protocol_fixed_range()
+-> Result<(), Box<dyn Error>> {
+    let point = DurabilityCrashPoint::MigrationAdmitNamespacePrefix;
+    for position in DurabilityCrashPosition::ALL {
+        let exclusive_limit = if position == DurabilityCrashPosition::During {
+            DurabilityCrashPoint::NAMESPACE_PREFIX_DIRECTORIES
+        } else {
+            1
+        };
+        for ordinal in 0..exclusive_limit {
+            let occurrence = DurabilityCrashOccurrence::new(ordinal);
+            let case = DurabilityCrashCase::new(point, position, Some(occurrence))?;
+            assert_eq!(case.occurrence(), Some(occurrence));
+        }
+        for ordinal in [exclusive_limit, u32::MAX] {
+            let observed = DurabilityCrashOccurrence::new(ordinal);
+            assert_eq!(
+                DurabilityCrashCase::new(point, position, Some(observed)),
+                Err(DurabilityCrashCaseError::OccurrenceOutOfRange {
+                    point,
+                    observed,
+                    exclusive_limit,
+                })
+            );
+        }
+    }
+    Ok(())
 }

@@ -45,11 +45,43 @@ mod filesystem_migration_namespace;
 mod filesystem_migration_namespace_directory;
 mod filesystem_migration_reader_fence;
 mod filesystem_migration_recovery;
+mod filesystem_migration_recovery_refusal;
+pub use filesystem_migration_recovery_refusal::{
+    FilesystemMigrationRecoveryRefusal, FilesystemMigrationResidueKind,
+};
+#[cfg(test)]
+mod filesystem_migration_compatibility_tests;
+#[cfg(test)]
+mod filesystem_migration_current_recovery_tests;
+#[cfg(test)]
+mod filesystem_migration_pair_admission_tests;
+#[cfg(test)]
+mod filesystem_migration_receipt_evidence_tests;
 #[cfg(test)]
 mod filesystem_migration_recovery_tests;
+#[cfg(test)]
+mod filesystem_migration_recovery_truncation_tests;
+#[cfg(test)]
+mod filesystem_migration_remount_tests;
 #[cfg(feature = "repository-tasks")]
 mod filesystem_migration_repository_tasks;
 mod filesystem_migration_residue;
+#[cfg(test)]
+mod filesystem_migration_residue_kind_tests;
+#[cfg(all(test, unix))]
+mod filesystem_migration_restart_namespace_tests;
+#[cfg(all(test, unix))]
+mod filesystem_migration_restart_order_tests;
+#[cfg(all(test, unix))]
+mod filesystem_migration_restart_pair_tests;
+#[cfg(all(test, unix))]
+mod filesystem_migration_restart_pool_tests;
+#[cfg(all(test, unix))]
+mod filesystem_migration_restart_record_tests;
+#[cfg(all(test, unix))]
+mod filesystem_migration_restart_root_tests;
+#[cfg(all(test, unix))]
+mod filesystem_migration_restart_test_fixture;
 mod filesystem_migration_storage;
 #[cfg(test)]
 mod filesystem_migration_storage_tests;
@@ -92,10 +124,14 @@ pub(in crate::adapters) use migration_receipt_initial_state::{
     empty_disposition_digest, initial_retention_digest,
 };
 mod migration_record_bytes;
+mod migration_stage_decode_error;
+pub use migration_stage_decode_error::StoreMigrationStageDecodeError;
+mod migration_namespace_prefix;
 mod migration_recovery_ambiguity;
 mod migration_recovery_ambiguity_display;
 mod migration_recovery_execution;
 mod migration_recovery_plan;
+pub use migration_namespace_prefix::StoreMigrationNamespacePrefix;
 mod migration_recovery_planner;
 mod migration_recovery_residue;
 mod migration_recovery_storage;
@@ -150,7 +186,6 @@ pub use migration_recovery_plan::{StoreMigrationFixedStage, StoreMigrationRecove
 pub use migration_recovery_planner::plan_store_migration_recovery;
 pub use migration_recovery_residue::{MIGRATION_NAMESPACE_PREFIX, StoreMigrationResidue};
 pub use migration_recovery_storage::StoreMigrationRecoveryStorage;
-pub use migration_resumption::resume_store_migration;
 pub use migration_storage::StoreMigrationStorage;
 pub use migration_synchronization_mask::MigrationSynchronizationMask;
 pub use store_identifier::StoreIdentifier;

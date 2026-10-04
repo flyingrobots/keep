@@ -101,20 +101,59 @@ registered! {
     }
 }
 
-/// The registered code of one verification depth: its one-based position
-/// in `VerificationDepth::ALL`.
-#[must_use]
-pub(super) fn depth_code(depth: VerificationDepth) -> u16 {
-    VerificationDepth::ALL
-        .iter()
-        .position(|candidate| *candidate == depth)
-        .and_then(|index| u16::try_from(index).ok())
-        .map_or(0, |index| index.saturating_add(1))
+registered! {
+    /// The closed depth vocabulary of receipt v1, independent of core ordering.
+    ReceiptVerificationDepth {
+        /// Fixed record framing.
+        Framing = 1,
+        /// Registered checksum verification.
+        Checksum = 2,
+        /// Exact chunk content identity.
+        ChunkIdentity = 3,
+        /// Canonical layout identity.
+        LayoutIdentity = 4,
+        /// Complete logical content identity.
+        CompleteBlobIdentity = 5,
+        /// Catalog reachability.
+        CatalogReachability = 6,
+        /// Retention closure.
+        RetentionClosure = 7,
+    }
 }
 
-/// The depth registered under `code`, if any.
-#[must_use]
-pub(super) fn depth_from_code(code: u16) -> Option<VerificationDepth> {
-    let index = usize::from(code.checked_sub(1)?);
-    VerificationDepth::ALL.get(index).copied()
+impl TryFrom<VerificationDepth> for ReceiptVerificationDepth {
+    type Error = super::VerificationReceiptProjectionError;
+    fn try_from(depth: VerificationDepth) -> Result<Self, Self::Error> {
+        Ok(match depth {
+            VerificationDepth::Framing => Self::Framing,
+            VerificationDepth::Checksum => Self::Checksum,
+            VerificationDepth::ChunkIdentity => Self::ChunkIdentity,
+            VerificationDepth::LayoutIdentity => Self::LayoutIdentity,
+            VerificationDepth::CompleteBlobIdentity => Self::CompleteBlobIdentity,
+            VerificationDepth::CatalogReachability => Self::CatalogReachability,
+            VerificationDepth::RetentionClosure => Self::RetentionClosure,
+            VerificationDepth::SnapshotBinding => return Err(Self::Error::Depth(depth)),
+        })
+    }
+}
+
+impl From<ReceiptVerificationDepth> for VerificationDepth {
+    fn from(depth: ReceiptVerificationDepth) -> Self {
+        match depth {
+            ReceiptVerificationDepth::Framing => Self::Framing,
+            ReceiptVerificationDepth::Checksum => Self::Checksum,
+            ReceiptVerificationDepth::ChunkIdentity => Self::ChunkIdentity,
+            ReceiptVerificationDepth::LayoutIdentity => Self::LayoutIdentity,
+            ReceiptVerificationDepth::CompleteBlobIdentity => Self::CompleteBlobIdentity,
+            ReceiptVerificationDepth::CatalogReachability => Self::CatalogReachability,
+            ReceiptVerificationDepth::RetentionClosure => Self::RetentionClosure,
+        }
+    }
+}
+
+pub(super) const fn depth_code(depth: ReceiptVerificationDepth) -> u16 {
+    depth.code()
+}
+pub(super) const fn depth_from_code(code: u16) -> Option<ReceiptVerificationDepth> {
+    ReceiptVerificationDepth::from_code(code)
 }

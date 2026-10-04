@@ -1,5 +1,6 @@
 //! Retention recovery execution laws against a recording fake storage.
 
+use super::RetentionStorageError;
 use std::error::Error;
 use std::io;
 
@@ -12,12 +13,16 @@ use super::{
 struct Recording {
     calls: Vec<Step>,
     refuse_at: Option<Step>,
+    failure: Option<RetentionStorageError>,
 }
 
 impl Recording {
-    fn record(&mut self, step: Step) -> io::Result<()> {
+    fn record(&mut self, step: Step) -> Result<(), RetentionStorageError> {
         if self.refuse_at == Some(step) {
-            return Err(io::Error::other("injected refusal"));
+            return Err(self
+                .failure
+                .take()
+                .unwrap_or_else(|| io::Error::other("injected refusal").into()));
         }
         self.calls.push(step);
         Ok(())
@@ -25,28 +30,28 @@ impl Recording {
 }
 
 impl RetentionRecoveryStorage for Recording {
-    fn discard_head_stage(&mut self) -> io::Result<()> {
+    fn discard_head_stage(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::DiscardHeadStage)
     }
-    fn discard_manifest_stage(&mut self) -> io::Result<()> {
+    fn discard_manifest_stage(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::DiscardManifestStage)
     }
-    fn discard_root_stage(&mut self) -> io::Result<()> {
+    fn discard_root_stage(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::DiscardRootStage)
     }
-    fn link_root(&mut self) -> io::Result<()> {
+    fn link_root(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::LinkRoot)
     }
-    fn link_manifest(&mut self) -> io::Result<()> {
+    fn link_manifest(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::LinkManifest)
     }
-    fn finalize_head(&mut self) -> io::Result<()> {
+    fn finalize_head(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::FinalizeHead)
     }
-    fn remove_root_stage(&mut self) -> io::Result<()> {
+    fn remove_root_stage(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::RemoveRootStage)
     }
-    fn remove_manifest_stage(&mut self) -> io::Result<()> {
+    fn remove_manifest_stage(&mut self) -> Result<(), RetentionStorageError> {
         self.record(Step::RemoveManifestStage)
     }
 }
@@ -56,6 +61,42 @@ const FINALIZE: [Step; 3] = [
     Step::RemoveRootStage,
     Step::RemoveManifestStage,
 ];
+
+// Size: small. Oracle: the public executor stops at its first refused storage capability.
+// The port records successful effects, not executor internals; none may follow failed finalization.
+// Delete when a stronger recovery-boundary law subsumes first-step refusal and its empty receipt.
+#[test]
+fn refused_finalization_reports_no_completed_steps() -> Result<(), Box<dyn Error>> {
+    let plan = RetentionRecoveryPlan::new(FINALIZE.to_vec(), RetentionRecoveryOutcome::Committed);
+    let mut storage = Recording {
+        calls: Vec::new(),
+        refuse_at: Some(Step::FinalizeHead),
+        ..Recording::default()
+    };
+
+    let error = execute_retention_recovery(&mut storage, &plan)
+        .err()
+        .ok_or("refused finalization was reported as success")?;
+
+    assert_eq!(
+        error.step(),
+        Step::FinalizeHead,
+        "name the first refused capability"
+    );
+    assert!(
+        error.executed().is_empty(),
+        "no operation completed before finalization refused"
+    );
+    assert!(
+        error.progress().is_none(),
+        "unreported effects must remain unknown"
+    );
+    assert!(
+        storage.calls.is_empty(),
+        "a finalization refusal must prevent cleanup effects"
+    );
+    Ok(())
+}
 
 #[test]
 fn every_step_calls_exactly_its_capability_in_plan_order() -> Result<(), Box<dyn Error>> {
@@ -99,6 +140,7 @@ fn a_refused_step_stops_execution_and_names_the_completed_prefix() -> Result<(),
     let mut storage = Recording {
         calls: Vec::new(),
         refuse_at: Some(Step::RemoveRootStage),
+        ..Recording::default()
     };
 
     let error: RetentionRecoveryError = execute_retention_recovery(&mut storage, &plan)
@@ -109,5 +151,47 @@ fn a_refused_step_stops_execution_and_names_the_completed_prefix() -> Result<(),
     assert_eq!(error.executed(), [Step::FinalizeHead]);
     assert_eq!(storage.calls, [Step::FinalizeHead]);
     assert!(error.source().is_some());
+    Ok(())
+}
+
+// Size: small. Oracle: an uncertain effect is not promoted to a known effect or erased.
+// Port-level fault simulation; real namespace/synchronization effects are tested separately.
+// Delete when a stronger public execution law subsumes uncertain cause propagation and stop-on-error.
+#[test]
+fn uncertain_failed_effect_survives_execution_without_later_cleanup() -> Result<(), Box<dyn Error>>
+{
+    use super::{RetentionNamespaceEffect as Effect, RetentionStorageBoundary as Boundary};
+    let plan = RetentionRecoveryPlan::new(FINALIZE.to_vec(), RetentionRecoveryOutcome::Committed);
+    let failure = RetentionStorageError::from(io::Error::from_raw_os_error(
+        rustix::io::Errno::IO.raw_os_error(),
+    ))
+    .at(Boundary::HeadRename)
+    .uncertain(Effect::HeadReplaced);
+    let mut storage = Recording {
+        refuse_at: Some(Step::FinalizeHead),
+        failure: Some(failure),
+        ..Recording::default()
+    };
+    let error = execute_retention_recovery(&mut storage, &plan)
+        .err()
+        .ok_or("uncertain failure accepted")?;
+    let progress = error.progress().ok_or("uncertain effect omitted")?;
+    assert_eq!(progress.boundary(), Boundary::HeadRename);
+    assert!(
+        progress.known_effects().is_empty(),
+        "an uncertain rename is not a known rename"
+    );
+    assert_eq!(progress.uncertain_effect(), Some(Effect::HeadReplaced));
+    assert!(storage.calls.is_empty(), "no later capability may execute");
+    let RetentionStorageError::Operation { source, .. } = error.storage_error() else {
+        return Err("operation cause absent".into());
+    };
+    let RetentionStorageError::Io { source } = source.as_ref() else {
+        return Err("original I/O cause absent".into());
+    };
+    assert_eq!(
+        source.raw_os_error(),
+        Some(rustix::io::Errno::IO.raw_os_error())
+    );
     Ok(())
 }

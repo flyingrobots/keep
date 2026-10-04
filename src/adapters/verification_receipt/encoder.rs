@@ -1,5 +1,6 @@
 //! This boundary module owns canonical verification receipt encoding.
 
+use super::ReceiptSubject as VerificationSubject;
 use super::enums::{
     ReceiptEvidenceKind, ReceiptOutcomeKind, ReceiptRefusalClass, ReceiptSubjectKind,
     ReceiptViewKind, depth_code,
@@ -10,7 +11,7 @@ use super::receipt::{
     VerificationOutcome, VerificationReceipt, VerificationView,
 };
 use crate::adapters::GcRetentionState;
-use crate::{BlobId, LayoutId, VerificationSubject};
+use crate::{BlobId, LayoutId};
 
 /// The scalar fields of one receipt, in wire order.
 struct Header {
@@ -137,7 +138,7 @@ fn write_view(encoded: &mut [u8; ENCODED_LENGTH], view: VerificationView) {
     }
 }
 
-fn header(receipt: &VerificationReceipt) -> Header {
+const fn header(receipt: &VerificationReceipt) -> Header {
     let subject_kind = match receipt.subject() {
         VerificationSubject::Blob(_) => ReceiptSubjectKind::Blob,
         VerificationSubject::Layout(_) => ReceiptSubjectKind::Layout,
@@ -181,7 +182,7 @@ fn header(receipt: &VerificationReceipt) -> Header {
     header
 }
 
-fn refusal_header(header: &mut Header, refusal: ReceiptRefusal) {
+const fn refusal_header(header: &mut Header, refusal: ReceiptRefusal) {
     match refusal {
         ReceiptRefusal::Missing {
             stage, evidence, ..

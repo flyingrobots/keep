@@ -109,14 +109,20 @@ impl FilesystemCatalogPublisher {
         })
     }
 
-    /// Opens a publisher without the production platform-profile proof.
+    /// Admits an already locked root and opens a publisher for repository tasks.
     ///
-    /// Repository process-death tests use this after executing the production
-    /// initialization protocol through [`crate::RepositoryInitializationStorage`].
+    /// This legacy route accepts an already retained writer lock. The catalog
+    /// crash campaign instead uses ordinary platform initialization and
+    /// [`Self::open`].
+    /// Despite the legacy name, this method now checks the full production
+    /// platform profile, including protocol-directory mount/device identity.
+    /// The pinned root is the authority; this does not re-admit an ambient path.
+    /// Unsupported filesystems cannot obtain publication authority through it.
     ///
     /// # Errors
     ///
-    /// Returns the same pinned-directory admission failures as [`Self::open`].
+    /// Returns platform-profile or required root-identity failures before
+    /// constructing authority, then the same directory failures as [`Self::open`].
     #[cfg(feature = "repository-tasks")]
     #[doc(hidden)]
     pub fn open_unchecked_for_repository_tasks(
@@ -124,7 +130,7 @@ impl FilesystemCatalogPublisher {
         policy: CatalogRestartPolicy,
     ) -> io::Result<Self> {
         Self::open(
-            FilesystemPlatformAdmission::unchecked_for_repository_tasks(lock)?,
+            FilesystemPlatformAdmission::from_repository_writer_lock(lock)?,
             policy,
         )
     }

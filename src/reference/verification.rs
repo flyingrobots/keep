@@ -1,20 +1,22 @@
 //! Explicit-depth verification over the non-durable reference view.
+#![expect(
+    clippy::result_large_err,
+    reason = "preserve main's bounded inline diagnostic coordinates without a new refusal allocation"
+)]
 
-use crate::profile::{StorageProfileVerificationError, StorageProfileVerifier};
+use crate::profile::StorageProfileVerifier;
 use crate::{
     AdmittedLayout, BlobHasher, BlobId, CorruptionEvidence, LayoutId, MissingEvidence,
-    ReferenceStore, VerificationDepth, VerificationError, VerificationFailure, VerificationRefusal,
-    VerificationReport, VerificationSubject,
+    ReferenceStore, VerificationDepth, VerificationError, VerificationReport, VerificationSubject,
 };
 
-use super::chunk_verification::{ChunkVerificationError, verified_chunk};
-
-/// Shallowest depth the in-memory view establishes: it holds no durable
-/// framing or checksums to verify.
-const SUPPORTED_MINIMUM: VerificationDepth = VerificationDepth::ChunkIdentity;
-/// Deepest depth the in-memory view establishes: it has no catalog and no
-/// retention.
-const SUPPORTED_MAXIMUM: VerificationDepth = VerificationDepth::CompleteBlobIdentity;
+use super::ReferenceVerificationSource as Source;
+use super::verification_outcome::{
+    canonical_identity, chunk_outcome, missing, operational, profile_failure, profile_outcome,
+    refused, require_layout_identity, require_supported,
+};
+use super::{ReferenceVerificationContext as Context, ReferenceVerificationEvidence as Evidence};
+use crate::authenticated_read::verified_chunk;
 
 impl ReferenceStore {
     /// Verifies one committed subject to exactly `depth` and reports it.
@@ -39,10 +41,13 @@ impl ReferenceStore {
     ) -> Result<VerificationReport, VerificationError> {
         require_supported(subject, depth)?;
         let layout_id = match subject {
-            VerificationSubject::Blob(target) => self
+            VerificationSubject::Blob { identity: target } => self
                 .first_layout_id(target)
                 .ok_or_else(|| missing(subject, MissingEvidence::Blob(target)))?,
-            VerificationSubject::Layout(layout_id) => layout_id,
+            VerificationSubject::Layout {
+                identity: layout_id,
+            } => layout_id,
+            _ => return Err(refused(Context::new(subject, depth, Evidence::Unsupported))),
         };
         let layout = self
             .layout(layout_id)
@@ -71,7 +76,9 @@ impl ReferenceStore {
         depth: VerificationDepth,
     ) -> Result<VerificationReport, VerificationError> {
         let layout_id = canonical_identity(layout)?;
-        let subject = VerificationSubject::Layout(layout_id);
+        let subject = VerificationSubject::Layout {
+            identity: layout_id,
+        };
         require_supported(subject, depth)?;
         let binding = LayoutBinding {
             id: layout_id,
@@ -105,19 +112,26 @@ fn verify_layout(
         let bytes = verified_chunk(store, layout_id, index, entry)
             .map_err(|error| chunk_outcome(subject, error))?;
         pass.feed(bytes)?;
-        chunks_verified = chunks_verified.saturating_add(1);
+        chunks_verified = chunks_verified
+            .checked_add(1)
+            .ok_or_else(|| operational(Source::ChunkCountOverflow))?;
     }
-    if committed && depth >= VerificationDepth::LayoutIdentity {
+    if committed
+        && matches!(
+            depth,
+            VerificationDepth::LayoutIdentity | VerificationDepth::CompleteBlobIdentity
+        )
+    {
         require_layout_identity(subject, layout_id, layout)?;
     }
     pass.conclude(layout.target())?;
-    Ok(VerificationReport::established(
-        subject,
-        depth,
-        layout_id,
-        layout.target(),
-        chunks_verified,
-    ))
+    Ok(
+        VerificationReport::established(subject, depth).in_reference(
+            layout_id,
+            layout.target(),
+            chunks_verified,
+        ),
+    )
 }
 
 /// The complete-blob work folded into the single chunk pass.
@@ -130,7 +144,7 @@ struct DeepPass<'a> {
     layout_id: LayoutId,
     hasher: Option<BlobHasher>,
     profile: Option<StorageProfileVerifier<'a>>,
-    pending: Option<VerificationRefusal>,
+    pending: Option<Context>,
 }
 
 impl<'a> DeepPass<'a> {
@@ -140,7 +154,7 @@ impl<'a> DeepPass<'a> {
         layout_id: LayoutId,
         layout: &'a AdmittedLayout,
     ) -> Result<Self, VerificationError> {
-        if depth < VerificationDepth::CompleteBlobIdentity {
+        if depth != VerificationDepth::CompleteBlobIdentity {
             return Ok(Self {
                 subject,
                 layout_id,
@@ -162,9 +176,9 @@ impl<'a> DeepPass<'a> {
 
     fn feed(&mut self, bytes: &[u8]) -> Result<(), VerificationError> {
         if let Some(hasher) = self.hasher.as_mut() {
-            hasher.update(bytes).map_err(|source| {
-                VerificationError::Operational(VerificationFailure::BlobHash { source })
-            })?;
+            hasher
+                .update(bytes)
+                .map_err(|source| operational(Source::BlobHash(source)))?;
         }
         if let Some(profile) = self.profile.as_mut()
             && let Err(error) = profile.feed(bytes)
@@ -184,14 +198,12 @@ impl<'a> DeepPass<'a> {
             pending,
         } = self;
         if let Some(pending) = pending {
-            return Err(VerificationError::refused(pending));
+            return Err(refused(pending));
         }
         if let Some(profile) = profile
             && let Err(error) = profile.finish()
         {
-            return Err(VerificationError::refused(profile_outcome(
-                subject, layout_id, error,
-            )?));
+            return Err(refused(profile_outcome(subject, layout_id, error)?));
         }
         let Some(hasher) = hasher else {
             return Ok(());
@@ -200,157 +212,15 @@ impl<'a> DeepPass<'a> {
         if observed == target {
             return Ok(());
         }
-        Err(VerificationError::refused(VerificationRefusal::Corrupt {
+        Err(refused(Context::new(
             subject,
-            stage: VerificationDepth::CompleteBlobIdentity,
-            evidence: CorruptionEvidence::BlobIdentity {
+            VerificationDepth::CompleteBlobIdentity,
+            Evidence::Corrupt(CorruptionEvidence::BlobIdentity {
                 layout: layout_id,
                 expected: target,
                 observed,
-            },
-        }))
-    }
-}
-
-/// Maps a replay error to the refusal it evidences, or to the operational
-/// failure it is.
-fn profile_outcome(
-    subject: VerificationSubject,
-    layout_id: LayoutId,
-    error: StorageProfileVerificationError,
-) -> Result<VerificationRefusal, VerificationError> {
-    match error {
-        StorageProfileVerificationError::BoundaryMismatch { index, .. } => {
-            Ok(VerificationRefusal::Corrupt {
-                subject,
-                stage: VerificationDepth::CompleteBlobIdentity,
-                evidence: CorruptionEvidence::ProfileBoundary {
-                    layout: layout_id,
-                    index,
-                },
-            })
-        }
-        other => Err(profile_failure(subject, layout_id, other)),
-    }
-}
-
-fn require_supported(
-    subject: VerificationSubject,
-    depth: VerificationDepth,
-) -> Result<(), VerificationError> {
-    if (SUPPORTED_MINIMUM..=SUPPORTED_MAXIMUM).contains(&depth) {
-        Ok(())
-    } else {
-        Err(VerificationError::refused(
-            VerificationRefusal::Unsupported {
-                subject,
-                requested: depth,
-                supported_minimum: SUPPORTED_MINIMUM,
-                supported_maximum: SUPPORTED_MAXIMUM,
-            },
-        ))
-    }
-}
-
-fn require_layout_identity(
-    subject: VerificationSubject,
-    expected: LayoutId,
-    layout: &AdmittedLayout,
-) -> Result<(), VerificationError> {
-    let observed = canonical_identity(layout)?;
-    if observed == expected {
-        Ok(())
-    } else {
-        Err(VerificationError::refused(VerificationRefusal::Corrupt {
-            subject,
-            stage: VerificationDepth::LayoutIdentity,
-            evidence: CorruptionEvidence::LayoutIdentity { expected, observed },
-        }))
-    }
-}
-
-fn canonical_identity(layout: &AdmittedLayout) -> Result<LayoutId, VerificationError> {
-    layout
-        .encode_record()
-        .map(|record| record.id())
-        .map_err(|source| {
-            VerificationError::Operational(VerificationFailure::LayoutEncoding { source })
-        })
-}
-
-fn missing(subject: VerificationSubject, evidence: MissingEvidence) -> VerificationError {
-    VerificationError::refused(VerificationRefusal::Missing {
-        subject,
-        stage: SUPPORTED_MINIMUM,
-        evidence,
-    })
-}
-
-fn chunk_outcome(subject: VerificationSubject, error: ChunkVerificationError) -> VerificationError {
-    match error {
-        ChunkVerificationError::Missing {
-            layout,
-            index,
-            requested,
-        } => VerificationError::refused(VerificationRefusal::Missing {
-            subject,
-            stage: VerificationDepth::ChunkIdentity,
-            evidence: MissingEvidence::Chunk {
-                layout,
-                index,
-                chunk: requested,
-            },
-        }),
-        ChunkVerificationError::IdentityMismatch {
-            layout,
-            index,
-            expected,
-            observed,
-        } => VerificationError::refused(VerificationRefusal::Corrupt {
-            subject,
-            stage: VerificationDepth::ChunkIdentity,
-            evidence: CorruptionEvidence::ChunkIdentity {
-                layout,
-                index,
-                expected,
-                observed,
-            },
-        }),
-        ChunkVerificationError::Hash {
-            layout,
-            index,
-            source,
-            ..
-        } => VerificationError::Operational(VerificationFailure::ChunkHash {
-            layout,
-            index,
-            source,
-        }),
-    }
-}
-
-fn profile_failure(
-    subject: VerificationSubject,
-    layout: LayoutId,
-    error: StorageProfileVerificationError,
-) -> VerificationError {
-    match error {
-        StorageProfileVerificationError::Unsupported { profile } => {
-            VerificationError::Operational(VerificationFailure::ProfileVerifierUnavailable {
-                layout,
-                profile,
-            })
-        }
-        StorageProfileVerificationError::Chunking { source } => {
-            VerificationError::Operational(VerificationFailure::ProfileChunking { layout, source })
-        }
-        StorageProfileVerificationError::BoundaryMismatch { index, .. } => {
-            VerificationError::refused(VerificationRefusal::Corrupt {
-                subject,
-                stage: VerificationDepth::CompleteBlobIdentity,
-                evidence: CorruptionEvidence::ProfileBoundary { layout, index },
-            })
-        }
+            }),
+        )))
     }
 }
 

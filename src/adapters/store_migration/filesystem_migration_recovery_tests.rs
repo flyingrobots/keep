@@ -10,8 +10,7 @@ use super::migration_resumption::{MigrationRecords, execute_phase};
 use super::{
     AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, AdmittedStoreMigrationReceipt,
     FilesystemStoreMigrationAuthority, StoreMigrationFixedStage, StoreMigrationPhase,
-    StoreMigrationRecoveryError, StoreMigrationRecoveryPlan, StoreMigrationStorage,
-    recover_store_migration,
+    StoreMigrationRecoveryPlan, StoreMigrationStorage, recover_store_migration,
 };
 
 /// Runs the first `count` forward phases in-process, drops the writer, and
@@ -39,6 +38,17 @@ fn every_forward_prefix_recovers_to_one_complete_migration() -> Result<(), Box<d
         let expected = recovered.observe_intent()?;
         let receipt = recover_store_migration(&mut recovered, &expected)
             .map_err(|error| format!("prefix {count}: {error}: {:?}", error.source()))?;
+        match receipt.plan() {
+            StoreMigrationRecoveryPlan::Resume { resume }
+            | StoreMigrationRecoveryPlan::DiscardStage { resume, .. } => {
+                assert_eq!(receipt.executed_phases().next(), Some(resume));
+                assert_eq!(
+                    receipt.executed_phases().last(),
+                    Some(StoreMigrationPhase::SynchronizeRootAfterReceiptCleanup)
+                );
+            }
+            _ => assert_eq!(receipt.executed_phases().count(), 0),
+        }
         drop(recovered);
 
         match receipt.plan() {
@@ -105,44 +115,7 @@ fn a_truncated_intent_stage_is_discarded_and_the_migration_completes() -> Result
     Ok(())
 }
 
-#[test]
-fn a_corrupt_durable_intent_refuses_recovery_before_any_mutation() -> Result<(), Box<dyn Error>> {
-    let (sandbox, mut authority) = open_authority("filesystem-migration-recovery-corrupt")?;
-    let intent = authority.observe_intent()?;
-    StoreMigrationStorage::verify_current(&mut authority, &intent)?;
-    let records = MigrationRecords::for_intent(&intent);
-    for phase in StoreMigrationPhase::ALL.iter().take(6) {
-        execute_phase(&mut authority, *phase, &records)?;
-    }
-    drop(authority);
-    let canonical = sandbox.path().join("migration.intent");
-    let mut bytes = fs::read(&canonical)?;
-    let last = bytes.last_mut().ok_or("intent is empty")?;
-    *last ^= 1;
-    fs::write(&canonical, &bytes)?;
-    let before = fs::read_dir(sandbox.path())?.count();
-
-    let mut recovered = FilesystemStoreMigrationAuthority::reopen_for_recovery_unchecked_for_tests(
-        sandbox.path(),
-        maximum_policy(),
-    )?;
-    let expected = recovered.observe_intent()?;
-    let error = recover_store_migration(&mut recovered, &expected)
-        .err()
-        .ok_or("a corrupt durable intent was recovered")?;
-    drop(recovered);
-
-    assert!(matches!(
-        error,
-        StoreMigrationRecoveryError::Ambiguity { .. }
-    ));
-    assert_eq!(fs::read_dir(sandbox.path())?.count(), before);
-    assert!(!sandbox.path().join("reader.lock").exists());
-    sandbox.remove()?;
-    Ok(())
-}
-
-fn assert_complete_migration(
+pub(super) fn assert_complete_migration(
     root: &Path,
     intent: &super::CanonicalStoreMigrationIntent,
 ) -> Result<(), Box<dyn Error>> {
@@ -172,7 +145,7 @@ fn assert_complete_migration(
     Ok(())
 }
 
-fn version_one_witness(root: &Path) -> io::Result<Vec<(String, Vec<u8>)>> {
+pub(super) fn version_one_witness(root: &Path) -> io::Result<Vec<(String, Vec<u8>)>> {
     let mut witness = vec![("HEAD".to_owned(), fs::read(root.join("HEAD"))?)];
     for pool in ["segments", "catalogs"] {
         for entry in fs::read_dir(root.join(pool))? {

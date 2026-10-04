@@ -18,6 +18,7 @@ mod error;
 mod ingestion_bound_tests;
 mod ingestion_error;
 mod ingestion_receipt;
+mod layout_reads;
 mod port;
 #[cfg(test)]
 mod port_tests;
@@ -25,6 +26,7 @@ mod receipt;
 mod recovery;
 #[cfg(test)]
 mod refusal_source_tests;
+mod retained_anchors;
 mod snapshot;
 mod staged;
 mod store;

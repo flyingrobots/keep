@@ -30,7 +30,8 @@ fn a_corrupt_retained_root_keeps_its_typed_cause_through_durable_admission()
     )
     .err()
     .ok_or("corrupt retained root admitted")?;
-    assert!(matches!(&error, DurableStoreError::RetainedRoot { .. }));
+    assert!(matches!(&error, DurableStoreError::Snapshot(source)
+        if matches!(source.as_ref(), crate::FilesystemRetentionSnapshotError::Root { .. })));
     let mut cause: &(dyn Error + 'static) = &error;
     loop {
         if let Some(refusal) = cause.downcast_ref::<RetentionRootDecodeError>() {

@@ -3,11 +3,11 @@
 /// One ordered recovery effect. Each maps to exactly one storage capability.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RetentionRecoveryStep {
-    /// Remove a truncated `head.next` whose replacement never happened.
+    /// Reserved head disposition step; never emitted by the current planner.
     DiscardHeadStage,
-    /// Remove a truncated `manifest.next` that was never linked.
+    /// Reserved manifest disposition step; never emitted by the current planner.
     DiscardManifestStage,
-    /// Remove a truncated `root.next` that was never linked.
+    /// Reserved root disposition step; never emitted by the current planner.
     DiscardRootStage,
     /// Admit the namespace directory and link the complete root stage into it.
     LinkRoot,

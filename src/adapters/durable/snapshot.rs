@@ -1,19 +1,17 @@
 //! This module owns one pinned durable view and the reads it answers.
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::io::{self, Write};
+use std::io::Write;
 use std::path::Path;
 
 use super::{
     DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt, DurableStoreError,
     DurableView,
 };
-use crate::adapters::retention::AdmittedRetentionRoot;
 use crate::adapters::{
     AdmittedSegmentRecord, CatalogRestartPolicy, CatalogSnapshot, FilesystemRetentionSnapshot,
-    GcRetentionState, LayoutDecodePolicy, ReaderAttemptLimit, SegmentRecordIdentity,
+    LayoutDecodePolicy, ReaderAttemptLimit, SegmentRecordIdentity,
 };
-use crate::reference::{ChunkSource, read_admitted, reconstruct_admitted};
+use crate::authenticated_read::{ChunkSource, read_admitted, reconstruct_admitted};
 use crate::{AdmittedLayout, BlobId, ByteRange, ChunkId, LayoutId};
 
 /// One consistent, fenced view of a version-two store.
@@ -22,13 +20,33 @@ use crate::{AdmittedLayout, BlobId, ByteRange, ChunkId, LayoutId};
 /// collector can retire a segment it may read; every read borrows the
 /// snapshot, so dropping the view mid-read is impossible. Blobs resolve
 /// through the retained roots' anchors; layouts and chunks resolve through
-/// the pinned catalog and are authenticated by the reference read cores
+/// the pinned catalog and are authenticated by the domain read cores
 /// before a byte is emitted.
+///
+/// Opening materializes selected segment bytes within the aggregate segment-byte
+/// limit in `CatalogRestartPolicy`. Catalog bytes are bounded separately by
+/// [`crate::CatalogLength::MAXIMUM`]; decoded indexes allocate additionally under
+/// format and record-count limits. The segment-byte limit is not a total
+/// snapshot-memory cap, and this is not a lazy segment reader.
+/// Retained roots are decoded and their closures verified
+/// one at a time under their stored traversal limits. Reads decode one bounded
+/// layout and stream authenticated chunks to the caller without assembling an
+/// additional whole-blob buffer. Caller-owned output may allocate separately.
+/// Each read also re-admits the already materialized catalog and segment bytes,
+/// allocating bounded decoded indexes; even a short range pays that cost.
+///
+/// Blob lookup performs synchronous reads over the manifest-selected roots,
+/// retaining at most one root's bytes and decoded anchors at a time. Its cost
+/// is linear in those roots and anchors. A lookup rechecks canonical identity;
+/// substituted or unreadable evidence fails rather than becoming absence.
+/// The shared fence remains held across caller output callbacks so collection
+/// cannot invalidate the read. No writer lock is acquired by these reads;
+/// callers must not make output wait for an exclusive collector fence that
+/// their own live snapshot prevents from being acquired.
 #[must_use]
 pub struct DurableSnapshot {
     view: FilesystemRetentionSnapshot,
     coordinates: DurableView,
-    anchors: BTreeMap<BlobId, BTreeSet<LayoutId>>,
     policy: CatalogRestartPolicy,
 }
 
@@ -56,7 +74,20 @@ impl ChunkSource for CatalogChunks<'_, '_, '_, '_> {
 impl DurableSnapshot {
     /// Admits `store_root` as a version-two store, acquires the shared
     /// reader fence, double-collects one consistent view within `limit`
-    /// attempts, and indexes every retained root's anchors.
+    /// attempts, and verifies every retained root's closure.
+    ///
+    /// The reader enforces the existing local writable, case-sensitive Linux
+    /// ext4 profile without acquiring writer authority. The admitted directory
+    /// capability is retained through view collection. Platform admission
+    /// synchronizes the root directory before fencing; a synchronization
+    /// failure is preserved under the snapshot's admission error.
+    ///
+    /// The aggregate byte limit in `policy` covers catalog-selected segment bytes only.
+    /// Catalog bytes use [`crate::CatalogLength::MAXIMUM`] independently; decoded
+    /// indexes and retention records allocate additionally under their format
+    /// and record-count limits. Closure work is bounded per root by its persisted limits.
+    /// This is blocking filesystem I/O and CPU verification, not publication;
+    /// it performs no namespace writes and establishes no new durability.
     ///
     /// # Errors
     ///
@@ -69,24 +100,15 @@ impl DurableSnapshot {
     ) -> Result<Self, DurableStoreError> {
         let view = FilesystemRetentionSnapshot::load(store_root, policy, limit)
             .map_err(|source| DurableStoreError::Snapshot(Box::new(source)))?;
-        let retention = view
-            .retention_head()
-            .map_or(GcRetentionState::Empty, |head| {
-                GcRetentionState::Published {
-                    generation: head.generation(),
-                    manifest_digest: head.manifest_digest(),
-                }
-            });
         let coordinates = DurableView::new(
             view.catalog().generation(),
             view.catalog().catalog_digest(),
-            retention,
+            view.retention_head().copied(),
         );
-        let anchors = anchors(&view)?;
+        super::retained_anchors::verify(&view)?;
         Ok(Self {
             view,
             coordinates,
-            anchors,
             policy,
         })
     }
@@ -98,9 +120,14 @@ impl DurableSnapshot {
     }
 
     /// Whether some retained root anchors `target` in this view.
-    #[must_use]
-    pub fn contains_blob(&self, target: BlobId) -> bool {
-        self.anchors.contains_key(&target)
+    ///
+    /// Scans the pinned manifest and admits one selected root at a time.
+    ///
+    /// # Errors
+    ///
+    /// Returns the exact selected-root read or admission failure.
+    pub fn contains_blob(&self, target: BlobId) -> Result<bool, DurableStoreError> {
+        super::retained_anchors::first_layout(&self.view, target).map(|layout| layout.is_some())
     }
 
     /// Reconstructs `target` through its canonically first retained anchor.
@@ -138,14 +165,15 @@ impl DurableSnapshot {
     {
         let catalog = self.catalog()?;
         let layout = self.layout(&catalog, layout_id)?;
-        let chunks = CatalogChunks { catalog: &catalog };
+        let chunks = CatalogChunks::new(&catalog);
         reconstruct_admitted(&chunks, layout_id, &layout, output)
             .map(|receipt| DurableReconstructionReceipt::new(receipt, self.coordinates))
-            .map_err(|source| DurableReadError::Reconstruction(Box::new(source)))
+            .map_err(|source| DurableReadError::Reconstruction(Box::new(source.into())))
     }
 
     /// Reads exactly `requested` of `target` through its first retained
-    /// anchor, authenticating only the overlapping chunks.
+    /// anchor. The range receipt covers only overlapping chunks; snapshot
+    /// and catalog admission also verify the surrounding stored evidence.
     ///
     /// # Errors
     ///
@@ -179,16 +207,15 @@ impl DurableSnapshot {
     {
         let catalog = self.catalog()?;
         let layout = self.layout(&catalog, layout_id)?;
-        let chunks = CatalogChunks { catalog: &catalog };
+        let chunks = CatalogChunks::new(&catalog);
         read_admitted(&chunks, layout_id, &layout, requested, output)
             .map(|receipt| DurableRangeReadReceipt::new(receipt, self.coordinates))
-            .map_err(|source| DurableReadError::RangeRead(Box::new(source)))
+            .map_err(|source| DurableReadError::RangeRead(Box::new(source.into())))
     }
 
     fn first_layout_id(&self, target: BlobId) -> Result<LayoutId, DurableReadError> {
-        self.anchors
-            .get(&target)
-            .and_then(|layouts| layouts.first().copied())
+        super::retained_anchors::first_layout(&self.view, target)
+            .map_err(|source| DurableReadError::Retention(Box::new(source)))?
             .ok_or(DurableReadError::BlobMissing { requested: target })
     }
 
@@ -214,31 +241,4 @@ impl DurableSnapshot {
         AdmittedLayout::decode_record(record.payload(), policy)
             .map_err(DurableReadError::LayoutDecode)
     }
-}
-
-/// Every retained root's anchors, blob to its committed layouts.
-fn anchors(
-    view: &FilesystemRetentionSnapshot,
-) -> Result<BTreeMap<BlobId, BTreeSet<LayoutId>>, DurableStoreError> {
-    let mut anchors: BTreeMap<BlobId, BTreeSet<LayoutId>> = BTreeMap::new();
-    let Some(manifest) = view.manifest() else {
-        return Ok(anchors);
-    };
-    for entry in manifest.entries() {
-        let namespace = entry.namespace();
-        let refused = |source: io::Error| DurableStoreError::RetainedRoot { namespace, source };
-        let bytes = view
-            .retained_root(namespace)
-            .map_err(|source| refused(io::Error::other(source)))?
-            .ok_or_else(|| refused(io::Error::other("the selected root is absent")))?;
-        let root = AdmittedRetentionRoot::decode(&bytes)
-            .map_err(|source| refused(io::Error::new(io::ErrorKind::InvalidData, source)))?;
-        for anchor in root.root().anchors() {
-            anchors
-                .entry(anchor.blob_id())
-                .or_default()
-                .insert(anchor.layout_id());
-        }
-    }
-    Ok(anchors)
 }

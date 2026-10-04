@@ -8,7 +8,9 @@
 use std::collections::BTreeSet;
 
 use keep::{StoreMigrationFixedStage, StoreMigrationPhase, StoreMigrationRecoveryPlan as Plan};
-use xtask::{DurabilityCrashCase, DurabilityCrashPoint, DurabilityCrashPosition};
+use xtask::{
+    DurabilityCrashCase, DurabilityCrashCaseError, DurabilityCrashPoint, DurabilityCrashPosition,
+};
 
 use crate::durability_crash_matrix::DurabilityCrashMatrixError;
 use crate::durability_crash_matrix::production_protocol::fixture::{
@@ -50,7 +52,7 @@ impl MigrationExpectation {
         } else {
             step
         };
-        let prefix_reached = prefix_reached(case);
+        let prefix_reached = prefix_reached(case)?;
         let mut paths = version_one_paths();
         if (1..5).contains(&done) {
             paths.insert(INTENT_STAGE.into());
@@ -171,16 +173,34 @@ fn partial_stage(case: DurabilityCrashCase) -> Option<StoreMigrationFixedStage> 
 
 /// Process death during namespace admission leaves the first `occurrence + 1`
 /// prefix directories, each with its parent synchronized.
-fn prefix_reached(case: DurabilityCrashCase) -> Option<usize> {
+fn prefix_reached(case: DurabilityCrashCase) -> Result<Option<usize>, DurabilityCrashMatrixError> {
     if case.point() != DurabilityCrashPoint::MigrationAdmitNamespacePrefix
         || case.position() != DurabilityCrashPosition::During
     {
-        return None;
+        return Ok(None);
     }
-    let ordinal = case
+    let point = case.point();
+    let observed = case
         .occurrence()
-        .map_or(0, xtask::DurabilityCrashOccurrence::get);
-    usize::try_from(ordinal.saturating_add(1)).ok()
+        .ok_or(DurabilityCrashMatrixError::InvalidCase(
+            DurabilityCrashCaseError::MissingOccurrence { point },
+        ))?;
+    let reached = observed
+        .get()
+        .checked_add(1)
+        .ok_or(DurabilityCrashMatrixError::InvalidCase(
+            DurabilityCrashCaseError::OccurrenceOutOfRange {
+                point,
+                observed,
+                exclusive_limit: point.during_occurrences(),
+            },
+        ))?;
+    usize::try_from(reached)
+        .map(Some)
+        .map_err(|source| DurabilityCrashMatrixError::Verification {
+            phase: "represent reached migration namespace prefix",
+            source: Box::new(source),
+        })
 }
 
 const fn stage_name(stage: StoreMigrationFixedStage) -> &'static str {

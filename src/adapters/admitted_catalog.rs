@@ -92,6 +92,13 @@ impl<'catalog, 'records> AdmittedCatalog<'catalog, 'records> {
         catalog_transition::validate(self, candidate)
     }
 
+    pub(super) fn records(&self) -> impl Iterator<Item = AdmittedSegmentRecord<'records>> + '_ {
+        self.records
+            .iter()
+            .copied()
+            .map(CatalogRecordBinding::record)
+    }
+
     pub(super) const fn from_verified_parts(
         catalog: ChecksummedCatalog<'catalog>,
         records: Vec<CatalogRecordBinding<'records>>,

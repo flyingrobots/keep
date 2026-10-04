@@ -1,110 +1,96 @@
-# Verification Reports
+# Verification reports
 
-This page defines what a Keep verification report proves and what a
-verification refusal evidences. The public non-durable `ReferenceStore`
-implements the reference form. Durable views implement the same vocabulary
-as their surfaces land.
+Status: implemented on main through [PR #165](https://github.com/flyingrobots/keep/pull/165) for [#114](https://github.com/flyingrobots/keep/issues/114); final acceptance and historical scope are recorded in the [closure ledger](../../audits/114-durable-verification-scope.md).
 
-The [rationale](rationale.md) records the governed decisions. The
-[requirement ledger](requirements.md) maps each law to its evidence.
+## Contract
 
-## Invariant
+A report names the exact subject, the caller's requested depth and the evidence established for that subject.
 
-A verification names one subject and one requested depth. It returns exactly
-one of:
+`VerificationDepth` has equality but no `Ord` or `PartialOrd`: a catalog membership check cannot certify a blob, and a layout identity cannot certify its missing chunks.
 
-1. a `VerificationReport` that establishes exactly the requested depth;
-2. a `VerificationRefusal` that evidences, from a complete view, why the
-   requested depth cannot hold;
-3. an operational failure from which no content conclusion follows.
+Report fields and construction are private; callers can inspect or copy established evidence but cannot construct or deepen it.
 
-A report never states a deeper depth than was requested, and a view that
-cannot establish a depth refuses it instead of reporting a shallower one.
-Verification never repairs, substitutes, quarantines, or rewrites physical
-state.
+Reports contain no plaintext, keys or filesystem paths and convey no publication, retention authority, reader fence or assurance that physical bytes still exist later.
 
-## Depths
+## Current subject and depth matrix
 
-`VerificationDepth` is an ordered enumeration, never a set of boolean flags:
+| Entry point | Subject | Supported depths | Scope of the proof |
+| --- | --- | --- | --- |
+| `AdmittedSegment::verify` | Exact physical segment digest | `Framing`, `Checksum` | The admitted immutable segment's physical representation; logical claims require record-specific reports. |
+| `AdmittedSegmentRecord::verify` for a chunk | Exact `ChunkId` | `Framing`, `Checksum`, `ChunkIdentity` | That record's complete chunk bytes; no blob or profile-boundary claim. |
+| `AdmittedSegmentRecord::verify` for a layout | Exact `LayoutId` | `Framing`, `Checksum`, `LayoutIdentity` | Canonical layout bytes and identity; no requirement that referenced chunks exist. |
+| `CatalogSnapshot::verify_blob` | Named logical blob in one catalog | `Framing`, `Checksum`, `ChunkIdentity`, `LayoutIdentity`, `CompleteBlobIdentity` | Canonical layout discovery; chunk presence at chunk depth; full profile replay and logical hash at complete depth. |
+| `AdmittedRetentionRoot::verify` | Exact namespace, root generation and root digest | `Framing`, `Checksum`, `RetentionClosure` | Closure depth checks every anchor against the supplied catalog and its admitted limits. |
+| `CatalogSnapshot::verify` | Selected catalog generation and digest | `Framing`, `Checksum`, `CatalogReachability` | Exact catalog-to-record bindings; no complete logical or retained closure claim. |
 
-| Depth | Establishes |
-| --- | --- |
-| `Framing` | every durable record the subject depends on has canonical framing |
-| `Checksum` | every such record has a matching checksum |
-| `ChunkIdentity` | every chunk the subject names is present and hashes to its `ChunkId` |
-| `LayoutIdentity` | the subject's layout produces its canonical `LayoutId` |
-| `CompleteBlobIdentity` | the authenticated chunks reproduce the target `BlobId` and replay the registered storage profile |
-| `CatalogReachability` | one admitted catalog generation names every record the subject needs |
-| `RetentionClosure` | one retained root's closure reaches the subject under one fenced view |
+Every other depth returns `VerificationRefusal::Unsupported` (wrapped by `VerificationError` for blob/root operations) with the exact subject, request and supported set; the operation neither downgrades the request nor returns a success report.
 
-Establishing a depth requires every shallower depth the view supports. A
-refusal names the `stage` Keep was establishing when it stopped, and a
-lower-stage refusal is always reported before a deeper one.
+`FilesystemRetentionSnapshot::verify_retention` accepts the same depths as direct root verification. Unsupported requests refuse with the requested namespace before reading its selected root or re-admitting the catalog, including when the namespace or root evidence is absent. Loading the fenced snapshot is a separate operation with its own admission failures.
 
-## Subjects and reports
+Selected-root observation rejects a non-regular file, including a symlink to valid root bytes, with a typed kind refusal classified as corruption. Subsequent opens still follow no links and check the opened file; the preliminary kind observation provides no isolation guarantee against concurrent raw namespace substitution.
 
-`VerificationSubject::Blob` verifies through the view's deterministic layout
-choice; `VerificationSubject::Layout` verifies one exact committed layout.
-`ReferenceStore::verify_admitted_layout` verifies a caller-supplied layout
-whose canonical identity becomes the subject.
+`SnapshotBinding` remains unsupported until its separate protocol exists; catalog/retention coordinates must not be mislabeled as that future proof.
 
-A `VerificationReport` binds the subject, the depth established, the exact
-`LayoutId` it was established through, that layout's target `BlobId`, and
-the number of chunks authenticated. Its fields are private and it has no
-method that raises its depth.
+## Costs and admission boundary
 
-A report proves nothing beyond its depth: not durability, not retention, not
-application meaning, and not that a later verification will agree.
+Reporting physical segment, logical record and catalog evidence is constant time and allocation-free; shallow root reporting has the same costs. Blob discovery decodes catalogued layouts in canonical identity order, retaining at most one decoded layout at a time. Chunk verification looks up every referenced member; complete blob verification additionally streams every selected byte through profile replay and complete identity calculation. Retention closure uses its existing checked limits, an ordered member index bounded by the root node limit, and one decoded layout at a time. These operations perform no I/O, mutate no persistent bytes, and synchronize nothing.
 
-## Refusals
+These costs exclude prerequisite admission: segment admission verifies all records, checksums and identities with bounded duplicate-detection allocation; layout record admission may allocate bounded layout metadata; catalog admission binds its entries to admitted segment records.
 
-`VerificationRefusal` keeps three kinds of evidence distinct:
+A framing request on already admitted evidence still requires that stronger admission to have succeeded first; these APIs are not shallow raw-byte scans that tolerate deeper corruption.
 
-- `Missing`: required evidence is absent from a complete view, with
-  `MissingEvidence` naming the blob, layout, or exact chunk;
-- `Corrupt`: present evidence contradicts the identity it must reproduce,
-  with `CorruptionEvidence` carrying the expected and observed `ChunkId`,
-  `LayoutId`, or `BlobId`, or the boundary index at which profile replay
-  diverged;
-- `Ambiguous`: two pieces of admitted evidence conflict, so neither a
-  positive nor a negative conclusion follows.
+Records prepared for publication provide the same logical proof over their canonical representation without asserting that the record has been written or made durable.
 
-`Unsupported` is the fourth variant: the view cannot establish the requested
-depth at all, and says which depths it can.
+## Durable ingress and view collection
 
-Absence is evidence only against a complete view. The reference store's
-in-memory indexes are complete by construction. A durable view must bind a
-complete admitted catalog before it may report `Missing`; until then an
-unreadable index is an operational failure, not a refusal.
+`verify_segment` admits raw segment bytes before reporting; `verify_catalog_bytes` admits the supplied publication head, catalog and selected segments before reporting.
 
-## Reference store
+`FilesystemCatalogSnapshot::load_for_verification` reads the exact selected artifacts under `CatalogRestartPolicy`, and its `verify` and `verify_blob` methods re-admit owned bytes before reporting.
 
-`ReferenceStore::verify` supports `ChunkIdentity` through
-`CompleteBlobIdentity`. It holds no durable framing or checksums, no catalog,
-and no retention, so every other depth is refused as `Unsupported`.
+`FilesystemRetentionSnapshot::load_for_verification` holds the existing shared fence and uses bounded before/load/after collection; `verify_retention` reads and verifies only the manifest-selected root for the supplied namespace digest, checks namespace/generation/digest, and establishes the requested root evidence against that same catalog.
 
-Work and memory are bounded by the layout: every chunk is read and hashed
-once in a single pass; `LayoutIdentity` and deeper materialize one canonical
-layout record bounded by the layout's entry limit; `CompleteBlobIdentity`
-replays the registered storage profile with the detector's fixed state. The
-view allocates no other adapter-owned memory.
+Filesystem loading blocks on reads and fence acquisition; the owner retains caller-bounded segment bytes plus protocol-bounded catalog/manifest data, while reporting may rebuild the bounded catalog indexes.
 
-No reference-store path produces `Ambiguous`.
+Selected-root verification holds one bounded root buffer, decoded anchors and catalog indexes; closure adds its checked node-bounded member index and one decoded layout at a time, with no whole-blob output buffer.
 
-## Receipts
+These operations do not publish, repair, run recovery, or acquire writer authority; a retained incomplete stage is not disposed of by verification. Opening a retention verification snapshot uses the shared production filesystem admission path, including its fallible root-directory synchronization probe; verification over an already admitted snapshot performs no synchronization.
 
-`VerificationReceipt::from_report` and `from_refusal` project a report or
-refusal onto a `VerificationView` (the reference store, or one durable
-snapshot's catalog and retention coordinates), keeping the subject, depth or
-stage, classification, evidence kind and index, and the exact layout and
-target, and dropping the expected and observed identities.
-`CanonicalVerificationReceipt::{encode, decode}` is the durable, replayable
-384-byte form specified on
-[the format page](../../formats/verification-receipt-v1/README.md); a
-receipt written by one process is admitted by another exactly as meant.
+Exhausted moving-view collection returns `Ambiguous` with the actual last before/after catalog and retention coordinates; no partial view or report is returned.
 
-## Nonclaims
+A failed observation is operational unless its retained typed cause establishes a precise missing artifact or content contradiction; classification never parses error prose.
 
-A report contains no plaintext, key material, or path. It is an ephemeral
-statement about one operation against one view; its receipt is the durable
-form and proves no more than the report did.
+Each named original interface verifies one requested subject and returns one `VerifiedSubject`; traversal of a blob's chunks or a root's anchors establishes that subject's depth, without manufacturing separate reports for its dependencies.
+
+This satisfies the original per-subject interface contract; it is not a whole-store enumeration or aggregate-report API, and the earlier work-in-progress references to a required aggregate operation were broader than the original named interfaces.
+
+## Catalog-ceiling memory boundary
+
+The catalog-ceiling runtime law supplies 1,048,576 distinct chunk records and requires exact sample lookups plus a `CatalogReachability` report within 1 GiB (1,073,741,824 bytes) of incremental tracked live allocations during catalog/head admission, lookups and reporting.
+
+This bound excludes caller-owned encoded segment/catalog buffers, fixture construction, segment admission, allocator bookkeeping and process RSS; it is not a total-process memory promise.
+
+Filesystem owners additionally retain the selected segment bytes up to their explicit `CatalogRestartByteLimit`, protocol-bounded catalog bytes and admission indexes; those owners must be included when sizing a verification process.
+
+These subject-verification operations do not serialize, repair, quarantine or execute GC. The separate receipt adapter below serializes only the claims its frozen vocabulary can represent.
+
+[Evidence and calibration](../../testing-evidence/durable-verification.md) distinguish runtime laws, static/API restrictions and final acceptance checks.
+
+## Logical refusal contract
+
+Blob and root verification distinguish missing catalog members, demonstrated contradictions, unsupported requests, and operational failures without returning partial reports. Original layout or closure causes retain their typed coordinates. Resource exhaustion is operational, not evidence of corruption.
+
+The report preserves the catalog generation/digest used by catalog and blob operations or successful root closure; root framing/checksum reports carry no catalog provenance; this provenance is not a live fence. Multiple valid layouts for a blob are representations, not automatically ambiguity: discovery selects the first canonical identity.
+
+Immutable admitted-view operations have no moving observation to classify; ambiguity is produced by the durable collection path, retaining at most the last conflicting coordinate pair and the original attempt-limit cause.
+
+Raw layout/root decoder errors also convert into `VerificationError` without losing their typed causes; these conversions name unadmitted input subjects and cannot manufacture a report.
+
+## Reference verification and frozen receipts
+
+`ReferenceStore::verify` accepts committed blob or layout subjects at `ChunkIdentity`, `LayoutIdentity`, and `CompleteBlobIdentity`. `verify_admitted_layout` accepts a supplied admitted layout at the same depths. Unsupported requests retain the exact supported set; there is no cross-subject depth ordering. Reference reports additionally expose `ReferenceVerificationDetails` naming the selected layout, target and authenticated chunk count.
+
+Reference verification authenticates chunks once. At complete-blob depth it folds profile replay and complete identity hashing into that pass, retaining a profile contradiction until chunk authentication finishes so the earlier chunk refusal takes precedence. Layout encoding and metadata remain bounded by the admitted layout; no reference path manufactures durable catalog or retention provenance.
+
+`VerificationReceipt::from_report` and `from_error` are checked projections into the frozen `keep.verification-receipt/v1` vocabulary. They accept reference-origin evidence with `VerificationView::Reference`; a caller-supplied durable view cannot relabel a reference result. Operational errors, absent reference context, unsupported subjects/depths and unrepresentable supported sets refuse projection with a typed cause. `SnapshotBinding` has no v1 wire code.
+
+The [384-byte receipt format](../../formats/verification-receipt-v1/README.md) retains its canonical byte contract and historical durable-view decoding. Decoding such a record does not establish fresh verification, and this adapter does not claim live durable-report projection. [Receipt laws](../../../tests/verification_receipt.rs) and [reference report laws](../../../tests/verification_report.rs) guard these separate boundaries.

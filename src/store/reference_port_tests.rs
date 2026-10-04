@@ -36,7 +36,7 @@ fn reference_backend_satisfies_the_read_laws_through_the_port() -> Result<(), Bo
         &content,
         &[(0, 1), (65_000, 5_000), (150_000, 42 * 1024)],
     )?;
-    absence_refuses(&store, BlobHasher::new().finish());
+    absence_refuses(&store, BlobHasher::new().finish())?;
     Ok(())
 }
 
@@ -69,6 +69,6 @@ fn the_byte_limit_refuses_before_any_excess_is_materialized() -> Result<(), Box<
     )?;
     let target = StagedContent::target(&staged);
     drop(staged);
-    assert!(!ContentReads::contains_blob(&store, target));
+    assert!(!ContentReads::contains_blob(&store, target)?);
     Ok(())
 }

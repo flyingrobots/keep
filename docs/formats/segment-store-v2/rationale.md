@@ -89,13 +89,9 @@ digest of the admitted version-1 catalog, immutable pools, and target format
 definition gives byte-identical stores one logical identity while the migration
 intent separately binds physical coordinates for in-place recovery.
 
-## Reserve GC names but refuse their state
+## Admit GC state through its protocol
 
-Leaving the future GC namespace undefined was rejected because adding it later
-would mutate the exact version-2 root grammar. Accepting placeholder bytes was
-also rejected. Version 2 reserves the names, while their presence remains an
-unsupported mandatory state until issue #21 supplies complete byte, parser,
-crash, recovery, corruption, and fuzz evidence.
+Leaving the GC namespace undefined was rejected because adding it later would mutate the exact version-2 root grammar. Accepting placeholder bytes was also rejected. The GC implementation admits these reserved names only through the canonical records, state transitions and recovery rules owned by [GC execution](gc-execution.md). File existence alone grants no authority.
 
 ## Compare restart-stable root coordinates on reopen
 
@@ -105,14 +101,20 @@ instance, not a volume. Comparing it on reopen made a correctly remounted
 store refuse and would have made partial-prefix migration recovery reject
 the store's own intent after a reboot.
 
-Reopen and every restart path therefore compare device and inode only, while
+Reopen and restart recovery compare device and inode only. Meanwhile,
 the migrating process still compares all three against its own observation.
 The intent bytes are unchanged.
 
 Rejected: removing the mount field. The definition digest covers the intent
 layout, so the change would re-derive the format marker, the receipt, and
 every version-2 fixture for no gain in restart safety. Rejected: the
-filesystem UUID as the device coordinate. It is stronger than `dev_t` under
-device-mapper renumbering, but reading it needs `FS_IOC_GETFSUUID` (Linux
-6.5) or superblock parsing, and no admitted platform has shown `dev_t` to be
-unstable; it is the recorded successor coordinate if one does.
+filesystem UUID as the device coordinate in this change. That would require
+separate platform admission, compatibility, and format decisions. Device
+renumbering remains a refusal; this change does not introduce re-admission or
+silently substitute a different identity coordinate.
+
+## Verify completed migration before reporting completion
+
+An exact receipt proves the migration records agree; it does not prove the current reserved namespace still admits. Recovery therefore invokes the read-only `StoreMigrationRecoveryStorage::verify_complete` capability after planning selects `Complete` and before returning success. The filesystem adapter reuses version-two namespace admission, retaining the original cause through `Observation` and `NamespacePreflight`. Existing corruption/planning refusals retain priority because this check follows planning. No namespace effect, synchronization or retention recovery is initiated.
+
+Completed stores may contain published retention roots, manifests and heads. Reusing the partial-migration empty-directory preflight would reject valid post-migration state, so completion uses the existing version-two admission policy instead. Migration completion verifies its root/reserved directory contract; retention owns the interpretation of retention artifacts and stages. This adds a required method to the public recovery storage port; external implementations must implement equivalent effect-free admission. On-disk formats and identities are unchanged.

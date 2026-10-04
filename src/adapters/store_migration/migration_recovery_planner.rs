@@ -4,7 +4,9 @@
 //! recovery table in `migration-recovery.md` prescribes, or into the exact
 //! ambiguity that refuses it. It reads no storage and mutates nothing.
 
+use super::StoreMigrationStageDecodeError as DecodeError;
 use super::migration_recovery_ambiguity::StoreMigrationEffect as Effect;
+use super::migration_recovery_residue::NAMESPACE_NAME_COUNT;
 use super::{
     AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, AdmittedStoreMigrationReceipt,
     FORMAT_MARKER_LENGTH, MIGRATION_INTENT_LENGTH, MIGRATION_RECEIPT_LENGTH,
@@ -37,6 +39,21 @@ pub fn plan_store_migration_recovery(
         return Err(Ambiguity::IntentDiffers);
     }
     if let Some(stage) = residue.intent_stage.as_deref() {
+        let later = if residue.has_namespace_effect() {
+            Some(Effect::Namespace)
+        } else if residue.marker_stage.is_some() || residue.marker.is_some() {
+            Some(Effect::Marker)
+        } else if residue.has_receipt_effect() {
+            Some(Effect::Receipt)
+        } else {
+            None
+        };
+        if let Some(effect) = later {
+            return Err(Ambiguity::StageAfterEffect {
+                stage: Stage::Intent,
+                effect,
+            });
+        }
         return if stage == intent_bytes {
             Ok(Plan::Resume {
                 resume: Phase::SynchronizeRootAfterIntent,
@@ -79,9 +96,10 @@ fn plan_before_durable_intent(
             resume: Phase::WriteIntentStage,
         }),
         StageShape::Complete => {
-            let staged = AdmittedStoreMigrationIntent::decode(stage).map_err(|_| {
+            let staged = AdmittedStoreMigrationIntent::decode(stage).map_err(|source| {
                 Ambiguity::StageUndecodable {
                     stage: Stage::Intent,
+                    source: DecodeError::Intent { source },
                 }
             })?;
             if restart_stable_match(expected, &staged) {
@@ -105,9 +123,12 @@ fn plan_namespace(
     let extent = residue
         .namespace_extent()
         .map_err(|(absent, present)| Ambiguity::NamespaceOutOfOrder { absent, present })?;
-    if extent < 7 {
-        if residue.has_marker_or_receipt_effect() {
+    if extent < NAMESPACE_NAME_COUNT {
+        if residue.marker_stage.is_some() || residue.marker.is_some() {
             return Err(Ambiguity::MarkerBeforeNamespace);
+        }
+        if residue.has_receipt_effect() {
+            return Err(Ambiguity::ReceiptBeforeMarker);
         }
         return Ok(Plan::Resume {
             resume: if extent == 0 {
@@ -142,7 +163,8 @@ fn plan_marker(
             StageShape::Complete => {
                 AdmittedStoreFormatMarker::decode(stage)
                     .map(|_| ())
-                    .map_err(|_| Ambiguity::StageUndecodable {
+                    .map_err(|source| Ambiguity::StageUndecodable {
+                        source: DecodeError::Marker { source },
                         stage: Stage::Marker,
                     })?;
                 Ok(Plan::Resume {
@@ -154,6 +176,12 @@ fn plan_marker(
     let marker = AdmittedStoreFormatMarker::decode(marker_bytes)
         .map_err(|source| Ambiguity::MarkerUndecodable { source })?;
     if let Some(stage) = residue.marker_stage.as_deref() {
+        if residue.has_receipt_effect() {
+            return Err(Ambiguity::StageAfterEffect {
+                stage: Stage::Marker,
+                effect: Effect::Receipt,
+            });
+        }
         return if stage == marker_bytes {
             Ok(Plan::Resume {
                 resume: Phase::SynchronizeRootAfterMarker,
@@ -187,7 +215,8 @@ fn plan_receipt(
             StageShape::Complete => {
                 AdmittedStoreMigrationReceipt::decode(stage, intent, marker)
                     .map(|_| ())
-                    .map_err(|_| Ambiguity::StageUndecodable {
+                    .map_err(|source| Ambiguity::StageUndecodable {
+                        source: DecodeError::Receipt { source },
                         stage: Stage::Receipt,
                     })?;
                 Ok(Plan::Resume {

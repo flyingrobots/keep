@@ -12,7 +12,7 @@ cargo-fuzz = true
 [dependencies]
 keep = { path = "..", version = "=0.0.0" }
 libfuzzer-sys = { version = "=0.4.13", default-features = false, features = ["link_libfuzzer"] }
-xtask = { path = "../xtask", version = "=0.0.0", default-features = false, features = ["golden-protocol-fuzz", "repository-json-fuzz"] }
+xtask = { path = "../xtask", version = "=0.0.0", default-features = false, features = ["golden-protocol-fuzz", "repository-json-fuzz", "benchmark-report-fuzz"] }
 
 [lints.rust]
 warnings = "deny"
@@ -162,3 +162,10 @@ bench = false
 [workspace]
 members = ["."]
 resolver = "3"
+
+[[bin]]
+name = "benchmark_report"
+path = "fuzz_targets/benchmark_report.rs"
+test = false
+doc = false
+bench = false

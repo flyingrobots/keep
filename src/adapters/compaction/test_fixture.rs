@@ -72,7 +72,8 @@ pub(super) fn mixed_store(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
     let bundle_bytes = pool_segment_bytes(sandbox.path())?
         .pop()
         .ok_or("the migrated store has no segment")?;
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+    let admission =
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
     let mut publisher = FilesystemCatalogPublisher::open_version_two(admission, policy)?;
     let current = FilesystemCatalogSnapshot::load(sandbox.path(), policy)?;
     let snapshot = current.snapshot()?;
@@ -156,7 +157,7 @@ pub(super) fn plan(root: &Path) -> Result<CompactionPlan, Box<dyn Error>> {
 }
 
 pub(super) fn authority(root: &Path) -> Result<FilesystemCompactionAuthority, Box<dyn Error>> {
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(root)?;
+    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(root)?;
     FilesystemCompactionAuthority::open(admission, root, catalog_policy()?).map_err(Into::into)
 }
 

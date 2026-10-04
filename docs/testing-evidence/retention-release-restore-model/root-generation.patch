@@ -1,0 +1,21 @@
+diff --git a/src/adapters/retention/filesystem_retention_snapshot.rs b/src/adapters/retention/filesystem_retention_snapshot.rs
+index 751aebc..3d5a396 100644
+--- a/src/adapters/retention/filesystem_retention_snapshot.rs
++++ b/src/adapters/retention/filesystem_retention_snapshot.rs
+@@ -249 +249,15 @@ impl FilesystemRetentionSnapshot {
+-        Ok(Some(bytes.into_boxed_slice()))
++        let changed = crate::RetentionRoot::new(
++            root.root().namespace().clone(),
++            root.root().generation().successor().map_err(|source| Error::Root {
++                source: io::Error::new(io::ErrorKind::InvalidData, source),
++            })?,
++            crate::RetentionPolicy::new(root.root().profile(), root.root().limits()),
++            Some(root.digest()),
++            root.root().anchors().to_vec(),
++        ).map_err(|source| Error::Root {
++            source: io::Error::new(io::ErrorKind::InvalidData, source),
++        })?;
++        let changed = crate::CanonicalRetentionRoot::from_root(&changed).map_err(|source| Error::Root {
++            source: io::Error::new(io::ErrorKind::InvalidData, source),
++        })?;
++        Ok(Some(changed.encoded().to_vec().into_boxed_slice()))

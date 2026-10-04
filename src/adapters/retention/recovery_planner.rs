@@ -14,7 +14,7 @@ type Current<'state> = Option<&'state ObservedRetentionState>;
 /// Plans retention recovery from complete restart evidence.
 ///
 /// The call performs no I/O. It applies the documented classification: a
-/// truncated stage with no later-ordered effect is discarded; a complete
+/// incomplete stage requires explicit disposition before any effects; a complete
 /// root or manifest stage is linked into its pool and retained as a
 /// recovery-protected orphan; a complete head stage naming the staged
 /// manifest is finalized and both retained stages are removed; a staged
@@ -28,43 +28,50 @@ type Current<'state> = Option<&'state ObservedRetentionState>;
 pub fn plan_retention_recovery(
     evidence: RetentionRecoveryEvidence<'_, '_>,
 ) -> Result<RetentionRecoveryPlan, Refusal> {
-    let head_present = evidence.stages().head.is_present();
-    let manifest_present = evidence.stages().manifest.is_present();
     let (current, stages, pools) = evidence.into_parts();
-    let mut steps = Vec::new();
+    // Preserve known corruption even when another stage is merely incomplete.
+    if let Stage::Corrupt(source) = stages.head {
+        return Err(Refusal::corrupt_head(source));
+    }
+    if let Stage::Corrupt(source) = stages.manifest {
+        return Err(Refusal::corrupt_manifest(source));
+    }
+    if let Stage::Corrupt(source) = stages.root {
+        return Err(Refusal::corrupt_root(source));
+    }
+    let steps = Vec::new();
     let head = match stages.head {
         Stage::Absent => None,
-        Stage::Truncated { .. } => {
-            steps.push(Step::DiscardHeadStage);
-            None
+        Stage::Truncated { expected, observed } => {
+            return Err(Refusal::IncompleteStageRequiresDisposition {
+                stage: RetentionFixedStage::Head,
+                expected,
+                observed,
+            });
         }
         Stage::Corrupt(source) => return Err(Refusal::corrupt_head(source)),
         Stage::Complete(head) => Some(head),
     };
     let manifest = match stages.manifest {
         Stage::Absent => None,
-        Stage::Truncated { .. } => {
-            if head_present || pools.manifest != Pool::Absent {
-                return Err(Refusal::TruncatedStageWithLaterEffect {
-                    stage: RetentionFixedStage::Manifest,
-                });
-            }
-            steps.push(Step::DiscardManifestStage);
-            None
+        Stage::Truncated { expected, observed } => {
+            return Err(Refusal::IncompleteStageRequiresDisposition {
+                stage: RetentionFixedStage::Manifest,
+                expected,
+                observed,
+            });
         }
         Stage::Corrupt(source) => return Err(Refusal::corrupt_manifest(source)),
         Stage::Complete(manifest) => Some(manifest),
     };
     let root = match stages.root {
         Stage::Absent => None,
-        Stage::Truncated { .. } => {
-            if head_present || manifest_present || pools.root != Pool::Absent {
-                return Err(Refusal::TruncatedStageWithLaterEffect {
-                    stage: RetentionFixedStage::Root,
-                });
-            }
-            steps.push(Step::DiscardRootStage);
-            None
+        Stage::Truncated { expected, observed } => {
+            return Err(Refusal::IncompleteStageRequiresDisposition {
+                stage: RetentionFixedStage::Root,
+                expected,
+                observed,
+            });
         }
         Stage::Corrupt(source) => return Err(Refusal::corrupt_root(source)),
         Stage::Complete(root) => Some(root),
@@ -90,7 +97,8 @@ pub fn plan_retention_recovery(
             pools,
             steps,
         ),
-        (Some(_), _, _) => Err(Refusal::HeadStageWithoutManifestStage),
+        (Some(_), None, _) => Err(Refusal::HeadStageWithoutManifestStage),
+        (Some(_), Some(_), None) => Err(Refusal::ManifestStageWithoutRootStage),
         (None, Some(manifest), root) => {
             plan_manifest(current, &manifest, root.as_ref(), pools, steps)
         }
@@ -124,11 +132,25 @@ fn finalize_head(
     let head = head.head();
     if head.manifest_digest() != manifest.digest()
         || head.generation() != manifest.manifest().generation()
+        || head.manifest_length().get()
+            != u64::try_from(manifest.encoded().len())
+                .map_err(|_| Refusal::HeadStageNamesOtherManifest)?
     {
         return Err(Refusal::HeadStageNamesOtherManifest);
     }
+    if head.predecessor() != manifest.manifest().predecessor() {
+        return Err(Refusal::HeadPredecessorMismatch);
+    }
     if !manifest_names_root(manifest, root) {
         return Err(Refusal::ManifestStageNamesOtherRoot);
+    }
+    if !is_committed(current, manifest) && !root_succeeds(current, root) {
+        return Err(Refusal::RootNotSuccessor);
+    }
+    if !is_committed(current, manifest)
+        && !super::recovery_manifest_entries::preserves_unrelated(current, manifest, root)
+    {
+        return Err(Refusal::ManifestNotSuccessor);
     }
     if pools.root != Pool::Identical {
         return Err(Refusal::RootNotLinkedBeforeHead);
@@ -178,6 +200,9 @@ fn plan_manifest(
         return Err(Refusal::ManifestStageNamesOtherRoot);
     }
     if !manifest_succeeds(current, manifest) {
+        return Err(Refusal::ManifestNotSuccessor);
+    }
+    if !super::recovery_manifest_entries::preserves_unrelated(current, manifest, root) {
         return Err(Refusal::ManifestNotSuccessor);
     }
     if !root_succeeds(current, root) {

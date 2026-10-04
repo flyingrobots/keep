@@ -5,11 +5,12 @@ use std::error::Error;
 use std::fmt;
 use std::io;
 
+use super::migration_resumption::resume_store_migration;
 use super::{
     AdmittedStoreMigrationIntent, CanonicalStoreMigrationIntent, CanonicalStoreMigrationReceipt,
     StoreMigrationError, StoreMigrationFixedStage, StoreMigrationRecoveryAmbiguity,
     StoreMigrationRecoveryPlan, StoreMigrationRecoveryStorage, StoreMigrationResidue,
-    plan_store_migration_recovery, resume_store_migration,
+    plan_store_migration_recovery,
 };
 
 /// What one recovery found and did.
@@ -17,6 +18,8 @@ use super::{
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StoreMigrationRecoveryReceipt {
     plan: StoreMigrationRecoveryPlan,
+    observed_prefix: super::StoreMigrationNamespacePrefix,
+    intent_digest: Option<super::StoreMigrationIntentDigest>,
     published: Option<CanonicalStoreMigrationReceipt>,
 }
 
@@ -26,17 +29,52 @@ impl StoreMigrationRecoveryReceipt {
         self.plan
     }
 
+    /// Returns the exact namespace prefix observed before any recovery writes.
+    pub const fn observed_namespace_prefix(&self) -> super::StoreMigrationNamespacePrefix {
+        self.observed_prefix
+    }
+
+    /// Returns the intent bound by this recovery, including complete observations.
+    ///
+    /// An untouched version-one observation has no migration intent. Resumed
+    /// recovery binds persisted intent bytes, or the newly published intent
+    /// after discarding an incomplete pre-effect stage.
+    pub const fn intent_digest(&self) -> Option<super::StoreMigrationIntentDigest> {
+        self.intent_digest
+    }
+
     /// Returns the migration receipt this recovery published, when it ran
     /// the forward protocol to completion.
     pub const fn published(&self) -> Option<&CanonicalStoreMigrationReceipt> {
         self.published.as_ref()
+    }
+
+    /// Lists every forward phase this successful recovery executed, in order.
+    ///
+    /// A version-one admission or already-complete observation executed no
+    /// forward phases. Any pre-effect discard is recorded separately in
+    /// [`Self::plan`]. No allocation or I/O occurs during iteration.
+    pub fn executed_phases(&self) -> impl Iterator<Item = super::StoreMigrationPhase> {
+        let first = match self.plan {
+            StoreMigrationRecoveryPlan::Resume { resume }
+            | StoreMigrationRecoveryPlan::DiscardStage { resume, .. } => Some(resume),
+            StoreMigrationRecoveryPlan::VersionOne | StoreMigrationRecoveryPlan::Complete => None,
+        };
+        super::StoreMigrationPhase::ALL
+            .into_iter()
+            .skip_while(move |phase| Some(*phase) != first)
     }
 }
 
 /// Failure to recover one interrupted migration.
 #[derive(Debug)]
 pub enum StoreMigrationRecoveryError {
-    /// The residue could not be observed.
+    /// Current writer authority no longer reproduces the caller's expected intent.
+    CurrentVerification {
+        /// Preserved current-state refusal or operational failure.
+        source: io::Error,
+    },
+    /// The residue or completed namespace could not be admitted without effects.
     Observation {
         /// Preserved storage failure.
         source: io::Error,
@@ -67,7 +105,8 @@ pub enum StoreMigrationRecoveryError {
 
 /// Recovers one interrupted migration under writer authority.
 ///
-/// The residue is observed once, planned against `expected` (the intent the
+/// Current writer authority first revalidates `expected`. The residue is then
+/// observed once and planned against `expected` (the intent the
 /// version-1 store derives today, compared on every restart-stable
 /// coordinate), and either admitted as version 1, reported complete, or
 /// driven through the remaining forward phases with the persisted intent,
@@ -77,10 +116,23 @@ pub enum StoreMigrationRecoveryError {
 /// # Errors
 ///
 /// Returns [`StoreMigrationRecoveryError`] at the exact boundary that refused.
+///
+/// A complete plan verifies the completed version-two namespace before returning,
+/// without requiring the retention pools to remain empty. A completion refusal
+/// retains its source under [`StoreMigrationRecoveryError::Observation`].
+///
+/// Resumption is internal: external callers cannot bypass recovery admission.
+///
+/// ```compile_fail
+/// use keep::resume_store_migration;
+/// ```
 pub fn recover_store_migration(
     storage: &mut impl StoreMigrationRecoveryStorage,
     expected: &CanonicalStoreMigrationIntent,
 ) -> Result<StoreMigrationRecoveryReceipt, StoreMigrationRecoveryError> {
+    storage
+        .verify_current(expected)
+        .map_err(|source| StoreMigrationRecoveryError::CurrentVerification { source })?;
     let residue = storage
         .observe_residue()
         .map_err(|source| StoreMigrationRecoveryError::Observation { source })?;
@@ -92,15 +144,26 @@ pub fn recover_store_migration(
         })?;
     let plan = plan_store_migration_recovery(&expected_admitted, &residue)
         .map_err(|source| StoreMigrationRecoveryError::Ambiguity { source })?;
+    if plan == StoreMigrationRecoveryPlan::Complete {
+        storage
+            .verify_complete()
+            .map_err(|source| StoreMigrationRecoveryError::Observation { source })?;
+    }
+    let observed_prefix = super::StoreMigrationNamespacePrefix::observe(&residue)
+        .map_err(|source| StoreMigrationRecoveryError::Ambiguity { source })?;
+    let persisted = persisted_intent(&residue, expected)?;
+    let intent_digest =
+        (plan != StoreMigrationRecoveryPlan::VersionOne).then(|| persisted.digest());
     let resume = match plan {
         StoreMigrationRecoveryPlan::VersionOne | StoreMigrationRecoveryPlan::Complete => {
             return Ok(StoreMigrationRecoveryReceipt {
                 plan,
+                observed_prefix,
+                intent_digest,
                 published: None,
             });
         }
         StoreMigrationRecoveryPlan::DiscardStage { stage, resume } => {
-            let persisted = persisted_intent(&residue, expected)?;
             storage
                 .adopt_residue(&residue, &persisted)
                 .map_err(|source| StoreMigrationRecoveryError::Adoption { source })?;
@@ -110,18 +173,18 @@ pub fn recover_store_migration(
             resume
         }
         StoreMigrationRecoveryPlan::Resume { resume } => {
-            let persisted = persisted_intent(&residue, expected)?;
             storage
                 .adopt_residue(&residue, &persisted)
                 .map_err(|source| StoreMigrationRecoveryError::Adoption { source })?;
             resume
         }
     };
-    let persisted = persisted_intent(&residue, expected)?;
     let published = resume_store_migration(storage, &persisted, resume)
         .map_err(|source| StoreMigrationRecoveryError::Resumption { source })?;
     Ok(StoreMigrationRecoveryReceipt {
         plan,
+        observed_prefix,
+        intent_digest,
         published: Some(published),
     })
 }
@@ -151,6 +214,9 @@ fn persisted_intent(
 impl fmt::Display for StoreMigrationRecoveryError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::CurrentVerification { .. } => {
+                formatter.write_str("current migration authority verification failed")
+            }
             Self::Observation { .. } => formatter.write_str("migration residue observation failed"),
             Self::Ambiguity { source } => {
                 write!(formatter, "migration residue is ambiguous: {source}")
@@ -167,7 +233,8 @@ impl fmt::Display for StoreMigrationRecoveryError {
 impl Error for StoreMigrationRecoveryError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
-            Self::Observation { source }
+            Self::CurrentVerification { source }
+            | Self::Observation { source }
             | Self::Adoption { source }
             | Self::Discard { source, .. } => Some(source),
             Self::Ambiguity { source } => Some(source),

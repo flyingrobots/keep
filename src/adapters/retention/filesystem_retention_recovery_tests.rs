@@ -90,7 +90,7 @@ fn a_synchronized_head_stage_is_finalized_and_the_retry_is_already_committed()
 }
 
 #[test]
-fn a_truncated_root_stage_is_discarded() -> Result<(), Box<dyn Error>> {
+fn a_truncated_root_stage_is_preserved_for_disposition() -> Result<(), Box<dyn Error>> {
     let (sandbox, mut authority) = open_authority("filesystem-retention-recovery-truncated")?;
     let root_bytes = fixture(ROOT_HEX)?;
     let stage = sandbox.path().join("retention").join("root.next");
@@ -101,10 +101,105 @@ fn a_truncated_root_stage_is_discarded() -> Result<(), Box<dyn Error>> {
             .ok_or("root fixture shorter than 100 bytes")?,
     )?;
 
-    let receipt = authority.recover()?;
+    let result = authority.recover();
+    assert!(
+        matches!(
+            result,
+            Err(super::FilesystemRetentionRecoveryError::Plan {
+                source: super::RetentionRecoveryRefusal::IncompleteStageRequiresDisposition {
+                    stage: super::RetentionFixedStage::Root,
+                    expected: 192,
+                    observed: 100
+                }
+            })
+        ),
+        "incomplete root must require disposition: {result:?}"
+    );
+    assert_eq!(
+        fs::read(stage)?,
+        root_bytes.get(..100).ok_or("missing prefix")?
+    );
+    Ok(())
+}
 
-    assert_eq!(receipt.executed(), [Step::DiscardRootStage]);
-    assert_eq!(receipt.outcome(), Outcome::Clean);
-    assert!(!stage.exists());
+// Size: medium. Oracle: recovery names the missing root, preserving ambiguous evidence.
+// Delete only when stronger public recovery evidence subsumes this diagnostic and preservation law.
+#[test]
+fn a_complete_manifest_without_its_root_reports_the_missing_root() -> Result<(), Box<dyn Error>> {
+    use super::filesystem_retention_test_fixture::retention_witness;
+    use super::{FilesystemRetentionRecoveryError, RetentionRecoveryRefusal};
+
+    let (sandbox, mut authority) = open_authority("recovery-missing-root")?;
+    let root_bytes = fixture(ROOT_HEX)?;
+    let preparation = initial_preparation(&root_bytes)?;
+    drive_publication(&mut authority, &preparation, 13)?;
+    fs::remove_file(sandbox.path().join("retention/root.next"))?;
+    let before = retention_witness(sandbox.path())?;
+
+    let result = authority.recover();
+
+    assert!(
+        matches!(
+            result,
+            Err(FilesystemRetentionRecoveryError::Plan {
+                source: RetentionRecoveryRefusal::ManifestStageWithoutRootStage,
+            })
+        ),
+        "a complete manifest with no root stage must name the missing root: {result:?}"
+    );
+    assert_eq!(
+        retention_witness(sandbox.path())?,
+        before,
+        "missing-root refusal must preserve all retained bytes"
+    );
+    Ok(())
+}
+
+// Size: medium. Oracle: Core Law refuses checksum corruption and preserves the exact evidence.
+// Delete only when stronger filesystem recovery coverage subsumes this corruption law.
+#[test]
+fn checksum_corrupt_root_stage_is_refused_without_changing_evidence() -> Result<(), Box<dyn Error>>
+{
+    use super::filesystem_retention_test_fixture::retention_witness;
+    use super::{
+        FilesystemRetentionRecoveryError, RetentionFixedStage, RetentionRecoveryRefusal,
+        RetentionRootDecodeError,
+    };
+
+    let (sandbox, mut authority) = open_authority("recovery-checksum-corrupt-root")?;
+    let root_bytes = fixture(ROOT_HEX)?;
+    let mut corrupt = root_bytes.clone();
+    *corrupt.last_mut().ok_or("empty root fixture")? ^= 0x01;
+    let checksum_offset = root_bytes.len().checked_sub(32).ok_or("missing checksum")?;
+    let expected_checksum: [u8; 32] = root_bytes
+        .get(checksum_offset..)
+        .ok_or("missing checksum")?
+        .try_into()?;
+    let observed_checksum: [u8; 32] = corrupt
+        .get(checksum_offset..)
+        .ok_or("missing damaged checksum")?
+        .try_into()?;
+    fs::write(sandbox.path().join("retention/root.next"), &corrupt)?;
+    let before = retention_witness(sandbox.path())?;
+
+    let result = authority.recover();
+
+    assert!(
+        matches!(&result,
+            Err(FilesystemRetentionRecoveryError::Plan {
+                source: RetentionRecoveryRefusal::StageCorrupt {
+                    stage: RetentionFixedStage::Root, source,
+                },
+            }) if matches!(source.downcast_ref::<RetentionRootDecodeError>(),
+                Some(RetentionRootDecodeError::ChecksumMismatch { expected, observed })
+                    if *expected == expected_checksum && *observed == observed_checksum)
+        ),
+        "corrupt root stage must report its exact checksum refusal: {result:?}"
+    );
+    assert_eq!(
+        retention_witness(sandbox.path())?,
+        before,
+        "corrupt-stage refusal must preserve all retained bytes"
+    );
     Ok(())
 }

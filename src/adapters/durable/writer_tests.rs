@@ -20,7 +20,7 @@ use crate::{
 };
 
 fn open_writer(root: &std::path::Path) -> Result<DurableWriter, Box<dyn Error>> {
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(root)?;
+    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(root)?;
     Ok(DurableWriter::open(admission, root, catalog_policy()?)?)
 }
 
@@ -63,10 +63,10 @@ fn one_pass_commits_a_blob_readable_by_layout_then_by_anchor() -> Result<(), Box
         sandbox.path(),
         catalog_policy()?,
         ReaderAttemptLimit::DEFAULT,
-    )
+    )?
     .snapshot()?;
     assert_eq!(snapshot.view().catalog_generation().get(), 2);
-    assert!(!snapshot.contains_blob(receipt.target()));
+    assert!(!snapshot.contains_blob(receipt.target())?);
     let mut output = Vec::new();
     let read = snapshot.reconstruct_layout(receipt.layout_id(), &mut output)?;
     assert_eq!(output, content);
@@ -115,7 +115,7 @@ fn nearby_content_reuses_every_unchanged_chunk_and_an_exact_re_ingest_publishes_
         sandbox.path(),
         catalog_policy()?,
         ReaderAttemptLimit::DEFAULT,
-    )
+    )?
     .snapshot()?;
     let mut output = Vec::new();
     let _read = snapshot.reconstruct_layout(second.layout_id(), &mut output)?;
@@ -161,7 +161,7 @@ fn limit_and_identity_refusals_leave_nothing_visible() -> Result<(), Box<dyn Err
         sandbox.path(),
         catalog_policy()?,
         ReaderAttemptLimit::DEFAULT,
-    )
+    )?
     .snapshot()?;
     assert_eq!(snapshot.view().catalog_generation().get(), 1);
     Ok(())
@@ -238,10 +238,10 @@ fn an_anchored_ingest_satisfies_the_port_laws_beside_the_fixture_store()
         sandbox.path(),
         catalog_policy()?,
         ReaderAttemptLimit::DEFAULT,
-    )
+    )?
     .snapshot()?;
     let anchored = published.first().ok_or("anchored blob")?;
-    assert!(ContentReads::contains_blob(&snapshot, anchored.target));
+    assert!(ContentReads::contains_blob(&snapshot, anchored.target)?);
     let mut output = Vec::new();
     let _read = snapshot.reconstruct_layout(receipt.layout_id(), &mut output)?;
     assert_eq!(output, content);

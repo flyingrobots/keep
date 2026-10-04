@@ -54,7 +54,7 @@ fn plan(root: &Path) -> Result<GcPlan, Box<dyn Error>> {
 }
 
 fn authority(root: &Path) -> Result<FilesystemGcAuthority, Box<dyn Error>> {
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(root)?;
+    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(root)?;
     FilesystemGcAuthority::open(admission, root, catalog_policy()?).map_err(Into::into)
 }
 

@@ -15,7 +15,8 @@ use crate::{FilesystemVersionTwoAdmission, LayoutEntryLimit, StagingLimits};
 fn a_grown_sealed_stage_refuses_before_payload_allocation_or_publication()
 -> Result<(), Box<dyn Error>> {
     let sandbox = migrated_store("durable-stage-length-bound")?;
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+    let admission =
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
     let mut writer = DurableWriter::open(admission, sandbox.path(), catalog_policy()?)?;
     let head = std::fs::read(sandbox.path().join("HEAD"))?;
     let staged = writer.stage(

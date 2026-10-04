@@ -6,13 +6,11 @@ catalog, and publication-head byte while adding explicit retention state,
 reader fences, migration evidence, and reserved GC and recovery-disposition
 namespaces.
 
-ADR-0009 owns the cross-cutting retention and liveness decision. These pages
-own its durable representation. The one-way migration, version-two reopen, and
-forward retention publication, partial-prefix recovery, reader fencing,
-explicit disposition, GC retirement, and compaction are implemented with
-executable evidence. The [requirements ledger](requirements.md) records
-exactly which requirements are proven. A version-1 store remains admitted until
-its owner migrates it.
+ADR-0009 owns the cross-cutting retention and liveness decision. These pages own its durable representation.
+
+The one-way migration, version-two reopen, forward retention publication, partial-prefix migration recovery, complete-stage retention recovery, and fenced retention snapshots are implemented on main through [PR #99](https://github.com/flyingrobots/keep/pull/99).
+
+The [requirements ledger](requirements.md) records evidence and remaining obligations; the laws below are normative requirements, not a claim that every corresponding runtime surface exists.
 
 ## Core laws
 
@@ -45,6 +43,7 @@ The following pages form one protocol:
   manifest, and retention-head rules.
 - [Retention publication](retention-publication.md) owns closure admission and
   the generation transition.
+- [Retention publication recovery](retention-recovery.md) owns interrupted stages, restart publication, and retention process-death boundaries.
 - [Closure verification](closure.md) owns deterministic traversal, exact
   resource accounting, authenticated reconstruction, and closure evidence.
 - [Closure corruption boundary](closure-corruption.md) owns the admitted-record
@@ -104,31 +103,39 @@ one pinned catalog, preflight, preparation, and the 17-phase publication port;
 fresh writer-locked filesystem migration through all 21 phases, refusing a
 version-one store that still holds a retained stage;
 `FilesystemVersionTwoAdmission::reopen`, which jointly admits the marker,
-intent, and receipt, binds the root's restart-stable device and inode identity to the
-intent, and pins the retention directories it admitted; and
+intent, and receipt, binds the root's restart-stable device and inode identity
+to the intent, and pins the retention directories it admitted; and
 `FilesystemRetentionPublicationAuthority`, which publishes initial and
 successor generations against the observed head, binds this store's catalog
 head and the catalog it selects, and refuses superseded candidates, retained
 stages, replaced protocol directories, and every namespace or capacity
 violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
 
-Retention publication recovery is implemented and proven both in-process for
-every crash prefix and by the crash matrix, which kills a real writer before,
-during, and after `KEEP-CRASH-036` through `052`.
-Readers bind one consistent catalog, retention head, and manifest view under a
-shared `ReaderFence` and verify selected roots on demand. Every three-operation
-transition sequence agrees with a deterministic namespace-to-anchor-set model.
-Migration recovery is proven in-process for every prefix and by the
-`KEEP-CRASH-053..073` process-death matrix, which kills a real writer at each
-of its 68 boundary coordinates and recovers the restarted root.
-GC retirement is proven in-process for every prefix and by the
-`KEEP-CRASH-074..087` process-death matrix; identity-preserving compaction
-is proven by its identity-stability and interruption laws. Compaction
-benchmarks and re-encoding compaction are not implemented, issue #21.
-Reopen compares only the restart-stable root coordinates, device and inode,
-against the intent; see
-[root identity across restart](recovery.md#root-identity-across-restart). A
-version-1 store
-remains admitted until its owner migrates it, and the
-[requirements ledger](requirements.md) is the authority on which requirements
-are proven.
+Retention publication recovery, fenced retention snapshots and model-based transition evidence are implemented on main.
+
+The [landing ledger](../../testing-evidence/retention-landing.md) records the accepted scope and evidence for merged PR #99.
+
+Incomplete retention stages are preserved pending explicit disposition; automatic disposal remains deferred in [#155](https://github.com/flyingrobots/keep/issues/155).
+
+Execution failures preserve the typed cause and report known effects separately from uncertain effects or durability, as specified by the [retention recovery contract](retention-recovery.md).
+
+Writer authority coordinates cooperating writers in a managed namespace; it does not isolate arbitrary out-of-band filesystem mutation or make pathname unlink conditional on inode identity.
+
+`FilesystemRetentionSnapshot` binds a catalog, retention head and manifest under a shared reader fence and verifies selected roots on demand. `DurableStore` composes that view with authenticated whole-blob and exact-range reads, delivered in [PR #164](https://github.com/flyingrobots/keep/pull/164); the [read contract](../../invariants/authenticated-reconstruction/README.md) records proof and allocation limits.
+
+General version-two catalog publication still needs the candidate-catalog retained-closure admission gate tracked in [#125](https://github.com/flyingrobots/keep/issues/125); verifying a new retention root against the current catalog is a different operation.
+
+[Durable verification reports](../../invariants/verification/README.md) are delivered in [PR #165](https://github.com/flyingrobots/keep/pull/165), with explicit subject/depth evidence and typed non-success outcomes.
+
+PR #107 adds durable ingestion, complete-orphan disposition, GC retirement and identity-preserving compaction. Their implementation and evidence are recorded in the requirements ledger; final integration acceptance remains pending. Compaction benchmarks and re-encoding compaction remain unfinished under [#21](https://github.com/flyingrobots/keep/issues/21).
+
+The `KEEP-CRASH-036..052` initial-publication process-death sequence includes independent recovered-reader checks; its [evidence receipt](../../testing-evidence/retention-crash-reader-oracle.md) records the assertions, calibration, and scope.
+
+Partial-prefix migration recovery and the 68-case `KEEP-CRASH-053..073`
+process-death matrix are implemented.
+
+The [migration restart matrix](../../testing-evidence/migration-restart-matrix.md) and [compatibility and fuzz evidence](../../testing-evidence/migration-compatibility-fuzz.md) record the additional merged #111/#112 evidence and its remaining limits.
+
+Reopen compares restart-stable root coordinates, device and inode, against the intent; see [root identity across restart](recovery.md#root-identity-across-restart).
+
+A version-1 store remains admitted until its owner migrates it. The [requirements ledger](requirements.md) records implementation and evidence gaps; planned cases are not proof.

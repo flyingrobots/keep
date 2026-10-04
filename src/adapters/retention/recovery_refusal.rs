@@ -32,6 +32,15 @@ pub enum RetentionPool {
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum RetentionRecoveryRefusal {
+    /// A retained stage is incomplete; automatic disposition is not supported.
+    IncompleteStageRequiresDisposition {
+        /// The stage requiring explicit disposition.
+        stage: RetentionFixedStage,
+        /// The minimum boundary currently required by decoding, not a completion proof.
+        expected: usize,
+        /// Bytes actually observed.
+        observed: usize,
+    },
     /// A stage is complete enough to judge and fails a canonical law.
     StageCorrupt {
         /// The stage that failed.
@@ -44,16 +53,23 @@ pub enum RetentionRecoveryRefusal {
         /// The truncated stage.
         stage: RetentionFixedStage,
     },
-    /// A complete stage names a pool entry that exists with other bytes.
+    /// A truncated stage lacks a complete, linked earlier stage.
+    TruncatedStageWithoutEarlierEvidence {
+        /// The truncated stage that cannot be discarded.
+        stage: RetentionFixedStage,
+        /// The earlier stage whose complete record or pool link is missing.
+        earlier_stage: RetentionFixedStage,
+    },
+    /// A complete stage names a pool entry whose bytes or stage identity differ.
     PoolEntryDiffers {
         /// The pool holding the conflicting entry.
         pool: RetentionPool,
     },
     /// A complete head stage exists without a complete manifest stage.
     HeadStageWithoutManifestStage,
-    /// The head stage names a manifest other than the staged one.
+    /// The head stage's digest, generation, or length disagrees with the manifest.
     HeadStageNamesOtherManifest,
-    /// The head stage's predecessor is not the published manifest.
+    /// The head stage's predecessor disagrees with staged or published history.
     HeadPredecessorMismatch,
     /// The head stage exists but the staged manifest was never linked.
     ManifestNotLinkedBeforeHead,
@@ -115,6 +131,14 @@ impl fmt::Display for RetentionPool {
 impl fmt::Display for RetentionRecoveryRefusal {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::IncompleteStageRequiresDisposition {
+                stage,
+                expected,
+                observed,
+            } => write!(
+                formatter,
+                "retention stage {stage} requires disposition: {observed} bytes, decoder requires {expected}"
+            ),
             Self::StageCorrupt { stage, .. } => {
                 write!(formatter, "retention stage {stage} is corrupt")
             }
@@ -128,6 +152,13 @@ impl fmt::Display for RetentionRecoveryRefusal {
                     "{pool} holds a different entry under the staged name"
                 )
             }
+            Self::TruncatedStageWithoutEarlierEvidence {
+                stage,
+                earlier_stage,
+            } => write!(
+                formatter,
+                "truncated retention stage {stage} lacks complete linked {earlier_stage} evidence"
+            ),
             other => formatter.write_str(other.message()),
         }
     }
@@ -158,7 +189,9 @@ impl RetentionRecoveryRefusal {
                 "root.next is not the successor of its namespace's current root"
             }
             Self::StageCorrupt { .. }
+            | Self::IncompleteStageRequiresDisposition { .. }
             | Self::TruncatedStageWithLaterEffect { .. }
+            | Self::TruncatedStageWithoutEarlierEvidence { .. }
             | Self::PoolEntryDiffers { .. } => "retention recovery refused",
         }
     }

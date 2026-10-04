@@ -1,52 +1,62 @@
-//! This module owns evidenced verification refusals.
+//! This module owns semantic refusals of verification requests.
 
-use super::{CorruptionEvidence, MissingEvidence, VerificationDepth, VerificationSubject};
+use std::error::Error;
+use std::fmt;
 
-/// An evidenced refusal: the view is complete enough to say exactly why the
-/// requested depth cannot be established.
-///
-/// `stage` names the depth Keep was establishing when it stopped. Missing,
-/// corrupt, and ambiguous evidence are distinct, and none of them is ever
-/// repaired, substituted, or quarantined by verification.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+use super::{VerificationDepth, VerificationObservation, VerificationSubject};
+
+/// Why a verification request cannot establish its requested evidence.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum VerificationRefusal {
-    /// Required evidence is absent from a complete view.
+    /// Required evidence is absent from an admitted immutable view.
     Missing {
-        /// Subject being verified.
+        /// Exact absent logical subject.
         subject: VerificationSubject,
-        /// Depth being established when the absence was found.
-        stage: VerificationDepth,
-        /// What was absent.
-        evidence: MissingEvidence,
     },
-    /// Present evidence contradicts the identity it must reproduce.
+    /// Present evidence contradicts the requirement at this boundary.
     Corrupt {
-        /// Subject being verified.
+        /// Subject whose evidence failed admission.
         subject: VerificationSubject,
-        /// Depth being established when the contradiction was found.
-        stage: VerificationDepth,
-        /// The exact contradiction.
-        evidence: CorruptionEvidence,
+        /// Required coordinate or structural predicate.
+        expected: VerificationObservation,
+        /// Observed coordinate or failed predicate.
+        observed: VerificationObservation,
     },
-    /// Two pieces of admitted evidence conflict, so neither a positive nor a
-    /// negative conclusion follows. No reference-store path produces this;
-    /// durable views reserve it for conflicting catalog or retention state.
+    /// Conflicting observations prevent selection of one admissible view.
     Ambiguous {
-        /// Subject being verified.
-        subject: VerificationSubject,
-        /// Depth being established when the conflict was found.
-        stage: VerificationDepth,
+        /// Bounded pair of conflicting observations, not an exhaustive inventory.
+        candidates: Box<[crate::retention::RetentionViewCoordinates; 2]>,
     },
-    /// The view cannot establish the requested depth at all, and refuses
-    /// rather than reporting a shallower one.
+
+    /// The operation cannot establish this depth for the requested subject.
     Unsupported {
-        /// Subject requested.
+        /// Subject the caller asked to verify.
         subject: VerificationSubject,
-        /// Depth requested.
+        /// Exact requested depth; the operation does not silently downgrade it.
         requested: VerificationDepth,
-        /// Shallowest depth this view establishes.
-        supported_minimum: VerificationDepth,
-        /// Deepest depth this view establishes.
-        supported_maximum: VerificationDepth,
+        /// Exact supported set, which need not be a contiguous ordinal range.
+        supported: &'static [VerificationDepth],
     },
 }
+
+impl fmt::Display for VerificationRefusal {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Missing { .. } => formatter.write_str("required verification evidence is absent"),
+            Self::Corrupt { .. } => {
+                formatter.write_str("verification evidence contradicts its contract")
+            }
+            Self::Ambiguous { .. } => formatter.write_str("verification observations conflict"),
+
+            Self::Unsupported { requested, .. } => {
+                write!(
+                    formatter,
+                    "verification depth {requested:?} is unsupported for this subject"
+                )
+            }
+        }
+    }
+}
+
+impl Error for VerificationRefusal {}

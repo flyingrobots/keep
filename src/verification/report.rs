@@ -1,66 +1,143 @@
-//! This module owns the statement one completed verification makes.
+//! This module owns read-only reports constructed after evidence admission.
 
-use super::{VerificationDepth, VerificationSubject};
-use crate::{BlobId, LayoutId};
+use super::{ReferenceVerificationDetails, VerificationDepth, VerificationSubject};
+use crate::{CatalogDigest, CatalogGeneration};
 
-/// Exactly what one verification established.
+/// Evidence established for one subject, with no public construction or upgrade.
 ///
-/// The report names the subject, the one depth established, and the exact
-/// layout and target coordinates that depth was established against. It has
-/// no constructor outside Keep and no method that raises its depth, so a
-/// report at one depth cannot be presented as a report at a deeper one.
+/// Depth is a subject-specific claim, not authority to infer a stronger claim.
+/// Copying this value preserves exactly the same evidence.
+///
+/// ```compile_fail
+/// use keep::{VerificationDepth, VerifiedSubject};
+/// fn deepen(mut subject: VerifiedSubject) {
+///     subject.depth = VerificationDepth::CompleteBlobIdentity;
+/// }
+/// ```
+#[must_use]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[must_use = "the verification report records the depth that was established"]
-pub struct VerificationReport {
+pub struct VerifiedSubject {
     subject: VerificationSubject,
     depth: VerificationDepth,
-    layout: LayoutId,
-    target: BlobId,
-    chunks_verified: u64,
 }
 
-impl VerificationReport {
-    pub(crate) const fn established(
-        subject: VerificationSubject,
-        depth: VerificationDepth,
-        layout: LayoutId,
-        target: BlobId,
-        chunks_verified: u64,
-    ) -> Self {
-        Self {
-            subject,
-            depth,
-            layout,
-            target,
-            chunks_verified,
-        }
-    }
-
-    /// Returns the subject that was verified.
-    pub const fn subject(self) -> VerificationSubject {
+impl VerifiedSubject {
+    /// Returns the exact subject whose evidence was admitted.
+    pub const fn subject(&self) -> VerificationSubject {
         self.subject
     }
 
-    /// Returns the one depth this report establishes; never deeper.
-    pub const fn depth(self) -> VerificationDepth {
+    /// Returns the depth established for this subject.
+    pub const fn depth(&self) -> VerificationDepth {
         self.depth
     }
+}
 
-    /// Returns the exact layout the depth was established through.
-    #[must_use]
-    pub const fn layout(self) -> LayoutId {
-        self.layout
+/// An immutable in-memory report from a successful verification operation.
+///
+/// The current operations each report one subject without allocating. A
+/// report is not a durable receipt, reader fence, retention authority, or
+/// assertion that an on-disk artifact still exists after the operation.
+/// It contains no plaintext, keys, or filesystem paths.
+///
+/// Adapters may check more evidence during admission than the requested
+/// depth; those costs are documented by each operation. Only the stated
+/// per-subject evidence is certified by the report.
+///
+/// ```
+/// use keep::{VerificationDepth, VerificationReport};
+/// fn claimed_depths(report: &VerificationReport) -> Vec<VerificationDepth> {
+///     report.subjects().iter().map(|subject| subject.depth()).collect()
+/// }
+/// ```
+///
+/// Callers cannot manufacture an upgraded report from subject coordinates.
+///
+/// ```compile_fail
+/// use keep::{VerificationDepth, VerificationReport, VerificationSubject};
+/// fn manufacture(subject: VerificationSubject) -> VerificationReport {
+///     VerificationReport::established(subject, VerificationDepth::CompleteBlobIdentity)
+/// }
+/// ```
+#[must_use]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct VerificationReport {
+    requested: VerificationDepth,
+    catalog: Option<(CatalogGeneration, CatalogDigest)>,
+    retention: Option<crate::RetentionHead>,
+    subject: VerifiedSubject,
+    reference_details: Option<ReferenceVerificationDetails>,
+}
+
+impl VerificationReport {
+    /// Returns the original requested policy, without implicit escalation.
+    pub const fn requested(&self) -> VerificationDepth {
+        self.requested
     }
 
-    /// Returns the target blob that layout binds.
-    #[must_use]
-    pub const fn target(self) -> BlobId {
-        self.target
+    /// Returns the evidence established for each subject in this report.
+    pub const fn subjects(&self) -> &[VerifiedSubject] {
+        std::slice::from_ref(&self.subject)
     }
 
-    /// Returns how many chunks were authenticated for this report.
-    #[must_use]
-    pub const fn chunks_verified(self) -> u64 {
-        self.chunks_verified
+    /// Returns the exact immutable catalog used by an operation, when applicable.
+    ///
+    /// This coordinate is evidence provenance, not a live fence or retention grant.
+    pub const fn catalog(&self) -> Option<(CatalogGeneration, CatalogDigest)> {
+        self.catalog
+    }
+
+    /// Returns the exact publication-selected retention head, when applicable.
+    ///
+    /// Root verification over supplied bytes alone has no publication coordinate.
+    pub const fn retention_head(&self) -> Option<crate::RetentionHead> {
+        self.retention
+    }
+
+    pub(crate) const fn in_retention(mut self, head: Option<crate::RetentionHead>) -> Self {
+        self.retention = head;
+        self
+    }
+
+    pub(crate) const fn in_catalog(
+        mut self,
+        generation: CatalogGeneration,
+        digest: CatalogDigest,
+    ) -> Self {
+        self.catalog = Some((generation, digest));
+        self
+    }
+
+    /// Returns reference layout work when this report came from that verifier.
+    /// Other verification operations have no reference details.
+    pub const fn reference_details(&self) -> Option<ReferenceVerificationDetails> {
+        self.reference_details
+    }
+
+    pub(crate) const fn in_reference(
+        mut self,
+        layout: crate::LayoutId,
+        target: crate::BlobId,
+        chunks_verified: u64,
+    ) -> Self {
+        self.reference_details = Some(ReferenceVerificationDetails::new(
+            layout,
+            target,
+            chunks_verified,
+        ));
+        self
+    }
+
+    pub(crate) const fn established(
+        subject: VerificationSubject,
+        depth: VerificationDepth,
+    ) -> Self {
+        Self {
+            requested: depth,
+            catalog: None,
+            retention: None,
+            subject: VerifiedSubject { subject, depth },
+            reference_details: None,
+        }
     }
 }

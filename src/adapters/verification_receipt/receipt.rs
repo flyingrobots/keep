@@ -1,11 +1,9 @@
 //! This boundary module owns the semantic verification receipt: the
 //! bounded projection of one report or refusal onto one view.
 
+use super::{ReceiptSubject as VerificationSubject, ReceiptVerificationDepth as VerificationDepth};
 use crate::adapters::GcRetentionState;
-use crate::{
-    BlobId, CatalogDigest, CatalogGeneration, CorruptionEvidence, LayoutId, MissingEvidence,
-    VerificationDepth, VerificationRefusal, VerificationReport, VerificationSubject,
-};
+use crate::{BlobId, CatalogDigest, CatalogGeneration, LayoutId};
 
 /// The verification contract version every receipt binds.
 pub const VERIFICATION_CONTRACT_VERSION: u32 = 1;
@@ -142,30 +140,6 @@ pub struct VerificationReceipt {
 }
 
 impl VerificationReceipt {
-    /// Projects one report onto `view`.
-    pub const fn from_report(report: &VerificationReport, view: VerificationView) -> Self {
-        Self {
-            view,
-            outcome: VerificationOutcome::Established {
-                subject: report.subject(),
-                depth: report.depth(),
-                layout: report.layout(),
-                target: report.target(),
-                chunks_verified: report.chunks_verified(),
-            },
-        }
-    }
-
-    /// Projects one refusal onto `view`, keeping its classification, stage,
-    /// and evidence coordinates and dropping the expected and observed
-    /// identities.
-    pub fn from_refusal(refusal: &VerificationRefusal, view: VerificationView) -> Self {
-        Self {
-            view,
-            outcome: VerificationOutcome::Refused(project_refusal(refusal)),
-        }
-    }
-
     /// Reconstructs a receipt from its decoded parts.
     pub(super) const fn from_parts(view: VerificationView, outcome: VerificationOutcome) -> Self {
         Self { view, outcome }
@@ -195,71 +169,4 @@ impl VerificationReceipt {
             ) => subject,
         }
     }
-}
-
-fn project_refusal(refusal: &VerificationRefusal) -> ReceiptRefusal {
-    match *refusal {
-        VerificationRefusal::Missing {
-            subject,
-            stage,
-            evidence,
-        } => ReceiptRefusal::Missing {
-            subject,
-            stage,
-            evidence: match evidence {
-                MissingEvidence::Blob(_) => ReceiptMissing::Blob,
-                MissingEvidence::Layout(_) => ReceiptMissing::Layout,
-                MissingEvidence::Chunk { layout, index, .. } => ReceiptMissing::Chunk {
-                    layout,
-                    index: index_u64(index),
-                },
-            },
-        },
-        VerificationRefusal::Corrupt {
-            subject,
-            stage,
-            evidence,
-        } => ReceiptRefusal::Corrupt {
-            subject,
-            stage,
-            evidence: match evidence {
-                CorruptionEvidence::ChunkIdentity { layout, index, .. } => {
-                    ReceiptCorruption::ChunkIdentity {
-                        layout,
-                        index: index_u64(index),
-                    }
-                }
-                CorruptionEvidence::LayoutIdentity { expected, .. } => {
-                    ReceiptCorruption::LayoutIdentity { expected }
-                }
-                CorruptionEvidence::BlobIdentity { layout, .. } => {
-                    ReceiptCorruption::BlobIdentity { layout }
-                }
-                CorruptionEvidence::ProfileBoundary { layout, index } => {
-                    ReceiptCorruption::ProfileBoundary {
-                        layout,
-                        index: index_u64(index),
-                    }
-                }
-            },
-        },
-        VerificationRefusal::Ambiguous { subject, stage } => {
-            ReceiptRefusal::Ambiguous { subject, stage }
-        }
-        VerificationRefusal::Unsupported {
-            subject,
-            requested,
-            supported_minimum,
-            supported_maximum,
-        } => ReceiptRefusal::Unsupported {
-            subject,
-            requested,
-            supported_minimum,
-            supported_maximum,
-        },
-    }
-}
-
-fn index_u64(index: usize) -> u64 {
-    u64::try_from(index).unwrap_or(u64::MAX)
 }

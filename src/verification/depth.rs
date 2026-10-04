@@ -1,41 +1,35 @@
-//! This module owns the ordered verification depths.
+//! This module owns the explicit vocabulary of verification requests.
 
-/// One explicit depth to which a verification establishes its subject.
+/// Requested verification work, interpreted for a specific subject.
 ///
-/// Depths are ordered: establishing a deeper depth requires every shallower
-/// depth the view supports. A report names the one depth it established and
-/// can never be read as a deeper one. Not every view supports every depth;
-/// a view refuses a depth it cannot establish instead of degrading to a
-/// shallower one.
-#[must_use]
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+/// Operations document their supported depths. No total implication order exists:
+/// catalog reachability does not establish every referenced blob's identity,
+/// and retention closure does not establish a future snapshot-binding format.
+///
+/// Depths have equality but no cross-subject implication order. Compare a
+/// request with the operation's explicit supported set, never an ordinal.
+///
+/// ```compile_fail,E0369
+/// use keep::VerificationDepth;
+/// let _ = VerificationDepth::CatalogReachability
+///     >= VerificationDepth::CompleteBlobIdentity;
+/// ```
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum VerificationDepth {
-    /// Every durable record the subject depends on has canonical framing.
+    /// Canonical record framing and structural bounds.
     Framing,
-    /// Every durable record the subject depends on has a matching checksum.
+    /// Checksums covering the subject's encoded representation.
     Checksum,
-    /// Every chunk the subject names is present and hashes to its `ChunkId`.
+    /// Logical identities of the subject's chunk bytes.
     ChunkIdentity,
-    /// The subject's layout produces its canonical `LayoutId`.
+    /// Canonical layout identity and layout structure.
     LayoutIdentity,
-    /// The complete reconstructed sequence hashes to the target `BlobId` and
-    /// replays the registered storage profile.
+    /// Complete logical blob identity and registered profile replay.
     CompleteBlobIdentity,
-    /// One admitted catalog generation names every record the subject needs.
+    /// Exact binding of catalog entries to admitted physical records.
     CatalogReachability,
-    /// One retained root's closure reaches the subject under one fenced view.
+    /// Complete logical closure of retained roots in one catalog view.
     RetentionClosure,
-}
-
-impl VerificationDepth {
-    /// Every depth in ascending order.
-    pub const ALL: [Self; 7] = [
-        Self::Framing,
-        Self::Checksum,
-        Self::ChunkIdentity,
-        Self::LayoutIdentity,
-        Self::CompleteBlobIdentity,
-        Self::CatalogReachability,
-        Self::RetentionClosure,
-    ];
+    /// Snapshot-format binding, unsupported until that protocol exists.
+    SnapshotBinding,
 }

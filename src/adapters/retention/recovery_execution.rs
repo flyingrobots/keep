@@ -1,8 +1,8 @@
 //! This module owns ordered execution of one retention recovery plan.
 
+use super::RetentionStorageError;
 use std::error::Error;
 use std::fmt;
-use std::io;
 
 use super::{
     RetentionRecoveryOutcome, RetentionRecoveryPlan, RetentionRecoveryStep,
@@ -31,22 +31,35 @@ impl RetentionRecoveryReceipt {
     }
 }
 
-/// One refused recovery step and the steps that completed before it.
+/// One failed recovery step and the steps that completed before it.
 #[derive(Debug)]
 pub struct RetentionRecoveryError {
     step: RetentionRecoveryStep,
     executed: Vec<RetentionRecoveryStep>,
-    source: io::Error,
+    source: RetentionStorageError,
 }
 
 impl RetentionRecoveryError {
-    /// The step that refused.
+    /// Effects reported by the failing capability, independently of preceding completed steps.
+    ///
+    /// `None` means that adapter did not report its effects; it does not mean no mutation.
+    #[must_use]
+    pub const fn progress(&self) -> Option<&super::RetentionStorageProgress> {
+        self.source.progress()
+    }
+    /// The precise storage failure, without dynamic downcasting.
+    #[must_use]
+    pub const fn storage_error(&self) -> &RetentionStorageError {
+        &self.source
+    }
+
+    /// The step that failed, possibly after effects.
     #[must_use]
     pub const fn step(&self) -> RetentionRecoveryStep {
         self.step
     }
 
-    /// Every step that completed before the refusal, in order.
+    /// Every step that completed before the failure, in order. This excludes effects of the failing step.
     #[must_use]
     pub fn executed(&self) -> &[RetentionRecoveryStep] {
         &self.executed
@@ -57,7 +70,7 @@ impl fmt::Display for RetentionRecoveryError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             formatter,
-            "retention recovery step {:?} refused after {} completed step(s)",
+            "retention recovery step {:?} failed after {} completed step(s)",
             self.step,
             self.executed.len()
         )
@@ -70,15 +83,17 @@ impl Error for RetentionRecoveryError {
     }
 }
 
-/// Executes `plan` against `storage` in order, stopping at the first refusal.
+/// Executes `plan` against `storage` in order, stopping at the first error.
 ///
-/// Each step calls exactly one storage capability. A refused step leaves the
+/// Each step calls exactly one storage capability. A failed step leaves the
 /// completed steps' effects in place, names the step, and returns; the caller
-/// re-observes and re-plans rather than continuing from stale evidence.
+/// re-observes and re-plans rather than continuing from stale evidence. The
+/// failing capability may also have effects: inspect its reported progress.
+/// Missing progress is uncertainty, never a claim that nothing changed.
 ///
 /// # Errors
 ///
-/// Returns [`RetentionRecoveryError`] with the refused step, the completed
+/// Returns [`RetentionRecoveryError`] with the failed step, the completed
 /// steps, and the storage's own error as source.
 pub fn execute_retention_recovery<S: RetentionRecoveryStorage>(
     storage: &mut S,

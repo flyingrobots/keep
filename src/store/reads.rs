@@ -13,6 +13,8 @@ use crate::{BlobId, ByteRange, LayoutId};
 /// proves only the requested bytes, and absence is evidence only against a
 /// complete view.
 pub trait ContentReads {
+    /// Why checking visibility could not establish presence or absence.
+    type ContainsError: Error + 'static;
     /// The receipt one complete reconstruction returns.
     type ReconstructionReceipt: Copy + Debug + Eq;
     /// The receipt one exact range read returns.
@@ -23,7 +25,12 @@ pub trait ContentReads {
     type RangeError: Error + 'static;
 
     /// Whether the view can serve `target` by identity.
-    fn contains_blob(&self, target: BlobId) -> bool;
+    ///
+    /// # Errors
+    ///
+    /// Returns the original admission or operational failure when the view
+    /// cannot establish visibility. Failure is never reported as absence.
+    fn contains_blob(&self, target: BlobId) -> Result<bool, Self::ContainsError>;
 
     /// Reconstructs `target` through the view's deterministic layout choice.
     ///

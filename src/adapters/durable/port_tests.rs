@@ -18,7 +18,7 @@ fn durable_backend_satisfies_the_read_laws_through_the_port() -> Result<(), Box<
         sandbox.path(),
         catalog_policy()?,
         ReaderAttemptLimit::DEFAULT,
-    )
+    )?
     .snapshot()?;
     for (bytes, entry) in contents.iter().zip(&published).take(2) {
         reconstructs_exactly(&snapshot, entry.target, entry.layout, bytes)?;
@@ -30,6 +30,6 @@ fn durable_backend_satisfies_the_read_laws_through_the_port() -> Result<(), Box<
         &long,
         &[(0, 1), (65_000, 5_000), (400_000, 42 * 1024)],
     )?;
-    absence_refuses(&snapshot, BlobHasher::new().finish());
+    absence_refuses(&snapshot, BlobHasher::new().finish())?;
     Ok(())
 }

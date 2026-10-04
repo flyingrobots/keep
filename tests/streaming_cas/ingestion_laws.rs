@@ -79,7 +79,8 @@ fn staging_admits_a_source_exactly_at_capacity() -> Result<(), Box<dyn Error>> {
     assert!(matches!(
         store.stage(&mut Cursor::new(b"x"), LayoutEntryLimit::MAXIMUM),
         Err(IngestionError::CapacityExceeded { capacity, attempted })
-            if capacity == source.len() && attempted == source.len().saturating_add(1)
+            if capacity == source.len()
+                && attempted == source.len().checked_add(1).ok_or("fixture bound overflow")?
     ));
     Ok(())
 }

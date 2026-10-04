@@ -24,6 +24,16 @@ pub trait StoreMigrationRecoveryStorage: StoreMigrationStorage {
     /// kind, a link, or an unknown entry.
     fn observe_residue(&mut self) -> io::Result<StoreMigrationResidue>;
 
+    /// Verifies completed migration namespace admission without effects.
+    ///
+    /// Owned post-migration retention state remains permitted. This does not
+    /// certify retention content or perform retention recovery.
+    ///
+    /// # Errors
+    ///
+    /// Returns the original namespace refusal or filesystem failure.
+    fn verify_complete(&mut self) -> io::Result<()>;
+
     /// Reopens, verifies, and retains every exact stage and canonical record
     /// the residue holds, so later phases find the handles the forward
     /// protocol would have retained.

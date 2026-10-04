@@ -70,10 +70,7 @@ retention-manifest, and retention-head decoders. The canonical one-root
 generation keeps mutations inside framing, semantic, ordering, checksum, and
 digest validation; every admitted value must retain its exact input bytes.
 
-The `migration_format` seeds select the public format-marker, migration-intent,
-and completion-receipt decoders. The receipt seed carries its exact marker and
-intent dependencies so mutations exercise integrity and cross-record binding;
-every admitted value must retain its exact input bytes.
+The `migration_format` seeds select public migration record decoders and bounded recovery planning. Receipt seeds carry exact marker and intent dependencies; malformed seeds exercise version, mandatory-flag and checksum refusals. Recovery seeds include valid prefixes and contradictory transition evidence. Properties require v1 admission only without migration evidence, precise pre-intent effect refusal, and complete success only with a full namespace and jointly admitted records. See [migration compatibility evidence](../docs/testing-evidence/migration-compatibility-fuzz.md) for the fuzz-only envelope, bounds, replay and oracle limits.
 
 The `gc_format` seeds select the public GC retirement-intent, retirement-receipt and recovery-disposition decoders. The retirement-receipt seed carries its exact intent dependency behind a length frame so mutations exercise cross-record binding as well as framing. Every admitted value must re-encode byte-for-byte through its public canonical encoder and preserve its semantic value; intents also preserve both reported digests. The canonicality relation complements the independent conformance vectors and does not prove specification correctness when encoder and decoder share a defect.
 
@@ -81,7 +78,7 @@ The `segment_format` seeds select the public segment-header, record-header,
 complete-record, seal, and complete-segment boundaries. Canonical empty,
 one-record, and bundled segments keep mutations inside the nested parsers;
 every admitted fixed-width value must re-encode byte-for-byte, and every
-admitted segment must retain its exact bytes and declared record count. Run
+admitted segment must retain its exact bytes and declared record count. The recovery selector also invokes whole-byte stage classification and requires every available fixed seal byte in a discardable truncation to match the independently specified format. Its permanent unsupported-version counterexample lives in `tests/fixtures/recovery/` and is replayed by ordinary runtime tests as well as seeded fuzzing. Run
 the reviewed smoke campaign across every registered target with:
 
 ```bash
@@ -117,3 +114,20 @@ for the finite periods declared in `campaign.env`. A confirmed crash, timeout,
 or out-of-memory input must be minimized and promoted into a committed
 deterministic regression test; an artifact or cache alone never closes the
 defect.
+
+## Benchmark report admission
+
+The `benchmark_report` target calls the production report parser through the
+`benchmark-report-fuzz` feature, with task execution and host capture disabled.
+Its coordinates are fixed to the committed historical baseline. Seed
+preparation materializes that complete canonical report under the derived,
+ignored corpus; no host measurement or new performance baseline is implied.
+The facade performs no filesystem, process, clock or network operations.
+
+The parser enforces a one-MiB input ceiling and preserves typed encoding,
+canonical row, metadata, counter-width and arithmetic refusals. Unit laws
+verify that the seed reaches admission and corrupted bytes refuse; these
+prevent an always-refusing facade from passing solely because it never panics.
+Run this target with the same pinned nightly and resource bounds as the other
+targets. Campaign success is bounded exploration evidence, not proof that all
+malformed reports have been enumerated.

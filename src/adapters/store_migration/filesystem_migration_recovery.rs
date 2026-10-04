@@ -5,11 +5,13 @@ use std::path::Path;
 
 use cap_std::fs::Dir;
 
+use super::FilesystemMigrationRecoveryRefusal as Refusal;
 use super::filesystem_migration_authority::MigrationNamespacePolicy;
 use super::filesystem_migration_authority_error::FilesystemMigrationAuthorityError as Error;
 use super::filesystem_migration_fixed_artifact::{
     FilesystemMigrationFixedArtifact as FixedArtifact, FilesystemMigrationFixedStage,
 };
+use super::filesystem_migration_recovery_refusal::{invalid, kind};
 use super::migration_resumption::MigrationRecords;
 use super::{
     CanonicalStoreMigrationIntent, FilesystemStoreMigrationAuthority,
@@ -81,11 +83,20 @@ impl StoreMigrationRecoveryStorage for FilesystemStoreMigrationAuthority {
         filesystem_migration_residue::observe(self.root())
     }
 
+    fn verify_complete(&mut self) -> io::Result<()> {
+        filesystem_initialization_namespace::admit_version_two(self.root())
+            .map_err(|source| io::Error::new(source.kind(), Refusal::NamespacePreflight { source }))
+    }
+
     fn adopt_residue(
         &mut self,
         residue: &StoreMigrationResidue,
         intent: &CanonicalStoreMigrationIntent,
     ) -> io::Result<()> {
+        super::filesystem_migration_namespace::preflight_recovery_directories(self.root())
+            .map_err(|source| {
+                io::Error::new(source.kind(), Refusal::NamespacePreflight { source })
+            })?;
         let records = MigrationRecords::for_intent(intent);
         adopt_artifact(
             self,
@@ -119,12 +130,19 @@ impl StoreMigrationRecoveryStorage for FilesystemStoreMigrationAuthority {
         let root = self.root();
         exact_record::require_absent(root, artifact.canonical_name()).map_err(refusal)?;
         let metadata = root.symlink_metadata(artifact.stage_name())?;
-        let complete = u64::try_from(artifact.encoded_length())
-            .map_err(|_| invalid("migration stage length exceeded u64"))?;
+        let complete = u64::try_from(artifact.encoded_length()).map_err(|source| {
+            invalid(Refusal::StageLengthOverflow {
+                length: artifact.encoded_length(),
+                source,
+            })
+        })?;
         if !metadata.is_file() || metadata.len() >= complete {
-            return Err(invalid(
-                "only an incomplete regular pre-effect stage may be discarded",
-            ));
+            return Err(invalid(Refusal::StageNotIncomplete {
+                stage,
+                complete_length: complete,
+                observed_length: metadata.len(),
+                observed_kind: kind(&metadata),
+            }));
         }
         root.remove_file(artifact.stage_name())?;
         exact_record::require_absent(root, artifact.stage_name()).map_err(refusal)?;
@@ -146,9 +164,12 @@ fn adopt_artifact(
     let root = authority.root();
     if stage.is_some_and(|bytes| bytes == expected) {
         if authority.fixed_stage.is_some() {
-            return Err(invalid("migration residue holds more than one exact stage"));
+            return Err(invalid(Refusal::MultipleExactStages));
         }
         let reopened = FilesystemMigrationFixedStage::reopen_stage(root, artifact, expected)?;
+        if canonical.is_some() {
+            reopened.verify_linked(root)?;
+        }
         authority.fixed_stage = Some(reopened);
         return Ok(());
     }
@@ -164,14 +185,5 @@ fn adopt_artifact(
 }
 
 fn refusal(error: ExactRecordError) -> io::Error {
-    match error {
-        ExactRecordError::Io(source) => source,
-        ExactRecordError::Refused(refusal) => {
-            io::Error::new(io::ErrorKind::InvalidData, refusal.to_string())
-        }
-    }
-}
-
-fn invalid(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
+    error.into_io()
 }

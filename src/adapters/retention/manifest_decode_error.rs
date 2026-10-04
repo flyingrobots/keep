@@ -7,6 +7,11 @@ use crate::{LivenessGenerationError, RetentionManifestError, RootGenerationError
 /// Failure to decode and admit one version-2 retention manifest.
 #[derive(Debug)]
 pub enum RetentionManifestDecodeError {
+    /// Available size-field bytes admit no canonical completion.
+    FramingPrefixImpossible {
+        /// Actual byte length of the interrupted stage.
+        observed: usize,
+    },
     /// The byte string ended before its required exact length.
     Truncated {
         /// Required byte length.
@@ -20,6 +25,15 @@ pub enum RetentionManifestDecodeError {
         expected: usize,
         /// Observed byte length.
         observed: usize,
+    },
+    /// An available byte contradicts a fixed or computed integrity field in an interrupted stage.
+    PrefixByteMismatch {
+        /// Absolute byte offset in the observed stage.
+        offset: usize,
+        /// The canonical byte required at this offset.
+        expected: u8,
+        /// The byte actually present at this offset.
+        observed: u8,
     },
     /// The fixed record magic was not canonical.
     InvalidMagic {

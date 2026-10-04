@@ -1,0 +1,17 @@
+diff --git a/src/adapters/store_migration/filesystem_migration_restart_namespace_tests.rs b/src/adapters/store_migration/filesystem_migration_restart_namespace_tests.rs
+--- a/src/adapters/store_migration/filesystem_migration_restart_namespace_tests.rs
++++ b/src/adapters/store_migration/filesystem_migration_restart_namespace_tests.rs
+@@ -15,9 +15 @@ fn unknown_root_and_nested_entries_preserve_restart_evidence() -> Result<(), Box
+-    for parent in [
+-        "",
+-        "retention",
+-        "retention/roots",
+-        "retention/manifests",
+-        "gc",
+-        "recovery",
+-        "recovery/dispositions",
+-    ] {
++    for parent in ["gc"] {
+@@ -26 +18 @@ fn unknown_root_and_nested_entries_preserve_restart_evidence() -> Result<(), Box
+-            Phase::AdmitNamespacePrefix,
++            Phase::RemoveReceiptStage,

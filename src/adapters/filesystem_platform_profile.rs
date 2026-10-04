@@ -56,6 +56,21 @@ pub(super) fn open(store_root: &Path) -> io::Result<Dir> {
     Ok(directory)
 }
 
+/// Applies the production profile to the root already pinned by writer authority.
+#[cfg(all(target_os = "linux", feature = "repository-tasks"))]
+pub(super) fn admit_locked_root(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
+    admit_linux_profile(directory, &PROTOCOL_DIRECTORIES)?;
+    root_identity(directory)
+}
+
+#[cfg(all(not(target_os = "linux"), feature = "repository-tasks"))]
+pub(super) fn admit_locked_root(_directory: &Dir) -> io::Result<FilesystemRootIdentity> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "catalog publication requires the admitted Linux ext4 profile",
+    ))
+}
+
 /// Opens one version-two store root under the admitted Linux profile.
 ///
 /// Identical to [`open`], but every version-two protocol directory that
@@ -119,8 +134,10 @@ fn open_protocol_directory(root: &Dir, name: &str) -> io::Result<Dir> {
     let first = components
         .next()
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "empty protocol name"))?;
+    super::filesystem_namespace_refusal::require_directory(root, first)?;
     let mut current = super::sync_capable_directory::open(root, first)?;
     for component in components {
+        super::filesystem_namespace_refusal::require_directory(&current, component)?;
         current = super::sync_capable_directory::open(&current, component)?;
     }
     Ok(current)

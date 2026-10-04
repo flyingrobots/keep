@@ -5,8 +5,6 @@ nonclaims, and golden evidence for `keep.segment-store/v1`.
 
 ## Requirement ledger
 
-<!-- markdownlint-disable MD013 -->
-
 | ID | Requirement | Design evidence | Status |
 | --- | --- | --- | --- |
 | `KEEP-STORE-001` | Segment, record, seal, catalog, entry, and head have exact versioned canonical grammars | Field tables and golden artifacts | Specified in #14 |
@@ -31,15 +29,11 @@ nonclaims, and golden evidence for `keep.segment-store/v1`.
 | `KEEP-STORE-020` | Initialization is writer-locked, idempotent, recoverable from every partial canonical namespace set, and admitted only after root synchronization | `KEEP-CRASH-031`–`035` | Specified in #14 |
 | `KEEP-STORE-021` | Explicit recovery completes a durable fixed-name stage into its immutable pool without publishing a head | `KEEP-CRASH-008`–`012`, `016`–`020` | Specified in #14 |
 
-<!-- markdownlint-enable MD013 -->
-
 ## Segment implementation evidence
 
 The issue #15 boundary implements immutable segment creation and admission. It
 does not claim catalog publication, namespace durability, restart recovery,
 retention, or garbage collection.
-
-<!-- markdownlint-disable MD013 -->
 
 | ID | Implemented requirement | Executable evidence | Status |
 | --- | --- | --- | --- |
@@ -47,14 +41,12 @@ retention, or garbage collection.
 | `KEEP-SEGMENT-002` | Staged and sealed writer states are distinct, consuming types | `tests/segment_writer.rs` | Implemented in #15 |
 | `KEEP-SEGMENT-003` | Short, interrupted, zero-progress, invalid-count, storage, permission, flush, and synchronization failures retain exact phases and offsets | `tests/segment_writer/write_contract_laws.rs`, `tests/segment_writer/refusal_laws.rs`, `tests/segment_writer/durability_laws.rs` | Implemented in #15 |
 | `KEEP-SEGMENT-004` | Complete-segment admission verifies bounds, framing, checksums, logical identities, duplicate refusal, terminal state, and physical digest before exposure | `tests/segment.rs`, `tests/segment/identity_laws.rs`, `tests/segment/framing_laws.rs` | Implemented in #15 |
-| `KEEP-SEGMENT-005` | The public sealed receipt exposes no mutable stage handle | `src/adapters/sealed_segment.rs` | Implemented in #15 |
+| `KEEP-SEGMENT-005` | The public sealed receipt exposes no mutable stage handle, including with repository-task observation enabled | `src/adapters/sealed_segment.rs` compile-fail law; `tests/observed_segment_stage.rs`; [capability evidence](../../testing-evidence/sealed-stage-observation.md) | Production API implemented in #15; repository-task escape removed for #146 |
 | `KEEP-SEGMENT-006` | Malformed, unsupported, partial, conflicting, and corrupt input returns boundary-typed errors | field-complete corruption ledger `conformance/segment-store/v1/mutations.tsv` reproduced by `tests/segment_store_mutations.rs`; `tests/segment_header/mutation_laws.rs`, `tests/segment_record_header/framing_laws.rs`, `tests/segment_seal/framing_laws.rs`, `tests/segment/identity_laws.rs` | Implemented in #15 |
 | `KEEP-SEGMENT-007` | Record, nested-layout, segment-length, and temporary identity-index allocation remain explicitly bounded | `tests/segment_memory.rs`, `tests/segment_record_memory.rs`, `tests/segment_seal_memory.rs` | Implemented in #15 |
-| `KEEP-SEGMENT-008` | Filesystem staging uses exclusive fixed-name creation and never enumerates storage as a content index | `tests/segment_filesystem_stage.rs`, `src/adapters/filesystem_segment_stage.rs` | Implemented in #15 |
-| `KEEP-SEGMENT-009` | Every implemented write and durability phase has deterministic fault injection, while dropped unsealed stages preserve recovery evidence | `tests/segment_writer/`, `tests/segment_filesystem_stage.rs` | Implemented in #15 |
+| `KEEP-SEGMENT-008` | Filesystem staging uses exclusive fixed-name creation and never enumerates storage as a content index | `tests/segment_filesystem_stage.rs`, `src/adapters/filesystem_segment_stage.rs`; [public-stage evidence](../../testing-evidence/public-filesystem-stage.md) covers exclusive creation, not an independent enumeration audit | Implemented in #15; public admission integration added for #147 |
+| `KEEP-SEGMENT-009` | Every implemented write and durability phase has deterministic fault injection, while dropped unsealed stages preserve recovery evidence | `tests/segment_writer/` owns phase injection; `tests/segment_filesystem_stage.rs` owns public filesystem drop/prefix evidence | Implemented in #15; public admission integration added for #147 |
 | `KEEP-SEGMENT-010` | Every public segment-format parser boundary is fuzzed from canonical deterministic seeds | `fuzz/fuzz_targets/segment_format.rs`, `xtask/src/fuzz_seed_corpus/segment_seeds.rs` | Implemented in #15 |
-
-<!-- markdownlint-enable MD013 -->
 
 ## Catalog implementation evidence
 
@@ -65,23 +57,19 @@ producer is implemented as the initialization slice of issue #17. Explicit
 recovery is implemented in issue #17; its evidence is the recovery table
 below.
 
-<!-- markdownlint-disable MD013 -->
-
 | ID | Implemented requirement | Oracle | Executable evidence | Status |
 | --- | --- | --- | --- | --- |
 | `KEEP-CATALOG-001` | `CatalogGeneration` admits positive values and refuses overflow when deriving a successor | Checked scalar model | `tests/catalog_generation.rs` | Implemented in #16 |
 | `KEEP-CATALOG-002` | Catalog and publication-head codecs reproduce every frozen version-1 artifact and refuse noncanonical bytes; catalog checksum and digest admission precede entry semantics | field-complete corruption ledger `conformance/segment-store/v1/mutations.tsv` (catalog, entry, binding, head) reproduced by `tests/segment_store_mutations.rs`; Independent golden corpus and mutation precedence oracle | `tests/catalog.rs`, `tests/catalog/integrity_laws.rs`, `tests/publication_head.rs` | Implemented in #16 |
-| `KEEP-CATALOG-003` | Catalog entries are sorted by logical identity and duplicate keys are refused independently of input order | Ordered reference map | `tests/catalog_ordering.rs` | Implemented in #16 |
+| `KEEP-CATALOG-003` | Catalog entries are sorted by logical identity and duplicate keys are refused independently of input order | Ordered reference map | `tests/catalog.rs`, `tests/catalog/ordering_laws.rs` | Implemented in #16 |
 | `KEEP-CATALOG-004` | Every catalog location equals a verified top-level record span in the exact named segment; construction and admission require every supplied segment to be referenced, and admission scans each referenced segment once | Bounded grouped lookup plan and golden artifacts | `tests/catalog_encoding.rs`, `tests/catalog_locations.rs` | Implemented in #16 |
 | `KEEP-CATALOG-005` | Publication admits only the exact expected successor and reports expected and observed generation and digest on staleness | Generation transition model | `tests/catalog_transition.rs` | Implemented in #16 |
 | `KEEP-CATALOG-006` | A reader retains one complete catalog generation and never combines it with a concurrent head | Immutable snapshot model | `tests/catalog_snapshot.rs` | Implemented in #16 |
-| `KEEP-CATALOG-007` | Retained kernel locks on the pinned store root and persistent writer file exclude a second cooperative writer even if the directory entry is replaced; neither lock is deleted on release, and lock ownership alone cannot construct a publisher without platform admission | Multi-handle lock model, replacement fixture, and construction architecture law | `tests/catalog_writer_lock.rs`, `tests/catalog_filesystem_publication/directory_laws.rs` | Implemented in #16; replacement-hardened in #17 |
-| `KEEP-CATALOG-008` | Segment, catalog, and head publication follows the documented synchronization order; retained fixed-name recovery state refuses before mutation; an absent head requires empty immutable pools; retry of an already-current candidate performs no publication mutation and re-synchronizes the root | Fault-recording port and filesystem fixtures | `tests/catalog_publication.rs`, `tests/catalog_filesystem_publication.rs` | Implemented in #16 |
+| `KEEP-CATALOG-007` | Retained kernel locks on the pinned store root and persistent writer file exclude a second cooperative writer even if the directory entry is replaced; neither lock is deleted on release, and lock ownership alone cannot construct a publisher without platform admission | Multi-handle lock model, replacement fixture, and public unsupported-platform refusal | `tests/catalog_writer_lock.rs`, `tests/catalog_platform_admission.rs`; [admission evidence](../../testing-evidence/catalog-platform-admission.md) | Implemented in #16; replacement-hardened in #17; repository-task admission corrected for #150 |
+| `KEEP-CATALOG-008` | Segment, catalog, and head publication follows the documented synchronization order; retained fixed-name recovery state refuses before mutation; an absent head requires empty immutable pools; retry of an already-current candidate performs no publication mutation and re-synchronizes the root | Fault-recording port and filesystem fixtures | `tests/catalog_publication.rs`, `src/adapters/filesystem_catalog_publisher_tests.rs` | Implemented in #16 |
 | `KEEP-CATALOG-009` | Restart loading refuses corrupt, unsupported, noncanonical, dangling, and conflicting catalog state | Corruption matrix | `tests/catalog_restart.rs` | Implemented in #16 |
-| `KEEP-CATALOG-010` | Model-based transitions and lookups agree with a deterministic `BTreeMap` catalog | Boring reference catalog | `tests/catalog_model.rs` | Implemented in #16 |
+| `KEEP-CATALOG-010` | Model-based transitions and lookups agree with a deterministic `BTreeMap` catalog | Boring reference catalog | `tests/catalog_model.rs`, `tests/catalog_model/generated_histories.rs`, `tests/catalog_model/transition_refusals.rs`; bounded oracle and calibration in [model evidence](../../testing-evidence/catalog-model-histories.md) | Implemented in #16; generated model evidence in #166 |
 | `KEEP-CATALOG-011` | Every public catalog and publication-head parser boundary is fuzzed from canonical deterministic seeds | Canonical generation-1, generation-2, and bundle artifacts | `fuzz/fuzz_targets/catalog_format.rs`, `xtask/src/fuzz_seed_corpus/catalog_seeds.rs` | Implemented in #16 |
-
-<!-- markdownlint-enable MD013 -->
 
 ## Recovery implementation evidence
 
@@ -104,26 +92,20 @@ may now authorize a transition-checked finalization through a semantic storage
 port, and the filesystem finalizer binds that transition to pinned
 writer-authorized storage. These slices now include reusable-stage continuation
 and the complete process-death crash matrix. Retention, compaction, garbage
-collection, and host-power-loss simulation remain outside version 1:
-retention belongs to
-[`keep.segment-store/v2`](../segment-store-v2/README.md), compaction and
-garbage collection are planned in issue #21, and host-power-loss simulation
-has no owner and is listed in the repository [roadmap](../../../ROADMAP.md).
-
-<!-- markdownlint-disable MD013 -->
+collection, and host-power-loss simulation remain outside version 1. Retention, compaction, and garbage collection belong to [`keep.segment-store/v2`](../segment-store-v2/README.md). The process-death matrix does not establish host-power-loss behavior; that requires separate filesystem and device fault evidence.
 
 | ID | Implemented requirement | Oracle | Executable evidence | Status |
 | --- | --- | --- | --- | --- |
 | `KEEP-RECOVERY-001` | Crash identifiers `KEEP-CRASH-001` through `KEEP-CRASH-035` form one contiguous typed vocabulary, map to the exact owning protocol sequence, and admit an occurrence counter only for record append | Ordered identifier-and-sequence ledger | `xtask/tests/durability_crash_point_contract.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-002` | Initialization admits the platform before mutation, opens and locks the writer file, admits `staging`, `segments`, and `catalogs` in order, and returns a receipt only after root synchronization; every failed operation retains its exact phase and prevents later transitions | Fault-recording initialization port | `tests/store_initialization.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-003` | Production initialization admits only one writable, non-casefolded Linux ext4 store profile; every existing protocol directory must independently satisfy that profile and share the root's device and mount identity; initialization refuses any noncanonical root entry before mutation, completes an empty or partial canonical namespace without replacing evidence, excludes a second initializer, and retains writer authority through the synchronized receipt; published-store reopen performs no mutation, reacquires the writer lock, and requires the complete initialized root plus regular `HEAD` | Capability-relative initialization, published-reopen, child-profile, and exact platform-profile matrix | `src/adapters/filesystem_store_initializer_tests.rs`, `src/adapters/filesystem_catalog_publisher_tests.rs`, `src/adapters/filesystem_platform_profile.rs`, `tests/store_initialization.rs` | Implemented in #17 |
-| `KEEP-RECOVERY-004` | Writer authority is returned only when the locked handle still has the exact device and inode resolved by the canonical `writer.lock` entry after kernel acquisition | Deterministic lock-entry replacement fixture | `src/adapters/filesystem_writer_lock_tests.rs` | Implemented in #17 |
+| `KEEP-RECOVERY-004` | Writer authority is returned only when the locked handle still has the exact device and inode resolved by the canonical `writer.lock` entry after kernel acquisition | Deterministic replacement through the shared authority-producing acquisition boundary; calibrated ignored-refusal mutant | `src/adapters/filesystem_writer_lock_tests.rs`; [acquisition evidence](../../testing-evidence/writer-acquisition-identity.md) | Implemented in #17; acquisition-boundary evidence strengthened in #169 |
 | `KEEP-RECOVERY-005` | Recovery counts the root and three protocol directories in fixed order before retaining names, refuses at the configured or protocol entry ceiling with the exact observed-at-least count, then returns one duplicate-free inventory sorted by namespace and raw name bytes | Fault-recording inventory port | `tests/recovery_inventory.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-006` | Filesystem inventory pins the admitted root and protocol directories without following links, verifies child-directory identity before and after scanning, stops each count at the remaining global budget plus one, preserves raw Linux entry-name bytes, and performs no protocol mutation | Capability-relative filesystem fixture | `src/adapters/filesystem_recovery_inventory_tests.rs`, `tests/recovery_inventory.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-007` | Name classification requires the four initialized root entries, admits only fixed protocol names and canonical pool coordinates in their owning namespaces, refuses simultaneous fixed recovery stages before artifact reads, and moves a refused raw name without duplicating its allocation | Canonical-name matrix and allocation counter | `tests/recovery_name_classification.rs`, `tests/recovery_name_classification_memory.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-008` | Stage evidence is fingerprinted through a zero-allocation bounded streaming reader under the named recovery domain; metadata and observed bytes cannot exceed the name-selected protocol maximum, and failures retain exact stage and offset | Independent framing oracle, adversarial reader matrix, and allocation counter | `tests/recovery_stage_fingerprint.rs`, `tests/recovery_stage_fingerprint_memory.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-009` | Filesystem stage observation uses the pinned inventory capability, never follows a fixed-stage link, admits only regular files, and refuses entry replacement or length drift after bounded fingerprinting | Capability-relative replacement fixtures | `src/adapters/filesystem_recovery_stage_tests.rs` | Implemented in #17 |
-| `KEEP-RECOVERY-010` | Whole-byte segment-stage classification distinguishes a validated reusable prefix, a complete admitted immutable segment, and exact header, record, or seal truncation only while every available fixed-framing byte remains canonical; proven partial-framing corruption, complete-looking corruption, duplicates, and resource-limit excess remain typed refusals | Exhaustive available-framing-byte, canonical prefix, and corruption matrix | `tests/recovery_segment_classification.rs`, `tests/recovery_segment_classification/*.rs` | Implemented in #17 |
+| `KEEP-RECOVERY-010` | Whole-byte segment-stage classification distinguishes a validated reusable prefix, a complete admitted immutable segment, and exact header, record, or seal truncation only while every available fixed-framing byte remains canonical; proven partial-framing corruption, complete-looking corruption, duplicates, and resource-limit excess remain typed refusals | Exhaustive available-framing-byte, canonical prefix, and corruption matrix | `tests/recovery_segment_classification.rs`, `tests/recovery_segment_classification/*.rs`, `tests/recovery_partial_seal.rs`, `tests/recovery_partial_seal/*.rs` | Implemented in #17; partial-seal framing correction in #171 ([evidence](../../testing-evidence/partial-seal-corruption.md)) |
 | `KEEP-RECOVERY-011` | Whole-byte catalog and next-head stage classification distinguishes exact fixed-header, declared-body, and fixed-width truncation from complete canonical bytes only while every available fixed-framing byte remains canonical; proven partial-framing corruption, complete-looking corruption, and oversize remain typed format or metadata refusals | Exhaustive available-framing-byte, canonical publication-artifact truncation, and corruption matrix | `tests/recovery_publication_stage_classification.rs`, `tests/recovery_publication_stage_classification/*.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-012` | Read-only semantic assessment admits materialized stage bytes only when the canonical-name stage, exact observed length, and `KEEP:RECOVERY:STAGE\0` fingerprint equal prior evidence, then dispatches through the name-selected segment, catalog, or next-head classifier | Evidence-binding mutation matrix and canonical stage assessments | `tests/recovery_stage_assessment.rs`, `tests/recovery_stage_assessment/*.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-013` | Explicit discard plans only from an exact truncation assessment, retains the observation evidence and typed truncation reason, refuses changed evidence without mutation, synchronizes the name-selected parent after exact removal or admitted absence, and returns a receipt only after synchronization | Truncation-planning, evidence-drift, operation-order, and retry matrix | `tests/recovery_stage_discard.rs`, `tests/recovery_stage_discard/*.rs` | Implemented in #17 |
@@ -135,8 +117,6 @@ has no owner and is listed in the repository [roadmap](../../../ROADMAP.md).
 | `KEEP-RECOVERY-019` | Reusable-segment continuation plans only from an exact reusable `current.seg` assessment within the selected record policy, consumes the storage authority that reopens the stage, re-admits the complete materialized prefix against prior evidence, rebuilds digest and duplicate-identity state, and returns the ordinary append-only stage without rewriting admitted bytes | Reusable-only planning, policy refusal, changed-evidence, storage-failure, duplicate-identity, append, seal, and independent decode matrix | `tests/recovery_segment_resume.rs`, `tests/recovery_segment_resume/*.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-020` | Filesystem reusable-segment continuation retains root and `writer.lock` authority in the returned stage, pins every protocol directory, opens `current.seg` read-write without following links or truncation, bounds and re-admits its complete bytes, recomputes exact evidence immediately before handoff, revalidates entry identity after reading, positions the handle at the exact validated append boundary, refuses missing, changed, linked, replaced, or namespace-drifted evidence, and preserves the prefix on append or empty seal | Empty and nonempty continuation, writer exclusion, missing, changed evidence, link, namespace replacement, writable-handoff entry or byte replacement, append, seal, and independent decode matrix | `src/adapters/filesystem_recovery_segment_resume_tests.rs`, `src/adapters/filesystem_recovery_segment_resume_tests/*.rs` | Implemented in #17 |
 | `KEEP-RECOVERY-021` | Every crash point has exact before, during, and after coordinates; each child executes the production initialization, segment-writing, catalog-publication, or recovery-discard protocol through a fault-injecting port decorator; a deadline-bounded parent receives readiness over a Unix socket, retains that socket, terminates the isolated child process group, and independently verifies the exact Golden File Worldline namespace, bytes, hard-link identity, released writer lock, recovery-stage class, immutable-artifact admission, generation, and visible chunk after restart | Production protocol driver, ordered 105-case model, independent expected-state model, production recovery classifiers, production restart loader, and explicit debug/optimized CI commands | `xtask/tests/durability_crash_production_contract.rs`, `xtask/tests/durability_crash_case_contract.rs`, `xtask/tests/durability_crash_process_contract.rs`, `xtask/src/durability_crash_matrix/`, `.github/workflows/ci.yml` | Implemented in #17 |
-
-<!-- markdownlint-enable MD013 -->
 
 ## Compatibility and migration
 

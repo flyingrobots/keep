@@ -7,6 +7,7 @@ use cap_std::fs::Dir;
 
 use super::{AdmittedGcRetirementIntent, GcResidue, GcRetirementIntent};
 use crate::adapters::filesystem_exact_record::{self as exact_record, ExactRecordError};
+use crate::adapters::filesystem_stage_observation::StageObservation;
 use crate::adapters::physical_pool_name;
 
 /// `gc/intent.next`.
@@ -25,7 +26,14 @@ const RECEIPT_LENGTH: usize = 320;
 
 /// Reads every `gc` record as it is, bounded one byte past its maximum
 /// length, and the presence of every candidate the durable intent names.
-pub(super) fn read(gc: &Dir, segments: &Dir) -> io::Result<GcResidue> {
+/// Filesystem evidence stays alive beside the planner's semantic residue.
+pub(super) struct GcResidueObservation {
+    pub(super) residue: GcResidue,
+    pub(super) intent_stage: Option<StageObservation>,
+    pub(super) receipt_stage: Option<StageObservation>,
+}
+
+pub(super) fn read(gc: &Dir, segments: &Dir) -> io::Result<GcResidueObservation> {
     let intent_bound =
         super::intent_format::canonical_length(GcRetirementIntent::MAXIMUM_CANDIDATE_COUNT)
             .and_then(|length| length.checked_add(1))
@@ -36,12 +44,19 @@ pub(super) fn read(gc: &Dir, segments: &Dir) -> io::Result<GcResidue> {
         Some(Ok(admitted)) => candidates_present(segments, admitted.intent())?,
         Some(Err(_)) | None => Vec::new(),
     };
-    Ok(GcResidue {
-        intent_stage: read_bounded(gc, INTENT_STAGE, intent_bound)?,
+    let intent_stage = StageObservation::read(gc, INTENT_STAGE, intent_bound)?;
+    let receipt_stage = StageObservation::read(gc, RECEIPT_STAGE, receipt_bound)?;
+    let residue = GcResidue {
+        intent_stage: intent_stage.as_ref().map(|stage| Box::from(stage.bytes())),
         intent,
-        receipt_stage: read_bounded(gc, RECEIPT_STAGE, receipt_bound)?,
+        receipt_stage: receipt_stage.as_ref().map(|stage| Box::from(stage.bytes())),
         receipt: read_bounded(gc, RECEIPT, receipt_bound)?,
         candidates_present,
+    };
+    Ok(GcResidueObservation {
+        residue,
+        intent_stage,
+        receipt_stage,
     })
 }
 
@@ -61,14 +76,9 @@ fn candidates_present(segments: &Dir, intent: &GcRetirementIntent) -> io::Result
 }
 
 fn read_bounded(gc: &Dir, name: &str, bound: usize) -> io::Result<Option<Box<[u8]>>> {
-    match exact_record::read_bounded_optional(gc, name, bound) {
-        Ok(bytes) => Ok(bytes.map(Vec::into_boxed_slice)),
-        Err(ExactRecordError::Io(source)) => Err(source),
-        Err(ExactRecordError::Refused(refusal)) => Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            refusal.to_string(),
-        )),
-    }
+    exact_record::read_bounded_optional(gc, name, bound)
+        .map(|bytes| bytes.map(Vec::into_boxed_slice))
+        .map_err(ExactRecordError::into_io)
 }
 
 /// Removes a discardable stage and proves it gone.

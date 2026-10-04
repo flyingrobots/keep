@@ -71,6 +71,16 @@ pub(super) enum ExactRecordError {
     Refused(ExactRecordRefusal),
 }
 
+impl ExactRecordError {
+    /// Preserves the original operational source or typed semantic refusal.
+    pub(super) fn into_io(self) -> io::Error {
+        match self {
+            Self::Io(source) => source,
+            refused @ Self::Refused(_) => io::Error::new(io::ErrorKind::InvalidData, refused),
+        }
+    }
+}
+
 impl fmt::Display for ExactRecordRefusal {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(match self {
@@ -220,6 +230,14 @@ pub(super) fn read_bounded_optional(
     name: &str,
     bound: usize,
 ) -> Result<Option<Vec<u8>>, ExactRecordError> {
+    match directory.symlink_metadata(name) {
+        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(source) => return Err(source.into()),
+        Ok(metadata) if !metadata.is_file() => {
+            return Err(ExactRecordRefusal::KindOrLength.into());
+        }
+        Ok(_) => {}
+    }
     let file = match open_read(directory, name) {
         Ok(file) => file,
         Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),
@@ -233,7 +251,7 @@ pub(super) fn read_bounded_optional(
     Ok(Some(bytes))
 }
 
-/// Opens `name` read-only without following links or blocking.
+/// Opens a record read-only without following links or blocking.
 pub(super) fn open_read(directory: &Dir, name: &str) -> io::Result<File> {
     let mut options = OpenOptions::new();
     options.read(true).follow(FollowSymlinks::No).nonblock(true);

@@ -13,9 +13,10 @@ use super::{
 pub enum RetentionPoolEntryObservation {
     /// No entry exists under the canonical name.
     Absent,
-    /// The entry exists with exactly the stage's bytes.
+    /// The entry is admitted as the exact stage object with matching bytes.
+    /// Filesystem adapters must also bind the retained stage's device and inode.
     Identical,
-    /// The entry exists with other bytes or another kind.
+    /// The entry exists with other bytes, another kind, or another stage identity.
     Different,
 }
 

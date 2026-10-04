@@ -86,7 +86,8 @@ pub(super) fn durable_store(name: &str, contents: &[&[u8]]) -> Result<BuiltStore
         bundle_bytes = Some(fs::read(entry?.path())?);
     }
     let bundle_bytes = bundle_bytes.ok_or("the migrated store has no segment")?;
-    let admission = FilesystemVersionTwoAdmission::reopen_unchecked_for_tests(sandbox.path())?;
+    let admission =
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
     let mut publisher = FilesystemCatalogPublisher::open_version_two(admission, policy)?;
     let current = FilesystemCatalogSnapshot::load(sandbox.path(), policy)?;
     let snapshot = current.snapshot()?;

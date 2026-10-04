@@ -6,7 +6,6 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use cap_fs_ext::DirExt;
-use cap_std::fs::Dir;
 
 use crate::adapters::gc::{
     GcLivenessCoordinates, GcLivenessObservationError, GcRetentionState, visit_retained_closures,
@@ -77,6 +76,15 @@ pub fn observe_compaction(
     view: &FilesystemRetentionSnapshot,
     policy: CatalogRestartPolicy,
 ) -> Result<CompactionObservation, GcLivenessObservationError> {
+    crate::adapters::filesystem_root_binding::require_locator(view.root_directory(), store_root)
+        .map_err(|source| GcLivenessObservationError::pool("bind store root", source))?;
+    observe_compaction_from_view(view, policy)
+}
+
+pub(super) fn observe_compaction_from_view(
+    view: &FilesystemRetentionSnapshot,
+    policy: CatalogRestartPolicy,
+) -> Result<CompactionObservation, GcLivenessObservationError> {
     let catalog = view
         .catalog()
         .snapshot()
@@ -89,8 +97,7 @@ pub fn observe_compaction(
         live.extend(members.identities.iter().copied());
         Ok(())
     })?;
-    let root = Dir::open_ambient_dir(store_root, cap_std::ambient_authority())
-        .map_err(|source| GcLivenessObservationError::pool("open store root", source))?;
+    let root = view.root_directory();
     let segments = root
         .open_dir_nofollow("segments")
         .map_err(|source| GcLivenessObservationError::pool("open segment pool", source))?;
