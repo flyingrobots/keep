@@ -1,6 +1,7 @@
 //! Filesystem next-head finalization laws.
 
 mod fixture;
+mod sync_failure_laws;
 mod namespace_laws;
 mod refusal_laws;
 mod replacement_laws;
