@@ -1,0 +1,28 @@
+    Checking keep v0.0.0 (/keep-validation-cache/source)
+    Checking repository-process-spawn v0.0.0 (/keep-validation-cache/source/repository-process-spawn)
+error: this function has a `#[must_use]` attribute with no message, but returns a type already marked as `#[must_use]`
+  --> src/adapters/compaction/recovery_progress.rs:65:5
+   |
+65 |     pub const fn completed(&self) -> &CompactionRecovery {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: either add some descriptive message or remove the attribute
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#double_must_use
+   = note: `-D clippy::double-must-use` implied by `-D clippy::all`
+   = help: to override `-D clippy::all` add `#[allow(clippy::double_must_use)]`
+
+error: this parameter is a mutable reference but is not used mutably
+   --> src/adapters/compaction/recovery_execution.rs:124:15
+    |
+124 |     observed: &mut ObservedStage,
+    |               ^----^^^^^^^^^^^^^
+    |                |
+    |                help: consider removing this `mut`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#needless_pass_by_ref_mut
+    = note: `-D clippy::needless-pass-by-ref-mut` implied by `-D clippy::nursery`
+    = help: to override `-D clippy::nursery` add `#[allow(clippy::needless_pass_by_ref_mut)]`
+
+error: could not compile `keep` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `keep` (lib test) due to 2 previous errors

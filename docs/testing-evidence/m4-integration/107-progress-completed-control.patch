@@ -1,0 +1,11 @@
+--- a/src/adapters/compaction/recovery_failure.rs
++++ b/src/adapters/compaction/recovery_failure.rs
+@@ -54,7 +54,7 @@
+         effects: Effects,
+     ) -> Self {
+         self.execution = Some(Box::new(CompactionRecoveryExecution {
+-            completed: completed.clone(),
++            completed: CompactionRecovery { discarded: Vec::new(), finalized: completed.finalized() },
+             action,
+             boundary,
+             effects,

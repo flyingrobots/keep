@@ -1,0 +1,17 @@
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.11s
+     Running tests/compaction_recovery_memory.rs (/keep-validation-cache/target/debug/deps/compaction_recovery_memory-6ab8b798a921c8e1)
+
+running 1 test
+test oversized_head_is_refused_without_allocating_its_contents ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+     Running tests/compaction_recovery_preflight.rs (/keep-validation-cache/target/debug/deps/compaction_recovery_preflight-f85ca969011c3959)
+
+running 2 tests
+test corrupt_later_head_preserves_earlier_discardable_stages ... ok
+test corrupt_current_head_is_not_reinterpreted_as_an_uninitialized_store ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.06s
+

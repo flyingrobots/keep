@@ -19,6 +19,10 @@ mod interruption_tests;
 mod observation;
 mod plan;
 mod recovery;
+mod recovery_execution;
+mod recovery_failure;
+#[cfg(test)]
+mod recovery_head_progress_tests;
 #[cfg(all(test, target_os = "linux"))]
 mod recovery_identity_tests;
 mod recovery_observation;
@@ -27,6 +31,8 @@ mod recovery_progress;
 #[cfg(test)]
 mod recovery_progress_tests;
 mod recovery_schedule;
+#[cfg(all(test, target_os = "linux"))]
+mod recovery_uncertain_tests;
 #[cfg(test)]
 mod test_fixture;
 

@@ -1,0 +1,54 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.26s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 14 tests
+test adapters::compaction::filesystem_tests::recovery_over_an_untouched_store_is_idle ... ok
+test adapters::compaction::filesystem_tests::a_mixed_segment_plans_its_live_records_for_copy_and_the_rest_for_omission ... ok
+test adapters::compaction::filesystem_tests::compaction_preserves_every_identity_and_closure_and_frees_the_mixed_segment ... ok
+test adapters::compaction::recovery_head_progress_tests::head_discard_sync_failure_reports_completed_stage_cleanup ... FAILED
+test adapters::compaction::recovery_head_progress_tests::root_sync_failure_reports_the_published_head ... FAILED
+test adapters::compaction::filesystem_tests::refusals_happen_before_any_stage_is_written ... ok
+test adapters::compaction::recovery_identity_tests::byte_equal_later_catalog_replacement_preserves_earlier_stage ... ok
+test adapters::compaction::recovery_progress_tests::failed_absence_check_reports_the_unlinked_stage ... ok
+test adapters::compaction::recovery_identity_tests::byte_equal_segment_replacement_is_preserved_before_cleanup ... ok
+test adapters::compaction::recovery_progress_tests::failed_parent_sync_reports_the_unlinked_stage ... ok
+test adapters::compaction::recovery_progress_tests::later_discard_failure_retains_the_earlier_durable_completion ... FAILED
+test adapters::compaction::recovery_progress_tests::failure_before_removal_reports_no_namespace_effect ... ok
+test adapters::compaction::recovery_uncertain_tests::failed_unlink_reports_uncertainty_without_losing_evidence ... ok
+test adapters::compaction::interruption_tests::every_interrupted_publication_phase_recovers_to_one_lawful_state ... ok
+
+failures:
+
+---- adapters::compaction::recovery_head_progress_tests::head_discard_sync_failure_reports_completed_stage_cleanup stdout ----
+
+thread 'adapters::compaction::recovery_head_progress_tests::head_discard_sync_failure_reports_completed_stage_cleanup' (552) panicked at src/adapters/compaction/recovery_head_progress_tests.rs:121:5:
+assertion `left == right` failed
+  left: []
+ right: [Segment, Catalog]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- adapters::compaction::recovery_head_progress_tests::root_sync_failure_reports_the_published_head stdout ----
+
+thread 'adapters::compaction::recovery_head_progress_tests::root_sync_failure_reports_the_published_head' (553) panicked at src/adapters/compaction/recovery_head_progress_tests.rs:59:5:
+assertion `left == right` failed
+  left: []
+ right: [Segment, Catalog]
+
+---- adapters::compaction::recovery_progress_tests::later_discard_failure_retains_the_earlier_durable_completion stdout ----
+
+thread 'adapters::compaction::recovery_progress_tests::later_discard_failure_retains_the_earlier_durable_completion' (559) panicked at src/adapters/compaction/recovery_progress_tests.rs:94:5:
+assertion `left == right` failed: earlier durable actions remain reported
+  left: []
+ right: [Segment]
+
+
+failures:
+    adapters::compaction::recovery_head_progress_tests::head_discard_sync_failure_reports_completed_stage_cleanup
+    adapters::compaction::recovery_head_progress_tests::root_sync_failure_reports_the_published_head
+    adapters::compaction::recovery_progress_tests::later_discard_failure_retains_the_earlier_durable_completion
+
+test result: FAILED. 11 passed; 3 failed; 0 ignored; 0 measured; 473 filtered out; finished in 1.99s
+
+error: test failed, to rerun pass `--lib`

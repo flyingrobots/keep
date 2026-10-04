@@ -1,0 +1,35 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.67s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 4 tests
+test adapters::compaction::recovery_progress_tests::failed_absence_check_reports_the_unlinked_stage ... FAILED
+test adapters::compaction::recovery_progress_tests::failed_parent_sync_reports_the_unlinked_stage ... FAILED
+test adapters::compaction::recovery_progress_tests::failure_before_removal_reports_no_namespace_effect ... FAILED
+test adapters::compaction::recovery_progress_tests::later_discard_failure_retains_the_earlier_durable_completion ... FAILED
+
+failures:
+
+---- adapters::compaction::recovery_progress_tests::failed_absence_check_reports_the_unlinked_stage stdout ----
+Error: "recovery lost execution progress"
+
+---- adapters::compaction::recovery_progress_tests::failed_parent_sync_reports_the_unlinked_stage stdout ----
+Error: "recovery lost execution progress"
+
+---- adapters::compaction::recovery_progress_tests::failure_before_removal_reports_no_namespace_effect stdout ----
+Error: "recovery lost execution progress"
+
+---- adapters::compaction::recovery_progress_tests::later_discard_failure_retains_the_earlier_durable_completion stdout ----
+Error: "recovery lost execution progress"
+
+
+failures:
+    adapters::compaction::recovery_progress_tests::failed_absence_check_reports_the_unlinked_stage
+    adapters::compaction::recovery_progress_tests::failed_parent_sync_reports_the_unlinked_stage
+    adapters::compaction::recovery_progress_tests::failure_before_removal_reports_no_namespace_effect
+    adapters::compaction::recovery_progress_tests::later_discard_failure_retains_the_earlier_durable_completion
+
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 480 filtered out; finished in 0.07s
+
+error: test failed, to rerun pass `--lib`

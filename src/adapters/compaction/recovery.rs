@@ -3,30 +3,25 @@
 //! protocols own, driven to one lawful state.
 
 use std::error::Error;
-use std::fmt;
 use std::io;
 use std::path::Path;
 
 use crate::CatalogGeneration;
-use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
-use crate::adapters::filesystem_exact_record as exact_record;
 use crate::adapters::{
-    CatalogRestartPolicy, FilesystemRecoveryNextHeadFinalizer, FilesystemRecoveryStageDiscarder,
-    RecoveryStage, RecoveryStageMetadata, RecoveryStageParent, admit_recovery_stage_bytes,
-    execute_recovery_next_head_finalization, execute_recovery_stage_discard,
-    fingerprint_recovery_stage,
+    CatalogRestartPolicy, FilesystemRecoveryStageDiscarder, RecoveryStage, RecoveryStageMetadata,
+    admit_recovery_stage_bytes, fingerprint_recovery_stage,
 };
 
 /// What recovery found and did.
 #[must_use]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CompactionRecovery {
-    discarded: Vec<RecoveryStage>,
-    finalized: Option<CatalogGeneration>,
+    pub(super) discarded: Vec<RecoveryStage>,
+    pub(super) finalized: Option<CatalogGeneration>,
 }
 
 impl CompactionRecovery {
-    /// The stages discarded, in the order examined.
+    /// Stages whose discard completed with successful parent synchronization.
     #[must_use]
     pub fn discarded(&self) -> &[RecoveryStage] {
         &self.discarded
@@ -38,59 +33,23 @@ impl CompactionRecovery {
         self.finalized
     }
 
-    /// Whether the store held no residue at all.
+    /// Whether this report contains no completed recovery actions.
+    ///
+    /// On success this means no residue was found. In an error's progress report,
+    /// it means no earlier action completed, not that the failed action had no effects.
     #[must_use]
     pub const fn was_idle(&self) -> bool {
         self.discarded.is_empty() && self.finalized.is_none()
     }
 }
 
-/// Why recovery could not complete. Planning failures precede all recovery effects.
-/// Execution failures may follow changes; returning an error is not rollback.
-#[derive(Debug)]
-pub struct FilesystemCompactionRecoveryError {
-    phase: &'static str,
-    source: Box<dyn Error + Send + Sync>,
-    execution: Option<super::CompactionRecoveryExecution>,
-}
-
-impl fmt::Display for FilesystemCompactionRecoveryError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "compaction recovery failed at {}", self.phase)
-    }
-}
-
-impl Error for FilesystemCompactionRecoveryError {
-    fn source(&self) -> Option<&(dyn Error + 'static)> {
-        Some(self.source.as_ref())
-    }
-}
+pub use super::recovery_failure::FilesystemCompactionRecoveryError;
 
 pub(super) fn refused(
     phase: &'static str,
     source: impl Error + Send + Sync + 'static,
 ) -> FilesystemCompactionRecoveryError {
     FilesystemCompactionRecoveryError::refused(phase, source)
-}
-
-impl FilesystemCompactionRecoveryError {
-    /// Progress of a failing execution action, or `None` for admission refusal.
-    /// A preflight refusal initiates no recovery mutation.
-    #[must_use]
-    pub const fn execution(&self) -> Option<&super::CompactionRecoveryExecution> {
-        self.execution.as_ref()
-    }
-
-    pub(in crate::adapters) fn refused(
-        phase: &'static str,
-        source: impl Error + Send + Sync + 'static,
-    ) -> Self {
-        Self {
-            phase,
-            source: Box::new(source),
-            execution: None,
-        }
-    }
 }
 
 /// Recovers an interrupted compaction on the version-two root at
@@ -109,13 +68,17 @@ impl FilesystemCompactionRecoveryError {
 /// length limit before materialization. Preflight retains bounded segment and
 /// catalog bytes; cleanup may materialize one additional stage copy. Catalog
 /// verification allocates separately under its format and caller policy limits.
-/// These limits are not a total process memory cap.
+/// These limits are not a total process memory cap. An execution error allocates
+/// a bounded progress report containing at most the three fixed-stage completions.
 ///
 /// # Errors
 ///
 /// Returns [`FilesystemCompactionRecoveryError`] at the exact open,
 /// assessment, planning, or execution failure. All residue is assessed and planned
-/// before mutation begins. A later execution error does not roll back prior effects.
+/// before mutation begins. `execution()` is `None` for admission refusal; otherwise
+/// it reports prior completed actions, the failed action and boundary, and known
+/// or uncertain namespace effects. A failed sync is not rollback or a durability
+/// receipt. Execution stops immediately; another call observes the store afresh.
 pub fn recover_compaction(
     store_root: &Path,
     policy: CatalogRestartPolicy,
@@ -168,7 +131,7 @@ pub(super) fn recover_after_preflight(
 }
 
 pub(super) fn recover_scheduled(
-    mut discarder: FilesystemRecoveryStageDiscarder,
+    discarder: FilesystemRecoveryStageDiscarder,
     policy: CatalogRestartPolicy,
     evidence: CompleteStageEvidence,
     after_preflight: impl FnOnce() -> io::Result<()>,
@@ -177,58 +140,7 @@ pub(super) fn recover_scheduled(
     let mut plan = super::recovery_preflight::prepare(&discarder, policy, evidence)?;
     after_preflight().map_err(|source| refused("observation interleaving", source))?;
     plan.verify(&discarder)?;
-    let mut recovery = CompactionRecovery {
-        discarded: Vec::new(),
-        finalized: None,
-    };
-    for mut stage in plan.stages {
-        match stage.action {
-            super::recovery_preflight::StageAction::Derivable => {
-                discard_derivable(&discarder, &mut stage.observed, schedule)?;
-            }
-            super::recovery_preflight::StageAction::Truncated(request) => {
-                stage.observed.verify(&discarder)?;
-                let _receipt = execute_recovery_stage_discard(
-                    &mut super::recovery_schedule::ScheduledDiscard {
-                        inner: &mut discarder,
-                        stage: stage.observed.stage(),
-                        schedule,
-                    },
-                    request,
-                )
-                .map_err(|source| refused("discard stage", source))?;
-            }
-        }
-        recovery.discarded.push(stage.observed.stage());
-    }
-    let Some(mut next) = plan.next else {
-        return Ok(recovery);
-    };
-    next.observed.verify(&discarder)?;
-    match next.action {
-        super::recovery_preflight::NextHeadAction::Discard(request) => {
-            let _receipt = execute_recovery_stage_discard(
-                &mut super::recovery_schedule::ScheduledDiscard {
-                    inner: &mut discarder,
-                    stage: RecoveryStage::NextHead,
-                    schedule,
-                },
-                request,
-            )
-            .map_err(|source| refused("discard head.next", source))?;
-            recovery.discarded.push(RecoveryStage::NextHead);
-        }
-        super::recovery_preflight::NextHeadAction::Finalize(request) => {
-            let mut finalizer = super::recovery_schedule::ScheduledFinalization {
-                inner: FilesystemRecoveryNextHeadFinalizer { discarder, policy },
-                schedule,
-            };
-            let _receipt = execute_recovery_next_head_finalization(&mut finalizer, request)
-                .map_err(|source| refused("finalize head.next", source))?;
-            recovery.finalized = Some(request.target().generation());
-        }
-    }
-    Ok(recovery)
+    super::recovery_execution::execute(discarder, policy, plan, schedule)
 }
 
 pub(super) fn admitted_stage(
@@ -242,30 +154,4 @@ pub(super) fn admitted_stage(
         .map_err(|source| refused("fingerprint stage", source))?;
     admit_recovery_stage_bytes(stage, evidence, bytes)
         .map_err(|source| refused("admit stage bytes", source))
-}
-
-/// Unlinks one derivable stage only while its bytes are exactly as assessed,
-/// and synchronizes `staging`.
-fn discard_derivable(
-    discarder: &FilesystemRecoveryStageDiscarder,
-    observed: &mut super::recovery_observation::ObservedStage,
-    schedule: &mut super::recovery_schedule::Schedule<'_>,
-) -> Result<(), FilesystemCompactionRecoveryError> {
-    let stage = observed.stage();
-    let staging = discarder
-        .inventory
-        .parent_directory(RecoveryStageParent::Staging);
-    observed.verify(discarder)?;
-    schedule(stage, super::CompactionRecoveryBoundary::RemoveStage)
-        .map_err(|source| refused("before stage removal", source))?;
-    staging
-        .remove_file(stage.file_name())
-        .map_err(|source| refused("discard stage", source))?;
-    schedule(stage, super::CompactionRecoveryBoundary::ConfirmStageAbsent)
-        .map_err(|source| refused("confirm stage absence", source))?;
-    exact_record::require_absent(staging, stage.file_name())
-        .map_err(|source| refused("discard stage", io::Error::other(source)))?;
-    schedule(stage, super::CompactionRecoveryBoundary::SynchronizeParent)
-        .map_err(|source| refused("synchronize staging", source))?;
-    synchronize_directory(staging).map_err(|source| refused("synchronize staging", source))
 }

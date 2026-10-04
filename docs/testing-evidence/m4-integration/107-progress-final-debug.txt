@@ -1,0 +1,23 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.55s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 14 tests
+test adapters::compaction::filesystem_tests::recovery_over_an_untouched_store_is_idle ... ok
+test adapters::compaction::filesystem_tests::a_mixed_segment_plans_its_live_records_for_copy_and_the_rest_for_omission ... ok
+test adapters::compaction::recovery_head_progress_tests::head_discard_sync_failure_reports_completed_stage_cleanup ... ok
+test adapters::compaction::filesystem_tests::compaction_preserves_every_identity_and_closure_and_frees_the_mixed_segment ... ok
+test adapters::compaction::recovery_head_progress_tests::root_sync_failure_reports_the_published_head ... ok
+test adapters::compaction::filesystem_tests::refusals_happen_before_any_stage_is_written ... ok
+test adapters::compaction::recovery_identity_tests::byte_equal_later_catalog_replacement_preserves_earlier_stage ... ok
+test adapters::compaction::recovery_progress_tests::failed_absence_check_reports_the_unlinked_stage ... ok
+test adapters::compaction::recovery_progress_tests::failed_parent_sync_reports_the_unlinked_stage ... ok
+test adapters::compaction::recovery_identity_tests::byte_equal_segment_replacement_is_preserved_before_cleanup ... ok
+test adapters::compaction::recovery_progress_tests::failure_before_removal_reports_no_namespace_effect ... ok
+test adapters::compaction::recovery_progress_tests::later_discard_failure_retains_the_earlier_durable_completion ... ok
+test adapters::compaction::recovery_uncertain_tests::failed_unlink_reports_uncertainty_without_losing_evidence ... ok
+test adapters::compaction::interruption_tests::every_interrupted_publication_phase_recovers_to_one_lawful_state ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 473 filtered out; finished in 1.75s
+

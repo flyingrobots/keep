@@ -63,9 +63,13 @@ Recovery retains every originally opened stage handle through its action. After 
 
 After successful recovery the store re-plans: identically when the successor was not published, or `NothingToCompact` when it was; either way the same successor is reached and the same segments are GC candidates.
 
-A preflight refusal initiates no recovery mutation. An execution failure may follow completed namespace changes; neither a returned error nor failed synchronization rolls those changes back. Detailed execution-effect reporting remains an integration obligation in #107; the focused preflight and identity evidence do not establish it.
+A preflight refusal initiates no recovery mutation. An execution failure may follow completed namespace changes; neither a returned error nor failed synchronization rolls those changes back. `FilesystemCompactionRecoveryError::execution()` is absent for admission refusal and otherwise reports the failed action and boundary, earlier durably completed actions, and the failing action's namespace effects. `None` effects means that action made no namespace mutation, `AppliedUnconfirmed` means it performed the mutation without confirming directory durability, and `Uncertain` means its failed mutation capability cannot establish whether the mutation occurred or persisted. An empty earlier-completion list never establishes absence of effects in the failing action.
+
+Execution stops at the first error and retains the original typed cause. Retry must observe the store again; the error report is not a resume token. A later idle observation means no residue was found, not that an earlier failed synchronization has retroactively become a durable receipt. Existing writer authority, bounded admission, exact-byte and original-handle guards remain; no isolation from arbitrary raw pathname mutation is added.
 
 ## Evidence
+
+The medium filesystem progress laws cover failure before complete-stage unlink, after successful unlink, at parent synchronization, during a later truncated-stage cleanup, and during next-head discard or publication synchronization. They require exact action/boundary/effect reports, earlier completed actions, preserved typed causes and the observed namespace after reopening. The Linux unlink-refusal law uses a deterministic raw substitution to trigger EISDIR after the pre-effect guard; this checks uncertainty reporting and retained evidence, not unsupported raw-mutation isolation. See the consolidated [M4 integration evidence](../../testing-evidence/m4-integration.md).
 
 `tests/compaction_recovery_memory.rs` supplies an oversized sparse `head.next`, requires the precise `RecoveryStageMetadataError::Oversized` cause, measures peak allocation below the rejected file length, and checks preservation of the stage and published head. The allocation assertion failed on PR parent `7cdc2cf` before the bounded observation fix and passes in debug and release.
 

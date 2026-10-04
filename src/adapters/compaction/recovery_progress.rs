@@ -61,7 +61,6 @@ pub struct CompactionRecoveryExecution {
 
 impl CompactionRecoveryExecution {
     /// Actions completed with successful directory synchronization before failure.
-    #[must_use]
     pub const fn completed(&self) -> &CompactionRecovery {
         &self.completed
     }

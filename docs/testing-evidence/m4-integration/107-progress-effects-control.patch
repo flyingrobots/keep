@@ -1,0 +1,11 @@
+--- a/src/adapters/compaction/recovery_failure.rs
++++ b/src/adapters/compaction/recovery_failure.rs
+@@ -57,7 +57,7 @@
+             completed: completed.clone(),
+             action,
+             boundary,
+-            effects,
++            effects: match effects { Effects::None | Effects::AppliedUnconfirmed | Effects::Uncertain => Effects::None },
+         }));
+         self
+     }

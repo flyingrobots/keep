@@ -1,0 +1,56 @@
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.01s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 14 tests
+test adapters::compaction::filesystem_tests::recovery_over_an_untouched_store_is_idle ... ok
+test adapters::compaction::filesystem_tests::a_mixed_segment_plans_its_live_records_for_copy_and_the_rest_for_omission ... ok
+test adapters::compaction::filesystem_tests::compaction_preserves_every_identity_and_closure_and_frees_the_mixed_segment ... ok
+test adapters::compaction::recovery_head_progress_tests::head_discard_sync_failure_reports_completed_stage_cleanup ... FAILED
+test adapters::compaction::recovery_head_progress_tests::root_sync_failure_reports_the_published_head ... FAILED
+test adapters::compaction::filesystem_tests::refusals_happen_before_any_stage_is_written ... ok
+test adapters::compaction::recovery_identity_tests::byte_equal_later_catalog_replacement_preserves_earlier_stage ... ok
+test adapters::compaction::recovery_progress_tests::failed_absence_check_reports_the_unlinked_stage ... FAILED
+test adapters::compaction::recovery_progress_tests::failed_parent_sync_reports_the_unlinked_stage ... FAILED
+test adapters::compaction::recovery_identity_tests::byte_equal_segment_replacement_is_preserved_before_cleanup ... ok
+test adapters::compaction::recovery_progress_tests::failure_before_removal_reports_no_namespace_effect ... FAILED
+test adapters::compaction::recovery_progress_tests::later_discard_failure_retains_the_earlier_durable_completion ... FAILED
+test adapters::compaction::recovery_uncertain_tests::failed_unlink_reports_uncertainty_without_losing_evidence ... FAILED
+test adapters::compaction::interruption_tests::every_interrupted_publication_phase_recovers_to_one_lawful_state ... ok
+
+failures:
+
+---- adapters::compaction::recovery_head_progress_tests::head_discard_sync_failure_reports_completed_stage_cleanup stdout ----
+Error: "head discard lost execution progress"
+
+---- adapters::compaction::recovery_head_progress_tests::root_sync_failure_reports_the_published_head stdout ----
+Error: "head failure lost execution progress"
+
+---- adapters::compaction::recovery_progress_tests::failed_absence_check_reports_the_unlinked_stage stdout ----
+Error: "recovery lost execution progress"
+
+---- adapters::compaction::recovery_progress_tests::failed_parent_sync_reports_the_unlinked_stage stdout ----
+Error: "recovery lost execution progress"
+
+---- adapters::compaction::recovery_progress_tests::failure_before_removal_reports_no_namespace_effect stdout ----
+Error: "recovery lost execution progress"
+
+---- adapters::compaction::recovery_progress_tests::later_discard_failure_retains_the_earlier_durable_completion stdout ----
+Error: "recovery lost execution progress"
+
+---- adapters::compaction::recovery_uncertain_tests::failed_unlink_reports_uncertainty_without_losing_evidence stdout ----
+Error: "failed unlink lost execution progress"
+
+
+failures:
+    adapters::compaction::recovery_head_progress_tests::head_discard_sync_failure_reports_completed_stage_cleanup
+    adapters::compaction::recovery_head_progress_tests::root_sync_failure_reports_the_published_head
+    adapters::compaction::recovery_progress_tests::failed_absence_check_reports_the_unlinked_stage
+    adapters::compaction::recovery_progress_tests::failed_parent_sync_reports_the_unlinked_stage
+    adapters::compaction::recovery_progress_tests::failure_before_removal_reports_no_namespace_effect
+    adapters::compaction::recovery_progress_tests::later_discard_failure_retains_the_earlier_durable_completion
+    adapters::compaction::recovery_uncertain_tests::failed_unlink_reports_uncertainty_without_losing_evidence
+
+test result: FAILED. 7 passed; 7 failed; 0 ignored; 0 measured; 473 filtered out; finished in 2.02s
+
+error: test failed, to rerun pass `--lib`
