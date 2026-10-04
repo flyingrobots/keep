@@ -1,0 +1,11 @@
+ fuzz/fuzz_targets/gc_format.rs | 47 +++++++++++++++++++++++++++++++++++++++---
+ 1 file changed, 44 insertions(+), 3 deletions(-)
+f31f4218dee13dc7a6b210121accdd683f4c14c5f5c928b8e501ae07cba80efa  fuzz/fuzz_targets/gc_format.rs
+rustc 1.96.0 (ac68faa20 2026-05-25)
+binary: rustc
+commit-hash: ac68faa20c58cbccd01ee7208bf3b6e93a7d7f96
+commit-date: 2026-05-25
+host: aarch64-unknown-linux-gnu
+release: 1.96.0
+LLVM version: 22.1.2
+Linux aarch64

@@ -4,6 +4,7 @@
 
 use keep::{
     AdmittedGcRetirementIntent, AdmittedGcRetirementReceipt, AdmittedRecoveryDispositionReceipt,
+    CanonicalGcRetirementIntent, CanonicalGcRetirementReceipt, CanonicalRecoveryDispositionReceipt,
 };
 use libfuzzer_sys::fuzz_target;
 
@@ -23,14 +24,43 @@ fuzz_target!(|bytes: &[u8]| {
 
 fn disposition(input: &[u8]) {
     if let Ok(receipt) = AdmittedRecoveryDispositionReceipt::decode(input) {
-        assert_eq!(receipt.encoded(), input);
+        let canonical = CanonicalRecoveryDispositionReceipt::from_receipt(receipt.receipt());
+        assert_eq!(
+            (canonical.encoded(), canonical.receipt()),
+            (input, receipt.receipt()),
+            "admitted disposition must preserve its canonical bytes and semantics"
+        );
     }
 }
 
 fn intent(input: &[u8]) {
     if let Ok(intent) = AdmittedGcRetirementIntent::decode(input) {
-        assert_eq!(intent.encoded(), input);
+        let _ = canonical_intent(&intent);
     }
+}
+
+// Oracle: the canonical format relation, using the encoder rather than the
+// decoder's retained input. Frozen independent vectors complement this relation.
+fn canonical_intent(
+    intent: &AdmittedGcRetirementIntent<'_>,
+) -> Option<CanonicalGcRetirementIntent> {
+    let canonical = CanonicalGcRetirementIntent::from_intent(intent.intent());
+    assert_eq!(
+        canonical.as_ref().ok().map(|value| (
+            value.encoded(),
+            value.intent(),
+            value.digest(),
+            value.candidate_set_digest(),
+        )),
+        Some((
+            intent.encoded(),
+            intent.intent(),
+            intent.digest(),
+            intent.candidate_set_digest(),
+        )),
+        "admitted intent must preserve its canonical bytes, semantics and digests: {canonical:?}"
+    );
+    canonical.ok()
 }
 
 fn receipt(input: &[u8]) {
@@ -50,6 +80,17 @@ fn receipt(input: &[u8]) {
         return;
     };
     if let Ok(receipt) = AdmittedGcRetirementReceipt::decode(receipt_bytes, &intent) {
-        assert_eq!(receipt.encoded(), receipt_bytes);
+        let Some(canonical_intent) = canonical_intent(&intent) else {
+            return;
+        };
+        let canonical = CanonicalGcRetirementReceipt::from_intent(
+            &canonical_intent,
+            receipt.receipt().pool_state_digest(),
+        );
+        assert_eq!(
+            (canonical.encoded(), canonical.receipt()),
+            (receipt_bytes, receipt.receipt()),
+            "admitted retirement receipt must preserve its canonical bytes and semantics"
+        );
     }
 }

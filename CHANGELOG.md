@@ -10,6 +10,7 @@ after its public API and format compatibility policies are established.
 
 ### Roadmap audit corrections
 
+- Replace tautological GC fuzz assertions with public canonical re-encoding checks for retirement intents, retirement receipts and recovery-disposition receipts (#107).
 - Preserve typed failure sources through durable and compaction I/O boundaries.
 - Bound sealed-stage admission by its recorded length before reading it.
 - Count selected chunks once in authenticated-read benchmark accounting.

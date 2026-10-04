@@ -1,0 +1,12 @@
+--- a/src/adapters/gc/intent_encoder.rs
++++ b/src/adapters/gc/intent_encoder.rs
+@@ -38,6 +38,9 @@
+     encoded.extend_from_slice(&digest);
+     let checksum = format::checksum(&encoded);
+     encoded.extend_from_slice(&checksum);
++    if let Some(byte) = encoded.first_mut() {
++        *byte ^= 1;
++    }
+     Ok(CanonicalGcRetirementIntent::admitted(
+         encoded,
+         intent.clone(),

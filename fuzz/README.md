@@ -75,10 +75,7 @@ and completion-receipt decoders. The receipt seed carries its exact marker and
 intent dependencies so mutations exercise integrity and cross-record binding;
 every admitted value must retain its exact input bytes.
 
-The `gc_format` seeds select the public GC retirement-intent and
-retirement-receipt decoders. The receipt seed carries its exact intent
-dependency behind a length frame so mutations exercise cross-record binding
-as well as framing; every admitted value must retain its exact input bytes.
+The `gc_format` seeds select the public GC retirement-intent, retirement-receipt and recovery-disposition decoders. The retirement-receipt seed carries its exact intent dependency behind a length frame so mutations exercise cross-record binding as well as framing. Every admitted value must re-encode byte-for-byte through its public canonical encoder and preserve its semantic value; intents also preserve both reported digests. The canonicality relation complements the independent conformance vectors and does not prove specification correctness when encoder and decoder share a defect.
 
 The `segment_format` seeds select the public segment-header, record-header,
 complete-record, seal, and complete-segment boundaries. Canonical empty,

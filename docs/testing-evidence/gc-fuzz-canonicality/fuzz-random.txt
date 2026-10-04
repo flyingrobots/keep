@@ -1,0 +1,33 @@
+Replay: seed=180510830 max_total_time=15 timeout=5 max_len=1048576 rss_limit_mb=1024; unshare network; outer deadline=75
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.03s
+    Finished `release` profile [optimized + debuginfo] target(s) in 0.01s
+     Running `/build/keep107-gc-nightly-target/aarch64-unknown-linux-gnu/release/gc_format -artifact_prefix=/build/keep107-gc-source/fuzz/artifacts/gc_format/ -seed=180510830 -max_total_time=15 -timeout=5 -max_len=1048576 -rss_limit_mb=1024 -print_final_stats=1 /build/keep107-gc-source/fuzz/corpus/gc_format`
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 180510830
+INFO: Loaded 1 modules   (91285 inline 8-bit counters): 91285 [0xaaaabb1761c0, 0xaaaabb18c655), 
+INFO: Loaded 1 PC tables (91285 PCs): 91285 [0xaaaabb18c658,0xaaaabb2f0fa8), 
+INFO:       35 files found in /build/keep107-gc-source/fuzz/corpus/gc_format
+INFO: seed corpus: files: 35 min: 1b max: 781b total: 13979b rss: 37Mb
+#36	INITED cov: 510 ft: 879 corp: 34/13974b exec/s: 0 rss: 40Mb
+#21807	REDUCE cov: 510 ft: 879 corp: 34/13966b lim: 997 exec/s: 0 rss: 62Mb L: 488/781 MS: 1 EraseBytes-
+#462278	REDUCE cov: 510 ft: 879 corp: 34/13957b lim: 5372 exec/s: 154092 rss: 396Mb L: 479/781 MS: 1 EraseBytes-
+#524288	pulse  cov: 510 ft: 879 corp: 34/13957b lim: 5984 exec/s: 174762 rss: 425Mb
+#986685	REDUCE cov: 510 ft: 879 corp: 34/13946b lim: 10584 exec/s: 164447 rss: 432Mb L: 468/781 MS: 1 EraseBytes-
+#1048576	pulse  cov: 510 ft: 879 corp: 34/13946b lim: 11195 exec/s: 149796 rss: 432Mb
+#1167602	REDUCE cov: 510 ft: 879 corp: 34/13941b lim: 12378 exec/s: 166800 rss: 432Mb L: 464/781 MS: 1 EraseBytes-
+#1892330	REDUCE cov: 510 ft: 879 corp: 34/13901b lim: 19587 exec/s: 157694 rss: 435Mb L: 421/781 MS: 3 InsertRepeatedBytes-ChangeByte-EraseBytes-
+#1892961	REDUCE cov: 510 ft: 879 corp: 34/13895b lim: 19587 exec/s: 157746 rss: 435Mb L: 415/781 MS: 1 EraseBytes-
+#1895487	REDUCE cov: 510 ft: 879 corp: 34/13881b lim: 19601 exec/s: 157957 rss: 435Mb L: 401/781 MS: 1 EraseBytes-
+#1901734	REDUCE cov: 510 ft: 879 corp: 34/13853b lim: 19657 exec/s: 158477 rss: 435Mb L: 373/781 MS: 2 ChangeBit-EraseBytes-
+#1909800	REDUCE cov: 510 ft: 879 corp: 34/13845b lim: 19727 exec/s: 159150 rss: 435Mb L: 365/781 MS: 1 CrossOver-
+#1934564	REDUCE cov: 510 ft: 879 corp: 34/13835b lim: 19965 exec/s: 161213 rss: 435Mb L: 355/781 MS: 4 ChangeASCIIInt-ChangeBinInt-EraseBytes-InsertRepeatedBytes-
+#1945653	REDUCE cov: 510 ft: 879 corp: 34/13834b lim: 20063 exec/s: 162137 rss: 435Mb L: 354/781 MS: 4 ChangeBinInt-ShuffleBytes-ChangeByte-EraseBytes-
+#1995259	RELOAD cov: 510 ft: 880 corp: 35/14255b lim: 20553 exec/s: 153481 rss: 435Mb
+#2097152	pulse  cov: 510 ft: 880 corp: 35/14255b lim: 21561 exec/s: 161319 rss: 438Mb
+#2381099	DONE   cov: 510 ft: 880 corp: 35/14255b lim: 24389 exec/s: 148818 rss: 472Mb
+Done 2381099 runs in 16 second(s)
+stat::number_of_executed_units: 2381099
+stat::average_exec_per_sec:     148818
+stat::new_units_added:          11
+stat::slowest_unit_time_sec:    0
+stat::peak_rss_mb:              472

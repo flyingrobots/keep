@@ -1,0 +1,12 @@
+--- a/src/adapters/gc/disposition_encoder.rs
++++ b/src/adapters/gc/disposition_encoder.rs
+@@ -7,6 +7,9 @@
+     let (preimage, checksum_slot) = encoded.split_at_mut(disposition_format::CHECKSUM_OFFSET);
+     write_preimage(preimage, receipt);
+     checksum_slot.copy_from_slice(&disposition_format::checksum(preimage));
++    if let Some(byte) = encoded.first_mut() {
++        *byte ^= 1;
++    }
+     CanonicalRecoveryDispositionReceipt::admitted(&encoded, receipt)
+ }
+ 

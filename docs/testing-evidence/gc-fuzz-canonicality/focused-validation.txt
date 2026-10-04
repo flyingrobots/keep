@@ -1,0 +1,11 @@
+Diff in /build/keep107-gc-source/fuzz/fuzz_targets/gc_format.rs:41:
+ 
+ // Oracle: the canonical format relation, using the encoder rather than the
+ // decoder's retained input. Frozen independent vectors complement this relation.
+-fn canonical_intent(intent: &AdmittedGcRetirementIntent<'_>) -> Option<CanonicalGcRetirementIntent> {
++fn canonical_intent(
++    intent: &AdmittedGcRetirementIntent<'_>,
++) -> Option<CanonicalGcRetirementIntent> {
+     let canonical = CanonicalGcRetirementIntent::from_intent(intent.intent());
+     assert_eq!(
+         canonical.as_ref().ok().map(|value| (
