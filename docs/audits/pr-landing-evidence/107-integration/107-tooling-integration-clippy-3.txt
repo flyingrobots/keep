@@ -1,0 +1,15 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+    Checking keep v0.0.0 (/keep-validation-cache/source)
+    Checking repository-process-spawn v0.0.0 (/keep-validation-cache/source/repository-process-spawn)
+    Checking xtask v0.0.0 (/keep-validation-cache/source/xtask)
+error: unused import: `DurabilityCrashSequence`
+ --> xtask/tests/durability_crash_case_contract.rs:9:30
+  |
+9 |     DurabilityCrashPosition, DurabilityCrashSequence,
+  |                              ^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `-D unused-imports` implied by `-D warnings`
+  = help: to override `-D warnings` add `#[allow(unused_imports)]`
+
+error: could not compile `xtask` (test "durability_crash_case_contract") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
