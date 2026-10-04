@@ -136,4 +136,3 @@ Reopen this admission when any of these changes:
 
 [blake3]: https://github.com/BLAKE3-team/BLAKE3
 [blake3-release]: https://github.com/BLAKE3-team/BLAKE3/releases/tag/1.8.7
-
