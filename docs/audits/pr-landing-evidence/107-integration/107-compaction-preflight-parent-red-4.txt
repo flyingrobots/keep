@@ -1,0 +1,29 @@
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.41s
+     Running tests/compaction_recovery_preflight.rs (/build/keep107-root-binding-parent-target/debug/deps/compaction_recovery_preflight-f85ca969011c3959)
+
+running 2 tests
+test corrupt_later_head_preserves_earlier_discardable_stages ... FAILED
+test corrupt_current_head_is_not_reinterpreted_as_an_uninitialized_store ... FAILED
+
+failures:
+
+---- corrupt_later_head_preserves_earlier_discardable_stages stdout ----
+
+thread 'corrupt_later_head_preserves_earlier_discardable_stages' (2655) panicked at tests/compaction_recovery_preflight.rs:78:5:
+assertion `left == right` failed: preflight refusal must preserve every earlier stage before recovery effects
+  left: ["FORMAT", "HEAD", "catalogs/0000000000000001-ff989a6761d3fd5a153277a14a416e264db10864c7f5a4f368cb17386a13afa1.cat", "head.next", "migration.intent", "migration.receipt", "reader.lock", "retention/HEAD", "retention/manifests/0000000000000001-41d568d21d0203e146f176b2f3d3dee8ec21c71f06cfa09bc7d488c9c83cf229.manifest", "retention/roots/83248af4ca5fef9ec05e051007bb3a8a66a1a0f921a0616db65c663a5e7585fd/0000000000000001-8ffeb64553a6a7ed33926b7cc9c39e1b049a10942d20958e33d9b10a81dd2a3d.root", "segments/906ebc6fe99d9d621822ba6d03d9f0cd4b8dc7c96f00697f56f6ac9fca8ba96d.seg", "writer.lock"]
+ right: ["FORMAT", "HEAD", "catalogs/0000000000000001-ff989a6761d3fd5a153277a14a416e264db10864c7f5a4f368cb17386a13afa1.cat", "head.next", "migration.intent", "migration.receipt", "reader.lock", "retention/HEAD", "retention/manifests/0000000000000001-41d568d21d0203e146f176b2f3d3dee8ec21c71f06cfa09bc7d488c9c83cf229.manifest", "retention/roots/83248af4ca5fef9ec05e051007bb3a8a66a1a0f921a0616db65c663a5e7585fd/0000000000000001-8ffeb64553a6a7ed33926b7cc9c39e1b049a10942d20958e33d9b10a81dd2a3d.root", "segments/906ebc6fe99d9d621822ba6d03d9f0cd4b8dc7c96f00697f56f6ac9fca8ba96d.seg", "staging/current.cat", "staging/current.seg", "writer.lock"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- corrupt_current_head_is_not_reinterpreted_as_an_uninitialized_store stdout ----
+Error: "required typed cause is absent: FilesystemCompactionRecoveryError { phase: \"plan head.next finalization\", source: InitialGeneration { observed: CatalogGeneration(2) } }"
+
+
+failures:
+    corrupt_current_head_is_not_reinterpreted_as_an_uninitialized_store
+    corrupt_later_head_preserves_earlier_discardable_stages
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.11s
+
+error: test failed, to rerun pass `--test compaction_recovery_preflight`

@@ -1,0 +1,21 @@
+    Checking keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.82s
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.70s
+     Running tests/compaction_recovery_preflight.rs (/build/keep107-coordinate-target/debug/deps/compaction_recovery_preflight-f85ca969011c3959)
+
+running 2 tests
+test corrupt_later_head_preserves_earlier_discardable_stages ... ok
+test corrupt_current_head_is_not_reinterpreted_as_an_uninitialized_store ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.29s
+
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `release` profile [optimized] target(s) in 3.37s
+     Running tests/compaction_recovery_preflight.rs (/build/keep107-coordinate-target/release/deps/compaction_recovery_preflight-a4b407a1fb548515)
+
+running 2 tests
+test corrupt_later_head_preserves_earlier_discardable_stages ... ok
+test corrupt_current_head_is_not_reinterpreted_as_an_uninitialized_store ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.30s

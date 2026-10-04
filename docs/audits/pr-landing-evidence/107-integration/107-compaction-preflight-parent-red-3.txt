@@ -1,0 +1,14 @@
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+error[E0624]: method `segment_read` is private
+  --> tests/compaction_recovery_preflight.rs:67:83
+   |
+67 |     let segments = bytes.iter().map(|bytes| AdmittedSegment::decode(bytes, policy.segment_read()))
+   |                                                                                   ^^^^^^^^^^^^ private method
+   |
+  ::: src/adapters/catalog_restart_policy.rs:24:5
+   |
+24 |     pub(super) const fn segment_read(self) -> SegmentReadPolicy {
+   |     ----------------------------------------------------------- private method defined here
+
+For more information about this error, try `rustc --explain E0624`.
+error: could not compile `keep` (test "compaction_recovery_preflight") due to 1 previous error
