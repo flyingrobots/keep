@@ -7,9 +7,9 @@ use std::{error::Error, fs, io};
 
 use super::fixture::{DiscardFixture, request, truncated_bytes};
 use crate::adapters::{
-    FilesystemRecoveryStageDiscarder, RecoveryStage, RecoveryStageDiscardOutcome,
-    RecoveryStageDiscardStorage, RecoveryStageDiscardStorageError, RecoveryStageEvidence,
-    RecoveryStageParent, execute_recovery_stage_discard,
+    FilesystemRecoveryStageDiscarder, RecoveryStage, RecoveryStageDiscardError,
+    RecoveryStageDiscardOutcome, RecoveryStageDiscardStorage, RecoveryStageDiscardStorageError,
+    RecoveryStageEvidence, RecoveryStageParent, execute_recovery_stage_discard,
 };
 
 #[test]
@@ -46,6 +46,11 @@ fn check_failure(outcome: RecoveryStageDiscardOutcome) -> Result<(), Box<dyn Err
         .and_then(|cause| cause.downcast_ref::<io::Error>())
         .ok_or("original synchronization cause was lost")?;
     assert_eq!(cause.raw_os_error(), Some(5), "original EIO remains typed");
+    assert!(
+        matches!(&error, RecoveryStageDiscardError::Synchronize { stage: actual_stage, outcome: actual, .. }
+        if *actual_stage == stage && *actual == outcome),
+        "typed discard effects must remain available"
+    );
     assert_eq!(
         error.to_string(),
         format!(

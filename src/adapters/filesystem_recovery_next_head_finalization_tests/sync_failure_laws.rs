@@ -7,10 +7,10 @@ use std::{error::Error, fs, io};
 
 use super::fixture::FinalizationFixture;
 use crate::adapters::{
-    FilesystemRecoveryNextHeadFinalizer, RecoveryNextHeadFinalizationOutcome,
-    RecoveryNextHeadFinalizationReadiness, RecoveryNextHeadFinalizationRequest,
-    RecoveryNextHeadFinalizationStorage, RecoveryNextHeadFinalizationStorageError,
-    execute_recovery_next_head_finalization,
+    FilesystemRecoveryNextHeadFinalizer, RecoveryNextHeadFinalizationError,
+    RecoveryNextHeadFinalizationOutcome, RecoveryNextHeadFinalizationReadiness,
+    RecoveryNextHeadFinalizationRequest, RecoveryNextHeadFinalizationStorage,
+    RecoveryNextHeadFinalizationStorageError, execute_recovery_next_head_finalization,
 };
 
 #[test]
@@ -49,6 +49,11 @@ fn check_failure(outcome: RecoveryNextHeadFinalizationOutcome) -> Result<(), Box
         .and_then(|cause| cause.downcast_ref::<io::Error>())
         .ok_or("original synchronization cause was lost")?;
     assert_eq!(cause.raw_os_error(), Some(5), "original EIO remains typed");
+    assert!(
+        matches!(&error, RecoveryNextHeadFinalizationError::SynchronizeRoot { target, outcome: actual, .. }
+        if *target == request.target() && *actual == outcome),
+        "typed publication effects must remain available"
+    );
     assert_eq!(
         error.to_string(),
         format!(
