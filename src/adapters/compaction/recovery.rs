@@ -138,11 +138,22 @@ pub(in crate::adapters) enum CompleteStageEvidence {
 }
 
 pub(in crate::adapters) fn recover_with(
-    mut discarder: FilesystemRecoveryStageDiscarder,
+    discarder: FilesystemRecoveryStageDiscarder,
     policy: CatalogRestartPolicy,
     evidence: CompleteStageEvidence,
 ) -> Result<CompactionRecovery, FilesystemCompactionRecoveryError> {
+    recover_after_preflight(discarder, policy, evidence, || Ok(()))
+}
+
+/// The callback supplies a deterministic observation/execution interleaving.
+pub(super) fn recover_after_preflight(
+    mut discarder: FilesystemRecoveryStageDiscarder,
+    policy: CatalogRestartPolicy,
+    evidence: CompleteStageEvidence,
+    after_preflight: impl FnOnce() -> io::Result<()>,
+) -> Result<CompactionRecovery, FilesystemCompactionRecoveryError> {
     let plan = super::recovery_preflight::prepare(&discarder, policy, evidence)?;
+    after_preflight().map_err(|source| refused("observation interleaving", source))?;
     let mut recovery = CompactionRecovery {
         discarded: Vec::new(),
         finalized: None,
