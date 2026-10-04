@@ -18,7 +18,7 @@ exceptions = [
   { allow = ["Apache-2.0", "MIT", "NCSA"], crate = "libfuzzer-sys@0.4.13" },
   # `memchr` is activated by fuzz-only repository JSON validation.
   { allow = ["MIT"], crate = "memchr@2.8.3" },
-  # `winx` is a required transitive dependency of locked `cap-primitives` 4.0.2.
+  # `winx` is a required transitive dependency of locked `cap-primitives` 4.0.3.
   { allow = ["Apache-2.0 WITH LLVM-exception"], crate = "winx@0.36.4" },
   # `zmij` is activated by fuzz-only repository JSON validation.
   { allow = ["MIT"], crate = "zmij@1.0.23" },
