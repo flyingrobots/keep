@@ -1,0 +1,13 @@
+diff --git a/src/adapters/retention/verification_view_collector.rs b/src/adapters/retention/verification_view_collector.rs
+index b8de247..8b79a60 100644
+--- a/src/adapters/retention/verification_view_collector.rs
++++ b/src/adapters/retention/verification_view_collector.rs
+@@ -69,7 +69,7 @@ fn classify(
+     if let Some(refusal) = observed_refusal {
+         return VerificationError::Refused {
+             refusal,
+-            source: Some(Box::new(VerificationSource::View(source))),
++            source: Some(Box::new(VerificationSource::View(RetentionViewError::Io { source: io::Error::other("calibration: erased exact-record cause") }))),
+         };
+     }
+     let refusal = match (&source, before, after) {

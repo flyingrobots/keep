@@ -1,5 +1,6 @@
 //! This module owns classification of typed publication observation failures.
 
+use crate::adapters::filesystem_exact_record::{ExactRecordError, ExactRecordRefusal};
 use crate::adapters::verification_admission;
 use crate::{
     PublicationHeadDecodeError, RetentionCurrentStateRefusal as Current,
@@ -17,7 +18,26 @@ pub(super) fn refusal(error: &io::Error) -> Option<VerificationRefusal> {
             VerificationSubject::PublishedCatalog,
         ));
     }
-    let current = source.downcast_ref::<Current>()?;
+    if let Some(ExactRecordError::Refused(refusal)) = source.downcast_ref::<ExactRecordError>() {
+        return exact_record_refusal(*refusal);
+    }
+    current_refusal(source.downcast_ref::<Current>()?)
+}
+
+const fn exact_record_refusal(refusal: ExactRecordRefusal) -> Option<VerificationRefusal> {
+    match refusal {
+        ExactRecordRefusal::LengthOverflow => None,
+        ExactRecordRefusal::KindOrLength
+        | ExactRecordRefusal::KindLengthOrIdentity
+        | ExactRecordRefusal::Bytes
+        | ExactRecordRefusal::TrailingBytes
+        | ExactRecordRefusal::RemainedVisible => Some(verification_admission::structural(
+            VerificationSubject::PublishedView,
+        )),
+    }
+}
+
+const fn current_refusal(current: &Current) -> Option<VerificationRefusal> {
     match current {
         Current::ManifestAbsent | Current::CatalogAbsent => Some(VerificationRefusal::Missing {
             subject: VerificationSubject::PublishedView,

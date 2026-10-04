@@ -10,6 +10,8 @@ after its public API and format compatibility policies are established.
 
 ### Roadmap audit corrections
 
+- Preserve corruption classification and the original exact-record cause when verification observes malformed retention records through the integrated typed-error adapters (#133, #107).
+
 - Bound compaction rereads by admitted catalog lengths and sealed-stage receipts; refuse changed lengths before allocation and retain typed materialization failures without publishing a successor (#107).
 
 - Report prior completed actions and failing-action namespace effects from compaction and ingestion recovery, preserving typed causes and distinguishing preflight refusal, known unsynchronized effects and uncertainty; stop at the first execution failure (#107).

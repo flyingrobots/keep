@@ -1,0 +1,4 @@
+markdownlint-cli2 v0.23.3 (markdownlint v0.41.1)
+Finding: CHANGELOG.md ROADMAP.md docs/adr/0010-preserve-typed-storage-refusals.md docs/adr/README.md docs/audits/completed-roadmap-2026-09-30.md docs/testing-evidence/m4-integration.md **/*.md
+Linting: 6 files
+Summary: 0 issues in 0 files

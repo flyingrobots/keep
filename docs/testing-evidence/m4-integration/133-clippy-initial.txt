@@ -1,0 +1,62 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+    Checking keep v0.0.0 (/keep-validation-cache/source)
+    Checking repository-process-spawn v0.0.0 (/keep-validation-cache/source/repository-process-spawn)
+error: these match arms have identical bodies
+   --> src/adapters/retention/filesystem_retention_refusal.rs:320:13
+    |
+320 |             Self::RecoveryObservationRefused { source } => Some(source),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+321 |             Self::NamespaceRead { source, .. } => Some(source),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: if this is unintentional make the arms return different values
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#match_same_arms
+    = note: `-D clippy::match-same-arms` implied by `-D clippy::pedantic`
+    = help: to override `-D clippy::pedantic` add `#[allow(clippy::match_same_arms)]`
+help: otherwise merge the patterns into a single arm
+    |
+320 ~             Self::RecoveryObservationRefused { source } | Self::NamespaceRead { source, .. } => Some(source),
+321 ~             Self::PredecessorRootRefused { source } => Some(source),
+    |
+
+error: this could be a `const fn`
+  --> src/adapters/retention/verification_observation_error.rs:27:1
+   |
+27 | / fn exact_record_refusal(refusal: ExactRecordRefusal) -> Option<VerificationRefusal> {
+28 | |     match refusal {
+29 | |         ExactRecordRefusal::LengthOverflow => None,
+30 | |         ExactRecordRefusal::KindOrLength
+...  |
+38 | | }
+   | |_^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#missing_const_for_fn
+   = note: `-D clippy::missing-const-for-fn` implied by `-D clippy::nursery`
+   = help: to override `-D clippy::nursery` add `#[allow(clippy::missing_const_for_fn)]`
+help: make the function `const`
+   |
+27 | const fn exact_record_refusal(refusal: ExactRecordRefusal) -> Option<VerificationRefusal> {
+   | +++++
+
+error: this could be a `const fn`
+  --> src/adapters/retention/verification_observation_error.rs:40:1
+   |
+40 | / fn current_refusal(current: &Current) -> Option<VerificationRefusal> {
+41 | |     match current {
+42 | |         Current::ManifestAbsent | Current::CatalogAbsent => Some(VerificationRefusal::Missing {
+43 | |             subject: VerificationSubject::PublishedView,
+...  |
+95 | | }
+   | |_^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#missing_const_for_fn
+help: make the function `const`
+   |
+40 | const fn current_refusal(current: &Current) -> Option<VerificationRefusal> {
+   | +++++
+
+error: could not compile `keep` (lib) due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `keep` (lib test) due to 3 previous errors
+
+Guarded command exit: 101

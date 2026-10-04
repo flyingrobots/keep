@@ -3,9 +3,11 @@
 use super::filesystem_retention_test_fixture::{
     ROOT_HEX, catalog_policy, fixture, initial_preparation, open_authority, retention_witness,
 };
+use crate::adapters::filesystem_exact_record::{ExactRecordError, ExactRecordRefusal};
 use crate::{
-    FilesystemRetentionSnapshot, ReaderAttemptLimit, VerificationError, VerificationObservation,
-    VerificationRefusal, VerificationSubject, execute_retention_publication,
+    FilesystemRetentionSnapshot, ReaderAttemptLimit, RetentionViewError, VerificationError,
+    VerificationObservation, VerificationRefusal, VerificationSource, VerificationSubject,
+    execute_retention_publication,
 };
 use std::{error::Error, fs};
 
@@ -46,6 +48,25 @@ fn a_truncated_retention_head_remains_corruption_after_typed_error_conversion()
             }
         ),
         "a demonstrated record contradiction must remain corruption: {error:?}"
+    );
+    let VerificationError::Refused {
+        source: Some(source),
+        ..
+    } = &error
+    else {
+        return Err("missing refusal source".into());
+    };
+    let VerificationSource::View(RetentionViewError::Io { source }) = source.as_ref() else {
+        return Err("missing observation boundary".into());
+    };
+    assert!(
+        matches!(
+            source
+                .get_ref()
+                .and_then(|source| source.downcast_ref::<ExactRecordError>()),
+            Some(ExactRecordError::Refused(ExactRecordRefusal::KindOrLength))
+        ),
+        "the original typed record refusal must survive: {source:?}"
     );
     assert_eq!(
         retention_witness(sandbox.path())?,

@@ -317,8 +317,9 @@ impl Error for RetentionCurrentStateRefusal {
             Self::RecoveryStepRefused { source } => Some(source),
             Self::ClosureMemberRefused { source } => Some(source.as_ref()),
             Self::ClosureReverificationRefused { source } => Some(source),
-            Self::RecoveryObservationRefused { source } => Some(source),
-            Self::NamespaceRead { source, .. } => Some(source),
+            Self::RecoveryObservationRefused { source } | Self::NamespaceRead { source, .. } => {
+                Some(source)
+            }
             Self::PredecessorRootRefused { source } => Some(source),
             _ => None,
         }
