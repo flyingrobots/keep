@@ -1,0 +1,25 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.01s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 2 tests
+test adapters::compaction::recovery_identity_tests::byte_equal_later_catalog_replacement_preserves_earlier_stage ... FAILED
+test adapters::compaction::recovery_identity_tests::byte_equal_segment_replacement_is_preserved_before_cleanup ... FAILED
+
+failures:
+
+---- adapters::compaction::recovery_identity_tests::byte_equal_later_catalog_replacement_preserves_earlier_stage stdout ----
+Error: "byte-equal replacement was silently cleaned"
+
+---- adapters::compaction::recovery_identity_tests::byte_equal_segment_replacement_is_preserved_before_cleanup stdout ----
+Error: "byte-equal replacement was silently cleaned"
+
+
+failures:
+    adapters::compaction::recovery_identity_tests::byte_equal_later_catalog_replacement_preserves_earlier_stage
+    adapters::compaction::recovery_identity_tests::byte_equal_segment_replacement_is_preserved_before_cleanup
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 474 filtered out; finished in 0.20s
+
+error: test failed, to rerun pass `--lib`

@@ -10,6 +10,7 @@ after its public API and format compatibility policies are established.
 
 ### Roadmap audit corrections
 
+- Retain original compaction recovery stage handles through execution and refuse byte-identical substitution before cleanup, including later-stage substitution before earlier effects (#107).
 - Reject oversized compaction recovery stages before content allocation, preserving the exact metadata refusal and retained evidence (#107).
 - Preflight all compaction recovery residue before effects and preserve current-catalog errors instead of treating them as an uninitialized store (#107).
 - Bind GC and compaction observations to the admitted root, and reject durable provenance supplied for reference verification receipts (#107).

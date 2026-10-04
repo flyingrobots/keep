@@ -68,6 +68,10 @@ fn refuses_substitution(stage: RecoveryStage) -> Result<(), Box<dyn Error>> {
         original_inode,
         "replacement remains present"
     );
+    assert!(
+        staging.join("current.seg").try_exists()?,
+        "pre-effect refusal must preserve the earlier stage name"
+    );
     assert_eq!(
         fs::read(staging.join("current.seg"))?,
         segment,

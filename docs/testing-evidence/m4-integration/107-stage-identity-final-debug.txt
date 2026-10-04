@@ -1,0 +1,14 @@
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.99s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 7 tests
+test adapters::compaction::filesystem_tests::recovery_over_an_untouched_store_is_idle ... ok
+test adapters::compaction::filesystem_tests::a_mixed_segment_plans_its_live_records_for_copy_and_the_rest_for_omission ... ok
+test adapters::compaction::filesystem_tests::compaction_preserves_every_identity_and_closure_and_frees_the_mixed_segment ... ok
+test adapters::compaction::recovery_identity_tests::byte_equal_later_catalog_replacement_preserves_earlier_stage ... ok
+test adapters::compaction::filesystem_tests::refusals_happen_before_any_stage_is_written ... ok
+test adapters::compaction::recovery_identity_tests::byte_equal_segment_replacement_is_preserved_before_cleanup ... ok
+test adapters::compaction::interruption_tests::every_interrupted_publication_phase_recovers_to_one_lawful_state ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 469 filtered out; finished in 1.69s

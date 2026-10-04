@@ -1,0 +1,11 @@
+--- a/src/adapters/compaction/recovery_observation.rs
++++ b/src/adapters/compaction/recovery_observation.rs
+@@ -37,7 +37,7 @@
+         let directory = inventory.stage_directory(self.stage);
+         self.opened
+             .verify(directory, self.stage.file_name(), self.stage)
+-            .map_err(|source| refused("verify stage identity", source))?;
++            .map_err(|_source| refused("verify stage identity", FilesystemRecoveryStageError::Replaced { stage: RecoveryStage::NextHead }))?;
+         let bytes = self
+             .opened
+             .materialize_and_position(self.stage)

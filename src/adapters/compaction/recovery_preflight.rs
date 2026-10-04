@@ -1,9 +1,9 @@
 //! This module owns effect-free admission of the complete compaction recovery queue.
 
 use super::recovery::{
-    CompleteStageEvidence, FilesystemCompactionRecoveryError as Error, admitted_stage, read_stage,
-    refused,
+    CompleteStageEvidence, FilesystemCompactionRecoveryError as Error, admitted_stage, refused,
 };
+use super::recovery_observation::{ObservedStage, read_stage};
 use crate::adapters::{
     AdmittedSegment, CatalogPublicationExpectation, CatalogRestartError, CatalogRestartPhase,
     CatalogRestartPolicy, ChecksummedCatalog, FilesystemRecoveryStageDiscarder,
@@ -17,12 +17,11 @@ use std::io;
 
 pub(super) struct RecoveryPlan {
     pub(super) stages: Vec<PreparedStage>,
-    pub(super) next: NextHeadAction,
+    pub(super) next: Option<PreparedNextHead>,
 }
 
 pub(super) struct PreparedStage {
-    pub(super) stage: RecoveryStage,
-    pub(super) bytes: Box<[u8]>,
+    pub(super) observed: ObservedStage,
     pub(super) action: StageAction,
 }
 
@@ -31,8 +30,12 @@ pub(super) enum StageAction {
     Truncated(RecoveryStageDiscardRequest),
 }
 
+pub(super) struct PreparedNextHead {
+    pub(super) observed: ObservedStage,
+    pub(super) action: NextHeadAction,
+}
+
 pub(super) enum NextHeadAction {
-    Absent,
     Discard(RecoveryStageDiscardRequest),
     Finalize(RecoveryNextHeadFinalizationRequest),
 }
@@ -44,27 +47,26 @@ pub(super) fn prepare(
 ) -> Result<RecoveryPlan, Error> {
     let mut stages = Vec::new();
     for stage in [RecoveryStage::Segment, RecoveryStage::Catalog] {
-        if let Some(bytes) = read_stage(discarder, stage)? {
-            let action = staging_action(discarder, stage, &bytes, policy, evidence)?;
-            stages.push(PreparedStage {
-                stage,
-                bytes,
-                action,
-            });
+        if let Some(observed) = read_stage(discarder, stage)? {
+            let action = staging_action(discarder, stage, observed.bytes(), policy, evidence)?;
+            stages.push(PreparedStage { observed, action });
         }
     }
-    let next = next_head_action(discarder, policy)?;
+    let next = read_stage(discarder, RecoveryStage::NextHead)?
+        .map(|observed| {
+            let action = next_head_action(discarder, policy, observed.bytes())?;
+            Ok::<_, Error>(PreparedNextHead { observed, action })
+        })
+        .transpose()?;
     Ok(RecoveryPlan { stages, next })
 }
 
 fn next_head_action(
     discarder: &FilesystemRecoveryStageDiscarder,
     policy: CatalogRestartPolicy,
+    bytes: &[u8],
 ) -> Result<NextHeadAction, Error> {
-    let Some(bytes) = read_stage(discarder, RecoveryStage::NextHead)? else {
-        return Ok(NextHeadAction::Absent);
-    };
-    let admitted = admitted_stage(RecoveryStage::NextHead, &bytes)?;
+    let admitted = admitted_stage(RecoveryStage::NextHead, bytes)?;
     let assessment = assess_recovery_stage(&admitted, policy.segment_read())
         .map_err(|source| refused("assess head.next", source))?;
     if !matches!(
@@ -242,5 +244,20 @@ fn require_successor_candidate(
             "successor candidate",
             io::Error::other("the staged catalog is not the current head's successor"),
         ))
+    }
+}
+
+impl RecoveryPlan {
+    pub(super) fn verify(
+        &mut self,
+        discarder: &FilesystemRecoveryStageDiscarder,
+    ) -> Result<(), Error> {
+        for stage in &mut self.stages {
+            stage.observed.verify(discarder)?;
+        }
+        if let Some(next) = &mut self.next {
+            next.observed.verify(discarder)?;
+        }
+        Ok(())
     }
 }

@@ -21,6 +21,7 @@ mod plan;
 mod recovery;
 #[cfg(all(test, target_os = "linux"))]
 mod recovery_identity_tests;
+mod recovery_observation;
 mod recovery_preflight;
 #[cfg(test)]
 mod test_fixture;

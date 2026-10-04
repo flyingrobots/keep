@@ -59,13 +59,17 @@ Recovery admits and plans all three observed stages before executing the first d
 
 Stage observation rejects lengths above the stage format maximum before fingerprinting or materialization. The preflight queue retains segment and catalog bytes; derivable-stage cleanup may hold an additional copy of the stage being checked. Current-catalog verification and decoded metadata allocate under separate format and caller policy bounds, so the stage limits are not a total memory cap.
 
+Recovery retains every originally opened stage handle through its action. After planning it rechecks the complete queue before the first effect, then verifies the affected original handle, exact bytes and namespace again before each action. A byte-identical replacement of a later stage therefore refuses before earlier cleanup. These guards detect observed substitution; they do not make pathname unlink atomic against arbitrary concurrent raw namespace mutation.
+
 After successful recovery the store re-plans: identically when the successor was not published, or `NothingToCompact` when it was; either way the same successor is reached and the same segments are GC candidates.
 
-A preflight refusal initiates no recovery mutation. An execution failure may follow completed namespace changes; neither a returned error nor failed synchronization rolls those changes back. Detailed execution-effect reporting and observed-identity binding for compaction's derivable-stage cleanup remain integration obligations in #107; the focused preflight evidence does not establish them.
+A preflight refusal initiates no recovery mutation. An execution failure may follow completed namespace changes; neither a returned error nor failed synchronization rolls those changes back. Detailed execution-effect reporting remains an integration obligation in #107; the focused preflight and identity evidence do not establish it.
 
 ## Evidence
 
 `tests/compaction_recovery_memory.rs` supplies an oversized sparse `head.next`, requires the precise `RecoveryStageMetadataError::Oversized` cause, measures peak allocation below the rejected file length, and checks preservation of the stage and published head. The allocation assertion failed on PR parent `7cdc2cf` before the bounded observation fix and passes in debug and release.
+
+The medium filesystem laws in `src/adapters/compaction/recovery_identity_tests.rs` replace the segment or later catalog with a byte-identical different inode at a deterministic preflight/execution seam. They require `FilesystemRecoveryStageError::Replaced` naming the affected stage and preserve both stage byte sequences and the published head. Both were observed RED on the unfixed checkpoint `43e20c4`; production uses the same recovery driver with a no-op scheduling callback. This is real filesystem substitution evidence, not a final unlink-race isolation claim.
 
 `tests/compaction_recovery_preflight.rs` exercises the public recovery boundary with a corrupt later candidate and with a corrupt current head after publication of generation two. It requires preserved store bytes and the precise decoder cause. Both regressions were observed failing on PR parent `7cdc2cf`; the generation-one current-head case alone was insufficient because the lower finalizer already preserved that cause.
 

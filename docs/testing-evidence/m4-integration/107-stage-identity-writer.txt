@@ -1,0 +1,11 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.02s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 5 tests
+test adapters::durable::writer_tests::limit_and_identity_refusals_leave_nothing_visible ... ok
+test adapters::durable::writer_tests::an_interrupted_source_leaves_a_stage_that_recovery_discards ... ok
+test adapters::durable::writer_tests::an_anchored_ingest_satisfies_the_port_laws_beside_the_fixture_store ... ok
+test adapters::durable::writer_tests::one_pass_commits_a_blob_readable_by_layout_then_by_anchor ... ok
+test adapters::durable::writer_tests::nearby_content_reuses_every_unchanged_chunk_and_an_exact_re_ingest_publishes_nothing ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 471 filtered out; finished in 1.18s

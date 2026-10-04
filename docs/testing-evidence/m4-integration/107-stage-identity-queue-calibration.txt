@@ -1,0 +1,28 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+error: variable does not need to be mutable
+   --> src/adapters/compaction/recovery.rs:156:9
+    |
+156 |     let mut plan = super::recovery_preflight::prepare(&discarder, policy, evidence)?;
+    |         ----^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+note: the lint level is defined here
+   --> src/lib.rs:1:9
+    |
+  1 | #![deny(warnings)]
+    |         ^^^^^^^^
+    = note: `#[deny(unused_mut)]` implied by `#[deny(warnings)]`
+
+error: method `verify` is never used
+   --> src/adapters/compaction/recovery_preflight.rs:251:19
+    |
+250 | impl RecoveryPlan {
+    | ----------------- method in this implementation
+251 |     pub(super) fn verify(
+    |                   ^^^^^^
+    |
+    = note: `#[deny(dead_code)]` implied by `#[deny(warnings)]`
+
+error: could not compile `keep` (lib test) due to 2 previous errors

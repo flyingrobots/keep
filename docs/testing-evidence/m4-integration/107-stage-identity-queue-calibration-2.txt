@@ -1,0 +1,23 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.89s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 1 test
+test adapters::compaction::recovery_identity_tests::byte_equal_later_catalog_replacement_preserves_earlier_stage ... FAILED
+
+failures:
+
+---- adapters::compaction::recovery_identity_tests::byte_equal_later_catalog_replacement_preserves_earlier_stage stdout ----
+
+thread 'adapters::compaction::recovery_identity_tests::byte_equal_later_catalog_replacement_preserves_earlier_stage' (1137) panicked at src/adapters/compaction/recovery_identity_tests.rs:71:5:
+pre-effect refusal must preserve the earlier stage name
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    adapters::compaction::recovery_identity_tests::byte_equal_later_catalog_replacement_preserves_earlier_stage
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 475 filtered out; finished in 0.09s
+
+error: test failed, to rerun pass `--lib`

@@ -1,0 +1,5 @@
+    Checking keep v0.0.0 (/keep-validation-cache/source)
+    Checking repository-process-spawn v0.0.0 (/keep-validation-cache/source/repository-process-spawn)
+    Checking xtask v0.0.0 (/keep-validation-cache/source/xtask)
+    Checking keep-benchmark v0.0.0 (/keep-validation-cache/source/benchmark)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.81s

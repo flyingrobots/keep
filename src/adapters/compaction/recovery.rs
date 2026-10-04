@@ -90,8 +90,9 @@ impl FilesystemCompactionRecoveryError {
 /// A retained `staging/current.seg` or `staging/current.cat` is discarded
 /// (nothing published references it); a retained `head.next` is finalized
 /// when it is complete and the exact successor of `HEAD`, and discarded
-/// otherwise. Every step runs the version-one recovery protocol it belongs
-/// to, with its evidence binding.
+/// only when its assessment authorizes discard. Corruption refuses. Every
+/// step retains its observed handle and rechecks exact bytes and identity
+/// before execution; pathname mutation is not atomic against raw external edits.
 ///
 /// # Allocation and I/O
 ///
@@ -152,26 +153,31 @@ pub(super) fn recover_after_preflight(
     evidence: CompleteStageEvidence,
     after_preflight: impl FnOnce() -> io::Result<()>,
 ) -> Result<CompactionRecovery, FilesystemCompactionRecoveryError> {
-    let plan = super::recovery_preflight::prepare(&discarder, policy, evidence)?;
+    let mut plan = super::recovery_preflight::prepare(&discarder, policy, evidence)?;
     after_preflight().map_err(|source| refused("observation interleaving", source))?;
+    plan.verify(&discarder)?;
     let mut recovery = CompactionRecovery {
         discarded: Vec::new(),
         finalized: None,
     };
-    for stage in plan.stages {
+    for mut stage in plan.stages {
         match stage.action {
             super::recovery_preflight::StageAction::Derivable => {
-                discard_derivable(&discarder, stage.stage, &stage.bytes)?;
+                discard_derivable(&discarder, &mut stage.observed)?;
             }
             super::recovery_preflight::StageAction::Truncated(request) => {
+                stage.observed.verify(&discarder)?;
                 let _receipt = execute_recovery_stage_discard(&mut discarder, request)
                     .map_err(|source| refused("discard stage", source))?;
             }
         }
-        recovery.discarded.push(stage.stage);
+        recovery.discarded.push(stage.observed.stage());
     }
-    match plan.next {
-        super::recovery_preflight::NextHeadAction::Absent => {}
+    let Some(mut next) = plan.next else {
+        return Ok(recovery);
+    };
+    next.observed.verify(&discarder)?;
+    match next.action {
         super::recovery_preflight::NextHeadAction::Discard(request) => {
             let _receipt = execute_recovery_stage_discard(&mut discarder, request)
                 .map_err(|source| refused("discard head.next", source))?;
@@ -185,43 +191,6 @@ pub(super) fn recover_after_preflight(
         }
     }
     Ok(recovery)
-}
-
-pub(super) fn read_stage(
-    discarder: &FilesystemRecoveryStageDiscarder,
-    stage: RecoveryStage,
-) -> Result<Option<Box<[u8]>>, FilesystemCompactionRecoveryError> {
-    use crate::adapters::{FilesystemRecoveryStageError, RecoveryStageNamespacePhase};
-    let inventory = &discarder.inventory;
-    inventory
-        .verify_stage_namespaces(stage, RecoveryStageNamespacePhase::BeforeObservation)
-        .map_err(|source| refused("verify stage namespace", source))?;
-    let directory = inventory.stage_directory(stage);
-    let observation = crate::adapters::filesystem_recovery_stage::observe(directory, stage);
-    inventory
-        .verify_stage_namespaces(stage, RecoveryStageNamespacePhase::AfterObservation)
-        .map_err(|source| refused("verify stage namespace", source))?;
-    let mut observed = match observation {
-        Ok(observed) => observed,
-        Err(FilesystemRecoveryStageError::Open { source, .. })
-            if source.kind() == io::ErrorKind::NotFound =>
-        {
-            return Ok(None);
-        }
-        Err(source) => return Err(refused("observe stage", source)),
-    };
-    let bytes = observed
-        .materialize_and_position(stage)
-        .map_err(|source| refused("read stage", source))?;
-    let _admitted = admit_recovery_stage_bytes(stage, observed.evidence(), &bytes)
-        .map_err(|source| refused("verify stage bytes", source))?;
-    observed
-        .verify(directory, stage.file_name(), stage)
-        .map_err(|source| refused("verify stage entry", source))?;
-    inventory
-        .verify_stage_namespaces(stage, RecoveryStageNamespacePhase::AfterObservation)
-        .map_err(|source| refused("verify stage namespace", source))?;
-    Ok(Some(bytes))
 }
 
 pub(super) fn admitted_stage(
@@ -241,20 +210,13 @@ pub(super) fn admitted_stage(
 /// and synchronizes `staging`.
 fn discard_derivable(
     discarder: &FilesystemRecoveryStageDiscarder,
-    stage: RecoveryStage,
-    expected: &[u8],
+    observed: &mut super::recovery_observation::ObservedStage,
 ) -> Result<(), FilesystemCompactionRecoveryError> {
+    let stage = observed.stage();
     let staging = discarder
         .inventory
         .parent_directory(RecoveryStageParent::Staging);
-    let observed = read_stage(discarder, stage)?
-        .ok_or_else(|| refused("discard stage", io::Error::other("the stage vanished")))?;
-    if observed.as_ref() != expected {
-        return Err(refused(
-            "discard stage",
-            io::Error::other("the stage changed after assessment"),
-        ));
-    }
+    observed.verify(discarder)?;
     staging
         .remove_file(stage.file_name())
         .map_err(|source| refused("discard stage", source))?;
