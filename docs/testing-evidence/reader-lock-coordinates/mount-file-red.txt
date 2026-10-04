@@ -1,0 +1,34 @@
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.87s
+   Doc-tests keep
+
+running 6 tests
+test src/blob/id.rs - blob::id::BlobId (line 20) ... ok
+test src/chunk/detector.rs - chunk::detector::FastCdc (line 36) ... ok
+test src/blob/id.rs - blob::id::BlobId::hash_reader (line 87) ... ok
+test src/reference/store.rs - reference::store::ReferenceStore (line 23) ... ok
+test src/reference/range_read.rs - reference::range_read::ReferenceStore::read_range (line 27) ... ok
+test src/adapters/gc/reader_lock_identity.rs - adapters::gc::reader_lock_identity::ReaderLockIdentity (line 16) ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 5 tests
+test src/adapters/gc/reader_lock_identity.rs - adapters::gc::reader_lock_identity::ReaderLockIdentity (line 34) - compile fail ... ok
+test src/adapters/gc/reader_lock_identity.rs - adapters::gc::reader_lock_identity::ReaderLockIdentity (line 25) - compile fail ... ok
+test src/adapters/retention/filesystem_retention_authority.rs - adapters::retention::filesystem_retention_authority::FilesystemRetentionPublicationAuthority::open (line 50) - compile fail ... ok
+test src/store/mod.rs - store (line 16) - compile fail ... ok
+test src/adapters/gc/reader_lock_identity.rs - adapters::gc::reader_lock_identity::ReaderLockIdentity (line 43) - compile fail ... FAILED
+
+failures:
+
+---- src/adapters/gc/reader_lock_identity.rs - adapters::gc::reader_lock_identity::ReaderLockIdentity (line 43) stdout ----
+Test compiled successfully, but it's marked `compile_fail`.
+
+failures:
+    src/adapters/gc/reader_lock_identity.rs - adapters::gc::reader_lock_identity::ReaderLockIdentity (line 43)
+
+test result: FAILED. 4 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+
+all doctests ran in 0.54s; merged doctests compilation took 0.32s
+error: doctest failed, to rerun pass `--doc`

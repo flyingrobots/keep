@@ -1,0 +1,309 @@
+    Checking keep v0.0.0 (/build/keep107-coordinate-source)
+    Checking xtask v0.0.0 (/build/keep107-coordinate-source/xtask)
+    Checking keep-benchmark v0.0.0 (/build/keep107-coordinate-source/benchmark)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.26s
+    Checking xtask v0.0.0 (/build/keep107-coordinate-source/xtask)
+    Checking keep v0.0.0 (/build/keep107-coordinate-source)
+    Checking keep-benchmark v0.0.0 (/build/keep107-coordinate-source/benchmark)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.63s
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.72s
+   Doc-tests keep
+
+running 1 test
+test src/adapters/gc/reader_lock_identity.rs - adapters::gc::reader_lock_identity::ReaderLockIdentity (line 16) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+
+running 3 tests
+test src/adapters/gc/reader_lock_identity.rs - adapters::gc::reader_lock_identity::ReaderLockIdentity (line 43) - compile fail ... ok
+test src/adapters/gc/reader_lock_identity.rs - adapters::gc::reader_lock_identity::ReaderLockIdentity (line 34) - compile fail ... ok
+test src/adapters/gc/reader_lock_identity.rs - adapters::gc::reader_lock_identity::ReaderLockIdentity (line 25) - compile fail ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.02s
+
+all doctests ran in 0.35s; merged doctests compilation took 0.34s
+Focused profile=debug
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.40s
+     Running tests/gc_retirement_intent.rs (/build/keep107-coordinate-target/debug/deps/gc_retirement_intent-6de0a7d49b53f247)
+
+running 5 tests
+test semantic_intent_refuses_empty_and_repeated_candidate_sets ... ok
+test mutation_laws::intent_framing_refuses_truncation_and_trailing_data ... ok
+test frozen_intent_decodes_and_reencodes_canonically ... ok
+test mutation_laws::every_intent_field_has_one_exact_first_refusal ... ok
+test mutation_laws::candidate_order_and_count_bounds_refuse_after_complete_integrity ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.36s
+
+     Running tests/gc_retirement_receipt.rs (/build/keep107-coordinate-target/debug/deps/gc_retirement_receipt-b07035724611f35c)
+
+running 4 tests
+test pool_state_digest_is_carried_not_bound_to_the_intent ... ok
+test receipt_framing_refuses_any_length_but_the_fixed_width ... ok
+test frozen_receipt_completes_the_frozen_intent_and_reencodes_canonically ... ok
+test every_receipt_field_has_one_exact_first_refusal ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/recovery_disposition_receipt.rs (/build/keep107-coordinate-target/debug/deps/recovery_disposition_receipt-96812ccadb83a6d8)
+
+running 5 tests
+test every_registered_code_round_trips_and_matches_the_definition ... ok
+test framing_refuses_truncation_and_trailing_bytes ... ok
+test frozen_disposition_decodes_and_reencodes_canonically ... ok
+test liveness_zero_beside_the_empty_retention_digest_round_trips_as_empty_retention ... ok
+test every_structural_field_has_one_exact_first_refusal ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.87s
+     Running unittests src/lib.rs (/build/keep107-coordinate-target/debug/deps/keep-882caa9da157737f)
+
+running 26 tests
+test adapters::gc::planner_tests::a_named_segment_no_root_reaches_is_named_unreachable_and_never_a_candidate ... ok
+test adapters::gc::planner_tests::a_snapshot_refuses_duplicate_inventory_and_namespaces ... ok
+test adapters::gc::planner_tests::an_empty_inventory_plans_nothing ... ok
+test adapters::gc::planner_tests::an_unnamed_segment_without_release_evidence_is_recovery_protected ... ok
+test adapters::gc::planner_tests::every_contradiction_refuses_the_plan ... ok
+test adapters::gc::planner_tests::named_segments_reached_by_retained_closures_are_live_with_their_root_count ... ok
+test adapters::gc::planner_tests::superseded_and_disposed_unnamed_segments_are_the_only_candidates ... ok
+test adapters::gc::planner_tests::superseded_or_disposed_segments_absent_from_the_inventory_are_already_retired ... ok
+test adapters::gc::planner_tests::the_candidate_limit_refuses_rather_than_truncates ... ok
+test adapters::gc::planner_tests::the_golden_version_two_store_plans_one_live_segment ... ok
+test adapters::gc::planner_tests::plan_model_tests::planning_never_collects_live_or_named_material_and_is_pure ... ok
+test adapters::gc::liveness_observation_tests::an_unpublished_store_plans_its_named_segment_unreachable_but_not_collectible ... ok
+test adapters::gc::liveness_observation_tests::a_corrupt_pool_segment_refuses_observation_before_any_plan ... ok
+test adapters::gc::liveness_observation_tests::a_pool_entry_not_named_by_a_digest_refuses_observation ... ok
+test adapters::gc::liveness_observation_tests::an_exact_retire_receipt_makes_the_orphan_collectible_and_a_stale_one_does_not ... ok
+test adapters::gc::liveness_observation_tests::the_published_fixture_store_plans_its_one_segment_live ... ok
+test adapters::gc::liveness_observation_tests::an_orphan_pool_segment_is_recovery_protected_and_never_a_candidate ... ok
+test adapters::gc::filesystem_gc_tests::admission_refuses_a_foreign_gc_entry_or_a_directory_in_place_of_a_record ... ok
+test adapters::gc::filesystem_gc_tests::nothing_to_retire_and_a_stale_plan_refuse_before_any_intent ... ok
+test adapters::gc::filesystem_gc_tests::an_absent_candidate_after_a_present_one_is_ambiguous_and_touches_nothing ... ok
+test adapters::gc::filesystem_gc_tests::a_reader_holding_the_fence_refuses_retirement_without_waiting ... ok
+test adapters::gc::filesystem_gc_tests::retiring_the_disposed_orphan_leaves_the_receipt_and_the_live_segment ... ok
+test adapters::gc::filesystem_gc_tests::a_durable_intent_excludes_retention_publication_and_another_retirement ... ok
+test adapters::gc::filesystem_gc_tests::a_second_retirement_succeeds_the_first_receipts_generation ... ok
+test adapters::gc::filesystem_gc_tests::a_truncated_stage_is_discarded_and_the_retirement_then_completes ... ok
+test adapters::gc::filesystem_gc_tests::every_interrupted_prefix_recovers_to_the_same_complete_state ... ok
+
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 276 filtered out; finished in 3.14s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (/build/keep107-coordinate-target/debug/deps/keep-882caa9da157737f)
+
+running 8 tests
+test adapters::retention::filesystem_retention_disposition_tests::finalize_requires_a_published_head ... ok
+test adapters::retention::filesystem_retention_disposition_tests::a_second_disposition_finds_nothing_protected_and_changes_nothing ... ok
+test adapters::retention::filesystem_retention_disposition_tests::a_reader_holding_the_fence_refuses_disposition_without_waiting ... ok
+test adapters::retention::filesystem_retention_disposition_tests::readers_admit_a_store_with_receipts_and_refuse_a_stray_disposition_entry ... ok
+test adapters::retention::filesystem_retention_disposition_tests::retiring_a_protected_root_under_an_absent_head_frees_publication ... ok
+test adapters::retention::filesystem_retention_disposition_tests::an_interrupted_retirement_resumes_from_every_residue ... ok
+test adapters::retention::filesystem_retention_disposition_tests::the_manifest_stage_must_be_disposed_before_the_root_it_names ... ok
+test adapters::retention::filesystem_retention_disposition_tests::finalizing_a_successor_orphan_keeps_its_pool_entry_and_frees_publication ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 294 filtered out; finished in 0.42s
+
+   Compiling typenum v1.20.1
+   Compiling foldhash v0.2.0
+   Compiling serde_core v1.0.229
+   Compiling memchr v2.8.3
+   Compiling arraydeque v0.5.1
+   Compiling itoa v1.0.18
+   Compiling repository-process-spawn v0.0.0 (/build/keep107-coordinate-source/repository-process-spawn)
+   Compiling errno v0.3.14
+   Compiling zmij v1.0.23
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+   Compiling hashbrown v0.16.1
+   Compiling signal-hook-registry v1.4.8
+   Compiling signal-hook v0.4.4
+   Compiling hashlink v0.11.1
+   Compiling hybrid-array v0.4.13
+   Compiling yaml-rust2 v0.11.0
+   Compiling block-buffer v0.12.1
+   Compiling crypto-common v0.2.2
+   Compiling digest v0.11.3
+   Compiling serde v1.0.229
+   Compiling serde_json v1.0.151
+   Compiling md-5 v0.11.0
+   Compiling xtask v0.0.0 (/build/keep107-coordinate-source/xtask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.26s
+     Running tests/retention_store_v2_format_oracle.rs (/build/keep107-coordinate-target/debug/deps/retention_store_v2_format_oracle-2a6d5511749a3dcb)
+
+running 4 tests
+test definition_and_profile_tables_are_exact_and_canonical ... ok
+test retention_anchor_ids_are_derived_from_the_accepted_layout_corpus ... ok
+test definition_profile_and_migration_sources_match_the_oracle ... ok
+test golden_artifacts_match_the_independent_oracle ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+Focused profile=release
+   Compiling rustix v1.1.4
+   Compiling linux-raw-sys v0.12.1
+   Compiling io-lifetimes v3.0.1
+   Compiling bitflags v2.13.1
+   Compiling io-lifetimes v2.0.4
+   Compiling io-extras v0.19.0
+   Compiling proc-macro2 v1.0.107
+   Compiling cap-primitives v4.0.2
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.9
+   Compiling once_cell v1.21.4
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.47
+   Compiling maybe-owned v0.3.4
+   Compiling ipnet v2.12.0
+   Compiling cap-std v4.0.2
+   Compiling ambient-authority v0.0.2
+   Compiling libc v0.2.186
+   Compiling anstyle v1.0.14
+   Compiling cap-fs-ext v4.0.2
+   Compiling cc v1.3.0
+   Compiling clap_lex v1.1.0
+   Compiling cfg-if v1.0.4
+   Compiling constant_time_eq v0.4.2
+   Compiling arrayref v0.3.9
+   Compiling arrayvec v0.7.8
+   Compiling condtype v1.3.0
+   Compiling regex-lite v0.1.9
+   Compiling clap_builder v4.6.2
+   Compiling allocation-counter v0.8.1
+   Compiling syn v2.0.119
+   Compiling blake3 v1.8.5
+   Compiling clap v4.6.4
+   Compiling fs-set-times v0.20.3
+   Compiling rustix-linux-procfs v0.1.1
+   Compiling divan-macros v0.1.21
+   Compiling divan v0.1.21
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+    Finished `release` profile [optimized] target(s) in 4.06s
+     Running tests/gc_retirement_intent.rs (/build/keep107-coordinate-target/release/deps/gc_retirement_intent-16dd92d184650f31)
+
+running 5 tests
+test frozen_intent_decodes_and_reencodes_canonically ... ok
+test mutation_laws::intent_framing_refuses_truncation_and_trailing_data ... ok
+test semantic_intent_refuses_empty_and_repeated_candidate_sets ... ok
+test mutation_laws::every_intent_field_has_one_exact_first_refusal ... ok
+test mutation_laws::candidate_order_and_count_bounds_refuse_after_complete_integrity ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running tests/gc_retirement_receipt.rs (/build/keep107-coordinate-target/release/deps/gc_retirement_receipt-7af42e76dc359ac8)
+
+running 4 tests
+test every_receipt_field_has_one_exact_first_refusal ... ok
+test frozen_receipt_completes_the_frozen_intent_and_reencodes_canonically ... ok
+test receipt_framing_refuses_any_length_but_the_fixed_width ... ok
+test pool_state_digest_is_carried_not_bound_to_the_intent ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/recovery_disposition_receipt.rs (/build/keep107-coordinate-target/release/deps/recovery_disposition_receipt-d5a50675829e7cd0)
+
+running 5 tests
+test every_registered_code_round_trips_and_matches_the_definition ... ok
+test every_structural_field_has_one_exact_first_refusal ... ok
+test framing_refuses_truncation_and_trailing_bytes ... ok
+test liveness_zero_beside_the_empty_retention_digest_round_trips_as_empty_retention ... ok
+test frozen_disposition_decodes_and_reencodes_canonically ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+    Finished `release` profile [optimized] target(s) in 4.21s
+     Running unittests src/lib.rs (/build/keep107-coordinate-target/release/deps/keep-8ca1b588e6dfe3ea)
+
+running 26 tests
+test adapters::gc::planner_tests::a_named_segment_no_root_reaches_is_named_unreachable_and_never_a_candidate ... ok
+test adapters::gc::planner_tests::a_snapshot_refuses_duplicate_inventory_and_namespaces ... ok
+test adapters::gc::planner_tests::an_empty_inventory_plans_nothing ... ok
+test adapters::gc::planner_tests::an_unnamed_segment_without_release_evidence_is_recovery_protected ... ok
+test adapters::gc::planner_tests::every_contradiction_refuses_the_plan ... ok
+test adapters::gc::planner_tests::named_segments_reached_by_retained_closures_are_live_with_their_root_count ... ok
+test adapters::gc::planner_tests::superseded_and_disposed_unnamed_segments_are_the_only_candidates ... ok
+test adapters::gc::planner_tests::the_candidate_limit_refuses_rather_than_truncates ... ok
+test adapters::gc::planner_tests::superseded_or_disposed_segments_absent_from_the_inventory_are_already_retired ... ok
+test adapters::gc::planner_tests::the_golden_version_two_store_plans_one_live_segment ... ok
+test adapters::gc::planner_tests::plan_model_tests::planning_never_collects_live_or_named_material_and_is_pure ... ok
+test adapters::gc::liveness_observation_tests::an_unpublished_store_plans_its_named_segment_unreachable_but_not_collectible ... ok
+test adapters::gc::liveness_observation_tests::the_published_fixture_store_plans_its_one_segment_live ... ok
+test adapters::gc::filesystem_gc_tests::nothing_to_retire_and_a_stale_plan_refuse_before_any_intent ... ok
+test adapters::gc::liveness_observation_tests::an_exact_retire_receipt_makes_the_orphan_collectible_and_a_stale_one_does_not ... ok
+test adapters::gc::liveness_observation_tests::a_corrupt_pool_segment_refuses_observation_before_any_plan ... ok
+test adapters::gc::liveness_observation_tests::an_orphan_pool_segment_is_recovery_protected_and_never_a_candidate ... ok
+test adapters::gc::filesystem_gc_tests::admission_refuses_a_foreign_gc_entry_or_a_directory_in_place_of_a_record ... ok
+test adapters::gc::liveness_observation_tests::a_pool_entry_not_named_by_a_digest_refuses_observation ... ok
+test adapters::gc::filesystem_gc_tests::an_absent_candidate_after_a_present_one_is_ambiguous_and_touches_nothing ... ok
+test adapters::gc::filesystem_gc_tests::a_reader_holding_the_fence_refuses_retirement_without_waiting ... ok
+test adapters::gc::filesystem_gc_tests::retiring_the_disposed_orphan_leaves_the_receipt_and_the_live_segment ... ok
+test adapters::gc::filesystem_gc_tests::a_durable_intent_excludes_retention_publication_and_another_retirement ... ok
+test adapters::gc::filesystem_gc_tests::a_second_retirement_succeeds_the_first_receipts_generation ... ok
+test adapters::gc::filesystem_gc_tests::a_truncated_stage_is_discarded_and_the_retirement_then_completes ... ok
+test adapters::gc::filesystem_gc_tests::every_interrupted_prefix_recovers_to_the_same_complete_state ... ok
+
+test result: ok. 26 passed; 0 failed; 0 ignored; 0 measured; 276 filtered out; finished in 1.45s
+
+    Finished `release` profile [optimized] target(s) in 0.01s
+     Running unittests src/lib.rs (/build/keep107-coordinate-target/release/deps/keep-8ca1b588e6dfe3ea)
+
+running 8 tests
+test adapters::retention::filesystem_retention_disposition_tests::finalize_requires_a_published_head ... ok
+test adapters::retention::filesystem_retention_disposition_tests::a_second_disposition_finds_nothing_protected_and_changes_nothing ... ok
+test adapters::retention::filesystem_retention_disposition_tests::a_reader_holding_the_fence_refuses_disposition_without_waiting ... ok
+test adapters::retention::filesystem_retention_disposition_tests::readers_admit_a_store_with_receipts_and_refuse_a_stray_disposition_entry ... ok
+test adapters::retention::filesystem_retention_disposition_tests::retiring_a_protected_root_under_an_absent_head_frees_publication ... ok
+test adapters::retention::filesystem_retention_disposition_tests::an_interrupted_retirement_resumes_from_every_residue ... ok
+test adapters::retention::filesystem_retention_disposition_tests::the_manifest_stage_must_be_disposed_before_the_root_it_names ... ok
+test adapters::retention::filesystem_retention_disposition_tests::finalizing_a_successor_orphan_keeps_its_pool_entry_and_frees_publication ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 294 filtered out; finished in 0.21s
+
+   Compiling typenum v1.20.1
+   Compiling serde_core v1.0.229
+   Compiling zmij v1.0.23
+   Compiling foldhash v0.2.0
+   Compiling serde_json v1.0.151
+   Compiling serde v1.0.229
+   Compiling signal-hook v0.4.4
+   Compiling arraydeque v0.5.1
+   Compiling itoa v1.0.18
+   Compiling memchr v2.8.3
+   Compiling repository-process-spawn v0.0.0 (/build/keep107-coordinate-source/repository-process-spawn)
+   Compiling errno v0.3.14
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+   Compiling signal-hook-registry v1.4.8
+   Compiling hashbrown v0.16.1
+   Compiling hashlink v0.11.1
+   Compiling hybrid-array v0.4.13
+   Compiling yaml-rust2 v0.11.0
+   Compiling crypto-common v0.2.2
+   Compiling block-buffer v0.12.1
+   Compiling digest v0.11.3
+   Compiling md-5 v0.11.0
+   Compiling xtask v0.0.0 (/build/keep107-coordinate-source/xtask)
+    Finished `release` profile [optimized] target(s) in 4.28s
+     Running tests/retention_store_v2_format_oracle.rs (/build/keep107-coordinate-target/release/deps/retention_store_v2_format_oracle-0f938c44dbe97a05)
+
+running 4 tests
+test definition_and_profile_tables_are_exact_and_canonical ... ok
+test retention_anchor_ids_are_derived_from_the_accepted_layout_corpus ... ok
+test definition_profile_and_migration_sources_match_the_oracle ... ok
+test golden_artifacts_match_the_independent_oracle ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Compiling libc v0.2.186
+    Checking arbitrary v1.4.2
+    Checking xtask v0.0.0 (/build/keep107-coordinate-source/xtask)
+   Compiling jobserver v0.1.35
+   Compiling cc v1.3.0
+   Compiling blake3 v1.8.5
+   Compiling libfuzzer-sys v0.4.13
+    Checking keep v0.0.0 (/build/keep107-coordinate-source)
+    Checking keep-fuzz v0.0.0 (/build/keep107-coordinate-source/fuzz)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.19s

@@ -42,9 +42,9 @@ fn frozen_intent_decodes_and_reencodes_canonically() -> Result<(), Box<dyn std::
     assert_eq!(coordinates.liveness_generation.get(), 1);
     assert_eq!(coordinates.catalog_generation.get(), 2);
     assert_eq!(coordinates.profile.identity(), 1);
-    assert_eq!(coordinates.reader_lock.device(), 4);
-    assert_eq!(coordinates.reader_lock.mount(), 5);
-    assert_eq!(coordinates.reader_lock.file(), 6);
+    assert_eq!(coordinates.reader_lock.device().get(), 4);
+    assert_eq!(coordinates.reader_lock.mount().get(), 5);
+    assert_eq!(coordinates.reader_lock.file().get(), 6);
     assert_eq!(intent.candidate_count(), 1);
     let candidate = intent
         .candidates()

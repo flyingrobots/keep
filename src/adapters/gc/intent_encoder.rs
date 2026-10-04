@@ -94,7 +94,7 @@ fn write_coordinates(output: &mut Vec<u8>, coordinates: &GcRetirementIntentCoord
     output.extend_from_slice(coordinates.catalog_successor_proof_digest.as_bytes());
     output.extend_from_slice(coordinates.segment_pool_identity_digest.as_bytes());
     output.extend_from_slice(coordinates.disposition_set_digest.as_bytes());
-    output.extend_from_slice(&coordinates.reader_lock.device().to_be_bytes());
-    output.extend_from_slice(&coordinates.reader_lock.mount().to_be_bytes());
-    output.extend_from_slice(&coordinates.reader_lock.file().to_be_bytes());
+    output.extend_from_slice(&coordinates.reader_lock.device().get().to_be_bytes());
+    output.extend_from_slice(&coordinates.reader_lock.mount().get().to_be_bytes());
+    output.extend_from_slice(&coordinates.reader_lock.file().get().to_be_bytes());
 }

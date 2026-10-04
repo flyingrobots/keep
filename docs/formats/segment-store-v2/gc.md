@@ -23,6 +23,8 @@ admission admits exactly those records as regular files and nothing else in
 
 ## Common rules
 
+The public record API represents reader-lock coordinates with distinct `ReaderLockDevice`, `ReaderLockMount` and `ReaderLockFile` types. `ReaderLockIdentity::new` takes those typed values; getters return them and `get()` exposes their exact unsigned 64-bit encoding. These roles prevent typed coordinate interchange, not mislabeling a raw number or fabrication of filesystem evidence. See the [coordinate rationale](../../../src/adapters/gc/rationale.md).
+
 All integers are unsigned and big-endian. Flags and reserved bytes are zero.
 Every length and count is checked before allocation. Decoders reject truncation,
 trailing bytes, unsupported versions, unknown mandatory flags, nonzero reserved

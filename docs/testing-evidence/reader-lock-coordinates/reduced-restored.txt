@@ -1,0 +1,2 @@
+81de2e366a4fa2293f4020e0267b3be6584f02c34ae7eaeb4f21d6f1f48f9678  /build/keep107-coordinate-evidence/reduced-parent.bin
+81de2e366a4fa2293f4020e0267b3be6584f02c34ae7eaeb4f21d6f1f48f9678  /build/keep107-coordinate-evidence/reduced-current.bin

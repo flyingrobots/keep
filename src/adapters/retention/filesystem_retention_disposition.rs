@@ -27,8 +27,9 @@ use super::{
 use crate::adapters::{
     AdmittedRecoveryDispositionReceipt, ArtifactIdentityDigest,
     CanonicalRecoveryDispositionReceipt, ChecksummedPublicationHead, GcRetentionState,
-    ObservedHeadChecksum, ReaderLockIdentity, RecoveryArtifactKind, RecoveryDispositionCoordinates,
-    RecoveryDispositionDecision, filesystem_platform_profile,
+    ObservedHeadChecksum, ReaderLockDevice, ReaderLockFile, ReaderLockIdentity, ReaderLockMount,
+    RecoveryArtifactKind, RecoveryDispositionCoordinates, RecoveryDispositionDecision,
+    filesystem_platform_profile,
 };
 
 const HEAD_NAME: &str = "HEAD";
@@ -352,7 +353,11 @@ impl FilesystemRetentionPublicationAuthority {
             catalog_generation: head.generation(),
             catalog_digest: head.catalog_digest(),
             retention,
-            reader_lock: ReaderLockIdentity::new(device, mount, file),
+            reader_lock: ReaderLockIdentity::new(
+                ReaderLockDevice::new(device),
+                ReaderLockMount::new(mount),
+                ReaderLockFile::new(file),
+            ),
         })
     }
 

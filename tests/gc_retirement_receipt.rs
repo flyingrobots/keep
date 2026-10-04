@@ -222,7 +222,7 @@ fn frozen_receipt_completes_the_frozen_intent_and_reencodes_canonically()
         intent.candidate_set_digest()
     );
     assert_eq!(receipt.synchronization_count(), 1);
-    assert_eq!(receipt.reader_lock().file(), 6);
+    assert_eq!(receipt.reader_lock().file().get(), 6);
 
     let canonical_intent = CanonicalGcRetirementIntent::from_intent(intent.intent())?;
     let canonical =

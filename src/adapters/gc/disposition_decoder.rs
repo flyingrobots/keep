@@ -4,10 +4,11 @@
 use super::RecoveryDispositionDecodeError as Error;
 use super::{
     AdmittedRecoveryDispositionReceipt, ArtifactContentDigest, ArtifactIdentityDigest,
-    DecisionEvidenceDigest, GcRetentionState, ObservedHeadChecksum, ReaderLockIdentity,
-    RecoveryArtifactKind, RecoveryClassification, RecoveryDispositionArtifact,
-    RecoveryDispositionCoordinates, RecoveryDispositionDecision, RecoveryDispositionField,
-    RecoveryDispositionReceipt, disposition_format as format,
+    DecisionEvidenceDigest, GcRetentionState, ObservedHeadChecksum, ReaderLockDevice,
+    ReaderLockFile, ReaderLockIdentity, ReaderLockMount, RecoveryArtifactKind,
+    RecoveryClassification, RecoveryDispositionArtifact, RecoveryDispositionCoordinates,
+    RecoveryDispositionDecision, RecoveryDispositionField, RecoveryDispositionReceipt,
+    disposition_format as format,
 };
 use crate::{CatalogDigest, CatalogGeneration, LivenessGeneration, RetentionManifestDigest};
 
@@ -47,9 +48,9 @@ pub(super) fn decode(encoded: &[u8]) -> Result<AdmittedRecoveryDispositionReceip
         catalog_digest: CatalogDigest::from_validated(read_array(encoded, 152)?),
         retention: retention_state(encoded)?,
         reader_lock: ReaderLockIdentity::new(
-            read_u64(encoded, 224)?,
-            read_u64(encoded, 232)?,
-            read_u64(encoded, 240)?,
+            ReaderLockDevice::new(read_u64(encoded, 224)?),
+            ReaderLockMount::new(read_u64(encoded, 232)?),
+            ReaderLockFile::new(read_u64(encoded, 240)?),
         ),
     };
     let evidence_digest = DecisionEvidenceDigest::new(read_array(encoded, 248)?);

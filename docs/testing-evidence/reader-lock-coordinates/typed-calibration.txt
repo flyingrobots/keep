@@ -1,0 +1,10 @@
+Static/API calibration pair=device-mount expected unexpected compilation success at line=25
+Observed exit: 101
+Test compiled successfully, but it's marked `compile_fail`.
+Static/API calibration pair=device-file expected unexpected compilation success at line=34
+Observed exit: 101
+Test compiled successfully, but it's marked `compile_fail`.
+Static/API calibration pair=mount-file expected unexpected compilation success at line=43
+Observed exit: 101
+Test compiled successfully, but it's marked `compile_fail`.
+Restored distinct coordinate types: exit 0

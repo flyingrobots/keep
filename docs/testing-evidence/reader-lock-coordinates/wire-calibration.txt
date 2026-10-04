@@ -1,0 +1,11 @@
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+   Compiling coordinate-observation v0.0.0 (/build/keep107-coordinate-driver-current)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.20s
+Correlated wire-slot mutation: seed=0x107c00d; expect successful codec calls but different bytes
+/build/keep107-coordinate-evidence/parent-fixed.bin /build/keep107-coordinate-evidence/wire-mutant.bin differ: char 2636, line 2
+Mutant comparison exit: 1
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+   Compiling coordinate-observation v0.0.0 (/build/keep107-coordinate-driver-current)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.86s
+Restored comparison exit: 0
+2817ce9c311b95c070e7b4774a3cc26193b010769e5a0ec36af6a04133c19714  /build/keep107-coordinate-evidence/wire-restored.bin

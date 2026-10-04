@@ -155,9 +155,9 @@ pub(super) fn segment_receipt(
 ) -> Result<Vec<u8>, Box<dyn Error>> {
     use crate::adapters::{
         ArtifactIdentityDigest, CanonicalRecoveryDispositionReceipt, DecisionEvidenceDigest,
-        ObservedHeadChecksum, ReaderLockIdentity, RecoveryArtifactKind, RecoveryClassification,
-        RecoveryDispositionArtifact, RecoveryDispositionCoordinates, RecoveryDispositionDecision,
-        RecoveryDispositionReceipt,
+        ObservedHeadChecksum, ReaderLockDevice, ReaderLockFile, ReaderLockIdentity,
+        ReaderLockMount, RecoveryArtifactKind, RecoveryClassification, RecoveryDispositionArtifact,
+        RecoveryDispositionCoordinates, RecoveryDispositionDecision, RecoveryDispositionReceipt,
     };
     let orphan = decode_hex(ORPHAN_SEGMENT_HEX.trim())?;
     let identity = <[u8; 32]>::try_from(decode_hex(
@@ -181,7 +181,11 @@ pub(super) fn segment_receipt(
             catalog_generation: coordinates.catalog_generation(),
             catalog_digest,
             retention: coordinates.retention(),
-            reader_lock: ReaderLockIdentity::new(1, 2, 3),
+            reader_lock: ReaderLockIdentity::new(
+                ReaderLockDevice::new(1),
+                ReaderLockMount::new(2),
+                ReaderLockFile::new(3),
+            ),
         },
         DecisionEvidenceDigest::new([0; 32]),
     );

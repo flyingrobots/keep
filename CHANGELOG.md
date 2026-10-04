@@ -10,6 +10,7 @@ after its public API and format compatibility policies are established.
 
 ### Roadmap audit corrections
 
+- Tighten the new GC reader-lock API with distinct device, mount and file coordinate types; constructors and accessors now name each role explicitly while preserving the encoded values and runtime refusals (#107).
 - Replace tautological GC fuzz assertions with public canonical re-encoding checks for retirement intents, retirement receipts and recovery-disposition receipts (#107).
 - Preserve typed failure sources through durable and compaction I/O boundaries.
 - Bound sealed-stage admission by its recorded length before reading it.

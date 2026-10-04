@@ -8,7 +8,8 @@ use super::receipt_bytes::{
 use super::{
     AdmittedGcRetirementIntent, AdmittedGcRetirementReceipt, GcCandidateSetDigest,
     GcRetirementIntentDigest, GcRetirementReceipt, PoolStateDigest, ReaderLockCoordinate,
-    ReaderLockIdentity, receipt_format as format,
+    ReaderLockDevice, ReaderLockFile, ReaderLockIdentity, ReaderLockMount,
+    receipt_format as format,
 };
 use crate::{
     CatalogDigest, CatalogGeneration, GcGeneration, LivenessGeneration, RetentionManifestDigest,
@@ -40,9 +41,9 @@ pub(super) fn decode_unbound(encoded: &[u8]) -> Result<GcRetirementReceipt, Erro
             catalog_generation,
             catalog_digest: CatalogDigest::from_validated(read_array(encoded, 176)?),
             reader_lock: ReaderLockIdentity::new(
-                read_u64(encoded, 208)?,
-                read_u64(encoded, 216)?,
-                read_u64(encoded, 224)?,
+                ReaderLockDevice::new(read_u64(encoded, 208)?),
+                ReaderLockMount::new(read_u64(encoded, 216)?),
+                ReaderLockFile::new(read_u64(encoded, 224)?),
             ),
             synchronization_count: read_u64(encoded, 232)?,
         },
@@ -165,9 +166,9 @@ fn require_reader_lock(
 ) -> Result<(), Error> {
     let bound = intent.intent().coordinates().reader_lock;
     for (coordinate, offset, expected) in [
-        (ReaderLockCoordinate::Device, 208, bound.device()),
-        (ReaderLockCoordinate::Mount, 216, bound.mount()),
-        (ReaderLockCoordinate::File, 224, bound.file()),
+        (ReaderLockCoordinate::Device, 208, bound.device().get()),
+        (ReaderLockCoordinate::Mount, 216, bound.mount().get()),
+        (ReaderLockCoordinate::File, 224, bound.file().get()),
     ] {
         let observed = read_u64(encoded, offset)?;
         if observed != expected {

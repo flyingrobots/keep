@@ -1,0 +1,34 @@
+    Checking repository-process-spawn v0.0.0 (/build/keep107-coordinate-source/repository-process-spawn)
+    Checking keep v0.0.0 (/build/keep107-coordinate-source)
+error: this function has a `#[must_use]` attribute with no message, but returns a type already marked as `#[must_use]`
+  --> src/adapters/gc/reader_lock_identity.rs:73:5
+   |
+73 |     pub const fn device(self) -> ReaderLockDevice {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: either add some descriptive message or remove the attribute
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#double_must_use
+   = note: `-D clippy::double-must-use` implied by `-D clippy::all`
+   = help: to override `-D clippy::all` add `#[allow(clippy::double_must_use)]`
+
+error: this function has a `#[must_use]` attribute with no message, but returns a type already marked as `#[must_use]`
+  --> src/adapters/gc/reader_lock_identity.rs:79:5
+   |
+79 |     pub const fn mount(self) -> ReaderLockMount {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: either add some descriptive message or remove the attribute
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#double_must_use
+
+error: this function has a `#[must_use]` attribute with no message, but returns a type already marked as `#[must_use]`
+  --> src/adapters/gc/reader_lock_identity.rs:85:5
+   |
+85 |     pub const fn file(self) -> ReaderLockFile {
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: either add some descriptive message or remove the attribute
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#double_must_use
+
+error: could not compile `keep` (lib) due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `keep` (lib test) due to 3 previous errors

@@ -1,0 +1,2 @@
+Reduced runtime counterexample: 0,1,0
+Replay: /build/keep107-coordinate-evidence/coordinate-mutant /build/keep107-coordinate-evidence/reduced/replay.bin 107c00d 0 1 0

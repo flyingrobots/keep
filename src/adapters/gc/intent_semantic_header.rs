@@ -5,7 +5,8 @@ use super::GcRetirementIntentDecodeError as Error;
 use super::intent_header_decoder::DecodedIntentHeader;
 use super::{
     CatalogSuccessorProofDigest, DispositionSetDigest, GcRetirementIntent,
-    GcRetirementIntentCoordinates, ReaderLockIdentity, SegmentPoolIdentityDigest,
+    GcRetirementIntentCoordinates, ReaderLockDevice, ReaderLockFile, ReaderLockIdentity,
+    ReaderLockMount, SegmentPoolIdentityDigest,
 };
 use crate::{
     CatalogDigest, CatalogGeneration, GcGeneration, LivenessGeneration, RegisteredRetentionProfile,
@@ -46,9 +47,9 @@ pub(super) fn admit(header: &DecodedIntentHeader) -> Result<GcRetirementIntentCo
         ),
         disposition_set_digest: DispositionSetDigest::new(header.disposition_set_digest),
         reader_lock: ReaderLockIdentity::new(
-            header.reader_device,
-            header.reader_mount,
-            header.reader_file,
+            ReaderLockDevice::new(header.reader_device),
+            ReaderLockMount::new(header.reader_mount),
+            ReaderLockFile::new(header.reader_file),
         ),
     })
 }

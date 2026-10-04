@@ -198,9 +198,9 @@ fn frozen_disposition_decodes_and_reencodes_canonically() -> Result<(), Box<dyn 
     ));
     assert_eq!(
         (
-            coordinates.reader_lock.device(),
-            coordinates.reader_lock.mount(),
-            coordinates.reader_lock.file()
+            coordinates.reader_lock.device().get(),
+            coordinates.reader_lock.mount().get(),
+            coordinates.reader_lock.file().get()
         ),
         (4, 5, 6)
     );

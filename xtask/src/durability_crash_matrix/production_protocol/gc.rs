@@ -11,10 +11,11 @@ use std::path::Path;
 use keep::{
     ArtifactIdentityDigest, CanonicalRecoveryDispositionReceipt, DecisionEvidenceDigest,
     FilesystemGcAuthority, FilesystemRetentionSnapshot, FilesystemVersionTwoAdmission, GcLimits,
-    GcPlan, ObservedHeadChecksum, ReaderAttemptLimit, ReaderLockIdentity, RecoveryArtifactKind,
-    RecoveryClassification, RecoveryDispositionArtifact, RecoveryDispositionCoordinates,
-    RecoveryDispositionDecision, RecoveryDispositionReceipt, execute_gc,
-    execute_retention_publication, observe_gc_liveness, plan_gc,
+    GcPlan, ObservedHeadChecksum, ReaderAttemptLimit, ReaderLockDevice, ReaderLockFile,
+    ReaderLockIdentity, ReaderLockMount, RecoveryArtifactKind, RecoveryClassification,
+    RecoveryDispositionArtifact, RecoveryDispositionCoordinates, RecoveryDispositionDecision,
+    RecoveryDispositionReceipt, execute_gc, execute_retention_publication, observe_gc_liveness,
+    plan_gc,
 };
 
 use super::control::CrashControl;
@@ -117,7 +118,11 @@ fn exact_receipt(store_root: &Path, orphan: &[u8]) -> Result<Vec<u8>, Durability
             catalog_generation: coordinates.catalog_generation(),
             catalog_digest: coordinates.catalog_digest(),
             retention: coordinates.retention(),
-            reader_lock: ReaderLockIdentity::new(1, 2, 3),
+            reader_lock: ReaderLockIdentity::new(
+                ReaderLockDevice::new(1),
+                ReaderLockMount::new(2),
+                ReaderLockFile::new(3),
+            ),
         },
         DecisionEvidenceDigest::new([0; 32]),
     );

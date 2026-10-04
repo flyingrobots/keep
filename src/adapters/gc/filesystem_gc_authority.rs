@@ -12,8 +12,8 @@ use super::{
     AdmittedGcRetirementIntent, AdmittedGcRetirementReceipt, CanonicalGcRetirementIntent,
     CanonicalGcRetirementReceipt, FilesystemGcError as Error, GcExecutionPhase, GcExecutionPoint,
     GcFixedStage, GcIntentEvidence, GcLimits, GcPlan, GcRecoveryPlan, GcRetirementReceipt,
-    ReaderLockIdentity, derive_gc_intent, observe_gc_liveness, plan_gc, plan_gc_recovery,
-    resume_gc_execution,
+    ReaderLockDevice, ReaderLockFile, ReaderLockIdentity, ReaderLockMount, derive_gc_intent,
+    observe_gc_liveness, plan_gc, plan_gc_recovery, resume_gc_execution,
 };
 use crate::adapters::retention::{FilesystemRetentionStage, ReaderFence};
 use crate::adapters::{
@@ -285,7 +285,11 @@ impl FilesystemGcAuthority {
         Ok(GcIntentEvidence {
             generation,
             profile: RegisteredRetentionProfile::SINGLE_CANONICAL_WITNESS_V1,
-            reader_lock: ReaderLockIdentity::new(device, mount, file),
+            reader_lock: ReaderLockIdentity::new(
+                ReaderLockDevice::new(device),
+                ReaderLockMount::new(mount),
+                ReaderLockFile::new(file),
+            ),
         })
     }
 }

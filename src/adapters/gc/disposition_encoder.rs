@@ -59,11 +59,11 @@ fn write_preimage(output: &mut [u8], receipt: &RecoveryDispositionReceipt) {
         }
     }
     let (device, output) = output.split_at_mut(8);
-    device.copy_from_slice(&coordinates.reader_lock.device().to_be_bytes());
+    device.copy_from_slice(&coordinates.reader_lock.device().get().to_be_bytes());
     let (mount, output) = output.split_at_mut(8);
-    mount.copy_from_slice(&coordinates.reader_lock.mount().to_be_bytes());
+    mount.copy_from_slice(&coordinates.reader_lock.mount().get().to_be_bytes());
     let (file, output) = output.split_at_mut(8);
-    file.copy_from_slice(&coordinates.reader_lock.file().to_be_bytes());
+    file.copy_from_slice(&coordinates.reader_lock.file().get().to_be_bytes());
     let (evidence, reserved) = output.split_at_mut(32);
     evidence.copy_from_slice(receipt.evidence_digest().as_bytes());
     reserved.fill(0);

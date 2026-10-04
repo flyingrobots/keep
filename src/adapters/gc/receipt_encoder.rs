@@ -36,11 +36,11 @@ fn write_preimage(output: &mut [u8], receipt: &GcRetirementReceipt) {
     let (catalog_digest, output) = output.split_at_mut(32);
     catalog_digest.copy_from_slice(receipt.catalog_digest().as_bytes());
     let (device, output) = output.split_at_mut(8);
-    device.copy_from_slice(&receipt.reader_lock().device().to_be_bytes());
+    device.copy_from_slice(&receipt.reader_lock().device().get().to_be_bytes());
     let (mount, output) = output.split_at_mut(8);
-    mount.copy_from_slice(&receipt.reader_lock().mount().to_be_bytes());
+    mount.copy_from_slice(&receipt.reader_lock().mount().get().to_be_bytes());
     let (file, output) = output.split_at_mut(8);
-    file.copy_from_slice(&receipt.reader_lock().file().to_be_bytes());
+    file.copy_from_slice(&receipt.reader_lock().file().get().to_be_bytes());
     let (synchronization_count, reserved) = output.split_at_mut(8);
     synchronization_count.copy_from_slice(&receipt.synchronization_count().to_be_bytes());
     reserved.fill(0);

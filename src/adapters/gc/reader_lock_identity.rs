@@ -1,23 +1,66 @@
 //! This boundary module owns the physical identity of the exclusively held
 //! `reader.lock` that authorized one retirement.
 
+use super::{ReaderLockDevice, ReaderLockFile, ReaderLockMount};
+
 /// Device, mount, and file coordinates of the locked `reader.lock`.
 ///
 /// The mount coordinate is `statx.stx_mnt_id`, a mount instance that changes
 /// across unmount, remount, and reboot; like the migration intent's root
 /// mount identity it is same-process evidence, and a restart comparison uses
 /// the device and file coordinates only.
+///
+/// Each coordinate has its own type; constructing this value does not prove
+/// that the lock was observed or acquired. No allocation, blocking or I/O occurs.
+///
+/// ```
+/// use keep::{ReaderLockDevice, ReaderLockFile, ReaderLockIdentity, ReaderLockMount};
+/// let _identity = ReaderLockIdentity::new(
+///     ReaderLockDevice::new(4), ReaderLockMount::new(5), ReaderLockFile::new(6),
+/// );
+/// ```
+///
+/// Device and mount cannot be exchanged:
+///
+/// ```compile_fail,E0308
+/// use keep::{ReaderLockDevice, ReaderLockFile, ReaderLockIdentity, ReaderLockMount};
+/// let _identity = ReaderLockIdentity::new(
+///     ReaderLockMount::new(5), ReaderLockDevice::new(4), ReaderLockFile::new(6),
+/// );
+/// ```
+///
+/// Device and file cannot be exchanged:
+///
+/// ```compile_fail,E0308
+/// use keep::{ReaderLockDevice, ReaderLockFile, ReaderLockIdentity, ReaderLockMount};
+/// let _identity = ReaderLockIdentity::new(
+///     ReaderLockFile::new(6), ReaderLockMount::new(5), ReaderLockDevice::new(4),
+/// );
+/// ```
+///
+/// Mount and file cannot be exchanged:
+///
+/// ```compile_fail,E0308
+/// use keep::{ReaderLockDevice, ReaderLockFile, ReaderLockIdentity, ReaderLockMount};
+/// let _identity = ReaderLockIdentity::new(
+///     ReaderLockDevice::new(4), ReaderLockFile::new(6), ReaderLockMount::new(5),
+/// );
+/// ```
 #[must_use]
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct ReaderLockIdentity {
-    device: u64,
-    mount: u64,
-    file: u64,
+    device: ReaderLockDevice,
+    mount: ReaderLockMount,
+    file: ReaderLockFile,
 }
 
 impl ReaderLockIdentity {
     /// Binds the three observed coordinates.
-    pub const fn new(device: u64, mount: u64, file: u64) -> Self {
+    pub const fn new(
+        device: ReaderLockDevice,
+        mount: ReaderLockMount,
+        file: ReaderLockFile,
+    ) -> Self {
         Self {
             device,
             mount,
@@ -26,20 +69,17 @@ impl ReaderLockIdentity {
     }
 
     /// Returns the platform device coordinate.
-    #[must_use]
-    pub const fn device(self) -> u64 {
+    pub const fn device(self) -> ReaderLockDevice {
         self.device
     }
 
     /// Returns the platform mount coordinate.
-    #[must_use]
-    pub const fn mount(self) -> u64 {
+    pub const fn mount(self) -> ReaderLockMount {
         self.mount
     }
 
     /// Returns the platform file coordinate.
-    #[must_use]
-    pub const fn file(self) -> u64 {
+    pub const fn file(self) -> ReaderLockFile {
         self.file
     }
 }

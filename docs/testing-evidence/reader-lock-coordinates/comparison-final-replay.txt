@@ -1,0 +1,23 @@
+   Compiling coordinate-observation v0.0.0 (/build/keep107-coordinate-driver-parent)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.38s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+Replay subject=parent corpus=fixed seed=0x107c00d boundary-triples=7 generated-triples=256 address-space-cap=536870912 deadline=30 network=unshare
+Replay subject=parent corpus=random seed=0xb039fd8f9b504649 boundary-triples=7 generated-triples=256 address-space-cap=536870912 deadline=30 network=unshare
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+   Compiling coordinate-observation v0.0.0 (/build/keep107-coordinate-driver-current)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.90s
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.01s
+Replay subject=current corpus=fixed seed=0x107c00d boundary-triples=7 generated-triples=256 address-space-cap=536870912 deadline=30 network=unshare
+Replay subject=current corpus=random seed=0xb039fd8f9b504649 boundary-triples=7 generated-triples=256 address-space-cap=536870912 deadline=30 network=unshare
+Exact runtime output comparison fixed: identical
+2817ce9c311b95c070e7b4774a3cc26193b010769e5a0ec36af6a04133c19714  /build/keep107-coordinate-evidence/parent-fixed.bin
+2817ce9c311b95c070e7b4774a3cc26193b010769e5a0ec36af6a04133c19714  /build/keep107-coordinate-evidence/current-fixed.bin
+310340 /build/keep107-coordinate-evidence/parent-fixed.bin
+310340 /build/keep107-coordinate-evidence/current-fixed.bin
+620680 total
+Exact runtime output comparison random: identical
+866f91a63c11d887bbc35084665e376a928e33768a21b8173e966b6571a6da95  /build/keep107-coordinate-evidence/parent-random.bin
+866f91a63c11d887bbc35084665e376a928e33768a21b8173e966b6571a6da95  /build/keep107-coordinate-evidence/current-random.bin
+310340 /build/keep107-coordinate-evidence/parent-random.bin
+310340 /build/keep107-coordinate-evidence/current-random.bin
+620680 total

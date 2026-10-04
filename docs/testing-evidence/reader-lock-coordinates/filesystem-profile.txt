@@ -1,0 +1,4 @@
+TARGET                                      SOURCE                                         FSTYPE OPTIONS
+/build/keep107-coordinate-source/target/tmp /dev/loop0[/keep107-coordinate-source-scratch] ext4   rw,relatime
+TARGET                               SOURCE                                         FSTYPE OPTIONS
+/build/keep107-coordinate-target/tmp /dev/loop0[/keep107-coordinate-target-scratch] ext4   rw,relatime

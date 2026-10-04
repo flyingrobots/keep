@@ -1,0 +1,18 @@
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.85s
+   Doc-tests keep
+
+running 1 test
+test src/adapters/gc/reader_lock_identity.rs - adapters::gc::reader_lock_identity::ReaderLockIdentity (line 16) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+
+running 3 tests
+test src/adapters/gc/reader_lock_identity.rs - adapters::gc::reader_lock_identity::ReaderLockIdentity (line 43) - compile fail ... ok
+test src/adapters/gc/reader_lock_identity.rs - adapters::gc::reader_lock_identity::ReaderLockIdentity (line 25) - compile fail ... ok
+test src/adapters/gc/reader_lock_identity.rs - adapters::gc::reader_lock_identity::ReaderLockIdentity (line 34) - compile fail ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.01s
+
+all doctests ran in 0.33s; merged doctests compilation took 0.32s
