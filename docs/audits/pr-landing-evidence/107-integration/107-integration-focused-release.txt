@@ -1,0 +1,37 @@
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `release` profile [optimized] target(s) in 3.24s
+     Running tests/gc_authority_root.rs (/build/keep107-coordinate-target/release/deps/gc_authority_root-4629d17b0491d874)
+
+running 2 tests
+test compaction_refuses_an_observation_locator_for_another_store ... ok
+test gc_refuses_an_observation_locator_for_another_store ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.56s
+
+     Running tests/verification_receipt.rs (/build/keep107-coordinate-target/release/deps/verification_receipt-88c876b73b3390ba)
+
+running 10 tests
+test a_reference_refusal_cannot_be_relabeled_as_durable ... ok
+test a_reference_report_cannot_be_relabeled_as_durable ... ok
+test every_reference_store_outcome_projects_and_round_trips ... ok
+test a_refusal_never_decodes_as_a_report_and_a_report_never_as_a_refusal ... ok
+test golden_receipts_match_the_oracle_and_decode_from_another_process ... ok
+test live_reference_refusal_reproduces_the_frozen_supported_interval ... ok
+test snapshot_binding_is_refused_instead_of_encoded_as_another_depth ... ok
+test every_structural_field_has_one_exact_first_refusal ... ok
+test live_reference_verification_reproduces_the_frozen_report ... ok
+test the_golden_report_and_refusals_state_exactly_their_frozen_coordinates ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/verification_report.rs (/build/keep107-coordinate-target/release/deps/verification_report-1a3ff18e8a176872)
+
+running 5 tests
+test a_wrong_target_passes_chunk_identity_and_fails_only_the_complete_blob ... ok
+test unsupported_depths_refuse_with_the_exact_supported_set ... ok
+test absent_subjects_are_missing_evidence_against_the_complete_view ... ok
+test a_report_establishes_exactly_the_requested_depth ... ok
+test false_profile_boundaries_pass_chunk_identity_and_fail_only_the_complete_blob ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

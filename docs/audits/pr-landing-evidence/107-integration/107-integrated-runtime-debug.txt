@@ -1,0 +1,103 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (/build/keep107-coordinate-target/debug/deps/keep-d7b438b48cea5d61)
+
+running 1 test
+test reference::verification::tests::tampered_stored_chunk_is_corrupt_at_the_chunk_identity_stage ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 473 filtered out; finished in 0.00s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (/build/keep107-coordinate-target/debug/deps/keep-d7b438b48cea5d61)
+
+running 17 tests
+test adapters::durable::ingestion_bound_tests::a_grown_sealed_stage_refuses_before_payload_allocation_or_publication ... ok
+test adapters::durable::refusal_source_tests::a_corrupt_retained_root_keeps_its_typed_cause_through_durable_admission ... FAILED
+test adapters::durable::refusal_source_tests::a_non_regular_selected_root_keeps_the_exact_record_refusal ... FAILED
+test adapters::durable::writer_tests::limit_and_identity_refusals_leave_nothing_visible ... FAILED
+test adapters::durable::tests::a_failing_writer_returns_no_receipt_and_the_exact_accepted_prefix ... FAILED
+test adapters::durable::tests::a_pinned_snapshot_keeps_its_view_beside_a_successor_and_blocks_collection ... FAILED
+test adapters::durable::tests::absence_is_evidence_against_the_pinned_view ... FAILED
+test adapters::durable::tests::identical_views_yield_identical_receipts_across_reopen ... FAILED
+test adapters::durable::writer_tests::one_pass_commits_a_blob_readable_by_layout_then_by_anchor ... FAILED
+test adapters::durable::transfer_tests::a_reference_store_copies_into_a_durable_writer ... FAILED
+test adapters::durable::writer_tests::an_anchored_ingest_satisfies_the_port_laws_beside_the_fixture_store ... FAILED
+test adapters::durable::writer_tests::an_interrupted_source_leaves_a_stage_that_recovery_discards ... ok
+test adapters::durable::port_tests::durable_backend_satisfies_the_read_laws_through_the_port ... FAILED
+test adapters::durable::tests::ranges_across_chunk_boundaries_emit_exactly_the_requested_bytes ... FAILED
+test adapters::durable::tests::every_anchored_blob_reconstructs_exactly_with_a_receipt_naming_the_view ... FAILED
+test adapters::durable::transfer_tests::a_durable_snapshot_copies_into_a_reference_store_and_transfers_to_a_sink ... FAILED
+test adapters::durable::writer_tests::nearby_content_reuses_every_unchanged_chunk_and_an_exact_re_ingest_publishes_nothing ... FAILED
+
+failures:
+
+---- adapters::durable::refusal_source_tests::a_corrupt_retained_root_keeps_its_typed_cause_through_durable_admission stdout ----
+
+thread 'adapters::durable::refusal_source_tests::a_corrupt_retained_root_keeps_its_typed_cause_through_durable_admission' (1389) panicked at src/adapters/durable/refusal_source_tests.rs:33:5:
+assertion failed: matches!(&error, DurableStoreError::Snapshot(source) if
+    matches!(source.as_ref(), crate::FilesystemRetentionSnapshotError::Root
+    { .. }))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- adapters::durable::refusal_source_tests::a_non_regular_selected_root_keeps_the_exact_record_refusal stdout ----
+Error: Admission { source: Custom { kind: Unsupported, error: "store namespace does not satisfy one local writable case-sensitive ext4 profile" } }
+
+---- adapters::durable::writer_tests::limit_and_identity_refusals_leave_nothing_visible stdout ----
+Error: Snapshot(Admission { source: Custom { kind: Unsupported, error: "store namespace does not satisfy one local writable case-sensitive ext4 profile" } })
+
+---- adapters::durable::tests::a_failing_writer_returns_no_receipt_and_the_exact_accepted_prefix stdout ----
+Error: Snapshot(Admission { source: Custom { kind: Unsupported, error: "store namespace does not satisfy one local writable case-sensitive ext4 profile" } })
+
+---- adapters::durable::tests::a_pinned_snapshot_keeps_its_view_beside_a_successor_and_blocks_collection stdout ----
+Error: Snapshot(Admission { source: Custom { kind: Unsupported, error: "store namespace does not satisfy one local writable case-sensitive ext4 profile" } })
+
+---- adapters::durable::tests::absence_is_evidence_against_the_pinned_view stdout ----
+Error: Snapshot(Admission { source: Custom { kind: Unsupported, error: "store namespace does not satisfy one local writable case-sensitive ext4 profile" } })
+
+---- adapters::durable::tests::identical_views_yield_identical_receipts_across_reopen stdout ----
+Error: Snapshot(Admission { source: Custom { kind: Unsupported, error: "store namespace does not satisfy one local writable case-sensitive ext4 profile" } })
+
+---- adapters::durable::writer_tests::one_pass_commits_a_blob_readable_by_layout_then_by_anchor stdout ----
+Error: Snapshot(Admission { source: Custom { kind: Unsupported, error: "store namespace does not satisfy one local writable case-sensitive ext4 profile" } })
+
+---- adapters::durable::transfer_tests::a_reference_store_copies_into_a_durable_writer stdout ----
+Error: Snapshot(Admission { source: Custom { kind: Unsupported, error: "store namespace does not satisfy one local writable case-sensitive ext4 profile" } })
+
+---- adapters::durable::writer_tests::an_anchored_ingest_satisfies_the_port_laws_beside_the_fixture_store stdout ----
+Error: Snapshot(Admission { source: Custom { kind: Unsupported, error: "store namespace does not satisfy one local writable case-sensitive ext4 profile" } })
+
+---- adapters::durable::port_tests::durable_backend_satisfies_the_read_laws_through_the_port stdout ----
+Error: Snapshot(Admission { source: Custom { kind: Unsupported, error: "store namespace does not satisfy one local writable case-sensitive ext4 profile" } })
+
+---- adapters::durable::tests::ranges_across_chunk_boundaries_emit_exactly_the_requested_bytes stdout ----
+Error: Snapshot(Admission { source: Custom { kind: Unsupported, error: "store namespace does not satisfy one local writable case-sensitive ext4 profile" } })
+
+---- adapters::durable::tests::every_anchored_blob_reconstructs_exactly_with_a_receipt_naming_the_view stdout ----
+Error: Snapshot(Admission { source: Custom { kind: Unsupported, error: "store namespace does not satisfy one local writable case-sensitive ext4 profile" } })
+
+---- adapters::durable::transfer_tests::a_durable_snapshot_copies_into_a_reference_store_and_transfers_to_a_sink stdout ----
+Error: Snapshot(Admission { source: Custom { kind: Unsupported, error: "store namespace does not satisfy one local writable case-sensitive ext4 profile" } })
+
+---- adapters::durable::writer_tests::nearby_content_reuses_every_unchanged_chunk_and_an_exact_re_ingest_publishes_nothing stdout ----
+Error: Snapshot(Admission { source: Custom { kind: Unsupported, error: "store namespace does not satisfy one local writable case-sensitive ext4 profile" } })
+
+
+failures:
+    adapters::durable::port_tests::durable_backend_satisfies_the_read_laws_through_the_port
+    adapters::durable::refusal_source_tests::a_corrupt_retained_root_keeps_its_typed_cause_through_durable_admission
+    adapters::durable::refusal_source_tests::a_non_regular_selected_root_keeps_the_exact_record_refusal
+    adapters::durable::tests::a_failing_writer_returns_no_receipt_and_the_exact_accepted_prefix
+    adapters::durable::tests::a_pinned_snapshot_keeps_its_view_beside_a_successor_and_blocks_collection
+    adapters::durable::tests::absence_is_evidence_against_the_pinned_view
+    adapters::durable::tests::every_anchored_blob_reconstructs_exactly_with_a_receipt_naming_the_view
+    adapters::durable::tests::identical_views_yield_identical_receipts_across_reopen
+    adapters::durable::tests::ranges_across_chunk_boundaries_emit_exactly_the_requested_bytes
+    adapters::durable::transfer_tests::a_durable_snapshot_copies_into_a_reference_store_and_transfers_to_a_sink
+    adapters::durable::transfer_tests::a_reference_store_copies_into_a_durable_writer
+    adapters::durable::writer_tests::an_anchored_ingest_satisfies_the_port_laws_beside_the_fixture_store
+    adapters::durable::writer_tests::limit_and_identity_refusals_leave_nothing_visible
+    adapters::durable::writer_tests::nearby_content_reuses_every_unchanged_chunk_and_an_exact_re_ingest_publishes_nothing
+    adapters::durable::writer_tests::one_pass_commits_a_blob_readable_by_layout_then_by_anchor
+
+test result: FAILED. 2 passed; 15 failed; 0 ignored; 0 measured; 457 filtered out; finished in 1.08s
+
+error: test failed, to rerun pass `--lib`

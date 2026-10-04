@@ -1,0 +1,15 @@
+    Checking keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.38s
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.93s
+
+running 5 tests
+test unsupported_depths_refuse_with_the_exact_supported_set ... ok
+     Running tests/verification_report.rs (/build/keep107-coordinate-target/debug/deps/verification_report-f5826e29a50f794b)
+test a_wrong_target_passes_chunk_identity_and_fails_only_the_complete_blob ... ok
+test a_report_establishes_exactly_the_requested_depth ... ok
+test absent_subjects_are_missing_evidence_against_the_complete_view ... ok
+test false_profile_boundaries_pass_chunk_identity_and_fail_only_the_complete_blob ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+

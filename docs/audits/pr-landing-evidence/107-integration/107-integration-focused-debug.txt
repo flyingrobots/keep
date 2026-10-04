@@ -1,0 +1,105 @@
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.52s
+     Running tests/blob_verification.rs (/build/keep107-coordinate-target/debug/deps/blob_verification-b7fe4f140a2a8b59)
+
+running 12 tests
+test root_laws::shallow_root_reports_do_not_claim_an_unconsulted_catalog ... ok
+test refusal_laws::incomplete_blob_refuses_the_exact_missing_chunk ... ok
+test root_laws::a_closure_budget_failure_is_operational_with_its_original_limit ... ok
+test refusal_laws::complete_blob_verification_preserves_expected_and_observed_identities ... ok
+test shallow_blob_evidence_does_not_require_unclaimed_chunk_closure ... ok
+test refusal_laws::an_absent_blob_is_not_reported_as_corruption ... ok
+test blob_reports_certify_only_the_requested_evidence_in_one_catalog ... ok
+test refusal_laws::blob_verification_refuses_unrelated_depths_before_discovery ... ok
+test root_laws::a_root_report_requires_complete_closure_in_its_named_catalog ... ok
+test root_laws::root_reports_refuse_unrelated_depths ... ok
+test root_laws::canonical_root_bytes_do_not_certify_an_absent_layout ... ok
+test profile_law::correct_blob_bytes_do_not_certify_false_profile_boundaries ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
+
+     Running tests/catalog_verification.rs (/build/keep107-coordinate-target/debug/deps/catalog_verification-fd525b3070a6e0c7)
+
+running 4 tests
+test reporting_catalog_evidence_requires_no_additional_allocation ... ok
+test catalog_reports_bind_the_requested_evidence_to_the_selected_generation ... ok
+test catalog_requests_outside_its_evidence_refuse_without_downgrading ... ok
+test catalog_reachability_does_not_certify_an_incomplete_blob ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/catalog_verification_ceiling.rs (/build/keep107-coordinate-target/debug/deps/catalog_verification_ceiling-de60a4108b87b22f)
+
+running 1 test
+test the_catalog_entry_ceiling_verifies_within_its_declared_memory_bound ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 42.27s
+
+
+running 4 tests
+test an_expected_identity_that_does_not_match_refuses_with_both ... ok
+     Running tests/content_store_port.rs (/build/keep107-coordinate-target/debug/deps/content_store_port-684d307c7de48177)
+test staging_refuses_the_entry_limit_through_the_port ... ok
+test staging_refuses_the_byte_limit_before_anything_is_visible ... ok
+test the_reference_backend_round_trips_through_the_port ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running tests/gc_authority_root.rs (/build/keep107-coordinate-target/debug/deps/gc_authority_root-63af85d2401e170e)
+
+running 2 tests
+test gc_refuses_an_observation_locator_for_another_store ... ok
+test compaction_refuses_an_observation_locator_for_another_store ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.17s
+
+     Running tests/segment_verification.rs (/build/keep107-coordinate-target/debug/deps/segment_verification-dc611717318782ba)
+
+running 6 tests
+test reporting_segment_evidence_allocates_no_heap_memory ... ok
+test record_laws::reporting_logical_record_evidence_allocates_no_heap_memory ... ok
+test physical_segment_reports_refuse_logical_or_store_claims ... ok
+test segment_reports_bind_only_supported_evidence_to_the_exact_physical_bytes ... ok
+test record_laws::admitted_record_reports_preserve_each_logical_subjects_exact_proof_scope ... ok
+test record_laws::a_layout_prepared_without_its_chunks_cannot_report_complete_blob_verification ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/verification_ingress.rs (/build/keep107-coordinate-target/debug/deps/verification_ingress-739e54411aaaaf0c)
+
+running 4 tests
+test segment_version_refusal_preserves_both_protocol_coordinates ... ok
+test a_segment_policy_limit_remains_an_operational_failure ... ok
+test segment_checksum_refusal_preserves_expected_and_observed_bytes ... ok
+test raw_segment_reports_are_only_issued_after_complete_admission ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/verification_receipt.rs (/build/keep107-coordinate-target/debug/deps/verification_receipt-443fd900bf0a4d6d)
+
+running 10 tests
+test a_refusal_never_decodes_as_a_report_and_a_report_never_as_a_refusal ... ok
+test a_reference_refusal_cannot_be_relabeled_as_durable ... ok
+test live_reference_verification_reproduces_the_frozen_report ... ok
+test the_golden_report_and_refusals_state_exactly_their_frozen_coordinates ... ok
+test golden_receipts_match_the_oracle_and_decode_from_another_process ... ok
+test snapshot_binding_is_refused_instead_of_encoded_as_another_depth ... ok
+test live_reference_refusal_reproduces_the_frozen_supported_interval ... ok
+test a_reference_report_cannot_be_relabeled_as_durable ... ok
+test every_reference_store_outcome_projects_and_round_trips ... ok
+test every_structural_field_has_one_exact_first_refusal ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/verification_view.rs (/build/keep107-coordinate-target/debug/deps/verification_view-fa08b03b608dd88d)
+
+running 6 tests
+test an_observation_failure_preserves_its_operational_cause ... ok
+test changing_catalogs_discard_the_superseded_view ... ok
+test retention_head_changes_are_not_hidden_by_a_stable_catalog ... ok
+test exhausted_collection_reports_exact_conflicting_candidates ... ok
+test malformed_publication_observations_preserve_the_decoder_contradiction ... ok
+test no_published_catalog_is_missing_evidence ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

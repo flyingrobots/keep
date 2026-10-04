@@ -1,0 +1,24 @@
+    Checking keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.08s
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.39s
+     Running tests/segment_store_mutations.rs (/build/keep107-coordinate-target/debug/deps/segment_store_mutations-8c770183f2ee95e0)
+
+running 2 tests
+test every_durable_record_has_a_ledger_and_every_row_cites_a_requirement ... ok
+test every_frozen_mutation_reaches_its_exact_first_refusal ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running tests/segment_verification.rs (/build/keep107-coordinate-target/debug/deps/segment_verification-dc611717318782ba)
+
+running 6 tests
+test record_laws::reporting_logical_record_evidence_allocates_no_heap_memory ... ok
+test record_laws::a_layout_prepared_without_its_chunks_cannot_report_complete_blob_verification ... ok
+test physical_segment_reports_refuse_logical_or_store_claims ... ok
+test reporting_segment_evidence_allocates_no_heap_memory ... ok
+test record_laws::admitted_record_reports_preserve_each_logical_subjects_exact_proof_scope ... ok
+test segment_reports_bind_only_supported_evidence_to_the_exact_physical_bytes ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
