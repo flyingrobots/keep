@@ -6,13 +6,13 @@ use super::filesystem_gc_authority::GcExecutionContext;
 use super::filesystem_gc_residue::{INTENT, INTENT_STAGE, RECEIPT, RECEIPT_STAGE, invalid};
 use super::{
     AdmittedGcRetirementIntent, AdmittedGcRetirementReceipt, CanonicalGcRetirementReceipt,
-    FilesystemGcAuthority, GcExecutionStorage, PoolStateDigest, segment_pool_identity,
+    FilesystemGcAuthority, PoolStateDigest, segment_pool_identity,
     segment_pool_inventory,
 };
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
 use crate::adapters::filesystem_exact_record::{self as exact_record, ExactRecordError};
 use crate::adapters::physical_pool_name;
-use crate::adapters::retention::FilesystemRetentionStage;
+use crate::adapters::retention::{FilesystemRetentionStage, RetentionStorageBoundary as Boundary};
 
 fn no_retirement() -> io::Error {
     invalid(super::FilesystemGcRefusal::NoRetirement)
@@ -108,8 +108,8 @@ impl FilesystemGcAuthority {
     }
 }
 
-impl GcExecutionStorage for FilesystemGcAuthority {
-    fn write_intent_stage(&mut self) -> io::Result<()> {
+impl FilesystemGcAuthority {
+    pub(super) fn store_write_intent_stage(&mut self) -> io::Result<()> {
         let gc = self.gc.try_clone()?;
         let context = self.context()?;
         context.intent_stage = Some(FilesystemRetentionStage::create(
@@ -120,14 +120,14 @@ impl GcExecutionStorage for FilesystemGcAuthority {
         Ok(())
     }
 
-    fn synchronize_intent_stage(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_intent_stage(&mut self) -> io::Result<()> {
         self.reopen_intent_stage()?;
         self.intent_stage()?
             .synchronize(&self.gc)
             .map_err(Into::into)
     }
 
-    fn link_intent(&mut self) -> io::Result<()> {
+    pub(super) fn store_link_intent(&mut self) -> io::Result<()> {
         self.reopen_intent_stage()?;
         self.intent_stage()?
             .link(&self.gc, &self.gc, INTENT)
@@ -135,11 +135,12 @@ impl GcExecutionStorage for FilesystemGcAuthority {
             .map_err(Into::into)
     }
 
-    fn synchronize_gc_after_intent(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_gc_after_intent(&mut self) -> io::Result<()> {
+        self.storage_checkpoint(Boundary::GcIntentSynchronization)?;
         synchronize_directory(&self.gc)
     }
 
-    fn remove_intent_stage(&mut self) -> io::Result<()> {
+    pub(super) fn store_remove_intent_stage(&mut self) -> io::Result<()> {
         self.reopen_intent_stage()?;
         let stage = self
             .context()?
@@ -149,11 +150,12 @@ impl GcExecutionStorage for FilesystemGcAuthority {
         stage.remove(&self.gc, &self.gc, INTENT).map_err(Into::into)
     }
 
-    fn synchronize_gc_after_intent_cleanup(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_gc_after_intent_cleanup(&mut self) -> io::Result<()> {
+        self.storage_checkpoint(Boundary::GcIntentCleanupSynchronization)?;
         synchronize_directory(&self.gc)
     }
 
-    fn unlink_candidate(&mut self, index: usize) -> io::Result<()> {
+    pub(super) fn store_unlink_candidate(&mut self, index: usize) -> io::Result<()> {
         let context = self.context.as_ref().ok_or_else(no_retirement)?;
         let candidate = context
             .intent
@@ -175,15 +177,18 @@ impl GcExecutionStorage for FilesystemGcAuthority {
             self.policy.segment_read(),
         )
         .map_err(|source| io::Error::new(io::ErrorKind::InvalidData, source))?;
+        self.storage_checkpoint(Boundary::CandidateUnlink)?;
         self.segments.remove_file(&name)?;
+        self.storage_checkpoint(Boundary::CandidateAbsence)?;
         exact_record::require_absent(&self.segments, &name).map_err(ExactRecordError::into_io)
     }
 
-    fn synchronize_segment_pool(&mut self, _index: usize) -> io::Result<()> {
+    pub(super) fn store_synchronize_segment_pool(&mut self, _index: usize) -> io::Result<()> {
+        self.storage_checkpoint(Boundary::PoolSynchronization)?;
         synchronize_directory(&self.segments)
     }
 
-    fn write_receipt_stage(&mut self) -> io::Result<()> {
+    pub(super) fn store_write_receipt_stage(&mut self) -> io::Result<()> {
         let receipt = self.completing_receipt()?;
         let gc = self.gc.try_clone()?;
         let context = self.context()?;
@@ -196,14 +201,14 @@ impl GcExecutionStorage for FilesystemGcAuthority {
         Ok(())
     }
 
-    fn synchronize_receipt_stage(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_receipt_stage(&mut self) -> io::Result<()> {
         self.reopen_receipt_stage()?;
         self.receipt_stage()?
             .synchronize(&self.gc)
             .map_err(Into::into)
     }
 
-    fn replace_receipt(&mut self) -> io::Result<()> {
+    pub(super) fn store_replace_receipt(&mut self) -> io::Result<()> {
         self.reopen_receipt_stage()?;
         let stage = self
             .context()?
@@ -219,11 +224,12 @@ impl GcExecutionStorage for FilesystemGcAuthority {
             .map_err(Into::into)
     }
 
-    fn synchronize_gc_after_receipt(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_gc_after_receipt(&mut self) -> io::Result<()> {
+        self.storage_checkpoint(Boundary::GcReceiptSynchronization)?;
         synchronize_directory(&self.gc)
     }
 
-    fn remove_intent(&mut self) -> io::Result<()> {
+    pub(super) fn store_remove_intent(&mut self) -> io::Result<()> {
         let context = self.context.as_ref().ok_or_else(no_retirement)?;
         let bytes = match exact_record::read_exact_optional(&self.gc, RECEIPT, 320) {
             Ok(Some(bytes)) => bytes,
@@ -248,11 +254,14 @@ impl GcExecutionStorage for FilesystemGcAuthority {
             );
             self.context()?.receipt = Some(receipt);
         }
+        self.storage_checkpoint(Boundary::IntentUnlink)?;
         self.gc.remove_file(INTENT)?;
+        self.storage_checkpoint(Boundary::IntentAbsence)?;
         exact_record::require_absent(&self.gc, INTENT).map_err(ExactRecordError::into_io)
     }
 
-    fn synchronize_gc_after_intent_removal(&mut self) -> io::Result<()> {
+    pub(super) fn store_synchronize_gc_after_intent_removal(&mut self) -> io::Result<()> {
+        self.storage_checkpoint(Boundary::GcIntentRemovalSynchronization)?;
         synchronize_directory(&self.gc)
     }
 }

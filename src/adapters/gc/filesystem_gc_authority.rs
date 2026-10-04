@@ -88,6 +88,8 @@ pub struct FilesystemGcAuthority {
     pub(super) segments: Dir,
     pub(super) policy: CatalogRestartPolicy,
     pub(super) context: Option<GcExecutionContext>,
+    #[cfg(test)]
+    pub(super) storage_failure: Option<crate::adapters::retention::RetentionStorageBoundary>,
     _lock: FilesystemWriterLock,
 }
 
@@ -120,6 +122,8 @@ impl FilesystemGcAuthority {
             segments,
             policy,
             context: None,
+            #[cfg(test)]
+            storage_failure: None,
             _lock: lock,
         })
     }

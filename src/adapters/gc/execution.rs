@@ -4,6 +4,8 @@ use std::error::Error;
 use std::fmt;
 use std::io;
 
+use crate::adapters::retention::{RetentionStorageError, RetentionStorageProgress};
+
 use super::{GcExecutionPhase, GcExecutionPoint, GcExecutionStorage};
 
 /// What one execution run executed.
@@ -30,7 +32,18 @@ pub struct GcExecutionError {
 }
 
 impl GcExecutionError {
-    /// The refused point.
+/// Progress reported by the failing storage capability.
+///
+/// `None` means unreported effects, never absence of effects. Earlier
+/// successful calls are listed separately by [`Self::executed`].
+#[must_use]
+pub fn storage_progress(&self) -> Option<&RetentionStorageProgress> {
+    self.source.get_ref()
+        .and_then(|source| source.downcast_ref::<RetentionStorageError>())
+        .and_then(RetentionStorageError::progress)
+}
+
+/// The refused point.
     #[must_use]
     pub const fn point(&self) -> GcExecutionPoint {
         self.point

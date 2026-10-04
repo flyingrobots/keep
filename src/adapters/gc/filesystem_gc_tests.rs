@@ -3,6 +3,9 @@
 //! intent, and every interrupted prefix recovers to the same complete
 //! state without losing the live segment.
 
+#[path = "filesystem_gc_effect_tests.rs"]
+mod effect_tests;
+
 use std::error::Error;
 use std::fs;
 use std::io;
