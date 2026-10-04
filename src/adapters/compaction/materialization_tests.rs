@@ -19,6 +19,7 @@ fn sealed_stage_growth_is_refused_before_materialization() -> Result<(), Box<dyn
     growth_is_refused(Selection::Staged)
 }
 
+#[derive(Clone, Copy)]
 enum Selection {
     Retained,
     Staged,

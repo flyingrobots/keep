@@ -1,0 +1,11 @@
+--- a/src/adapters/compaction/materialization.rs
++++ b/src/adapters/compaction/materialization.rs
+@@ -36,7 +36,7 @@
+             artifact,
+             minimum: expected,
+             maximum: expected,
+-            observed,
++            observed: expected,
+         });
+     }
+     // Metadata is only an early guard. The bounded reader also refuses growth

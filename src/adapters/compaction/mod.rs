@@ -16,6 +16,7 @@ mod filesystem;
 mod filesystem_tests;
 #[cfg(test)]
 mod interruption_tests;
+mod materialization;
 #[cfg(all(test, target_os = "linux"))]
 mod materialization_tests;
 mod observation;

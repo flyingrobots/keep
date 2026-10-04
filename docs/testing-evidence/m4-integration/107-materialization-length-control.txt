@@ -1,0 +1,32 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.69s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 2 tests
+test adapters::compaction::materialization_tests::retained_segment_growth_is_refused_before_materialization ... FAILED
+test adapters::compaction::materialization_tests::sealed_stage_growth_is_refused_before_materialization ... FAILED
+
+failures:
+
+---- adapters::compaction::materialization_tests::retained_segment_growth_is_refused_before_materialization stdout ----
+
+thread 'adapters::compaction::materialization_tests::retained_segment_growth_is_refused_before_materialization' (451) panicked at src/adapters/compaction/materialization_tests.rs:84:5:
+exact observed-length refusal: Materialize(Length { artifact: Segment { digest: SegmentDigest([34, 31, 103, 69, 205, 138, 82, 33, 201, 168, 124, 55, 7, 89, 54, 8, 71, 146, 130, 181, 74, 74, 116, 208, 231, 83, 253, 118, 247, 14, 141, 178]) }, minimum: 701, maximum: 701, observed: 701 })
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- adapters::compaction::materialization_tests::sealed_stage_growth_is_refused_before_materialization stdout ----
+
+thread 'adapters::compaction::materialization_tests::sealed_stage_growth_is_refused_before_materialization' (452) panicked at src/adapters/compaction/materialization_tests.rs:84:5:
+exact observed-length refusal: Materialize(Length { artifact: Segment { digest: SegmentDigest([162, 186, 196, 168, 172, 192, 142, 28, 141, 12, 115, 48, 37, 117, 72, 28, 164, 173, 212, 58, 245, 52, 226, 123, 113, 188, 248, 140, 194, 232, 109, 3]) }, minimum: 701, maximum: 701, observed: 701 })
+
+
+failures:
+    adapters::compaction::materialization_tests::retained_segment_growth_is_refused_before_materialization
+    adapters::compaction::materialization_tests::sealed_stage_growth_is_refused_before_materialization
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 487 filtered out; finished in 0.12s
+
+error: test failed, to rerun pass `--lib`
+
+Guarded command exit: 101

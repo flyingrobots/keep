@@ -29,6 +29,8 @@ pub enum FilesystemCompactionError {
     PlanStale,
     /// The current catalog could not be reloaded.
     Catalog(Box<CatalogRestartError>),
+    /// Rereading admitted segment evidence refused its exact length or I/O.
+    Materialize(Box<CatalogRestartError>),
     /// A live record the plan copies is not in the current catalog.
     RecordVanished,
     /// A retained or staged segment refused admission.
@@ -58,6 +60,7 @@ impl fmt::Display for FilesystemCompactionError {
             Self::Refused(source) => write!(formatter, "compaction refused: {source}"),
             Self::PlanStale => formatter.write_str("the store no longer matches the plan"),
             Self::Catalog(_) => formatter.write_str("the current catalog could not be reloaded"),
+            Self::Materialize(_) => formatter.write_str("compaction segment reread refused"),
             Self::RecordVanished => formatter.write_str("a planned live record is not named"),
             Self::Segment(_) => formatter.write_str("a segment refused admission"),
             Self::Stage(_) => formatter.write_str("the new segment stage refused"),
@@ -79,7 +82,7 @@ impl Error for FilesystemCompactionError {
             Self::Snapshot(source) => Some(source.as_ref()),
             Self::Liveness(source) => Some(source.as_ref()),
             Self::Refused(source) => Some(source),
-            Self::Catalog(source) => Some(source.as_ref()),
+            Self::Catalog(source) | Self::Materialize(source) => Some(source.as_ref()),
             Self::Segment(source) => Some(source.as_ref()),
             Self::Stage(source) => Some(source.as_ref()),
             Self::Selection(source) => Some(source),

@@ -10,6 +10,8 @@ after its public API and format compatibility policies are established.
 
 ### Roadmap audit corrections
 
+- Bound compaction rereads by admitted catalog lengths and sealed-stage receipts; refuse changed lengths before allocation and retain typed materialization failures without publishing a successor (#107).
+
 - Report prior completed actions and failing-action namespace effects from compaction and ingestion recovery, preserving typed causes and distinguishing preflight refusal, known unsynchronized effects and uncertainty; stop at the first execution failure (#107).
 
 - Preserve removal and head-finalization outcomes in recovery directory-sync errors, distinguishing effects from already-completed retries while retaining the original I/O cause and unconfirmed durability; exhaustive public error patterns must admit the new `outcome` field (#107).

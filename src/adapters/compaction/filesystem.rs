@@ -3,7 +3,7 @@
 //! successor through the complete catalog protocol, and revalidate.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::io::{self, Read};
+use std::io;
 use std::path::Path;
 
 use super::plan::superseded_set;
@@ -13,8 +13,8 @@ use crate::adapters::{
     AdmittedSegment, CanonicalCatalog, CatalogPublicationError, CatalogPublicationExpectation,
     CatalogPublicationReceipt, CatalogRestartPolicy, FilesystemCatalogPublisher,
     FilesystemRetentionSnapshot, FilesystemVersionTwoAdmission, ReaderAttemptLimit, SegmentDigest,
-    SegmentPublication, SegmentRecordLimit, StagedSegment, filesystem_exact_record as exact_record,
-    physical_pool_name, publish_catalog_generation,
+    SegmentPublication, SegmentRecordLimit, StagedSegment, physical_pool_name,
+    publish_catalog_generation,
 };
 use crate::{CatalogDigest, CatalogGeneration};
 
@@ -134,9 +134,16 @@ impl FilesystemCompactionAuthority {
     /// new one; `publish` runs the protocol; then the store is reopened and
     /// every superseded segment must plan as a superseded GC candidate.
     ///
+    /// Retained segments are reread at the exact lengths admitted by the
+    /// bounded catalog load; the new stage is reread at its sealed receipt's
+    /// exact length. Metadata growth refuses before content allocation, and
+    /// growth after that check cannot extend the bounded read. The operation
+    /// materializes these bytes while retaining the loaded catalog snapshot.
+    ///
     /// # Errors
     ///
-    /// As [`Self::execute`].
+    /// As [`Self::execute`]. [`FilesystemCompactionError::Materialize`](super::FilesystemCompactionError::Materialize)
+    /// preserves typed length, allocation and I/O failures from a reread.
     #[doc(hidden)]
     pub fn execute_with(
         &mut self,
@@ -162,7 +169,7 @@ impl FilesystemCompactionAuthority {
         let snapshot = catalog
             .snapshot()
             .map_err(|source| Error::Catalog(Box::new(source)))?;
-        let retained_bytes = self.read_retained(plan, before_read)?;
+        let retained_bytes = self.read_retained(plan, &catalog, before_read)?;
         let mut segments = Vec::new();
         for bytes in &retained_bytes {
             segments.push(admit(bytes, self.policy)?);
@@ -243,6 +250,7 @@ impl FilesystemCompactionAuthority {
     fn read_retained(
         &self,
         plan: &CompactionPlan,
+        catalog: &crate::adapters::FilesystemCatalogSnapshot,
         before_read: &mut dyn FnMut(ReadTarget) -> io::Result<()>,
     ) -> Result<Vec<Vec<u8>>, Error> {
         let mut retained = Vec::new();
@@ -250,11 +258,14 @@ impl FilesystemCompactionAuthority {
             before_read(ReadTarget::Retained(digest))
                 .map_err(|source| Error::Observe { source })?;
             let name = physical_pool_name::segment(digest);
-            let mut file = exact_record::open_read(&self.publisher.segments, &name)
-                .map_err(|source| Error::Observe { source })?;
-            let mut bytes = Vec::new();
-            file.read_to_end(&mut bytes)
-                .map_err(|source| Error::Observe { source })?;
+            let loaded = catalog
+                .loaded_segments()
+                .iter()
+                .find(|loaded| loaded.digest() == digest)
+                .ok_or(Error::PlanStale)?;
+            let expected = admit(loaded.encoded(), self.policy)?.segment_length();
+            let bytes =
+                super::materialization::read(&self.publisher.segments, &name, digest, expected)?;
             retained.push(bytes);
         }
         Ok(retained)
@@ -295,14 +306,12 @@ impl FilesystemCompactionAuthority {
             .seal()
             .map_err(|source| Error::Stage(Box::new(source)))?;
         before_read(ReadTarget::Staged).map_err(|source| Error::Observe { source })?;
-        let mut file = exact_record::open_read(
+        let bytes = super::materialization::read(
             &self.publisher.staging,
             crate::adapters::filesystem_catalog_publisher::CURRENT_SEGMENT,
-        )
-        .map_err(|source| Error::Observe { source })?;
-        let mut bytes = Vec::new();
-        file.read_to_end(&mut bytes)
-            .map_err(|source| Error::Observe { source })?;
+            sealed.digest(),
+            sealed.segment_length(),
+        )?;
         Ok((bytes, sealed))
     }
 

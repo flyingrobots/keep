@@ -41,6 +41,8 @@ The plan carries the coordinates it was computed under, the successor generation
 6. reopens the store, verifies every retained closure, and requires every
    superseded segment to plan as an `unreachable-superseded` GC candidate.
 
+Compaction bounds retained-segment rereads by the lengths admitted in the current catalog snapshot and the new stage reread by its sealed receipt. No-follow regular-file opens precede a metadata length check; allocation and reading use only the expected length, and a trailing-byte probe rejects later growth. `FilesystemCompactionError::Materialize` preserves the typed length, allocation or I/O cause. A length refusal preserves the observed artifact and publishes no successor; these guards do not establish isolation against concurrent raw namespace mutation.
+
 The closure *transcript digest* changes across a successor by design (it binds the catalog generation and digest); closure membership, root digests, and every live record's bytes do not.
 
 ## Recovery

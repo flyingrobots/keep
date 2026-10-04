@@ -1,0 +1,14 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.68s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 3 tests
+test adapters::catalog_restart_io::tests::read_exact_rejects_trailing_bytes ... ok
+test adapters::catalog_restart_io::tests::read_exact_returns_exact_bytes ... ok
+test adapters::catalog_restart_io::tests::read_exact_rejects_short_artifacts ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 486 filtered out; finished in 0.00s
+
+
+Guarded command exit: 0

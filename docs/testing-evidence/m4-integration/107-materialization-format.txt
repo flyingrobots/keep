@@ -1,0 +1,3 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+
+Guarded command exit: 0
