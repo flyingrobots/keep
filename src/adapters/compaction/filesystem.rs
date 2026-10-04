@@ -3,7 +3,7 @@
 //! successor through the complete catalog protocol, and revalidate.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::io::Read;
+use std::io::{self, Read};
 use std::path::Path;
 
 use super::plan::superseded_set;
@@ -17,6 +17,13 @@ use crate::adapters::{
     physical_pool_name, publish_catalog_generation,
 };
 use crate::{CatalogDigest, CatalogGeneration};
+
+/// The observed artifact about to be reread under compaction authority.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) enum ReadTarget {
+    Retained(SegmentDigest),
+    Staged,
+}
 
 /// The publication call compaction drives: production passes
 /// [`publish_catalog_generation`] on the authority's own publisher; a test
@@ -136,6 +143,15 @@ impl FilesystemCompactionAuthority {
         plan: &CompactionPlan,
         publish: CompactionPublish<'_>,
     ) -> Result<CompactionReceipt, Error> {
+        self.execute_before_read(plan, publish, &mut |_target| Ok(()))
+    }
+
+    pub(super) fn execute_before_read(
+        &mut self,
+        plan: &CompactionPlan,
+        publish: CompactionPublish<'_>,
+        before_read: &mut dyn FnMut(ReadTarget) -> io::Result<()>,
+    ) -> Result<CompactionReceipt, Error> {
         self.reprove(plan)?;
         let catalog = crate::adapters::catalog_restart_loader::load_from_directory(
             &self.publisher.root,
@@ -146,7 +162,7 @@ impl FilesystemCompactionAuthority {
         let snapshot = catalog
             .snapshot()
             .map_err(|source| Error::Catalog(Box::new(source)))?;
-        let retained_bytes = self.read_retained(plan)?;
+        let retained_bytes = self.read_retained(plan, before_read)?;
         let mut segments = Vec::new();
         for bytes in &retained_bytes {
             segments.push(admit(bytes, self.policy)?);
@@ -154,7 +170,7 @@ impl FilesystemCompactionAuthority {
         let staged = if plan.copied_records() == 0 {
             None
         } else {
-            Some(self.stage_copies(plan, &snapshot)?)
+            Some(self.stage_copies(plan, &snapshot, before_read)?)
         };
         let (new_bytes, sealed) = match staged {
             Some((bytes, sealed)) => (Some(bytes), Some(sealed)),
@@ -224,9 +240,15 @@ impl FilesystemCompactionAuthority {
         }
     }
 
-    fn read_retained(&self, plan: &CompactionPlan) -> Result<Vec<Vec<u8>>, Error> {
+    fn read_retained(
+        &self,
+        plan: &CompactionPlan,
+        before_read: &mut dyn FnMut(ReadTarget) -> io::Result<()>,
+    ) -> Result<Vec<Vec<u8>>, Error> {
         let mut retained = Vec::new();
         for digest in plan.retained() {
+            before_read(ReadTarget::Retained(digest))
+                .map_err(|source| Error::Observe { source })?;
             let name = physical_pool_name::segment(digest);
             let mut file = exact_record::open_read(&self.publisher.segments, &name)
                 .map_err(|source| Error::Observe { source })?;
@@ -244,6 +266,7 @@ impl FilesystemCompactionAuthority {
         &'publisher self,
         plan: &CompactionPlan,
         snapshot: &crate::adapters::CatalogSnapshot<'_, '_, '_>,
+        before_read: &mut dyn FnMut(ReadTarget) -> io::Result<()>,
     ) -> Result<
         (
             Vec<u8>,
@@ -271,6 +294,7 @@ impl FilesystemCompactionAuthority {
         let sealed = staged
             .seal()
             .map_err(|source| Error::Stage(Box::new(source)))?;
+        before_read(ReadTarget::Staged).map_err(|source| Error::Observe { source })?;
         let mut file = exact_record::open_read(
             &self.publisher.staging,
             crate::adapters::filesystem_catalog_publisher::CURRENT_SEGMENT,
