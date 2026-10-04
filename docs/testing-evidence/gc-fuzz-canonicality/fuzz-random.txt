@@ -4,8 +4,8 @@ Replay: seed=180510830 max_total_time=15 timeout=5 max_len=1048576 rss_limit_mb=
      Running `/build/keep107-gc-nightly-target/aarch64-unknown-linux-gnu/release/gc_format -artifact_prefix=/build/keep107-gc-source/fuzz/artifacts/gc_format/ -seed=180510830 -max_total_time=15 -timeout=5 -max_len=1048576 -rss_limit_mb=1024 -print_final_stats=1 /build/keep107-gc-source/fuzz/corpus/gc_format`
 INFO: Running with entropic power schedule (0xFF, 100).
 INFO: Seed: 180510830
-INFO: Loaded 1 modules   (91285 inline 8-bit counters): 91285 [0xaaaabb1761c0, 0xaaaabb18c655), 
-INFO: Loaded 1 PC tables (91285 PCs): 91285 [0xaaaabb18c658,0xaaaabb2f0fa8), 
+INFO: Loaded 1 modules   (91285 inline 8-bit counters): 91285 [0xaaaabb1761c0, 0xaaaabb18c655),
+INFO: Loaded 1 PC tables (91285 PCs): 91285 [0xaaaabb18c658,0xaaaabb2f0fa8),
 INFO:       35 files found in /build/keep107-gc-source/fuzz/corpus/gc_format
 INFO: seed corpus: files: 35 min: 1b max: 781b total: 13979b rss: 37Mb
 #36	INITED cov: 510 ft: 879 corp: 34/13974b exec/s: 0 rss: 40Mb

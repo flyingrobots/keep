@@ -24,6 +24,8 @@ Each [intent](gc-fuzz-canonicality/intent.patch), [retirement-receipt](gc-fuzz-c
 
 [Calibration transcript](gc-fuzz-canonicality/calibration.txt) preserves seed 107 and observed statuses. This is old-oracle/new-oracle calibration against deliberate runtime mutations, not a claim that the unmodified production encoders have a demonstrated defect or that every compared coordinate was independently mutated. No mutation remains in the candidate. The replaced assertions are deleted because they fail calibration; their intended risk is now covered by the canonicality relation.
 
+The [original-record archive](gc-fuzz-canonicality/original-records.tar.gz) preserves the tool output and initial mutation patches byte-for-byte. Readable `.txt` copies remove trailing whitespace and terminal blank lines to satisfy the repository whitespace gate; diagnostics and outcomes are unchanged. The standalone mutation patches use one context line to avoid trailing blank context while making the same source mutation. The required whole-tree whitespace check exposed this packaging issue after the first repair commit; it is not a runtime failure.
+
 ## Replay and resource profile
 
 Run in a copied Docker checkout with Rust 1.96.0, a distinct Cargo target directory and the checked-in lockfiles. Build the fixed-input runner with `cargo build --locked --manifest-path fuzz/Cargo.toml --bin gc_format`. This stable replay runner executes the real target on fixtures; it is not a coverage-guided or sanitizer campaign.
