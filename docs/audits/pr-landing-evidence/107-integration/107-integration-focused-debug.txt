@@ -102,4 +102,3 @@ test malformed_publication_observations_preserve_the_decoder_contradiction ... o
 test no_published_catalog_is_missing_evidence ... ok
 
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-

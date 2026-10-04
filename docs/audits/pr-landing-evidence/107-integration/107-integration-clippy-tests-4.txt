@@ -21,4 +21,3 @@ test record_laws::admitted_record_reports_preserve_each_logical_subjects_exact_p
 test segment_reports_bind_only_supported_evidence_to_the_exact_physical_bytes ... ok
 
 test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-

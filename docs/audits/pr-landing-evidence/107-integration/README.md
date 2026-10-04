@@ -2,7 +2,7 @@
 
 Change kinds: bug fixes for mixed-store authority and receipt provenance; integration adaptations preserving main's fallible reads, subject-specific verification and typed error sources. This is unfinished local work combining PR `7cdc2cfbef59407f3c38881b39a290cb85501f9b` with main `3165890e9291cfb5fe10e81a9d7cd151f3e59464`, not a reviewed candidate or a landed change. Owner: `@flyingrobots`; the change author supplies evidence and an independent reviewer must assess the eventual exact candidate.
 
-The [source manifest](107-integration-source-sha256.txt) identifies the checkpoint's source and tests. Prior runs belong to their recorded incremental source states; they are not represented as validation of an immutable integration commit. The complete working copy and staged patch are preserved locally while documentation and tooling merge conflicts remain.
+The [source manifest](107-integration-source-sha256.txt) identifies the checkpoint's source and tests. Prior runs belong to their recorded incremental source states; they are not represented as validation of an immutable integration commit. The complete working copy and staged patch are preserved locally while documentation and tooling merge conflicts remain. Committed log copies omit surplus terminal blank lines; the original outputs remain preserved locally.
 
 ## Claims and runtime evidence
 

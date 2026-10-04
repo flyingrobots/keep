@@ -12,4 +12,3 @@ test absent_subjects_are_missing_evidence_against_the_complete_view ... ok
 test false_profile_boundaries_pass_chunk_identity_and_fail_only_the_complete_blob ... ok
 
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s
-
