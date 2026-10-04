@@ -22,7 +22,7 @@ struct Mutation {
     field: &'static str,
     reseal: bool,
     mutate: fn(&mut Vec<u8>) -> io::Result<()>,
-    refuses: fn(&Refusal) -> bool,
+    refuses: fn(&Refusal, &[u8], &[u8]) -> bool,
 }
 
 const MATRIX: &[Mutation] = &[
@@ -30,13 +30,13 @@ const MATRIX: &[Mutation] = &[
         field: "magic",
         reseal: true,
         mutate: |bytes| flip(bytes, 15),
-        refuses: |error| matches!(error, Refusal::InvalidMagic { .. }),
+        refuses: |error, _, _| matches!(error, Refusal::InvalidMagic { .. }),
     },
     Mutation {
         field: "version",
         reseal: true,
         mutate: |bytes| patch(bytes, 16, &3_u16.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::UnsupportedVersion {
@@ -50,7 +50,7 @@ const MATRIX: &[Mutation] = &[
         field: "record length",
         reseal: true,
         mutate: |bytes| patch(bytes, 18, &319_u16.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::InvalidRecordLength {
@@ -64,13 +64,13 @@ const MATRIX: &[Mutation] = &[
         field: "flags",
         reseal: true,
         mutate: |bytes| patch(bytes, 20, &1_u32.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::UnsupportedFlags { observed: 1 }),
+        refuses: |error, _, _| matches!(error, Refusal::UnsupportedFlags { observed: 1 }),
     },
     Mutation {
         field: "GC generation",
         reseal: true,
         mutate: |bytes| patch(bytes, 24, &2_u64.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::GenerationMismatch {
@@ -84,19 +84,19 @@ const MATRIX: &[Mutation] = &[
         field: "intent digest",
         reseal: true,
         mutate: |bytes| flip(bytes, 32),
-        refuses: |error| matches!(error, Refusal::IntentDigestMismatch { .. }),
+        refuses: |error, intent, receipt| matches!(error, Refusal::IntentDigestMismatch { expected, observed } if Some(expected.as_slice()) == intent.get(392..424) && Some(observed.as_slice()) == receipt.get(32..64)),
     },
     Mutation {
         field: "retired candidate-set digest",
         reseal: true,
         mutate: |bytes| flip(bytes, 64),
-        refuses: |error| matches!(error, Refusal::RetiredSetDigestMismatch { .. }),
+        refuses: |error, intent, receipt| matches!(error, Refusal::RetiredSetDigestMismatch { expected, observed } if Some(expected.as_slice()) == intent.get(288..320) && Some(observed.as_slice()) == receipt.get(64..96)),
     },
     Mutation {
         field: "liveness generation",
         reseal: true,
         mutate: |bytes| patch(bytes, 128, &2_u64.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::LivenessGenerationMismatch {
@@ -110,13 +110,13 @@ const MATRIX: &[Mutation] = &[
         field: "retention-manifest digest",
         reseal: true,
         mutate: |bytes| flip(bytes, 136),
-        refuses: |error| matches!(error, Refusal::ManifestDigestMismatch { .. }),
+        refuses: |error, intent, receipt| matches!(error, Refusal::ManifestDigestMismatch { expected, observed } if Some(expected.as_slice()) == intent.get(56..88) && Some(observed.as_slice()) == receipt.get(136..168)),
     },
     Mutation {
         field: "catalog generation",
         reseal: true,
         mutate: |bytes| patch(bytes, 168, &3_u64.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::CatalogGenerationMismatch {
@@ -130,13 +130,13 @@ const MATRIX: &[Mutation] = &[
         field: "catalog digest",
         reseal: true,
         mutate: |bytes| flip(bytes, 176),
-        refuses: |error| matches!(error, Refusal::CatalogDigestMismatch { .. }),
+        refuses: |error, intent, receipt| matches!(error, Refusal::CatalogDigestMismatch { expected, observed } if Some(expected.as_slice()) == intent.get(96..128) && Some(observed.as_slice()) == receipt.get(176..208)),
     },
     Mutation {
         field: "reader-lock device",
         reseal: true,
         mutate: |bytes| patch(bytes, 208, &9_u64.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::ReaderLockMismatch {
@@ -151,12 +151,13 @@ const MATRIX: &[Mutation] = &[
         field: "reader-lock mount",
         reseal: true,
         mutate: |bytes| patch(bytes, 216, &9_u64.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::ReaderLockMismatch {
                     coordinate: ReaderLockCoordinate::Mount,
-                    ..
+                    expected: 5,
+                    observed: 9,
                 }
             )
         },
@@ -165,12 +166,13 @@ const MATRIX: &[Mutation] = &[
         field: "reader-lock file",
         reseal: true,
         mutate: |bytes| patch(bytes, 224, &9_u64.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::ReaderLockMismatch {
                     coordinate: ReaderLockCoordinate::File,
-                    ..
+                    expected: 6,
+                    observed: 9,
                 }
             )
         },
@@ -179,7 +181,7 @@ const MATRIX: &[Mutation] = &[
         field: "synchronization count",
         reseal: true,
         mutate: |bytes| patch(bytes, 232, &2_u64.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::SynchronizationCountMismatch {
@@ -193,13 +195,13 @@ const MATRIX: &[Mutation] = &[
         field: "reserved bytes",
         reseal: true,
         mutate: |bytes| flip(bytes, 287),
-        refuses: |error| matches!(error, Refusal::NonZeroReserved),
+        refuses: |error, _, _| matches!(error, Refusal::NonZeroReserved),
     },
     Mutation {
         field: "checksum",
         reseal: false,
         mutate: |bytes| flip(bytes, 319),
-        refuses: |error| matches!(error, Refusal::ChecksumMismatch { .. }),
+        refuses: |error, _, _| matches!(error, Refusal::ChecksumMismatch { .. }),
     },
 ];
 
@@ -233,7 +235,7 @@ fn frozen_receipt_completes_the_frozen_intent_and_reencodes_canonically()
 }
 
 #[test]
-fn every_receipt_field_has_one_exact_first_refusal() -> Result<(), Box<dyn std::error::Error>> {
+fn malformed_receipt_fields_report_the_named_refusal() -> Result<(), Box<dyn std::error::Error>> {
     let intent_bytes = fixture_bytes(GC_INTENT)?;
     let intent = AdmittedGcRetirementIntent::decode(&intent_bytes)?;
     for mutation in MATRIX {
@@ -246,7 +248,7 @@ fn every_receipt_field_has_one_exact_first_refusal() -> Result<(), Box<dyn std::
             return Err(format!("mutated {} was admitted", mutation.field).into());
         };
         assert!(
-            (mutation.refuses)(&error),
+            (mutation.refuses)(&error, &intent_bytes, &bytes),
             "{} refused with {error:?}",
             mutation.field
         );

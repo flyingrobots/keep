@@ -1,13 +1,13 @@
 //! Field-by-field corruption matrix for GC retirement intents.
 //!
-//! Every structural field of the intent header, candidate body, and trailer
-//! has one mutation and one exact first refusal (`KEEP-GC-001`). The sealed
-//! matrix recomputes every digest and checksum the mutation did not target.
+//! Selected malformed fields refuse at their named boundary (KEEP-GC-001); opaque coordinates have separate admission laws. Sealing reconstructs integrity fields not targeted by each case.
 
 use std::io;
 
 use keep::{
-    AdmittedGcRetirementIntent, GcRetirementIntentDecodeError as Refusal, GcRetirementIntentError,
+    AdmittedGcRetirementIntent, CatalogGenerationError, GcGenerationError,
+    GcRetirementIntentDecodeError as Refusal, GcRetirementIntentError, LivenessGenerationError,
+    RetentionProfileAdmissionError,
 };
 
 use super::{
@@ -32,7 +32,7 @@ struct Mutation {
     field: &'static str,
     seal: Seal,
     mutate: fn(&mut Vec<u8>) -> io::Result<()>,
-    refuses: fn(&Refusal) -> bool,
+    refuses: fn(&Refusal, &[u8], &[u8]) -> bool,
 }
 
 const MATRIX: &[Mutation] = &[
@@ -40,13 +40,13 @@ const MATRIX: &[Mutation] = &[
         field: "magic",
         seal: Seal::Everything,
         mutate: |bytes| flip(bytes, 15),
-        refuses: |error| matches!(error, Refusal::InvalidMagic { .. }),
+        refuses: |error, _, mutated| matches!(error, Refusal::InvalidMagic { observed } if Some(observed.as_slice()) == mutated.get(..16)),
     },
     Mutation {
         field: "version",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 16, &3_u16.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::UnsupportedVersion {
@@ -60,7 +60,7 @@ const MATRIX: &[Mutation] = &[
         field: "header length",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 18, &319_u16.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::InvalidHeaderLength {
@@ -74,13 +74,13 @@ const MATRIX: &[Mutation] = &[
         field: "flags",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 20, &1_u32.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::UnsupportedFlags { observed: 1 }),
+        refuses: |error, _, _| matches!(error, Refusal::UnsupportedFlags { observed: 1 }),
     },
     Mutation {
         field: "total record length",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 24, &455_u64.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::DeclaredLengthMismatch {
@@ -94,13 +94,20 @@ const MATRIX: &[Mutation] = &[
         field: "GC generation zero",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 32, &0_u64.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::Generation { .. }),
+        refuses: |error, _, _| {
+            matches!(
+                error,
+                Refusal::Generation {
+                    source: GcGenerationError::Zero
+                }
+            )
+        },
     },
     Mutation {
         field: "candidate width",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 40, &71_u16.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::InvalidCandidateWidth {
@@ -114,13 +121,13 @@ const MATRIX: &[Mutation] = &[
         field: "reserved candidate bytes",
         seal: Seal::Everything,
         mutate: |bytes| flip(bytes, 42),
-        refuses: |error| matches!(error, Refusal::NonZeroReserved { field: "candidate" }),
+        refuses: |error, _, _| matches!(error, Refusal::NonZeroReserved { field: "candidate" }),
     },
     Mutation {
         field: "candidate count participates in the declared length",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, CANDIDATE_COUNT_OFFSET, &2_u32.to_be_bytes()),
-        refuses: |error| {
+        refuses: |error, _, _| {
             matches!(
                 error,
                 Refusal::DeclaredLengthMismatch {
@@ -134,54 +141,92 @@ const MATRIX: &[Mutation] = &[
         field: "liveness generation zero",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 48, &0_u64.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::LivenessGeneration { .. }),
+        refuses: |error, _, _| {
+            matches!(
+                error,
+                Refusal::LivenessGeneration {
+                    source: LivenessGenerationError::Zero
+                }
+            )
+        },
     },
     Mutation {
         field: "catalog generation zero",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 88, &0_u64.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::CatalogGeneration { .. }),
+        refuses: |error, _, _| {
+            matches!(
+                error,
+                Refusal::CatalogGeneration {
+                    source: CatalogGenerationError::Zero
+                }
+            )
+        },
     },
     Mutation {
         field: "profile identity",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 128, &2_u32.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::Profile { .. }),
+        refuses: |error, _, _| {
+            matches!(
+                error,
+                Refusal::Profile {
+                    source: RetentionProfileAdmissionError::UnsupportedCoordinate {
+                        expected_identity: 1,
+                        expected_version: 1,
+                        observed_identity: 2,
+                        observed_version: 1
+                    }
+                }
+            )
+        },
     },
     Mutation {
         field: "profile version",
         seal: Seal::Everything,
         mutate: |bytes| patch(bytes, 132, &2_u32.to_be_bytes()),
-        refuses: |error| matches!(error, Refusal::Profile { .. }),
+        refuses: |error, _, _| {
+            matches!(
+                error,
+                Refusal::Profile {
+                    source: RetentionProfileAdmissionError::UnsupportedCoordinate {
+                        expected_identity: 1,
+                        expected_version: 1,
+                        observed_identity: 1,
+                        observed_version: 2
+                    }
+                }
+            )
+        },
     },
     Mutation {
         field: "profile-definition digest",
         seal: Seal::Everything,
         mutate: |bytes| flip(bytes, 136),
-        refuses: |error| matches!(error, Refusal::Profile { .. }),
+        refuses: |error, original, mutated| matches!(error, Refusal::Profile { source: RetentionProfileAdmissionError::DefinitionDigestMismatch { expected, observed } } if Some(expected.as_slice()) == original.get(136..168) && Some(observed.as_slice()) == mutated.get(136..168)),
     },
     Mutation {
         field: "candidate-set digest",
         seal: Seal::Digests,
         mutate: |bytes| flip(bytes, CANDIDATE_SET_DIGEST_OFFSET),
-        refuses: |error| matches!(error, Refusal::CandidateSetDigestMismatch { .. }),
+        refuses: |error, _, _| matches!(error, Refusal::CandidateSetDigestMismatch { .. }),
     },
     Mutation {
         field: "intent digest",
         seal: Seal::Checksum,
         mutate: |bytes| flip(bytes, INTENT_DIGEST_OFFSET),
-        refuses: |error| matches!(error, Refusal::IntentDigestMismatch { .. }),
+        refuses: |error, _, _| matches!(error, Refusal::IntentDigestMismatch { .. }),
     },
     Mutation {
         field: "checksum",
         seal: Seal::Nothing,
         mutate: |bytes| flip(bytes, CHECKSUM_OFFSET),
-        refuses: |error| matches!(error, Refusal::ChecksumMismatch { .. }),
+        refuses: |error, _, _| matches!(error, Refusal::ChecksumMismatch { .. }),
     },
 ];
 
 #[test]
-fn every_intent_field_has_one_exact_first_refusal() -> Result<(), Box<dyn std::error::Error>> {
+fn malformed_intent_fields_report_the_named_refusal() -> Result<(), Box<dyn std::error::Error>> {
     for mutation in MATRIX {
         let mut bytes = fixture_bytes()?;
         (mutation.mutate)(&mut bytes)?;
@@ -190,7 +235,7 @@ fn every_intent_field_has_one_exact_first_refusal() -> Result<(), Box<dyn std::e
             return Err(format!("mutated {} was admitted", mutation.field).into());
         };
         assert!(
-            (mutation.refuses)(&error),
+            (mutation.refuses)(&error, &fixture_bytes()?, &bytes),
             "{} refused with {error:?}",
             mutation.field
         );
