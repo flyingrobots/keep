@@ -89,6 +89,7 @@ mod filesystem_exact_record;
 mod filesystem_initialization_namespace;
 mod filesystem_initialization_storage;
 mod filesystem_namespace_refusal;
+mod filesystem_operation_refusal;
 mod filesystem_platform_admission;
 mod filesystem_platform_admission_error;
 mod filesystem_platform_profile;

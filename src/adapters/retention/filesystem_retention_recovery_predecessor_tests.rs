@@ -99,7 +99,15 @@ fn require_refusal(damage: Damage, prefix: usize) -> Result<(), Box<dyn Error>> 
                 Some(RetentionCurrentStateRefusal::PredecessorRootAbsent)
             )
         }
-        (Err(FilesystemRetentionRecoveryError::Observe { source }), _) => {
+        (Err(FilesystemRetentionRecoveryError::Observe { source }), Damage::Corrupt) => {
+            matches!(
+                refusal(source),
+                Some(RetentionCurrentStateRefusal::PredecessorRootRefused {
+                    source: crate::RetentionRootDecodeError::ChecksumMismatch { .. }
+                })
+            )
+        }
+        (Err(FilesystemRetentionRecoveryError::Observe { source }), Damage::Substituted) => {
             matches!(
                 refusal(source),
                 Some(RetentionCurrentStateRefusal::PredecessorRootChanged)

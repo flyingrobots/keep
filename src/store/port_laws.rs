@@ -21,14 +21,10 @@ pub(crate) fn reconstructs_exactly<C: ContentReads>(
 ) -> Result<(), Box<dyn Error>> {
     assert!(view.contains_blob(target)?);
     let mut output = Vec::new();
-    let receipt = view
-        .reconstruct(target, &mut output)
-        .map_err(|error| error.to_string())?;
+    let receipt = view.reconstruct(target, &mut output)?;
     assert_eq!(output.as_slice(), expected);
     let mut exact = Vec::new();
-    let exact_receipt = view
-        .reconstruct_layout(layout_id, &mut exact)
-        .map_err(|error| error.to_string())?;
+    let exact_receipt = view.reconstruct_layout(layout_id, &mut exact)?;
     assert_eq!(exact.as_slice(), expected);
     assert_eq!(exact_receipt, receipt);
     Ok(())
@@ -45,9 +41,7 @@ pub(crate) fn ranges_exactly<C: ContentReads>(
     for (offset, length) in ranges {
         let requested = ByteRange::new(ByteOffset::new(*offset), ByteLength::new(*length))?;
         let mut output = Vec::new();
-        let _receipt = view
-            .read_range(target, requested, &mut output)
-            .map_err(|error| error.to_string())?;
+        let _receipt = view.read_range(target, requested, &mut output)?;
         let start = usize::try_from(*offset)?;
         let end = usize::try_from(offset.saturating_add(*length))?;
         assert_eq!(Some(output.as_slice()), expected.get(start..end));

@@ -110,6 +110,20 @@ fn byte_equal_substituted_canonical_root_is_refused() -> Result<(), Box<dyn Erro
         .ok_or("byte-equal substituted root was unexpectedly admitted")?;
 
     assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    let storage = error
+        .get_ref()
+        .and_then(|source| source.downcast_ref::<crate::RetentionStorageError>())
+        .ok_or("substitution lost its typed storage boundary")?;
+    assert!(
+        matches!(
+            storage,
+            crate::RetentionStorageError::Operation { source, progress }
+                if matches!(source.as_ref(), crate::RetentionStorageError::Refused {
+                    source: crate::RetentionRecordRefusal::KindLengthOrIdentity
+                }) && progress.boundary == crate::RetentionStorageBoundary::PoolVerification
+        ),
+        "substitution must preserve the exact refusal and boundary: {storage:?}"
+    );
     Ok(())
 }
 

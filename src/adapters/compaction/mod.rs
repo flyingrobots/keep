@@ -33,6 +33,7 @@ mod recovery_preflight;
 mod recovery_progress;
 #[cfg(test)]
 mod recovery_progress_tests;
+mod recovery_refusal;
 mod recovery_schedule;
 #[cfg(all(test, target_os = "linux"))]
 mod recovery_uncertain_tests;
@@ -52,3 +53,4 @@ pub use recovery_progress::{
     CompactionRecoveryAction, CompactionRecoveryBoundary, CompactionRecoveryEffects,
     CompactionRecoveryExecution,
 };
+pub use recovery_refusal::CompactionRecoveryRefusal;

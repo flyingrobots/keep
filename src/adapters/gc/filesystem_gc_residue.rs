@@ -37,7 +37,7 @@ pub(super) fn read(gc: &Dir, segments: &Dir) -> io::Result<GcResidueObservation>
     let intent_bound =
         super::intent_format::canonical_length(GcRetirementIntent::MAXIMUM_CANDIDATE_COUNT)
             .and_then(|length| length.checked_add(1))
-            .ok_or_else(|| invalid("GC intent bound overflow"))?;
+            .ok_or_else(|| invalid(super::FilesystemGcRefusal::IntentBoundOverflow))?;
     let receipt_bound = RECEIPT_LENGTH.saturating_add(1);
     let intent = read_bounded(gc, INTENT, intent_bound)?;
     let candidates_present = match intent.as_deref().map(AdmittedGcRetirementIntent::decode) {
@@ -84,15 +84,44 @@ fn read_bounded(gc: &Dir, name: &str, bound: usize) -> io::Result<Option<Box<[u8
 /// Removes a discardable stage and proves it gone.
 pub(super) fn discard(gc: &Dir, name: &str) -> io::Result<()> {
     gc.remove_file(name)?;
-    exact_record::require_absent(gc, name)
-        .map_err(|_source| invalid("discarded GC stage remained visible"))?;
+    exact_record::require_absent(gc, name).map_err(ExactRecordError::into_io)?;
     crate::adapters::filesystem_catalog_artifact::synchronize_directory(gc)
 }
 
-pub(super) fn invalid(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
+pub(super) fn invalid(refusal: super::FilesystemGcRefusal) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, refusal)
 }
 
 pub(super) fn invalid_from(error: impl std::error::Error + Send + Sync + 'static) -> io::Error {
     io::Error::new(io::ErrorKind::InvalidData, error)
+}
+#[cfg(test)]
+mod tests {
+    use std::error::Error;
+    use std::fs;
+
+    use super::{ExactRecordError, INTENT, read_bounded};
+    use crate::adapters::filesystem_exact_record::ExactRecordRefusal;
+    use crate::adapters::filesystem_test_sandbox::TestDirectory;
+
+    #[test]
+    fn a_non_regular_gc_record_retains_its_exact_refusal() -> Result<(), Box<dyn Error>> {
+        let sandbox = TestDirectory::create("gc-residue-typed-kind")?;
+        fs::create_dir(sandbox.path().join(INTENT))?;
+        let directory =
+            cap_std::fs::Dir::open_ambient_dir(sandbox.path(), cap_std::ambient_authority())?;
+        let error = read_bounded(&directory, INTENT, 1)
+            .err()
+            .ok_or("non-regular GC intent admitted")?;
+        assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+        assert!(matches!(
+            error
+                .get_ref()
+                .and_then(|source| source.downcast_ref::<ExactRecordError>()),
+            Some(ExactRecordError::Refused(ExactRecordRefusal::KindOrLength))
+        ));
+        drop(directory);
+        sandbox.remove()?;
+        Ok(())
+    }
 }

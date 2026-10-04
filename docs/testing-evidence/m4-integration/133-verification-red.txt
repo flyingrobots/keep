@@ -1,0 +1,23 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 1 test
+test adapters::retention::verification_record_refusal_tests::a_truncated_retention_head_remains_corruption_after_typed_error_conversion ... FAILED
+
+failures:
+
+---- adapters::retention::verification_record_refusal_tests::a_truncated_retention_head_remains_corruption_after_typed_error_conversion stdout ----
+
+thread 'adapters::retention::verification_record_refusal_tests::a_truncated_retention_head_remains_corruption_after_typed_error_conversion' (1721) panicked at src/adapters/retention/verification_record_refusal_tests.rs:32:5:
+a demonstrated record contradiction must remain corruption: Operational { source: View(Io { source: Custom { kind: InvalidData, error: Refused(KindOrLength) } }) }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    adapters::retention::verification_record_refusal_tests::a_truncated_retention_head_remains_corruption_after_typed_error_conversion
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 492 filtered out; finished in 0.06s
+
+error: test failed, to rerun pass `--lib`
+
+Guarded command exit: 101

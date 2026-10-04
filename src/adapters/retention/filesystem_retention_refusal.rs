@@ -5,9 +5,11 @@ use std::fmt;
 use std::io;
 
 use super::{RetentionClosureVerificationError, RetentionRecoveryError, RetentionRecoveryRefusal};
-use super::{RetentionHeadDecodeError, RetentionManifestDecodeError};
+use super::{RetentionHeadDecodeError, RetentionManifestDecodeError, RetentionRootDecodeError};
 use crate::adapters::{CatalogDecodeError, CatalogRestartError, PublicationHeadDecodeError};
-use crate::{CatalogGeneration, LivenessGeneration, RetentionManifestDigest};
+use crate::{
+    CatalogGeneration, LivenessGeneration, RetentionManifestDigest, RetentionNamespaceDigest,
+};
 
 /// Exact reason filesystem current-state verification refused a transition.
 ///
@@ -103,6 +105,13 @@ pub enum RetentionCurrentStateRefusal {
     CommittedSelectionMismatch,
     /// The committed namespace directory cannot be opened.
     CommittedNamespaceUnavailable,
+    /// The selected namespace directory cannot be opened; the exact OS failure remains.
+    NamespaceRead {
+        /// The selected namespace.
+        namespace: RetentionNamespaceDigest,
+        /// The exact filesystem failure.
+        source: io::Error,
+    },
     /// The committed root pool entry is absent.
     CommittedRootAbsent,
     /// The committed root pool entry holds different bytes.
@@ -113,6 +122,11 @@ pub enum RetentionCurrentStateRefusal {
     PredecessorRootAbsent,
     /// The predecessor root pool entry does not decode to the manifest's selection.
     PredecessorRootChanged,
+    /// The predecessor bytes fail root decoding before selection can be compared.
+    PredecessorRootRefused {
+        /// The exact framing, integrity, or semantic decoding refusal.
+        source: RetentionRootDecodeError,
+    },
     /// The `retention` directory carries an entry outside `HEAD`, `roots`,
     /// and `manifests`.
     UnknownRetentionEntry,
@@ -237,7 +251,7 @@ impl RetentionCurrentStateRefusal {
             Self::CommittedSelectionMismatch => {
                 "committed manifest selects a different root for the candidate namespace"
             }
-            Self::CommittedNamespaceUnavailable => {
+            Self::CommittedNamespaceUnavailable | Self::NamespaceRead { .. } => {
                 "committed root namespace directory is unavailable"
             }
             Self::CommittedRootAbsent => "committed root pool entry is absent",
@@ -248,7 +262,7 @@ impl RetentionCurrentStateRefusal {
             Self::PredecessorRootAbsent => {
                 "predecessor root pool entry is absent or exceeds the format bound"
             }
-            Self::PredecessorRootChanged => {
+            Self::PredecessorRootChanged | Self::PredecessorRootRefused { .. } => {
                 "predecessor root pool entry does not decode to the manifest's selection"
             }
             Self::UnknownRetentionEntry => "retention namespace carries an unknown entry",
@@ -304,6 +318,8 @@ impl Error for RetentionCurrentStateRefusal {
             Self::ClosureMemberRefused { source } => Some(source.as_ref()),
             Self::ClosureReverificationRefused { source } => Some(source),
             Self::RecoveryObservationRefused { source } => Some(source),
+            Self::NamespaceRead { source, .. } => Some(source),
+            Self::PredecessorRootRefused { source } => Some(source),
             _ => None,
         }
     }

@@ -31,7 +31,7 @@ pub(super) fn verify(root: &Dir, file: &File) -> io::Result<()> {
         Ok(())
     } else {
         Err(ambiguous(
-            "reader fence kind, length, or identity disagreed",
+            super::FilesystemMigrationRefusal::ReaderFenceChanged,
         ))
     }
 }

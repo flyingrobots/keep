@@ -151,7 +151,9 @@ impl FilesystemMigrationFixedStage {
         if observed == self.identity {
             Ok(())
         } else {
-            Err(invalid_data("migration stage handle changed identity"))
+            Err(invalid_data(
+                super::FilesystemMigrationRefusal::StageIdentityChanged,
+            ))
         }
     }
 
@@ -163,7 +165,7 @@ impl FilesystemMigrationFixedStage {
         if self.artifact == artifact && self.expected.as_ref() == expected {
             Ok(())
         } else {
-            Err(invalid_data("migration stage record disagreed"))
+            Err(invalid_data(super::FilesystemMigrationRefusal::StageRecord))
         }
     }
 
@@ -196,7 +198,7 @@ fn verify_named_record(
     exact_record::verify_named(root, name, expected, identity).map_err(migration_error)
 }
 
-/// Maps a shared exact-record failure onto this protocol's refusal messages.
+/// Retains exact-record refusals and the filesystem's original operational errors.
 fn migration_error(error: ExactRecordError) -> io::Error {
     error.into_io()
 }
@@ -212,8 +214,8 @@ fn require_length(artifact: FilesystemMigrationFixedArtifact, expected: &[u8]) -
     }
 }
 
-fn invalid_data(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
+fn invalid_data(refusal: super::FilesystemMigrationRefusal) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, refusal)
 }
 
 impl FilesystemMigrationFixedStage {

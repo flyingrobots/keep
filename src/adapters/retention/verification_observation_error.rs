@@ -40,11 +40,13 @@ pub(super) fn refusal(error: &io::Error) -> Option<VerificationRefusal> {
         | Current::Superseded { .. }
         | Current::CommittedSelectionMissing
         | Current::CommittedSelectionMismatch
+        | Current::NamespaceRead { .. }
         | Current::CommittedNamespaceUnavailable
         | Current::CommittedRootAbsent
         | Current::CommittedRootChanged
         | Current::PredecessorMismatch
         | Current::PredecessorRootAbsent
+        | Current::PredecessorRootRefused { .. }
         | Current::PredecessorRootChanged
         | Current::UnknownRetentionEntry
         | Current::NonNamespaceEntry

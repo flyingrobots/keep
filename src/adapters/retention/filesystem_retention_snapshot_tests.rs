@@ -141,10 +141,19 @@ fn a_non_empty_reader_lock_refuses_the_fence() -> Result<(), Box<dyn Error>> {
         FilesystemRetentionSnapshot::load(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)
             .err()
             .ok_or("a non-empty reader.lock was accepted as the fence")?;
-    assert!(
-        matches!(&error, FilesystemRetentionSnapshotError::Fence { source }
-            if source.kind() == std::io::ErrorKind::InvalidData),
-        "a nonempty lock must report Fence with InvalidData: {error:?}"
+    let FilesystemRetentionSnapshotError::Fence { source } = error else {
+        return Err("wrong fence refusal boundary".into());
+    };
+    assert_eq!(source.kind(), std::io::ErrorKind::InvalidData);
+    assert_eq!(
+        source
+            .get_ref()
+            .and_then(|source| source.downcast_ref::<crate::ReaderFenceRefusal>()),
+        Some(&crate::ReaderFenceRefusal::Length {
+            expected: 0,
+            observed_handle: 9,
+            observed_entry: 9,
+        })
     );
     Ok(())
 }

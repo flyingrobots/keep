@@ -77,7 +77,7 @@ names; use those in code, tests, and commits.
 
 ### Foundations (M1 and M2)
 
-- [x] [F-01 Core law and fail-closed contract](#f-01-core-law-and-fail-closed-contract) — Done
+- [x] [F-01 Core law and fail-closed contract](#f-01-core-law-and-fail-closed-contract) — Partial; T-01.2 corrections await integration (#110)
 - [x] [F-02 BlobId exact logical identity](#f-02-blobid-exact-logical-identity) — Done
 - [x] [F-03 Identity layers and RepresentationId](#f-03-identity-layers-and-representationid) — Done as a model; representation codec reserved
 - [x] [F-04 Deterministic chunking and ChunkId](#f-04-deterministic-chunking-and-chunkid) — Done
@@ -194,7 +194,8 @@ features are listed; finished prerequisites are implied.
 
 ### F-01 Core law and fail-closed contract
 
-**Status:** Done. Governs every other feature.
+**Status:** Partial. Governs every other feature; T-01.2's audit corrections
+are implemented on this branch, with integration tracked in #110.
 
 For a given content identity, Keep must return exactly the bytes named by
 that identity, or refuse. Keep refuses, before mutating anything, a disk
@@ -210,6 +211,10 @@ application policy.
   boundary error enum carries `expected` and `observed` fields and a
   preserved `source`; `unwrap_used`, `expect_used`, and `panic` are denied
   workspace-wide.
+  Typed-source audit corrections: #110; ADR-0010;
+  chunk-reader, selected-root,
+  reader-fence, predecessor, migration-stage, and GC-residue regressions.
+  The task remains open until the corrected implementation is integrated.
 - [x] T-01.3 Keep application semantics out of the core — `KEEP-STORE-016`;
   Echo, Git, Graft, WARP, and CLI types never enter `src/`.
 

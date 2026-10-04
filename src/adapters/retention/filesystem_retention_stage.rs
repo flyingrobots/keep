@@ -218,6 +218,8 @@ pub(in crate::adapters) fn retention_error(error: ExactRecordError) -> Retention
     }
 }
 
-pub(in crate::adapters) fn invalid_data(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
+pub(in crate::adapters) fn invalid_data(
+    refusal: super::FilesystemRetentionStageRefusal,
+) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, refusal)
 }

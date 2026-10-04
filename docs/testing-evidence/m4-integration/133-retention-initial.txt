@@ -1,0 +1,302 @@
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.44s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 247 tests
+test adapters::retention::durable_read_law_tests::durable_reconstruction_returns_golden_bytes_with_exact_view_coordinates ... ok
+test adapters::retention::durable_read_law_tests::durable_ranges_emit_only_the_requested_golden_interval ... ok
+test adapters::retention::durable_read_law_tests::unretained_blob_refuses_without_output_but_exact_catalog_layout_remains_readable ... ok
+test adapters::retention::durable_view_law_tests::a_pinned_read_keeps_its_retained_view_after_release_publication ... ok
+test adapters::retention::durable_view_law_tests::an_unreadable_segment_preserves_the_operational_open_failure ... ok
+test adapters::retention::durable_view_law_tests::durable_snapshot_holds_the_collector_fence_until_drop ... ok
+test adapters::retention::filesystem_recovery_admission_tests::recovery_inventory_reader_refuses_a_migrated_root ... ok
+test adapters::retention::filesystem_retention_anchor_order_prefix_tests::every_decisive_anchor_order_prefix_is_corrupt ... ok
+test adapters::retention::filesystem_recovery_admission_tests::recovery_stage_discarder_refuses_a_migrated_root ... ok
+test adapters::retention::filesystem_retention_anchor_order_prefix_tests::ordered_anchors_admit_every_partial_length ... ok
+test adapters::retention::filesystem_retention_attempt_tests::namespace_admission_refuses_a_directory_the_expectation_excludes ... ok
+test adapters::retention::filesystem_retention_attempt_tests::namespace_phases_refuse_a_root_outside_the_admitted_namespace ... ok
+test adapters::retention::filesystem_retention_attempt_tests::refused_verification_admits_no_later_phase ... ok
+test adapters::retention::filesystem_retention_attempt_tests::stale_stage_handle_does_not_survive_a_refused_verification ... ok
+test adapters::retention::filesystem_retention_body_prefix_tests::duplicate_entries_in_short_bodies_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_anchor_order_prefix_tests::impossible_partial_anchor_order_preserves_evidence ... ok
+test adapters::retention::filesystem_retention_body_prefix_tests::invalid_complete_entries_in_short_bodies_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_capacity_tests::a_full_namespace_pool_admits_a_successor_in_an_existing_namespace ... ok
+test adapters::retention::filesystem_retention_capacity_tests::a_full_namespace_pool_refuses_a_new_namespace_before_staging ... ok
+test adapters::retention::filesystem_retention_catalog_tests::a_corrupt_catalog_head_refuses_with_its_decode_error ... ok
+test adapters::retention::filesystem_retention_catalog_tests::an_absent_selected_catalog_refuses_publication ... ok
+test adapters::retention::filesystem_retention_catalog_tests::closure_verified_against_another_catalog_refuses_before_staging ... ok
+test adapters::retention::filesystem_retention_catalog_tests::committed_retry_over_a_foreign_catalog_refuses_before_reporting_committed ... ok
+test adapters::retention::filesystem_retention_capacity_tests::an_overfull_namespace_pool_refuses_even_a_successor_in_an_existing_namespace ... ok
+test adapters::retention::filesystem_retention_current_tests::committed_retry_refuses_when_the_selected_manifest_is_corrupt ... ok
+test adapters::retention::filesystem_retention_current_tests::committed_retry_refuses_when_the_selected_root_bytes_changed ... ok
+test adapters::retention::filesystem_retention_current_tests::committed_retry_refuses_when_the_selected_root_is_absent ... ok
+test adapters::retention::filesystem_retention_current_tests::head_predecessor_disagreeing_with_its_manifest_refuses ... ok
+test adapters::retention::filesystem_retention_disposition_tests::a_reader_holding_the_fence_refuses_disposition_without_waiting ... ok
+test adapters::retention::filesystem_retention_disposition_tests::a_second_disposition_finds_nothing_protected_and_changes_nothing ... ok
+test adapters::retention::filesystem_retention_disposition_tests::an_interrupted_retirement_resumes_from_every_residue ... ok
+test adapters::retention::filesystem_retention_disposition_tests::finalize_requires_a_published_head ... ok
+test adapters::retention::filesystem_retention_disposition_tests::finalizing_a_successor_orphan_keeps_its_pool_entry_and_frees_publication ... ok
+test adapters::retention::filesystem_retention_disposition_tests::readers_admit_a_store_with_receipts_and_refuse_a_stray_disposition_entry ... ok
+test adapters::retention::filesystem_retention_disposition_tests::retiring_a_protected_root_under_an_absent_head_frees_publication ... ok
+test adapters::retention::filesystem_retention_disposition_tests::the_manifest_stage_must_be_disposed_before_the_root_it_names ... ok
+test adapters::retention::filesystem_retention_expectation_tests::absent_expectation_refuses_an_orphan_directory_for_a_new_namespace ... ok
+test adapters::retention::filesystem_retention_expectation_tests::absent_head_with_retention_artifacts_refuses_as_recovery ... ok
+test adapters::retention::filesystem_retention_expectation_tests::current_expectation_refuses_when_the_namespace_directory_is_absent ... ok
+test adapters::retention::filesystem_retention_expectation_tests::predecessor_read_bound_derives_from_the_typed_root_limits ... ok
+test adapters::retention::filesystem_retention_closure_prefix_tests::impossible_closure_prefixes_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_expectation_tests::successor_refuses_when_the_predecessor_root_bytes_changed ... ok
+test adapters::retention::filesystem_retention_expectation_tests::successor_refuses_when_the_predecessor_root_file_is_absent ... ok
+test adapters::retention::filesystem_retention_fifo_tests::a_fifo_at_a_manifest_pool_name_refuses_instead_of_blocking ... ok
+test adapters::retention::filesystem_retention_fifo_tests::a_fifo_at_the_format_marker_refuses_instead_of_blocking ... ok
+test adapters::retention::filesystem_retention_fifo_tests::a_fifo_at_the_retention_head_refuses_instead_of_blocking ... ok
+test adapters::retention::filesystem_retention_forward_error_tests::forward_stage_refusal_preserves_its_typed_record_cause ... ok
+test adapters::retention::filesystem_retention_framing_prefix_tests::canonical_manifest_lengths_remain_possible_at_every_header_prefix ... ok
+test adapters::retention::filesystem_retention_framing_prefix_tests::impossible_framing_prefixes_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_generation_refusal_tests::invalid_complete_generations_refuse_recovery_without_changing_retained_bytes ... ok
+test adapters::retention::filesystem_retention_incomplete_disposition_tests::direct_discard_capabilities_refuse_without_mutation ... ok
+test adapters::retention::filesystem_retention_incomplete_disposition_tests::greatest_namespace_with_a_declared_successor_preserves_the_incomplete_manifest ... ok
+test adapters::retention::filesystem_retention_incomplete_disposition_tests::incomplete_stages_block_direct_and_publication_recovery_without_effects ... ok
+test adapters::retention::filesystem_retention_incomplete_disposition_tests::known_corruption_precedes_incomplete_disposition ... ok
+test adapters::retention::filesystem_retention_member_tests::a_corrupt_chunk_member_refuses_with_its_admission_error_as_source ... ok
+test adapters::retention::filesystem_retention_member_tests::a_corrupt_layout_member_refuses_with_its_layout_admission_error_as_source ... ok
+test adapters::retention::filesystem_retention_member_tests::a_missing_member_segment_refuses_with_the_restart_error_as_source ... ok
+test adapters::retention::filesystem_retention_member_tests::an_intact_store_reverifies_every_member_and_admits_publication ... ok
+test adapters::retention::filesystem_retention_namespace_tests::malformed_manifest_pool_name_refuses ... ok
+test adapters::retention::filesystem_retention_namespace_tests::non_digest_root_namespace_directory_refuses ... ok
+test adapters::retention::filesystem_retention_namespace_tests::unknown_retention_entry_refuses_before_any_stage_is_written ... ok
+test adapters::retention::filesystem_retention_namespace_tests::uppercase_root_pool_name_refuses ... ok
+test adapters::retention::filesystem_retention_namespace_tests::zero_generation_root_pool_name_refuses ... ok
+test adapters::retention::filesystem_retention_observation_error_tests::publication_preserves_the_recovery_observation_io_cause ... ok
+test adapters::retention::filesystem_retention_observation_error_tests::publication_preserves_the_recovery_observation_refusal ... ok
+test adapters::retention::filesystem_retention_partial_anchor_tests::canonical_layout_lengths_admit_every_partial_numeric_prefix ... ok
+test adapters::retention::filesystem_retention_partial_anchor_tests::contradictory_partial_anchor_fields_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_partial_anchor_tests::impossible_partial_layout_lengths_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_partial_anchor_tests::invalid_lengths_in_partial_anchors_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_partial_entry_tests::impossible_partial_namespace_order_preserves_evidence ... ok
+test adapters::retention::filesystem_retention_partial_entry_tests::ordered_manifest_entries_remain_possible_at_every_partial_length ... ok
+test adapters::retention::filesystem_retention_partial_entry_tests::zero_generation_in_partial_manifest_entry_preserves_evidence ... ok
+test adapters::retention::filesystem_retention_partial_history_tests::nonzero_partial_initial_predecessors_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_partial_history_tests::successor_predecessors_remain_possible_before_the_digest_is_complete ... ok
+test adapters::retention::filesystem_retention_partial_integrity_tests::corrupt_complete_body_digests_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_partial_integrity_tests::corrupt_partial_record_trailers_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_partial_profile_tests::contradictory_partial_root_profiles_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_publication_closure_tests::publication_refuses_a_segment_corrupted_after_preflight ... FAILED
+test adapters::retention::filesystem_retention_publication_closure_tests::publication_refuses_a_segment_removed_after_preflight ... FAILED
+test adapters::retention::filesystem_retention_recovery::effect_tests::recovery_sync_failures_report_exact_known_effects_before_restart ... ok
+test adapters::retention::filesystem_retention_recovery::storage_error_tests::a_missing_stage_preserves_the_recovery_io_cause ... ok
+test adapters::retention::filesystem_retention_recovery::storage_error_tests::changed_stage_bytes_preserve_the_recovery_record_refusal ... ok
+test adapters::retention::filesystem_retention_recovery::storage_error_tests::cleanup_sync_failure_reports_removed_stage_and_preserved_pool ... ok
+test adapters::retention::filesystem_retention_recovery::storage_error_tests::substituted_cleanup_source_refuses_before_unlink ... ok
+test adapters::retention::filesystem_retention_recovery::storage_error_tests::substituted_stage_preserves_the_recovery_record_refusal ... ok
+test adapters::retention::filesystem_retention_recovery::storage_error_tests::substitution_before_reopening_refuses_without_rebinding_evidence ... ok
+test adapters::retention::filesystem_retention_recovery_closure_law_tests::recovered_head_refuses_a_physical_closure_limit_violation ... ok
+test adapters::retention::filesystem_retention_recovery_closure_law_tests::recovered_head_refuses_an_absent_anchor_layout ... ok
+test adapters::retention::filesystem_retention_recovery_closure_tests::recovery_refuses_corrupt_catalogs_before_head_commit ... ok
+test adapters::retention::filesystem_retention_recovery_closure_tests::recovery_refuses_corrupt_catalogs_before_manifest_link ... ok
+test adapters::retention::filesystem_retention_recovery_closure_tests::recovery_refuses_corrupt_catalogs_before_root_link ... ok
+test adapters::retention::filesystem_retention_recovery_closure_tests::recovery_refuses_corrupt_segments_before_head_commit ... ok
+test adapters::retention::filesystem_retention_recovery_closure_tests::recovery_refuses_corrupt_segments_before_manifest_link ... ok
+test adapters::retention::filesystem_retention_recovery_closure_tests::recovery_refuses_corrupt_segments_before_root_link ... ok
+test adapters::retention::filesystem_retention_recovery_closure_tests::recovery_refuses_missing_catalogs_before_head_commit ... ok
+test adapters::retention::filesystem_retention_recovery_closure_tests::recovery_refuses_missing_catalogs_before_manifest_link ... ok
+test adapters::retention::filesystem_retention_recovery_closure_tests::recovery_refuses_missing_catalogs_before_root_link ... ok
+test adapters::retention::filesystem_retention_recovery_closure_tests::recovery_refuses_missing_segments_before_head_commit ... ok
+test adapters::retention::filesystem_retention_recovery_closure_tests::recovery_refuses_missing_segments_before_manifest_link ... ok
+test adapters::retention::filesystem_retention_recovery_closure_tests::recovery_refuses_missing_segments_before_root_link ... ok
+test adapters::retention::filesystem_retention_recovery_directory_tests::replaced_manifest_pool_refuses_recovery_without_deleting_evidence ... ok
+test adapters::retention::filesystem_retention_recovery_directory_tests::replaced_retention_directory_refuses_recovery_without_deleting_evidence ... ok
+test adapters::retention::filesystem_retention_recovery_directory_tests::replaced_root_pool_refuses_recovery_without_deleting_evidence ... ok
+test adapters::retention::filesystem_retention_recovery_discard_prefix_tests::truncated_head_refuses_a_missing_manifest_link ... ok
+test adapters::retention::filesystem_retention_recovery_discard_prefix_tests::truncated_head_refuses_a_missing_manifest_stage ... ok
+test adapters::retention::filesystem_retention_recovery_discard_prefix_tests::truncated_head_refuses_a_missing_root_link ... ok
+test adapters::retention::filesystem_retention_recovery_discard_prefix_tests::truncated_head_refuses_a_missing_root_stage ... ok
+test adapters::retention::filesystem_retention_recovery_discard_prefix_tests::truncated_manifest_refuses_a_missing_root_link ... ok
+test adapters::retention::filesystem_retention_recovery_discard_prefix_tests::truncated_manifest_refuses_a_missing_root_stage ... ok
+test adapters::retention::filesystem_retention_recovery_entry_set_tests::recovery_refuses_altered_namespaces_before_head_commit ... ok
+test adapters::retention::filesystem_retention_recovery_entry_set_tests::recovery_refuses_altered_namespaces_before_manifest_link ... ok
+test adapters::retention::filesystem_retention_recovery_entry_set_tests::recovery_refuses_dropped_namespaces_before_head_commit ... ok
+test adapters::retention::filesystem_retention_recovery_entry_set_tests::recovery_refuses_dropped_namespaces_before_manifest_link ... ok
+test adapters::retention::filesystem_retention_recovery_head_binding_tests::recovery_refuses_a_canonical_head_with_another_manifest_predecessor ... ok
+test adapters::retention::filesystem_retention_recovery_head_binding_tests::recovery_refuses_a_canonical_head_with_the_wrong_manifest_length ... ok
+test adapters::retention::filesystem_retention_recovery_history_domain_tests::recovered_heads_refuse_the_skipped_generation_domain ... ok
+test adapters::retention::filesystem_retention_recovery_history_tests::recovered_head_refuses_a_skipped_root_generation ... ok
+test adapters::retention::filesystem_retention_recovery_history_tests::recovered_initial_head_refuses_noninitial_root_history ... ok
+test adapters::retention::filesystem_retention_recovery_history_tests::recovered_inserted_namespace_refuses_noninitial_root_history ... ok
+test adapters::retention::filesystem_retention_recovery_identity_tests::substituted_manifest_pool_refuses_before_recovery_commits_head ... ok
+test adapters::retention::filesystem_retention_recovery_identity_tests::substituted_root_pool_refuses_before_recovery_commits_head ... ok
+test adapters::retention::filesystem_retention_recovery_namespace_tests::direct_recovery_preserves_stages_when_namespace_admission_refuses ... ok
+test adapters::retention::filesystem_retention_recovery_namespace_tests::publication_recovery_preserves_stages_when_namespace_admission_refuses ... ok
+test adapters::retention::filesystem_retention_recovery_policy_tests::recovery_admits_a_catalog_budget_equal_to_selected_segment_bytes ... ok
+test adapters::retention::filesystem_retention_recovery_policy_tests::recovery_refuses_a_catalog_budget_smaller_than_selected_segments ... ok
+test adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_corrupt_predecessor_before_head_commit ... FAILED
+test adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_corrupt_predecessor_before_manifest_link ... FAILED
+test adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_corrupt_predecessor_before_root_link ... FAILED
+test adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_missing_predecessor_before_head_commit ... ok
+test adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_missing_predecessor_before_manifest_link ... ok
+test adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_missing_predecessor_before_root_link ... ok
+test adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_substituted_predecessor_before_head_commit ... ok
+test adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_substituted_predecessor_before_manifest_link ... ok
+test adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_substituted_predecessor_before_root_link ... ok
+test adapters::retention::filesystem_retention_recovery_prefix_tests::a_crash_during_each_stage_write_requires_disposition_without_effects ... ok
+test adapters::retention::filesystem_retention_recovery_prefix_tests::every_initial_publication_prefix_recovers_to_its_documented_state ... ok
+test adapters::retention::filesystem_retention_recovery_prefix_tests::noncanonical_short_stages_refuse_recovery_without_changing_retained_bytes ... ok
+test adapters::retention::filesystem_retention_recovery_prefix_tests::successor_prefixes_recover_against_the_published_generation ... ok
+test adapters::retention::filesystem_retention_recovery_tests::a_clean_store_recovers_to_clean ... ok
+test adapters::retention::filesystem_retention_recovery_tests::a_complete_manifest_without_its_root_reports_the_missing_root ... ok
+test adapters::retention::filesystem_retention_recovery_tests::a_synchronized_head_stage_is_finalized_and_the_retry_is_already_committed ... ok
+test adapters::retention::filesystem_retention_recovery_tests::a_truncated_root_stage_is_preserved_for_disposition ... ok
+test adapters::retention::filesystem_retention_recovery_tests::a_written_root_stage_is_linked_and_protected ... ok
+test adapters::retention::filesystem_retention_recovery_tests::checksum_corrupt_root_stage_is_refused_without_changing_evidence ... ok
+test adapters::retention::filesystem_retention_short_count_tests::excessive_counts_in_short_headers_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_short_framing_tests::contradictory_lengths_in_short_stage_headers_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_short_head_tests::contradictory_history_in_short_heads_preserves_evidence ... ok
+test adapters::retention::filesystem_retention_framing_prefix_tests::canonical_root_framing_remains_possible_at_every_header_prefix ... ok
+test adapters::retention::filesystem_retention_short_head_tests::invalid_manifest_lengths_in_short_heads_preserve_corrupt_evidence ... ok
+test adapters::retention::filesystem_retention_short_history_tests::contradictory_short_root_and_manifest_histories_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_short_head_tests::contradictory_partial_head_checksums_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_short_namespace_tests::impossible_namespace_sizes_in_short_roots_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_short_policy_tests::invalid_short_root_profiles_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_snapshot::coordinate_tests::a_changed_catalog_length_refuses_the_loaded_reader_view ... ok
+test adapters::retention::filesystem_retention_snapshot::moving_error_tests::a_head_change_discards_the_superseded_catalog_refusal ... ok
+test adapters::retention::filesystem_retention_short_policy_tests::invalid_short_root_closure_limits_preserve_evidence ... ok
+test adapters::retention::filesystem_retention_snapshot::pinning_tests::replacing_the_ambient_root_preserves_the_pinned_catalog ... ok
+test adapters::retention::filesystem_retention_snapshot_error_tests::a_corrupt_catalog_head_reports_its_exact_view_refusal ... ok
+test adapters::retention::filesystem_retention_snapshot_error_tests::a_corrupt_selected_catalog_reports_its_decoder_refusal ... ok
+test adapters::retention::filesystem_retention_snapshot_error_tests::a_missing_selected_catalog_reports_its_exact_catalog_refusal ... ok
+test adapters::retention::filesystem_retention_snapshot_error_tests::a_missing_selected_segment_reports_its_exact_catalog_refusal ... ok
+test adapters::retention::filesystem_retention_snapshot_tests::a_migrated_store_snapshot_binds_the_catalog_and_no_retention_head ... ok
+test adapters::retention::filesystem_retention_snapshot_identity_tests::a_reader_refuses_migration_records_bound_to_another_root ... ok
+test adapters::retention::filesystem_retention_snapshot_tests::a_non_empty_reader_lock_refuses_the_fence ... ok
+test adapters::retention::filesystem_retention_snapshot_tests::a_published_generation_is_read_and_its_root_verified ... ok
+test adapters::retention::filesystem_retention_snapshot_tests::readers_share_the_fence_and_collection_cannot_take_it_exclusively ... ok
+test adapters::retention::filesystem_retention_snapshot_tests::root_checksum_damage_reports_its_exact_mismatch ... ok
+test adapters::retention::filesystem_retention_storage_tests::a_complete_orphan_root_stage_refuses_publication_until_disposition ... ok
+test adapters::retention::filesystem_retention_storage_tests::a_truncated_stage_preserves_evidence_and_blocks_publication ... ok
+test adapters::retention::filesystem_retention_storage_tests::byte_equal_substituted_canonical_root_is_refused ... FAILED
+test adapters::retention::filesystem_retention_storage_tests::complete_publication_preserves_migrated_bytes_and_publishes_exact_retention_prefix ... ok
+test adapters::retention::filesystem_retention_storage_tests::exact_committed_retry_mutates_nothing ... ok
+test adapters::retention::filesystem_retention_storage_tests::existing_root_stage_is_never_truncated ... ok
+test adapters::retention::filesystem_retention_storage_tests::retained_stage_refuses_publication_before_recovery ... ok
+test adapters::retention::filesystem_retention_successor_tests::expected_current_generation_refuses_when_no_head_is_published ... ok
+test adapters::retention::filesystem_retention_successor_tests::successor_publication_over_existing_head_publishes_exact_successor ... ok
+test adapters::retention::filesystem_retention_successor_tests::superseded_candidate_refuses_once_a_successor_is_current ... ok
+test adapters::retention::filesystem_verification_law_tests::a_missing_selected_root_preserves_its_original_filesystem_cause ... ok
+test adapters::retention::filesystem_verification_law_tests::an_unretained_namespace_is_precisely_missing ... ok
+test adapters::retention::filesystem_verification_law_tests::corrupted_root_verification_retains_exact_checksum_diagnostics ... ok
+test adapters::retention::filesystem_verification_law_tests::published_root_reports_name_only_the_evidence_established_at_the_requested_depth ... ok
+test adapters::retention::filesystem_version_two_admission_tests::a_protocol_directory_replaced_after_reopen_is_neither_opened_nor_published_into ... ok
+test adapters::retention::filesystem_version_two_admission_tests::production_version_two_reopen_admits_an_exact_migrated_store ... ok
+test adapters::retention::filesystem_version_two_admission_tests::reopen_admits_a_remounted_root_and_refuses_a_moved_one ... ok
+test adapters::retention::filesystem_version_two_admission_tests::production_version_two_reopen_refuses_an_aliased_protocol_directory ... ok
+test adapters::retention::filesystem_version_two_admission_tests::version_two_reopen_admits_exact_migration_records ... ok
+test adapters::retention::filesystem_version_two_admission_tests::version_two_reopen_refuses_a_corrupt_format_marker ... ok
+test adapters::retention::filesystem_version_two_admission_tests::version_two_reopen_refuses_a_missing_dispositions_directory ... ok
+test adapters::retention::filesystem_version_two_admission_tests::version_two_reopen_refuses_a_missing_retention_pool ... ok
+test adapters::retention::filesystem_version_two_admission_tests::version_two_reopen_refuses_a_receipt_that_disagrees_with_its_intent ... ok
+test adapters::retention::filesystem_version_two_admission_tests::version_two_reopen_refuses_a_stray_gc_entry ... ok
+test adapters::retention::filesystem_version_two_admission_tests::version_two_reopen_refuses_a_stray_recovery_entry ... ok
+test adapters::retention::filesystem_version_two_admission_tests::version_two_reopen_refuses_an_oversized_format_marker ... ok
+test adapters::retention::reader_platform_law_tests::a_canonical_tmpfs_store_refuses_durable_snapshot_admission ... ok
+test adapters::retention::reader_platform_law_tests::a_canonical_tmpfs_store_refuses_the_public_reader_profile ... ok
+test adapters::retention::reader_fence::tests::replacing_the_reader_lock_during_acquisition_refuses_the_fence ... ok
+test adapters::retention::recovery_execution_tests::a_refused_step_stops_execution_and_names_the_completed_prefix ... ok
+test adapters::retention::recovery_execution_tests::an_empty_plan_touches_nothing_and_reports_its_outcome ... ok
+test adapters::retention::recovery_execution_tests::every_step_calls_exactly_its_capability_in_plan_order ... ok
+test adapters::retention::recovery_execution_tests::refused_finalization_reports_no_completed_steps ... ok
+test adapters::retention::recovery_execution_tests::uncertain_failed_effect_survives_execution_without_later_cleanup ... ok
+test adapters::retention::reader_platform_law_tests::reader_platform_admission_does_not_acquire_writer_authority ... ok
+test adapters::retention::recovery_planner_tests::a_clean_store_needs_nothing ... ok
+test adapters::retention::recovery_planner_tests::a_complete_head_stage_over_linked_stages_is_finalized ... ok
+test adapters::retention::recovery_planner_tests::a_complete_root_stage_is_linked_and_protected ... ok
+test adapters::retention::recovery_planner_tests::a_corrupt_stage_refuses_with_its_decode_error ... ok
+test adapters::retention::recovery_planner_tests::a_head_stage_without_the_staged_manifest_refuses ... ok
+test adapters::retention::recovery_planner_tests::a_successor_generation_is_planned_against_the_published_state ... ok
+test adapters::retention::recovery_planner_tests::a_truncated_head_stage_requires_disposition_despite_complete_earlier_evidence ... ok
+test adapters::retention::recovery_planner_tests::a_truncated_root_stage_requires_disposition ... ok
+test adapters::retention::recovery_planner_tests::a_truncated_stage_with_a_later_effect_refuses ... ok
+test adapters::retention::recovery_planner_tests::complete_root_and_manifest_stages_are_linked_and_protected ... ok
+test adapters::retention::recovery_planner_tests::stages_the_published_head_already_names_are_cleaned_up ... ok
+test adapters::retention::recovery_head_length_tests::recovery_binds_head_length_across_the_complete_canonical_length_domain ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_a_retry_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_a_stale_initial_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_a_successor_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_an_initial_publication_of_a_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_an_initial_publication_of_b_agree_with_the_model ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_release_agree_with_the_model ... ok
+test adapters::retention::retention_snapshot_refusal_tests::a_valid_successor_at_the_selected_name_reports_both_selections ... ok
+test adapters::retention::retention_snapshot_refusal_tests::an_oversized_selected_root_reports_the_exact_allocation_bound ... ok
+test adapters::retention::retention_storage_error_law_tests::every_recovery_capability_preserves_its_supplied_record_refusal ... ok
+test adapters::retention::retention_view_collector::coordinate_law_tests::changed_predecessor_bytes_discard_the_superseded_view ... ok
+test adapters::retention::retention_view_collector::coordinate_law_tests::every_changed_manifest_length_discards_the_superseded_view ... ok
+test adapters::retention::retention_view_collector_tests::a_publication_between_reads_discards_the_superseded_view ... ok
+test adapters::retention::retention_view_collector_tests::a_stable_store_returns_its_loaded_view ... ok
+test adapters::retention::retention_view_collector_tests::a_store_that_never_settles_exhausts_the_limit ... ok
+test adapters::retention::retention_view_collector_tests::an_absent_catalog_refuses_collection ... ok
+test adapters::retention::retention_view_collector_tests::changed_catalog_digests_discard_the_superseded_view ... ok
+test adapters::retention::retention_view_collector_tests::changed_retention_digests_discard_the_superseded_view ... ok
+test adapters::retention::retention_view_collector_tests::final_coordinate_failure_preserves_its_io_cause ... ok
+test adapters::retention::retention_view_collector_tests::initial_coordinate_failure_preserves_its_io_cause ... ok
+test adapters::retention::retention_view_collector_tests::view_load_failure_preserves_its_io_cause ... ok
+test adapters::retention::verification_namespace_kind_tests::a_selected_namespace_file_is_typed_corruption ... ok
+test adapters::retention::verification_namespace_kind_tests::a_selected_namespace_symlink_is_typed_corruption ... ok
+test adapters::retention::verification_namespace_law_tests::required_directory_files_are_published_view_corruption ... ok
+test adapters::retention::verification_namespace_law_tests::required_directory_symlinks_are_published_view_corruption ... ok
+test adapters::retention::verification_namespace_law_tests::unexpected_store_entries_are_published_view_corruption ... ok
+test adapters::retention::verification_root_kind_tests::a_selected_root_symlink_is_typed_corruption ... ok
+test adapters::retention::verification_selection_law_tests::a_canonical_foreign_root_cannot_certify_the_requested_namespace ... ok
+test adapters::retention::verification_selection_law_tests::a_selected_root_coordinate_refusal_keeps_its_typed_evidence ... ok
+test adapters::retention::verification_store_admission_tests::a_foreign_migration_binding_is_corruption_with_exact_root_coordinates ... ok
+test adapters::retention::verification_store_admission_tests::inconclusive_admission_causes_remain_operational_without_losing_the_source ... ok
+test adapters::retention::verification_store_admission_tests::malformed_store_records_are_corrupt_with_the_original_magic ... ok
+test adapters::retention::verification_unsupported_depth_tests::unsupported_retention_requests_refuse_before_missing_evidence ... ok
+test adapters::retention::retention_model_tests::sequences_starting_with_restore_agree_with_the_model ... ok
+
+failures:
+
+---- adapters::retention::filesystem_retention_publication_closure_tests::publication_refuses_a_segment_corrupted_after_preflight stdout ----
+
+thread 'adapters::retention::filesystem_retention_publication_closure_tests::publication_refuses_a_segment_corrupted_after_preflight' (1221) panicked at src/adapters/retention/filesystem_retention_publication_closure_tests.rs:74:5:
+live closure must retain exact Corrupt refusal: Err(CurrentVerification { source: Custom { kind: InvalidData, error: ClosureMemberRefused { source: Segment { expected: SegmentDigest([34, 31, 103, 69, 205, 138, 82, 33, 201, 168, 124, 55, 7, 89, 54, 8, 71, 146, 130, 181, 74, 74, 116, 208, 231, 83, 253, 118, 247, 14, 141, 178]), source: Seal { source: SealChecksumMismatch { expected: [8, 205, 43, 252, 116, 97, 250, 19, 106, 16, 94, 95, 9, 167, 109, 26, 178, 206, 250, 39, 16, 80, 114, 10, 62, 243, 188, 96, 46, 249, 115, 185], observed: [8, 205, 43, 252, 116, 97, 250, 19, 106, 16, 94, 95, 9, 167, 109, 26, 178, 206, 250, 39, 16, 80, 114, 10, 62, 243, 188, 96, 46, 249, 115, 184] } } } } } })
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- adapters::retention::filesystem_retention_publication_closure_tests::publication_refuses_a_segment_removed_after_preflight stdout ----
+
+thread 'adapters::retention::filesystem_retention_publication_closure_tests::publication_refuses_a_segment_removed_after_preflight' (1222) panicked at src/adapters/retention/filesystem_retention_publication_closure_tests.rs:74:5:
+live closure must retain exact Missing refusal: Err(CurrentVerification { source: Custom { kind: InvalidData, error: ClosureMemberRefused { source: SegmentIo { expected: SegmentDigest([34, 31, 103, 69, 205, 138, 82, 33, 201, 168, 124, 55, 7, 89, 54, 8, 71, 146, 130, 181, 74, 74, 116, 208, 231, 83, 253, 118, 247, 14, 141, 178]), phase: OpenSegment, source: Os { code: 2, kind: NotFound, message: "No such file or directory" } } } } })
+
+---- adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_corrupt_predecessor_before_head_commit stdout ----
+
+thread 'adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_corrupt_predecessor_before_head_commit' (1289) panicked at src/adapters/retention/filesystem_retention_recovery_predecessor_tests.rs:110:5:
+selected predecessor must refuse at observation for recovery-predecessor-Corrupt-13: Err(Observe { source: Custom { kind: InvalidData, error: PredecessorRootRefused { source: ChecksumMismatch { expected: [40, 197, 47, 240, 248, 214, 83, 50, 52, 190, 8, 63, 66, 94, 146, 29, 105, 150, 57, 226, 4, 226, 198, 109, 236, 12, 174, 47, 240, 162, 220, 52], observed: [40, 197, 47, 240, 248, 214, 83, 50, 52, 190, 8, 63, 66, 94, 146, 29, 105, 150, 57, 226, 4, 226, 198, 109, 236, 12, 174, 47, 240, 162, 220, 53] } } } })
+
+---- adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_corrupt_predecessor_before_manifest_link stdout ----
+
+thread 'adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_corrupt_predecessor_before_manifest_link' (1290) panicked at src/adapters/retention/filesystem_retention_recovery_predecessor_tests.rs:110:5:
+selected predecessor must refuse at observation for recovery-predecessor-Corrupt-8: Err(Observe { source: Custom { kind: InvalidData, error: PredecessorRootRefused { source: ChecksumMismatch { expected: [40, 197, 47, 240, 248, 214, 83, 50, 52, 190, 8, 63, 66, 94, 146, 29, 105, 150, 57, 226, 4, 226, 198, 109, 236, 12, 174, 47, 240, 162, 220, 52], observed: [40, 197, 47, 240, 248, 214, 83, 50, 52, 190, 8, 63, 66, 94, 146, 29, 105, 150, 57, 226, 4, 226, 198, 109, 236, 12, 174, 47, 240, 162, 220, 53] } } } })
+
+---- adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_corrupt_predecessor_before_root_link stdout ----
+
+thread 'adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_corrupt_predecessor_before_root_link' (1291) panicked at src/adapters/retention/filesystem_retention_recovery_predecessor_tests.rs:110:5:
+selected predecessor must refuse at observation for recovery-predecessor-Corrupt-2: Err(Observe { source: Custom { kind: InvalidData, error: PredecessorRootRefused { source: ChecksumMismatch { expected: [40, 197, 47, 240, 248, 214, 83, 50, 52, 190, 8, 63, 66, 94, 146, 29, 105, 150, 57, 226, 4, 226, 198, 109, 236, 12, 174, 47, 240, 162, 220, 52], observed: [40, 197, 47, 240, 248, 214, 83, 50, 52, 190, 8, 63, 66, 94, 146, 29, 105, 150, 57, 226, 4, 226, 198, 109, 236, 12, 174, 47, 240, 162, 220, 53] } } } })
+
+---- adapters::retention::filesystem_retention_storage_tests::byte_equal_substituted_canonical_root_is_refused stdout ----
+
+thread 'adapters::retention::filesystem_retention_storage_tests::byte_equal_substituted_canonical_root_is_refused' (1358) panicked at src/adapters/retention/filesystem_retention_storage_tests.rs:113:5:
+assertion failed: matches!(error.get_ref().and_then(|source|
+    source.downcast_ref::<crate::adapters::filesystem_exact_record::ExactRecordError>()),
+    Some(crate::adapters::filesystem_exact_record::ExactRecordError::Refused(crate::adapters::filesystem_exact_record::ExactRecordRefusal::KindLengthOrIdentity)))
+
+
+failures:
+    adapters::retention::filesystem_retention_publication_closure_tests::publication_refuses_a_segment_corrupted_after_preflight
+    adapters::retention::filesystem_retention_publication_closure_tests::publication_refuses_a_segment_removed_after_preflight
+    adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_corrupt_predecessor_before_head_commit
+    adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_corrupt_predecessor_before_manifest_link
+    adapters::retention::filesystem_retention_recovery_predecessor_tests::recovery_refuses_a_corrupt_predecessor_before_root_link
+    adapters::retention::filesystem_retention_storage_tests::byte_equal_substituted_canonical_root_is_refused
+
+test result: FAILED. 241 passed; 6 failed; 0 ignored; 0 measured; 245 filtered out; finished in 32.19s
+
+error: test failed, to rerun pass `--lib`
+
+Guarded command exit: 101

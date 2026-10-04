@@ -4,10 +4,10 @@ use std::error::Error;
 use std::fs;
 use std::io;
 
-use super::RetentionPublicationError;
 use super::filesystem_retention_test_fixture::{
     ROOT_HEX, SEGMENT_NAME, fixture, initial_preparation, open_authority, retention_witness,
 };
+use super::{RetentionCurrentStateRefusal, RetentionPublicationError};
 use crate::adapters::{
     CatalogRestartError, CatalogRestartPhase, SegmentReadError, SegmentSealError,
 };
@@ -58,7 +58,11 @@ fn require_refusal(damage: Damage) -> Result<(), Box<dyn Error>> {
     };
     let restart = error
         .get_ref()
-        .and_then(|source| source.downcast_ref::<CatalogRestartError>());
+        .and_then(|source| source.downcast_ref::<RetentionCurrentStateRefusal>())
+        .and_then(|source| match source {
+            RetentionCurrentStateRefusal::ClosureMemberRefused { source } => Some(source.as_ref()),
+            _ => None,
+        });
     let exact = match (damage, restart) {
         (Damage::Missing, Some(CatalogRestartError::SegmentIo { phase, source, .. })) => {
             *phase == CatalogRestartPhase::OpenSegment && source.kind() == io::ErrorKind::NotFound

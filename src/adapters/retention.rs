@@ -132,6 +132,7 @@ mod filesystem_retention_snapshot_identity_tests;
 #[cfg(test)]
 mod filesystem_retention_snapshot_tests;
 mod filesystem_retention_stage;
+mod filesystem_retention_stage_refusal;
 mod filesystem_retention_storage;
 #[cfg(test)]
 mod filesystem_retention_storage_tests;
@@ -208,6 +209,7 @@ mod verified_closure;
 mod filesystem_retention_forward_error_tests;
 mod reader_attempt_limit;
 mod reader_fence;
+mod reader_fence_refusal;
 #[cfg(all(test, target_os = "linux"))]
 mod reader_platform_law_tests;
 mod recovery_evidence;
@@ -227,6 +229,8 @@ mod recovery_storage;
 #[cfg(test)]
 mod retention_model_tests;
 mod retention_record_refusal;
+#[cfg(test)]
+mod retention_snapshot_refusal_tests;
 mod retention_storage_error;
 #[cfg(test)]
 mod retention_storage_error_law_tests;
@@ -278,6 +282,7 @@ pub use filesystem_retention_refusal::RetentionCurrentStateRefusal;
 pub use filesystem_retention_snapshot::FilesystemRetentionSnapshot;
 pub use filesystem_retention_snapshot_error::FilesystemRetentionSnapshotError;
 pub(in crate::adapters) use filesystem_retention_stage::FilesystemRetentionStage;
+pub use filesystem_retention_stage_refusal::FilesystemRetentionStageRefusal;
 pub use head_decode_error::RetentionHeadDecodeError;
 pub use manifest_decode_error::RetentionManifestDecodeError;
 pub use manifest_encode_error::RetentionManifestEncodeError;
@@ -293,6 +298,7 @@ pub use publication_receipt::RetentionPublicationReceipt;
 pub use publication_storage::RetentionPublicationStorage;
 pub use reader_attempt_limit::ReaderAttemptLimit;
 pub(in crate::adapters) use reader_fence::ReaderFence;
+pub use reader_fence_refusal::{ReaderFenceKind, ReaderFenceRefusal};
 pub use recovery_evidence::{
     RetentionPoolEntryObservation, RetentionPoolObservations, RetentionRecoveryEvidence,
     RetentionStageAssessments,
@@ -334,3 +340,6 @@ pub use verification_view_collector::collect_verification_view;
 
 #[cfg(all(test, feature = "repository-tasks"))]
 mod filesystem_retention_migration_completion_tests;
+
+#[cfg(all(test, target_os = "linux"))]
+mod verification_record_refusal_tests;

@@ -179,7 +179,9 @@ fn require_derivable_segment(
         let named = snapshot.record(record.identity()).ok_or_else(|| {
             refused(
                 "derivable segment",
-                io::Error::other("a staged record is not named"),
+                super::CompactionRecoveryRefusal::RecordNotNamed {
+                    identity: record.identity(),
+                },
             )
         })?;
         if named.header() != record.header()
@@ -188,7 +190,9 @@ fn require_derivable_segment(
         {
             return Err(refused(
                 "derivable segment",
-                io::Error::other("a staged record differs from the named record"),
+                super::CompactionRecoveryRefusal::RecordMismatch {
+                    identity: record.identity(),
+                },
             ));
         }
     }
@@ -213,7 +217,9 @@ fn require_unpublished_segment(
         if snapshot.record(record.identity()).is_some() {
             return Err(refused(
                 "unpublished segment",
-                io::Error::other("a staged record is already named"),
+                super::CompactionRecoveryRefusal::RecordAlreadyNamed {
+                    identity: record.identity(),
+                },
             ));
         }
     }
@@ -242,7 +248,12 @@ fn require_successor_candidate(
     } else {
         Err(refused(
             "successor candidate",
-            io::Error::other("the staged catalog is not the current head's successor"),
+            super::CompactionRecoveryRefusal::SuccessorMismatch {
+                expected_generation: successor,
+                observed_generation: catalog.generation(),
+                expected_predecessor: current.catalog_digest(),
+                observed_predecessor: catalog.previous_catalog_digest(),
+            },
         ))
     }
 }

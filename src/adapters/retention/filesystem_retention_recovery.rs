@@ -181,8 +181,10 @@ impl FilesystemRetentionPublicationAuthority {
 }
 
 fn no_recovery() -> RetentionStorageError {
-    RetentionStorageError::from(invalid_data("no retention recovery is in progress"))
-        .at(Boundary::RecoveryContext)
+    RetentionStorageError::from(invalid_data(
+        super::FilesystemRetentionStageRefusal::NoRecovery,
+    ))
+    .at(Boundary::RecoveryContext)
 }
 
 fn take_complete(
@@ -197,7 +199,7 @@ fn take_complete(
         Some(other) => {
             *slot = Some(other);
             Err(RetentionStorageError::from(invalid_data(
-                "recovery step expected a complete stage",
+                super::FilesystemRetentionStageRefusal::RecoveryRequiresCompleteStage,
             ))
             .at(Boundary::RecoveryContext))
         }
@@ -234,7 +236,7 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
         }) = context.root.as_ref()
         else {
             return Err(RetentionStorageError::from(invalid_data(
-                "link_root expected a complete root stage",
+                super::FilesystemRetentionStageRefusal::RootLinkRequiresCompleteStage,
             ))
             .at(Boundary::RecoveryContext));
         };
@@ -287,7 +289,7 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
         }) = context.manifest.as_ref()
         else {
             return Err(RetentionStorageError::from(invalid_data(
-                "link_manifest expected a complete manifest stage",
+                super::FilesystemRetentionStageRefusal::ManifestLinkRequiresCompleteStage,
             ))
             .at(Boundary::RecoveryContext));
         };
@@ -320,8 +322,10 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
         let (stage, name, namespace) = take_complete(&mut context.root)?;
         let namespace = namespace.ok_or_else(|| {
-            RetentionStorageError::from(invalid_data("root stage without a namespace"))
-                .at(Boundary::RecoveryContext)
+            RetentionStorageError::from(invalid_data(
+                super::FilesystemRetentionStageRefusal::RootNamespaceAbsent,
+            ))
+            .at(Boundary::RecoveryContext)
         })?;
         let directory = self
             .roots

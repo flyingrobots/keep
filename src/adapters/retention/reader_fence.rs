@@ -6,6 +6,7 @@ use cap_fs_ext::MetadataExt;
 use cap_std::fs::{Dir, File, Metadata};
 use rustix::fs::{FlockOperation, flock};
 
+use super::{ReaderFenceKind, ReaderFenceRefusal};
 use crate::adapters::filesystem_exact_record;
 
 const READER_LOCK: &str = "reader.lock";
@@ -73,19 +74,39 @@ impl ReaderFence {
 fn verify(root: &Dir, file: &File) -> io::Result<()> {
     let handle = file.metadata()?;
     let entry = root.symlink_metadata(READER_LOCK)?;
-    if handle.is_file()
-        && entry.is_file()
-        && handle.len() == 0
-        && entry.len() == 0
-        && identity(&handle) == identity(&entry)
-    {
-        Ok(())
-    } else {
-        Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "reader fence kind, length, or identity disagreed",
-        ))
+    if !handle.is_file() || !entry.is_file() {
+        return Err(refused(ReaderFenceRefusal::Kind {
+            expected: ReaderFenceKind::RegularFile,
+            observed_handle: kind(&handle),
+            observed_entry: kind(&entry),
+        }));
     }
+    if handle.len() != 0 || entry.len() != 0 {
+        return Err(refused(ReaderFenceRefusal::Length {
+            expected: 0,
+            observed_handle: handle.len(),
+            observed_entry: entry.len(),
+        }));
+    }
+    if identity(&handle) != identity(&entry) {
+        return Err(refused(ReaderFenceRefusal::Identity {
+            expected: identity(&handle),
+            observed: identity(&entry),
+        }));
+    }
+    Ok(())
+}
+
+fn kind(metadata: &Metadata) -> ReaderFenceKind {
+    if metadata.is_file() {
+        ReaderFenceKind::RegularFile
+    } else {
+        ReaderFenceKind::Other
+    }
+}
+
+fn refused(refusal: ReaderFenceRefusal) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, refusal)
 }
 
 fn identity(metadata: &Metadata) -> (u64, u64) {

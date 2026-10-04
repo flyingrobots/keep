@@ -33,7 +33,14 @@ pub(super) fn write_prefix(
     prefix: usize,
 ) -> io::Result<()> {
     let bytes = catalog.encoded().get(..prefix).ok_or_else(|| {
-        io::Error::new(io::ErrorKind::InvalidInput, "catalog prefix exceeds bytes")
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            super::FilesystemOperationRefusal::PrefixBound {
+                artifact: CatalogRestartArtifact::Catalog,
+                maximum: catalog.encoded().len(),
+                observed: prefix,
+            },
+        )
     })?;
     write_bytes(publisher, bytes)
 }

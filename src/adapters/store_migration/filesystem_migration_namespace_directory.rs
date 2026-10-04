@@ -52,7 +52,9 @@ impl PinnedMigrationDirectory {
         {
             Ok(())
         } else {
-            Err(ambiguous("migration directory changed identity"))
+            Err(ambiguous(
+                super::FilesystemMigrationRefusal::DirectoryIdentityChanged,
+            ))
         }
     }
 
@@ -79,7 +81,7 @@ pub(super) fn optional_directory(
             pinned.verify(parent)?;
             Ok(Some(pinned))
         }
-        Ok(_) => Err(ambiguous("migration namespace entry has the wrong kind")),
+        Ok(_) => Err(ambiguous(super::FilesystemMigrationRefusal::NamespaceKind)),
     }
 }
 
@@ -90,7 +92,7 @@ fn require_same_filesystem(parent: &Dir, child: &Dir) -> io::Result<()> {
         Ok(())
     } else {
         Err(ambiguous(
-            "migration namespace crossed the admitted filesystem or mount",
+            super::FilesystemMigrationRefusal::NamespaceMountChanged,
         ))
     }
 }
@@ -100,28 +102,29 @@ pub(super) fn required_directory(
     name: &'static str,
 ) -> io::Result<PinnedMigrationDirectory> {
     optional_directory(parent, name)?
-        .ok_or_else(|| ambiguous("required migration namespace directory was absent"))
+        .ok_or_else(|| ambiguous(super::FilesystemMigrationRefusal::DirectoryAbsent))
 }
 
 pub(super) fn require_directory(parent: &Dir, name: &str) -> io::Result<()> {
     if parent.symlink_metadata(name)?.is_dir() {
         Ok(())
     } else {
-        Err(ambiguous("required migration directory has the wrong kind"))
+        Err(ambiguous(
+            super::FilesystemMigrationRefusal::RequiredDirectoryKind,
+        ))
     }
 }
 
 pub(super) fn require_regular(parent: &Dir, name: &str, length: Option<usize>) -> io::Result<()> {
     let metadata = parent.symlink_metadata(name)?;
-    let expected = length
-        .map(u64::try_from)
-        .transpose()
-        .map_err(|_source| ambiguous("required migration file length exceeded u64"))?;
+    let expected = length.map(u64::try_from).transpose().map_err(|_source| {
+        ambiguous(super::FilesystemMigrationRefusal::RequiredFileLengthOverflow)
+    })?;
     if metadata.is_file() && expected.is_none_or(|expected| metadata.len() == expected) {
         Ok(())
     } else {
         Err(ambiguous(
-            "required migration file has the wrong kind or length",
+            super::FilesystemMigrationRefusal::RequiredFileKindOrLength,
         ))
     }
 }
@@ -131,7 +134,9 @@ pub(super) fn require_empty(directory: &Dir) -> io::Result<()> {
     if entries.next().transpose()?.is_none() {
         Ok(())
     } else {
-        Err(ambiguous("new migration namespace was not empty"))
+        Err(ambiguous(
+            super::FilesystemMigrationRefusal::NamespaceNotEmpty,
+        ))
     }
 }
 
@@ -139,7 +144,9 @@ pub(super) fn require_exact_membership(directory: &Dir, expected: &[&str]) -> io
     if exact_membership(directory, expected)? {
         Ok(())
     } else {
-        Err(ambiguous("migration namespace membership disagreed"))
+        Err(ambiguous(
+            super::FilesystemMigrationRefusal::NamespaceMembership,
+        ))
     }
 }
 
@@ -164,15 +171,17 @@ pub(super) fn require_allowed_membership(directory: &Dir, allowed: &[&str]) -> i
     for entry in directory.entries()? {
         observed = observed
             .checked_add(1)
-            .ok_or_else(|| ambiguous("migration namespace count overflowed"))?;
+            .ok_or_else(|| ambiguous(super::FilesystemMigrationRefusal::NamespaceCountOverflow))?;
         let name = entry?.file_name();
         if observed > allowed.len() || !allowed.iter().any(|candidate| name == *candidate) {
-            return Err(ambiguous("migration namespace contains an unknown entry"));
+            return Err(ambiguous(
+                super::FilesystemMigrationRefusal::UnknownNamespaceEntry,
+            ));
         }
     }
     Ok(())
 }
 
-pub(super) fn ambiguous(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
+pub(super) fn ambiguous(refusal: super::FilesystemMigrationRefusal) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, refusal)
 }

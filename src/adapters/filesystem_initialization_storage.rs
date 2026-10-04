@@ -51,14 +51,14 @@ impl FilesystemInitializationStorage {
 
     pub(super) fn into_lock(self) -> io::Result<FilesystemWriterLock> {
         self.lock.ok_or_else(|| {
-            io::Error::other("initialization completed without retained writer authority")
+            io::Error::other(super::FilesystemOperationRefusal::WriterAuthorityAbsent)
         })
     }
 
     fn admit_directory(&self, name: &str) -> io::Result<()> {
         if self.lock.is_none() {
             return Err(io::Error::other(
-                "initialization directory mutation requires writer authority",
+                super::FilesystemOperationRefusal::WriterAuthorityAbsent,
             ));
         }
         match self.directory.create_dir(name) {
@@ -79,7 +79,9 @@ impl StoreInitializationStorage for FilesystemInitializationStorage {
 
     fn open_and_lock_writer_file(&mut self) -> io::Result<()> {
         if self.lock.is_some() {
-            return Err(io::Error::other("writer authority was already acquired"));
+            return Err(io::Error::other(
+                super::FilesystemOperationRefusal::WriterAlreadyAcquired,
+            ));
         }
         let lock = FilesystemWriterLock::initialize_in(self.directory.try_clone()?)
             .map_err(io::Error::other)?;
@@ -102,7 +104,7 @@ impl StoreInitializationStorage for FilesystemInitializationStorage {
     fn synchronize_root(&mut self) -> io::Result<()> {
         if self.lock.is_none() {
             return Err(io::Error::other(
-                "root synchronization requires writer authority",
+                super::FilesystemOperationRefusal::WriterAuthorityAbsent,
             ));
         }
         sync_capable_directory::open(&self.directory, ".")?
