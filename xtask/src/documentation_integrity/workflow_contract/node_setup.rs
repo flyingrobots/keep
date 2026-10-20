@@ -7,7 +7,7 @@ use super::WORKFLOW;
 fn documentation_job_requires_the_pinned_node_action_once() {
     let setup = concat!(
         "      - name: Install pinned Node.js\n",
-        "        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020\n",
+        "        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1\n",
         "        with:\n",
         "          node-version: 24.18.0\n"
     );
@@ -25,7 +25,7 @@ fn documentation_job_requires_the_pinned_node_action_once() {
 fn duplicate_pinned_node_setup_is_refused_for_multiplicity() {
     let setup = concat!(
         "      - name: Install pinned Node.js\n",
-        "        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020\n",
+        "        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1\n",
         "        with:\n",
         "          node-version: 24.18.0\n"
     );
@@ -43,7 +43,7 @@ fn duplicate_pinned_node_setup_is_refused_for_multiplicity() {
 #[test]
 fn drifted_node_setup_does_not_satisfy_the_contract() {
     let workflow = WORKFLOW.replace(
-        "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020",
+        "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1",
         "actions/setup-node@0123456789abcdef0123456789abcdef01234567",
     );
     assert!(matches!(
