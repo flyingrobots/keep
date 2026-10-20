@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Update the documentation job's pinned actions/setup-node action to v7.1.0 and move the repository workflow contract to the same reviewed commit (#183).
+
 - Update cap-std and cap-primitives to 4.0.3 in both locked workspaces, preserving cap-fs-ext 4.0.2 and the existing typed filesystem and recovery contracts (#93).
 
 - Update rustix to 1.1.5 across the library, repository tools, process-spawn boundary and fuzz lockfile, retaining the existing filesystem and process contracts (#102).
