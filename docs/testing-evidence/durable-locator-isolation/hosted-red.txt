@@ -1,0 +1,8 @@
+Rust quality gates	Test release profile	2026-10-04T00:24:47.3413241Z ---- suite::durable_layout_laws::supplied_range_layouts_cannot_replace_the_catalogued_target_binding stdout ----
+Rust quality gates	Test release profile	2026-10-04T00:24:47.3414320Z Error: WriterLock { source: Busy }
+Rust quality gates	Test release profile	2026-10-04T00:24:47.3414537Z
+Rust quality gates	Test release profile	2026-10-04T00:24:47.3414541Z
+Rust quality gates	Test release profile	2026-10-04T00:24:47.3414631Z failures:
+Rust quality gates	Test release profile	2026-10-04T00:24:47.3415069Z     suite::durable_layout_laws::supplied_range_layouts_cannot_replace_the_catalogued_target_binding
+Rust quality gates	Test release profile	2026-10-04T00:24:47.3415356Z
+Rust quality gates	Test release profile	2026-10-04T00:24:47.3415561Z test result: FAILED. 51 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.67s
