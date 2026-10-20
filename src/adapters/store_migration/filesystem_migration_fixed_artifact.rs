@@ -7,7 +7,7 @@ use cap_std::fs::{Dir, File};
 use super::{format_marker_decoder, migration_intent_format, migration_receipt_format};
 use crate::adapters::filesystem_catalog_artifact;
 use crate::adapters::filesystem_exact_record::{
-    self as exact_record, EntryIdentity, ExactRecordError, ExactRecordRefusal,
+    self as exact_record, EntryIdentity, ExactRecordError,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -83,7 +83,7 @@ impl FilesystemMigrationFixedStage {
         let prefix = expected
             .get(..end)
             .filter(|prefix| prefix.len() < expected.len())
-            .ok_or_else(|| invalid_data("migration stage prefix is not strict"))?;
+            .ok_or_else(|| invalid_data(super::FilesystemMigrationRefusal::StagePrefix))?;
         let mut file = filesystem_catalog_artifact::create_exclusive(root, artifact.stage_name())?;
         file.write_all(prefix)?;
         file.flush()
@@ -143,7 +143,9 @@ impl FilesystemMigrationFixedStage {
         if observed == self.identity {
             Ok(())
         } else {
-            Err(invalid_data("migration stage handle changed identity"))
+            Err(invalid_data(
+                super::FilesystemMigrationRefusal::StageIdentityChanged,
+            ))
         }
     }
 
@@ -155,7 +157,7 @@ impl FilesystemMigrationFixedStage {
         if self.artifact == artifact && self.expected.as_ref() == expected {
             Ok(())
         } else {
-            Err(invalid_data("migration stage record disagreed"))
+            Err(invalid_data(super::FilesystemMigrationRefusal::StageRecord))
         }
     }
 
@@ -188,33 +190,23 @@ fn verify_named_record(
     exact_record::verify_named(root, name, expected, identity).map_err(migration_error)
 }
 
-/// Maps a shared exact-record failure onto this protocol's refusal messages.
+/// Retains exact-record refusals and the filesystem's original operational errors.
 fn migration_error(error: ExactRecordError) -> io::Error {
-    match error {
-        ExactRecordError::Io(source) => source,
-        ExactRecordError::Refused(refusal) => invalid_data(match refusal {
-            ExactRecordRefusal::LengthOverflow => "migration fixed-record length exceeded u64",
-            ExactRecordRefusal::KindOrLength | ExactRecordRefusal::KindLengthOrIdentity => {
-                "migration fixed-record kind, length, or identity disagreed"
-            }
-            ExactRecordRefusal::Bytes | ExactRecordRefusal::TrailingBytes => {
-                "migration fixed-record bytes disagreed"
-            }
-            ExactRecordRefusal::RemainedVisible => "removed migration stage remained visible",
-        }),
-    }
+    error.into_io()
 }
 
 fn require_length(artifact: FilesystemMigrationFixedArtifact, expected: &[u8]) -> io::Result<()> {
     if expected.len() == artifact.encoded_length() {
         Ok(())
     } else {
-        Err(invalid_data("migration fixed-record length disagreed"))
+        Err(invalid_data(
+            super::FilesystemMigrationRefusal::RecordLength,
+        ))
     }
 }
 
-fn invalid_data(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
+fn invalid_data(refusal: super::FilesystemMigrationRefusal) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, refusal)
 }
 
 impl FilesystemMigrationFixedStage {

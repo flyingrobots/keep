@@ -47,6 +47,7 @@ mod filesystem_migration_reader_fence;
 mod filesystem_migration_recovery;
 #[cfg(test)]
 mod filesystem_migration_recovery_tests;
+mod filesystem_migration_refusal;
 #[cfg(feature = "repository-tasks")]
 mod filesystem_migration_repository_tasks;
 mod filesystem_migration_residue;
@@ -122,6 +123,7 @@ pub use filesystem_migration_authority_error::{
     FilesystemMigrationAuthorityArtifact, FilesystemMigrationAuthorityError,
     StoreRootIdentityCoordinate,
 };
+pub use filesystem_migration_refusal::FilesystemMigrationRefusal;
 pub use format_definition_digest::StoreFormatDefinitionDigest;
 pub use format_marker_decode_error::StoreFormatMarkerDecodeError;
 pub(super) use format_marker_decoder::ENCODED_LENGTH as FORMAT_MARKER_LENGTH;

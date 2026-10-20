@@ -15,21 +15,20 @@ use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
 use crate::adapters::filesystem_exact_record as exact_record;
 
 fn no_disposition() -> io::Error {
-    invalid_data("no disposition is in progress")
+    invalid_data(super::FilesystemRetentionStageRefusal::NoDisposition)
 }
 
 /// Removes `name` from `directory` after proving it still holds `expected`.
 fn unlink_verified(directory: &Dir, name: &str, expected: &[u8]) -> io::Result<()> {
     let observed = read_exact_optional(directory, name, expected.len())?
-        .ok_or_else(|| invalid_data("retired pool entry is already absent"))?;
+        .ok_or_else(|| invalid_data(super::FilesystemRetentionStageRefusal::PoolEntryAbsent))?;
     if observed.as_ref() != expected {
         return Err(invalid_data(
-            "retired pool entry bytes disagree with the receipt",
+            super::FilesystemRetentionStageRefusal::PoolEntryChanged,
         ));
     }
     directory.remove_file(name)?;
-    exact_record::require_absent(directory, name)
-        .map_err(|_source| invalid_data("retired pool entry remained visible"))
+    exact_record::require_absent(directory, name).map_err(exact_record::ExactRecordError::into_io)
 }
 
 impl RecoveryDispositionStorage for FilesystemRetentionPublicationAuthority {

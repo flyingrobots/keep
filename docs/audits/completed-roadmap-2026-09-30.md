@@ -82,7 +82,37 @@ Linux ARM host capture encountered an unsupported CPU-model coordinate;
 that environment failure is not evidence that the entire Linux workspace
 suite passed.
 
-## GitHub follow-up ownership
+## First-milestone follow-up, 2026-10-01
+
+T-01.2 / #110 now has implementation evidence on this branch for the
+remaining text-only I/O refusals and source erasures discovered in the audit.
+The original dated findings above describe the initial state. Integration
+is pending, so the task remains unchecked.
+
+| Boundary | Corrective evidence |
+| --- | --- |
+| Chunk streaming | The consumer's I/O failure carries the original chunk verification error, including expected and observed identities. The corrupted-second-chunk law downcasts the payload. |
+| Exact records and stages | Shared conversion preserves OS errors unchanged and retains typed exact-record refusals through retention, migration, GC, and cleanup. Byte-equal inode substitution and non-regular GC-record regressions downcast the original refusal. |
+| Selected retained roots | Typed size bounds and selection mismatches include exact expected and observed coordinates. Sparse over-bound and valid-successor substitution laws preserve the head and reject before returning bytes. |
+| Reader fences | Kind, zero-length, and inode/device disagreement have distinct typed evidence. A nonempty fence reports both observed lengths. |
+| Predecessor admission | A checksum-corrupt predecessor retains its exact decoder source; namespace reads preserve their OS source and operational error kind. |
+| Other filesystem operations | Initialization, namespace census, platform admission, publication prefixes, and recovery materialization use typed semantic payloads. Linux profile refusals retain observed flags and device/mount coordinates. |
+| Compaction and transfer | Recovery refusals carry logical record and successor coordinates; the internal transfer stop signal is typed while original sink errors remain retained for the final result. |
+
+New regression assertions failed against the original chunk, retention,
+migration, GC, fence, and predecessor wrappers before their fixes. Replacing
+the selected-root payload with `to_string()` also makes both new root laws
+fail; restoring the typed payload makes them pass. The production source
+contract prevents direct literal/formatted I/O payloads and the identified
+refusal-stringification patterns. It does not prove arbitrary error flows.
+
+ADR-0010 records the diagnostic API decision. No format, identity, write
+ordering, synchronization, or recovery protocol is changed. The existing
+debug/release workspace, Linux ext4 storage, and killed-writer matrix checks
+passed; selected-root checks were rerun after separating reading from
+selection admission to keep the changed functions within the size limit.
+
+## GitHub ownership index
 
 Tracking container: [completed-roadmap audit follow-ups](https://github.com/flyingrobots/keep/issues/132).
 It coordinates work and integration gates; it is not another executable PR.

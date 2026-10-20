@@ -147,7 +147,7 @@ impl FilesystemRetentionPublicationAuthority {
 }
 
 fn no_recovery() -> io::Error {
-    invalid_data("no retention recovery is in progress")
+    invalid_data(super::FilesystemRetentionStageRefusal::NoRecovery)
 }
 
 fn take_complete(
@@ -161,9 +161,13 @@ fn take_complete(
         }) => Ok((stage, pool_name, namespace)),
         Some(other) => {
             *slot = Some(other);
-            Err(invalid_data("recovery step expected a complete stage"))
+            Err(invalid_data(
+                super::FilesystemRetentionStageRefusal::RecoveryRequiresCompleteStage,
+            ))
         }
-        None => Err(invalid_data("recovery step expected a retained stage")),
+        None => Err(invalid_data(
+            super::FilesystemRetentionStageRefusal::NoRetainedRecoveryStage,
+        )),
     }
 }
 
@@ -173,18 +177,20 @@ fn discard_truncated(
     slot: &mut Option<RecoveredStage>,
 ) -> io::Result<()> {
     let Some(RecoveredStage::Truncated { identity, length }) = slot.take() else {
-        return Err(invalid_data("recovery step expected a truncated stage"));
+        return Err(invalid_data(
+            super::FilesystemRetentionStageRefusal::RecoveryRequiresTruncatedStage,
+        ));
     };
     let metadata = retention.symlink_metadata(name)?;
     if !metadata.is_file() || metadata.len() != length || EntryIdentity::from(&metadata) != identity
     {
         return Err(invalid_data(
-            "truncated retention stage changed before discard",
+            super::FilesystemRetentionStageRefusal::TruncatedStageChanged,
         ));
     }
     retention.remove_file(name)?;
     exact_record::require_absent(retention, name)
-        .map_err(|_source| invalid_data("discarded retention stage remained visible"))?;
+        .map_err(exact_record::ExactRecordError::into_io)?;
     synchronize_directory(retention)
 }
 
@@ -216,7 +222,9 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
             namespace: Some(namespace),
         }) = context.root.as_ref()
         else {
-            return Err(invalid_data("link_root expected a complete root stage"));
+            return Err(invalid_data(
+                super::FilesystemRetentionStageRefusal::RootLinkRequiresCompleteStage,
+            ));
         };
         match self.roots.create_dir(namespace) {
             Ok(()) => {}
@@ -238,7 +246,7 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
         }) = context.manifest.as_ref()
         else {
             return Err(invalid_data(
-                "link_manifest expected a complete manifest stage",
+                super::FilesystemRetentionStageRefusal::ManifestLinkRequiresCompleteStage,
             ));
         };
         stage.link(&self.retention, &self.manifests, name)?;
@@ -255,7 +263,9 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
     fn remove_root_stage(&mut self) -> io::Result<()> {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
         let (stage, name, namespace) = take_complete(&mut context.root)?;
-        let namespace = namespace.ok_or_else(|| invalid_data("root stage without a namespace"))?;
+        let namespace = namespace.ok_or_else(|| {
+            invalid_data(super::FilesystemRetentionStageRefusal::RootNamespaceAbsent)
+        })?;
         let directory = self.roots.open_dir_nofollow(&namespace)?;
         stage.remove(&self.retention, &directory, &name)?;
         synchronize_directory(&self.retention)

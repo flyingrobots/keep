@@ -127,14 +127,19 @@ fn read_stage(retention: &Dir, name: &str, bound: usize) -> io::Result<Option<St
     if !metadata.is_file() {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,
-            "retained retention stage is not a regular file",
+            super::FilesystemRetentionStageRefusal::NonRegularRecoveryStage,
         ));
     }
     let identity = EntryIdentity::from(&metadata);
     let limit = bound
         .checked_add(1)
         .and_then(|limit| u64::try_from(limit).ok())
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "stage bound overflowed"))?;
+        .ok_or_else(|| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                super::FilesystemRetentionStageRefusal::RecoveryStageBoundOverflow,
+            )
+        })?;
     let mut bytes = Vec::new();
     file.by_ref().take(limit).read_to_end(&mut bytes)?;
     Ok(Some(StageBytes {

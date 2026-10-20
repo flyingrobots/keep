@@ -235,7 +235,7 @@ fn is_canonical(name: &OsStr, canonical_names: &[&str]) -> bool {
 fn ambiguous_namespace() -> io::Error {
     io::Error::new(
         io::ErrorKind::InvalidData,
-        "store root is not an empty or partial canonical initialization namespace",
+        super::FilesystemOperationRefusal::InitializationNamespace,
     )
 }
 

@@ -107,7 +107,7 @@ const fn source_error(refusal: ChunkVerificationError) -> TransferSourceError {
 }
 
 fn refused(refusal: ChunkVerificationError) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, format!("{refusal:?}"))
+    io::Error::new(io::ErrorKind::InvalidData, refusal)
 }
 
 impl<S: ChunkSource + ?Sized> Read for ChunkReader<'_, S> {
@@ -237,6 +237,11 @@ mod tests {
             return Err("expected a chunk refusal".into());
         };
         assert_eq!(refusal.kind(), std::io::ErrorKind::InvalidData);
+        assert!(matches!(
+            refusal.get_ref().and_then(|source| source.downcast_ref::<ChunkVerificationError>()),
+            Some(ChunkVerificationError::IdentityMismatch { index: 1, expected, observed, .. })
+                if *expected == second && expected != observed
+        ));
         let first_length = usize::try_from(
             layout
                 .entries()

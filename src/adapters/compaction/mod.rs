@@ -19,6 +19,7 @@ mod interruption_tests;
 mod observation;
 mod plan;
 mod recovery;
+mod recovery_refusal;
 #[cfg(test)]
 mod test_fixture;
 
@@ -30,3 +31,4 @@ pub use plan::{CompactionPlan, CompactionRefusal, CompactionSegmentDisposition, 
 pub(in crate::adapters) use recovery::recover_compaction_unchecked_for_tests;
 pub use recovery::{CompactionRecovery, FilesystemCompactionRecoveryError, recover_compaction};
 pub(in crate::adapters) use recovery::{CompleteStageEvidence, recover_with};
+pub use recovery_refusal::CompactionRecoveryRefusal;

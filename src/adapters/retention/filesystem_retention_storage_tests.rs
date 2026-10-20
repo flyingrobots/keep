@@ -103,6 +103,17 @@ fn byte_equal_substituted_canonical_root_is_refused() -> Result<(), Box<dyn Erro
         .ok_or("byte-equal substituted root was unexpectedly admitted")?;
 
     assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    assert!(matches!(
+        error
+            .get_ref()
+            .and_then(|source| source
+                .downcast_ref::<crate::adapters::filesystem_exact_record::ExactRecordError>()),
+        Some(
+            crate::adapters::filesystem_exact_record::ExactRecordError::Refused(
+                crate::adapters::filesystem_exact_record::ExactRecordRefusal::KindLengthOrIdentity
+            )
+        )
+    ));
     Ok(())
 }
 

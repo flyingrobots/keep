@@ -61,8 +61,9 @@ fn assert_unsupported(result: &std::io::Result<()>) {
         result,
         Err(error)
             if error.kind() == std::io::ErrorKind::Unsupported
-                && error.to_string()
-                    == "store namespace does not satisfy one local writable case-sensitive ext4 profile"
+                && matches!(error.get_ref().and_then(|source| source.downcast_ref::<crate::FilesystemOperationRefusal>()),
+                    Some(crate::FilesystemOperationRefusal::FilesystemProfile { .. }
+                        | crate::FilesystemOperationRefusal::MountBoundaryChanged { .. }))
     ));
 }
 

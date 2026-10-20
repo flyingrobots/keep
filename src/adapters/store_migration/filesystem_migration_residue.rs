@@ -34,11 +34,8 @@ pub(super) fn observe(root: &Dir) -> io::Result<StoreMigrationResidue> {
 fn bounded_file(root: &Dir, name: &str, length: usize) -> io::Result<Option<Vec<u8>>> {
     let bound = length
         .checked_add(1)
-        .ok_or_else(|| ambiguous("migration residue bound overflowed"))?;
-    exact_record::read_bounded_optional(root, name, bound).map_err(|error| match error {
-        ExactRecordError::Io(source) => source,
-        ExactRecordError::Refused(_) => ambiguous("migration residue entry has the wrong kind"),
-    })
+        .ok_or_else(|| ambiguous(super::FilesystemMigrationRefusal::ResidueBoundOverflow))?;
+    exact_record::read_bounded_optional(root, name, bound).map_err(ExactRecordError::into_io)
 }
 
 fn reader_fence(root: &Dir) -> io::Result<bool> {
@@ -46,7 +43,9 @@ fn reader_fence(root: &Dir) -> io::Result<bool> {
         Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(false),
         Err(source) => Err(source),
         Ok(metadata) if metadata.is_file() && metadata.len() == 0 => Ok(true),
-        Ok(_) => Err(ambiguous("reader fence has the wrong kind or length")),
+        Ok(_) => Err(ambiguous(
+            super::FilesystemMigrationRefusal::ReaderFenceKindOrLength,
+        )),
     }
 }
 
@@ -80,6 +79,6 @@ fn optional_directory(parent: &Dir, name: &str) -> io::Result<Option<Dir>> {
         Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(None),
         Err(source) => Err(source),
         Ok(metadata) if metadata.is_dir() => parent.open_dir_nofollow(name).map(Some),
-        Ok(_) => Err(ambiguous("migration namespace entry has the wrong kind")),
+        Ok(_) => Err(ambiguous(super::FilesystemMigrationRefusal::NamespaceKind)),
     }
 }

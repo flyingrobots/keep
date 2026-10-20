@@ -6,7 +6,7 @@ use cap_std::fs::{Dir, File};
 
 use crate::adapters::filesystem_catalog_artifact;
 use crate::adapters::filesystem_exact_record::{
-    self as exact_record, EntryIdentity, ExactRecordError, ExactRecordRefusal,
+    self as exact_record, EntryIdentity, ExactRecordError,
 };
 
 /// One exclusively created, verified, and retained retention stage file.
@@ -102,7 +102,9 @@ impl FilesystemRetentionStage {
         if EntryIdentity::of_file(&self.file)? == self.identity {
             Ok(())
         } else {
-            Err(invalid_data("retention stage handle changed identity"))
+            Err(invalid_data(
+                super::FilesystemRetentionStageRefusal::HandleIdentityChanged,
+            ))
         }
     }
 
@@ -121,23 +123,11 @@ fn verify_named_record(
     exact_record::verify_named(directory, name, expected, identity).map_err(retention_error)
 }
 
-/// Maps a shared exact-record failure onto this protocol's refusal messages.
+/// Retains exact-record refusals and the filesystem's original operational errors.
 fn retention_error(error: ExactRecordError) -> io::Error {
-    match error {
-        ExactRecordError::Io(source) => source,
-        ExactRecordError::Refused(refusal) => invalid_data(match refusal {
-            ExactRecordRefusal::LengthOverflow => "retention record length exceeded u64",
-            ExactRecordRefusal::KindOrLength | ExactRecordRefusal::KindLengthOrIdentity => {
-                "retention record kind, length, or identity disagreed"
-            }
-            ExactRecordRefusal::Bytes | ExactRecordRefusal::TrailingBytes => {
-                "retention record bytes disagreed"
-            }
-            ExactRecordRefusal::RemainedVisible => "removed retention stage remained visible",
-        }),
-    }
+    error.into_io()
 }
 
-pub(super) fn invalid_data(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
+pub(super) fn invalid_data(refusal: super::FilesystemRetentionStageRefusal) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, refusal)
 }

@@ -72,7 +72,7 @@ fn read_exact(
             expected: length,
             source: io::Error::new(
                 io::ErrorKind::UnexpectedEof,
-                "recovery stage ended before the expected boundary",
+                super::FilesystemOperationRefusal::IncompleteRead { expected, observed },
             ),
         });
     }

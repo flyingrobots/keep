@@ -41,6 +41,7 @@ pub use super::durable::*;
 pub use super::filesystem_catalog_publication_error::FilesystemCatalogPublicationError;
 pub use super::filesystem_catalog_publisher::FilesystemCatalogPublisher;
 pub use super::filesystem_catalog_snapshot::FilesystemCatalogSnapshot;
+pub use super::filesystem_operation_refusal::FilesystemOperationRefusal;
 pub use super::filesystem_platform_admission::FilesystemPlatformAdmission;
 pub use super::filesystem_platform_admission_error::FilesystemPlatformAdmissionError;
 pub use super::filesystem_recovery_inventory_reader::FilesystemRecoveryInventoryReader;

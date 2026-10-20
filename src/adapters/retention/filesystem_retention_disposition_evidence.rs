@@ -35,7 +35,9 @@ pub(super) fn disposed_artifact(
         RecoveryDispositionTarget::Root => {
             let bytes = observation
                 .root()
-                .ok_or_else(|| invalid_data("disposition target root stage vanished"))?
+                .ok_or_else(|| {
+                    invalid_data(super::FilesystemRetentionStageRefusal::DispositionRootStageAbsent)
+                })?
                 .bytes
                 .clone();
             let root = AdmittedRetentionRoot::decode(&bytes).map_err(invalid_data_from)?;
@@ -48,7 +50,11 @@ pub(super) fn disposed_artifact(
         RecoveryDispositionTarget::Manifest => {
             let bytes = observation
                 .manifest()
-                .ok_or_else(|| invalid_data("disposition target manifest stage vanished"))?
+                .ok_or_else(|| {
+                    invalid_data(
+                        super::FilesystemRetentionStageRefusal::DispositionManifestStageAbsent,
+                    )
+                })?
                 .bytes
                 .clone();
             let manifest = AdmittedRetentionManifest::decode(&bytes).map_err(invalid_data_from)?;
@@ -107,14 +113,13 @@ pub(super) fn receipt_for(
 /// The artifact record's trailing checksum: the evidence the decision was
 /// made over.
 pub(super) fn trailing_checksum(bytes: &[u8]) -> io::Result<[u8; 32]> {
-    let start = bytes
-        .len()
-        .checked_sub(32)
-        .ok_or_else(|| invalid_data("artifact is shorter than its checksum"))?;
+    let start = bytes.len().checked_sub(32).ok_or_else(|| {
+        invalid_data(super::FilesystemRetentionStageRefusal::ArtifactChecksumLength)
+    })?;
     bytes
         .get(start..)
         .and_then(|slice| slice.try_into().ok())
-        .ok_or_else(|| invalid_data("artifact checksum slot"))
+        .ok_or_else(|| invalid_data(super::FilesystemRetentionStageRefusal::ArtifactChecksumSlot))
 }
 
 /// The first regular entry of `directory` whose name ends with `suffix`,
@@ -127,11 +132,14 @@ pub(super) fn entry_with_suffix(directory: &Dir, suffix: &str) -> io::Result<Opt
         }
         let metadata = directory.symlink_metadata(&name)?;
         if !metadata.is_file() {
-            return Err(invalid_data("retention pool entry is not a regular file"));
+            return Err(invalid_data(
+                super::FilesystemRetentionStageRefusal::PoolEntryKind,
+            ));
         }
         let length = usize::try_from(metadata.len()).map_err(invalid_data_from)?;
-        let bytes = read_exact_optional(directory, &name, length)?
-            .ok_or_else(|| invalid_data("retention pool entry vanished"))?;
+        let bytes = read_exact_optional(directory, &name, length)?.ok_or_else(|| {
+            invalid_data(super::FilesystemRetentionStageRefusal::PoolEntryVanished)
+        })?;
         return Ok(Some((name, bytes)));
     }
     Ok(None)
@@ -145,7 +153,9 @@ pub(super) fn read_bounded(recovery: &Dir, name: &str) -> io::Result<Option<Vec<
         Err(source) => return Err(source),
     };
     if !file.metadata()?.is_file() {
-        return Err(invalid_data("disposition stage is not a regular file"));
+        return Err(invalid_data(
+            super::FilesystemRetentionStageRefusal::DispositionStageKind,
+        ));
     }
     let mut bytes = Vec::new();
     let limit = u64::try_from(RECEIPT_LENGTH)
@@ -158,6 +168,6 @@ pub(super) fn read_bounded(recovery: &Dir, name: &str) -> io::Result<Option<Vec<
 pub(super) fn discard_stage(recovery: &Dir) -> io::Result<()> {
     recovery.remove_file(pool_name::DISPOSITION_STAGE)?;
     exact_record::require_absent(recovery, pool_name::DISPOSITION_STAGE)
-        .map_err(|_source| invalid_data("discarded disposition stage remained visible"))?;
+        .map_err(exact_record::ExactRecordError::into_io)?;
     synchronize_directory(recovery)
 }

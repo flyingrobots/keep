@@ -9,18 +9,23 @@ use super::{RecoveryEntryName, RecoveryInventoryLimit};
 pub(super) fn count_entries(directory: &Dir, remaining: u64) -> io::Result<u64> {
     if remaining > RecoveryInventoryLimit::PROTOCOL_MAXIMUM {
         return Err(invalid_input(
-            "recovery count budget exceeds protocol maximum",
+            super::FilesystemOperationRefusal::InventoryLimit {
+                maximum: RecoveryInventoryLimit::PROTOCOL_MAXIMUM,
+                observed: remaining,
+            },
         ));
     }
-    let ceiling = remaining
-        .checked_add(1)
-        .ok_or_else(|| invalid_input("recovery count budget cannot admit a drift witness"))?;
+    let ceiling = remaining.checked_add(1).ok_or_else(|| {
+        invalid_input(super::FilesystemOperationRefusal::InventoryCountOverflow {
+            observed: remaining,
+        })
+    })?;
     let mut observed = 0_u64;
     for entry in directory.entries()? {
         let _entry = entry?;
-        observed = observed
-            .checked_add(1)
-            .ok_or_else(|| invalid_input("recovery entry count overflowed"))?;
+        observed = observed.checked_add(1).ok_or_else(|| {
+            invalid_input(super::FilesystemOperationRefusal::InventoryCountOverflow { observed })
+        })?;
         if observed == ceiling {
             break;
         }
@@ -34,14 +39,23 @@ pub(super) fn read_entry_names(
 ) -> io::Result<Vec<RecoveryEntryName>> {
     if expected_count > RecoveryInventoryLimit::PROTOCOL_MAXIMUM {
         return Err(invalid_input(
-            "recovery expected count exceeds protocol maximum",
+            super::FilesystemOperationRefusal::InventoryLimit {
+                maximum: RecoveryInventoryLimit::PROTOCOL_MAXIMUM,
+                observed: expected_count,
+            },
         ));
     }
-    let expected = usize::try_from(expected_count)
-        .map_err(|_| invalid_input("recovery expected count does not fit the address space"))?;
-    let capacity = expected
-        .checked_add(1)
-        .ok_or_else(|| invalid_input("recovery name capacity overflowed"))?;
+    let expected = usize::try_from(expected_count).map_err(|source| {
+        invalid_input(super::FilesystemOperationRefusal::InventoryAddressSpace {
+            observed: expected_count,
+            source,
+        })
+    })?;
+    let capacity = expected.checked_add(1).ok_or_else(|| {
+        invalid_input(
+            super::FilesystemOperationRefusal::InventoryCapacityOverflow { observed: expected },
+        )
+    })?;
     let mut names = Vec::with_capacity(capacity);
     for entry in directory.entries()? {
         names.push(entry_name(&entry?)?);
@@ -64,10 +78,10 @@ fn entry_name(entry: &cap_std::fs::DirEntry) -> io::Result<RecoveryEntryName> {
 fn entry_name(_entry: &cap_std::fs::DirEntry) -> io::Result<RecoveryEntryName> {
     Err(io::Error::new(
         io::ErrorKind::Unsupported,
-        "raw recovery entry names currently require a Unix platform",
+        super::FilesystemOperationRefusal::RawNamesUnsupported,
     ))
 }
 
-fn invalid_input(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidInput, message)
+fn invalid_input(refusal: super::FilesystemOperationRefusal) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidInput, refusal)
 }

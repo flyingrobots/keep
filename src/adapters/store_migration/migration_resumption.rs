@@ -157,6 +157,6 @@ fn receipt_phase(
 fn wrong_section(phase: StoreMigrationPhase) -> io::Error {
     io::Error::new(
         io::ErrorKind::InvalidInput,
-        format!("migration phase {phase} dispatched to the wrong section"),
+        super::FilesystemMigrationRefusal::WrongPhaseSection { observed: phase },
     )
 }

@@ -18,7 +18,7 @@ use crate::adapters::{
     CatalogRestartPolicy, ChecksummedPublicationHead, FilesystemCatalogSnapshot,
     filesystem_initialization_namespace, filesystem_version_two_records, publication_head_decoder,
 };
-use crate::{RetentionHead, RetentionManifest, RetentionNamespaceDigest};
+use crate::{RetentionHead, RetentionManifest, RetentionNamespaceDigest, RetentionSnapshotRefusal};
 
 const HEAD_NAME: &str = "HEAD";
 
@@ -202,27 +202,44 @@ impl FilesystemRetentionSnapshot {
         else {
             return Ok(None);
         };
+        let bytes = self.read_selected_root(entry)?;
+        require_selected_root(&bytes, entry)?;
+        Ok(Some(bytes.into_boxed_slice()))
+    }
+
+    fn read_selected_root(&self, entry: crate::RetentionManifestEntry) -> Result<Vec<u8>, Error> {
         let directory = self
             .roots
-            .open_dir_nofollow(pool_name::namespace(namespace))
+            .open_dir_nofollow(pool_name::namespace(entry.namespace()))
             .map_err(|source| Error::Root { source })?;
         let name = pool_name::root(entry.root_generation(), entry.root_digest());
         let length = directory
             .symlink_metadata(&name)
             .and_then(|metadata| {
-                usize::try_from(metadata.len()).map_err(|_source| invalid("root length overflow"))
+                usize::try_from(metadata.len()).map_err(|source| {
+                    invalid(RetentionSnapshotRefusal::LengthAddressSpace {
+                        observed: metadata.len(),
+                        source,
+                    })
+                })
             })
             .map_err(|source| Error::Root { source })?;
         if length > root_header_decoder::MAXIMUM_ENCODED_LENGTH {
             return Err(Error::Root {
-                source: invalid("selected root exceeds the format bound"),
+                source: invalid(RetentionSnapshotRefusal::LengthBound {
+                    maximum: root_header_decoder::MAXIMUM_ENCODED_LENGTH,
+                    observed: length,
+                }),
             });
         }
         let bytes = match exact_record::read_exact_optional(&directory, &name, length) {
             Ok(Some(bytes)) => bytes,
             Ok(None) => {
                 return Err(Error::Root {
-                    source: invalid("selected root is absent"),
+                    source: invalid(RetentionSnapshotRefusal::SelectedRootAbsent {
+                        expected_generation: entry.root_generation(),
+                        expected_digest: entry.root_digest(),
+                    }),
                 });
             }
             Err(ExactRecordError::Io(source)) => return Err(Error::Root { source }),
@@ -235,20 +252,27 @@ impl FilesystemRetentionSnapshot {
                 });
             }
         };
-        let root = AdmittedRetentionRoot::decode(&bytes).map_err(|source| Error::Root {
-            source: io::Error::new(io::ErrorKind::InvalidData, source),
-        })?;
-        if root.digest() != entry.root_digest()
-            || root.root().generation() != entry.root_generation()
-        {
-            return Err(Error::Root {
-                source: invalid("selected root does not decode to the manifest's selection"),
-            });
-        }
-        Ok(Some(bytes.into_boxed_slice()))
+        Ok(bytes)
     }
 }
 
-fn invalid(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
+fn require_selected_root(bytes: &[u8], entry: crate::RetentionManifestEntry) -> Result<(), Error> {
+    let root = AdmittedRetentionRoot::decode(bytes).map_err(|source| Error::Root {
+        source: io::Error::new(io::ErrorKind::InvalidData, source),
+    })?;
+    if root.digest() != entry.root_digest() || root.root().generation() != entry.root_generation() {
+        return Err(Error::Root {
+            source: invalid(RetentionSnapshotRefusal::SelectionMismatch {
+                expected_generation: entry.root_generation(),
+                observed_generation: root.root().generation(),
+                expected_digest: entry.root_digest(),
+                observed_digest: root.digest(),
+            }),
+        });
+    }
+    Ok(())
+}
+
+fn invalid(refusal: RetentionSnapshotRefusal) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, refusal)
 }

@@ -188,7 +188,7 @@ impl FilesystemStoreMigrationAuthority {
             Ok(Some(_entry)) => Err(Error::Namespace {
                 source: std::io::Error::new(
                     std::io::ErrorKind::InvalidData,
-                    "version-one staging holds a retained stage; recover it before migration",
+                    super::FilesystemMigrationRefusal::VersionOneStageRequiresRecovery,
                 ),
             }),
             Err(source) => Err(Error::Namespace { source }),

@@ -18,7 +18,7 @@ pub(super) fn open(parent: &Dir, name: &str) -> io::Result<Dir> {
     if !file.metadata()?.is_dir() {
         return Err(io::Error::new(
             io::ErrorKind::NotADirectory,
-            "sync-capable target is not a directory",
+            super::FilesystemOperationRefusal::DirectoryRequired,
         ));
     }
     Ok(Dir::from_std_file(file.into_std()))

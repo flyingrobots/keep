@@ -40,7 +40,7 @@ pub(super) fn require_mut(
 }
 
 fn no_attempt() -> io::Error {
-    invalid_data("no admitted retention publication attempt")
+    invalid_data(super::FilesystemRetentionStageRefusal::NoPublicationAttempt)
 }
 
 impl PublicationAttempt {
@@ -77,15 +77,16 @@ impl PublicationAttempt {
         self.namespace
             .as_ref()
             .map(|(_name, namespace)| namespace)
-            .ok_or_else(|| invalid_data("retention root namespace was not admitted"))
+            .ok_or_else(|| {
+                invalid_data(super::FilesystemRetentionStageRefusal::NamespaceNotAdmitted)
+            })
     }
 
     /// Returns the admitted namespace only if `name` is the namespace it admitted.
     pub(super) fn require_namespace(&self, name: &str) -> io::Result<&Dir> {
-        let (admitted, namespace) = self
-            .namespace
-            .as_ref()
-            .ok_or_else(|| invalid_data("retention root namespace was not admitted"))?;
+        let (admitted, namespace) = self.namespace.as_ref().ok_or_else(|| {
+            invalid_data(super::FilesystemRetentionStageRefusal::NamespaceNotAdmitted)
+        })?;
         if admitted == name {
             Ok(namespace)
         } else {
@@ -98,9 +99,9 @@ impl PublicationAttempt {
     }
 
     pub(super) fn retained_root_name(&self) -> io::Result<&str> {
-        self.retained_root
-            .as_deref()
-            .ok_or_else(|| invalid_data("retention root pool coordinate was not retained"))
+        self.retained_root.as_deref().ok_or_else(|| {
+            invalid_data(super::FilesystemRetentionStageRefusal::RootPoolNotRetained)
+        })
     }
 
     pub(super) fn retain_manifest_name(&mut self, name: String) {
@@ -108,9 +109,9 @@ impl PublicationAttempt {
     }
 
     pub(super) fn retained_manifest_name(&self) -> io::Result<&str> {
-        self.retained_manifest
-            .as_deref()
-            .ok_or_else(|| invalid_data("retention manifest pool coordinate was not retained"))
+        self.retained_manifest.as_deref().ok_or_else(|| {
+            invalid_data(super::FilesystemRetentionStageRefusal::ManifestPoolNotRetained)
+        })
     }
 
     pub(super) fn retain_root_stage(&mut self, stage: FilesystemRetentionStage) {
@@ -118,15 +119,15 @@ impl PublicationAttempt {
     }
 
     pub(super) fn root_stage(&self) -> io::Result<&FilesystemRetentionStage> {
-        self.root_stage
-            .as_ref()
-            .ok_or_else(|| invalid_data("retention root stage was not retained"))
+        self.root_stage.as_ref().ok_or_else(|| {
+            invalid_data(super::FilesystemRetentionStageRefusal::RootStageNotRetained)
+        })
     }
 
     pub(super) fn take_root_stage(&mut self) -> io::Result<FilesystemRetentionStage> {
-        self.root_stage
-            .take()
-            .ok_or_else(|| invalid_data("retention root stage was not retained"))
+        self.root_stage.take().ok_or_else(|| {
+            invalid_data(super::FilesystemRetentionStageRefusal::RootStageNotRetained)
+        })
     }
 
     pub(super) fn retain_manifest_stage(&mut self, stage: FilesystemRetentionStage) {
@@ -134,15 +135,15 @@ impl PublicationAttempt {
     }
 
     pub(super) fn manifest_stage(&self) -> io::Result<&FilesystemRetentionStage> {
-        self.manifest_stage
-            .as_ref()
-            .ok_or_else(|| invalid_data("retention manifest stage was not retained"))
+        self.manifest_stage.as_ref().ok_or_else(|| {
+            invalid_data(super::FilesystemRetentionStageRefusal::ManifestStageNotRetained)
+        })
     }
 
     pub(super) fn take_manifest_stage(&mut self) -> io::Result<FilesystemRetentionStage> {
-        self.manifest_stage
-            .take()
-            .ok_or_else(|| invalid_data("retention manifest stage was not retained"))
+        self.manifest_stage.take().ok_or_else(|| {
+            invalid_data(super::FilesystemRetentionStageRefusal::ManifestStageNotRetained)
+        })
     }
 
     pub(super) fn retain_head_stage(&mut self, stage: FilesystemRetentionStage) {
@@ -150,14 +151,14 @@ impl PublicationAttempt {
     }
 
     pub(super) fn head_stage(&self) -> io::Result<&FilesystemRetentionStage> {
-        self.head_stage
-            .as_ref()
-            .ok_or_else(|| invalid_data("retention head stage was not retained"))
+        self.head_stage.as_ref().ok_or_else(|| {
+            invalid_data(super::FilesystemRetentionStageRefusal::HeadStageNotRetained)
+        })
     }
 
     pub(super) fn take_head_stage(&mut self) -> io::Result<FilesystemRetentionStage> {
-        self.head_stage
-            .take()
-            .ok_or_else(|| invalid_data("retention head stage was not retained"))
+        self.head_stage.take().ok_or_else(|| {
+            invalid_data(super::FilesystemRetentionStageRefusal::HeadStageNotRetained)
+        })
     }
 }
