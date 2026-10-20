@@ -1,0 +1,57 @@
+Diagnostic Cargo.toml (replace the Keep path with an isolated parent checkout):
+
+[package]
+name = "keep-inherited-lock-probe"
+version = "0.0.0"
+edition = "2024"
+[dependencies]
+keep = { path = "/build/keep178-parent-source" }
+rustix = { version = "=1.1.4", default-features = false, features = ["pipe", "std"] }
+
+Diagnostic src/main.rs:
+
+//! Isolated diagnostic crate; never linked into Keep or used as a CI gate.
+//! A pipe handshake controls the inherited-descriptor lifetime across pre-exec.
+//! The hook performs only async-signal-safe read/write syscalls, without allocation.
+use std::{error::Error, io, os::unix::process::CommandExt, path::Path, process::Command};
+use keep::{FilesystemPlatformAdmission, FilesystemWriterLock, WriterLockAcquireError};
+use rustix::pipe::{PipeFlags, pipe_with};
+
+fn main() -> Result<(), Box<dyn Error>> {
+    let root_arg = std::env::args().nth(1).ok_or("scratch root argument missing")?;
+    let root = Path::new(&root_arg);
+    std::fs::create_dir(root)?;
+    let authority = FilesystemPlatformAdmission::initialize(root)?;
+    let (ready_read, ready_write) = pipe_with(PipeFlags::CLOEXEC)?;
+    let (release_read, release_write) = pipe_with(PipeFlags::CLOEXEC)?;
+    let mut command = Command::new("/bin/true");
+    // SAFETY: the child hook touches only its captured owned descriptors, uses
+    // async-signal-safe raw read/write, and does not allocate, lock or unwind.
+    unsafe {
+        command.pre_exec(move || {
+            if rustix::io::write(&ready_write, &[1])? != 1 {
+                return Err(io::Error::from(io::ErrorKind::WriteZero));
+            }
+            let mut byte = [0];
+            if rustix::io::read(&release_read, &mut byte)? != 1 {
+                return Err(io::Error::from(io::ErrorKind::UnexpectedEof));
+            }
+            Ok(())
+        });
+    }
+    let child = std::thread::spawn(move || command.status());
+    let mut ready = [0];
+    assert_eq!(rustix::io::read(&ready_read, &mut ready)?, 1);
+    drop(authority);
+    let during = FilesystemWriterLock::try_acquire(root);
+    // Release before asserting so even a failed diagnostic reaps its child.
+    assert_eq!(rustix::io::write(&release_write, &[1])?, 1);
+    let status = child.join().map_err(|_| "spawn thread panicked")??;
+    assert!(status.success());
+    assert!(matches!(during, Err(WriterLockAcquireError::Busy)),
+        "a child before exec must retain inherited writer authority");
+    let after = FilesystemWriterLock::try_acquire(root)?;
+    drop(after);
+    println!("controlled pre-exec child: parent drop => Busy; child exec/reap => acquired");
+    Ok(())
+}
