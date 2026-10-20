@@ -1,0 +1,15 @@
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.34s
+     Running tests/verification_receipt.rs (/build/keep107-coordinate-target/debug/deps/verification_receipt-443fd900bf0a4d6d)
+
+running 8 tests
+test a_reference_refusal_cannot_be_relabeled_as_durable ... ok
+test golden_receipts_match_the_oracle_and_decode_from_another_process ... ok
+test a_reference_report_cannot_be_relabeled_as_durable ... ok
+test the_golden_report_and_refusals_state_exactly_their_frozen_coordinates ... ok
+test every_reference_store_outcome_projects_and_round_trips ... ok
+test a_refusal_never_decodes_as_a_report_and_a_report_never_as_a_refusal ... ok
+test snapshot_binding_is_refused_instead_of_encoded_as_another_depth ... ok
+test every_structural_field_has_one_exact_first_refusal ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
