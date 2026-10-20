@@ -1,14 +1,15 @@
-# Dependency Admission: serde 1.0.229 and serde_json 1.0.151
+# Dependency Admission: serde 1.0.229 and serde_json 1.0.154
 
 - Status: Accepted for repository-task JSON admission only
 - Date: 2026-07-28
+- serde_json version updated: 2026-10-20 (#186)
 - Owner: Keep repository verification
 - Upstream:
   [serde-rs/json](https://github.com/serde-rs/json)
 
 ## Admitted use
 
-Keep admits the exactly pinned `serde_json` 1.0.151 and `serde` 1.0.229
+Keep admits the exactly pinned `serde_json` 1.0.154 and `serde` 1.0.229
 packages only behind the `xtask` crate's `repository-tasks` feature. They parse
 the committed Node documentation-tool manifest and lockfile so the Rust
 documentation integrity task can validate their structure and reviewed
