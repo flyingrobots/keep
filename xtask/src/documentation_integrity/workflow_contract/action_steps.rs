@@ -11,7 +11,7 @@ const CHECKOUT_STEP: &str = concat!(
 );
 const NODE_STEP: &str = concat!(
     "      - name: Install pinned Node.js\n",
-    "        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020\n",
+    "        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1\n",
     "        with:\n",
     "          node-version: 24.18.0\n"
 );

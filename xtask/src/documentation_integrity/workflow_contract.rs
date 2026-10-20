@@ -17,7 +17,7 @@ const DOCUMENTATION_JOB_FIELDS: &[&str] = &["name", "runs-on", "timeout-minutes"
 const DOCUMENTATION_JOB_NAME: &str = "Documentation and workflow integrity";
 const DOCUMENTATION_RUNNER: &str = "ubuntu-latest";
 const DOCUMENTATION_TIMEOUT_MINUTES: i64 = 10;
-const SETUP_NODE_ACTION: &str = "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
+const SETUP_NODE_ACTION: &str = "actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1";
 const SETUP_NODE_ACTION_PREFIX: &str = "actions/setup-node@";
 const NODE_VERSION: &str = "24.18.0";
 
