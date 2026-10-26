@@ -10,6 +10,11 @@ const LAYOUTS: &str = include_str!("../../conformance/layout/v1/layouts.tsv");
 const V1_SEGMENT: &str = include_str!("../../conformance/segment-store/v1/one-zero-segment.hex");
 const V1_CATALOG: &str = include_str!("../../conformance/segment-store/v1/one-zero-catalog.hex");
 const V1_HEAD: &str = include_str!("../../conformance/segment-store/v1/one-zero-head.hex");
+const V1_CATALOG_TWO: &str =
+    include_str!("../../conformance/segment-store/v1/one-zero-catalog-generation-two.hex");
+const V1_HEAD_TWO: &str =
+    include_str!("../../conformance/segment-store/v1/one-zero-head-generation-two.hex");
+const V1_EMPTY_SEGMENT: &str = include_str!("../../conformance/segment-store/v1/empty-segment.hex");
 
 struct Artifact {
     case_name: &'static str,

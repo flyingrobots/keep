@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Add canonical encoders and admitting decoders for the `keep.segment-store/v2` GC retirement intent and receipt, with typed reader-lock coordinate roles, independent golden fixtures, field-by-field corruption laws and a seeded `gc_format` fuzz target. No writer persists these records, namespace admission still refuses them on disk, and the format-definition digest is unchanged. Salvaged from the closed #107 branch (#21).
+
 - Update the repository-only serde_json parser to 1.0.154 in both locked workspaces and refresh its dependency admission; the resolved transitive graph, features, license and MSRV are unchanged (#186).
 
 - Update the in-process BLAKE3 dependency to 1.8.7 in both locked workspaces, remove the unused arrayref license exception and renew its admission while retaining the external b3sum oracle and version-one identity contract (#94).

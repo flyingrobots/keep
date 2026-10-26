@@ -188,6 +188,10 @@ replacement, synchronizes `recovery/dispositions`, removes the stage, and
 synchronizes `recovery`. Until that completes, the artifact remains
 recovery-protected.
 
-These grammars, their golden fixtures, parsers, corruption matrices, crash
-points, model, benchmarks, and fuzz targets are **Planned in #21**. Issue #19
-must refuse their physical presence without mutating it.
+The intent and receipt grammars have canonical encoders, admitting decoders,
+golden fixtures, corruption laws, and a seeded fuzz target; no writer persists
+them. Typed reader-lock coordinate roles are recorded in the
+[GC boundary decisions](../../../src/adapters/gc/rationale.md). The
+disposition grammar's parser and fixture, and every crash point, model,
+benchmark, execution, and recovery law, are **Planned in #21**. Issue #19 must
+refuse their physical presence without mutating it.

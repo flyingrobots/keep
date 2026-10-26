@@ -55,6 +55,10 @@
 //! [`VerificationReport`] names the subject, requested depth and established
 //! evidence; unsupported depths refuse without downgrade or a partial report.
 //!
+//! [`GcRetirementIntent`] and [`GcRetirementReceipt`] have canonical encoders
+//! and admitting decoders; no writer persists them and namespace admission
+//! still refuses them on disk.
+//!
 //! Production durable ingestion, garbage collection and compaction remain
 //! unimplemented here. General version-2 catalog publication still needs a
 //! retained-closure gate; retention publication's live closure verification
@@ -68,6 +72,7 @@ mod authenticated_read;
 mod blob;
 mod catalog;
 mod chunk;
+mod gc;
 mod layout;
 mod profile;
 mod reference;
@@ -156,6 +161,15 @@ pub use adapters::{
     publish_catalog_generation, read_recovery_inventory,
 };
 pub use adapters::{
+    AdmittedGcRetirementIntent, AdmittedGcRetirementReceipt, CanonicalGcRetirementIntent,
+    CanonicalGcRetirementReceipt, CatalogSuccessorProofDigest, DispositionSetDigest, GcCandidate,
+    GcCandidateSetDigest, GcRetirementIntent, GcRetirementIntentCoordinates,
+    GcRetirementIntentDecodeError, GcRetirementIntentDigest, GcRetirementIntentEncodeError,
+    GcRetirementIntentError, GcRetirementReceipt, GcRetirementReceiptDecodeError, PoolStateDigest,
+    ReaderLockCoordinate, ReaderLockDevice, ReaderLockFile, ReaderLockIdentity, ReaderLockMount,
+    SegmentPoolIdentityDigest, VerificationEvidenceDigest,
+};
+pub use adapters::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionHead,
     CanonicalRetentionManifest, CanonicalRetentionRoot, ChecksummedRetentionHead,
     FilesystemRetentionAuthorityError, FilesystemRetentionPublicationAuthority,
@@ -207,6 +221,7 @@ pub use catalog::{
 pub use chunk::{
     ChunkHashError, ChunkId, ChunkLength, ChunkOffset, ChunkSpan, ChunkingError, FastCdc,
 };
+pub use gc::{GcGeneration, GcGenerationError};
 pub use layout::{
     AdmittedLayout, LayoutEntry, LayoutEntryLimit, LayoutEntryLimitError, LayoutId,
     LayoutIdMismatch, LayoutRecordLength, LayoutValidationError, RangePlan, RangePlanError,

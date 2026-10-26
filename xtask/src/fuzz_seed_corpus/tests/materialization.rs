@@ -4,8 +4,8 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use super::super::{
-    FuzzSeedError, catalog_seeds, layout_seeds, migration_seeds, prepare, retention_seeds,
-    segment_seeds,
+    FuzzSeedError, catalog_seeds, gc_seeds, layout_seeds, migration_seeds, prepare,
+    retention_seeds, segment_seeds,
 };
 use crate::test_directory::TestDirectory;
 
@@ -127,7 +127,8 @@ fn copy_version_two_fixtures(source_root: &Path, root: &Path) -> Result<(), Fuzz
     })?;
     let fixtures = retention_seeds::FIXTURES
         .into_iter()
-        .chain(migration_seeds::FIXTURES);
+        .chain(migration_seeds::FIXTURES)
+        .chain(gc_seeds::FIXTURES);
     for (_selector, fixture) in fixtures {
         let source_path = source_root
             .join("conformance/segment-store/v2")
