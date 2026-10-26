@@ -34,6 +34,16 @@ impl EntryIdentity {
             .dir_metadata()
             .map(|metadata| Self::from(&metadata))
     }
+
+    /// The observed device number, for refusal evidence.
+    pub(super) const fn device(self) -> u64 {
+        self.device
+    }
+
+    /// The observed inode number, for refusal evidence.
+    pub(super) const fn inode(self) -> u64 {
+        self.inode
+    }
 }
 
 impl From<&Metadata> for EntryIdentity {

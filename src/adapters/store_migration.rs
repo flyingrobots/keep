@@ -49,6 +49,10 @@ mod filesystem_migration_recovery_refusal;
 pub use filesystem_migration_recovery_refusal::{
     FilesystemMigrationRecoveryRefusal, FilesystemMigrationResidueKind,
 };
+mod filesystem_migration_refusal;
+pub use filesystem_migration_refusal::FilesystemMigrationRefusal;
+#[cfg(test)]
+mod filesystem_migration_refusal_tests;
 #[cfg(test)]
 mod filesystem_migration_compatibility_tests;
 #[cfg(test)]

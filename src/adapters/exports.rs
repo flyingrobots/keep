@@ -110,3 +110,6 @@ pub use super::writer_lock_acquire_phase::WriterLockAcquirePhase;
 pub use crate::segment_digest::SegmentDigest;
 
 pub use super::filesystem_namespace_refusal::{FilesystemEntryKind, FilesystemNamespaceRefusal};
+pub use super::filesystem_entry_identity::FilesystemEntryIdentity;
+pub use super::filesystem_operation_refusal::FilesystemOperationRefusal;
+pub use super::reader_fence_refusal::ReaderFenceRefusal;

@@ -8,6 +8,10 @@ use super::{
     StoreMigrationError, StoreMigrationPhase, StoreMigrationStorage,
 };
 
+#[cfg(test)]
+#[path = "migration_resumption_tests.rs"]
+mod tests;
+
 /// The three canonical records one migration publishes.
 pub(super) struct MigrationRecords<'a> {
     pub(super) intent: &'a CanonicalStoreMigrationIntent,

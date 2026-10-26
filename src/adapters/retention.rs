@@ -102,6 +102,8 @@ mod filesystem_retention_recovery_roots;
 mod filesystem_retention_recovery_tests;
 mod filesystem_retention_refusal;
 #[cfg(test)]
+mod filesystem_retention_refusal_source_tests;
+#[cfg(test)]
 mod filesystem_retention_short_count_tests;
 #[cfg(test)]
 mod filesystem_retention_short_framing_tests;

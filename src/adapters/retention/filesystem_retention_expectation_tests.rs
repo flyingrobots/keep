@@ -11,7 +11,7 @@ use super::filesystem_retention_test_fixture::{
 };
 use super::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, RetentionCurrentStateRefusal,
-    RetentionPublicationStorage,
+    RetentionPublicationStorage, RetentionRootDecodeError,
 };
 use crate::{RetentionNamespace, RetentionRoot, execute_retention_publication};
 
@@ -156,7 +156,9 @@ fn successor_refuses_when_the_predecessor_root_bytes_changed() -> Result<(), Box
 
     assert!(matches!(
         refusal(&error),
-        Some(RetentionCurrentStateRefusal::PredecessorRootChanged)
+        Some(RetentionCurrentStateRefusal::PredecessorRootRefused {
+            source: RetentionRootDecodeError::ChecksumMismatch { .. }
+        })
     ));
     Ok(())
 }

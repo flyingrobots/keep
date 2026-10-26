@@ -184,7 +184,8 @@ pub use adapters::{
     verify_retention_closure,
 };
 pub use adapters::{
-    FilesystemMigrationRecoveryRefusal, FilesystemMigrationResidueKind, MIGRATION_NAMESPACE_PREFIX,
+    FilesystemMigrationRecoveryRefusal, FilesystemMigrationRefusal, FilesystemMigrationResidueKind,
+    MIGRATION_NAMESPACE_PREFIX,
     StoreMigrationEffect, StoreMigrationFixedStage, StoreMigrationNamespacePrefix,
     StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError, StoreMigrationRecoveryPlan,
     StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,
@@ -237,4 +238,7 @@ pub use verification::{
 pub use adapters::{RangeReadError, ReconstructionError};
 pub use authenticated_read::{RangeReadReceipt, ReconstructionReceipt};
 
-pub use adapters::{FilesystemEntryKind, FilesystemNamespaceRefusal};
+pub use adapters::{
+    FilesystemEntryIdentity, FilesystemEntryKind, FilesystemNamespaceRefusal,
+    FilesystemOperationRefusal, ReaderFenceRefusal,
+};

@@ -8,7 +8,17 @@ use cap_std::fs::Dir;
 
 use super::{FilesystemWriterLock, LOCK_FILE_NAME, acquire_root, open_existing};
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
-use crate::adapters::{WriterLockAcquireError, WriterLockAcquirePhase};
+use crate::adapters::{
+    FilesystemEntryIdentity, FilesystemOperationRefusal, WriterLockAcquireError,
+    WriterLockAcquirePhase,
+};
+
+fn identity(path: &std::path::Path) -> std::io::Result<FilesystemEntryIdentity> {
+    use std::os::unix::fs::MetadataExt;
+
+    let metadata = fs::symlink_metadata(path)?;
+    Ok(FilesystemEntryIdentity::new(metadata.dev(), metadata.ino()))
+}
 
 // Size: medium. Oracle: KEEP-RECOVERY-004 forbids returning mismatched authority.
 // This shared acquisition boundary performs the real kernel lock and returns the guard.
@@ -41,6 +51,8 @@ fn replaced_lock_entry_refuses_authority_after_kernel_acquisition() -> Result<()
     let error = result
         .err()
         .ok_or("replacement received writer authority")?;
+    let expected = identity(&sandbox.path().join("displaced.lock"))?;
+    let observed = identity(&sandbox.path().join(LOCK_FILE_NAME))?;
     assert!(
         matches!(
             error,
@@ -48,6 +60,8 @@ fn replaced_lock_entry_refuses_authority_after_kernel_acquisition() -> Result<()
                 phase: WriterLockAcquirePhase::VerifyFileIdentity,
                 ref source,
             } if source.kind() == std::io::ErrorKind::InvalidData
+                && source.get_ref().and_then(|refusal| refusal.downcast_ref::<FilesystemOperationRefusal>())
+                    == Some(&FilesystemOperationRefusal::IdentityChanged { expected, observed })
         ),
         "replacement must retain the identity-refusal boundary: {error:?}"
     );
