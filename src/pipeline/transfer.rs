@@ -152,20 +152,20 @@ where
         acknowledgements: 0,
         failure: None,
     };
-    let receipt = match read(&mut writer) {
-        Ok(receipt) => receipt,
-        Err(source) => {
-            return Err(match writer.failure.take() {
-                Some(Failure::Sink(error)) => TransferError::Sink(error),
-                Some(Failure::Cancelled) => TransferError::Cancelled {
-                    segments: writer.segments,
-                    bytes: writer.bytes,
-                },
-                Some(Failure::Accounting) => TransferError::Accounting,
-                None => TransferError::Read(Box::new(source)),
-            });
-        }
-    };
+    let outcome = read(&mut writer);
+    // A recorded writer failure wins even if the read core returned `Ok`:
+    // partial output must never become a receipt.
+    if let Some(failure) = writer.failure.take() {
+        return Err(match failure {
+            Failure::Sink(error) => TransferError::Sink(error),
+            Failure::Cancelled => TransferError::Cancelled {
+                segments: writer.segments,
+                bytes: writer.bytes,
+            },
+            Failure::Accounting => TransferError::Accounting,
+        });
+    }
+    let receipt = outcome.map_err(|source| TransferError::Read(Box::new(source)))?;
     if writer.in_window > 0 {
         writer.acknowledge().map_err(TransferError::Sink)?;
     }
@@ -190,6 +190,7 @@ enum TransferStop {
     Sink,
     Cancelled,
     Accounting,
+    AlreadyStopped,
 }
 
 impl std::fmt::Display for TransferStop {
@@ -235,13 +236,17 @@ where
         io::Error::other(reason)
     }
 
+    /// Applies one segment, or refuses before the sink sees it.
+    ///
+    /// Once any failure is recorded, every later write refuses without
+    /// touching the sink, so a caller that retries cannot extend the applied
+    /// prefix. Accounting is checked before the sink is called.
     fn apply(&mut self, bytes: &[u8]) -> io::Result<()> {
+        if self.failure.is_some() {
+            return Err(io::Error::other(TransferStop::AlreadyStopped));
+        }
         if self.cancellation.is_cancelled() {
             return Err(self.fail(Failure::Cancelled));
-        }
-        let segment = TransferSegment::new(self.segments, self.bytes, bytes);
-        if let Err(error) = self.sink.apply(segment) {
-            return Err(self.fail(Failure::Sink(error)));
         }
         let Some(next_bytes) = u64::try_from(bytes.len())
             .ok()
@@ -252,6 +257,10 @@ where
         let Some(next_segments) = self.segments.checked_add(1) else {
             return Err(self.fail(Failure::Accounting));
         };
+        let segment = TransferSegment::new(self.segments, self.bytes, bytes);
+        if let Err(error) = self.sink.apply(segment) {
+            return Err(self.fail(Failure::Sink(error)));
+        }
         self.bytes = next_bytes;
         self.segments = next_segments;
         self.in_window = self.in_window.saturating_add(1);
@@ -281,3 +290,6 @@ where
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod stop_tests;
