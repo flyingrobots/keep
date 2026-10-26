@@ -185,11 +185,11 @@ pub use adapters::{
 };
 pub use adapters::{
     FilesystemMigrationRecoveryRefusal, FilesystemMigrationRefusal, FilesystemMigrationResidueKind,
-    MIGRATION_NAMESPACE_PREFIX,
-    StoreMigrationEffect, StoreMigrationFixedStage, StoreMigrationNamespacePrefix,
-    StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError, StoreMigrationRecoveryPlan,
-    StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,
-    StoreMigrationStageDecodeError, plan_store_migration_recovery, recover_store_migration,
+    MIGRATION_NAMESPACE_PREFIX, StoreMigrationEffect, StoreMigrationFixedStage,
+    StoreMigrationNamespacePrefix, StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError,
+    StoreMigrationRecoveryPlan, StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage,
+    StoreMigrationResidue, StoreMigrationStageDecodeError, plan_store_migration_recovery,
+    recover_store_migration,
 };
 #[cfg(feature = "repository-tasks")]
 #[doc(hidden)]

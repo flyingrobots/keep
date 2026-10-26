@@ -7,7 +7,9 @@ use cap_std::fs::{Dir, File};
 use super::filesystem_migration_recovery_refusal::{
     FilesystemMigrationRecoveryRefusal as Refusal, invalid,
 };
+use super::{FilesystemMigrationRefusal, StoreMigrationFixedStage};
 use super::{format_marker_decoder, migration_intent_format, migration_receipt_format};
+use crate::adapters::FilesystemOperationRefusal;
 use crate::adapters::filesystem_catalog_artifact;
 use crate::adapters::filesystem_exact_record::{
     self as exact_record, EntryIdentity, ExactRecordError,
@@ -42,6 +44,15 @@ impl FilesystemMigrationFixedArtifact {
             Self::Intent => migration_intent_format::ENCODED_LENGTH,
             Self::Marker => format_marker_decoder::ENCODED_LENGTH,
             Self::Receipt => migration_receipt_format::ENCODED_LENGTH,
+        }
+    }
+
+    /// The public stage coordinate reported by refusal evidence.
+    pub(super) const fn stage(self) -> StoreMigrationFixedStage {
+        match self {
+            Self::Intent => StoreMigrationFixedStage::Intent,
+            Self::Marker => StoreMigrationFixedStage::Marker,
+            Self::Receipt => StoreMigrationFixedStage::Receipt,
         }
     }
 }
@@ -151,7 +162,10 @@ impl FilesystemMigrationFixedStage {
         if observed == self.identity {
             Ok(())
         } else {
-            Err(invalid_data("migration stage handle changed identity"))
+            Err(invalid_data(FilesystemOperationRefusal::IdentityChanged {
+                expected: self.identity.into(),
+                observed: observed.into(),
+            }))
         }
     }
 
@@ -163,7 +177,12 @@ impl FilesystemMigrationFixedStage {
         if self.artifact == artifact && self.expected.as_ref() == expected {
             Ok(())
         } else {
-            Err(invalid_data("migration stage record disagreed"))
+            Err(invalid_data(
+                FilesystemMigrationRefusal::StageRecordDisagreed {
+                    retained: self.artifact.stage(),
+                    requested: artifact.stage(),
+                },
+            ))
         }
     }
 
@@ -212,8 +231,8 @@ fn require_length(artifact: FilesystemMigrationFixedArtifact, expected: &[u8]) -
     }
 }
 
-fn invalid_data(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
+fn invalid_data(refusal: impl std::error::Error + Send + Sync + 'static) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, refusal)
 }
 
 impl FilesystemMigrationFixedStage {

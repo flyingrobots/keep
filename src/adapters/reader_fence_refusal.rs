@@ -1,9 +1,13 @@
-//! This module owns the refusals of the persistent `reader.lock` fence shared
-//! by retention snapshots and store migration.
+//! This module owns the admission law and refusals of the persistent
+//! `reader.lock` fence shared by retention snapshots and store migration.
 
 use std::error::Error;
 use std::fmt;
+use std::io;
 
+use cap_std::fs::Metadata;
+
+use super::filesystem_exact_record::EntryIdentity;
 use super::{FilesystemEntryIdentity, FilesystemEntryKind};
 
 /// Why an opened `reader.lock` handle and its named entry cannot fence one view.
@@ -47,3 +51,39 @@ impl fmt::Display for ReaderFenceRefusal {
 }
 
 impl Error for ReaderFenceRefusal {}
+
+impl ReaderFenceRefusal {
+    /// Admits one fence observation: an opened handle and its no-follow named entry.
+    pub(super) fn admit(handle: &Metadata, entry: &Metadata) -> io::Result<()> {
+        let kind = |metadata: &Metadata| FilesystemEntryKind::observed(metadata.file_type());
+        if !handle.is_file() || !entry.is_file() {
+            return Err(Self::Kind {
+                observed_handle: kind(handle),
+                observed_entry: kind(entry),
+            }
+            .into_io());
+        }
+        if handle.len() != 0 || entry.len() != 0 {
+            return Err(Self::Length {
+                observed_handle: handle.len(),
+                observed_entry: entry.len(),
+            }
+            .into_io());
+        }
+        let expected = EntryIdentity::from(handle);
+        let observed = EntryIdentity::from(entry);
+        if expected == observed {
+            Ok(())
+        } else {
+            Err(Self::Identity {
+                expected: expected.into(),
+                observed: observed.into(),
+            }
+            .into_io())
+        }
+    }
+
+    fn into_io(self) -> io::Error {
+        io::Error::new(io::ErrorKind::InvalidData, self)
+    }
+}

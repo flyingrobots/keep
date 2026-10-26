@@ -21,11 +21,11 @@ fn section_refusal(result: io::Result<()>) -> Option<(io::ErrorKind, FilesystemM
 
 const fn misdispatched(
     observed: StoreMigrationPhase,
-) -> Option<(io::ErrorKind, FilesystemMigrationRefusal)> {
-    Some((
+) -> (io::ErrorKind, FilesystemMigrationRefusal) {
+    (
         io::ErrorKind::InvalidInput,
         FilesystemMigrationRefusal::PhaseSection { observed },
-    ))
+    )
 }
 
 #[test]
@@ -37,16 +37,20 @@ fn a_section_refuses_a_foreign_phase_by_naming_it() -> Result<(), Box<dyn Error>
     let intent_only = StoreMigrationPhase::WriteIntentStage;
 
     assert_eq!(
-        section_refusal(intent_and_namespace_phase(&mut authority, receipt_only, &intent)),
-        misdispatched(receipt_only)
+        section_refusal(intent_and_namespace_phase(
+            &mut authority,
+            receipt_only,
+            &intent
+        )),
+        Some(misdispatched(receipt_only))
     );
     assert_eq!(
         section_refusal(marker_phase(&mut authority, intent_only, &records.marker)),
-        misdispatched(intent_only)
+        Some(misdispatched(intent_only))
     );
     assert_eq!(
         section_refusal(receipt_phase(&mut authority, intent_only, &records.receipt)),
-        misdispatched(intent_only)
+        Some(misdispatched(intent_only))
     );
     drop(authority);
     sandbox.remove()?;

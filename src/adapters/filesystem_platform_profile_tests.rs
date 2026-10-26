@@ -60,7 +60,12 @@ fn root_identity_uses_linux_device_mount_and_inode_coordinates() {
 fn profile_refusal(result: &std::io::Result<()>) -> Option<FilesystemOperationRefusal> {
     let error = result.as_ref().err()?;
     (error.kind() == std::io::ErrorKind::Unsupported)
-        .then(|| error.get_ref()?.downcast_ref::<FilesystemOperationRefusal>().copied())
+        .then(|| {
+            error
+                .get_ref()?
+                .downcast_ref::<FilesystemOperationRefusal>()
+                .copied()
+        })
         .flatten()
 }
 

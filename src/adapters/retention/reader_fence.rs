@@ -2,11 +2,10 @@
 
 use std::io;
 
-use cap_fs_ext::MetadataExt;
-use cap_std::fs::{Dir, File, Metadata};
+use cap_std::fs::{Dir, File};
 use rustix::fs::{FlockOperation, flock};
 
-use crate::adapters::filesystem_exact_record;
+use crate::adapters::{ReaderFenceRefusal, filesystem_exact_record};
 
 const READER_LOCK: &str = "reader.lock";
 
@@ -54,21 +53,5 @@ impl ReaderFence {
 fn verify(root: &Dir, file: &File) -> io::Result<()> {
     let handle = file.metadata()?;
     let entry = root.symlink_metadata(READER_LOCK)?;
-    if handle.is_file()
-        && entry.is_file()
-        && handle.len() == 0
-        && entry.len() == 0
-        && identity(&handle) == identity(&entry)
-    {
-        Ok(())
-    } else {
-        Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "reader fence kind, length, or identity disagreed",
-        ))
-    }
-}
-
-fn identity(metadata: &Metadata) -> (u64, u64) {
-    (metadata.dev(), metadata.ino())
+    ReaderFenceRefusal::admit(&handle, &entry)
 }

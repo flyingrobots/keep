@@ -14,8 +14,7 @@ use super::filesystem_retention_attempt::{self as attempt, PublicationAttempt};
 use super::filesystem_retention_current::{verify_committed, verify_predecessor};
 use super::filesystem_retention_recovery_observation::RetentionRecoveryObservation;
 use super::filesystem_retention_test_fixture::{
-    ROOT_HEX, fixture, initial_preparation, migrated_store, open_authority, refusal,
-    successor_root,
+    ROOT_HEX, fixture, initial_preparation, migrated_store, open_authority, refusal, successor_root,
 };
 use super::{
     AdmittedRetentionRoot, RetentionCurrentStateRefusal, RetentionFixedStage,
@@ -33,8 +32,8 @@ fn record_refusal<T>(result: io::Result<T>) -> Option<(io::ErrorKind, RetentionR
     Some((error.kind(), refusal))
 }
 
-const fn invalid(refusal: RetentionRecordRefusal) -> Option<(io::ErrorKind, RetentionRecordRefusal)> {
-    Some((io::ErrorKind::InvalidData, refusal))
+const fn invalid(refusal: RetentionRecordRefusal) -> (io::ErrorKind, RetentionRecordRefusal) {
+    (io::ErrorKind::InvalidData, refusal)
 }
 
 #[test]
@@ -48,35 +47,35 @@ fn publication_phases_without_retained_attempt_state_refuse_with_typed_payloads(
 
     assert_eq!(
         record_refusal(attempt::require(None)),
-        invalid(RetentionRecordRefusal::PublicationAttemptAbsent)
+        Some(invalid(RetentionRecordRefusal::PublicationAttemptAbsent))
     );
     assert_eq!(
         record_refusal(fresh.namespace()),
-        invalid(RetentionRecordRefusal::NamespaceNotAdmitted)
+        Some(invalid(RetentionRecordRefusal::NamespaceNotAdmitted))
     );
     assert_eq!(
         record_refusal(fresh.require_namespace("unadmitted")),
-        invalid(RetentionRecordRefusal::NamespaceNotAdmitted)
+        Some(invalid(RetentionRecordRefusal::NamespaceNotAdmitted))
     );
     assert_eq!(
         record_refusal(fresh.retained_root_name()),
-        invalid(no_pool(RetentionFixedStage::Root))
+        Some(invalid(no_pool(RetentionFixedStage::Root)))
     );
     assert_eq!(
         record_refusal(fresh.retained_manifest_name()),
-        invalid(no_pool(RetentionFixedStage::Manifest))
+        Some(invalid(no_pool(RetentionFixedStage::Manifest)))
     );
     assert_eq!(
         record_refusal(fresh.root_stage()),
-        invalid(not_retained(RetentionFixedStage::Root))
+        Some(invalid(not_retained(RetentionFixedStage::Root)))
     );
     assert_eq!(
         record_refusal(fresh.manifest_stage()),
-        invalid(not_retained(RetentionFixedStage::Manifest))
+        Some(invalid(not_retained(RetentionFixedStage::Manifest)))
     );
     assert_eq!(
         record_refusal(fresh.head_stage()),
-        invalid(not_retained(RetentionFixedStage::Head))
+        Some(invalid(not_retained(RetentionFixedStage::Head)))
     );
 }
 
@@ -91,7 +90,10 @@ fn recovery_steps_without_a_context_refuse_as_typed_record_state() -> Result<(),
     let RetentionStorageError::Operation { source, progress } = &error else {
         return Err(format!("recovery step lost its boundary: {error:?}").into());
     };
-    assert_eq!(progress.boundary(), RetentionStorageBoundary::RecoveryContext);
+    assert_eq!(
+        progress.boundary(),
+        RetentionStorageBoundary::RecoveryContext
+    );
     assert!(
         matches!(
             source.as_ref(),
@@ -119,7 +121,7 @@ fn a_non_regular_retained_stage_refuses_observation_by_kind() -> Result<(), Box<
 
     assert_eq!(
         record_refusal(observed),
-        invalid(RetentionRecordRefusal::KindOrLength)
+        Some(invalid(RetentionRecordRefusal::KindOrLength))
     );
     sandbox.remove()?;
     Ok(())

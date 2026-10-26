@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Filesystem, retention, and migration storage adapters carry typed refusals with expected and observed evidence as their `io::Error` payloads instead of text, and preserve the original namespace-open failure and predecessor-root decoder refusal as sources. Adds `FilesystemOperationRefusal`, `FilesystemEntryIdentity`, `ReaderFenceRefusal`, and `FilesystemMigrationRefusal`, and additive variants on `RetentionRecordRefusal` and `RetentionCurrentStateRefusal`; corrupt predecessor bytes now report `PredecessorRootRefused` rather than `PredecessorRootChanged`. Error kinds, formats, and recovery behavior are unchanged (ADR-0010). Salvaged from #133 on the closed #107 branch (#110).
+
 - Update the repository-only serde_json parser to 1.0.154 in both locked workspaces and refresh its dependency admission; the resolved transitive graph, features, license and MSRV are unchanged (#186).
 
 - Update the in-process BLAKE3 dependency to 1.8.7 in both locked workspaces, remove the unused arrayref license exception and renew its admission while retaining the external b3sum oracle and version-one identity contract (#94).

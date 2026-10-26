@@ -5,7 +5,7 @@ use std::io;
 
 use super::{
     CanonicalStoreFormatMarker, CanonicalStoreMigrationIntent, CanonicalStoreMigrationReceipt,
-    StoreMigrationError, StoreMigrationPhase, StoreMigrationStorage,
+    FilesystemMigrationRefusal, StoreMigrationError, StoreMigrationPhase, StoreMigrationStorage,
 };
 
 #[cfg(test)]
@@ -161,6 +161,6 @@ fn receipt_phase(
 fn wrong_section(phase: StoreMigrationPhase) -> io::Error {
     io::Error::new(
         io::ErrorKind::InvalidInput,
-        format!("migration phase {phase} dispatched to the wrong section"),
+        FilesystemMigrationRefusal::PhaseSection { observed: phase },
     )
 }

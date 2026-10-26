@@ -60,7 +60,9 @@ fn oversized_publication_prefixes_refuse_with_the_artifact_and_bounds() -> Resul
         FilesystemOperationRefusal,
     };
 
-    fn prefix_refusal(result: io::Result<()>) -> Option<(io::ErrorKind, FilesystemOperationRefusal)> {
+    fn prefix_refusal(
+        result: io::Result<()>,
+    ) -> Option<(io::ErrorKind, FilesystemOperationRefusal)> {
         let error = result.err()?;
         let refusal = error
             .get_ref()?
@@ -77,14 +79,13 @@ fn oversized_publication_prefixes_refuse_with_the_artifact_and_bounds() -> Resul
     let head = CanonicalPublicationHead::for_catalog(catalog.checksummed());
     let catalog_length = catalog.encoded().len();
     let head_length = head.encoded().len();
-    let catalog_over = catalog_length.checked_add(1).ok_or("catalog length overflow")?;
+    let catalog_over = catalog_length
+        .checked_add(1)
+        .ok_or("catalog length overflow")?;
     let head_over = head_length.checked_add(1).ok_or("head length overflow")?;
 
     assert_eq!(
-        prefix_refusal(publisher.write_catalog_prefix_for_repository_tasks(
-            &catalog,
-            catalog_over
-        )),
+        prefix_refusal(publisher.write_catalog_prefix_for_repository_tasks(&catalog, catalog_over)),
         Some((
             io::ErrorKind::InvalidInput,
             FilesystemOperationRefusal::PrefixExceedsArtifact {

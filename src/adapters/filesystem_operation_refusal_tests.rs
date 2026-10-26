@@ -59,7 +59,10 @@ fn initialization_mutations_without_writer_authority_refuse_typed() -> Result<()
     locked.open_and_lock_writer_file()?;
     assert_eq!(
         operation_refusal(locked.open_and_lock_writer_file()),
-        Some((io::ErrorKind::Other, Refusal::WriterAuthorityAlreadyAcquired))
+        Some((
+            io::ErrorKind::Other,
+            Refusal::WriterAuthorityAlreadyAcquired
+        ))
     );
     drop(locked);
     sandbox.remove()?;
@@ -72,14 +75,22 @@ fn recovery_counts_above_the_protocol_maximum_refuse_with_both_bounds() -> Resul
     let sandbox = TestDirectory::create("operation-refusal-inventory-limit")?;
     let directory = Dir::open_ambient_dir(sandbox.path(), ambient_authority())?;
     let maximum = RecoveryInventoryLimit::PROTOCOL_MAXIMUM;
-    let observed = maximum.checked_add(1).ok_or("protocol maximum has no successor")?;
+    let observed = maximum
+        .checked_add(1)
+        .ok_or("protocol maximum has no successor")?;
     let refused = Some((
         io::ErrorKind::InvalidInput,
         Refusal::InventoryLimit { maximum, observed },
     ));
 
-    assert_eq!(operation_refusal(count_entries(&directory, observed)), refused);
-    assert_eq!(operation_refusal(read_entry_names(&directory, observed)), refused);
+    assert_eq!(
+        operation_refusal(count_entries(&directory, observed)),
+        refused
+    );
+    assert_eq!(
+        operation_refusal(read_entry_names(&directory, observed)),
+        refused
+    );
     sandbox.remove()?;
     Ok(())
 }

@@ -214,6 +214,7 @@ pub(super) fn retention_error(error: ExactRecordError) -> RetentionStorageError 
     }
 }
 
-pub(super) fn invalid_data(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
+/// Carries a retention record refusal as the `InvalidData` error an I/O port returns.
+pub(super) fn invalid_data(refusal: RetentionRecordRefusal) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, refusal)
 }

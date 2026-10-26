@@ -4,6 +4,7 @@ use std::io;
 
 use cap_std::fs::Dir;
 
+use super::FilesystemMigrationRefusal as Refusal;
 use super::filesystem_migration_namespace_directory::{
     PinnedMigrationDirectory, ambiguous, exact_membership, optional_directory,
     require_allowed_membership, require_directory, require_empty, require_exact_membership,
@@ -81,7 +82,7 @@ pub(super) fn admit_reader_fence(root: &Dir) -> io::Result<()> {
     let before = exact_membership(root, &BEFORE_READER)?;
     let after = exact_membership(root, &AFTER_READER)?;
     if !before && !after {
-        return Err(ambiguous("reader-fence predecessor namespace disagreed"));
+        return Err(ambiguous(Refusal::ReaderFencePredecessorNamespace));
     }
     let file = if before {
         filesystem_migration_reader_fence::create(root)?
@@ -102,7 +103,7 @@ pub(super) fn admit_namespace_prefix(root: &Dir) -> io::Result<()> {
     let prefix = admit_directories(root, PREFIX_DIRECTORY_COUNT)?;
     let (retention, roots, manifests, gc, recovery, dispositions) = prefix
         .complete()
-        .ok_or_else(|| ambiguous("namespace prefix admission stopped short"))?;
+        .ok_or_else(|| ambiguous(Refusal::NamespacePrefixIncomplete))?;
     roots.verify(retention.directory())?;
     manifests.verify(retention.directory())?;
     dispositions.verify(recovery.directory())?;
@@ -118,7 +119,10 @@ pub(super) fn admit_namespace_prefix(root: &Dir) -> io::Result<()> {
 #[cfg(feature = "repository-tasks")]
 pub(super) fn admit_namespace_prefix_partially(root: &Dir, count: usize) -> io::Result<()> {
     if count > PREFIX_DIRECTORY_COUNT {
-        return Err(ambiguous("namespace prefix count exceeds the protocol"));
+        return Err(ambiguous(Refusal::NamespacePrefixCount {
+            maximum: PREFIX_DIRECTORY_COUNT,
+            observed: count,
+        }));
     }
     preflight_prefix(root)?;
     admit_directories(root, count).map(|_prefix| ())
@@ -179,7 +183,7 @@ fn admit_child(
     parent: Option<&PinnedMigrationDirectory>,
     name: &'static str,
 ) -> io::Result<PinnedMigrationDirectory> {
-    let parent = parent.ok_or_else(|| ambiguous("namespace prefix parent was not admitted"))?;
+    let parent = parent.ok_or_else(|| ambiguous(Refusal::NamespaceParentAbsent))?;
     PinnedMigrationDirectory::admit(parent.directory(), name)
 }
 
@@ -234,10 +238,10 @@ pub(super) fn preflight_recovery_directories(root: &Dir) -> io::Result<()> {
     let recovery = optional_directory(root, RECOVERY)?;
     let retention_complete = preflight_retention(retention.as_ref())?;
     if gc.is_some() && !retention_complete {
-        return Err(ambiguous("gc appeared before the retention prefix"));
+        return Err(ambiguous(Refusal::GcBeforeRetention));
     }
     if recovery.is_some() && gc.is_none() {
-        return Err(ambiguous("recovery appeared before the gc prefix"));
+        return Err(ambiguous(Refusal::RecoveryBeforeGc));
     }
     if let Some(directory) = gc.as_ref() {
         require_empty(directory.directory())?;
@@ -284,7 +288,7 @@ fn preflight_retention(retention: Option<&PinnedMigrationDirectory>) -> io::Resu
     let roots = optional_directory(retention.directory(), ROOTS)?;
     let manifests = optional_directory(retention.directory(), MANIFESTS)?;
     if manifests.is_some() && roots.is_none() {
-        return Err(ambiguous("retention manifests appeared before roots"));
+        return Err(ambiguous(Refusal::ManifestsBeforeRoots));
     }
     if let Some(directory) = roots.as_ref() {
         require_empty(directory.directory())?;

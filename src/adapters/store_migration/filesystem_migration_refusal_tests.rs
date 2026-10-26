@@ -21,7 +21,9 @@ use super::filesystem_migration_namespace_directory::{
 };
 use super::filesystem_migration_reader_fence;
 use super::filesystem_migration_test_fixture::open_authority;
-use super::{FilesystemMigrationRefusal as Refusal, StoreMigrationFixedStage, StoreMigrationStorage};
+use super::{
+    FilesystemMigrationRefusal as Refusal, StoreMigrationFixedStage, StoreMigrationStorage,
+};
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
 use crate::adapters::{
     FilesystemEntryIdentity, FilesystemEntryKind, FilesystemOperationRefusal, ReaderFenceRefusal,
@@ -36,8 +38,8 @@ fn payload<T: Error + Copy + 'static, R>(result: io::Result<R>) -> Option<(io::E
     Some((error.kind(), refusal))
 }
 
-const fn invalid<T>(refusal: T) -> Option<(io::ErrorKind, T)> {
-    Some((io::ErrorKind::InvalidData, refusal))
+const fn invalid<T>(refusal: T) -> (io::ErrorKind, T) {
+    (io::ErrorKind::InvalidData, refusal)
 }
 
 fn identity(path: &Path) -> io::Result<FilesystemEntryIdentity> {
@@ -53,24 +55,31 @@ fn out_of_order_fixed_stage_phases_name_the_expected_and_active_stages()
     StoreMigrationStorage::verify_current(&mut authority, &intent)?;
 
     assert_eq!(
-        payload(StoreMigrationStorage::synchronize_intent_stage(&mut authority)),
-        invalid(Refusal::StageInactive {
+        payload(StoreMigrationStorage::synchronize_intent_stage(
+            &mut authority
+        )),
+        Some(invalid(Refusal::StageInactive {
             expected: StoreMigrationFixedStage::Intent
-        })
+        }))
     );
     StoreMigrationStorage::write_intent_stage(&mut authority, &intent)?;
     assert_eq!(
-        payload(StoreMigrationStorage::write_intent_stage(&mut authority, &intent)),
-        invalid(Refusal::StageAlreadyActive {
+        payload(StoreMigrationStorage::write_intent_stage(
+            &mut authority,
+            &intent
+        )),
+        Some(invalid(Refusal::StageAlreadyActive {
             active: StoreMigrationFixedStage::Intent
-        })
+        }))
     );
     assert_eq!(
-        payload(StoreMigrationStorage::synchronize_marker_stage(&mut authority)),
-        invalid(Refusal::DifferentStageActive {
+        payload(StoreMigrationStorage::synchronize_marker_stage(
+            &mut authority
+        )),
+        Some(invalid(Refusal::DifferentStageActive {
             expected: StoreMigrationFixedStage::Marker,
             observed: StoreMigrationFixedStage::Intent,
-        })
+        }))
     );
     drop(authority);
     sandbox.remove()?;
@@ -87,10 +96,10 @@ fn linking_a_different_record_than_the_retained_stage_is_refused() -> Result<(),
 
     assert_eq!(
         payload(stage.link(&root, Artifact::Marker, &marker)),
-        invalid(Refusal::StageRecordDisagreed {
+        Some(invalid(Refusal::StageRecordDisagreed {
             retained: StoreMigrationFixedStage::Intent,
             requested: StoreMigrationFixedStage::Marker,
-        })
+        }))
     );
     drop(stage);
     sandbox.remove()?;
@@ -106,34 +115,40 @@ fn migration_namespace_contradictions_report_typed_evidence() -> Result<(), Box<
     let kind = |expected, observed| Refusal::EntryKind { expected, observed };
     let (file, directory) = (FilesystemEntryKind::File, FilesystemEntryKind::Directory);
 
-    assert_eq!(payload(require_directory(&root, "file")), invalid(kind(directory, file)));
+    assert_eq!(
+        payload(require_directory(&root, "file")),
+        Some(invalid(kind(directory, file)))
+    );
     assert_eq!(
         payload(optional_directory(&root, "file")),
-        invalid(kind(directory, file))
+        Some(invalid(kind(directory, file)))
     );
     assert_eq!(
         payload(require_regular(&root, "directory", None)),
-        invalid(kind(file, directory))
+        Some(invalid(kind(file, directory)))
     );
     assert_eq!(
         payload(require_regular(&root, "file", Some(3))),
-        invalid(Refusal::FileLength {
+        Some(invalid(Refusal::FileLength {
             expected: 3,
             observed: 1
-        })
+        }))
     );
     assert_eq!(
         payload(required_directory(&root, "absent")),
-        invalid(Refusal::DirectoryAbsent { name: "absent" })
+        Some(invalid(Refusal::DirectoryAbsent { name: "absent" }))
     );
-    assert_eq!(payload(require_empty(&root)), invalid(Refusal::NamespaceNotEmpty));
+    assert_eq!(
+        payload(require_empty(&root)),
+        Some(invalid(Refusal::NamespaceNotEmpty))
+    );
     assert_eq!(
         payload(require_exact_membership(&root, &["file"])),
-        invalid(Refusal::MembershipDisagreed)
+        Some(invalid(Refusal::MembershipDisagreed))
     );
     assert_eq!(
         payload(require_allowed_membership(&root, &["file"])),
-        invalid(Refusal::UnknownEntry)
+        Some(invalid(Refusal::UnknownEntry))
     );
     sandbox.remove()?;
     Ok(())
@@ -152,7 +167,10 @@ fn a_replaced_pinned_migration_directory_reports_both_identities() -> Result<(),
 
     assert_eq!(
         payload(pinned.verify(&root)),
-        invalid(FilesystemOperationRefusal::IdentityChanged { expected, observed })
+        Some(invalid(FilesystemOperationRefusal::IdentityChanged {
+            expected,
+            observed
+        }))
     );
     drop(pinned);
     sandbox.remove()?;
@@ -169,10 +187,10 @@ fn a_nonempty_migration_reader_fence_reports_both_lengths() -> Result<(), Box<dy
 
     assert_eq!(
         payload(filesystem_migration_reader_fence::verify(&root, &fence)),
-        invalid(ReaderFenceRefusal::Length {
+        Some(invalid(ReaderFenceRefusal::Length {
             observed_handle: 3,
             observed_entry: 3
-        })
+        }))
     );
     drop(fence);
     sandbox.remove()?;

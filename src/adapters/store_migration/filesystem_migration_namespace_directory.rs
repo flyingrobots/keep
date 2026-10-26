@@ -5,7 +5,9 @@ use std::io;
 
 use cap_std::fs::Dir;
 
+use super::FilesystemMigrationRefusal as Refusal;
 use crate::adapters::filesystem_exact_record::EntryIdentity;
+use crate::adapters::{FilesystemEntryKind, FilesystemOperationRefusal};
 
 use crate::adapters::{
     filesystem_catalog_artifact, filesystem_platform_profile, sync_capable_directory,
@@ -45,15 +47,20 @@ impl PinnedMigrationDirectory {
         require_same_filesystem(parent, &current)?;
         let current = EntryIdentity::from(&current.dir_metadata()?);
         let metadata = parent.symlink_metadata(self.name)?;
-        if metadata.is_dir()
-            && handle == self.identity
-            && current == self.identity
-            && EntryIdentity::from(&metadata) == handle
-        {
-            Ok(())
-        } else {
-            Err(ambiguous("migration directory changed identity"))
-        }
+        require_kind(&metadata, FilesystemEntryKind::Directory)?;
+        let entry = EntryIdentity::from(&metadata);
+        [handle, current, entry]
+            .into_iter()
+            .find(|observed| *observed != self.identity)
+            .map_or(Ok(()), |observed| {
+                Err(io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    FilesystemOperationRefusal::IdentityChanged {
+                        expected: self.identity.into(),
+                        observed: observed.into(),
+                    },
+                ))
+            })
     }
 
     pub(super) const fn directory(&self) -> &Dir {
@@ -79,7 +86,7 @@ pub(super) fn optional_directory(
             pinned.verify(parent)?;
             Ok(Some(pinned))
         }
-        Ok(_) => Err(ambiguous("migration namespace entry has the wrong kind")),
+        Ok(metadata) => Err(wrong_kind(&metadata, FilesystemEntryKind::Directory)),
     }
 }
 
@@ -89,8 +96,14 @@ fn require_same_filesystem(parent: &Dir, child: &Dir) -> io::Result<()> {
     if parent.device() == child.device() && parent.mount() == child.mount() {
         Ok(())
     } else {
-        Err(ambiguous(
-            "migration namespace crossed the admitted filesystem or mount",
+        Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            FilesystemOperationRefusal::MountBoundaryChanged {
+                expected_device: parent.device(),
+                observed_device: child.device(),
+                expected_mount: parent.mount(),
+                observed_mount: child.mount(),
+            },
         ))
     }
 }
@@ -99,30 +112,31 @@ pub(super) fn required_directory(
     parent: &Dir,
     name: &'static str,
 ) -> io::Result<PinnedMigrationDirectory> {
-    optional_directory(parent, name)?
-        .ok_or_else(|| ambiguous("required migration namespace directory was absent"))
+    optional_directory(parent, name)?.ok_or_else(|| ambiguous(Refusal::DirectoryAbsent { name }))
 }
 
 pub(super) fn require_directory(parent: &Dir, name: &str) -> io::Result<()> {
-    if parent.symlink_metadata(name)?.is_dir() {
-        Ok(())
-    } else {
-        Err(ambiguous("required migration directory has the wrong kind"))
-    }
+    require_kind(
+        &parent.symlink_metadata(name)?,
+        FilesystemEntryKind::Directory,
+    )
 }
 
 pub(super) fn require_regular(parent: &Dir, name: &str, length: Option<usize>) -> io::Result<()> {
     let metadata = parent.symlink_metadata(name)?;
     let expected = length
-        .map(u64::try_from)
-        .transpose()
-        .map_err(|_source| ambiguous("required migration file length exceeded u64"))?;
-    if metadata.is_file() && expected.is_none_or(|expected| metadata.len() == expected) {
-        Ok(())
-    } else {
-        Err(ambiguous(
-            "required migration file has the wrong kind or length",
-        ))
+        .map(|length| {
+            u64::try_from(length)
+                .map_err(|source| ambiguous(Refusal::FileLengthOverflow { length, source }))
+        })
+        .transpose()?;
+    require_kind(&metadata, FilesystemEntryKind::File)?;
+    match expected {
+        Some(expected) if metadata.len() != expected => Err(ambiguous(Refusal::FileLength {
+            expected,
+            observed: metadata.len(),
+        })),
+        _ => Ok(()),
     }
 }
 
@@ -131,7 +145,7 @@ pub(super) fn require_empty(directory: &Dir) -> io::Result<()> {
     if entries.next().transpose()?.is_none() {
         Ok(())
     } else {
-        Err(ambiguous("new migration namespace was not empty"))
+        Err(ambiguous(Refusal::NamespaceNotEmpty))
     }
 }
 
@@ -139,7 +153,7 @@ pub(super) fn require_exact_membership(directory: &Dir, expected: &[&str]) -> io
     if exact_membership(directory, expected)? {
         Ok(())
     } else {
-        Err(ambiguous("migration namespace membership disagreed"))
+        Err(ambiguous(Refusal::MembershipDisagreed))
     }
 }
 
@@ -164,15 +178,31 @@ pub(super) fn require_allowed_membership(directory: &Dir, allowed: &[&str]) -> i
     for entry in directory.entries()? {
         observed = observed
             .checked_add(1)
-            .ok_or_else(|| ambiguous("migration namespace count overflowed"))?;
+            .ok_or_else(|| ambiguous(Refusal::EntryCountOverflow))?;
         let name = entry?.file_name();
         if observed > allowed.len() || !allowed.iter().any(|candidate| name == *candidate) {
-            return Err(ambiguous("migration namespace contains an unknown entry"));
+            return Err(ambiguous(Refusal::UnknownEntry));
         }
     }
     Ok(())
 }
 
-pub(super) fn ambiguous(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
+fn require_kind(metadata: &cap_std::fs::Metadata, expected: FilesystemEntryKind) -> io::Result<()> {
+    if FilesystemEntryKind::observed(metadata.file_type()) == expected {
+        Ok(())
+    } else {
+        Err(wrong_kind(metadata, expected))
+    }
+}
+
+fn wrong_kind(metadata: &cap_std::fs::Metadata, expected: FilesystemEntryKind) -> io::Error {
+    ambiguous(Refusal::EntryKind {
+        expected,
+        observed: FilesystemEntryKind::observed(metadata.file_type()),
+    })
+}
+
+/// Carries a migration namespace refusal as the `InvalidData` error the port returns.
+pub(super) fn ambiguous(refusal: Refusal) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, refusal)
 }

@@ -95,8 +95,8 @@ pub enum RetentionCurrentStateRefusal {
     CommittedNamespaceUnavailable,
     /// The manifest-selected namespace directory could not be opened.
     ///
-    /// The carrying `io::Error` keeps the original kind, except that a
-    /// missing directory is reported as `InvalidData`: the manifest selected it.
+    /// Like every current-state refusal it is carried as `InvalidData`; the
+    /// original open failure, with its own kind and OS code, is the source.
     CommittedNamespaceRead {
         /// The namespace the manifest selects.
         namespace: RetentionNamespaceDigest,
@@ -256,7 +256,9 @@ impl RetentionCurrentStateRefusal {
             Self::PredecessorRootChanged => {
                 "predecessor root pool entry does not decode to the manifest's selection"
             }
-            Self::PredecessorRootRefused { .. } => "predecessor root pool entry failed root decoding",
+            Self::PredecessorRootRefused { .. } => {
+                "predecessor root pool entry failed root decoding"
+            }
             Self::UnknownRetentionEntry => "retention namespace carries an unknown entry",
             Self::NonNamespaceEntry => "retention roots carries a non-namespace entry",
             Self::NamespaceCapacity => "retention namespace or pool count would exceed its ceiling",
@@ -298,8 +300,8 @@ impl Error for RetentionCurrentStateRefusal {
             Self::CatalogRefused { source } => Some(source.as_ref()),
             Self::RecoveryRefused { source } => Some(source),
             Self::RecoveryStepRefused { source } => Some(source),
-            Self::RecoveryObservationRefused { source } => Some(source),
-            Self::CommittedNamespaceRead { source, .. } => Some(source),
+            Self::RecoveryObservationRefused { source }
+            | Self::CommittedNamespaceRead { source, .. } => Some(source),
             Self::PredecessorRootRefused { source } => Some(source),
             _ => None,
         }

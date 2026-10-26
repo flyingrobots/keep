@@ -5,8 +5,10 @@ use std::io::{self, Read};
 use cap_fs_ext::DirExt;
 use cap_std::fs::Dir;
 
+use super::RetentionRecordRefusal;
 use super::filesystem_retention_current::{self, ObservedRetentionState};
 use super::filesystem_retention_pool_name as pool_name;
+use super::filesystem_retention_stage::invalid_data;
 use super::{
     RetentionPoolEntryObservation as Pool, RetentionPoolObservations, RetentionRecoveryEvidence,
     RetentionStageAssessment, RetentionStageAssessments, assess_head_stage, assess_manifest_stage,
@@ -127,16 +129,13 @@ fn read_stage(retention: &Dir, name: &str, bound: usize) -> io::Result<Option<St
     };
     let metadata = file.metadata()?;
     if !metadata.is_file() {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "retained retention stage is not a regular file",
-        ));
+        return Err(invalid_data(RetentionRecordRefusal::KindOrLength));
     }
     let identity = EntryIdentity::from(&metadata);
     let limit = bound
         .checked_add(1)
         .and_then(|limit| u64::try_from(limit).ok())
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, "stage bound overflowed"))?;
+        .ok_or_else(|| invalid_data(RetentionRecordRefusal::LengthOverflow))?;
     let mut bytes = Vec::new();
     file.by_ref().take(limit).read_to_end(&mut bytes)?;
     Ok(Some(StageBytes {
