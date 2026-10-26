@@ -184,11 +184,12 @@ pub use adapters::{
     verify_retention_closure,
 };
 pub use adapters::{
-    FilesystemMigrationRecoveryRefusal, FilesystemMigrationResidueKind, MIGRATION_NAMESPACE_PREFIX,
-    StoreMigrationEffect, StoreMigrationFixedStage, StoreMigrationNamespacePrefix,
-    StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError, StoreMigrationRecoveryPlan,
-    StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,
-    StoreMigrationStageDecodeError, plan_store_migration_recovery, recover_store_migration,
+    FilesystemMigrationRecoveryRefusal, FilesystemMigrationRefusal, FilesystemMigrationResidueKind,
+    MIGRATION_NAMESPACE_PREFIX, StoreMigrationEffect, StoreMigrationFixedStage,
+    StoreMigrationNamespacePrefix, StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError,
+    StoreMigrationRecoveryPlan, StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage,
+    StoreMigrationResidue, StoreMigrationStageDecodeError, plan_store_migration_recovery,
+    recover_store_migration,
 };
 #[cfg(feature = "repository-tasks")]
 #[doc(hidden)]
@@ -237,4 +238,7 @@ pub use verification::{
 pub use adapters::{RangeReadError, ReconstructionError};
 pub use authenticated_read::{RangeReadReceipt, ReconstructionReceipt};
 
-pub use adapters::{FilesystemEntryKind, FilesystemNamespaceRefusal};
+pub use adapters::{
+    FilesystemEntryIdentity, FilesystemEntryKind, FilesystemNamespaceRefusal,
+    FilesystemOperationRefusal, ReaderFenceRefusal,
+};

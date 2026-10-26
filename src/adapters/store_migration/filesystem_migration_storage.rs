@@ -2,6 +2,7 @@
 
 use std::io;
 
+use super::FilesystemMigrationRefusal as Refusal;
 use super::filesystem_migration_fixed_artifact::{
     FilesystemMigrationFixedArtifact as FixedArtifact, FilesystemMigrationFixedStage,
 };
@@ -133,8 +134,10 @@ fn write_stage(
     artifact: FixedArtifact,
     expected: &[u8],
 ) -> io::Result<()> {
-    if authority.fixed_stage.is_some() {
-        return Err(stage_state("migration fixed stage was already active"));
+    if let Some(active) = authority.fixed_stage.as_ref() {
+        return Err(stage_state(Refusal::StageAlreadyActive {
+            active: active.artifact().stage(),
+        }));
     }
     let stage = FilesystemMigrationFixedStage::create(authority.root(), artifact, expected)?;
     authority.fixed_stage = Some(stage);
@@ -161,15 +164,18 @@ fn remove_stage(
     artifact: FixedArtifact,
 ) -> io::Result<()> {
     if published_stage(authority, artifact).is_some() {
-        return Err(stage_state("migration fixed record was already published"));
+        return Err(stage_state(Refusal::RecordAlreadyPublished {
+            stage: artifact.stage(),
+        }));
     }
     let stage = authority
         .fixed_stage
         .take()
-        .ok_or_else(|| stage_state("migration fixed stage was not active"))?;
-    if stage.artifact() != artifact {
+        .ok_or_else(|| inactive(artifact))?;
+    let observed = stage.artifact();
+    if observed != artifact {
         authority.fixed_stage = Some(stage);
-        return Err(stage_state("a different migration fixed stage was active"));
+        return Err(different(artifact, observed));
     }
     let published = stage.remove(authority.root())?;
     match artifact {
@@ -187,11 +193,11 @@ fn active_stage(
     let stage = authority
         .fixed_stage
         .as_ref()
-        .ok_or_else(|| stage_state("migration fixed stage was not active"))?;
+        .ok_or_else(|| inactive(artifact))?;
     if stage.artifact() == artifact {
         Ok(stage)
     } else {
-        Err(stage_state("a different migration fixed stage was active"))
+        Err(different(artifact, stage.artifact()))
     }
 }
 
@@ -200,7 +206,11 @@ fn verify_published(
     artifact: FixedArtifact,
 ) -> io::Result<()> {
     published_stage(authority, artifact)
-        .ok_or_else(|| stage_state("migration fixed record was not published"))?
+        .ok_or_else(|| {
+            stage_state(Refusal::RecordNotPublished {
+                stage: artifact.stage(),
+            })
+        })?
         .verify_canonical(authority.root())
 }
 
@@ -237,6 +247,19 @@ fn synchronize_root(authority: &FilesystemStoreMigrationAuthority) -> io::Result
     filesystem_catalog_artifact::synchronize_directory(authority.root())
 }
 
-fn stage_state(message: &'static str) -> io::Error {
-    io::Error::new(io::ErrorKind::InvalidData, message)
+fn inactive(expected: FixedArtifact) -> io::Error {
+    stage_state(Refusal::StageInactive {
+        expected: expected.stage(),
+    })
+}
+
+fn different(expected: FixedArtifact, observed: FixedArtifact) -> io::Error {
+    stage_state(Refusal::DifferentStageActive {
+        expected: expected.stage(),
+        observed: observed.stage(),
+    })
+}
+
+fn stage_state(refusal: Refusal) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, refusal)
 }

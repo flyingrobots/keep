@@ -11,7 +11,7 @@ use super::filesystem_retention_test_fixture::{
 };
 use super::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, FilesystemRetentionRecoveryError,
-    RetentionCurrentStateRefusal,
+    RetentionCurrentStateRefusal, RetentionRootDecodeError,
 };
 use crate::execute_retention_publication;
 
@@ -99,7 +99,15 @@ fn require_refusal(damage: Damage, prefix: usize) -> Result<(), Box<dyn Error>> 
                 Some(RetentionCurrentStateRefusal::PredecessorRootAbsent)
             )
         }
-        (Err(FilesystemRetentionRecoveryError::Observe { source }), _) => {
+        (Err(FilesystemRetentionRecoveryError::Observe { source }), Damage::Corrupt) => {
+            matches!(
+                refusal(source),
+                Some(RetentionCurrentStateRefusal::PredecessorRootRefused {
+                    source: RetentionRootDecodeError::ChecksumMismatch { .. }
+                })
+            )
+        }
+        (Err(FilesystemRetentionRecoveryError::Observe { source }), Damage::Substituted) => {
             matches!(
                 refusal(source),
                 Some(RetentionCurrentStateRefusal::PredecessorRootChanged)

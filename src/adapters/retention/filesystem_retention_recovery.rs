@@ -13,13 +13,14 @@ use cap_std::fs::Dir;
 use super::filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
 use super::filesystem_retention_pool_name as pool_name;
 use super::filesystem_retention_recovery_observation::RetentionRecoveryObservation;
-use super::filesystem_retention_stage::{FilesystemRetentionStage, invalid_data};
+use super::filesystem_retention_stage::FilesystemRetentionStage;
 use super::filesystem_retention_storage::require_pinned_directories;
 use super::{
     FilesystemRetentionRecoveryError as Error, RetentionRecoveryReceipt, RetentionRecoveryStorage,
     RetentionStageAssessment, assess_head_stage, assess_manifest_stage, assess_root_stage,
     execute_retention_recovery, plan_retention_recovery,
 };
+use super::{RetentionFixedStage, RetentionRecordRefusal};
 use crate::adapters::CatalogRestartPolicy;
 use crate::adapters::filesystem_catalog_artifact::synchronize_directory;
 
@@ -178,12 +179,21 @@ impl FilesystemRetentionPublicationAuthority {
 }
 
 fn no_recovery() -> RetentionStorageError {
-    RetentionStorageError::from(invalid_data("no retention recovery is in progress"))
-        .at(Boundary::RecoveryContext)
+    context_refusal(RetentionRecordRefusal::RecoveryAbsent)
+}
+
+/// A typed refusal of the retained recovery context, at its boundary.
+fn context_refusal(source: RetentionRecordRefusal) -> RetentionStorageError {
+    RetentionStorageError::Refused { source }.at(Boundary::RecoveryContext)
+}
+
+const fn incomplete(stage: RetentionFixedStage) -> RetentionRecordRefusal {
+    RetentionRecordRefusal::RecoveryStageNotComplete { stage }
 }
 
 fn take_complete(
     slot: &mut Option<RecoveredStage>,
+    expected: RetentionFixedStage,
 ) -> Result<(FilesystemRetentionStage, String, Option<String>), RetentionStorageError> {
     match slot.take() {
         Some(RecoveredStage::Complete {
@@ -193,10 +203,7 @@ fn take_complete(
         }) => Ok((stage, pool_name, namespace)),
         Some(other) => {
             *slot = Some(other);
-            Err(RetentionStorageError::from(invalid_data(
-                "recovery step expected a complete stage",
-            ))
-            .at(Boundary::RecoveryContext))
+            Err(context_refusal(incomplete(expected)))
         }
         None => Err(no_recovery()),
     }
@@ -204,7 +211,7 @@ fn take_complete(
 
 fn disposition_required() -> Result<(), RetentionStorageError> {
     Err(RetentionStorageError::Refused {
-        source: super::RetentionRecordRefusal::IncompleteDispositionRequired,
+        source: RetentionRecordRefusal::IncompleteDispositionRequired,
     }
     .at(Boundary::RecoveryContext))
 }
@@ -230,10 +237,7 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
             namespace: Some(namespace),
         }) = context.root.as_ref()
         else {
-            return Err(RetentionStorageError::from(invalid_data(
-                "link_root expected a complete root stage",
-            ))
-            .at(Boundary::RecoveryContext));
+            return Err(context_refusal(incomplete(RetentionFixedStage::Root)));
         };
         stage.synchronize(&self.retention)?;
         let created = match self.roots.create_dir(namespace) {
@@ -283,10 +287,7 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
             ..
         }) = context.manifest.as_ref()
         else {
-            return Err(RetentionStorageError::from(invalid_data(
-                "link_manifest expected a complete manifest stage",
-            ))
-            .at(Boundary::RecoveryContext));
+            return Err(context_refusal(incomplete(RetentionFixedStage::Manifest)));
         };
         stage.synchronize(&self.retention)?;
         let link = stage.link(&self.retention, &self.manifests, name)?;
@@ -301,7 +302,8 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
 
     fn finalize_head(&mut self) -> Result<(), RetentionStorageError> {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
-        let (stage, _name, _namespace) = take_complete(&mut context.head)?;
+        let (stage, _name, _namespace) =
+            take_complete(&mut context.head, RetentionFixedStage::Head)?;
         stage.synchronize(&self.retention)?;
         stage.replace(&self.retention, pool_name::HEAD)?;
         synchronize_recovery_directory(
@@ -315,11 +317,9 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
 
     fn remove_root_stage(&mut self) -> Result<(), RetentionStorageError> {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
-        let (stage, name, namespace) = take_complete(&mut context.root)?;
-        let namespace = namespace.ok_or_else(|| {
-            RetentionStorageError::from(invalid_data("root stage without a namespace"))
-                .at(Boundary::RecoveryContext)
-        })?;
+        let (stage, name, namespace) = take_complete(&mut context.root, RetentionFixedStage::Root)?;
+        let namespace = namespace
+            .ok_or_else(|| context_refusal(RetentionRecordRefusal::RecoveredRootNamespaceAbsent))?;
         let directory = self
             .roots
             .open_dir_nofollow(&namespace)
@@ -336,7 +336,8 @@ impl RetentionRecoveryStorage for FilesystemRetentionPublicationAuthority {
 
     fn remove_manifest_stage(&mut self) -> Result<(), RetentionStorageError> {
         let context = self.recovery.as_mut().ok_or_else(no_recovery)?;
-        let (stage, name, _namespace) = take_complete(&mut context.manifest)?;
+        let (stage, name, _namespace) =
+            take_complete(&mut context.manifest, RetentionFixedStage::Manifest)?;
         stage.remove(&self.retention, &self.manifests, &name)?;
         synchronize_recovery_directory(
             &self.retention,

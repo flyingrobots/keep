@@ -5,6 +5,7 @@ use std::io;
 use cap_std::fs::Dir;
 
 use super::filesystem_exact_record::EntryIdentity;
+use super::{FilesystemEntryKind, FilesystemOperationRefusal};
 
 use super::{
     RecoveryInventoryError, RecoveryInventoryOperation, RecoveryNamespace, sync_capable_directory,
@@ -46,16 +47,22 @@ impl PinnedRecoveryDirectory {
             )
         })?;
         let observed = EntryIdentity::from(&metadata);
-        if metadata.is_dir() && observed == self.identity {
+        let refusal = if !metadata.is_dir() {
+            FilesystemOperationRefusal::DirectoryRequired {
+                observed: FilesystemEntryKind::observed(metadata.file_type()),
+            }
+        } else if observed == self.identity {
             return Ok(());
-        }
+        } else {
+            FilesystemOperationRefusal::IdentityChanged {
+                expected: self.identity.into(),
+                observed: observed.into(),
+            }
+        };
         Err(RecoveryInventoryError::io(
             self.namespace,
             RecoveryInventoryOperation::VerifyNamespace,
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                "recovery namespace changed identity after it was pinned",
-            ),
+            io::Error::new(io::ErrorKind::InvalidData, refusal),
         ))
     }
 

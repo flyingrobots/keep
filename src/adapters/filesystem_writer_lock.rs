@@ -10,7 +10,10 @@ use cap_std::fs::{Dir, Metadata, OpenOptions};
 use rustix::fs::{FlockOperation, Mode, OFlags, flock, openat};
 use rustix::io::Errno;
 
-use super::{WriterLockAcquireError, WriterLockAcquirePhase};
+use super::{
+    FilesystemEntryIdentity, FilesystemOperationRefusal, WriterLockAcquireError,
+    WriterLockAcquirePhase,
+};
 
 #[cfg(test)]
 #[path = "filesystem_writer_lock_tests.rs"]
@@ -187,7 +190,10 @@ fn verify_current_identity(
         WriterLockAcquirePhase::VerifyFileIdentity,
         io::Error::new(
             io::ErrorKind::InvalidData,
-            "writer.lock changed identity during acquisition",
+            FilesystemOperationRefusal::IdentityChanged {
+                expected: FilesystemEntryIdentity::new(expected.device, expected.inode),
+                observed: FilesystemEntryIdentity::new(observed.device, observed.inode),
+            },
         ),
     ))
 }

@@ -5,6 +5,7 @@ use std::path::Path;
 
 use cap_std::fs::Dir;
 
+use super::FilesystemOperationRefusal;
 use super::filesystem_root_identity::FilesystemRootIdentity;
 
 #[cfg(target_os = "linux")]
@@ -65,9 +66,8 @@ pub(super) fn admit_locked_root(directory: &Dir) -> io::Result<FilesystemRootIde
 
 #[cfg(all(not(target_os = "linux"), feature = "repository-tasks"))]
 pub(super) fn admit_locked_root(_directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-    Err(io::Error::new(
-        io::ErrorKind::Unsupported,
-        "catalog publication requires the admitted Linux ext4 profile",
+    Err(unsupported(
+        FilesystemOperationRefusal::LinuxProfileRequired,
     ))
 }
 
@@ -96,17 +96,15 @@ pub(super) fn open_version_two(store_root: &Path) -> io::Result<Dir> {
 
 #[cfg(not(target_os = "linux"))]
 pub(super) fn open(_store_root: &Path) -> io::Result<Dir> {
-    Err(io::Error::new(
-        io::ErrorKind::Unsupported,
-        "filesystem initialization currently requires the admitted Linux ext4 profile",
+    Err(unsupported(
+        FilesystemOperationRefusal::LinuxProfileRequired,
     ))
 }
 
 #[cfg(not(target_os = "linux"))]
 pub(super) fn open_version_two(_store_root: &Path) -> io::Result<Dir> {
-    Err(io::Error::new(
-        io::ErrorKind::Unsupported,
-        "version-two reopen currently requires the admitted Linux ext4 profile",
+    Err(unsupported(
+        FilesystemOperationRefusal::LinuxProfileRequired,
     ))
 }
 
@@ -131,9 +129,12 @@ fn admit_linux_profile(directory: &Dir, protocol_directories: &[&str]) -> io::Re
 #[cfg(target_os = "linux")]
 fn open_protocol_directory(root: &Dir, name: &str) -> io::Result<Dir> {
     let mut components = name.split('/');
-    let first = components
-        .next()
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "empty protocol name"))?;
+    let first = components.next().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            FilesystemOperationRefusal::EmptyProtocolName,
+        )
+    })?;
     super::filesystem_namespace_refusal::require_directory(root, first)?;
     let mut current = super::sync_capable_directory::open(root, first)?;
     for component in components {
@@ -154,7 +155,10 @@ fn linux_directory_properties(file: &std::fs::File) -> io::Result<LinuxDirectory
     let status = statx(file, ".", AtFlags::empty(), required)?;
     let observed = StatxFlags::from_bits_retain(status.stx_mask);
     if !observed.contains(required) {
-        return Err(unsupported_linux_profile());
+        return Err(unsupported(FilesystemOperationRefusal::PlatformStatus {
+            required: required.bits(),
+            observed: observed.bits(),
+        }));
     }
     Ok(LinuxDirectoryProperties {
         filesystem_type: filesystem.f_type,
@@ -225,12 +229,18 @@ fn linux_file_identity(
     let requested = StatxFlags::BASIC_STATS | StatxFlags::MNT_ID;
     let status = statx(file, ".", AtFlags::empty(), requested)?;
     let observed = StatxFlags::from_bits_retain(status.stx_mask);
+    let status_refusal = || {
+        unsupported(FilesystemOperationRefusal::PlatformStatus {
+            required: requested.bits(),
+            observed: observed.bits(),
+        })
+    };
     if !observed.contains(StatxFlags::BASIC_STATS) {
-        return Err(unsupported_linux_profile());
+        return Err(status_refusal());
     }
     let reported = observed.contains(StatxFlags::MNT_ID);
-    let mount_id = admit_mount_identity(policy, reported, status.stx_mnt_id)
-        .ok_or_else(unsupported_linux_profile)?;
+    let mount_id =
+        admit_mount_identity(policy, reported, status.stx_mnt_id).ok_or_else(status_refusal)?;
     Ok(linux_root_identity(
         status.stx_dev_major,
         status.stx_dev_minor,
@@ -269,9 +279,8 @@ pub(super) fn root_identity_lenient(directory: &Dir) -> io::Result<FilesystemRoo
 
 #[cfg(all(not(target_os = "linux"), not(any(test, feature = "repository-tasks"))))]
 pub(super) fn root_identity(_directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-    Err(io::Error::new(
-        io::ErrorKind::Unsupported,
-        "filesystem root identity currently requires the admitted Linux ext4 profile",
+    Err(unsupported(
+        FilesystemOperationRefusal::LinuxProfileRequired,
     ))
 }
 
@@ -291,7 +300,12 @@ fn admit_linux_properties(
         || mount_flags.contains(rustix::fs::StatVfsMountFlags::RDONLY)
         || inode_flags & EXT4_CASEFOLD_FLAG != 0
     {
-        return Err(unsupported_linux_profile());
+        return Err(unsupported(FilesystemOperationRefusal::FilesystemProfile {
+            expected_filesystem: i128::from(EXT4_SUPER_MAGIC),
+            observed_filesystem: i128::from(filesystem_type),
+            observed_mount_flags: mount_flags.bits(),
+            observed_inode_flags: inode_flags,
+        }));
     }
     Ok(())
 }
@@ -306,17 +320,21 @@ fn admit_linux_child_properties(
         || root.device_minor != child.device_minor
         || root.mount_id != child.mount_id
     {
-        return Err(unsupported_linux_profile());
+        return Err(unsupported(
+            FilesystemOperationRefusal::MountBoundaryChanged {
+                expected_device: rustix::fs::makedev(root.device_major, root.device_minor),
+                observed_device: rustix::fs::makedev(child.device_major, child.device_minor),
+                expected_mount: root.mount_id,
+                observed_mount: child.mount_id,
+            },
+        ));
     }
     Ok(())
 }
 
-#[cfg(target_os = "linux")]
-fn unsupported_linux_profile() -> io::Error {
-    io::Error::new(
-        io::ErrorKind::Unsupported,
-        "store namespace does not satisfy one local writable case-sensitive ext4 profile",
-    )
+/// Carries a profile refusal as the `Unsupported` error platform admission returns.
+fn unsupported(refusal: FilesystemOperationRefusal) -> io::Error {
+    io::Error::new(io::ErrorKind::Unsupported, refusal)
 }
 
 #[cfg(all(test, target_os = "linux"))]

@@ -14,7 +14,9 @@ use super::{
 use crate::adapters::filesystem_exact_record::{
     self as exact_record, ExactRecordError, ExactRecordRefusal,
 };
-use crate::{RetentionGenerationExpectation, RetentionHead, RetentionManifest};
+use crate::{
+    RetentionGenerationExpectation, RetentionHead, RetentionManifest, RetentionNamespaceDigest,
+};
 
 const HEAD_LENGTH: usize = super::head_decoder::ENCODED_LENGTH;
 
@@ -201,7 +203,7 @@ pub(super) fn verify_committed(
     }
     let directory = roots
         .open_dir_nofollow(pool_name::namespace(namespace))
-        .map_err(|_source| RetentionCurrentStateRefusal::CommittedNamespaceUnavailable.into_io())?;
+        .map_err(|source| namespace_read_failure(namespace, source))?;
     let name = pool_name::root(candidate.root().generation(), candidate.digest());
     let observed = read_exact_optional(&directory, &name, candidate.encoded().len())?
         .ok_or_else(|| RetentionCurrentStateRefusal::CommittedRootAbsent.into_io())?;
@@ -235,7 +237,7 @@ pub(super) fn verify_predecessor(
     }
     let directory = roots
         .open_dir_nofollow(pool_name::namespace(namespace))
-        .map_err(|_source| RetentionCurrentStateRefusal::CommittedNamespaceUnavailable.into_io())?;
+        .map_err(|source| namespace_read_failure(namespace, source))?;
     let name = pool_name::root(entry.root_generation(), entry.root_digest());
     let length = match directory.symlink_metadata(&name) {
         Ok(metadata) => usize::try_from(metadata.len())
@@ -250,8 +252,9 @@ pub(super) fn verify_predecessor(
     }
     let bytes = read_exact_optional(&directory, &name, length)?
         .ok_or_else(|| RetentionCurrentStateRefusal::PredecessorRootAbsent.into_io())?;
-    let predecessor = AdmittedRetentionRoot::decode(&bytes)
-        .map_err(|_source| RetentionCurrentStateRefusal::PredecessorRootChanged.into_io())?;
+    let predecessor = AdmittedRetentionRoot::decode(&bytes).map_err(|source| {
+        RetentionCurrentStateRefusal::PredecessorRootRefused { source }.into_io()
+    })?;
     if predecessor.digest() == entry.root_digest()
         && predecessor.root().generation() == entry.root_generation()
     {
@@ -259,6 +262,15 @@ pub(super) fn verify_predecessor(
     } else {
         Err(RetentionCurrentStateRefusal::PredecessorRootChanged.into_io())
     }
+}
+
+/// Wraps a selected-namespace open failure without erasing its cause.
+///
+/// The outer kind stays `InvalidData`, as before this refusal carried a source:
+/// the manifest selected this directory, so a missing, substituted, or
+/// unreadable one refuses the transition. The original kind remains on the source.
+fn namespace_read_failure(namespace: RetentionNamespaceDigest, source: io::Error) -> io::Error {
+    RetentionCurrentStateRefusal::CommittedNamespaceRead { namespace, source }.into_io()
 }
 
 /// The empty retention state admits only a generation-one head with no predecessor.

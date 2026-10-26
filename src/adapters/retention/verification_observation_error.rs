@@ -37,11 +37,13 @@ pub(super) fn refusal(error: &io::Error) -> Option<VerificationRefusal> {
         | Current::CommittedSelectionMissing
         | Current::CommittedSelectionMismatch
         | Current::CommittedNamespaceUnavailable
+        | Current::CommittedNamespaceRead { .. }
         | Current::CommittedRootAbsent
         | Current::CommittedRootChanged
         | Current::PredecessorMismatch
         | Current::PredecessorRootAbsent
         | Current::PredecessorRootChanged
+        | Current::PredecessorRootRefused { .. }
         | Current::UnknownRetentionEntry
         | Current::NonNamespaceEntry
         | Current::NoncanonicalPoolEntry { .. }

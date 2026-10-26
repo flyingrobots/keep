@@ -4,10 +4,12 @@ use std::error::Error;
 use std::fmt;
 use std::io;
 
-use super::{RetentionHeadDecodeError, RetentionManifestDecodeError};
+use super::{RetentionHeadDecodeError, RetentionManifestDecodeError, RetentionRootDecodeError};
 use super::{RetentionRecoveryError, RetentionRecoveryRefusal};
 use crate::adapters::{CatalogDecodeError, PublicationHeadDecodeError};
-use crate::{CatalogGeneration, LivenessGeneration, RetentionManifestDigest};
+use crate::{
+    CatalogGeneration, LivenessGeneration, RetentionManifestDigest, RetentionNamespaceDigest,
+};
 
 /// Exact reason filesystem current-state verification refused a transition.
 ///
@@ -87,7 +89,20 @@ pub enum RetentionCurrentStateRefusal {
     /// The committed manifest selects a different root for the candidate namespace.
     CommittedSelectionMismatch,
     /// The committed namespace directory cannot be opened.
+    ///
+    /// Retained for compatibility; the filesystem adapter now reports
+    /// [`Self::CommittedNamespaceRead`] with the original cause instead.
     CommittedNamespaceUnavailable,
+    /// The manifest-selected namespace directory could not be opened.
+    ///
+    /// Like every current-state refusal it is carried as `InvalidData`; the
+    /// original open failure, with its own kind and OS code, is the source.
+    CommittedNamespaceRead {
+        /// The namespace the manifest selects.
+        namespace: RetentionNamespaceDigest,
+        /// The original open failure, including its OS code.
+        source: io::Error,
+    },
     /// The committed root pool entry is absent.
     CommittedRootAbsent,
     /// The committed root pool entry holds different bytes.
@@ -96,8 +111,14 @@ pub enum RetentionCurrentStateRefusal {
     PredecessorMismatch,
     /// The predecessor root pool entry is absent or exceeds the format bound.
     PredecessorRootAbsent,
-    /// The predecessor root pool entry does not decode to the manifest's selection.
+    /// The predecessor root pool entry decodes to a different selection than
+    /// the manifest names.
     PredecessorRootChanged,
+    /// The predecessor root pool entry fails canonical root decoding.
+    PredecessorRootRefused {
+        /// The exact framing, integrity, or semantic decoding refusal.
+        source: RetentionRootDecodeError,
+    },
     /// The `retention` directory carries an entry outside `HEAD`, `roots`,
     /// and `manifests`.
     UnknownRetentionEntry,
@@ -221,7 +242,7 @@ impl RetentionCurrentStateRefusal {
             Self::CommittedSelectionMismatch => {
                 "committed manifest selects a different root for the candidate namespace"
             }
-            Self::CommittedNamespaceUnavailable => {
+            Self::CommittedNamespaceUnavailable | Self::CommittedNamespaceRead { .. } => {
                 "committed root namespace directory is unavailable"
             }
             Self::CommittedRootAbsent => "committed root pool entry is absent",
@@ -234,6 +255,9 @@ impl RetentionCurrentStateRefusal {
             }
             Self::PredecessorRootChanged => {
                 "predecessor root pool entry does not decode to the manifest's selection"
+            }
+            Self::PredecessorRootRefused { .. } => {
+                "predecessor root pool entry failed root decoding"
             }
             Self::UnknownRetentionEntry => "retention namespace carries an unknown entry",
             Self::NonNamespaceEntry => "retention roots carries a non-namespace entry",
@@ -276,7 +300,9 @@ impl Error for RetentionCurrentStateRefusal {
             Self::CatalogRefused { source } => Some(source.as_ref()),
             Self::RecoveryRefused { source } => Some(source),
             Self::RecoveryStepRefused { source } => Some(source),
-            Self::RecoveryObservationRefused { source } => Some(source),
+            Self::RecoveryObservationRefused { source }
+            | Self::CommittedNamespaceRead { source, .. } => Some(source),
+            Self::PredecessorRootRefused { source } => Some(source),
             _ => None,
         }
     }

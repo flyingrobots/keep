@@ -4,6 +4,7 @@ use super::{
     LinuxDirectoryProperties, PROTOCOL_DIRECTORIES, VERSION_TWO_PROTOCOL_DIRECTORIES,
     admit_linux_child_properties, admit_linux_properties, linux_root_identity,
 };
+use crate::adapters::FilesystemOperationRefusal;
 use rustix::fs::{NFS_SUPER_MAGIC, StatVfsMountFlags};
 
 const EXT4_SUPER_MAGIC: rustix::fs::FsWord = 0x0000_ef53;
@@ -56,14 +57,58 @@ fn root_identity_uses_linux_device_mount_and_inode_coordinates() {
     assert_eq!(identity.file(), 73);
 }
 
+fn profile_refusal(result: &std::io::Result<()>) -> Option<FilesystemOperationRefusal> {
+    let error = result.as_ref().err()?;
+    (error.kind() == std::io::ErrorKind::Unsupported)
+        .then(|| {
+            error
+                .get_ref()?
+                .downcast_ref::<FilesystemOperationRefusal>()
+                .copied()
+        })
+        .flatten()
+}
+
 fn assert_unsupported(result: &std::io::Result<()>) {
-    assert!(matches!(
-        result,
-        Err(error)
-            if error.kind() == std::io::ErrorKind::Unsupported
-                && error.to_string()
-                    == "store namespace does not satisfy one local writable case-sensitive ext4 profile"
-    ));
+    assert!(
+        matches!(
+            profile_refusal(result),
+            Some(
+                FilesystemOperationRefusal::FilesystemProfile { .. }
+                    | FilesystemOperationRefusal::MountBoundaryChanged { .. }
+            )
+        ),
+        "profile refusal must be a typed Unsupported payload: {result:?}"
+    );
+}
+
+#[test]
+fn profile_refusals_report_the_observed_filesystem_and_mount_evidence() {
+    assert_eq!(
+        profile_refusal(&admit_linux_properties(
+            NFS_SUPER_MAGIC,
+            StatVfsMountFlags::RDONLY,
+            EXT4_CASEFOLD_FLAG,
+        )),
+        Some(FilesystemOperationRefusal::FilesystemProfile {
+            expected_filesystem: i128::from(EXT4_SUPER_MAGIC),
+            observed_filesystem: i128::from(NFS_SUPER_MAGIC),
+            observed_mount_flags: StatVfsMountFlags::RDONLY.bits(),
+            observed_inode_flags: EXT4_CASEFOLD_FLAG,
+        })
+    );
+    assert_eq!(
+        profile_refusal(&admit_linux_child_properties(
+            properties(8, 1, 41),
+            properties(8, 2, 42),
+        )),
+        Some(FilesystemOperationRefusal::MountBoundaryChanged {
+            expected_device: rustix::fs::makedev(8, 1),
+            observed_device: rustix::fs::makedev(8, 2),
+            expected_mount: 41,
+            observed_mount: 42,
+        })
+    );
 }
 
 const fn properties(

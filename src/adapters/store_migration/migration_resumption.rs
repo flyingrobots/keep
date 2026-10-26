@@ -5,8 +5,12 @@ use std::io;
 
 use super::{
     CanonicalStoreFormatMarker, CanonicalStoreMigrationIntent, CanonicalStoreMigrationReceipt,
-    StoreMigrationError, StoreMigrationPhase, StoreMigrationStorage,
+    FilesystemMigrationRefusal, StoreMigrationError, StoreMigrationPhase, StoreMigrationStorage,
 };
+
+#[cfg(test)]
+#[path = "migration_resumption_tests.rs"]
+mod tests;
 
 /// The three canonical records one migration publishes.
 pub(super) struct MigrationRecords<'a> {
@@ -157,6 +161,6 @@ fn receipt_phase(
 fn wrong_section(phase: StoreMigrationPhase) -> io::Error {
     io::Error::new(
         io::ErrorKind::InvalidInput,
-        format!("migration phase {phase} dispatched to the wrong section"),
+        FilesystemMigrationRefusal::PhaseSection { observed: phase },
     )
 }
