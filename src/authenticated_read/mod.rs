@@ -13,6 +13,7 @@
     reason = "retain exact identity coordinates and original causes without heap allocation"
 )]
 
+mod chunk_reader;
 mod chunk_verification;
 mod output_write;
 mod profile_verification;
@@ -23,6 +24,7 @@ mod reconstruction;
 mod reconstruction_failure;
 mod reconstruction_receipt;
 
+pub(crate) use chunk_reader::ChunkReader;
 pub(crate) use chunk_verification::{ChunkSource, ChunkVerificationError};
 pub(crate) use output_write::OutputWriteError;
 pub(crate) use range_read_execution::read_admitted;

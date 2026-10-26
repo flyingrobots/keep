@@ -226,7 +226,7 @@ impl DurableSnapshot {
             .map_err(|source| DurableReadError::View(Box::new(source)))
     }
 
-    fn layout(
+    pub(super) fn layout(
         &self,
         catalog: &CatalogSnapshot<'_, '_, '_>,
         layout_id: LayoutId,

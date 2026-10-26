@@ -16,6 +16,7 @@ mod range_read;
 mod reconstruction;
 mod staged_blob;
 mod store;
+mod transfer_source;
 
 pub use capacity::ReferenceStoreCapacity;
 pub use ingestion_error::{IngestionAllocation, IngestionError};
