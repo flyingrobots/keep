@@ -2,6 +2,8 @@
 
 #[path = "retention_manifest_codec/refusal_laws.rs"]
 mod refusal_laws;
+#[path = "retention_manifest_codec/mutation_laws.rs"]
+mod mutation_laws;
 mod support;
 
 use std::io;
