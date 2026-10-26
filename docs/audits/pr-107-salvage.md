@@ -8,15 +8,14 @@ every change the branch carried that main did not, whether it is kept and how.
 It is a decision record, not a completion claim: a row marked *ported* names a
 salvage branch, and the work counts as delivered only once that branch merges.
 
-## Preservation
+## Source material
 
-Nothing on the branch is deleted. Two annotated tags pin the source material
-independently of branch lifetime:
+The source branches stay on GitHub. Commit hashes below are from them:
 
-| Tag | Commit | Contents |
+| Branch | Head | Contents |
 | --- | --- | --- |
-| `archive/pr-107-feature` | `57b6c37` | The PR head at closure, including #133 merged into it. |
-| `archive/pr-107-landing` | `f21589f` | The `landing/107-integration` branch: later review fixes and the unfinished disposition RED checkpoint. |
+| `feature/roadmap-m4-tasks` | `57b6c37` | The PR head at closure, including #133 merged into it. |
+| `landing/107-integration` | `f21589f` | Later review fixes and the unfinished disposition RED checkpoint. |
 
 The branch merge base with main is `c9277ea` (2026-09-09). At closure the
 branch had 54 commits not on main; main had 360 not on the branch.
@@ -74,7 +73,7 @@ means it has no remaining value.
 | `1de4f66`, `666922a` | Crash-point table and GC/compaction doc-link fixes | Travel with GC execution and compaction. |
 | `05b804b`, `7af834a`, `9a5fb8f`, `65c0707`, `e8ae339` | Review evidence for the GC codecs, reader-lock coordinates, fixture provenance, and GC retention oracles | Travel with the GC codec and planning ports; each records calibration against branch-only code and must be re-established on main rather than copied. |
 | `7cdc2cf`, `4158001` | Requirement-ledger wording for KEEP-RETENTION-003 and KEEP-GC-001 that cites the branch-only `mutations.tsv` ledger | Travel with the corruption-ledger port; the mutation-law salvage writes its own KEEP-RETENTION-003 evidence. |
-| `4b9c389` | The 2026-09-30 completed-roadmap audit and its GitHub ownership index | Its findings are the source of #110–#131. Where it lives depends on the open decision about #131 and #141; it remains readable in the tag. |
+| `4b9c389` | The 2026-09-30 completed-roadmap audit and its GitHub ownership index | Its findings are the source of #110–#131. Where it lives depends on the open decision about #131 and #141; it remains readable on `feature/roadmap-m4-tasks`. |
 
 ### Dropped
 
@@ -83,7 +82,7 @@ means it has no remaining value.
 | landing `43eaeb3`, `34db571`, `864f804` | Re-integration merges of #133 and an older main; superseded by the typed-refusal salvage and by main itself. |
 | `docs/dependencies/{blake3-1.8.5,cap-std-and-cap-fs-ext-4.0.2,yaml-rust2-0.11.0}.md` | Main admits newer versions. |
 | `docs/architecture/durable-store/{README,rationale}.md` | Describe the branch's durable read API; main documents its own in `src/adapters/durable/rationale.md` and the reconstruction ledger. |
-| `docs/audits/pr-landing-*` and `pr-landing-evidence/107-integration/*` on the audit branch | Session process logs for a merge queue that no longer exists. They are kept in the tags and the audit branch only. |
+| `docs/audits/pr-landing-*` and `pr-landing-evidence/107-integration/*` on the audit branch | Session process logs for a merge queue that no longer exists. They remain on the source branches and the audit branch only. |
 | Branch edits to `README.md`, `CHANGELOG.md`, and requirement ledgers | They would revert main's delivered state (for example KEEP-VERIFY-006 back to Planned). Only the entries belonging to a ported change travel with that change. |
 
 ## Ordering
