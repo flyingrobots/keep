@@ -104,6 +104,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "gc_format"
+path = "fuzz_targets/gc_format.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "golden_protocol"
 path = "fuzz_targets/golden_protocol.rs"
 test = false

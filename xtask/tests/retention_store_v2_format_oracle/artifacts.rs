@@ -16,6 +16,8 @@ fn build_corpus() -> Result<Corpus, String> {
     let root = build_retention_root(profile_digest)?;
     let manifest = build_retention_manifest(&root)?;
     let head = build_retention_head(&manifest)?;
+    let gc_intent = build_gc_intent(profile_digest, inventory.digest, &manifest)?;
+    let gc_receipt = build_gc_receipt(&gc_intent)?;
     let artifacts = vec![
         format,
         intent,
@@ -41,6 +43,8 @@ fn build_corpus() -> Result<Corpus, String> {
             bytes: manifest.bytes,
         },
         head,
+        gc_intent,
+        gc_receipt,
     ];
     Ok(Corpus {
         profile_digest,
@@ -141,5 +145,6 @@ fn migration_source(
     })
 }
 
+include!("artifacts/gc.rs");
 include!("artifacts/migration.rs");
 include!("artifacts/retention.rs");

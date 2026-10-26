@@ -28,3 +28,43 @@ pub(crate) fn domain_hash(domain: &[u8], preimage: &[u8]) -> [u8; 32] {
     hasher.update(preimage);
     *hasher.finalize().as_bytes()
 }
+
+/// Hashes a named domain, a big-endian `u32` count, and a body independently.
+///
+/// This mirrors the counted entry-set preimages of version-2 records without
+/// calling the production encoder.
+pub(crate) fn counted_domain_hash(domain: &[u8], count: u32, body: &[u8]) -> [u8; 32] {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(domain);
+    hasher.update(&count.to_be_bytes());
+    hasher.update(body);
+    *hasher.finalize().as_bytes()
+}
+
+/// Flips the lowest bit of one fixture byte.
+///
+/// # Errors
+/// Returns a fixture error when `offset` is outside the fixture.
+pub(crate) fn flip(bytes: &mut [u8], offset: usize) -> io::Result<()> {
+    let byte = bytes
+        .get_mut(offset)
+        .ok_or_else(|| io::Error::other("fixture byte absent"))?;
+    *byte ^= 1;
+    Ok(())
+}
+
+/// Reads one big-endian `u32` fixture field.
+///
+/// # Errors
+/// Returns a fixture error for overflow or an out-of-bounds field.
+pub(crate) fn read_u32(bytes: &[u8], offset: usize) -> io::Result<u32> {
+    let end = offset
+        .checked_add(4)
+        .ok_or_else(|| io::Error::other("fixture offset overflow"))?;
+    let field = bytes
+        .get(offset..end)
+        .ok_or_else(|| io::Error::other("fixture field absent"))?;
+    <[u8; 4]>::try_from(field)
+        .map(u32::from_be_bytes)
+        .map_err(|_| io::Error::other("fixture field width mismatch"))
+}
