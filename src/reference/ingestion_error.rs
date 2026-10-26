@@ -77,6 +77,15 @@ pub enum IngestionError {
         /// Current read byte count.
         incoming: usize,
     },
+    /// The source exceeded the staging's byte limit.
+    ByteLimitExceeded {
+        /// The admitted limit.
+        limit: crate::StagedByteLimit,
+        /// Bytes accepted before the current read.
+        accepted: u64,
+        /// Current read byte count.
+        incoming: usize,
+    },
     /// A bounded allocation could not be reserved.
     Allocation {
         /// Allocation purpose.
@@ -139,6 +148,15 @@ impl fmt::Display for IngestionError {
                 formatter,
                 "stream length overflow after {accepted} bytes with {incoming} incoming bytes"
             ),
+            Self::ByteLimitExceeded {
+                limit,
+                accepted,
+                incoming,
+            } => write!(
+                formatter,
+                "source exceeds the staging limit of {limit} after {accepted} bytes with \
+                 {incoming} incoming bytes"
+            ),
             Self::Allocation {
                 target, requested, ..
             } => write!(
@@ -177,6 +195,7 @@ impl Error for IngestionError {
             | Self::BoundaryOutOfRange { .. }
             | Self::MultipleBoundaries { .. }
             | Self::StreamLengthOverflow { .. }
+            | Self::ByteLimitExceeded { .. }
             | Self::CapacityExceeded { .. }
             | Self::ConflictingChunk { .. } => None,
         }

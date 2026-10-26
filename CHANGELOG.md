@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Add the backend-neutral content-store port: `ContentReads` is implemented by `ReferenceStore` and the fenced `DurableSnapshot`, with fallible membership for durable views; `ContentStaging` and `StagedContent` are implemented by the non-durable reference store; and `StagingLimits` adds a `StagedByteLimit` that `ReferenceStore::stage_bounded` enforces before each read is hashed or staged, refusing with `IngestionError::ByteLimitExceeded`. Generic read laws with typed refusal oracles run against both backends. Salvaged from the closed #107 branch; no format, durability, or recovery behavior changes (#120).
+
 - Update the repository-only serde_json parser to 1.0.154 in both locked workspaces and refresh its dependency admission; the resolved transitive graph, features, license and MSRV are unchanged (#186).
 
 - Update the in-process BLAKE3 dependency to 1.8.7 in both locked workspaces, remove the unused arrayref license exception and renew its admission while retaining the external b3sum oracle and version-one identity contract (#94).

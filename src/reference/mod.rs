@@ -9,6 +9,7 @@ mod chunk_source;
 mod chunk_staging;
 mod ingestion;
 mod ingestion_error;
+mod port;
 mod publish_error;
 mod published_blob;
 mod range_read;
@@ -18,6 +19,7 @@ mod store;
 
 pub use capacity::ReferenceStoreCapacity;
 pub use ingestion_error::{IngestionAllocation, IngestionError};
+pub use port::ReferenceStagedContent;
 pub use publish_error::PublishError;
 pub use published_blob::PublishedBlob;
 pub use staged_blob::StagedBlob;
