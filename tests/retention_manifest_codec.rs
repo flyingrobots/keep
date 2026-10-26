@@ -1,9 +1,9 @@
 //! Public semantic and canonical-codec laws for retention manifests.
 
-#[path = "retention_manifest_codec/refusal_laws.rs"]
-mod refusal_laws;
 #[path = "retention_manifest_codec/mutation_laws.rs"]
 mod mutation_laws;
+#[path = "retention_manifest_codec/refusal_laws.rs"]
+mod refusal_laws;
 mod support;
 
 use std::io;
