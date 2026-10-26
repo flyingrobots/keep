@@ -1,4 +1,4 @@
-# ADR-0010: Preserve Typed Storage Refusals
+# Preserve typed storage refusals
 
 - Status: Accepted
 - Date: 2026-10-26
