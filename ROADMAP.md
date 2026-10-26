@@ -16,7 +16,7 @@ Provenance: this page was originally authored on the closed #107 branch
 task's field set are carried over unchanged, because open issues cite them.
 Every status claim has been reconciled to `main`. Work that exists only on
 that branch is not counted as done here: it is shown as Planned or Partial,
-its implementation is archived at the tag `archive/pr-107-feature`, and its
+its implementation is kept on the branch `feature/roadmap-m4-tasks` (`57b6c37`), and its
 salvage is tracked in the #107 salvage ledger. The branch's 2026-09-30
 completed-task audit (`docs/audits/completed-roadmap-2026-09-30.md`) is
 archived at the same tag and is not on `main`.
@@ -203,7 +203,7 @@ features are listed; finished prerequisites are implied.
 
 **Status:** Partial. Governs every other feature; T-01.2's audit corrections
 exist only on the closed #107 branch (#133 merged into that branch, not into
-`main`). They are archived at `archive/pr-107-feature`; salvage is tracked
+`main`). They are kept on `feature/roadmap-m4-tasks` (`57b6c37`); salvage is tracked
 in the #107 salvage ledger and integration in #110.
 
 For a given content identity, Keep must return exactly the bytes named by
@@ -224,7 +224,7 @@ application policy.
   `tests/typed_refusal_source_contract.rs`, and the chunk-reader,
   selected-root, reader-fence, predecessor, migration-stage, and GC-residue
   regressions exist only on the archived #107 branch
-  (`archive/pr-107-feature`); salvage is tracked in the #107 salvage ledger.
+  (`feature/roadmap-m4-tasks` at `57b6c37`); salvage is tracked in the #107 salvage ledger.
   The task remains open until the corrected implementation is integrated.
 - [x] T-01.3 Keep application semantics out of the core — `KEEP-STORE-016`;
   Echo, Git, Graft, WARP, and CLI types never enter `src/`. The ledger row
@@ -697,7 +697,7 @@ decoder that refuses every structural fault before admission.
   `tests/retention_root_decoding/mutation_laws.rs`,
   `tests/retention_manifest_codec/mutation_laws.rs`, and
   `tests/retention_head_codec/mutation_laws.rs` exist only on the archived
-  #107 branch (`archive/pr-107-feature`); salvage is tracked in the #107
+  #107 branch (`feature/roadmap-m4-tasks` at `57b6c37`); salvage is tracked in the #107
   salvage ledger. Original task fields:
   - **Requirements:** every structural field of root, manifest, and head
     has a permanent mutation case with the exact typed refusal it must
@@ -1162,7 +1162,7 @@ quarantines, or rewrites physical state.
   field — Planned on `main`, where the Worldline capability
   `keep.verification.precise-refusal/v1` is still `declared-future`. The
   following exists only on the archived #107 branch
-  (`archive/pr-107-feature`; salvage tracked in the #107 salvage ledger):
+  (`feature/roadmap-m4-tasks` at `57b6c37`; salvage tracked in the #107 salvage ledger):
   `conformance/segment-store/v1/mutations.tsv` (105 rows) and
   `v2/mutations.tsv` (150 rows) with exact first refusal, verification
   stage, and requirement per row; `tests/segment_store_mutations.rs`
@@ -1197,7 +1197,7 @@ quarantines, or rewrites physical state.
 - [ ] T-21.3 Durable refusal and verification receipts — Planned on
   `main`, where `KEEP-RECONSTRUCT-006` keeps persisted refusal receipts
   separate and no `KEEP-VERIFY-007` row exists. The following exists only
-  on the archived #107 branch (`archive/pr-107-feature`; salvage tracked in
+  on the archived #107 branch (`feature/roadmap-m4-tasks` at `57b6c37`; salvage tracked in
   the #107 salvage ledger): `keep.verification-receipt/v1`
   (`docs/formats/verification-receipt-v1/`),
   `VerificationReceipt`, `VerificationView`, and
@@ -1246,7 +1246,7 @@ refuses until #21 implements it. All three codecs (T-22.1, T-22.1a), the
 deterministic planner (T-22.2), explicit orphan disposition (T-22.5),
 retirement with recovery and its `KEEP-CRASH-074` to `-087` process-death
 matrix (T-22.4), and identity-preserving compaction (T-22.3) exist only on
-the archived #107 branch (`archive/pr-107-feature`); salvage is tracked in
+the archived #107 branch (`feature/roadmap-m4-tasks` at `57b6c37`); salvage is tracked in
 the #107 salvage ledger, and a salvage of the T-22.1 codecs is in progress.
 The branch itself still owed the disposition-phase and compaction
 process-death sequences, the 65,536-candidate stress run, compaction
@@ -1564,7 +1564,7 @@ and no hidden whole-blob allocation.
 the crate documentation there says production durable ingestion remains
 unimplemented. T-24.1 (the content-store port), T-24.2 (`DurableWriter`), and
 T-24.3 (the transfer pipeline) exist only on the archived #107 branch
-(`archive/pr-107-feature`); salvage is tracked in the #107 salvage ledger.
+(`feature/roadmap-m4-tasks` at `57b6c37`); salvage is tracked in the #107 salvage ledger.
 Salvage of the T-24.1 port and the T-24.3 pipeline is in progress. The
 items the branch still owed are named under T-24.2 and T-24.3.
 
