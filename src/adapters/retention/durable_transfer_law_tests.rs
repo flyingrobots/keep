@@ -15,8 +15,8 @@ use crate::adapters::filesystem_test_sandbox::TestDirectory;
 use crate::{
     AdmittedRetentionRoot, CatalogRestartByteLimit, CatalogRestartPolicy, CopyError,
     DurableSnapshot, LayoutEntryLimit, NeverCancelled, ReaderAttemptLimit, ReferenceStore,
-    ReferenceStoreCapacity, RetentionAnchor, SegmentReadPolicy, SegmentRecordLimit,
-    StagingLimits, TransferBounds, TransferSourceError, TransferWindow, WriteSink, copy_layout,
+    ReferenceStoreCapacity, RetentionAnchor, SegmentReadPolicy, SegmentRecordLimit, StagingLimits,
+    TransferBounds, TransferSourceError, TransferWindow, WriteSink, copy_layout,
     execute_retention_publication, transfer_layout,
 };
 
@@ -46,8 +46,8 @@ fn published_snapshot(
 }
 
 #[test]
-fn a_durable_snapshot_copies_its_exact_layout_into_a_reference_store()
--> Result<(), Box<dyn Error>> {
+fn a_durable_snapshot_copies_its_exact_layout_into_a_reference_store() -> Result<(), Box<dyn Error>>
+{
     let (_sandbox, snapshot, anchor) = published_snapshot("durable-transfer-copy")?;
     let mut destination = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
     let receipt = copy_layout(
@@ -87,7 +87,10 @@ fn a_missing_durable_layout_refuses_the_copy_before_staging() -> Result<(), Box<
     let (_sandbox, snapshot, anchor) = published_snapshot("durable-transfer-missing")?;
     let mut destination = ReferenceStore::new(ReferenceStoreCapacity::new(1_048_576));
     let absent = destination
-        .stage(&mut std::io::Cursor::new(b"absent"), LayoutEntryLimit::MAXIMUM)?
+        .stage(
+            &mut std::io::Cursor::new(b"absent"),
+            LayoutEntryLimit::MAXIMUM,
+        )?
         .layout_id();
     let refusal = copy_layout(
         &snapshot,

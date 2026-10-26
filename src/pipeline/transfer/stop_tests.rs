@@ -37,7 +37,8 @@ fn bounds() -> Result<TransferBounds<'static, NeverCancelled>, &'static str> {
 }
 
 #[test]
-fn a_recorded_sink_failure_outlives_a_read_core_that_ignores_it() -> Result<(), Box<dyn std::error::Error>> {
+fn a_recorded_sink_failure_outlives_a_read_core_that_ignores_it()
+-> Result<(), Box<dyn std::error::Error>> {
     let mut sink = RefusingSink::default();
     let outcome = run(&mut sink, &bounds()?, |writer| {
         let _ignored = writer.write(b"bytes");

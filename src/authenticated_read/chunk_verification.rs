@@ -109,10 +109,6 @@ impl Error for ChunkVerificationError {
 /// Fetches an already-authenticated immutable chunk for emission.
 ///
 /// The verification pass hashed every selected chunk before the first byte
-
-/// Fetches an already-authenticated immutable chunk for emission.
-///
-/// The verification pass hashed every selected chunk before the first byte
 /// was written, and the in-memory view cannot change under `&self`, so the
 /// emission pass looks the chunk up by identity and hashes nothing. A chunk
 /// that vanished between the passes is impossible here; the arm exists so a
