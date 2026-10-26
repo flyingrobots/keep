@@ -285,6 +285,7 @@ has one job; this one is the front door.
 | See how a retention generation is published | [`segment-store-v2/retention-publication.md`](docs/formats/segment-store-v2/retention-publication.md) |
 | Check reproducible performance evidence | [`docs/benchmarks/`](docs/benchmarks/) |
 | Run the language-neutral corpora | [`conformance/`](conformance/) |
+| See planned features and their tasks | [`ROADMAP.md`](ROADMAP.md) |
 | See what changed | [`CHANGELOG.md`](CHANGELOG.md) |
 
 ## Contributing, security, license
