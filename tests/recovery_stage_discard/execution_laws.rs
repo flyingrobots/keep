@@ -105,6 +105,7 @@ fn retry_after_remove_before_parent_sync_is_idempotent() -> Result<(), Box<dyn E
         RecoveryStageDiscardError::Synchronize {
             stage: RecoveryStage::NextHead,
             source,
+            ..
         } if source.kind() == io::ErrorKind::Other
     ));
     assert_eq!(storage.present(), None);
