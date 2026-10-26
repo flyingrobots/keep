@@ -18,6 +18,8 @@ mod durable_port_law_tests;
 #[cfg(test)]
 mod durable_read_law_tests;
 #[cfg(test)]
+mod durable_transfer_law_tests;
+#[cfg(test)]
 mod durable_view_law_tests;
 #[cfg(test)]
 mod filesystem_recovery_admission_tests;

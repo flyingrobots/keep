@@ -56,6 +56,14 @@ process death loses everything in it, and no port method claims otherwise.
 No durable writer implements it yet; bounded durable ingestion is
 tracked by [#82](https://github.com/flyingrobots/keep/issues/82).
 
+## Moving bytes out and between
+
+The [transfer pipeline](pipeline.md) moves authenticated bytes from any
+`ContentReads` view into a `TransferSink` as verified segments under a
+window and a cancellation signal, and `copy_layout` moves a blob from any
+`TransferSource` into any `ContentStaging` destination without buffering it.
+Where it lives and why is recorded in the [rationale](rationale.md).
+
 ## The receipt law
 
 A non-durable receipt can never stand where a durable one is required. The

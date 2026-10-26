@@ -69,6 +69,7 @@ mod blob;
 mod catalog;
 mod chunk;
 mod layout;
+mod pipeline;
 mod profile;
 mod reference;
 mod retention;
@@ -211,6 +212,12 @@ pub use chunk::{
 pub use layout::{
     AdmittedLayout, LayoutEntry, LayoutEntryLimit, LayoutEntryLimitError, LayoutId,
     LayoutIdMismatch, LayoutRecordLength, LayoutValidationError, RangePlan, RangePlanError,
+};
+pub use pipeline::{
+    CancellationFlag, CancellationSignal, CopyError, CopyReceipt, NeverCancelled, StreamConsumer,
+    TransferBounds, TransferError, TransferReceipt, TransferSegment, TransferSink, TransferSource,
+    TransferSourceError, TransferWindow, WriteSink, WriteSinkError, copy_layout, transfer_blob,
+    transfer_layout, transfer_layout_range, transfer_range,
 };
 pub use profile::{
     ProfileBoundary, RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId,

@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Add the bounded streaming transfer pipeline: `transfer_layout`, `transfer_blob`, `transfer_range` and `transfer_layout_range` hand verified borrowed segments from any `ContentReads` view to a `TransferSink` exactly once in order under a `TransferWindow` and `CancellationSignal`, never upgrading partial output into a receipt; `copy_layout` streams one layout from a sealed `TransferSource` (`ReferenceStore`, `DurableSnapshot`) into any `ContentStaging` destination, which recomputes the complete identity. Salvaged from the closed #107 branch with the #127 inward port ownership; additive API, no format, durability, or recovery changes (#126, #127).
+
 - Add the backend-neutral content-store port: `ContentReads` is implemented by `ReferenceStore` and the fenced `DurableSnapshot`, with fallible membership for durable views; `ContentStaging` and `StagedContent` are implemented by the non-durable reference store; and `StagingLimits` adds a `StagedByteLimit` that `ReferenceStore::stage_bounded` enforces before each read is hashed or staged, refusing with `IngestionError::ByteLimitExceeded`. Generic read laws with typed refusal oracles run against both backends. Salvaged from the closed #107 branch; no format, durability, or recovery behavior changes (#120).
 
 - Update the repository-only serde_json parser to 1.0.154 in both locked workspaces and refresh its dependency admission; the resolved transitive graph, features, license and MSRV are unchanged (#186).

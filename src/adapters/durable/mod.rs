@@ -7,6 +7,7 @@ mod receipt;
 mod retained_anchors;
 mod snapshot;
 mod store;
+mod transfer_source;
 mod view;
 
 pub use error::{DurableReadError, DurableStoreError};
