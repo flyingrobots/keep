@@ -14,6 +14,8 @@ mod closure_member;
 mod closure_profile_error;
 mod closure_verifier;
 #[cfg(test)]
+mod durable_port_law_tests;
+#[cfg(test)]
 mod durable_read_law_tests;
 #[cfg(test)]
 mod durable_view_law_tests;

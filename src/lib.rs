@@ -73,6 +73,7 @@ mod profile;
 mod reference;
 mod retention;
 mod segment_digest;
+mod store;
 mod verification;
 
 pub use adapters::{
@@ -215,8 +216,8 @@ pub use profile::{
     ProfileBoundary, RegisteredStorageProfile, StorageProfileAdmissionError, StorageProfileId,
 };
 pub use reference::{
-    IngestionAllocation, IngestionError, PublishError, PublishedBlob, ReferenceStore,
-    ReferenceStoreCapacity, StagedBlob,
+    IngestionAllocation, IngestionError, PublishError, PublishedBlob, ReferenceStagedContent,
+    ReferenceStore, ReferenceStoreCapacity, StagedBlob,
 };
 pub use retention::{
     LivenessGeneration, LivenessGenerationError, RegisteredRetentionProfile, RetentionAnchor,
@@ -228,6 +229,9 @@ pub use retention::{
     RetentionNamespaceDigest, RetentionNamespaceError, RetentionPolicy,
     RetentionProfileAdmissionError, RetentionRoot, RetentionRootDigest, RetentionRootError,
     RootGeneration, RootGenerationError,
+};
+pub use store::{
+    CommitReceipt, ContentReads, ContentStaging, StagedByteLimit, StagedContent, StagingLimits,
 };
 pub use verification::{
     VerificationDepth, VerificationObservation, VerificationRefusal, VerificationReport,
