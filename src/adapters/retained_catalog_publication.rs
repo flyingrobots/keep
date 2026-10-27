@@ -6,7 +6,7 @@
 //! then verifies each root's closure against the candidate before the first
 //! catalog mutation. It confirms the retention head is unchanged again
 //! immediately before `HEAD` replacement. The decision and its crash states are
-//! recorded in `docs/formats/segment-store-v2/rationale.md`.
+//! recorded in `docs/formats/store/rationale.md`.
 
 mod preserved_retention_manifest;
 mod retained_catalog_publication_error;

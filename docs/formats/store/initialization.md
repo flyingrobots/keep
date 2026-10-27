@@ -169,7 +169,7 @@ path refuses it as `MissingFormatMarker`. A root holding only an empty
 runs the production initializer in a subprocess and kills it before, during,
 and after each boundary. The parent then checks the exact inventory and bytes,
 the admission refusal or result, and runs `initialize` again as recovery. It
-then requires writer reopen, publishes a first catalog through the version-2
+then requires writer reopen, publishes a first catalog through the
 writer, and reads the blob back.
 
 | ID | Boundary | During |

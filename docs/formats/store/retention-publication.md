@@ -20,7 +20,7 @@ the current manifest and derives exact canonical successors.
 ordered durability phases, and returns the complete receipt only after cleanup;
 exact already-committed retry revalidates authority and performs no mutation.
 
-Version-2 catalog publication must hold the same writer authority and prove every current retained closure against its candidate catalog before replacing the catalog `HEAD`.
+Catalog publication must hold the same writer authority and prove every current retained closure against its candidate catalog before replacing the catalog `HEAD`.
 
 `publish_retained_catalog_generation` implements that gate over the `RetainedCatalogPublicationStorage` port ([#125](https://github.com/flyingrobots/keep/issues/125)). Under writer authority, before its first catalog storage call, it:
 
@@ -30,7 +30,7 @@ Version-2 catalog publication must hold the same writer authority and prove ever
 
 After `head.next` verification, it rereads the retention head and refuses `HEAD` replacement if the head changed. Its receipt binds the preserved manifest generation and digest. The [format rationale](rationale.md#gate-catalog-publication-on-every-retained-closure) records the crash states and the recovery obligation.
 
-`FilesystemCatalogPublisher` publishes through the gate, and version-2 next-head finalization runs the same retained-closure admission against a staged candidate ([#198](https://github.com/flyingrobots/keep/issues/198)). [Catalog publication and stage recovery](catalog-publication.md) owns that writer and its recovery. Retention publication and complete-stage retention recovery separately reverify a new root's closure against the current catalog.
+`FilesystemCatalogPublisher` publishes through the gate, and next-head finalization runs the same retained-closure admission against a staged candidate ([#198](https://github.com/flyingrobots/keep/issues/198)). [Catalog publication and stage recovery](catalog-publication.md) owns that writer and its recovery. Retention publication and complete-stage retention recovery separately reverify a new root's closure against the current catalog.
 
 ## Generation transition
 

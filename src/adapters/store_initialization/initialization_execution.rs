@@ -1,7 +1,7 @@
 //! This module owns the ordered execution of direct initialization from one observed prefix.
 //!
 //! Forward protocol, crash states, and recovery are specified in
-//! `docs/formats/segment-store-v2/initialization.md`. Every phase runs
+//! `docs/formats/store/initialization.md`. Every phase runs
 //! between two observer notifications, so the crash matrix kills the process
 //! at an exact boundary of this code rather than of a reimplementation.
 

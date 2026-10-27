@@ -62,7 +62,7 @@ Keep is required to refuse all three, before mutating anything.
   (`KEEP-CRASH-081`–`091`) covers every boundary. Nothing persisted binds a
   store to its directory: a quiescent copy or restored backup opens wherever
   it is placed. There is no migration; see the
-  [retirement ledger](docs/formats/segment-store-v2/retired-identifiers.md).
+  [retirement ledger](docs/formats/store/retired-identifiers.md).
 - **Version-2 retention, forward path.** Explicit retention roots,
   deterministic closure verification, the gated segment and catalog writer,
   and a 17-phase retention publication, all with production filesystem
@@ -78,7 +78,7 @@ Version-2 complete-stage retention recovery, fenced retention snapshots and mode
 
 The retention process-death sequence checks the recovered head generation and exact selected-root bytes before retry; its [evidence receipt](docs/testing-evidence/retention-crash-reader-oracle.md) bounds that claim to the declared initial-publication crash coordinates.
 
-Recovery failures retain their typed cause and report known effects separately from uncertain effects or durability under the [approved recovery contract](docs/formats/segment-store-v2/retention-recovery.md).
+Recovery failures retain their typed cause and report known effects separately from uncertain effects or durability under the [approved recovery contract](docs/formats/store/retention-recovery.md).
 
 Writer authority coordinates cooperating writers in a managed namespace; it does not isolate arbitrary concurrent out-of-band filesystem mutation.
 
@@ -278,8 +278,8 @@ has one job; this one is the front door.
 | Understand what is proved and what is not | [`docs/invariants/`](docs/invariants/) |
 | Read the byte-level formats | [`docs/formats/`](docs/formats/) |
 | See the architecture and port boundaries | [`docs/architecture/`](docs/architecture/) |
-| Follow the crash and recovery rules | [`segment-store-v1/recovery.md`](docs/formats/segment-store-v1/recovery.md) · [`segment-store-v2/recovery.md`](docs/formats/segment-store-v2/recovery.md) · [`segment-store-v2/initialization.md`](docs/formats/segment-store-v2/initialization.md) |
-| See how a retention generation is published | [`segment-store-v2/retention-publication.md`](docs/formats/segment-store-v2/retention-publication.md) |
+| Follow the crash and recovery rules | [`store/stage-recovery.md`](docs/formats/store/stage-recovery.md) · [`store/recovery.md`](docs/formats/store/recovery.md) · [`store/initialization.md`](docs/formats/store/initialization.md) |
+| See how a retention generation is published | [`store/retention-publication.md`](docs/formats/store/retention-publication.md) |
 | Check reproducible performance evidence | [`docs/benchmarks/`](docs/benchmarks/) |
 | Run the language-neutral corpora | [`conformance/`](conformance/) |
 | See what changed | [`CHANGELOG.md`](CHANGELOG.md) |
@@ -296,4 +296,4 @@ plaintext content, keys, or sensitive paths in a public issue.
 Licensed under the [Apache License 2.0](LICENSE).
 
 [reconstruction]: docs/invariants/authenticated-reconstruction/README.md
-[ledger]: docs/formats/segment-store-v2/requirements.md
+[ledger]: docs/formats/store/requirements.md

@@ -1,7 +1,9 @@
-# Recovery and Platform Contract
+# Catalog-Protocol Stage Recovery and Platform Contract
 
-This page owns recovery classification, deterministic refusal precedence, and
-the minimum filesystem semantics for `keep.segment-store/v1`.
+This page owns recovery classification, deterministic refusal precedence, the
+segment, catalog, and head stage recovery tools, the catalog-protocol crash
+matrix, and the minimum filesystem semantics of the
+[Keep store format](README.md).
 
 ## Recovery
 

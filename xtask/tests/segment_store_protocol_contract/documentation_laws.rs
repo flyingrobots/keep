@@ -53,8 +53,8 @@ fn protocol_index_routes_each_semantic_owner() {
         "[Segment bytes](segment.md)",
         "[Catalog and publication-head bytes](catalog.md)",
         "[Publication and reader visibility](publication.md)",
-        "[Recovery and platform contract](recovery.md)",
-        "[Requirements, compatibility, and evidence](requirements.md)",
+        "[Catalog-protocol stage recovery and platform contract](stage-recovery.md)",
+        "[Catalog-protocol requirements, compatibility, and evidence](catalog-protocol-requirements.md)",
     ] {
         assert!(
             SPECIFICATION_INDEX.contains(route),

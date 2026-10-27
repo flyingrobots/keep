@@ -34,7 +34,7 @@ fn immutable_pool_links_are_verified_after_namespace_resolution() {
 fn store_initialization_routes_to_the_single_format_protocol() {
     for required in [
         "## Store initialization",
-        "(../segment-store-v2/initialization.md)",
+        "(initialization.md)",
         "`KEEP-CRASH-081`–`KEEP-CRASH-091`",
         "`KEEP-CRASH-031`–`KEEP-CRASH-035`; the",
     ] {

@@ -1,12 +1,14 @@
 # Publication and Reader Visibility
 
 This page owns the physical namespace, visibility states, writer exclusion,
-forward publication order, and reader snapshots for
-`keep.segment-store/v1`.
+forward publication order, and reader snapshots of the segment, catalog, and
+head transitions of the [Keep store format](README.md).
 
 ## Physical namespace
 
-The version-1 filesystem adapter owns this relative namespace:
+The filesystem adapter owns this relative catalog-protocol namespace; the
+store root holds the further entries that
+[Format, namespace, and portability](recovery.md) specifies:
 
 ```text
 writer.lock
@@ -54,7 +56,7 @@ silently interpreted as an empty store.
 ## Store initialization
 
 A store is created only by direct initialization of the single store format,
-specified in [Initialization](../segment-store-v2/initialization.md) and
+specified in [Initialization](initialization.md) and
 crash-tested at `KEEP-CRASH-081`–`KEEP-CRASH-091`. It commits `writer.lock`,
 the catalog-protocol directories `staging`, `segments`, and `catalogs`, and the
 format's marker, reader fence, and retention, GC, and recovery directories
@@ -64,7 +66,7 @@ publication.
 The version-1 initializer, which created only `writer.lock` and the three
 catalog-protocol directories, is retired with its crash rows
 `KEEP-CRASH-031`–`KEEP-CRASH-035`; the
-[retirement ledger](../segment-store-v2/retired-identifiers.md) records them.
+[retirement ledger](retired-identifiers.md) records them.
 
 ## State and visibility
 
@@ -78,7 +80,7 @@ catalog-protocol directories, is retired with its crash rows
 | Sealed stage | complete verified seal in staging | no | immutable bytes, not yet durable pool evidence |
 | Valid orphan | verified immutable artifact not selected by current head | no | preserve; neither promote nor delete silently |
 | Published | selected through one verified head and catalog | yes | exact immutable reader snapshot |
-| Retired | selected by an older catalog but not the current head | no for new readers | existing pinned readers may finish; no deletion in v1 |
+| Retired | selected by an older catalog but not the current head | no for new readers | existing pinned readers may finish; no deletion until garbage collection ([#21](https://github.com/flyingrobots/keep/issues/21)) |
 | Corrupt sealed | seal, checksum, digest, or framing disagreement | no | refuse; never truncate or reinterpret |
 | Stale generation | candidate does not extend current generation exactly | no | refuse expected/observed generation |
 | Unrecoverable ambiguity | conflicting or insufficient durable evidence | no | represent uncertainty and refuse |
@@ -87,7 +89,7 @@ catalog-protocol directories, is retired with its crash rows
 
 ## Writer exclusion
 
-Version 1 is a one-writer/many-reader protocol.
+The store is a one-writer/many-reader protocol.
 
 The writer opens `writer.lock` without following links and acquires one
 exclusive kernel advisory lock before recovery planning. It holds the lock
@@ -116,7 +118,7 @@ Neither operation repairs, enumerates, or removes protocol state.
 The admission has private fields, so only Keep's own initialization and
 admission boundary can produce a value. A new store obtains one through
 `FilesystemStoreAdmission::initialize`, which runs the
-[initialization protocol](../segment-store-v2/initialization.md); a committed
+[initialization protocol](initialization.md); a committed
 store reacquires one through `FilesystemStoreAdmission::reopen`, which
 mutates nothing. A root without the `FORMAT` marker refuses at every open
 path. The version-1 initializer, `FilesystemPlatformAdmission`, and their
@@ -162,7 +164,7 @@ proves the exact canonical directories and the persistent lock file before a
 publisher opens. Any retained `head.next` or `current.cat`, and any
 `current.seg` not owned by the selected staged segment, causes publication to
 refuse before mutation; the explicit recovery boundaries in
-[Recovery and platform contract](recovery.md) classify and resolve that
+[Recovery and platform contract](stage-recovery.md) classify and resolve that
 residue. When `HEAD` is absent, the publisher probes both immutable pools
 and admits first publication only when both are empty; any entry is preserved
 as recovery evidence and refuses the operation. An already-current retry
@@ -271,7 +273,8 @@ catalogs. If head replacement races the initial read, atomic replacement gives
 the reader either the complete old head or complete new head. Any other
 observation is an unsupported-platform or corruption refusal.
 
-Version 1 never deletes immutable artifacts. A reader holding an older
+No implemented protocol deletes immutable artifacts; collection is planned
+in [GC and disposition records](gc.md). A reader holding an older
 verified generation can therefore finish while a new generation is
 published. Retention and GC must define later deletion safety before this can
 change.

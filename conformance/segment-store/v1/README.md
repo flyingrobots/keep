@@ -1,12 +1,15 @@
 # Durable Segment Store Corpus v1
 
-This directory is the implementation-independent corpus for
-`keep.segment-store/v1`. It freezes canonical segment, catalog-generation,
-and publication-head bytes plus the stable durable-transition ledger
-independently of any production implementation.
+This directory is the implementation-independent corpus for the segment,
+catalog-generation, and publication-head grammars, first specified as
+`keep.segment-store/v1` and carried unchanged by the one Keep store format. It
+freezes their canonical bytes plus the stable catalog-protocol transition
+ledger independently of any production implementation. The directory keeps its
+`v1` name because every artifact here carries grammar version 1 in its own
+magic and version fields.
 
 The normative protocol is the
-[Durable Segment Store v1 specification](../../../docs/formats/segment-store-v1/README.md).
+[Keep store format](../../../docs/formats/store/README.md).
 ADR-0005 records the cross-cutting decision. Issue
 [#15](https://github.com/flyingrobots/keep/issues/15) owns production segment
 writing and reading, issue
@@ -100,7 +103,7 @@ initializer, which was deleted when the single store format became the only
 format. A store is now created by direct initialization, whose rows are
 `KEEP-CRASH-081`–`KEEP-CRASH-091` in the
 [version-2 corpus](../v2/transitions.tsv). The
-[retirement ledger](../../../docs/formats/segment-store-v2/retired-identifiers.md)
+[retirement ledger](../../../docs/formats/store/retired-identifiers.md)
 records their last evidence. No row reuses a retired identifier.
 
 The `interrupted_class` column names the weakest state that interruption may

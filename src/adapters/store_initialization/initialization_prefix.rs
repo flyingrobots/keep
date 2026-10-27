@@ -5,7 +5,7 @@ use super::StoreInitializationDirectory;
 /// One recoverable initialization state, observed under writer authority.
 ///
 /// Each variant is exactly one forward state of the protocol in
-/// `docs/formats/segment-store-v2/initialization.md`. A root in any other
+/// `docs/formats/store/initialization.md`. A root in any other
 /// state is refused, and a committed root is refused as already initialized,
 /// so no variant describes a committed store.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -1,14 +1,15 @@
 # Namespace, Format Marker, and Recovery
 
-This page owns the exact version-2 root namespace, the `FORMAT` marker, the
+This page owns the exact store root namespace, the `FORMAT` marker, the
 reader fence, the GC and recovery-disposition reservation, and the laws that
 make a store independent of the directory it lives in.
 [Direct initialization](initialization.md) owns how a store comes into
-existence; every version-2 store is created by direct initialization.
+existence; every store is created by direct initialization.
 
 ## Exact filesystem namespace
 
-Version 2 keeps the version-1 files and directories and adds:
+The store keeps the catalog-protocol files and directories of
+[Publication and reader visibility](publication.md) and adds:
 
 ```text
 reader.lock
@@ -28,9 +29,9 @@ recovery/dispositions/<artifact-digest>.receipt
 Catalog `HEAD` is optional: an initialized store holds none until its first
 catalog publication. `retention/HEAD`, every fixed `.next` stage, `gc/intent`,
 and `gc/receipt` are optional according to the exact state tables of their
-pages. The version-1 catalog `head.next` stays a version-1 file: writer
-admission refuses it as recovery state, while readers and version-2
-catalog-stage recovery admit it, as
+pages. The catalog `head.next` is a catalog-protocol stage: writer admission
+refuses it as recovery state, while readers and catalog-stage recovery admit
+it, as
 [catalog publication and stage recovery](catalog-publication.md) specifies.
 `FORMAT.next` exists only while initialization has not committed; every
 admission refuses it as `InitializationIncomplete`, and a root without `FORMAT`
@@ -78,7 +79,7 @@ carries the decoder's typed refusal as its source.
 `reader.lock` is a persistent regular zero-length file. Its contents and
 existence alone prove nothing.
 
-A version-2 reader acquires a kernel-managed shared lock on `reader.lock`
+A reader acquires a kernel-managed shared lock on `reader.lock`
 before opening catalog `HEAD` or `retention/HEAD`. The returned `ReaderFence`
 owns that lock for the complete snapshot lifetime. Close, drop, or process
 death releases only the kernel lock and never deletes the persistent file.

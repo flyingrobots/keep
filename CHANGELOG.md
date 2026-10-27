@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Version 1 is deleted: every open path refuses a root without the `FORMAT` marker, `KEEP-CRASH-001`–`030` run on initialized stores, `KEEP-CRASH-031`–`035` are retired, the `VersionTwo*` types take format-neutral names (`FilesystemStoreAdmission`, `FilesystemCatalogPublisher`, `StoreInitialization`, `classify_recovery_names`), and the format pages are one set under `docs/formats/store/` (#198).
+
 - Keep has one storage format: `FilesystemVersionTwoAdmission::initialize` creates a store directly through a recoverable protocol with one durable commit point and a 41-case crash matrix (`KEEP-CRASH-081`–`091`), migration and its public API, records, golden fixtures, and crash rows `KEEP-CRASH-053`–`073` are deleted, the persisted root device-and-inode binding is removed so quiescent copies and backups open, and the format-definition digest changes to `f1a0ce10…361d` (#198).
 
 - Version-2 stores can ingest: `FilesystemVersionTwoCatalogPublisher` stages one segment and publishes a catalog successor through the retained-closure gate, version-2 catalog-stage recovery classifies version-2 roots and finalizes a staged head only after the same gate admits it, and `KEEP-CRASH-074` through `077` cover writer process death (#198).

@@ -3,12 +3,13 @@
 #![cfg(feature = "repository-tasks")]
 
 const ROOT_README: &str = include_str!("../../README.md");
-const RECOVERY: &str = include_str!("../../docs/formats/segment-store-v1/recovery.md");
-const REQUIREMENTS: &str = include_str!("../../docs/formats/segment-store-v1/requirements.md");
+const RECOVERY: &str = include_str!("../../docs/formats/store/stage-recovery.md");
+const REQUIREMENTS: &str =
+    include_str!("../../docs/formats/store/catalog-protocol-requirements.md");
 const CORPUS_README: &str = include_str!("../../conformance/segment-store/v1/README.md");
 const V2_CORPUS_README: &str = include_str!("../../conformance/segment-store/v2/README.md");
-const INITIALIZATION: &str = include_str!("../../docs/formats/segment-store-v2/initialization.md");
-const V2_REQUIREMENTS: &str = include_str!("../../docs/formats/segment-store-v2/requirements.md");
+const INITIALIZATION: &str = include_str!("../../docs/formats/store/initialization.md");
+const V2_REQUIREMENTS: &str = include_str!("../../docs/formats/store/requirements.md");
 
 #[test]
 fn living_documentation_routes_the_complete_crash_matrix_and_its_limits() {

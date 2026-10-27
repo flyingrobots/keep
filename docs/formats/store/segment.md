@@ -1,7 +1,9 @@
 # Segment Bytes
 
 This page owns the canonical primitives, record framing, and immutable segment
-grammar for `keep.segment-store/v1`.
+grammar of the [Keep store format](README.md). The segment records are
+grammar version 1, named by their own magic and version fields; they were first
+specified for `keep.segment-store/v1` and are unchanged.
 
 ## Canonical primitives
 

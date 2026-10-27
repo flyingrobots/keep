@@ -1,8 +1,9 @@
 # Catalog and Publication-Head Bytes
 
 This page owns catalog generations, publication-head framing, and the fixed
-bounds for `keep.segment-store/v1`. It uses the canonical primitives defined
-by the [segment-byte grammar](segment.md#canonical-primitives).
+bounds of the [Keep store format](README.md). Both records are grammar
+version 1, unchanged since `keep.segment-store/v1`. It uses the canonical
+primitives defined by the [segment-byte grammar](segment.md#canonical-primitives).
 
 ## Catalog generation
 

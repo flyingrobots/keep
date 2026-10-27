@@ -1,7 +1,10 @@
-# Requirements, Compatibility, and Evidence
+# Catalog-Protocol Requirements, Compatibility, and Evidence
 
-This page owns the requirement ledger, compatibility boundary, security
-nonclaims, and golden evidence for `keep.segment-store/v1`.
+This page owns the segment, catalog, publication, and stage-recovery
+requirement ledger, its compatibility boundary, security nonclaims, and golden
+evidence for the [Keep store format](README.md). The store, retention,
+initialization, and portability ledger is [Requirements and
+evidence](requirements.md).
 
 ## Requirement ledger
 
@@ -103,12 +106,11 @@ may now authorize a transition-checked finalization through a semantic storage
 port, and the filesystem finalizer binds that transition to pinned
 writer-authorized storage. These slices now include reusable-stage continuation
 and the complete process-death crash matrix. Retention, compaction, garbage
-collection, and host-power-loss simulation remain outside version 1:
-retention belongs to
-[`keep.segment-store/v2`](../segment-store-v2/README.md), compaction and
-garbage collection are tracked in issue #21. The process-death matrix does
-not establish host-power-loss behavior; that requires separate filesystem and
-device fault evidence.
+collection, and host-power-loss simulation remain outside this protocol:
+retention belongs to the [retention records](retention.md) of the store
+format, and compaction and garbage collection are tracked in issue #21. The
+process-death matrix does not establish host-power-loss behavior; that
+requires separate filesystem and device fault evidence.
 
 <!-- markdownlint-disable MD013 -->
 
@@ -136,17 +138,20 @@ device fault evidence.
 
 <!-- markdownlint-enable MD013 -->
 
-## Compatibility and migration
+## Compatibility and format changes
 
 The byte grammars, magic values, field widths and order, endianness, kinds,
 flags, algorithm coordinates, bounds, checksum domains, catalog ordering,
 physical-name grammar, generation law, crash-point identifiers, publication
 order, and recovery classifications are compatibility commitments.
 
-Changing any of them requires a new store protocol version and an explicit
-migration decision. A migration writes and verifies new immutable artifacts,
-publishes a new compatible head under its accepted protocol, and never
-reinterprets existing bytes in place.
+Changing any of them changes the store format. Before the first release that
+regenerates the affected golden fixtures and needs no conversion; after it, a
+format change ships ADR-0010's separately invoked upgrade tool, which writes a
+new store from the old one and never converts or reinterprets existing bytes
+in place. The format definition (`definition.tsv`) does not yet enumerate
+these segment, catalog, and head grammars, so its digest does not change when
+they do; that binding is not claimed.
 
 Logical `BlobId`, `ChunkId`, and `LayoutId` remain stable when their exact
 logical bytes and canonical plans remain unchanged.
@@ -196,7 +201,7 @@ single-format stores and retires the version-1 initializer.
 `KEEP-STORE-020`, `KEEP-RECOVERY-002`, and `KEEP-RECOVERY-003` named the
 version-1 initializer and its platform-checked reopen. They are retired, never
 reused, and mapped to their successors in the
-[retirement ledger](../segment-store-v2/retired-identifiers.md).
+[retirement ledger](retired-identifiers.md).
 
 The format-local tradeoffs are recorded in the
-[colocated rationale](rationale.md).
+[colocated rationale](catalog-protocol-rationale.md).

@@ -120,7 +120,7 @@ single-format writer runs, so they keep their identifiers and their crash
 children now run on stores created by direct initialization. A row whose
 boundary no longer exists is retired here and never reused.
 
-### Requirements
+### Version-1 requirements
 
 <!-- markdownlint-disable MD013 -->
 
@@ -139,7 +139,7 @@ boundary no longer exists is retired here and never reused.
 ownership alone still cannot construct a publisher, now because only
 single-format admission produces publisher authority.
 
-### Crash identifiers
+### Version-1 crash identifiers
 
 `KEEP-CRASH-031` to `-035` named the version-1 initializer. Their last
 evidence is the initialization crash child at `1fc1ad0` and `f7956c0`, and the
@@ -161,7 +161,14 @@ transition ledger at `e03c2a1`.
 publication with a retained root, a scenario distinct from the first
 publication that `KEEP-CRASH-009`, `-013`, `-024`, and `-025` cover.
 
-### Code and evidence removed
+`KEEP-CRASH-078` was reserved, never implemented, for process death in stage
+discard under version-2 recovery admission. It is retired: `KEEP-CRASH-027` to
+`-030` are that boundary and now run under single-format recovery admission.
+`KEEP-CRASH-079` and `-080` (stage completion and gated finalization under
+recovery admission) stay reserved and planned in
+[catalog publication and stage recovery](catalog-publication.md).
+
+### Version-1 code and evidence removed
 
 - `src/adapters/filesystem_platform_admission.rs`,
   `filesystem_catalog_publisher.rs`, `filesystem_catalog_publisher_storage.rs`,

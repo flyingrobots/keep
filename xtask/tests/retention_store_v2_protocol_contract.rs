@@ -15,7 +15,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-const FORMAT_ROOT: &str = "docs/formats/segment-store-v2";
+const FORMAT_ROOT: &str = "docs/formats/store";
 const DOCUMENT_REVIEW_LIMIT_LINES: usize = 300;
 
 fn repository_root() -> Result<PathBuf, io::Error> {
@@ -40,7 +40,7 @@ fn version_two_is_one_routed_protocol() -> Result<(), Box<dyn std::error::Error>
     let overview = normalized(&read(&format!("{FORMAT_ROOT}/README.md"))?);
 
     assert!(
-        format_index.contains("segment-store-v2/README.md"),
+        format_index.contains("store/README.md"),
         "format index does not route to segment-store v2"
     );
     assert!(

@@ -1,7 +1,8 @@
-# Durable Segment Store Version 1 Rationale
+# Catalog-Protocol Rationale
 
-This note records the format-local choices behind
-`keep.segment-store/v1`. ADR-0005 owns the cross-cutting decision to bind
+This note records the format-local choices behind the segment, catalog, and
+publication-head protocol, first specified as `keep.segment-store/v1` and
+unchanged in the [Keep store format](README.md). ADR-0005 owns the cross-cutting decision to bind
 format, publication, crash states, and recovery into one protocol.
 
 ## Three artifacts instead of one mutable file
@@ -163,7 +164,7 @@ Initialization then refuses any root that is not an initialization prefix
 before mutation, acquires and retains `writer.lock`, and returns the proof only
 after its commit point; the version-1 initializer that created just the three
 catalog-protocol directories is retired
-([Initialization](../segment-store-v2/initialization.md)).
+([Initialization](initialization.md)).
 
 The profile treats local single-host mounting as an environmental precondition,
 not as a fact derivable from `statfs`. A shared or multiply mounted ext4 volume

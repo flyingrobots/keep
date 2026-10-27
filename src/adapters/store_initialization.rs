@@ -5,7 +5,7 @@
 //! that a later call resumes, every other nonempty root is refused before any
 //! mutation, and the store admits only after one named durable commit point.
 //! The protocol, its states, and its crash matrix are specified in
-//! `docs/formats/segment-store-v2/initialization.md`.
+//! `docs/formats/store/initialization.md`.
 
 mod initialization_entries;
 mod initialization_error;
