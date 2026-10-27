@@ -1,6 +1,6 @@
 # Closure Verification
 
-- Status: Normative version-2 protocol; the storage-independent verifier and live member re-verification under filesystem retention authority are implemented. General candidate-catalog retained-closure admission remains in [#125](https://github.com/flyingrobots/keep/issues/125).
+- Status: Normative version-2 protocol; the storage-independent verifier, live member re-verification under filesystem retention authority, and the candidate-catalog retained-closure gate over its storage port ([#125](https://github.com/flyingrobots/keep/issues/125)) are implemented. No filesystem version-2 catalog publisher uses the gate yet ([#198](https://github.com/flyingrobots/keep/issues/198)).
 - Format coordinate: `keep.segment-store/v2`
 - Requirement: [`KEEP-RETENTION-005`](requirements.md#retention-transitions)
 - Decision record:

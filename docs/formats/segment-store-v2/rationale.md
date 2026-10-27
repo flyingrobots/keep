@@ -123,3 +123,72 @@ silently substitute a different identity coordinate.
 An exact receipt proves the migration records agree; it does not prove the current reserved namespace still admits. Recovery therefore invokes the read-only `StoreMigrationRecoveryStorage::verify_complete` capability after planning selects `Complete` and before returning success. The filesystem adapter reuses version-two namespace admission, retaining the original cause through `Observation` and `NamespacePreflight`. Existing corruption/planning refusals retain priority because this check follows planning. No namespace effect, synchronization or retention recovery is initiated.
 
 Completed stores may contain published retention roots, manifests and heads. Reusing the partial-migration empty-directory preflight would reject valid post-migration state, so completion uses the existing version-two admission policy instead. Migration completion verifies its root/reserved directory contract; retention owns the interpretation of retention artifacts and stages. This adds a required method to the public recovery storage port; external implementations must implement equivalent effect-free admission. On-disk formats and identities are unchanged.
+
+## Gate catalog publication on every retained closure
+
+ADR-0009 requires version-2 catalog publication to verify every current
+retained closure against the candidate catalog before it replaces `HEAD`.
+`publish_retained_catalog_generation` implements that rule over the
+`RetainedCatalogPublicationStorage` port (#125). It is the entry point a
+version-2 catalog writer plugs into; this change adds no filesystem version-2
+catalog publisher.
+
+Under writer authority, the gate runs the pure catalog preflight first. It
+then reads the retention head, the manifest that head names, and every root
+the manifest names. Each record is decoded and cross-checked against the
+record that selected it: the head names the manifest's digest, generation,
+predecessor and length, and each manifest entry names its root's namespace,
+generation and digest. The gate then calls `verify_retention_closure` for each
+root against the candidate snapshot, using the root's own profile and limits.
+Only then does the first catalog storage call run. A refused candidate
+therefore leaves no stage, pool entry, or head change. After `head.next`
+verification, the gate rereads the retention head and requires it to equal the
+admitted head before it calls `replace_head`.
+
+Storage returns exact bytes and the gate does all the decoding. Storage that
+decoded its own records would be vouching for evidence it supplies. The
+catalog stages are reachable only through `catalog_stages`, which takes a
+`RetainedClosureAdmission`. Only the gate can create that value. A version-2
+publisher whose stage type has no other constructor therefore cannot be passed
+to the ungated `publish_catalog_generation`, which stays unchanged for
+version 1.
+
+The gate holds one manifest of at most 4,096 entries and one root at a time.
+Each closure is limited by its root's admitted limits. Roots are verified in
+manifest order, and the first refusal is returned.
+
+Revalidation compares only the head, because manifest and root pool entries
+are immutable and named by digest. An unchanged canonical head therefore
+selects exactly the admitted evidence. The candidate catalog is held in
+memory, and `verify_head_view` reverifies its pool copy.
+
+Crash and refusal states:
+
+- Refusal during evidence admission or closure verification happens before any
+  catalog call, so there is nothing to recover.
+- A head change refused at revalidation leaves the linked catalog, the linked
+  segment if one was staged, and a verified `head.next`. These are the same
+  states a crash at that point leaves in the version-1 protocol. They are
+  recovery state, never repaired automatically.
+- Process death at any point leaves exactly the version-1 crash states. The
+  gate adds only reads.
+
+Recovery implication: today's next-head finalization admits only version-1
+writer authority, so it cannot finalize a version-2 `head.next`. When the
+single-format writer moves stage recovery onto version 2 (#198), finalizing a
+staged catalog head must run this same retained-closure admission against the
+staged catalog. Changing the admission type that recovery accepts is not
+enough.
+
+Rejected alternatives:
+
+- Extending `CatalogPublicationStorage` with retention reads. Any implementation
+  could then be driven through the ungated entry point.
+- Having storage return admitted evidence. The gate would trust the storage
+  it is checking.
+- Revalidating before `head.next` creation. That leaves a wider unchecked
+  window before the atomic replacement.
+- Rereading every root at commit. Immutable digest-named records make the head
+  comparison sufficient.
+- Relying on ingestion's preserve-all-records behaviour. That is a property of
+  one writer, not of the publication boundary.

@@ -71,6 +71,11 @@ pub use super::publication_head_decode_error::PublicationHeadDecodeError;
 pub use super::recovery::*;
 #[cfg(feature = "repository-tasks")]
 pub use super::repository_initialization_storage::RepositoryInitializationStorage;
+pub use super::retained_catalog_publication::{
+    PreservedRetentionManifest, RetainedCatalogPublicationError, RetainedCatalogPublicationReceipt,
+    RetainedCatalogPublicationStorage, RetainedClosureAdmission, RetentionEvidencePhase,
+    publish_retained_catalog_generation,
+};
 pub use super::retention::*;
 pub use super::sealed_segment::SealedSegment;
 pub use super::segment_header::SegmentHeader;

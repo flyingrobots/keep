@@ -22,7 +22,15 @@ exact already-committed retry revalidates authority and performs no mutation.
 
 Version-2 catalog publication must hold the same writer authority and prove every current retained closure against its candidate catalog before replacing the catalog `HEAD`.
 
-That general candidate-catalog gate remains unimplemented and is tracked in [#125](https://github.com/flyingrobots/keep/issues/125). The implemented retention publication and complete-stage retention recovery paths reverify a root's closure against the current catalog; this does not establish that an arbitrary successor catalog preserves every retained root.
+`publish_retained_catalog_generation` implements that gate over the `RetainedCatalogPublicationStorage` port ([#125](https://github.com/flyingrobots/keep/issues/125)). Under writer authority, before its first catalog storage call, it:
+
+1. admits the current retention head, the manifest that head names, and every root that manifest names;
+2. cross-checks each record against the record that selected it; and
+3. verifies each root's closure against the candidate catalog with that root's profile and limits.
+
+After `head.next` verification, it rereads the retention head and refuses `HEAD` replacement if the head changed. Its receipt binds the preserved manifest generation and digest. The [format rationale](rationale.md#gate-catalog-publication-on-every-retained-closure) records the crash states and the recovery obligation.
+
+No filesystem version-2 catalog publisher or version-2 next-head finalization uses the gate yet; that writer is tracked in [#198](https://github.com/flyingrobots/keep/issues/198). Retention publication and complete-stage retention recovery separately reverify a new root's closure against the current catalog.
 
 ## Generation transition
 

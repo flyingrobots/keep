@@ -105,7 +105,7 @@ Writer authority coordinates cooperating writers in a managed namespace; it does
 
 `FilesystemRetentionSnapshot` binds a catalog, retention head and manifest under a shared reader fence and verifies selected roots on demand. `DurableStore` composes that view with authenticated whole-blob and exact-range reads, delivered in [PR #164](https://github.com/flyingrobots/keep/pull/164); the [read contract](../../invariants/authenticated-reconstruction/README.md) records proof and allocation limits.
 
-General version-two catalog publication still needs the candidate-catalog retained-closure admission gate tracked in [#125](https://github.com/flyingrobots/keep/issues/125); verifying a new retention root against the current catalog is a different operation.
+The candidate-catalog retained-closure gate is implemented over its storage port ([#125](https://github.com/flyingrobots/keep/issues/125)). No filesystem version-two catalog publisher uses it yet ([#198](https://github.com/flyingrobots/keep/issues/198)). Verifying a new retention root against the current catalog is a different operation.
 
 [Durable verification reports](../../invariants/verification/README.md) are delivered in [PR #165](https://github.com/flyingrobots/keep/pull/165), with explicit subject/depth evidence and typed non-success outcomes.
 

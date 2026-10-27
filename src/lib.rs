@@ -196,6 +196,11 @@ pub use adapters::{
     ObservedSegmentStage, RepositoryInitializationStorage, SegmentStageDurabilityEvent,
     SegmentStageObserver,
 };
+pub use adapters::{
+    PreservedRetentionManifest, RetainedCatalogPublicationError, RetainedCatalogPublicationReceipt,
+    RetainedCatalogPublicationStorage, RetainedClosureAdmission, RetentionEvidencePhase,
+    publish_retained_catalog_generation,
+};
 pub use adapters::{VerificationError, VerificationSource, verify_catalog_bytes, verify_segment};
 pub use blob::{
     BlobHashError, BlobHasher, BlobId, BlobLength, BlobReadError, ByteLength, ByteOffset,
