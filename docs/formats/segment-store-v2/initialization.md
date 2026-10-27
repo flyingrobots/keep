@@ -154,13 +154,14 @@ refuses with `WriterLock { source: Busy }`, or, if it acquires them after the
 first committed, with `AlreadyInitialized`. Both classifications run under the
 lock, so the second attempt never resumes the first one's phases.
 
-### Version 1
+### Roots of the retired version 1
 
-A root holding only an empty `writer.lock` is also a version-1 initialization
-prefix; it holds nothing of value and either protocol may continue it. Every
-later state holds `FORMAT.next` or `FORMAT`, which version-1 admission and
-version-1 recovery refuse. Version-1 admission is removed by a later unit of
-[#198](https://github.com/flyingrobots/keep/issues/198).
+Version-1 admission and initialization are deleted
+([#198](https://github.com/flyingrobots/keep/issues/198)). A former version-1
+root (`writer.lock`, `staging`, `segments`, `catalogs`, and `HEAD`) is not an
+initialization prefix, so `initialize` refuses it unchanged and every open
+path refuses it as `MissingFormatMarker`. A root holding only an empty
+`writer.lock` is the `Locked` prefix of this protocol and resumes.
 
 ## Process-death matrix
 

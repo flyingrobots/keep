@@ -14,22 +14,6 @@ const STAGING_NAME: &str = "staging";
 const SEGMENTS_NAME: &str = "segments";
 const CATALOGS_NAME: &str = "catalogs";
 const HEAD_NAME: &str = "HEAD";
-const INITIALIZATION_NAMES: [&str; 4] = [LOCK_NAME, STAGING_NAME, SEGMENTS_NAME, CATALOGS_NAME];
-const PUBLISHED_NAMES: [&str; 5] = [
-    LOCK_NAME,
-    STAGING_NAME,
-    SEGMENTS_NAME,
-    CATALOGS_NAME,
-    HEAD_NAME,
-];
-const VERSION_TWO_MARKERS: [&str; 6] = [
-    "reader.lock",
-    "FORMAT",
-    "FORMAT.next",
-    "retention",
-    "gc",
-    "recovery",
-];
 const READER_LOCK_NAME: &str = "reader.lock";
 const MARKER_NAME: &str = "FORMAT";
 const MARKER_STAGE_NAME: &str = "FORMAT.next";
@@ -66,42 +50,6 @@ const VERSION_TWO_STAGED_NAMES: [&str; 11] = [
     RECOVERY_NAME,
 ];
 
-pub(super) fn admit(directory: &Dir) -> io::Result<()> {
-    admit_optional_file(directory, LOCK_NAME)?;
-    admit_optional_directory(directory, STAGING_NAME)?;
-    admit_optional_directory(directory, SEGMENTS_NAME)?;
-    admit_optional_directory(directory, CATALOGS_NAME)?;
-    admit_membership(directory, &INITIALIZATION_NAMES)
-}
-
-pub(super) fn admit_published(directory: &Dir) -> io::Result<()> {
-    admit_required_file(directory, LOCK_NAME)?;
-    admit_required_directory(directory, STAGING_NAME)?;
-    admit_required_directory(directory, SEGMENTS_NAME)?;
-    admit_required_directory(directory, CATALOGS_NAME)?;
-    admit_required_file(directory, HEAD_NAME)?;
-    admit_membership(directory, &PUBLISHED_NAMES)
-}
-
-/// Refuses version-two state before version-one recovery touches a pool.
-///
-/// Recovery may open a store at any lawful point of its version-one lifecycle,
-/// including before first publication and with `head.next` retained, and the
-/// recovery inventory already classifies every unknown root entry as
-/// unexpected. What that classification cannot express is that a root is a
-/// version-two store: a format marker or its stage, a reader fence, or a
-/// `retention`, `gc`, or `recovery` directory means version-one recovery must
-/// refuse before pinning anything.
-pub(super) fn admit_recoverable(directory: &Dir) -> io::Result<()> {
-    for entry in directory.entries()? {
-        let name = entry?.file_name();
-        if is_canonical(&name, &VERSION_TWO_MARKERS) {
-            return Err(ambiguous_namespace());
-        }
-    }
-    Ok(())
-}
-
 /// Admits the exact committed version-2 root namespace.
 ///
 /// `writer.lock`, `staging`, `segments`, `catalogs`, the persistent reader
@@ -118,10 +66,9 @@ pub(super) fn admit_version_two(directory: &Dir) -> io::Result<()> {
 
 /// Admits a committed version-2 root that may retain a catalog `head.next`.
 ///
-/// `head.next` is the version-1 catalog-protocol head stage, which version 2
-/// preserves unchanged. A reader selects only `HEAD`, so a retained or
-/// in-flight `head.next` does not change its view, and catalog-stage recovery
-/// must be able to open the store that holds one. Writer admission keeps the
+/// `head.next` is the catalog-protocol head stage. A reader selects only
+/// `HEAD`, so a retained or in-flight `head.next` does not change its view, and
+/// catalog-stage recovery must be able to open the store that holds one. Writer admission keeps the
 /// exact law of [`admit_version_two`] and refuses it. Every other entry and
 /// every protocol directory is admitted exactly as [`admit_version_two`] does.
 pub(super) fn admit_version_two_with_catalog_stage(directory: &Dir) -> io::Result<()> {
@@ -172,10 +119,6 @@ fn admit_version_two_protocol_directories(directory: &Dir) -> io::Result<()> {
 
 fn admit_optional_file(directory: &Dir, name: &str) -> io::Result<()> {
     admit_optional_kind(directory, name, FilesystemEntryKind::File)
-}
-
-fn admit_optional_directory(directory: &Dir, name: &str) -> io::Result<()> {
-    admit_optional_kind(directory, name, FilesystemEntryKind::Directory)
 }
 
 fn admit_required_file(directory: &Dir, name: &str) -> io::Result<()> {

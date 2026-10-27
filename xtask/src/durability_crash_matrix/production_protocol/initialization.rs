@@ -1,30 +1,15 @@
-//! This module owns execution of the production initialization protocol.
+//! This module owns the crash children' initialized writer and read policies.
 
 use std::path::Path;
 
 use keep::{
     CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemVersionTwoAdmission,
-    FilesystemVersionTwoCatalogPublisher, LayoutEntryLimit, RepositoryInitializationStorage,
-    SegmentReadPolicy, SegmentRecordLimit, initialize_store,
+    FilesystemVersionTwoCatalogPublisher, LayoutEntryLimit, SegmentReadPolicy, SegmentRecordLimit,
 };
 
-use super::control::CrashControl;
-use super::initialization_storage::CrashInitializationStorage;
 use super::{DurabilityCrashMatrixError, verification};
 
 const RESTART_BYTE_LIMIT: u64 = 1_048_576;
-
-pub(super) fn run(
-    store_root: &Path,
-    control: &mut CrashControl,
-) -> Result<(), DurabilityCrashMatrixError> {
-    let storage = RepositoryInitializationStorage::admit_unchecked(store_root)
-        .map_err(|source| DurabilityCrashMatrixError::io("open initialization storage", source))?;
-    let mut storage = CrashInitializationStorage::new(storage, control);
-    initialize_store(&mut storage)
-        .map(|_receipt| ())
-        .map_err(|source| verification("execute production store initialization", source))
-}
 
 /// Initializes the single-format store and opens its writer, as production does.
 pub(super) fn publisher(

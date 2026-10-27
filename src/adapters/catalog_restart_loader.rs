@@ -9,7 +9,8 @@ use crate::CatalogLength;
 use super::{
     CatalogRestartArtifact, CatalogRestartError, CatalogRestartPhase, CatalogRestartPolicy,
     ChecksummedCatalog, ChecksummedPublicationHead, FilesystemCatalogSnapshot, catalog_restart_io,
-    catalog_restart_segments, physical_pool_name,
+    catalog_restart_segments, filesystem_initialization_namespace,
+    filesystem_version_two_admission, physical_pool_name,
 };
 
 const HEAD_NAME: &str = "HEAD";
@@ -17,11 +18,23 @@ const CATALOGS_NAME: &str = "catalogs";
 const SEGMENTS_NAME: &str = "segments";
 const HEAD_LENGTH: u64 = 128;
 
+/// Opens `root`, admits it as a committed store, and loads the `HEAD` snapshot.
+///
+/// Admission is the reader law: the exact namespace, which may hold an
+/// in-flight `head.next`, and the canonical `FORMAT` marker. A root without the
+/// marker refuses before any catalog artifact is opened.
 pub(super) fn load(
     root: &Path,
     policy: CatalogRestartPolicy,
 ) -> Result<FilesystemCatalogSnapshot, CatalogRestartError> {
     let directory = catalog_restart_io::open_root(root)?;
+    filesystem_version_two_admission::admit_root(
+        &directory,
+        filesystem_initialization_namespace::admit_version_two_with_catalog_stage,
+    )
+    .map_err(|source| CatalogRestartError::Admission {
+        source: Box::new(source),
+    })?;
     load_from_directory(&directory, HEAD_NAME, policy)
 }
 

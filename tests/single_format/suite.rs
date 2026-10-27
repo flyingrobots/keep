@@ -36,6 +36,8 @@ mod store_copy;
     reason = "these laws publish successors only through `publish`"
 )]
 mod successor_catalog;
+#[path = "unsupported_directory.rs"]
+mod unsupported_directory;
 #[path = "../version_two_catalog_writer/writer_fixture.rs"]
 #[allow(
     dead_code,

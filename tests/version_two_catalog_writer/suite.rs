@@ -14,6 +14,8 @@ mod durable_fixture;
 mod durable_sandbox;
 #[path = "finalization_laws.rs"]
 mod finalization_laws;
+#[path = "format_marker_laws.rs"]
+mod format_marker_laws;
 #[path = "forward_laws.rs"]
 mod forward_laws;
 #[path = "../support/populated_store.rs"]
@@ -30,7 +32,5 @@ mod refusal_laws;
 mod stage_recovery_laws;
 #[path = "../support/successor_catalog.rs"]
 mod successor_catalog;
-#[path = "version_laws.rs"]
-mod version_laws;
 #[path = "writer_fixture.rs"]
 mod writer_fixture;

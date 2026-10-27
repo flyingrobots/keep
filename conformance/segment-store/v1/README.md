@@ -39,7 +39,7 @@ oracles for issues #16 and #17.
   names the second record at checked offset 209.
 - `one-zero-bundle-head.hex` publishes the two-entry bundle catalog.
 - `transitions.tsv` assigns one stable crash-point identifier to every
-  version-1 durable transition and records its pre-state, interrupted-state
+  segment, catalog, head, and stage-discard transition and records its pre-state, interrupted-state
   classification, post-state, and recovery posture.
 - `ORIGIN.md` records construction and review provenance.
 
@@ -95,9 +95,13 @@ second binds unpublishable `head.next` unlink and root-directory
 synchronization. Publication unlink identifiers are not reused with false
 preconditions.
 
-`KEEP-CRASH-031`–`KEEP-CRASH-035` own crash-safe initialization. They bind
-writer-lock establishment, each canonical directory creation, and final
-root-directory synchronization to explicit partial-state recovery.
+`KEEP-CRASH-031`–`KEEP-CRASH-035` are retired: they named the version-1
+initializer, which was deleted when the single store format became the only
+format. A store is now created by direct initialization, whose rows are
+`KEEP-CRASH-081`–`KEEP-CRASH-091` in the
+[version-2 corpus](../v2/transitions.tsv). The
+[retirement ledger](../../../docs/formats/segment-store-v2/retired-identifiers.md)
+records their last evidence. No row reuses a retired identifier.
 
 The `interrupted_class` column names the weakest state that interruption may
 leave. Recovery must inspect exact bytes and may refine that state only after
@@ -105,8 +109,9 @@ complete validation. A `truncated-tail-or-reusable-stage` result, for example,
 means the observed prefix decides between those two typed outcomes; it does
 not authorize truncation.
 
-The issue #17 harness executes 105 canonical process-death cases from this
-table. It terminates an isolated writer process group, compares
+The crash harness executes 90 canonical process-death cases from this table,
+each on a store created by direct initialization and written by the
+single-format writer. It terminates an isolated writer process group, compares
 the exact restarted namespace and bytes against an independent expected-state
 model, and exercises the production recovery classifiers and Golden File
 Worldline restart loader. The harness proves application process-death

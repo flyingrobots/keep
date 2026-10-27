@@ -1,10 +1,11 @@
 //! This module owns public direct-initialization laws under the production profile.
 
 use std::fs;
+use std::io::ErrorKind;
 
 use keep::{
-    FilesystemNamespaceRefusal, FilesystemPlatformAdmission, FilesystemPlatformAdmissionError,
-    FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError, FilesystemVersionTwoAdmission,
+    FilesystemNamespaceRefusal, FilesystemPlatformAdmissionError, FilesystemRetentionSnapshot,
+    FilesystemRetentionSnapshotError, FilesystemVersionTwoAdmission,
     FilesystemVersionTwoCatalogPublisher, ReaderAttemptLimit, RetainedCatalogPublicationError,
     RetentionCurrentStateRefusal, RetentionEvidencePhase, VersionTwoInitializationError,
     VersionTwoInitializationPrefix, VersionTwoInitializationRefusal,
@@ -12,6 +13,7 @@ use keep::{
 
 use super::durable_sandbox::TestDirectory;
 use super::populated_store;
+use super::unsupported_directory::UnsupportedDirectory;
 use super::writer_fixture::{TestResult, first_blob, witness};
 
 #[test]
@@ -38,16 +40,17 @@ fn an_initialized_store_has_no_catalog_and_admits_writers_but_not_readers() -> T
 }
 
 #[test]
-fn version_one_admission_refuses_an_initialized_store() -> TestResult<()> {
-    let sandbox = TestDirectory::create("single-format-v1-refuses")?;
-    drop(FilesystemVersionTwoAdmission::initialize(sandbox.path())?);
+fn initialization_refuses_an_unsupported_platform_before_any_mutation() -> TestResult<()> {
+    let directory = UnsupportedDirectory::create()?;
 
-    let refused = FilesystemPlatformAdmission::reopen(sandbox.path());
+    let refused = FilesystemVersionTwoAdmission::initialize(directory.path());
 
-    assert!(matches!(
-        refused,
-        Err(FilesystemPlatformAdmissionError::Namespace { .. })
-    ));
+    let Err(VersionTwoInitializationError::Platform { source }) = refused else {
+        return Err("initialization admitted an unsupported platform".into());
+    };
+    assert_eq!(source.kind(), ErrorKind::Unsupported);
+    assert_eq!(fs::read_dir(directory.path())?.count(), 0);
+    directory.remove()?;
     Ok(())
 }
 

@@ -25,8 +25,9 @@ const CATALOGS_NAME: &str = "catalogs";
 /// A pinned, read-only view of the four recovery inventory namespaces.
 ///
 /// Opening performs no protocol mutation. The production constructor admits
-/// the same Linux ext4 profile as store initialization and pins all three child
-/// directories without following symbolic links.
+/// the same Linux ext4 profile, namespace, and `FORMAT` marker as recovery
+/// admission and pins all three child directories without following symbolic
+/// links.
 #[must_use]
 pub struct FilesystemRecoveryInventoryReader {
     root: Dir,
@@ -36,45 +37,10 @@ pub struct FilesystemRecoveryInventoryReader {
 }
 
 impl FilesystemRecoveryInventoryReader {
-    /// Opens one initialized store for read-only recovery inventory.
+    /// Opens one committed store for read-only stage inventory.
     ///
-    /// The call is synchronous, allocates no content-sized memory, and may
-    /// block on filesystem I/O.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`RecoveryInventoryError::Io`] with the exact namespace and
-    /// open phase for an unsupported platform or missing, replaced, linked, or
-    /// non-directory protocol namespace.
-    pub fn open(store_root: &Path) -> Result<Self, RecoveryInventoryError> {
-        let root = filesystem_platform_profile::open(store_root).map_err(|source| {
-            RecoveryInventoryError::io(
-                RecoveryNamespace::Root,
-                RecoveryInventoryOperation::OpenNamespace,
-                source,
-            )
-        })?;
-        Self::from_root(root)
-    }
-
-    #[cfg(test)]
-    pub(super) fn open_unchecked_for_tests(
-        store_root: &Path,
-    ) -> Result<Self, RecoveryInventoryError> {
-        let root = Dir::open_ambient_dir(store_root, ambient_authority()).map_err(|source| {
-            RecoveryInventoryError::io(
-                RecoveryNamespace::Root,
-                RecoveryInventoryOperation::OpenNamespace,
-                source,
-            )
-        })?;
-        Self::from_root(root)
-    }
-
-    /// Opens one committed version-two store for read-only stage inventory.
-    ///
-    /// Admission is the version-two recovery law: the production platform for
-    /// every version-two protocol directory, the exact namespace with an
+    /// Admission is the recovery law: the production platform for every
+    /// protocol directory, the exact namespace with an
     /// optional retained catalog `head.next`, and the canonical `FORMAT` marker.
     /// No writer lock is taken
     /// and no protocol state is mutated. Classify the resulting inventory with
@@ -85,7 +51,7 @@ impl FilesystemRecoveryInventoryReader {
     /// Returns [`RecoveryInventoryError::Io`] for the store root when platform
     /// or version-two admission refuses; the source carries the exact
     /// [`FilesystemPlatformAdmissionError`](crate::FilesystemPlatformAdmissionError).
-    /// A version-one root refuses because its marker and records are absent.
+    /// A root without the `FORMAT` marker refuses.
     pub fn open_version_two(store_root: &Path) -> Result<Self, RecoveryInventoryError> {
         let root = filesystem_platform_profile::open_version_two(store_root).map_err(root_error)?;
         admit_root(
@@ -115,11 +81,6 @@ impl FilesystemRecoveryInventoryReader {
             filesystem_initialization_namespace::admit_version_two_with_catalog_stage,
         )
         .map_err(|source| root_error(io::Error::new(io::ErrorKind::InvalidData, source)))?;
-        Self::pin(root)
-    }
-
-    pub(super) fn from_root(root: Dir) -> Result<Self, RecoveryInventoryError> {
-        filesystem_initialization_namespace::admit_recoverable(&root).map_err(root_error)?;
         Self::pin(root)
     }
 

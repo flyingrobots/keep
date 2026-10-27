@@ -16,14 +16,12 @@ use super::{
     filesystem_platform_profile,
 };
 
-/// Exclusive writer authority over a committed version-two root.
+/// Exclusive writer authority over a committed store root.
 ///
-/// This type is deliberately distinct from
-/// [`FilesystemPlatformAdmission`](super::FilesystemPlatformAdmission): a
-/// version-one publisher cannot consume it, so version-one catalog publication
-/// can never run against a version-two root and leave residue no adapter
-/// admits. Fields are private so only version-two admission and
-/// initialization can create values. The admitted `retention`, `roots`, and
+/// A value proves the production platform, the exact committed namespace, and
+/// the canonical `FORMAT` marker under the writer lock; every writer consumes
+/// one, so no writer runs against a root without the marker. Fields are
+/// private so only admission and initialization can create values. The admitted `retention`, `roots`, and
 /// `manifests` capabilities are retained, so the authority built from this
 /// value operates on the directories that passed admission and not on whatever
 /// those names resolve to later.

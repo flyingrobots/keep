@@ -107,9 +107,7 @@ pub use recovery_inventory_error::RecoveryInventoryError;
 pub use recovery_inventory_limit::{RecoveryInventoryLimit, RecoveryInventoryLimitError};
 pub use recovery_inventory_operation::RecoveryInventoryOperation;
 pub use recovery_inventory_storage::RecoveryInventoryStorage;
-pub use recovery_name_classification::{
-    classify_recovery_names, classify_version_two_recovery_names,
-};
+pub use recovery_name_classification::classify_version_two_recovery_names;
 pub use recovery_name_classification_error::RecoveryNameClassificationError;
 pub use recovery_name_manifest::{RecoveryNameManifest, RecoveryNamedEntry};
 pub use recovery_namespace::RecoveryNamespace;

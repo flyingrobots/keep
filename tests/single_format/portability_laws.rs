@@ -98,7 +98,10 @@ fn a_replaced_lock_or_protocol_directory_during_an_operation_still_refuses() -> 
             source: WriterLockAcquireError::Busy
         })
     ));
-    fs::rename(root.join("retention"), root.join("retention.moved"))?;
+    // The displaced directory leaves the root, so every path-based reader still
+    // admits it; only the publisher's pinned capability can notice.
+    let displaced = TestDirectory::create("portable-replaced-displaced")?;
+    fs::rename(root.join("retention"), displaced.path().join("retention"))?;
     fs::create_dir_all(root.join("retention/roots"))?;
     fs::create_dir(root.join("retention/manifests"))?;
     let mut publisher =

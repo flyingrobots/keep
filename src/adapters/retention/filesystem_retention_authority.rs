@@ -40,15 +40,15 @@ pub struct FilesystemRetentionPublicationAuthority {
 }
 
 impl FilesystemRetentionPublicationAuthority {
-    /// Pins one admitted version-two root for retention publication.
+    /// Pins one admitted root for retention publication.
     ///
-    /// Only [`FilesystemVersionTwoAdmission`] is accepted, so version-one
-    /// writer authority can never reach retention publication; the type
-    /// system refuses it:
+    /// Only [`FilesystemVersionTwoAdmission`] is accepted, so a bare writer
+    /// lock, which proves neither the namespace nor the `FORMAT` marker, can
+    /// never reach retention publication; the type system refuses it:
     ///
     /// ```compile_fail
-    /// fn publish(admission: keep::FilesystemPlatformAdmission) {
-    ///     let _ = keep::FilesystemRetentionPublicationAuthority::open(admission);
+    /// fn publish(lock: keep::FilesystemWriterLock) {
+    ///     let _ = keep::FilesystemRetentionPublicationAuthority::open(lock);
     /// }
     /// ```
     ///

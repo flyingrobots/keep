@@ -5,7 +5,7 @@ use std::io::{self, Write};
 use cap_std::fs::File;
 
 use super::filesystem_catalog_artifact;
-use super::filesystem_catalog_publisher::CURRENT_SEGMENT;
+use super::filesystem_catalog_stages::CURRENT_SEGMENT;
 use super::filesystem_catalog_stages::FilesystemCatalogStages;
 use super::filesystem_publisher_authority::FilesystemPublisherAuthority;
 use super::{SegmentStage, SegmentStageCreateError};

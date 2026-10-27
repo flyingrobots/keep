@@ -105,7 +105,6 @@ impl ExpectedStoreState {
             DurabilityCrashSequence::Catalog => sequence::catalog(case),
             DurabilityCrashSequence::Head => sequence::head(case),
             DurabilityCrashSequence::RecoveryDiscard => sequence::recovery(case),
-            DurabilityCrashSequence::Initialization => sequence::initialization(case),
             DurabilityCrashSequence::Retention
             | DurabilityCrashSequence::VersionTwoCatalog
             | DurabilityCrashSequence::VersionTwoInitialization => {

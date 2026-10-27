@@ -82,8 +82,6 @@ mod filesystem_catalog_catalog;
 mod filesystem_catalog_current;
 mod filesystem_catalog_head;
 mod filesystem_catalog_publication_error;
-mod filesystem_catalog_publisher;
-mod filesystem_catalog_publisher_storage;
 #[cfg(test)]
 mod filesystem_catalog_publisher_tests;
 mod filesystem_catalog_segment;
@@ -93,9 +91,7 @@ mod filesystem_catalog_storage;
 mod filesystem_exact_record;
 mod filesystem_format_marker;
 mod filesystem_initialization_namespace;
-mod filesystem_initialization_storage;
 mod filesystem_namespace_refusal;
-mod filesystem_platform_admission;
 mod filesystem_platform_admission_error;
 mod filesystem_platform_profile;
 mod filesystem_publisher_authority;
@@ -137,9 +133,6 @@ mod filesystem_recovery_stage_tests;
 mod filesystem_segment_stage;
 #[cfg(test)]
 mod filesystem_segment_stage_tests;
-mod filesystem_store_initializer;
-#[cfg(test)]
-mod filesystem_store_initializer_tests;
 #[cfg(test)]
 #[path = "../../tests/segment_filesystem_stage/sandbox.rs"]
 mod filesystem_test_sandbox;
@@ -182,8 +175,6 @@ mod publication_head_decode_error_display;
 mod publication_head_decoder;
 mod publication_head_encoder;
 mod recovery;
-#[cfg(feature = "repository-tasks")]
-mod repository_initialization_storage;
 mod retained_catalog_publication;
 mod retention;
 mod sealed_segment;
@@ -249,11 +240,6 @@ mod staged_segment;
 mod storage_profile_id_text;
 mod storage_profile_id_text_error;
 mod store_format;
-mod store_initialization;
-mod store_initialization_error;
-mod store_initialization_phase;
-mod store_initialization_receipt;
-mod store_initialization_storage;
 mod sync_capable_directory;
 #[cfg(test)]
 #[path = "../../tests/support/mod.rs"]

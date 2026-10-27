@@ -2,11 +2,10 @@
 
 use std::io::{self, Write};
 
-use super::filesystem_catalog_stages::FilesystemCatalogStages;
+use super::filesystem_catalog_stages::{self, FilesystemCatalogStages};
 use super::{
     CanonicalPublicationHead, CatalogRestartArtifact, CatalogSnapshot,
     FilesystemCatalogPublicationError, catalog_restart_loader, filesystem_catalog_artifact,
-    filesystem_catalog_publisher,
 };
 
 pub(super) fn create_stage(stages: &mut FilesystemCatalogStages) -> io::Result<()> {
@@ -15,7 +14,7 @@ pub(super) fn create_stage(stages: &mut FilesystemCatalogStages) -> io::Result<(
     }
     stages.head_stage = Some(filesystem_catalog_artifact::create_exclusive(
         &stages.root,
-        filesystem_catalog_publisher::NEXT_HEAD,
+        filesystem_catalog_stages::NEXT_HEAD,
     )?);
     Ok(())
 }
@@ -25,19 +24,6 @@ pub(super) fn write(
     head: &CanonicalPublicationHead,
 ) -> io::Result<()> {
     write_bytes(stages, head.encoded())
-}
-
-#[cfg(feature = "repository-tasks")]
-pub(super) fn write_prefix(
-    stages: &mut FilesystemCatalogStages,
-    head: &CanonicalPublicationHead,
-    prefix: usize,
-) -> io::Result<()> {
-    let bytes = head
-        .encoded()
-        .get(..prefix)
-        .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "head prefix exceeds bytes"))?;
-    write_bytes(stages, bytes)
 }
 
 fn write_bytes(stages: &mut FilesystemCatalogStages, bytes: &[u8]) -> io::Result<()> {
@@ -61,7 +47,7 @@ pub(super) fn verify_view(
     drop(stage);
     let observed = catalog_restart_loader::load_from_directory(
         &stages.root,
-        filesystem_catalog_publisher::NEXT_HEAD,
+        filesystem_catalog_stages::NEXT_HEAD,
         stages.policy,
     )
     .map_err(filesystem_catalog_artifact::invalid_data)?;
@@ -90,9 +76,9 @@ pub(super) fn verify_view(
 
 pub(super) fn replace(stages: &FilesystemCatalogStages) -> io::Result<()> {
     stages.root.rename(
-        filesystem_catalog_publisher::NEXT_HEAD,
+        filesystem_catalog_stages::NEXT_HEAD,
         &stages.root,
-        filesystem_catalog_publisher::HEAD,
+        filesystem_catalog_stages::HEAD,
     )
 }
 

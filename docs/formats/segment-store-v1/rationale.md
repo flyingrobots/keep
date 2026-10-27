@@ -151,17 +151,19 @@ availability.
 
 The writer lock proves process-scoped exclusion; it does not prove
 case-sensitive names, single-host ownership, hard-link and replacement
-semantics, or directory durability. `FilesystemCatalogPublisher::open`
-therefore consumes an opaque `FilesystemPlatformAdmission` that owns the
-acquired lock. The proof is bound to that exact root authority and cannot be
+semantics, or directory durability. The writer therefore consumes an opaque
+admission value, now `FilesystemVersionTwoAdmission`, that owns the acquired
+lock. The proof is bound to that exact root authority and cannot be
 constructed from metadata or caller assertion.
 
 The production proof producer admits one deliberately narrow profile: Linux,
 writable ext4, a store-root inode without ext4 casefolding, no symbolic link in
 the selected path, and successful file and directory synchronization calls.
-Initialization then refuses any noncanonical root entry before mutation,
-acquires and retains `writer.lock`, completes the three canonical directories
-in protocol order, and synchronizes the root before returning the proof.
+Initialization then refuses any root that is not an initialization prefix
+before mutation, acquires and retains `writer.lock`, and returns the proof only
+after its commit point; the version-1 initializer that created just the three
+catalog-protocol directories is retired
+([Initialization](../segment-store-v2/initialization.md)).
 
 The profile treats local single-host mounting as an environmental precondition,
 not as a fact derivable from `statfs`. A shared or multiply mounted ext4 volume

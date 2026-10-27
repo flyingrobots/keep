@@ -187,9 +187,10 @@ transitions as version 1. A copy would let the two formats drift in exactly
 the steps that decide durability. `FilesystemCatalogStages` therefore holds the
 pinned catalog directories, the writable stages, and the stage-authority
 token, and it is the only `CatalogPublicationStorage` implementation of those
-transitions. `FilesystemCatalogPublisher` owns one beside its version-1 writer
-lock. `FilesystemVersionTwoCatalogStages` wraps one under the version-2 writer
-lock and has no public constructor. Each forwards transitions unchanged.
+transitions. `FilesystemVersionTwoCatalogStages` wraps one under the writer lock
+and has no public constructor; it forwards transitions unchanged. (Until #198
+deleted version 1, the version-1 `FilesystemCatalogPublisher` owned a second
+one beside its own writer lock.)
 
 The version-2 stage type is reachable only through `catalog_stages`, so only
 the retained-closure gate can drive it. Repository tasks install an observer

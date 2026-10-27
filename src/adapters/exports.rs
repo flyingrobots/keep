@@ -37,9 +37,7 @@ pub use super::checksummed_publication_head::ChecksummedPublicationHead;
 pub use super::checksummed_segment_record::ChecksummedSegmentRecord;
 pub use super::closed_segment::ClosedSegment;
 pub use super::filesystem_catalog_publication_error::FilesystemCatalogPublicationError;
-pub use super::filesystem_catalog_publisher::FilesystemCatalogPublisher;
 pub use super::filesystem_catalog_snapshot::FilesystemCatalogSnapshot;
-pub use super::filesystem_platform_admission::FilesystemPlatformAdmission;
 pub use super::filesystem_platform_admission_error::FilesystemPlatformAdmissionError;
 pub use super::filesystem_recovery_inventory_reader::FilesystemRecoveryInventoryReader;
 pub use super::filesystem_recovery_next_head_finalization_open_error::FilesystemRecoveryNextHeadFinalizationOpenError;
@@ -76,8 +74,6 @@ pub use super::observed_segment_stage::ObservedSegmentStage;
 pub use super::opened_reusable_segment::OpenedReusableSegment;
 pub use super::publication_head_decode_error::PublicationHeadDecodeError;
 pub use super::recovery::*;
-#[cfg(feature = "repository-tasks")]
-pub use super::repository_initialization_storage::RepositoryInitializationStorage;
 pub use super::retained_catalog_publication::{
     PreservedRetentionManifest, RetainedCatalogPublicationError, RetainedCatalogPublicationReceipt,
     RetainedCatalogPublicationStorage, RetainedClosureAdmission, RetentionEvidencePhase,
@@ -112,11 +108,6 @@ pub use super::segment_write_phase::{SegmentDurabilityPhase, SegmentWritePhase};
 pub use super::staged_segment::StagedSegment;
 pub use super::storage_profile_id_text_error::StorageProfileIdParseError;
 pub use super::store_format::*;
-pub use super::store_initialization::initialize_store;
-pub use super::store_initialization_error::StoreInitializationError;
-pub use super::store_initialization_phase::StoreInitializationPhase;
-pub use super::store_initialization_receipt::StoreInitializationReceipt;
-pub use super::store_initialization_storage::StoreInitializationStorage;
 #[cfg(any(test, feature = "repository-tasks"))]
 pub use super::version_two_initialization::VersionTwoInitializationObserver;
 pub use super::version_two_initialization::{

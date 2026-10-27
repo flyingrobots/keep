@@ -12,9 +12,9 @@ use super::{
     filesystem_platform_profile,
 };
 
-/// Exclusive writer authority over a committed version-two root for stage recovery.
+/// Exclusive writer authority over a committed root for stage recovery.
 ///
-/// Admission is the version-two writer admission with one difference: the
+/// Admission is the writer admission with one difference: the
 /// root may retain the catalog `head.next` that an interrupted publication
 /// left. Every other law is the same: the production platform, the writer
 /// lock, the exact namespace with its protocol directories, and the canonical
@@ -22,9 +22,8 @@ use super::{
 /// are retained so recovery finalization verifies retained closures against
 /// the directories that passed admission.
 ///
-/// Only the version-two recovery constructors consume this value; version-one
-/// recovery keeps refusing a version-two root, and this admission refuses a
-/// version-one root because the marker is required.
+/// Every recovery tool that mutates a stage consumes this value, so recovery
+/// never runs against a root without the marker.
 #[must_use]
 pub struct FilesystemVersionTwoRecoveryAdmission {
     parts: AdmittedVersionTwoParts,

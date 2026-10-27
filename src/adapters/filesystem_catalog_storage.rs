@@ -1,8 +1,7 @@
 //! This module binds the shared filesystem catalog stages to the publication port.
 //!
-//! This is the one stage implementation. Each writer authority forwards its own
-//! port to it, so version-one and version-two publication execute identical
-//! transitions.
+//! This is the one stage implementation; the gated writer stages forward every
+//! transition to it.
 
 use std::io;
 

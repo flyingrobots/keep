@@ -2,11 +2,10 @@
 
 use std::io::{self, Write};
 
-use super::filesystem_catalog_stages::FilesystemCatalogStages;
+use super::filesystem_catalog_stages::{self, FilesystemCatalogStages};
 use super::{
     CanonicalCatalog, CatalogRestartArtifact, ChecksummedCatalog,
-    FilesystemCatalogPublicationError, filesystem_catalog_artifact, filesystem_catalog_publisher,
-    physical_pool_name,
+    FilesystemCatalogPublicationError, filesystem_catalog_artifact, physical_pool_name,
 };
 
 pub(super) fn create_stage(stages: &mut FilesystemCatalogStages) -> io::Result<()> {
@@ -15,7 +14,7 @@ pub(super) fn create_stage(stages: &mut FilesystemCatalogStages) -> io::Result<(
     }
     stages.catalog_stage = Some(filesystem_catalog_artifact::create_exclusive(
         &stages.staging,
-        filesystem_catalog_publisher::CURRENT_CATALOG,
+        filesystem_catalog_stages::CURRENT_CATALOG,
     )?);
     Ok(())
 }
@@ -25,18 +24,6 @@ pub(super) fn write(
     catalog: &CanonicalCatalog,
 ) -> io::Result<()> {
     write_bytes(stages, catalog.encoded())
-}
-
-#[cfg(feature = "repository-tasks")]
-pub(super) fn write_prefix(
-    stages: &mut FilesystemCatalogStages,
-    catalog: &CanonicalCatalog,
-    prefix: usize,
-) -> io::Result<()> {
-    let bytes = catalog.encoded().get(..prefix).ok_or_else(|| {
-        io::Error::new(io::ErrorKind::InvalidInput, "catalog prefix exceeds bytes")
-    })?;
-    write_bytes(stages, bytes)
 }
 
 fn write_bytes(stages: &mut FilesystemCatalogStages, bytes: &[u8]) -> io::Result<()> {
@@ -59,12 +46,12 @@ pub(super) fn link(
     drop(stage);
     filesystem_catalog_artifact::verify_catalog(
         &stages.staging,
-        filesystem_catalog_publisher::CURRENT_CATALOG,
+        filesystem_catalog_stages::CURRENT_CATALOG,
         catalog,
     )?;
     super::filesystem_exact_record::link_without_replacement(
         &stages.staging,
-        filesystem_catalog_publisher::CURRENT_CATALOG,
+        filesystem_catalog_stages::CURRENT_CATALOG,
         &stages.catalogs,
         &physical_pool_name::catalog(catalog.generation(), catalog.digest()),
     )
@@ -88,7 +75,7 @@ pub(super) fn synchronize_pool(stages: &FilesystemCatalogStages) -> io::Result<(
 pub(super) fn remove_stage(stages: &FilesystemCatalogStages) -> io::Result<()> {
     stages
         .staging
-        .remove_file(filesystem_catalog_publisher::CURRENT_CATALOG)
+        .remove_file(filesystem_catalog_stages::CURRENT_CATALOG)
 }
 
 pub(super) fn synchronize_staging(stages: &FilesystemCatalogStages) -> io::Result<()> {

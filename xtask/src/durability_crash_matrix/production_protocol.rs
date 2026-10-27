@@ -4,7 +4,6 @@ mod control;
 pub(super) mod crash_blob;
 pub(super) mod fixture;
 pub(super) mod initialization;
-mod initialization_storage;
 pub(super) mod populated_store;
 mod publication;
 mod recovery;
@@ -35,9 +34,6 @@ pub(super) fn run(
     let store_root = create_store_root(case_root)?;
     let mut control = CrashControl::new(case, readiness);
     match case.point().sequence() {
-        DurabilityCrashSequence::Initialization => {
-            initialization::run(&store_root, &mut control)?;
-        }
         DurabilityCrashSequence::Segment
         | DurabilityCrashSequence::Catalog
         | DurabilityCrashSequence::Head => {

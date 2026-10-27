@@ -5,8 +5,7 @@
 use xtask::{DurabilityCrashPoint, DurabilityCrashSequence};
 
 use DurabilityCrashSequence::{
-    Catalog, Head, Initialization, RecoveryDiscard, Retention, Segment, VersionTwoCatalog,
-    VersionTwoInitialization,
+    Catalog, Head, RecoveryDiscard, Retention, Segment, VersionTwoCatalog, VersionTwoInitialization,
 };
 
 const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
@@ -139,31 +138,6 @@ const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
         DurabilityCrashPoint::SynchronizeRootAfterRecovery,
         "KEEP-CRASH-030",
         RecoveryDiscard,
-    ),
-    (
-        DurabilityCrashPoint::OpenAndLockWriterFile,
-        "KEEP-CRASH-031",
-        Initialization,
-    ),
-    (
-        DurabilityCrashPoint::CreateStagingDirectory,
-        "KEEP-CRASH-032",
-        Initialization,
-    ),
-    (
-        DurabilityCrashPoint::CreateSegmentPoolDirectory,
-        "KEEP-CRASH-033",
-        Initialization,
-    ),
-    (
-        DurabilityCrashPoint::CreateCatalogPoolDirectory,
-        "KEEP-CRASH-034",
-        Initialization,
-    ),
-    (
-        DurabilityCrashPoint::SynchronizeRootAfterInitialization,
-        "KEEP-CRASH-035",
-        Initialization,
     ),
     (
         DurabilityCrashPoint::WriteRootStage,
@@ -370,7 +344,7 @@ fn initialization_directory_admission_runs_one_during_case_per_directory() {
 
 #[test]
 fn retired_crash_identifiers_are_never_reassigned() {
-    for ordinal in (53..=73).chain(78..=80) {
+    for ordinal in (31..=35).chain(53..=73).chain(78..=80) {
         let identifier = format!("KEEP-CRASH-{ordinal:03}");
         assert_eq!(
             DurabilityCrashPoint::from_identifier(&identifier),
@@ -403,7 +377,6 @@ fn crash_matrix_cli_admits_its_stable_sequence_names() {
         ("catalog", Catalog),
         ("head", Head),
         ("recovery-discard", RecoveryDiscard),
-        ("initialization", Initialization),
         ("retention", Retention),
         ("version-two-catalog", VersionTwoCatalog),
         ("version-two-initialization", VersionTwoInitialization),

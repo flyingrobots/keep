@@ -27,8 +27,8 @@ created by [direct initialization](initialization.md).
 `FilesystemVersionTwoAdmission::reopen` admits the root and acquires the writer
 lock. `FilesystemVersionTwoCatalogPublisher::open` consumes that admission. It
 pins the store root, `staging`, `segments`, `catalogs`, `retention`,
-`retention/roots`, and `retention/manifests`. Version-1 writer authority
-cannot open it.
+`retention/roots`, and `retention/manifests`. A bare writer lock cannot open
+it.
 
 The publisher implements only `RetainedCatalogPublicationStorage`, so it
 publishes only through `publish_retained_catalog_generation`. Its stage type,
@@ -138,19 +138,19 @@ the gate's exact refusal, and `head.next`, the pools, and `HEAD` stay
 unchanged. A retained retention stage, or a retention head absent while the
 pools hold artifacts, refuses in the same way.
 
-## Cross-version entry
+## Roots without the marker
 
-- Version-1 publisher admission, version-1 inventory, and every version-1
-  recovery tool keep refusing a version-2 root through
-  `admit_recoverable` or the exact published namespace.
-- Version-2 writer admission, version-2 recovery admission, and the version-2
-  inventory refuse a version-1 root because its marker, records, and reader
-  fence are absent.
-- `classify_recovery_names` refuses every version-2 root entry as unexpected.
-  `classify_version_two_recovery_names` refuses a version-1 inventory as
-  missing a required entry.
-- A segment stage sealed under one publisher's authority, version-1 or
-  version-2, refuses selection by any other publisher.
+- Writer admission, recovery admission, the recovery inventory, catalog
+  restart, and the retention and durable readers refuse a root without
+  `FORMAT` as `MissingFormatMarker`, even when every other entry and record of
+  a published, retained store is intact.
+- `classify_version_two_recovery_names` requires every root entry of an
+  initialized store and refuses a missing one as a missing required entry.
+- A segment stage sealed under one publisher's authority refuses selection by
+  any other publisher.
+
+Version-1 admission, the version-1 publisher, and the version-1 recovery tools
+are deleted (#198), so no cross-version entry remains.
 
 ## Process-death matrix
 

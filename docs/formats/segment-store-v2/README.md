@@ -119,4 +119,4 @@ Production durable ingestion ([#82](https://github.com/flyingrobots/keep/issues/
 
 The `KEEP-CRASH-036..052` initial-publication process-death sequence includes independent recovered-reader checks; its [evidence receipt](../../testing-evidence/retention-crash-reader-oracle.md) records the assertions, calibration, and scope.
 
-Version-1 admission still exists and refuses every version-2 store; version-2 admission refuses every version-1 store. No conversion between them exists. Version-1 admission is removed by a later unit of [#198](https://github.com/flyingrobots/keep/issues/198).
+Version-1 admission is deleted ([#198](https://github.com/flyingrobots/keep/issues/198)): this is the only format, and every open path refuses a root without its `FORMAT` marker. No conversion from version 1 exists.

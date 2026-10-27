@@ -2,11 +2,11 @@
 
 use std::io;
 
-use super::filesystem_catalog_stages::FilesystemCatalogStages;
+use super::filesystem_catalog_stages::{self, FilesystemCatalogStages};
 use super::{
     CatalogPublicationExpectation, CatalogPublicationReadiness, CatalogRestartError,
     CatalogRestartPhase, CatalogSnapshot, FilesystemCatalogPublicationError, SegmentPublication,
-    catalog_restart_loader, filesystem_catalog_artifact, filesystem_catalog_publisher,
+    catalog_restart_loader, filesystem_catalog_artifact,
 };
 
 pub(super) fn verify(
@@ -23,7 +23,7 @@ pub(super) fn verify(
     }
     let readiness = match catalog_restart_loader::load_from_directory(
         &stages.root,
-        filesystem_catalog_publisher::HEAD,
+        filesystem_catalog_stages::HEAD,
         stages.policy,
     ) {
         Ok(observed) => {
@@ -76,7 +76,7 @@ fn require_segment_authority(
 fn require_no_next_head(stages: &FilesystemCatalogStages) -> io::Result<()> {
     match stages
         .root
-        .symlink_metadata(filesystem_catalog_publisher::NEXT_HEAD)
+        .symlink_metadata(filesystem_catalog_stages::NEXT_HEAD)
     {
         Err(source) if source.kind() == io::ErrorKind::NotFound => Ok(()),
         Err(source) => Err(source),
@@ -89,7 +89,7 @@ fn require_no_next_head(stages: &FilesystemCatalogStages) -> io::Result<()> {
 fn require_no_catalog_stage(stages: &FilesystemCatalogStages) -> io::Result<()> {
     require_absent(
         &stages.staging,
-        filesystem_catalog_publisher::CURRENT_CATALOG,
+        filesystem_catalog_stages::CURRENT_CATALOG,
         FilesystemCatalogPublicationError::CatalogRecoveryRequired,
     )
 }
@@ -97,7 +97,7 @@ fn require_no_catalog_stage(stages: &FilesystemCatalogStages) -> io::Result<()> 
 fn require_no_segment_stage(stages: &FilesystemCatalogStages) -> io::Result<()> {
     require_absent(
         &stages.staging,
-        filesystem_catalog_publisher::CURRENT_SEGMENT,
+        filesystem_catalog_stages::CURRENT_SEGMENT,
         FilesystemCatalogPublicationError::SegmentRecoveryRequired,
     )
 }

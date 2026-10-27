@@ -1,8 +1,8 @@
 //! This module owns resource-versus-content classification at durable ingress.
 
 use crate::{
-    CatalogAdmissionError, CatalogRestartError, LayoutDecodeError, SegmentReadError,
-    SegmentRecordAdmissionError,
+    CatalogAdmissionError, CatalogRestartError, FilesystemPlatformAdmissionError,
+    LayoutDecodeError, SegmentReadError, SegmentRecordAdmissionError,
 };
 
 #[derive(Clone, Copy)]
@@ -88,6 +88,7 @@ pub(super) fn catalog_class(error: &CatalogRestartError) -> FailureClass {
         | CatalogRestartError::SegmentIndexAllocation { .. }
         | CatalogRestartError::RetainedSegmentBytes { .. }
         | CatalogRestartError::RetainedSegmentByteArithmetic { .. } => FailureClass::Operational,
+        CatalogRestartError::Admission { source } => store_admission_class(source),
         CatalogRestartError::Segment { source, .. } => segment_class(source),
         CatalogRestartError::CatalogAdmission { source } => admission_class(source),
         CatalogRestartError::NotRegular { .. }
@@ -113,5 +114,19 @@ fn admission_class(error: &CatalogAdmissionError) -> FailureClass {
         | CatalogAdmissionError::LocationNotTopLevel { .. }
         | CatalogAdmissionError::RecordIdentityMismatch { .. }
         | CatalogAdmissionError::RecordChecksumMismatch { .. } => FailureClass::Corrupt,
+    }
+}
+
+/// A namespace or marker refusal is demonstrated corruption; anything else
+/// that stopped admission is an operational failure.
+fn store_admission_class(error: &FilesystemPlatformAdmissionError) -> FailureClass {
+    match error {
+        FilesystemPlatformAdmissionError::Namespace { source }
+        | FilesystemPlatformAdmissionError::FormatMarker { source }
+            if source.kind() == std::io::ErrorKind::InvalidData =>
+        {
+            FailureClass::Corrupt
+        }
+        _ => FailureClass::Operational,
     }
 }

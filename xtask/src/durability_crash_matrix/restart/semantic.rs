@@ -6,15 +6,14 @@ use std::path::Path;
 
 use keep::{
     AdmittedSegment, CatalogRestartByteLimit, CatalogRestartPolicy, ChecksummedCatalog, ChunkId,
-    FilesystemCatalogSnapshot, FilesystemVersionTwoRecoveryAdmission, FilesystemWriterLock,
-    LayoutEntryLimit, RecoveryCatalogStage, RecoveryNextHeadStage, RecoverySegmentStage,
-    SegmentReadPolicy, SegmentRecordIdentity, SegmentRecordLimit, classify_recovery_catalog_stage,
+    FilesystemCatalogSnapshot, FilesystemVersionTwoRecoveryAdmission, LayoutEntryLimit,
+    RecoveryCatalogStage, RecoveryNextHeadStage, RecoverySegmentStage, SegmentReadPolicy,
+    SegmentRecordIdentity, SegmentRecordLimit, classify_recovery_catalog_stage,
     classify_recovery_next_head_stage, classify_recovery_segment_stage,
 };
 
 use super::expectation::{
-    ArtifactBytes, CATALOG_STAGE, ExpectedStoreState, FORMAT, HEAD, NEXT_HEAD, SEGMENT_STAGE,
-    WRITER_LOCK,
+    ArtifactBytes, CATALOG_STAGE, ExpectedStoreState, HEAD, NEXT_HEAD, SEGMENT_STAGE,
 };
 use crate::durability_crash_matrix::DurabilityCrashMatrixError;
 use crate::durability_crash_matrix::production_protocol::fixture::{
@@ -27,7 +26,7 @@ pub(super) fn verify(
     store_root: &Path,
     expected: &ExpectedStoreState,
 ) -> Result<(), DurabilityCrashMatrixError> {
-    verify_writer_release(store_root, expected)?;
+    verify_recovery_admission(store_root)?;
     verify_segment_stage(store_root, expected)?;
     verify_catalog_stage(store_root, expected)?;
     verify_next_head(store_root, expected)?;
@@ -35,29 +34,16 @@ pub(super) fn verify(
     verify_published_snapshot(store_root, expected)
 }
 
-/// Requires the dead writer's authority to be reacquirable.
+/// Requires the dead writer's authority to be reacquirable over a lawful state.
 ///
-/// A committed store must also pass single-format recovery admission: every
-/// residue a catalog-protocol crash leaves is a lawful state of the format.
-fn verify_writer_release(
-    store_root: &Path,
-    expected: &ExpectedStoreState,
-) -> Result<(), DurabilityCrashMatrixError> {
-    if expected.artifact(FORMAT).is_some() {
-        let admission =
-            FilesystemVersionTwoRecoveryAdmission::reopen_unchecked_for_repository_tasks(
-                store_root,
-            )
+/// Recovery admission takes the writer lock and admits the namespace and
+/// `FORMAT` marker: every residue a catalog-protocol crash leaves is a state
+/// of the format that recovery can open.
+fn verify_recovery_admission(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
+    let admission =
+        FilesystemVersionTwoRecoveryAdmission::reopen_unchecked_for_repository_tasks(store_root)
             .map_err(|source| verification("admit the crash residue for recovery", source))?;
-        drop(admission);
-        return Ok(());
-    }
-    if expected.artifact(WRITER_LOCK).is_none() {
-        return Ok(());
-    }
-    let lock = FilesystemWriterLock::try_acquire(store_root)
-        .map_err(|source| verification("reacquire writer lock after process death", source))?;
-    drop(lock);
+    drop(admission);
     Ok(())
 }
 

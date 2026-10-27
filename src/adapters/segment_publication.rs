@@ -29,7 +29,7 @@ impl<'selection, 'records> SegmentPublication<'selection, 'records> {
     /// Binds one storage-agnostic closed stage to its exact admitted bytes.
     ///
     /// This selection carries no filesystem-publisher authority. Use
-    /// [`crate::FilesystemCatalogPublisher::select_segment`] for filesystem
+    /// [`crate::FilesystemVersionTwoCatalogPublisher::select_segment`] for filesystem
     /// publication.
     ///
     /// # Errors

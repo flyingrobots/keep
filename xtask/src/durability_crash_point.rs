@@ -11,8 +11,6 @@ pub enum DurabilityCrashSequence {
     Head,
     /// Explicit discard of fingerprint-bound recovery evidence.
     RecoveryDiscard,
-    /// Writer-locked store initialization.
-    Initialization,
     /// Version-two retention publication, `KEEP-CRASH-036` through `052`.
     Retention,
     /// Direct version-two initialization and its recovery, `KEEP-CRASH-081`
@@ -25,12 +23,11 @@ pub enum DurabilityCrashSequence {
 
 impl DurabilityCrashSequence {
     /// Every sequence in stable protocol order.
-    pub const ALL: [Self; 8] = [
+    pub const ALL: [Self; 7] = [
         Self::Segment,
         Self::Catalog,
         Self::Head,
         Self::RecoveryDiscard,
-        Self::Initialization,
         Self::Retention,
         Self::VersionTwoCatalog,
         Self::VersionTwoInitialization,
@@ -44,7 +41,6 @@ impl DurabilityCrashSequence {
             Self::Catalog => "catalog",
             Self::Head => "head",
             Self::RecoveryDiscard => "recovery-discard",
-            Self::Initialization => "initialization",
             Self::Retention => "retention",
             Self::VersionTwoCatalog => "version-two-catalog",
             Self::VersionTwoInitialization => "version-two-initialization",
@@ -123,16 +119,6 @@ pub enum DurabilityCrashPoint {
     RemoveRecoveryHead,
     /// Synchronize the store root after recovery-head removal.
     SynchronizeRootAfterRecovery,
-    /// Create or reopen `writer.lock`, then acquire writer authority.
-    OpenAndLockWriterFile,
-    /// Create or verify the staging directory.
-    CreateStagingDirectory,
-    /// Create or verify the segment-pool directory.
-    CreateSegmentPoolDirectory,
-    /// Create or verify the catalog-pool directory.
-    CreateCatalogPoolDirectory,
-    /// Synchronize the store root after initialization.
-    SynchronizeRootAfterInitialization,
     /// Retention root stage write.
     WriteRootStage,
     /// Retention root stage synchronization.
@@ -204,7 +190,7 @@ pub enum DurabilityCrashPoint {
 
 impl DurabilityCrashPoint {
     /// Every crash boundary in stable protocol order.
-    pub const ALL: [Self; 67] = [
+    pub const ALL: [Self; 62] = [
         Self::CreateSegmentStage,
         Self::WriteSegmentHeader,
         Self::AppendSegmentRecord,
@@ -235,11 +221,6 @@ impl DurabilityCrashPoint {
         Self::SynchronizeStagingAfterRecovery,
         Self::RemoveRecoveryHead,
         Self::SynchronizeRootAfterRecovery,
-        Self::OpenAndLockWriterFile,
-        Self::CreateStagingDirectory,
-        Self::CreateSegmentPoolDirectory,
-        Self::CreateCatalogPoolDirectory,
-        Self::SynchronizeRootAfterInitialization,
         Self::WriteRootStage,
         Self::SynchronizeRootStage,
         Self::AdmitRootNamespace,
@@ -320,11 +301,6 @@ impl DurabilityCrashPoint {
             | Self::SynchronizeStagingAfterRecovery
             | Self::RemoveRecoveryHead
             | Self::SynchronizeRootAfterRecovery => DurabilityCrashSequence::RecoveryDiscard,
-            Self::OpenAndLockWriterFile
-            | Self::CreateStagingDirectory
-            | Self::CreateSegmentPoolDirectory
-            | Self::CreateCatalogPoolDirectory
-            | Self::SynchronizeRootAfterInitialization => DurabilityCrashSequence::Initialization,
             Self::WriteRootStage
             | Self::SynchronizeRootStage
             | Self::AdmitRootNamespace

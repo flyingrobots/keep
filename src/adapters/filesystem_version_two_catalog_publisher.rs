@@ -52,14 +52,15 @@ pub struct FilesystemVersionTwoCatalogPublisher {
 }
 
 impl FilesystemVersionTwoCatalogPublisher {
-    /// Pins the catalog and retention directories under version-two writer authority.
+    /// Pins the catalog and retention directories under admitted writer authority.
     ///
-    /// Only [`FilesystemVersionTwoAdmission`] is accepted, so a version-one
-    /// root or version-one writer authority cannot reach this publisher:
+    /// Only [`FilesystemVersionTwoAdmission`] is accepted, so a bare writer
+    /// lock, which proves neither the namespace nor the `FORMAT` marker, cannot
+    /// reach this publisher:
     ///
     /// ```compile_fail
-    /// fn open(admission: keep::FilesystemPlatformAdmission, policy: keep::CatalogRestartPolicy) {
-    ///     let _ = keep::FilesystemVersionTwoCatalogPublisher::open(admission, policy);
+    /// fn open(lock: keep::FilesystemWriterLock, policy: keep::CatalogRestartPolicy) {
+    ///     let _ = keep::FilesystemVersionTwoCatalogPublisher::open(lock, policy);
     /// }
     /// ```
     ///
@@ -105,7 +106,7 @@ impl FilesystemVersionTwoCatalogPublisher {
     /// # Errors
     ///
     /// Returns [`SegmentPublicationError::PublisherAuthority`] when `sealed`
-    /// was created by another publisher, including a version-one publisher.
+    /// was created by another publisher.
     /// Other variants preserve exact closed-stage to admitted-segment
     /// disagreements.
     pub fn select_segment<'selection, 'records>(

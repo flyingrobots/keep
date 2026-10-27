@@ -40,8 +40,8 @@ pub type CatalogPublicationObserver =
 
 /// Version-two catalog protocol transitions guarded by retained-closure admission.
 ///
-/// Every transition is the shared version-one stage implementation, executed
-/// under the version-two publisher's writer authority. Fields are private and
+/// Every transition is the shared stage implementation, executed under the
+/// publisher's writer authority. Fields are private and
 /// no constructor is public.
 #[must_use]
 pub struct FilesystemVersionTwoCatalogStages {

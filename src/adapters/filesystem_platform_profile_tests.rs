@@ -1,8 +1,8 @@
 //! Linux filesystem platform-profile laws.
 
 use super::{
-    LinuxDirectoryProperties, PROTOCOL_DIRECTORIES, VERSION_TWO_PROTOCOL_DIRECTORIES,
-    admit_linux_child_properties, admit_linux_properties,
+    LinuxDirectoryProperties, VERSION_TWO_PROTOCOL_DIRECTORIES, admit_linux_child_properties,
+    admit_linux_properties,
 };
 use rustix::fs::{NFS_SUPER_MAGIC, StatVfsMountFlags};
 
@@ -31,7 +31,6 @@ fn only_writable_case_sensitive_ext4_is_admitted() {
 
 #[test]
 fn every_protocol_child_must_share_the_root_filesystem_and_mount() {
-    assert_eq!(PROTOCOL_DIRECTORIES, ["staging", "segments", "catalogs"]);
     let root = properties(8, 1, 41);
     let mut casefolded = root;
     casefolded.inode_flags = EXT4_CASEFOLD_FLAG;
@@ -74,7 +73,7 @@ const fn properties(
 }
 
 #[test]
-fn version_two_admission_covers_every_protocol_directory() {
+fn admission_covers_every_protocol_directory() {
     assert_eq!(
         VERSION_TWO_PROTOCOL_DIRECTORIES,
         [
@@ -89,7 +88,4 @@ fn version_two_admission_covers_every_protocol_directory() {
             "recovery/dispositions",
         ]
     );
-    for name in PROTOCOL_DIRECTORIES {
-        assert!(VERSION_TWO_PROTOCOL_DIRECTORIES.contains(&name));
-    }
 }

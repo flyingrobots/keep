@@ -11,8 +11,10 @@ pub(super) struct UnsupportedDirectory {
 
 impl UnsupportedDirectory {
     pub(super) fn create() -> io::Result<Self> {
-        let path =
-            Path::new("/dev/shm").join(format!("keep-catalog-platform-{}", std::process::id()));
+        let path = Path::new("/dev/shm").join(format!(
+            "keep-single-format-platform-{}",
+            std::process::id()
+        ));
         fs::create_dir(&path)?;
         Ok(Self { path })
     }

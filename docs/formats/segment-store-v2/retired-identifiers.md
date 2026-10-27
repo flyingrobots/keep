@@ -101,3 +101,78 @@ recovery and are not assigned here.
 
 PR [#191](https://github.com/flyingrobots/keep/pull/191) proposed typed
 refusals at the migration storage boundaries; those parts are moot.
+
+## Version-1 admission (ADR-0010 step 5, #198)
+
+The version-1 initializer, `FilesystemPlatformAdmission`, the version-1
+`FilesystemCatalogPublisher`, the version-1 recovery openers, and
+`classify_recovery_names` were deleted once the single format could do
+everything they did. A root without the `FORMAT` marker now refuses at every
+open path (`KEEP-INITIALIZATION-003`).
+
+### Rule for crash identifiers
+
+A crash identifier names a boundary in code, not a store format. A row whose
+boundary is still executed unchanged by the single-format writer keeps its
+identifier and moves: `KEEP-CRASH-001` to `-030` name the segment, catalog,
+head, and stage-discard transitions of the shared catalog stages, which the
+single-format writer runs, so they keep their identifiers and their crash
+children now run on stores created by direct initialization. A row whose
+boundary no longer exists is retired here and never reused.
+
+### Requirements
+
+<!-- markdownlint-disable MD013 -->
+
+| ID | Obligation | Last evidence on `main` | Disposition |
+| --- | --- | --- | --- |
+| `KEEP-STORE-020` | Initialization is writer-locked, idempotent, recoverable from every partial canonical namespace set, and admitted only after root synchronization | `docs/formats/segment-store-v1/requirements.md` and rows `KEEP-CRASH-031`–`035` at `e03c2a1` | Moved to `KEEP-INITIALIZATION-001`, `-002`, and `-004` |
+| `KEEP-RECOVERY-002` | Initialization admits the platform, locks the writer file, and admits the three directories in order with exact failure phases | `tests/store_initialization.rs` at `c60def9` | Moved to `KEEP-INITIALIZATION-001` and `-002`; every initialization phase keeps its typed failure |
+| `KEEP-RECOVERY-003` | Production initialization and published-store reopen admit only the Linux ext4 profile for every protocol directory and the exact version-1 namespace | `src/adapters/filesystem_store_initializer_tests.rs` at `ecf4f7e`; `tests/store_initialization.rs` at `c60def9` | The profile obligation moved to single-format admission: `filesystem_platform_profile` admits every protocol directory, and `initialization_refuses_an_unsupported_platform_before_any_mutation` in `tests/single_format.rs` refuses tmpfs before mutation. The version-1 namespace disappeared |
+| `KEEP-RETENTION-014` | Version-1 entry points refuse version-2 roots and version-2 entry points refuse version-1 roots | Never on `main`; introduced and retired within #198 (`tests/version_two_catalog_writer.rs` version laws at `e3930f0`) | The version-1 half disappeared. The version-2 half moved to `KEEP-INITIALIZATION-003`, evidenced by `every_open_path_refuses_a_root_without_the_format_marker` |
+
+<!-- markdownlint-enable MD013 -->
+
+`KEEP-MIGRATION-001` and `-008` above deferred their version-2 refusal to
+`KEEP-RETENTION-014` until this step; that obligation now lives in
+`KEEP-INITIALIZATION-003`. `KEEP-CATALOG-007` keeps its identifier: lock
+ownership alone still cannot construct a publisher, now because only
+single-format admission produces publisher authority.
+
+### Crash identifiers
+
+`KEEP-CRASH-031` to `-035` named the version-1 initializer. Their last
+evidence is the initialization crash child at `1fc1ad0` and `f7956c0`, and the
+transition ledger at `e03c2a1`.
+
+<!-- markdownlint-disable MD013 -->
+
+| ID | Version-1 initialization boundary | Disposition |
+| --- | --- | --- |
+| `KEEP-CRASH-031` | create or reopen `writer.lock` and lock it | Moved to `KEEP-CRASH-081`, which also synchronizes the lock and the root |
+| `KEEP-CRASH-032` | create `staging` | Moved to `KEEP-CRASH-086` (one occurrence per directory) |
+| `KEEP-CRASH-033` | create `segments` | Moved to `KEEP-CRASH-086` |
+| `KEEP-CRASH-034` | create `catalogs` | Moved to `KEEP-CRASH-086` |
+| `KEEP-CRASH-035` | synchronize the root after initialization | Moved to `KEEP-CRASH-088`, the commit point; each directory now also synchronizes its parent inside `KEEP-CRASH-086` |
+
+<!-- markdownlint-enable MD013 -->
+
+`KEEP-CRASH-074` to `-077` stay: they are the gated writer's second-generation
+publication with a retained root, a scenario distinct from the first
+publication that `KEEP-CRASH-009`, `-013`, `-024`, and `-025` cover.
+
+### Code and evidence removed
+
+- `src/adapters/filesystem_platform_admission.rs`,
+  `filesystem_catalog_publisher.rs`, `filesystem_catalog_publisher_storage.rs`,
+  `filesystem_store_initializer.rs`, `filesystem_initialization_storage.rs`,
+  `repository_initialization_storage.rs`, and `store_initialization*.rs`; the
+  version-1 namespace laws; the version-1 recovery openers; and the
+  `Platform` and `WriterLock` variants of the four recovery open errors,
+  which no remaining constructor can produce.
+- `tests/store_initialization.rs`, `tests/catalog_platform_admission.rs`, the
+  version-1 initializer unit laws, and the laws whose subject was the boundary
+  between the two formats (`filesystem_recovery_admission_tests.rs` and the
+  cross-version laws, replaced by `format_marker_laws.rs`).
+- The `initialization` crash sequence, its child and storage decorator, and
+  transition rows `KEEP-CRASH-031`–`035`.

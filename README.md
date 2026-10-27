@@ -94,7 +94,7 @@ Incomplete retention stages are preserved and block publication pending explicit
 
 Complete orphans remain recovery-protected until explicit disposition lands with garbage collection (#21).
 
-Version-1 admission still exists and refuses every version-2 store; no conversion exists, and a later unit of [#198](https://github.com/flyingrobots/keep/issues/198) deletes version 1.
+Version-1 admission is deleted ([#198](https://github.com/flyingrobots/keep/issues/198)); every open path refuses a root without the `FORMAT` marker, and no conversion from version 1 exists.
 
 | Gap | Tracked |
 | --- | --- |

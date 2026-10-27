@@ -17,8 +17,6 @@ mod closure_verifier;
 mod durable_read_law_tests;
 #[cfg(test)]
 mod durable_view_law_tests;
-#[cfg(test)]
-mod filesystem_recovery_admission_tests;
 mod filesystem_retained_evidence;
 #[cfg(test)]
 mod filesystem_retention_anchor_order_prefix_tests;

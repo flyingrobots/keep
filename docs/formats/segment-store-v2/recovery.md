@@ -39,9 +39,8 @@ data-dependent but canonically named. Every other root or protocol-directory
 entry is an unknown entry and unrecoverable ambiguity. Operations are
 capability-relative and never follow links.
 
-Version-1 admission refuses every root that holds `FORMAT`, `FORMAT.next`,
-`reader.lock`, `retention`, `gc`, or `recovery`. Version-1 recovery refuses
-the same entries before it pins a pool.
+Version-1 admission and recovery, which refused every root holding these
+entries, are deleted (#198); every open path now requires `FORMAT`.
 
 ## Format marker
 

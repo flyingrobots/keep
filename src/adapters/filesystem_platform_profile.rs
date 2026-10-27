@@ -5,8 +5,6 @@ use std::path::Path;
 
 use cap_std::fs::Dir;
 
-#[cfg(target_os = "linux")]
-const PROTOCOL_DIRECTORIES: [&str; 3] = ["staging", "segments", "catalogs"];
 /// Every version-two protocol directory, including nested immutable pools.
 ///
 /// A version-two root receives writer authority only when each of these shares
@@ -36,43 +34,11 @@ struct LinuxDirectoryProperties {
     mount_id: u64,
 }
 
-#[cfg(target_os = "linux")]
-pub(super) fn open(store_root: &Path) -> io::Result<Dir> {
-    use std::fs::File;
-
-    use rustix::fs::{CWD, Mode, OFlags, ResolveFlags, openat2};
-
-    let descriptor = openat2(
-        CWD,
-        store_root,
-        OFlags::RDONLY | OFlags::DIRECTORY | OFlags::CLOEXEC,
-        Mode::empty(),
-        ResolveFlags::NO_MAGICLINKS | ResolveFlags::NO_SYMLINKS,
-    )?;
-    let directory = Dir::from_std_file(File::from(descriptor));
-    admit_linux_profile(&directory, &PROTOCOL_DIRECTORIES)?;
-    Ok(directory)
-}
-
-/// Applies the production profile to the root already pinned by writer authority.
-#[cfg(all(target_os = "linux", feature = "repository-tasks"))]
-pub(super) fn admit_locked_root(directory: &Dir) -> io::Result<()> {
-    admit_linux_profile(directory, &PROTOCOL_DIRECTORIES)
-}
-
-#[cfg(all(not(target_os = "linux"), feature = "repository-tasks"))]
-pub(super) fn admit_locked_root(_directory: &Dir) -> io::Result<()> {
-    Err(io::Error::new(
-        io::ErrorKind::Unsupported,
-        "catalog publication requires the admitted Linux ext4 profile",
-    ))
-}
-
 /// Opens one version-two store root under the admitted Linux profile.
 ///
-/// Identical to [`open`], but every version-two protocol directory that
-/// exists must satisfy the same filesystem, mount, and inode-flag laws as the
-/// root; absence is left to namespace admission.
+/// The root is opened without following links, and every protocol directory
+/// that exists must satisfy the same filesystem, mount, and inode-flag laws as
+/// the root; absence is left to namespace admission.
 #[cfg(target_os = "linux")]
 pub(super) fn open_version_two(store_root: &Path) -> io::Result<Dir> {
     use std::fs::File;
@@ -89,14 +55,6 @@ pub(super) fn open_version_two(store_root: &Path) -> io::Result<Dir> {
     let directory = Dir::from_std_file(File::from(descriptor));
     admit_linux_profile(&directory, &VERSION_TWO_PROTOCOL_DIRECTORIES)?;
     Ok(directory)
-}
-
-#[cfg(not(target_os = "linux"))]
-pub(super) fn open(_store_root: &Path) -> io::Result<Dir> {
-    Err(io::Error::new(
-        io::ErrorKind::Unsupported,
-        "filesystem initialization currently requires the admitted Linux ext4 profile",
-    ))
 }
 
 #[cfg(not(target_os = "linux"))]

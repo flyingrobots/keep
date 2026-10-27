@@ -1,34 +1,27 @@
-//! Version-two writer authority is a distinct type that version-one publishers cannot consume.
+//! Writer authority over a store comes only from single-format admission.
 
 const RETENTION_AUTHORITY: &str =
     include_str!("../src/adapters/retention/filesystem_retention_authority.rs");
-const CATALOG_PUBLISHER: &str = include_str!("../src/adapters/filesystem_catalog_publisher.rs");
-const STORE_INITIALIZER: &str = include_str!("../src/adapters/filesystem_store_initializer.rs");
+const CATALOG_PUBLISHER: &str =
+    include_str!("../src/adapters/filesystem_version_two_catalog_publisher.rs");
 const VERSION_TWO_ADMISSION: &str =
     include_str!("../src/adapters/filesystem_version_two_admission.rs");
 const ADMISSION_ERROR: &str =
     include_str!("../src/adapters/filesystem_platform_admission_error.rs");
 
-/// The type-level proof is the `compile_fail` doctest on
-/// `FilesystemRetentionPublicationAuthority::open`, which refuses a
-/// `FilesystemPlatformAdmission` argument at compile time. These markers only
-/// keep each file on its side of the boundary without pinning a signature.
+/// The type-level proofs are the `compile_fail` doctests on
+/// `FilesystemRetentionPublicationAuthority::open` and
+/// `FilesystemVersionTwoCatalogPublisher::open`, which refuse a bare
+/// `FilesystemWriterLock`. These markers only keep each writer on the
+/// admission side of the boundary without pinning a signature.
 #[test]
-fn retention_publication_consumes_only_version_two_authority() {
+fn every_writer_consumes_admitted_authority() {
     assert!(RETENTION_AUTHORITY.contains("FilesystemVersionTwoAdmission"));
-    assert!(!RETENTION_AUTHORITY.contains("admission: FilesystemPlatformAdmission"));
+    assert!(CATALOG_PUBLISHER.contains("admission: FilesystemVersionTwoAdmission"));
 }
 
 #[test]
-fn version_one_publishers_consume_only_version_one_authority() {
-    assert!(CATALOG_PUBLISHER.contains("FilesystemPlatformAdmission"));
-    assert!(!CATALOG_PUBLISHER.contains("FilesystemVersionTwoAdmission"));
-}
-
-#[test]
-fn version_two_reopen_produces_only_version_two_authority() {
-    assert!(!STORE_INITIALIZER.contains("fn reopen_version_two"));
-    assert!(!STORE_INITIALIZER.contains("FilesystemVersionTwoAdmission"));
+fn reopen_admits_the_marker_under_the_production_profile() {
     assert!(VERSION_TWO_ADMISSION.contains("pub struct FilesystemVersionTwoAdmission"));
     assert!(VERSION_TWO_ADMISSION.contains("pub fn reopen(store_root: &Path)"));
     assert!(VERSION_TWO_ADMISSION.contains("pub fn initialize("));

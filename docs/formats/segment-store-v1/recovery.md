@@ -5,7 +5,7 @@ the minimum filesystem semantics for `keep.segment-store/v1`.
 
 ## Recovery
 
-Opening is read-only. It returns an admitted reader snapshot, an uninitialized
+Opening is read-only. It returns an admitted reader snapshot, an unpublished
 state, a typed recovery inventory and plan, or a refusal. It never changes
 durable bytes.
 
@@ -29,20 +29,23 @@ the configured and protocol ceilings, count stability, duplicate refusal, and
 namespace-plus-raw-byte ordering. `FilesystemRecoveryInventoryReader` pins the
 root and three no-follow child directories, bounds each scan by the remaining
 global budget, preserves raw Linux name bytes, and verifies child-directory
-identity before and after inventory. `classify_recovery_names` requires the
-four initialized root entries, types each fixed name and immutable-pool
-coordinate, and refuses an unknown or conflicting name without artifact I/O.
+identity before and after inventory. `classify_version_two_recovery_names`
+requires every root entry of an initialized store, types each fixed name and
+immutable-pool coordinate, and refuses an unknown or conflicting name without
+artifact I/O.
 `fingerprint_recovery_stage` then reads a fixed stage through a zero-allocation
 bounded stream, refuses metadata or observed bytes above the name-selected
 maximum, and returns its exact observed length and
 `KEEP:RECOVERY:STAGE\0` fingerprint.
 
 New stores obtain writer authority through
-`FilesystemPlatformAdmission::initialize`. A stable published store reacquires
-authority through `FilesystemPlatformAdmission::reopen`, which performs no
+`FilesystemVersionTwoAdmission::initialize`. A committed store reacquires
+authority through `FilesystemVersionTwoAdmission::reopen`, and every recovery
+tool through `FilesystemVersionTwoRecoveryAdmission::reopen`; each performs no
 protocol mutation, admits the production platform, acquires the existing
-writer lock, and requires exactly `writer.lock`, `staging`, `segments`,
-`catalogs`, and a regular `HEAD` in the root. Missing or additional root
+writer lock, and requires the exact committed namespace and the `FORMAT`
+marker, with `HEAD` optional and, for recovery only, a retained `head.next`.
+A root without `FORMAT` refuses at every open path. Missing or additional root
 evidence remains a typed namespace refusal; content-level head, catalog, and
 segment verification stays at the publisher and restart boundaries.
 
@@ -127,14 +130,15 @@ Run the repository-owned matrix:
 cargo xtask durability-crash-matrix
 ```
 
-The 105 version-one cases are a subset of the complete command, which also
-executes version-two cases. The version-one subset executes the
-three ordered positions for each stable `KEEP-CRASH-001`–`KEEP-CRASH-035`
-point. Each version-one case owns a
+The 90 catalog-protocol cases are a subset of the complete command, which also
+executes the retention, writer, and initialization cases. The catalog-protocol
+subset executes the three ordered positions for each stable
+`KEEP-CRASH-001`–`KEEP-CRASH-030` point. Each case owns a
 fresh filesystem store and an isolated child process group. The child retains
 the writer lock and any open staged artifact while it executes the production
-initialization, segment-writing, catalog-publication, or recovery-discard
-protocol. A fault-injecting port decorator sends one readiness byte at the
+segment-writing, catalog-publication, or recovery-discard protocol on a store
+it created by direct initialization. An observer installed on the writer's
+own segment stage or catalog transitions sends one readiness byte at the
 selected semantic boundary and waits on the retained connection. The parent
 keeps the accepted socket open, sends `SIGKILL` to the complete process group,
 reaps the child, and only then begins restart inspection. A ten-second

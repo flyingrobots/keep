@@ -2,10 +2,8 @@
 
 use std::io;
 
-use super::filesystem_catalog_stages::FilesystemCatalogStages;
-use super::{
-    AdmittedSegment, filesystem_catalog_artifact, filesystem_catalog_publisher, physical_pool_name,
-};
+use super::filesystem_catalog_stages::{self, FilesystemCatalogStages};
+use super::{AdmittedSegment, filesystem_catalog_artifact, physical_pool_name};
 
 pub(super) fn link(
     stages: &FilesystemCatalogStages,
@@ -13,13 +11,13 @@ pub(super) fn link(
 ) -> io::Result<()> {
     filesystem_catalog_artifact::verify_segment(
         &stages.staging,
-        filesystem_catalog_publisher::CURRENT_SEGMENT,
+        filesystem_catalog_stages::CURRENT_SEGMENT,
         segment,
         stages.policy.segment_read(),
     )?;
     super::filesystem_exact_record::link_without_replacement(
         &stages.staging,
-        filesystem_catalog_publisher::CURRENT_SEGMENT,
+        filesystem_catalog_stages::CURRENT_SEGMENT,
         &stages.segments,
         &physical_pool_name::segment(segment.digest()),
     )
@@ -44,7 +42,7 @@ pub(super) fn synchronize_pool(stages: &FilesystemCatalogStages) -> io::Result<(
 pub(super) fn remove_stage(stages: &FilesystemCatalogStages) -> io::Result<()> {
     stages
         .staging
-        .remove_file(filesystem_catalog_publisher::CURRENT_SEGMENT)
+        .remove_file(filesystem_catalog_stages::CURRENT_SEGMENT)
 }
 
 pub(super) fn synchronize_staging(stages: &FilesystemCatalogStages) -> io::Result<()> {

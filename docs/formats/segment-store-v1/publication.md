@@ -51,35 +51,20 @@ publication use generation 1 with an all-zero predecessor digest. A missing
 head in a root containing protocol artifacts requires recovery; it is never
 silently interpreted as an empty store.
 
-## Crash-safe initialization
+## Store initialization
 
-Before mutation, the initializer admits the opened root only when the
-capability probe passes and its protocol namespace is either empty or a
-partial canonical initialization set containing only `writer.lock`,
-`staging`, `segments`, and `catalogs`. Every existing name must have the
-required regular-file or directory kind and must pass no-follow admission.
-Any artifact, unknown name, wrong kind, or alias is unrecoverable ambiguity.
+A store is created only by direct initialization of the single store format,
+specified in [Initialization](../segment-store-v2/initialization.md) and
+crash-tested at `KEEP-CRASH-081`–`KEEP-CRASH-091`. It commits `writer.lock`,
+the catalog-protocol directories `staging`, `segments`, and `catalogs`, and the
+format's marker, reader fence, and retention, GC, and recovery directories
+before any publication. An initialized store has no `HEAD` until its first
+publication.
 
-The initializer creates `writer.lock` exclusively when absent, or reopens the
-existing regular file without following links (`KEEP-CRASH-031`). Its contents
-prove nothing. The initializer acquires the exclusive advisory lock before
-creating any directory. Under that lock, it creates each absent directory
-exclusively in this order:
-
-1. `staging` (`KEEP-CRASH-032`);
-2. `segments` (`KEEP-CRASH-033`); and
-3. `catalogs` (`KEEP-CRASH-034`).
-
-An exact existing directory is idempotent success for its creation step. Each
-retry reopens and verifies every existing canonical name. A crash before the
-final synchronization leaves a recoverable partial initialization set; the
-next initializer reacquires the lock, verifies the observed subset, and
-continues without deleting or renaming it.
-
-After all four canonical names exist, the initializer synchronizes the store
-root (`KEEP-CRASH-035`). Only the completed root synchronization admits an
-uninitialized store and returns an initialization receipt. No reader treats a
-partial set or an unsynchronized complete set as an admitted store.
+The version-1 initializer, which created only `writer.lock` and the three
+catalog-protocol directories, is retired with its crash rows
+`KEEP-CRASH-031`–`KEEP-CRASH-035`; the
+[retirement ledger](../segment-store-v2/retired-identifiers.md) records them.
 
 ## State and visibility
 
@@ -121,39 +106,31 @@ process-scoped exclusion are unsupported.
 `FilesystemWriterLock::try_acquire` opens the existing regular `writer.lock`
 without following symbolic links and acquires its exclusive advisory lock
 without blocking. That lock alone cannot construct a publisher.
-`FilesystemCatalogPublisher::open` consumes `FilesystemPlatformAdmission`,
-which owns the lock after initialization and platform checks, then pins the
-existing store root plus `staging`, `segments`, and `catalogs`. Both operations
-perform blocking filesystem I/O. Neither operation repairs, enumerates, or
-removes protocol state.
+`FilesystemVersionTwoCatalogPublisher::open` consumes
+`FilesystemVersionTwoAdmission`, which owns the lock after the production
+platform, the exact committed namespace, and the `FORMAT` marker are admitted,
+then pins the store root plus `staging`, `segments`, and `catalogs` and the
+retention directories. Both operations perform blocking filesystem I/O.
+Neither operation repairs, enumerates, or removes protocol state.
 
-`FilesystemPlatformAdmission` has private fields, so only Keep's own
-initialization and platform-admission boundary can produce a production value.
-A new store obtains one through `FilesystemPlatformAdmission::initialize`,
-which runs the ordered initialization protocol (`KEEP-RECOVERY-002`); a
-published store reacquires one through `FilesystemPlatformAdmission::reopen`,
-which mutates nothing and admits the production platform
-(`KEEP-RECOVERY-003`). Both are described in
-[Recovery and platform contract](recovery.md).
+The admission has private fields, so only Keep's own initialization and
+admission boundary can produce a value. A new store obtains one through
+`FilesystemVersionTwoAdmission::initialize`, which runs the
+[initialization protocol](../segment-store-v2/initialization.md); a committed
+store reacquires one through `FilesystemVersionTwoAdmission::reopen`, which
+mutates nothing. A root without the `FORMAT` marker refuses at every open
+path. The version-1 initializer, `FilesystemPlatformAdmission`, and their
+rows `KEEP-CRASH-031`–`-035` are retired.
 
-The crash matrix opens its catalog publisher through ordinary production
-initialization and admission, then wraps that publisher in fault-injecting
-decorators. Publication campaigns therefore require admitted Linux ext4 scratch
-storage.
+The crash matrix initializes its store and opens the writer through these
+production entry points, then observes the writer's own transitions.
+Publication campaigns therefore require admitted Linux ext4 scratch storage.
 
-The feature-gated legacy `open_unchecked_for_repository_tasks` entry point now
-checks the same production filesystem profile against its retained root
-capability before constructing authority; its name no longer denotes a platform
-bypass. It reopens that pinned directory with a readable descriptor for profile
-ioctls, checks each existing protocol directory, and requires strict root identity.
-
-The pinned-root route does not re-admit an ambient pathname or claim to establish
-the historical spelling used to acquire the lock. Private unit-test construction
-remains separate and is not callable by external consumers.
-
-`publish_catalog_generation` performs complete semantic preflight before the
-first storage transition. With `FilesystemCatalogPublisher`, it then executes
-the forward segment, catalog, and head protocols below. Every writable catalog
+The writer publishes only through `publish_retained_catalog_generation`,
+which runs the retained-closure gate and then the storage-independent
+`publish_catalog_generation` protocol. Complete semantic preflight precedes
+the first storage transition. The writer then executes the forward segment,
+catalog, and head protocols below. Every writable catalog
 or head handle is closed before the synchronized stage is reopened read-only.
 Existing immutable-pool coordinates are never replaced; their bytes are
 reopened and compared against the preflighted canonical artifact before the
@@ -161,7 +138,7 @@ protocol advances. Publisher teardown closes retained writable handles and
 pinned directory capabilities before releasing the writer lock.
 
 Publishing a new filesystem segment additionally requires
-`FilesystemCatalogPublisher::select_segment`. The method consumes the
+`FilesystemVersionTwoCatalogPublisher::select_segment`. The method consumes the
 `SealedSegment`, drops Keep's owned writable stage, proves that this publisher
 created the stage, and binds its record count, byte length, and digest to the
 exact `AdmittedSegment` bytes. A storage-agnostic
@@ -169,7 +146,7 @@ exact `AdmittedSegment` bytes. A storage-agnostic
 adapters, but its handle-free `ClosedSegment` receipt cannot authorize
 `staging/current.seg`. Catalog publication cannot select an unrelated or
 still-open sealed stage.
-`FilesystemCatalogPublisher::create_segment_stage` is the only public
+`FilesystemVersionTwoCatalogPublisher::create_segment_stage` is the only public
 filesystem-stage constructor. Its returned lifetime keeps the acquired writer
 authority borrowed while `current.seg` remains writable.
 

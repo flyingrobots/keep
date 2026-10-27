@@ -16,7 +16,7 @@ fn living_documentation_routes_the_complete_crash_matrix_and_its_limits() {
         (ROOT_README, "cargo xtask durability-crash-matrix"),
         (RECOVERY, "## Process-death crash matrix"),
         (REQUIREMENTS, "`KEEP-RECOVERY-021`"),
-        (CORPUS_README, "105 canonical process-death cases"),
+        (CORPUS_README, "90 canonical process-death cases"),
         (
             V2_CORPUS_README,
             "41 canonical initialization process-death cases",
