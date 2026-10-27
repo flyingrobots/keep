@@ -108,12 +108,11 @@ writer authority. The protocol is a recoverable state machine:
 - an initialized store with no published catalog is a defined state, not an
   inferred one.
 
-While migration code still exists, a migrated store and an initialized store
-must be distinguished by an explicit discriminator that is checked on
-admission. Treating migration records as optional is not a discriminator. The
-unit that adds initialization decides the discriminator and the resulting
-definition digest. It does not leave them for the unit that deletes
-migration.
+Initialization replaces migration in the same change that deletes it, so a
+migrated store and an initialized store never coexist in the codebase and no
+discriminator between them is needed. That change removes the migration
+rows from the format definition, which changes the definition digest; the
+marker it writes carries the new digest.
 
 ### Portable stores, live authority
 
@@ -156,26 +155,25 @@ may share it.
 Version 1 and migration are deleted only after the single format can do
 everything they do today. The order, tracked in #198, is:
 
-1. Direct initialization and its crash matrix.
-2. The #125 retained-closure gate on every route that can publish a catalog,
+1. The #125 retained-closure gate on every route that can publish a catalog,
    including recovery that finalizes a staged catalog. Changing the admission
    type that recovery accepts is not sufficient.
-3. The segment and catalog writer, with segment and catalog stage recovery,
-   on the single format. Publication of immutable catalogs and retention roots
-   keeps running beside readers. Only GC takes the reader fence exclusively,
-   after writer authority. This unit defines the input envelope it supports
-   and does not claim the segment rollover in
-   [#121](https://github.com/flyingrobots/keep/issues/121).
-4. Test builders move to direct initialization. Empty stores move after
-   step 1. Populated fixtures move after step 3 and are built through the real
-   writer, so that test code is not a second implementation of store
-   construction.
-5. Migration is deleted once one integrated public-API sequence passes:
-   initialize, ingest, reopen, reconstruct exact bytes, retain, publish a
-   second catalog, interrupt publication, recover, and read both retained
-   contents. The sequence also includes a candidate catalog that would lose
-   retained content, which must refuse with its evidence intact.
-6. Version-1 admission is deleted and the format pages are consolidated.
+2. The segment and catalog writer, with segment and catalog stage recovery,
+   on version-2 stores, which until step 4 are still created by migration.
+   Publication of immutable catalogs and retention roots keeps running beside
+   readers. Only GC takes the reader fence exclusively, after writer
+   authority. This unit defines the input envelope it supports and does not
+   claim the segment rollover in [#121](https://github.com/flyingrobots/keep/issues/121).
+3. Populated test fixtures are built through that writer, so that test code is
+   not a second implementation of store construction.
+4. Direct initialization and its crash matrix replace migration, and
+   migration is deleted in the same change. Before that change merges, one
+   integrated public-API sequence passes: initialize, ingest, reopen,
+   reconstruct exact bytes, retain, publish a second catalog, interrupt
+   publication, recover, and read both retained contents. The sequence also
+   includes a candidate catalog that would lose retained content, which must
+   refuse with its evidence intact.
+5. Version-1 admission is deleted and the format pages are consolidated.
 
 Retired requirement and crash identifiers are never reused. A retirement
 ledger maps each one to its last evidence and states whether its obligation
@@ -229,9 +227,8 @@ upgrades a fixture store from every prior release.
 
 ## Consequences
 
-- The definition digest changes at least when initialization adds its
-  discriminator and again when migration grammar is removed. Golden fixtures
-  are regenerated each time.
+- The definition digest changes when initialization replaces migration and
+  the migration rows are removed. Golden fixtures are regenerated then.
 - Until the units in #198 land, main still enforces the persistent root
   binding and still creates version-2 stores only by migration. This ADR is a
   protocol commitment, not evidence that the change has shipped.
