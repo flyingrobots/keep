@@ -42,6 +42,9 @@ The following pages form one protocol:
   manifest, and retention-head rules.
 - [Retention publication](retention-publication.md) owns closure admission and
   the generation transition.
+- [Catalog publication and stage recovery](catalog-publication.md) owns the
+  version-2 segment and catalog writer, its crash states, and version-2
+  catalog-stage recovery, including gated next-head finalization.
 - [Retention publication recovery](retention-recovery.md) owns interrupted stages, restart publication, and retention process-death boundaries.
 - [Closure verification](closure.md) owns deterministic traversal, exact
   resource accounting, authenticated reconstruction, and closure evidence.
@@ -105,11 +108,11 @@ Writer authority coordinates cooperating writers in a managed namespace; it does
 
 `FilesystemRetentionSnapshot` binds a catalog, retention head and manifest under a shared reader fence and verifies selected roots on demand. `DurableStore` composes that view with authenticated whole-blob and exact-range reads, delivered in [PR #164](https://github.com/flyingrobots/keep/pull/164); the [read contract](../../invariants/authenticated-reconstruction/README.md) records proof and allocation limits.
 
-The candidate-catalog retained-closure gate is implemented over its storage port ([#125](https://github.com/flyingrobots/keep/issues/125)). No filesystem version-two catalog publisher uses it yet ([#198](https://github.com/flyingrobots/keep/issues/198)). Verifying a new retention root against the current catalog is a different operation.
+The candidate-catalog retained-closure gate is implemented over its storage port ([#125](https://github.com/flyingrobots/keep/issues/125)). `FilesystemVersionTwoCatalogPublisher` ingests one segment and publishes a catalog successor through it, and version-two next-head finalization runs the same admission before replacing `HEAD` ([#198](https://github.com/flyingrobots/keep/issues/198)); see [catalog publication and stage recovery](catalog-publication.md). Verifying a new retention root against the current catalog is a different operation.
 
 [Durable verification reports](../../invariants/verification/README.md) are delivered in [PR #165](https://github.com/flyingrobots/keep/pull/165), with explicit subject/depth evidence and typed non-success outcomes.
 
-Production durable ingestion ([#82](https://github.com/flyingrobots/keep/issues/82)), garbage collection and compaction ([#21](https://github.com/flyingrobots/keep/issues/21)) remain absent from main; those prepared portions of unmerged PR #107 are not delivered APIs here.
+Production durable ingestion ([#82](https://github.com/flyingrobots/keep/issues/82)) builds on the version-two segment and catalog writer but is not delivered by it. Durable ingestion, garbage collection and compaction ([#21](https://github.com/flyingrobots/keep/issues/21)) remain absent from main; those prepared portions of unmerged PR #107 are not delivered APIs here.
 
 The `KEEP-CRASH-036..052` initial-publication process-death sequence includes independent recovered-reader checks; its [evidence receipt](../../testing-evidence/retention-crash-reader-oracle.md) records the assertions, calibration, and scope.
 

@@ -16,6 +16,7 @@ fn crash_children_execute_every_claimed_production_protocol() -> Result<(), Box<
         "durability_crash_matrix/production_protocol/publication.rs",
         "durability_crash_matrix/production_protocol/recovery.rs",
         "durability_crash_matrix/production_protocol/migration.rs",
+        "durability_crash_matrix/production_protocol/version_two_catalog.rs",
     ]
     .into_iter()
     .map(|path| fs::read_to_string(source_root.join(path)))
@@ -29,6 +30,7 @@ fn crash_children_execute_every_claimed_production_protocol() -> Result<(), Box<
         "initialize_store(",
         "execute_recovery_stage_discard(",
         "execute_store_migration(",
+        "publish_retained_catalog_generation(",
     ] {
         assert!(
             protocol.contains(required),

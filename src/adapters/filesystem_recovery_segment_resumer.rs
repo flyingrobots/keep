@@ -2,7 +2,10 @@
 
 use std::path::Path;
 
-use super::{FilesystemRecoverySegmentResumeOpenError, FilesystemRecoveryStageDiscarder};
+use super::{
+    FilesystemRecoverySegmentResumeOpenError, FilesystemRecoveryStageDiscarder,
+    FilesystemVersionTwoRecoveryAdmission,
+};
 
 /// Writer-authorized pinned filesystem adapter for reusable segment recovery.
 ///
@@ -28,6 +31,22 @@ impl FilesystemRecoverySegmentResumer {
     /// writer-authority, root-clone, or namespace admission failure.
     pub fn open(store_root: &Path) -> Result<Self, FilesystemRecoverySegmentResumeOpenError> {
         FilesystemRecoveryStageDiscarder::open(store_root)
+            .map(Self::from_discarder)
+            .map_err(Into::into)
+    }
+
+    /// Pins a migrated version-two store for explicit segment continuation.
+    ///
+    /// The call performs no protocol mutation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FilesystemRecoverySegmentResumeOpenError`] on root-clone or
+    /// namespace pinning failure.
+    pub fn open_version_two(
+        admission: FilesystemVersionTwoRecoveryAdmission,
+    ) -> Result<Self, FilesystemRecoverySegmentResumeOpenError> {
+        FilesystemRecoveryStageDiscarder::open_version_two(admission)
             .map(Self::from_discarder)
             .map_err(Into::into)
     }

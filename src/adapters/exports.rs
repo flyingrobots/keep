@@ -56,7 +56,14 @@ pub use super::filesystem_recovery_stage_error::{
 };
 pub use super::filesystem_segment_stage::FilesystemSegmentStage;
 pub use super::filesystem_version_two_admission::FilesystemVersionTwoAdmission;
+pub use super::filesystem_version_two_catalog_publisher::FilesystemVersionTwoCatalogPublisher;
+pub use super::filesystem_version_two_catalog_stages::FilesystemVersionTwoCatalogStages;
+#[cfg(any(test, feature = "repository-tasks"))]
+pub use super::filesystem_version_two_catalog_stages::{
+    CatalogPublicationBoundary, CatalogPublicationObserver,
+};
 pub use super::filesystem_version_two_record_refusal::VersionTwoRecordRefusal;
+pub use super::filesystem_version_two_recovery_admission::FilesystemVersionTwoRecoveryAdmission;
 pub use super::filesystem_writer_lock::FilesystemWriterLock;
 pub use super::layout_decode_error::LayoutDecodeError;
 pub use super::layout_decode_policy::LayoutDecodePolicy;

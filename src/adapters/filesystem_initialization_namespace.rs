@@ -58,6 +58,22 @@ const VERSION_TWO_NAMES: [&str; 12] = [
     GC_NAME,
     RECOVERY_NAME,
 ];
+const NEXT_HEAD_NAME: &str = "head.next";
+const VERSION_TWO_STAGED_NAMES: [&str; 13] = [
+    LOCK_NAME,
+    STAGING_NAME,
+    SEGMENTS_NAME,
+    CATALOGS_NAME,
+    HEAD_NAME,
+    NEXT_HEAD_NAME,
+    READER_LOCK_NAME,
+    MARKER_NAME,
+    INTENT_NAME,
+    RECEIPT_NAME,
+    RETENTION_NAME,
+    GC_NAME,
+    RECOVERY_NAME,
+];
 
 pub(super) fn admit(directory: &Dir) -> io::Result<()> {
     admit_optional_file(directory, LOCK_NAME)?;
@@ -101,6 +117,27 @@ pub(super) fn admit_recoverable(directory: &Dir) -> io::Result<()> {
 /// marker, both migration records, and all three protocol directories must be
 /// present. Any other entry is unrecoverable ambiguity.
 pub(super) fn admit_version_two(directory: &Dir) -> io::Result<()> {
+    admit_version_two_required(directory)?;
+    admit_membership(directory, &VERSION_TWO_NAMES)?;
+    admit_version_two_protocol_directories(directory)
+}
+
+/// Admits a completely migrated version-2 root that may retain a catalog `head.next`.
+///
+/// `head.next` is the version-1 catalog-protocol head stage, which version 2
+/// preserves unchanged. A reader selects only `HEAD`, so a retained or
+/// in-flight `head.next` does not change its view, and catalog-stage recovery
+/// must be able to open the store that holds one. Writer admission keeps the
+/// exact law of [`admit_version_two`] and refuses it. Every other entry and
+/// every protocol directory is admitted exactly as [`admit_version_two`] does.
+pub(super) fn admit_version_two_with_catalog_stage(directory: &Dir) -> io::Result<()> {
+    admit_version_two_required(directory)?;
+    admit_optional_file(directory, NEXT_HEAD_NAME)?;
+    admit_membership(directory, &VERSION_TWO_STAGED_NAMES)?;
+    admit_version_two_protocol_directories(directory)
+}
+
+fn admit_version_two_required(directory: &Dir) -> io::Result<()> {
     admit_required_file(directory, LOCK_NAME)?;
     admit_required_directory(directory, STAGING_NAME)?;
     admit_required_directory(directory, SEGMENTS_NAME)?;
@@ -112,9 +149,7 @@ pub(super) fn admit_version_two(directory: &Dir) -> io::Result<()> {
     admit_required_file(directory, RECEIPT_NAME)?;
     admit_required_directory(directory, RETENTION_NAME)?;
     admit_required_directory(directory, GC_NAME)?;
-    admit_required_directory(directory, RECOVERY_NAME)?;
-    admit_membership(directory, &VERSION_TWO_NAMES)?;
-    admit_version_two_protocol_directories(directory)
+    admit_required_directory(directory, RECOVERY_NAME)
 }
 
 /// Admits the nested version-2 protocol directories the migration writer left.

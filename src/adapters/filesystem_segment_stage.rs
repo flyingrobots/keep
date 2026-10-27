@@ -6,8 +6,9 @@ use cap_std::fs::File;
 
 use super::filesystem_catalog_artifact;
 use super::filesystem_catalog_publisher::CURRENT_SEGMENT;
+use super::filesystem_catalog_stages::FilesystemCatalogStages;
 use super::filesystem_publisher_authority::FilesystemPublisherAuthority;
-use super::{FilesystemCatalogPublisher, SegmentStage, SegmentStageCreateError};
+use super::{SegmentStage, SegmentStageCreateError};
 
 /// An exclusively created empty `current.seg` staging file under writer authority.
 ///
@@ -16,7 +17,7 @@ use super::{FilesystemCatalogPublisher, SegmentStage, SegmentStageCreateError};
 /// the value closes the file but deliberately leaves its bytes and name for
 /// explicit recovery.
 ///
-/// The lifetime keeps the locked publisher borrowed until the writable file is
+/// The lifetime keeps the locked publisher's stages borrowed until the writable file is
 /// closed. This type does not synchronize the staging-directory entry, publish
 /// the file, or establish that the surrounding filesystem satisfies Keep's
 /// complete platform contract. It retains this publisher's private authority
@@ -24,12 +25,12 @@ use super::{FilesystemCatalogPublisher, SegmentStage, SegmentStageCreateError};
 pub struct FilesystemSegmentStage<'publisher> {
     file: File,
     authority: FilesystemPublisherAuthority,
-    _publisher: &'publisher FilesystemCatalogPublisher,
+    _publisher: &'publisher FilesystemCatalogStages,
 }
 
 impl<'publisher> FilesystemSegmentStage<'publisher> {
     pub(super) fn create(
-        publisher: &'publisher FilesystemCatalogPublisher,
+        publisher: &'publisher FilesystemCatalogStages,
     ) -> Result<Self, SegmentStageCreateError> {
         let file =
             filesystem_catalog_artifact::create_exclusive(&publisher.staging, CURRENT_SEGMENT)

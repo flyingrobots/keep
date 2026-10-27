@@ -8,6 +8,7 @@ use super::{
     CatalogPublicationExpectation, CatalogRestartError, FilesystemRecoveryStageError,
     RecoveryNextHeadFinalizationTarget, RecoveryStageEvidence,
 };
+use crate::RetainedCatalogPublicationError;
 
 /// Why storage could not continue one exact next-head finalization request.
 #[derive(Debug)]
@@ -57,6 +58,15 @@ pub enum RecoveryNextHeadFinalizationStorageError {
     CurrentView {
         /// Exact bounded restart-loading failure.
         source: Box<CatalogRestartError>,
+    },
+    /// The candidate would lose content a current retention root retains.
+    ///
+    /// Only version-two finalization reports this. The source is the forward
+    /// catalog gate's own evidence, binding, or closure refusal; its `Catalog`
+    /// and `RetentionChanged` variants never arise here.
+    RetainedClosure {
+        /// Exact retained-closure admission refusal.
+        source: Box<RetainedCatalogPublicationError>,
     },
     /// The storage boundary failed while observing or mutating.
     Storage {
@@ -112,6 +122,10 @@ impl fmt::Display for RecoveryNextHeadFinalizationStorageError {
             Self::CurrentView { source } => {
                 write!(formatter, "durable current view is invalid: {source}")
             }
+            Self::RetainedClosure { source } => write!(
+                formatter,
+                "recovery candidate would not preserve retained content: {source}"
+            ),
             Self::Storage { source } => {
                 write!(
                     formatter,
@@ -128,6 +142,7 @@ impl Error for RecoveryNextHeadFinalizationStorageError {
             Self::Storage { source } => Some(source),
             Self::Stage { source } => Some(source.as_ref()),
             Self::CandidateView { source } | Self::CurrentView { source } => Some(source.as_ref()),
+            Self::RetainedClosure { source } => Some(source.as_ref()),
             Self::EvidenceMismatch { .. }
             | Self::CurrentMismatch { .. }
             | Self::CandidateMismatch { .. }

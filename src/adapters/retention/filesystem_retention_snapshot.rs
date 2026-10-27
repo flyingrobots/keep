@@ -120,6 +120,8 @@ impl FilesystemRetentionSnapshot {
     /// Linux ext4 profile across every present version-two protocol directory.
     /// The same opened root capability is retained through namespace, migration
     /// identity, fence, and coordinate admission; the ambient path is not reopened.
+    /// A retained or in-flight catalog `head.next` is admitted and ignored: the
+    /// view selects only `HEAD`, so catalog publication runs beside readers.
     ///
     /// # Errors
     ///
@@ -147,7 +149,7 @@ impl FilesystemRetentionSnapshot {
     ) -> Result<Self, E> {
         let root = filesystem_platform_profile::open_version_two(store_root)
             .map_err(|source| Error::Admission { source })?;
-        filesystem_initialization_namespace::admit_version_two(&root)
+        filesystem_initialization_namespace::admit_version_two_with_catalog_stage(&root)
             .map_err(|source| Error::Admission { source })?;
         let bound = filesystem_version_two_records::admit(&root)
             .map_err(|source| Error::Admission { source })?;

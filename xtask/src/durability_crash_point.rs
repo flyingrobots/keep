@@ -17,11 +17,14 @@ pub enum DurabilityCrashSequence {
     Retention,
     /// One-way version-1 to version-2 store migration.
     Migration,
+    /// Version-two catalog publication and its stage recovery, `KEEP-CRASH-074`
+    /// through `077`.
+    VersionTwoCatalog,
 }
 
 impl DurabilityCrashSequence {
     /// Every sequence in stable protocol order.
-    pub const ALL: [Self; 7] = [
+    pub const ALL: [Self; 8] = [
         Self::Segment,
         Self::Catalog,
         Self::Head,
@@ -29,6 +32,7 @@ impl DurabilityCrashSequence {
         Self::Initialization,
         Self::Retention,
         Self::Migration,
+        Self::VersionTwoCatalog,
     ];
 
     /// Returns the stable identifier used by the crash-matrix command line.
@@ -42,6 +46,7 @@ impl DurabilityCrashSequence {
             Self::Initialization => "initialization",
             Self::Retention => "retention",
             Self::Migration => "migration",
+            Self::VersionTwoCatalog => "version-two-catalog",
         }
     }
 
@@ -204,11 +209,19 @@ pub enum DurabilityCrashPoint {
     MigrationRemoveReceiptStage,
     /// Synchronize the store root after receipt-stage cleanup.
     MigrationSynchronizeRootAfterReceiptCleanup,
+    /// Link the version-two writer's sealed segment into the immutable pool.
+    VersionTwoLinkSegment,
+    /// Exclusively create the version-two writer's `staging/current.cat`.
+    VersionTwoCreateCatalogStage,
+    /// Synchronize the version-two writer's complete `head.next`.
+    VersionTwoSynchronizeHead,
+    /// Replace `HEAD` after the version-two retained-closure revalidation.
+    VersionTwoReplaceHead,
 }
 
 impl DurabilityCrashPoint {
     /// Every crash boundary in stable protocol order.
-    pub const ALL: [Self; 73] = [
+    pub const ALL: [Self; 77] = [
         Self::CreateSegmentStage,
         Self::WriteSegmentHeader,
         Self::AppendSegmentRecord,
@@ -282,6 +295,10 @@ impl DurabilityCrashPoint {
         Self::MigrationSynchronizeRootAfterReceipt,
         Self::MigrationRemoveReceiptStage,
         Self::MigrationSynchronizeRootAfterReceiptCleanup,
+        Self::VersionTwoLinkSegment,
+        Self::VersionTwoCreateCatalogStage,
+        Self::VersionTwoSynchronizeHead,
+        Self::VersionTwoReplaceHead,
     ];
 
     /// The migration boundaries in `StoreMigrationPhase::ALL` order.
@@ -401,6 +418,10 @@ impl DurabilityCrashPoint {
             | Self::MigrationSynchronizeRootAfterReceiptCleanup => {
                 DurabilityCrashSequence::Migration
             }
+            Self::VersionTwoLinkSegment
+            | Self::VersionTwoCreateCatalogStage
+            | Self::VersionTwoSynchronizeHead
+            | Self::VersionTwoReplaceHead => DurabilityCrashSequence::VersionTwoCatalog,
         }
     }
 

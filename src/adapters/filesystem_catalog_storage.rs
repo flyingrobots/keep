@@ -1,15 +1,20 @@
-//! This module binds filesystem catalog transitions to the publication port.
+//! This module binds the shared filesystem catalog stages to the publication port.
+//!
+//! This is the one stage implementation. Each writer authority forwards its own
+//! port to it, so version-one and version-two publication execute identical
+//! transitions.
 
 use std::io;
 
+use super::filesystem_catalog_stages::FilesystemCatalogStages;
 use super::{
     AdmittedSegment, CanonicalCatalog, CanonicalPublicationHead, CatalogPublicationExpectation,
     CatalogPublicationReadiness, CatalogPublicationStorage, CatalogSnapshot, ChecksummedCatalog,
-    FilesystemCatalogPublisher, SegmentPublication, filesystem_catalog_catalog,
-    filesystem_catalog_current, filesystem_catalog_head, filesystem_catalog_segment,
+    SegmentPublication, filesystem_catalog_catalog, filesystem_catalog_current,
+    filesystem_catalog_head, filesystem_catalog_segment,
 };
 
-impl CatalogPublicationStorage for FilesystemCatalogPublisher {
+impl CatalogPublicationStorage for FilesystemCatalogStages {
     fn verify_current(
         &mut self,
         expected: CatalogPublicationExpectation,

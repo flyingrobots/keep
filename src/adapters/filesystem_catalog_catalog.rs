@@ -2,100 +2,101 @@
 
 use std::io::{self, Write};
 
+use super::filesystem_catalog_stages::FilesystemCatalogStages;
 use super::{
     CanonicalCatalog, CatalogRestartArtifact, ChecksummedCatalog,
-    FilesystemCatalogPublicationError, FilesystemCatalogPublisher, filesystem_catalog_artifact,
-    filesystem_catalog_publisher, physical_pool_name,
+    FilesystemCatalogPublicationError, filesystem_catalog_artifact, filesystem_catalog_publisher,
+    physical_pool_name,
 };
 
-pub(super) fn create_stage(publisher: &mut FilesystemCatalogPublisher) -> io::Result<()> {
-    if publisher.catalog_stage.is_some() {
+pub(super) fn create_stage(stages: &mut FilesystemCatalogStages) -> io::Result<()> {
+    if stages.catalog_stage.is_some() {
         return Err(stage_state());
     }
-    publisher.catalog_stage = Some(filesystem_catalog_artifact::create_exclusive(
-        &publisher.staging,
+    stages.catalog_stage = Some(filesystem_catalog_artifact::create_exclusive(
+        &stages.staging,
         filesystem_catalog_publisher::CURRENT_CATALOG,
     )?);
     Ok(())
 }
 
 pub(super) fn write(
-    publisher: &mut FilesystemCatalogPublisher,
+    stages: &mut FilesystemCatalogStages,
     catalog: &CanonicalCatalog,
 ) -> io::Result<()> {
-    write_bytes(publisher, catalog.encoded())
+    write_bytes(stages, catalog.encoded())
 }
 
 #[cfg(feature = "repository-tasks")]
 pub(super) fn write_prefix(
-    publisher: &mut FilesystemCatalogPublisher,
+    stages: &mut FilesystemCatalogStages,
     catalog: &CanonicalCatalog,
     prefix: usize,
 ) -> io::Result<()> {
     let bytes = catalog.encoded().get(..prefix).ok_or_else(|| {
         io::Error::new(io::ErrorKind::InvalidInput, "catalog prefix exceeds bytes")
     })?;
-    write_bytes(publisher, bytes)
+    write_bytes(stages, bytes)
 }
 
-fn write_bytes(publisher: &mut FilesystemCatalogPublisher, bytes: &[u8]) -> io::Result<()> {
-    stage_mut(publisher)?.write_all(bytes)
+fn write_bytes(stages: &mut FilesystemCatalogStages, bytes: &[u8]) -> io::Result<()> {
+    stage_mut(stages)?.write_all(bytes)
 }
 
-pub(super) fn flush(publisher: &mut FilesystemCatalogPublisher) -> io::Result<()> {
-    stage_mut(publisher)?.flush()
+pub(super) fn flush(stages: &mut FilesystemCatalogStages) -> io::Result<()> {
+    stage_mut(stages)?.flush()
 }
 
-pub(super) fn synchronize(publisher: &mut FilesystemCatalogPublisher) -> io::Result<()> {
-    stage_mut(publisher)?.sync_all()
+pub(super) fn synchronize(stages: &mut FilesystemCatalogStages) -> io::Result<()> {
+    stage_mut(stages)?.sync_all()
 }
 
 pub(super) fn link(
-    publisher: &mut FilesystemCatalogPublisher,
+    stages: &mut FilesystemCatalogStages,
     catalog: ChecksummedCatalog<'_>,
 ) -> io::Result<()> {
-    let stage = publisher.catalog_stage.take().ok_or_else(stage_state)?;
+    let stage = stages.catalog_stage.take().ok_or_else(stage_state)?;
     drop(stage);
     filesystem_catalog_artifact::verify_catalog(
-        &publisher.staging,
+        &stages.staging,
         filesystem_catalog_publisher::CURRENT_CATALOG,
         catalog,
     )?;
     super::filesystem_exact_record::link_without_replacement(
-        &publisher.staging,
+        &stages.staging,
         filesystem_catalog_publisher::CURRENT_CATALOG,
-        &publisher.catalogs,
+        &stages.catalogs,
         &physical_pool_name::catalog(catalog.generation(), catalog.digest()),
     )
 }
 
 pub(super) fn verify_pool(
-    publisher: &FilesystemCatalogPublisher,
+    stages: &FilesystemCatalogStages,
     catalog: ChecksummedCatalog<'_>,
 ) -> io::Result<()> {
     filesystem_catalog_artifact::verify_catalog(
-        &publisher.catalogs,
+        &stages.catalogs,
         &physical_pool_name::catalog(catalog.generation(), catalog.digest()),
         catalog,
     )
 }
 
-pub(super) fn synchronize_pool(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
-    filesystem_catalog_artifact::synchronize_directory(&publisher.catalogs)
+pub(super) fn synchronize_pool(stages: &FilesystemCatalogStages) -> io::Result<()> {
+    filesystem_catalog_artifact::synchronize_directory(&stages.catalogs)
 }
 
-pub(super) fn remove_stage(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
-    publisher
+pub(super) fn remove_stage(stages: &FilesystemCatalogStages) -> io::Result<()> {
+    stages
         .staging
         .remove_file(filesystem_catalog_publisher::CURRENT_CATALOG)
 }
 
-pub(super) fn synchronize_staging(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
-    filesystem_catalog_artifact::synchronize_directory(&publisher.staging)
+pub(super) fn synchronize_staging(stages: &FilesystemCatalogStages) -> io::Result<()> {
+    filesystem_catalog_artifact::synchronize_directory(&stages.staging)
 }
 
-fn stage_mut(publisher: &mut FilesystemCatalogPublisher) -> io::Result<&mut cap_std::fs::File> {
-    publisher.catalog_stage.as_mut().ok_or_else(stage_state)
+fn stage_mut(stages: &mut FilesystemCatalogStages) -> io::Result<&mut cap_std::fs::File> {
+    stages.catalog_stage.as_mut().ok_or_else(stage_state)
 }
 
 fn stage_state() -> io::Error {

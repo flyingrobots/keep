@@ -15,6 +15,7 @@ mod retained_catalog_publication_receipt;
 mod retained_catalog_publication_storage;
 mod retained_closure_admission;
 mod retained_evidence_admission;
+mod retained_evidence_source;
 mod retention_evidence_phase;
 
 pub use preserved_retention_manifest::PreservedRetentionManifest;
@@ -23,6 +24,10 @@ pub use retained_catalog_publication_receipt::RetainedCatalogPublicationReceipt;
 pub use retained_catalog_publication_storage::RetainedCatalogPublicationStorage;
 pub use retained_closure_admission::RetainedClosureAdmission;
 pub use retention_evidence_phase::RetentionEvidencePhase;
+
+pub(in crate::adapters) use retained_evidence_source::RetainedEvidenceSource;
+
+use retained_evidence_source::PublicationEvidence;
 
 use super::catalog_publication_execution as execution;
 use super::{
@@ -72,7 +77,8 @@ pub fn publish_retained_catalog_generation<S: RetainedCatalogPublicationStorage>
         catalog_publication::admit_candidate(expectation, &segment, checksummed, segments)?;
     let head = CanonicalPublicationHead::for_catalog(checksummed);
     let snapshot = catalog_publication::admit_snapshot(&head, admitted)?;
-    let admission = retained_evidence_admission::admit(storage, &snapshot)?;
+    let admission =
+        retained_evidence_admission::admit(&mut PublicationEvidence(storage), &snapshot)?;
     let preserved = admission.preserved_manifest();
     let current_stages = storage.catalog_stages(&admission);
     let readiness = execution::execute_current(current_stages, expectation, &snapshot, &segment)?;
@@ -92,7 +98,7 @@ pub fn publish_retained_catalog_generation<S: RetainedCatalogPublicationStorage>
         snapshot: &snapshot,
     };
     stage_candidate(storage.catalog_stages(&admission), segment, &candidate)?;
-    retained_evidence_admission::revalidate(storage, &admission)?;
+    retained_evidence_admission::revalidate(&mut PublicationEvidence(storage), &admission)?;
     execution::execute_head_replacement(storage.catalog_stages(&admission))?;
     let catalog_receipt =
         CatalogPublicationReceipt::published(snapshot.generation(), snapshot.catalog_digest());
@@ -119,4 +125,22 @@ fn stage_candidate(
     execution::execute_catalog(stages, candidate.catalog, candidate.catalog.checksummed())?;
     execution::execute_head_stage(stages, candidate.head, candidate.snapshot)?;
     Ok(())
+}
+
+/// Verifies every current retained closure against one candidate snapshot.
+///
+/// This is the gate's own admission, exposed to routes that change `HEAD`
+/// without running the forward catalog protocol: recovery finalization of a
+/// staged `head.next` runs it immediately before replacement. It performs only
+/// the reads described by [`RetainedEvidenceSource`] and no mutation.
+///
+/// # Errors
+///
+/// Returns the forward gate's evidence, binding, or closure refusal. The
+/// `Catalog` and `RetentionChanged` variants never arise from this check.
+pub(in crate::adapters) fn admit_retained_closures(
+    evidence: &mut impl RetainedEvidenceSource,
+    candidate: &CatalogSnapshot<'_, '_, '_>,
+) -> Result<RetainedClosureAdmission, RetainedCatalogPublicationError> {
+    retained_evidence_admission::admit(evidence, candidate)
 }

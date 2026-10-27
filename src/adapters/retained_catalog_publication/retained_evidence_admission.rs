@@ -4,9 +4,10 @@
 //! evidence admission never depends on the storage being checked. Closure
 //! work reuses the storage-independent [`verify_retention_closure`].
 
+use super::retained_evidence_source::RetainedEvidenceSource;
 use super::{
-    RetainedCatalogPublicationError as Error, RetainedCatalogPublicationStorage,
-    RetainedClosureAdmission, RetentionEvidencePhase as Phase,
+    RetainedCatalogPublicationError as Error, RetainedClosureAdmission,
+    RetentionEvidencePhase as Phase,
 };
 use crate::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CatalogSnapshot, ChecksummedRetentionHead,
@@ -18,7 +19,7 @@ use crate::{
 /// Roots are read, admitted, and verified one at a time in manifest order, so
 /// at most one root's bytes are held. The first refusal is returned.
 pub(super) fn admit(
-    storage: &mut impl RetainedCatalogPublicationStorage,
+    storage: &mut impl RetainedEvidenceSource,
     candidate: &CatalogSnapshot<'_, '_, '_>,
 ) -> Result<RetainedClosureAdmission, Error> {
     let Some(head) = read_head(storage, Phase::AdmitHead)? else {
@@ -47,7 +48,7 @@ pub(super) fn admit(
 /// and root pool entries are immutable and named by digest, so an unchanged
 /// head selects exactly the admitted manifest and roots.
 pub(super) fn revalidate(
-    storage: &mut impl RetainedCatalogPublicationStorage,
+    storage: &mut impl RetainedEvidenceSource,
     admission: &RetainedClosureAdmission,
 ) -> Result<(), Error> {
     let expected = admission.head();
@@ -63,7 +64,7 @@ pub(super) fn revalidate(
 }
 
 fn read_head(
-    storage: &mut impl RetainedCatalogPublicationStorage,
+    storage: &mut impl RetainedEvidenceSource,
     phase: Phase,
 ) -> Result<Option<RetentionHead>, Error> {
     let Some(encoded) = storage
@@ -123,7 +124,7 @@ fn require_manifest_binding(
 }
 
 fn verify_root(
-    storage: &mut impl RetainedCatalogPublicationStorage,
+    storage: &mut impl RetainedEvidenceSource,
     entry: RetentionManifestEntry,
     candidate: &CatalogSnapshot<'_, '_, '_>,
 ) -> Result<(), Error> {

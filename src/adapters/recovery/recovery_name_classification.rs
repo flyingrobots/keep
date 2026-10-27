@@ -6,11 +6,12 @@ use super::{
     recovery_pool_name,
 };
 
-/// Classifies one complete inventory without opening artifact bytes.
+/// Classifies one complete version-one inventory without opening artifact bytes.
 ///
 /// The operation preserves inventory order and allocates at most one manifest
 /// entry per inventory entry. It rejects unknown names, missing initialized
 /// root entries, noncanonical pool coordinates, and simultaneous fixed stages.
+/// Every version-two root entry is unknown here.
 ///
 /// # Errors
 ///
@@ -19,12 +20,46 @@ use super::{
 pub fn classify_recovery_names(
     inventory: RecoveryInventory,
 ) -> Result<RecoveryNameManifest, RecoveryNameClassificationError> {
+    classify_inventory(inventory, StoreLayout::VersionOne)
+}
+
+/// Classifies one complete migrated version-two inventory without opening bytes.
+///
+/// The version-one laws apply unchanged, and the version-two root entries
+/// `reader.lock`, `FORMAT`, `migration.intent`, `migration.receipt`,
+/// `retention`, `gc`, and `recovery` are classified as known roles, never as
+/// unexpected or ignored. Each of them and the published `HEAD` is required.
+/// Migration stages are unknown: a completely migrated root never holds one.
+/// The contents of `retention`, `gc`, and `recovery` are not inventoried here;
+/// version-two admission and retention recovery own them.
+///
+/// # Errors
+///
+/// Returns [`RecoveryNameClassificationError`] at the first deterministic
+/// namespace, grammar, required-entry, or stage-conflict failure.
+pub fn classify_version_two_recovery_names(
+    inventory: RecoveryInventory,
+) -> Result<RecoveryNameManifest, RecoveryNameClassificationError> {
+    classify_inventory(inventory, StoreLayout::VersionTwo)
+}
+
+/// The root layout one classification admits.
+#[derive(Clone, Copy)]
+enum StoreLayout {
+    VersionOne,
+    VersionTwo,
+}
+
+fn classify_inventory(
+    inventory: RecoveryInventory,
+    layout: StoreLayout,
+) -> Result<RecoveryNameManifest, RecoveryNameClassificationError> {
     let mut required = RequiredEntries::default();
     let mut first_stage = None;
     let mut named = Vec::with_capacity(inventory.entries().len());
     for entry in inventory.into_entries() {
         let (namespace, name) = entry.into_parts();
-        let role = match classify(namespace, &name) {
+        let role = match classify(namespace, &name, layout) {
             Ok(role) => role,
             Err(NameFailure::Unexpected) => {
                 return Err(RecoveryNameClassificationError::Unexpected { namespace, name });
@@ -49,7 +84,7 @@ pub fn classify_recovery_names(
         }
         named.push(RecoveryNamedEntry::new(namespace, name, role));
     }
-    if let Some(required) = required.first_missing() {
+    if let Some(required) = required.first_missing(layout) {
         return Err(RecoveryNameClassificationError::Missing { required });
     }
     Ok(RecoveryNameManifest::new(named))
@@ -58,9 +93,10 @@ pub fn classify_recovery_names(
 fn classify(
     namespace: RecoveryNamespace,
     name: &RecoveryEntryName,
+    layout: StoreLayout,
 ) -> Result<RecoveryEntryRole, NameFailure> {
     match namespace {
-        RecoveryNamespace::Root => classify_root(name),
+        RecoveryNamespace::Root => classify_root(name, layout),
         RecoveryNamespace::Staging => classify_staging(name),
         RecoveryNamespace::Segments => recovery_pool_name::segment(name)
             .map(|digest| RecoveryEntryRole::ImmutableSegment { digest })
@@ -71,7 +107,10 @@ fn classify(
     }
 }
 
-fn classify_root(name: &RecoveryEntryName) -> Result<RecoveryEntryRole, NameFailure> {
+fn classify_root(
+    name: &RecoveryEntryName,
+    layout: StoreLayout,
+) -> Result<RecoveryEntryRole, NameFailure> {
     match name.as_bytes() {
         b"writer.lock" => Ok(RecoveryEntryRole::WriterLock),
         b"staging" => Ok(RecoveryEntryRole::StagingDirectory),
@@ -79,6 +118,22 @@ fn classify_root(name: &RecoveryEntryName) -> Result<RecoveryEntryRole, NameFail
         b"catalogs" => Ok(RecoveryEntryRole::CatalogPoolDirectory),
         b"HEAD" => Ok(RecoveryEntryRole::CurrentHead),
         b"head.next" => Ok(RecoveryEntryRole::NextHeadStage),
+        other => match layout {
+            StoreLayout::VersionOne => Err(NameFailure::Unexpected),
+            StoreLayout::VersionTwo => classify_version_two_root(other),
+        },
+    }
+}
+
+fn classify_version_two_root(name: &[u8]) -> Result<RecoveryEntryRole, NameFailure> {
+    match name {
+        b"reader.lock" => Ok(RecoveryEntryRole::ReaderFence),
+        b"FORMAT" => Ok(RecoveryEntryRole::FormatMarker),
+        b"migration.intent" => Ok(RecoveryEntryRole::MigrationIntent),
+        b"migration.receipt" => Ok(RecoveryEntryRole::MigrationReceipt),
+        b"retention" => Ok(RecoveryEntryRole::RetentionDirectory),
+        b"gc" => Ok(RecoveryEntryRole::GcDirectory),
+        b"recovery" => Ok(RecoveryEntryRole::RecoveryDirectory),
         _ => Err(NameFailure::Unexpected),
     }
 }
@@ -96,41 +151,75 @@ enum NameFailure {
     Pool(super::RecoveryPoolNameError),
 }
 
+/// Required root entries in report order; version one requires the prefix.
+const REQUIRED: [RecoveryRequiredEntry; 12] = [
+    RecoveryRequiredEntry::WriterLock,
+    RecoveryRequiredEntry::StagingDirectory,
+    RecoveryRequiredEntry::SegmentPoolDirectory,
+    RecoveryRequiredEntry::CatalogPoolDirectory,
+    RecoveryRequiredEntry::CurrentHead,
+    RecoveryRequiredEntry::ReaderFence,
+    RecoveryRequiredEntry::FormatMarker,
+    RecoveryRequiredEntry::MigrationIntent,
+    RecoveryRequiredEntry::MigrationReceipt,
+    RecoveryRequiredEntry::RetentionDirectory,
+    RecoveryRequiredEntry::GcDirectory,
+    RecoveryRequiredEntry::RecoveryDirectory,
+];
+const VERSION_ONE_REQUIRED: usize = 4;
+
 #[derive(Default)]
-struct RequiredEntries(u8);
+struct RequiredEntries {
+    observed: [bool; REQUIRED.len()],
+}
 
 impl RequiredEntries {
-    const WRITER_LOCK: u8 = 1 << 0;
-    const STAGING: u8 = 1 << 1;
-    const SEGMENTS: u8 = 1 << 2;
-    const CATALOGS: u8 = 1 << 3;
-
-    const fn observe(&mut self, role: RecoveryEntryRole) {
-        match role {
-            RecoveryEntryRole::WriterLock => self.0 |= Self::WRITER_LOCK,
-            RecoveryEntryRole::StagingDirectory => self.0 |= Self::STAGING,
-            RecoveryEntryRole::SegmentPoolDirectory => self.0 |= Self::SEGMENTS,
-            RecoveryEntryRole::CatalogPoolDirectory => self.0 |= Self::CATALOGS,
-            RecoveryEntryRole::CurrentHead
-            | RecoveryEntryRole::NextHeadStage
-            | RecoveryEntryRole::SegmentStage
-            | RecoveryEntryRole::CatalogStage
-            | RecoveryEntryRole::ImmutableSegment { .. }
-            | RecoveryEntryRole::ImmutableCatalog { .. } => {}
+    fn observe(&mut self, role: RecoveryEntryRole) {
+        let Some(required) = required_entry(role) else {
+            return;
+        };
+        for (seen, entry) in self.observed.iter_mut().zip(REQUIRED) {
+            if entry == required {
+                *seen = true;
+            }
         }
     }
 
-    const fn first_missing(&self) -> Option<RecoveryRequiredEntry> {
-        if self.0 & Self::WRITER_LOCK == 0 {
-            Some(RecoveryRequiredEntry::WriterLock)
-        } else if self.0 & Self::STAGING == 0 {
-            Some(RecoveryRequiredEntry::StagingDirectory)
-        } else if self.0 & Self::SEGMENTS == 0 {
+    fn first_missing(&self, layout: StoreLayout) -> Option<RecoveryRequiredEntry> {
+        let count = match layout {
+            StoreLayout::VersionOne => VERSION_ONE_REQUIRED,
+            StoreLayout::VersionTwo => REQUIRED.len(),
+        };
+        REQUIRED
+            .into_iter()
+            .zip(self.observed)
+            .take(count)
+            .find_map(|(entry, seen)| (!seen).then_some(entry))
+    }
+}
+
+const fn required_entry(role: RecoveryEntryRole) -> Option<RecoveryRequiredEntry> {
+    match role {
+        RecoveryEntryRole::WriterLock => Some(RecoveryRequiredEntry::WriterLock),
+        RecoveryEntryRole::StagingDirectory => Some(RecoveryRequiredEntry::StagingDirectory),
+        RecoveryEntryRole::SegmentPoolDirectory => {
             Some(RecoveryRequiredEntry::SegmentPoolDirectory)
-        } else if self.0 & Self::CATALOGS == 0 {
-            Some(RecoveryRequiredEntry::CatalogPoolDirectory)
-        } else {
-            None
         }
+        RecoveryEntryRole::CatalogPoolDirectory => {
+            Some(RecoveryRequiredEntry::CatalogPoolDirectory)
+        }
+        RecoveryEntryRole::CurrentHead => Some(RecoveryRequiredEntry::CurrentHead),
+        RecoveryEntryRole::ReaderFence => Some(RecoveryRequiredEntry::ReaderFence),
+        RecoveryEntryRole::FormatMarker => Some(RecoveryRequiredEntry::FormatMarker),
+        RecoveryEntryRole::MigrationIntent => Some(RecoveryRequiredEntry::MigrationIntent),
+        RecoveryEntryRole::MigrationReceipt => Some(RecoveryRequiredEntry::MigrationReceipt),
+        RecoveryEntryRole::RetentionDirectory => Some(RecoveryRequiredEntry::RetentionDirectory),
+        RecoveryEntryRole::GcDirectory => Some(RecoveryRequiredEntry::GcDirectory),
+        RecoveryEntryRole::RecoveryDirectory => Some(RecoveryRequiredEntry::RecoveryDirectory),
+        RecoveryEntryRole::NextHeadStage
+        | RecoveryEntryRole::SegmentStage
+        | RecoveryEntryRole::CatalogStage
+        | RecoveryEntryRole::ImmutableSegment { .. }
+        | RecoveryEntryRole::ImmutableCatalog { .. } => None,
     }
 }

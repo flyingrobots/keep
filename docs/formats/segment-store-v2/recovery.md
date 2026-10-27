@@ -29,7 +29,10 @@ recovery/dispositions/<artifact-digest>.receipt
 ```
 
 `retention/HEAD`, every fixed `.next` stage, `gc/intent`, and `gc/receipt` are
-optional according to the exact state tables below. Immutable-pool coordinates
+optional according to the exact state tables below. The version-1 catalog
+`head.next` stays a version-1 file: writer admission refuses it as recovery
+state, while readers and version-2 catalog-stage recovery admit it, as
+[catalog publication and stage recovery](catalog-publication.md) specifies. Immutable-pool coordinates
 are data-dependent but canonically named. Every other root or
 protocol-directory entry is an unknown entry and unrecoverable ambiguity.
 Operations are capability-relative and never follow links.
@@ -65,6 +68,8 @@ corpus `definition.tsv` bytes. The format-marker digest is BLAKE3-256 of
 retained writer authority. The fresh writer executes once; separate migration
 recovery plans and executes the lawful remaining suffix after process death.
 Version-1 reopen and version-1 recovery both refuse a migrated root.
+Version-2 catalog-stage recovery admits it through
+`FilesystemVersionTwoRecoveryAdmission`.
 
 ## Reader fence
 

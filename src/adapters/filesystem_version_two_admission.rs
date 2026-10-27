@@ -79,21 +79,8 @@ impl FilesystemVersionTwoAdmission {
     }
 
     fn admit(root: Dir) -> Result<Self, FilesystemPlatformAdmissionError> {
-        let lock = FilesystemWriterLock::try_acquire_in(root)
-            .map_err(|source| FilesystemPlatformAdmissionError::WriterLock { source })?;
-        let directory = lock
-            .clone_directory()
-            .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
-        filesystem_initialization_namespace::admit_version_two(&directory)
-            .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
-        let observed = filesystem_platform_profile::root_identity(&directory)
-            .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
-        let bound = filesystem_version_two_records::admit(&directory)
-            .map_err(|source| FilesystemPlatformAdmissionError::MigrationRecord { source })?;
-        require_root_identity(bound, observed)?;
-        let retention = pin(&directory, "retention")?;
-        let roots = pin(&retention, "roots")?;
-        let manifests = pin(&retention, "manifests")?;
+        let (lock, retention, roots, manifests) =
+            admit_locked(root, filesystem_initialization_namespace::admit_version_two)?;
         Ok(Self {
             lock,
             retention,
@@ -101,6 +88,45 @@ impl FilesystemVersionTwoAdmission {
             manifests,
         })
     }
+}
+
+/// Writer authority and the three pinned retention capabilities of one admitted root.
+pub(super) type AdmittedVersionTwoParts = (FilesystemWriterLock, Dir, Dir, Dir);
+
+/// Acquires writer authority, then admits the root under `namespace`.
+///
+/// Forward writers pass the exact version-two namespace law; catalog-stage
+/// recovery passes the law that also admits a retained `head.next`. Every
+/// other check is identical: the marker, intent, and receipt records, the
+/// restart-stable root identity, and the pinned retention directories.
+pub(super) fn admit_locked(
+    root: Dir,
+    namespace: fn(&Dir) -> std::io::Result<()>,
+) -> Result<AdmittedVersionTwoParts, FilesystemPlatformAdmissionError> {
+    let lock = FilesystemWriterLock::try_acquire_in(root)
+        .map_err(|source| FilesystemPlatformAdmissionError::WriterLock { source })?;
+    let directory = lock
+        .clone_directory()
+        .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
+    admit_root(&directory, namespace)?;
+    let retention = pin(&directory, "retention")?;
+    let roots = pin(&retention, "roots")?;
+    let manifests = pin(&retention, "manifests")?;
+    Ok((lock, retention, roots, manifests))
+}
+
+/// Admits the namespace, migration records, and root identity without mutation.
+pub(super) fn admit_root(
+    directory: &Dir,
+    namespace: fn(&Dir) -> std::io::Result<()>,
+) -> Result<(), FilesystemPlatformAdmissionError> {
+    namespace(directory)
+        .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
+    let observed = filesystem_platform_profile::root_identity(directory)
+        .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
+    let bound = filesystem_version_two_records::admit(directory)
+        .map_err(|source| FilesystemPlatformAdmissionError::MigrationRecord { source })?;
+    require_root_identity(bound, observed)
 }
 
 /// Pins one admitted protocol directory without following links.

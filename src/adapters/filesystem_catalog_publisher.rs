@@ -2,13 +2,11 @@
 
 use std::io;
 
-use cap_std::fs::{Dir, File};
-
-use super::filesystem_publisher_authority::FilesystemPublisherAuthority;
+use super::filesystem_catalog_stages::FilesystemCatalogStages;
 use super::{
-    AdmittedSegment, CatalogRestartPolicy, ClosedSegment, FilesystemPlatformAdmission,
-    FilesystemSegmentStage, FilesystemWriterLock, SealedSegment, SegmentPublication,
-    SegmentPublicationError, SegmentStageCreateError, sync_capable_directory,
+    AdmittedSegment, CatalogRestartPolicy, FilesystemPlatformAdmission, FilesystemSegmentStage,
+    FilesystemWriterLock, SealedSegment, SegmentPublication, SegmentPublicationError,
+    SegmentStageCreateError,
 };
 #[cfg(feature = "repository-tasks")]
 use super::{CanonicalCatalog, CanonicalPublicationHead, filesystem_catalog_catalog};
@@ -29,14 +27,7 @@ pub(super) const NEXT_HEAD: &str = "head.next";
 /// initializing a new store or reopening a completely published store.
 #[must_use]
 pub struct FilesystemCatalogPublisher {
-    pub(super) root: Dir,
-    pub(super) staging: Dir,
-    pub(super) segments: Dir,
-    pub(super) catalogs: Dir,
-    pub(super) policy: CatalogRestartPolicy,
-    pub(super) authority: FilesystemPublisherAuthority,
-    pub(super) catalog_stage: Option<File>,
-    pub(super) head_stage: Option<File>,
+    pub(super) stages: FilesystemCatalogStages,
     // Fields drop in declaration order. Writer authority must outlive every
     // directory capability and retained writable stage.
     pub(super) _lock: FilesystemWriterLock,
@@ -58,19 +49,9 @@ impl FilesystemCatalogPublisher {
     ) -> io::Result<Self> {
         let lock = admission.into_lock();
         let pinned_root = lock.clone_directory()?;
-        let root = sync_capable_directory::open(&pinned_root, ".")?;
-        let staging = sync_capable_directory::open(&root, "staging")?;
-        let segments = sync_capable_directory::open(&root, "segments")?;
-        let catalogs = sync_capable_directory::open(&root, "catalogs")?;
+        let stages = FilesystemCatalogStages::open(&pinned_root, policy)?;
         Ok(Self {
-            root,
-            staging,
-            segments,
-            catalogs,
-            policy,
-            authority: FilesystemPublisherAuthority::new(),
-            catalog_stage: None,
-            head_stage: None,
+            stages,
             _lock: lock,
         })
     }
@@ -125,7 +106,7 @@ impl FilesystemCatalogPublisher {
     pub fn create_segment_stage(
         &self,
     ) -> Result<FilesystemSegmentStage<'_>, SegmentStageCreateError> {
-        FilesystemSegmentStage::create(self)
+        self.stages.create_segment_stage()
     }
 
     /// Closes and selects one synchronized stage created by this publisher.
@@ -144,16 +125,7 @@ impl FilesystemCatalogPublisher {
         sealed: SealedSegment<FilesystemSegmentStage<'_>>,
         admitted: &'selection AdmittedSegment<'records>,
     ) -> Result<SegmentPublication<'selection, 'records>, SegmentPublicationError> {
-        let (stage, record_count, segment_length, digest) = sealed.into_parts();
-        let authority = stage.close();
-        if !self.authority.matches(&authority) {
-            return Err(SegmentPublicationError::PublisherAuthority);
-        }
-        SegmentPublication::one_bound(
-            ClosedSegment::admitted(record_count, segment_length, digest),
-            admitted,
-            authority,
-        )
+        self.stages.select_segment(sealed, admitted)
     }
 
     /// Writes a strict prefix through the production catalog-stage adapter.
@@ -168,7 +140,7 @@ impl FilesystemCatalogPublisher {
         catalog: &CanonicalCatalog,
         prefix: usize,
     ) -> io::Result<()> {
-        filesystem_catalog_catalog::write_prefix(self, catalog, prefix)
+        filesystem_catalog_catalog::write_prefix(&mut self.stages, catalog, prefix)
     }
 
     /// Writes a strict prefix through the production head-stage adapter.
@@ -183,6 +155,6 @@ impl FilesystemCatalogPublisher {
         head: &CanonicalPublicationHead,
         prefix: usize,
     ) -> io::Result<()> {
-        super::filesystem_catalog_head::write_prefix(self, head, prefix)
+        super::filesystem_catalog_head::write_prefix(&mut self.stages, head, prefix)
     }
 }

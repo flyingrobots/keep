@@ -34,6 +34,20 @@ pub enum RecoveryEntryRole {
         /// Physical catalog digest parsed from the name.
         digest: CatalogDigest,
     },
+    /// Version-two persistent reader fence `reader.lock`.
+    ReaderFence,
+    /// Version-two format marker `FORMAT`.
+    FormatMarker,
+    /// Version-two migration intent record.
+    MigrationIntent,
+    /// Version-two migration receipt record.
+    MigrationReceipt,
+    /// Version-two `retention` protocol directory, admitted by retention recovery.
+    RetentionDirectory,
+    /// Version-two reserved `gc` protocol directory.
+    GcDirectory,
+    /// Version-two reserved `recovery` protocol directory.
+    RecoveryDirectory,
 }
 
 impl RecoveryEntryRole {
