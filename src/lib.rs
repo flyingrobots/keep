@@ -186,12 +186,6 @@ pub use adapters::{
     plan_retention_transition, preflight_retention_transition, prepare_retention_publication,
     verify_retention_closure,
 };
-#[cfg(feature = "repository-tasks")]
-#[doc(hidden)]
-pub use adapters::{
-    ObservedSegmentStage, RepositoryInitializationStorage, SegmentStageDurabilityEvent,
-    SegmentStageObserver,
-};
 #[cfg(any(test, feature = "repository-tasks"))]
 #[doc(hidden)]
 pub use adapters::{CatalogPublicationBoundary, CatalogPublicationObserver};
@@ -201,6 +195,12 @@ pub use adapters::{
     StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError, StoreMigrationRecoveryPlan,
     StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,
     StoreMigrationStageDecodeError, plan_store_migration_recovery, recover_store_migration,
+};
+#[cfg(feature = "repository-tasks")]
+#[doc(hidden)]
+pub use adapters::{
+    ObservedSegmentStage, RepositoryInitializationStorage, SegmentStageDurabilityEvent,
+    SegmentStageObserver,
 };
 pub use adapters::{
     PreservedRetentionManifest, RetainedCatalogPublicationError, RetainedCatalogPublicationReceipt,
