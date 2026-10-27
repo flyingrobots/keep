@@ -4,8 +4,8 @@ use std::error::Error;
 use std::fs;
 
 use super::{
-    FilesystemRecoveryInventoryReader, FilesystemRecoveryStageError, RecoveryStage,
-    RecoveryStageMetadataError, filesystem_test_sandbox::TestDirectory,
+    FilesystemRecoveryInventoryReader, FilesystemRecoveryStageError, FilesystemVersionTwoAdmission,
+    RecoveryStage, RecoveryStageMetadataError, filesystem_test_sandbox::TestDirectory,
 };
 
 #[test]
@@ -37,10 +37,10 @@ fn fixed_stage_symbolic_link_is_never_followed() -> Result<(), Box<dyn Error>> {
     use std::os::unix::fs::symlink;
 
     let fixture = StageFixture::new("recovery-stage-symlink")?;
+    let reader = fixture.reader()?;
     let target = fixture.root().join("outside");
     fs::write(&target, b"outside bytes")?;
     symlink(&target, fixture.segment_path())?;
-    let reader = fixture.reader()?;
 
     let Err(error) = reader.fingerprint_stage(RecoveryStage::Segment) else {
         return Err("symbolic stage was followed".into());
@@ -174,9 +174,11 @@ struct StageFixture {
 impl StageFixture {
     fn new(name: &str) -> Result<Self, Box<dyn Error>> {
         let directory = TestDirectory::create(name)?;
-        for name in ["staging", "segments", "catalogs"] {
-            fs::create_dir(directory.path().join(name))?;
-        }
+        drop(
+            FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(
+                directory.path(),
+            )?,
+        );
         Ok(Self { directory })
     }
 
@@ -197,9 +199,11 @@ impl StageFixture {
     }
 
     fn reader(&self) -> Result<FilesystemRecoveryInventoryReader, Box<dyn Error>> {
-        Ok(FilesystemRecoveryInventoryReader::open_unchecked_for_tests(
-            self.root(),
-        )?)
+        Ok(
+            FilesystemRecoveryInventoryReader::open_version_two_unchecked_for_repository_tasks(
+                self.root(),
+            )?,
+        )
     }
 
     fn remove(self) -> std::io::Result<()> {

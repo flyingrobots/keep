@@ -66,7 +66,7 @@ fn every_count_precedes_name_retention_in_fixed_namespace_order() -> Result<(), 
 fn unsupported_platform_refuses_before_filesystem_inventory_mutation() -> Result<(), Box<dyn Error>>
 {
     let sandbox = TestDirectory::create("recovery-inventory-unsupported")?;
-    let Err(error) = FilesystemRecoveryInventoryReader::open(sandbox.path()) else {
+    let Err(error) = FilesystemRecoveryInventoryReader::open_version_two(sandbox.path()) else {
         return Err("filesystem inventory admitted an unsupported platform".into());
     };
 

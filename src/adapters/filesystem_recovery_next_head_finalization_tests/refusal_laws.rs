@@ -16,10 +16,12 @@ fn symbolic_candidate_is_never_followed_or_published() -> Result<(), Box<dyn Err
 
     let fixture = FinalizationFixture::new("filesystem-next-head-link")?;
     let request = fixture.install_generation_one_candidate()?;
+    // Admission refuses a linked `head.next`; replace it after admission so the
+    // finalizer's own no-follow open is the boundary under test.
+    let mut finalizer = fixture.finalizer()?;
     let target = fixture.root().join("outside-head");
     fs::rename(fixture.next_head_path(), &target)?;
     symlink(&target, fixture.next_head_path())?;
-    let mut finalizer = fixture.finalizer()?;
 
     let error = execute_recovery_next_head_finalization(&mut finalizer, request)
         .err()

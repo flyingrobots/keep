@@ -49,13 +49,4 @@ impl FilesystemRecoveryStageCompleter {
             .map(|discarder| Self { discarder })
             .map_err(Into::into)
     }
-
-    #[cfg(test)]
-    pub(super) fn open_unchecked_for_tests(
-        store_root: &Path,
-    ) -> Result<Self, FilesystemRecoveryStageCompletionOpenError> {
-        FilesystemRecoveryStageDiscarder::open_unchecked_for_tests(store_root)
-            .map(|discarder| Self { discarder })
-            .map_err(Into::into)
-    }
 }

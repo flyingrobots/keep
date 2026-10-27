@@ -1,13 +1,13 @@
 //! Deterministic initialized-store fixture for filesystem segment continuation.
 
 use std::error::Error;
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::LayoutEntryLimit;
 
 use super::super::{
-    FilesystemRecoverySegmentResumeOpenError, FilesystemRecoverySegmentResumer,
+    FilesystemPlatformAdmissionError, FilesystemRecoverySegmentResumer,
+    FilesystemVersionTwoAdmission, FilesystemVersionTwoRecoveryAdmission,
     RecoverySegmentResumeRequest, RecoveryStage, RecoveryStageMetadata, SegmentReadPolicy,
     SegmentRecordLimit, admit_recovery_stage_bytes, assess_recovery_stage,
     filesystem_test_sandbox::TestDirectory, fingerprint_recovery_stage,
@@ -61,10 +61,11 @@ pub(super) struct ResumeFixture {
 impl ResumeFixture {
     pub(super) fn new(name: &str) -> Result<Self, Box<dyn Error>> {
         let directory = TestDirectory::create(name)?;
-        fs::write(directory.path().join("writer.lock"), [])?;
-        for name in ["staging", "segments", "catalogs"] {
-            fs::create_dir(directory.path().join(name))?;
-        }
+        drop(
+            FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(
+                directory.path(),
+            )?,
+        );
         Ok(Self { directory })
     }
 
@@ -76,22 +77,31 @@ impl ResumeFixture {
         self.root().join("staging/current.seg")
     }
 
-    pub(super) fn resumer(
+    /// Acquires single-format recovery admission, the writer authority continuation runs under.
+    pub(super) fn recovery_admission(
         &self,
-    ) -> Result<FilesystemRecoverySegmentResumer, FilesystemRecoverySegmentResumeOpenError> {
-        FilesystemRecoverySegmentResumer::open_unchecked_for_tests(self.root())
+    ) -> Result<FilesystemVersionTwoRecoveryAdmission, FilesystemPlatformAdmissionError> {
+        FilesystemVersionTwoRecoveryAdmission::reopen_unchecked_for_repository_tasks(self.root())
+    }
+
+    pub(super) fn resumer(&self) -> Result<FilesystemRecoverySegmentResumer, Box<dyn Error>> {
+        Ok(FilesystemRecoverySegmentResumer::open_version_two(
+            self.recovery_admission()?,
+        )?)
     }
 
     pub(super) fn resumer_before_handoff<F>(
         &self,
         before_handoff: F,
-    ) -> Result<FilesystemRecoverySegmentResumer, FilesystemRecoverySegmentResumeOpenError>
+    ) -> Result<FilesystemRecoverySegmentResumer, Box<dyn Error>>
     where
         F: FnOnce() + 'static,
     {
-        FilesystemRecoverySegmentResumer::open_unchecked_for_tests_before_handoff(
-            self.root(),
-            before_handoff,
+        Ok(
+            FilesystemRecoverySegmentResumer::open_before_handoff_for_tests(
+                self.recovery_admission()?,
+                before_handoff,
+            )?,
         )
     }
 

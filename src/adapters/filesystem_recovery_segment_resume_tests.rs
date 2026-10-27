@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fs;
 
 use super::{
-    AdmittedSegment, AdmittedSegmentRecord, FilesystemRecoverySegmentResumeOpenError,
+    AdmittedSegment, AdmittedSegmentRecord, FilesystemPlatformAdmissionError,
     WriterLockAcquireError, execute_recovery_segment_resume,
 };
 
@@ -41,7 +41,7 @@ fn exact_prefix_resumes_seals_and_retains_writer_authority() -> Result<(), Box<d
 
     let resumed_stage = execute_recovery_segment_resume(authority, resume_request(&prefix)?)?;
     let second = fixture
-        .resumer()
+        .recovery_admission()
         .err()
         .ok_or("resumed stage did not retain writer authority")?;
     let sealed = resumed_stage
@@ -50,7 +50,7 @@ fn exact_prefix_resumes_seals_and_retains_writer_authority() -> Result<(), Box<d
 
     assert!(matches!(
         second,
-        FilesystemRecoverySegmentResumeOpenError::WriterLock {
+        FilesystemPlatformAdmissionError::WriterLock {
             source: WriterLockAcquireError::Busy
         }
     ));

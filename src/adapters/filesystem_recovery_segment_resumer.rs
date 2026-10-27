@@ -60,23 +60,14 @@ impl FilesystemRecoverySegmentResumer {
     }
 
     #[cfg(test)]
-    pub(super) fn open_unchecked_for_tests(
-        store_root: &Path,
-    ) -> Result<Self, FilesystemRecoverySegmentResumeOpenError> {
-        FilesystemRecoveryStageDiscarder::open_unchecked_for_tests(store_root)
-            .map(Self::from_discarder)
-            .map_err(Into::into)
-    }
-
-    #[cfg(test)]
-    pub(super) fn open_unchecked_for_tests_before_handoff<F>(
-        store_root: &Path,
+    pub(super) fn open_before_handoff_for_tests<F>(
+        admission: FilesystemVersionTwoRecoveryAdmission,
         before_handoff: F,
     ) -> Result<Self, FilesystemRecoverySegmentResumeOpenError>
     where
         F: FnOnce() + 'static,
     {
-        let mut resumer = Self::open_unchecked_for_tests(store_root)?;
+        let mut resumer = Self::open_version_two(admission)?;
         resumer.before_handoff = Some(Box::new(before_handoff));
         Ok(resumer)
     }

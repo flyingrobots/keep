@@ -16,11 +16,6 @@ impl FilesystemPlatformAdmission {
         Self { lock }
     }
 
-    #[cfg(test)]
-    pub(super) const fn unchecked_for_tests(lock: FilesystemWriterLock) -> Self {
-        Self::initialized(lock)
-    }
-
     #[cfg(feature = "repository-tasks")]
     pub(super) fn from_repository_writer_lock(lock: FilesystemWriterLock) -> std::io::Result<Self> {
         // Writer capabilities may be O_PATH; profile ioctls require a readable

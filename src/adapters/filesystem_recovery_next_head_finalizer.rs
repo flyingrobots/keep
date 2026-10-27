@@ -85,16 +85,6 @@ impl FilesystemRecoveryNextHeadFinalizer {
         })
     }
 
-    #[cfg(test)]
-    pub(super) fn open_unchecked_for_tests(
-        store_root: &Path,
-        policy: CatalogRestartPolicy,
-    ) -> Result<Self, FilesystemRecoveryNextHeadFinalizationOpenError> {
-        FilesystemRecoveryStageDiscarder::open_unchecked_for_tests(store_root)
-            .map(|discarder| Self::version_one(discarder, policy))
-            .map_err(Into::into)
-    }
-
     const fn version_one(
         discarder: FilesystemRecoveryStageDiscarder,
         policy: CatalogRestartPolicy,

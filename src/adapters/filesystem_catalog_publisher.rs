@@ -82,17 +82,6 @@ impl FilesystemCatalogPublisher {
         )
     }
 
-    #[cfg(test)]
-    pub(super) fn open_unchecked_for_tests(
-        lock: FilesystemWriterLock,
-        policy: CatalogRestartPolicy,
-    ) -> io::Result<Self> {
-        Self::open(
-            FilesystemPlatformAdmission::unchecked_for_tests(lock),
-            policy,
-        )
-    }
-
     /// Exclusively creates `staging/current.seg` under this writer authority.
     ///
     /// The returned stage borrows this publisher until the stage is dropped or

@@ -4,14 +4,14 @@ use std::error::Error;
 
 use keep::{
     RecoveryEntryRole, RecoveryNameClassificationError, RecoveryNamespace, RecoveryPoolNameError,
-    RecoveryRequiredEntry, classify_recovery_names,
+    RecoveryRequiredEntry, classify_version_two_recovery_names,
 };
 
-use super::{initialized_root, inventory, name, names};
+use super::{INITIALIZED_ROOT, initialized_root, inventory, name, names};
 
 #[test]
 fn unknown_name_is_refused_with_its_exact_namespace_and_bytes() -> Result<(), Box<dyn Error>> {
-    let Err(error) = classify_recovery_names(inventory([
+    let Err(error) = classify_version_two_recovery_names(inventory([
         initialized_root()?,
         Vec::new(),
         names(&["not-a-segment"])?,
@@ -36,8 +36,12 @@ fn unknown_name_is_refused_with_its_exact_namespace_and_bytes() -> Result<(), Bo
 
 #[test]
 fn missing_initialized_root_entry_is_an_exact_refusal() -> Result<(), Box<dyn Error>> {
-    let Err(error) = classify_recovery_names(inventory([
-        names(&["staging", "segments", "catalogs"])?,
+    let Err(error) = classify_version_two_recovery_names(inventory([
+        names(
+            INITIALIZED_ROOT
+                .get(1..)
+                .ok_or("initialized root is empty")?,
+        )?,
         Vec::new(),
         Vec::new(),
         Vec::new(),
@@ -56,7 +60,7 @@ fn missing_initialized_root_entry_is_an_exact_refusal() -> Result<(), Box<dyn Er
 
 #[test]
 fn uppercase_pool_digest_is_noncanonical() -> Result<(), Box<dyn Error>> {
-    let Err(error) = classify_recovery_names(inventory([
+    let Err(error) = classify_version_two_recovery_names(inventory([
         initialized_root()?,
         Vec::new(),
         vec![name(format!("{}.seg", "AA".repeat(32)).as_bytes())?],
@@ -77,7 +81,7 @@ fn uppercase_pool_digest_is_noncanonical() -> Result<(), Box<dyn Error>> {
 
 #[test]
 fn simultaneous_fixed_stages_are_unrecoverable_ambiguity() -> Result<(), Box<dyn Error>> {
-    let Err(error) = classify_recovery_names(inventory([
+    let Err(error) = classify_version_two_recovery_names(inventory([
         initialized_root()?,
         names(&["current.seg", "current.cat"])?,
         Vec::new(),

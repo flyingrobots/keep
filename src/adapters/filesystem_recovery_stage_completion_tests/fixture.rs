@@ -1,13 +1,13 @@
 //! Deterministic initialized-store fixture for filesystem stage completion.
 
 use std::error::Error;
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::LayoutEntryLimit;
 
 use super::super::{
-    FilesystemRecoveryStageCompleter, FilesystemRecoveryStageCompletionOpenError, RecoveryStage,
+    FilesystemPlatformAdmissionError, FilesystemRecoveryStageCompleter,
+    FilesystemVersionTwoAdmission, FilesystemVersionTwoRecoveryAdmission, RecoveryStage,
     RecoveryStageCompletionRequest, RecoveryStageCompletionTarget, RecoveryStageMetadata,
     SegmentReadPolicy, SegmentRecordLimit, admit_recovery_stage_bytes, assess_recovery_stage,
     filesystem_test_sandbox::TestDirectory, fingerprint_recovery_stage, physical_pool_name,
@@ -57,10 +57,11 @@ pub(super) struct CompletionFixture {
 impl CompletionFixture {
     pub(super) fn new(name: &str) -> Result<Self, Box<dyn Error>> {
         let directory = TestDirectory::create(name)?;
-        fs::write(directory.path().join("writer.lock"), [])?;
-        for name in ["staging", "segments", "catalogs"] {
-            fs::create_dir(directory.path().join(name))?;
-        }
+        drop(
+            FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(
+                directory.path(),
+            )?,
+        );
         Ok(Self { directory })
     }
 
@@ -91,10 +92,17 @@ impl CompletionFixture {
         }
     }
 
-    pub(super) fn completer(
+    /// Acquires single-format recovery admission, the writer authority completion runs under.
+    pub(super) fn recovery_admission(
         &self,
-    ) -> Result<FilesystemRecoveryStageCompleter, FilesystemRecoveryStageCompletionOpenError> {
-        FilesystemRecoveryStageCompleter::open_unchecked_for_tests(self.root())
+    ) -> Result<FilesystemVersionTwoRecoveryAdmission, FilesystemPlatformAdmissionError> {
+        FilesystemVersionTwoRecoveryAdmission::reopen_unchecked_for_repository_tasks(self.root())
+    }
+
+    pub(super) fn completer(&self) -> Result<FilesystemRecoveryStageCompleter, Box<dyn Error>> {
+        Ok(FilesystemRecoveryStageCompleter::open_version_two(
+            self.recovery_admission()?,
+        )?)
     }
 
     pub(super) fn remove(self) -> std::io::Result<()> {

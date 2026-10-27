@@ -9,18 +9,29 @@ use allocation_counter::measure;
 use inventory_double::InventoryDouble;
 use keep::{
     RecoveryEntryName, RecoveryInventoryLimit, RecoveryNameClassificationError,
-    classify_recovery_names, read_recovery_inventory,
+    classify_version_two_recovery_names, read_recovery_inventory,
 };
 
 #[test]
 fn refusal_moves_the_exact_name_without_an_extra_allocation() -> Result<(), Box<dyn Error>> {
     let names = [
-        recovery_names(&["writer.lock", "staging", "segments", "catalogs", "unknown"])?,
+        recovery_names(&[
+            "writer.lock",
+            "staging",
+            "segments",
+            "catalogs",
+            "reader.lock",
+            "FORMAT",
+            "retention",
+            "gc",
+            "recovery",
+            "unknown",
+        ])?,
         Vec::new(),
         Vec::new(),
         Vec::new(),
     ];
-    let mut storage = InventoryDouble::new([5, 0, 0, 0], names);
+    let mut storage = InventoryDouble::new([10, 0, 0, 0], names);
     let inventory =
         read_recovery_inventory(&mut storage, RecoveryInventoryLimit::protocol_maximum())?;
     assert_eq!(storage.calls().len(), 8);
@@ -29,7 +40,7 @@ fn refusal_moves_the_exact_name_without_an_extra_allocation() -> Result<(), Box<
 
     let allocations = measure(|| {
         if let Some(inventory) = input.take() {
-            result = Some(classify_recovery_names(inventory));
+            result = Some(classify_version_two_recovery_names(inventory));
         }
     });
     let error = match result.ok_or("name classification did not run")? {
