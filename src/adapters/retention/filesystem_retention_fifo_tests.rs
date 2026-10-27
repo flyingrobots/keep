@@ -9,7 +9,7 @@ use std::thread;
 use std::time::Duration;
 
 use super::filesystem_retention_test_fixture::{
-    ROOT_HEX, fixture, initial_preparation, manifest_pool_path, migrated_store, open_authority,
+    ROOT_HEX, fixture, initial_preparation, initialized_store, manifest_pool_path, open_authority,
 };
 use crate::adapters::FilesystemVersionTwoAdmission;
 use crate::execute_retention_publication;
@@ -29,7 +29,7 @@ fn a_fifo_at_the_retention_head_refuses_instead_of_blocking() -> Result<(), Box<
 
 #[test]
 fn a_fifo_at_the_format_marker_refuses_instead_of_blocking() -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("filesystem-retention-fifo-marker")?;
+    let sandbox = initialized_store("filesystem-retention-fifo-marker")?;
     std::fs::remove_file(sandbox.path().join("FORMAT"))?;
     make_fifo(&sandbox.path().join("FORMAT"))?;
     let path = sandbox.path().to_path_buf();

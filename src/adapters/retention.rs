@@ -119,8 +119,6 @@ mod filesystem_retention_snapshot_error;
 #[cfg(test)]
 mod filesystem_retention_snapshot_error_tests;
 #[cfg(test)]
-mod filesystem_retention_snapshot_identity_tests;
-#[cfg(test)]
 mod filesystem_retention_snapshot_tests;
 mod filesystem_retention_stage;
 mod filesystem_retention_storage;
@@ -306,6 +304,3 @@ pub use verified_closure::VerifiedRetentionClosure;
 pub(super) use closure_profile_error::map as profile_verification_refusal;
 
 pub use verification_view_collector::collect_verification_view;
-
-#[cfg(all(test, feature = "repository-tasks"))]
-mod filesystem_retention_migration_completion_tests;

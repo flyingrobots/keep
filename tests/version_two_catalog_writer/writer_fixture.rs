@@ -27,7 +27,7 @@ pub(super) fn first_blob() -> Vec<u8> {
 
 /// The content each law ingests through the version-two writer.
 pub(super) fn second_blob() -> Vec<u8> {
-    b"KEEP V2 WRITER -- the second blob, ingested after migration | ".repeat(2_500)
+    b"KEEP V2 WRITER -- the second blob, ingested after the first catalog | ".repeat(2_500)
 }
 
 /// Opens the version-two writer under the production platform profile.

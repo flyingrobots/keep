@@ -75,7 +75,7 @@ impl FilesystemRecoveryStageDiscarder {
         Self::from_root(root)
     }
 
-    /// Pins a migrated version-two store for explicit stage discard.
+    /// Pins a committed version-two store for explicit stage discard.
     ///
     /// The admission already holds writer authority over a root that passed
     /// version-two recovery admission; this call pins the catalog-protocol

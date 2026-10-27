@@ -1,7 +1,6 @@
 //! This module owns proof that a filesystem root passed platform admission.
 
 use super::FilesystemWriterLock;
-use super::filesystem_root_identity::FilesystemRootIdentity;
 
 /// Exclusive writer authority over a platform-admitted filesystem root.
 ///
@@ -10,23 +9,16 @@ use super::filesystem_root_identity::FilesystemRootIdentity;
 #[must_use]
 pub struct FilesystemPlatformAdmission {
     lock: FilesystemWriterLock,
-    root_identity: FilesystemRootIdentity,
 }
 
 impl FilesystemPlatformAdmission {
-    pub(super) const fn initialized(
-        lock: FilesystemWriterLock,
-        root_identity: FilesystemRootIdentity,
-    ) -> Self {
-        Self {
-            lock,
-            root_identity,
-        }
+    pub(super) const fn initialized(lock: FilesystemWriterLock) -> Self {
+        Self { lock }
     }
 
     #[cfg(test)]
-    pub(super) fn unchecked_for_tests(lock: FilesystemWriterLock) -> std::io::Result<Self> {
-        Self::unchecked(lock)
+    pub(super) const fn unchecked_for_tests(lock: FilesystemWriterLock) -> Self {
+        Self::initialized(lock)
     }
 
     #[cfg(feature = "repository-tasks")]
@@ -35,25 +27,11 @@ impl FilesystemPlatformAdmission {
         // descriptor of that same pinned directory, without an ambient reopen.
         let pinned = lock.clone_directory()?;
         let directory = super::sync_capable_directory::open(&pinned, ".")?;
-        let root_identity = super::filesystem_platform_profile::admit_locked_root(&directory)?;
-        Ok(Self::initialized(lock, root_identity))
+        super::filesystem_platform_profile::admit_locked_root(&directory)?;
+        Ok(Self::initialized(lock))
     }
 
     pub(super) fn into_lock(self) -> FilesystemWriterLock {
         self.lock
-    }
-
-    pub(super) fn into_parts(self) -> (FilesystemWriterLock, FilesystemRootIdentity) {
-        (self.lock, self.root_identity)
-    }
-
-    /// Grants authority without platform admission only for private unit
-    /// tests; the identity probe tolerates a kernel that reports no mount
-    /// identity so the bypass does not require `STATX_MNT_ID`.
-    #[cfg(test)]
-    fn unchecked(lock: FilesystemWriterLock) -> std::io::Result<Self> {
-        let directory = lock.clone_directory()?;
-        let root_identity = super::filesystem_platform_profile::root_identity_lenient(&directory)?;
-        Ok(Self::initialized(lock, root_identity))
     }
 }

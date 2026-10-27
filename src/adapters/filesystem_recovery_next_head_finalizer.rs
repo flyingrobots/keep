@@ -58,7 +58,7 @@ impl FilesystemRecoveryNextHeadFinalizer {
             .map_err(Into::into)
     }
 
-    /// Pins a migrated version-two store for gated head finalization.
+    /// Pins a committed version-two store for gated head finalization.
     ///
     /// The call performs no protocol mutation and reads no record. Execution
     /// verifies every retained closure named by the current retention head

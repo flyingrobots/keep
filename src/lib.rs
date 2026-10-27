@@ -31,15 +31,10 @@
 //! Ordered publication revalidates authority, executes all durability phases,
 //! and returns a complete receipt. The exact version-2 store-format marker has
 //! canonical encoding, registered-definition admission, checksum verification,
-//! and domain-separated identity. Migration-intent admission validates its
-//! framing, checksum, catalog and predecessor grammar, registered definition,
-//! deterministic store identity, and typed recovery coordinates. Completion
-//! receipts bind an admitted intent and marker, registered empty-state digests,
-//! and the complete synchronization mask. Writer-locked filesystem authority
-//! now executes one fresh forward migration through exact fixed-record and
-//! namespace transitions while retaining version-1 immutable bytes.
-//! Partial-prefix recovery now plans and resumes lawful migration residue,
-//! returning typed refusals and an ordered execution receipt. Filesystem
+//! and domain-separated identity. [`FilesystemVersionTwoAdmission::initialize`]
+//! creates a store directly under writer authority through a recoverable
+//! state machine with one durable commit point; an interrupted call resumes
+//! and every other nonempty root refuses before mutation. Filesystem
 //! retention publication and complete-stage restart recovery are available.
 //!
 //! Incomplete retention stages require explicit disposition before recovery
@@ -56,9 +51,9 @@
 //! evidence; unsupported depths refuse without downgrade or a partial report.
 //!
 //! Production durable ingestion, garbage collection and compaction remain
-//! unimplemented here. General version-2 catalog publication still needs a
-//! retained-closure gate; retention publication's live closure verification
-//! does not establish that an arbitrary successor catalog preserves every root.
+//! unimplemented here. Version-2 catalog publication runs only through the
+//! retained-closure gate, which verifies every retained root against the
+//! candidate catalog before any catalog mutation.
 
 #[cfg(test)]
 extern crate self as keep;
@@ -80,52 +75,48 @@ pub use adapters::{
     DurableSnapshot, DurableStore, DurableStoreError, DurableView,
 };
 
+#[cfg(any(test, feature = "repository-tasks"))]
+#[doc(hidden)]
+pub use adapters::VersionTwoInitializationObserver;
 pub use adapters::{
     AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedSegment, AdmittedSegmentRecord,
-    AdmittedStoreFormatMarker, AdmittedStoreMigrationIntent, AdmittedStoreMigrationReceipt,
-    BlobIdBinaryParseError, BlobIdTextParseError, CanonicalCatalog, CanonicalLayoutRecord,
-    CanonicalPublicationHead, CanonicalStoreFormatMarker, CanonicalStoreMigrationIntent,
-    CanonicalStoreMigrationReceipt, CatalogAdmissionError, CatalogAllocationPhase,
-    CatalogDecodeError, CatalogEncodeError, CatalogEntryDecodeError, CatalogPublicationError,
-    CatalogPublicationExpectation, CatalogPublicationOutcome, CatalogPublicationPhase,
-    CatalogPublicationReadiness, CatalogPublicationReceipt, CatalogPublicationStorage,
-    CatalogRestartArtifact, CatalogRestartByteLimit, CatalogRestartByteLimitError,
-    CatalogRestartError, CatalogRestartPhase, CatalogRestartPolicy, CatalogSnapshot,
-    CatalogSnapshotError, CatalogSuccessor, CatalogTransitionError, ChecksummedCatalog,
-    ChecksummedPublicationHead, ChecksummedSegmentRecord, ClosedSegment, EmptyDispositionSetDigest,
-    FilesystemCatalogPublicationError, FilesystemCatalogPublisher, FilesystemCatalogSnapshot,
-    FilesystemMigrationAuthorityArtifact, FilesystemMigrationAuthorityError,
-    FilesystemMigrationInventoryError, FilesystemMigrationInventoryOperation,
-    FilesystemPlatformAdmission, FilesystemPlatformAdmissionError,
-    FilesystemRecoveryInventoryReader, FilesystemRecoveryNextHeadFinalizationOpenError,
-    FilesystemRecoveryNextHeadFinalizer, FilesystemRecoverySegmentResumeOpenError,
-    FilesystemRecoverySegmentResumer, FilesystemRecoverySegmentStage,
-    FilesystemRecoveryStageCompleter, FilesystemRecoveryStageCompletionOpenError,
-    FilesystemRecoveryStageDiscardOpenError, FilesystemRecoveryStageDiscarder,
-    FilesystemRecoveryStageError, FilesystemSegmentStage, FilesystemStoreMigrationAuthority,
-    FilesystemStoreMigrationInventoryReader, FilesystemVersionTwoAdmission,
-    FilesystemVersionTwoCatalogPublisher, FilesystemVersionTwoCatalogStages,
-    FilesystemVersionTwoRecoveryAdmission, FilesystemWriterLock, ImmutablePoolInventoryDigest,
-    InitialGcStateDigest, InitialRetentionStateDigest, LayoutDecodeError, LayoutDecodePolicy,
-    LayoutEncodeError, LayoutIdBinaryParseError, LayoutIdTextParseError,
-    MigrationInventoryNamespace, MigrationInventoryPool, MigrationSynchronizationMask,
-    OpenedReusableSegment, PublicationHeadDecodeError, RecoveryCatalogStage,
-    RecoveryCatalogStageError, RecoveryEntryName, RecoveryEntryNameError, RecoveryEntryRole,
-    RecoveryInventory, RecoveryInventoryEntry, RecoveryInventoryError, RecoveryInventoryLimit,
-    RecoveryInventoryLimitError, RecoveryInventoryOperation, RecoveryInventoryStorage,
-    RecoveryNameClassificationError, RecoveryNameManifest, RecoveryNamedEntry, RecoveryNamespace,
-    RecoveryNextHeadFinalizationError, RecoveryNextHeadFinalizationOutcome,
-    RecoveryNextHeadFinalizationPlanError, RecoveryNextHeadFinalizationReadiness,
-    RecoveryNextHeadFinalizationReceipt, RecoveryNextHeadFinalizationRequest,
-    RecoveryNextHeadFinalizationStorage, RecoveryNextHeadFinalizationStorageError,
-    RecoveryNextHeadFinalizationTarget, RecoveryNextHeadStage, RecoveryNextHeadStageError,
-    RecoveryPoolNameError, RecoveryRequiredEntry, RecoverySegmentResumeError,
-    RecoverySegmentResumePlanError, RecoverySegmentResumeRequest, RecoverySegmentResumeStorage,
-    RecoverySegmentResumeStorageError, RecoverySegmentStage, RecoverySegmentStageError,
-    RecoverySegmentTruncation, RecoveryStage, RecoveryStageAssessment,
-    RecoveryStageAssessmentError, RecoveryStageByteAdmissionError, RecoveryStageCompletionError,
-    RecoveryStageCompletionPlanError, RecoveryStageCompletionPool, RecoveryStageCompletionReceipt,
-    RecoveryStageCompletionRequest, RecoveryStageCompletionStorage,
+    AdmittedStoreFormatMarker, BlobIdBinaryParseError, BlobIdTextParseError, CanonicalCatalog,
+    CanonicalLayoutRecord, CanonicalPublicationHead, CanonicalStoreFormatMarker,
+    CatalogAdmissionError, CatalogAllocationPhase, CatalogDecodeError, CatalogEncodeError,
+    CatalogEntryDecodeError, CatalogPublicationError, CatalogPublicationExpectation,
+    CatalogPublicationOutcome, CatalogPublicationPhase, CatalogPublicationReadiness,
+    CatalogPublicationReceipt, CatalogPublicationStorage, CatalogRestartArtifact,
+    CatalogRestartByteLimit, CatalogRestartByteLimitError, CatalogRestartError,
+    CatalogRestartPhase, CatalogRestartPolicy, CatalogSnapshot, CatalogSnapshotError,
+    CatalogSuccessor, CatalogTransitionError, ChecksummedCatalog, ChecksummedPublicationHead,
+    ChecksummedSegmentRecord, ClosedSegment, FilesystemCatalogPublicationError,
+    FilesystemCatalogPublisher, FilesystemCatalogSnapshot, FilesystemPlatformAdmission,
+    FilesystemPlatformAdmissionError, FilesystemRecoveryInventoryReader,
+    FilesystemRecoveryNextHeadFinalizationOpenError, FilesystemRecoveryNextHeadFinalizer,
+    FilesystemRecoverySegmentResumeOpenError, FilesystemRecoverySegmentResumer,
+    FilesystemRecoverySegmentStage, FilesystemRecoveryStageCompleter,
+    FilesystemRecoveryStageCompletionOpenError, FilesystemRecoveryStageDiscardOpenError,
+    FilesystemRecoveryStageDiscarder, FilesystemRecoveryStageError, FilesystemSegmentStage,
+    FilesystemVersionTwoAdmission, FilesystemVersionTwoCatalogPublisher,
+    FilesystemVersionTwoCatalogStages, FilesystemVersionTwoRecoveryAdmission, FilesystemWriterLock,
+    LayoutDecodeError, LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError,
+    LayoutIdTextParseError, OpenedReusableSegment, PublicationHeadDecodeError,
+    RecoveryCatalogStage, RecoveryCatalogStageError, RecoveryEntryName, RecoveryEntryNameError,
+    RecoveryEntryRole, RecoveryInventory, RecoveryInventoryEntry, RecoveryInventoryError,
+    RecoveryInventoryLimit, RecoveryInventoryLimitError, RecoveryInventoryOperation,
+    RecoveryInventoryStorage, RecoveryNameClassificationError, RecoveryNameManifest,
+    RecoveryNamedEntry, RecoveryNamespace, RecoveryNextHeadFinalizationError,
+    RecoveryNextHeadFinalizationOutcome, RecoveryNextHeadFinalizationPlanError,
+    RecoveryNextHeadFinalizationReadiness, RecoveryNextHeadFinalizationReceipt,
+    RecoveryNextHeadFinalizationRequest, RecoveryNextHeadFinalizationStorage,
+    RecoveryNextHeadFinalizationStorageError, RecoveryNextHeadFinalizationTarget,
+    RecoveryNextHeadStage, RecoveryNextHeadStageError, RecoveryPoolNameError,
+    RecoveryRequiredEntry, RecoverySegmentResumeError, RecoverySegmentResumePlanError,
+    RecoverySegmentResumeRequest, RecoverySegmentResumeStorage, RecoverySegmentResumeStorageError,
+    RecoverySegmentStage, RecoverySegmentStageError, RecoverySegmentTruncation, RecoveryStage,
+    RecoveryStageAssessment, RecoveryStageAssessmentError, RecoveryStageByteAdmissionError,
+    RecoveryStageCompletionError, RecoveryStageCompletionPlanError, RecoveryStageCompletionPool,
+    RecoveryStageCompletionReceipt, RecoveryStageCompletionRequest, RecoveryStageCompletionStorage,
     RecoveryStageCompletionStorageError, RecoveryStageCompletionTarget, RecoveryStageDiscardError,
     RecoveryStageDiscardOutcome, RecoveryStageDiscardPlanError, RecoveryStageDiscardReason,
     RecoveryStageDiscardReceipt, RecoveryStageDiscardRequest, RecoveryStageDiscardStorage,
@@ -141,20 +132,17 @@ pub use adapters::{
     SegmentRecords, SegmentSeal, SegmentSealError, SegmentStage, SegmentStageCreateError,
     SegmentWriteError, SegmentWritePhase, StagedSegment, StorageProfileIdParseError,
     StoreFormatDefinitionDigest, StoreFormatMarkerDecodeError, StoreFormatMarkerDigest,
-    StoreIdentifier, StoreInitializationError, StoreInitializationPhase,
-    StoreInitializationReceipt, StoreInitializationStorage, StoreMigrationError,
-    StoreMigrationIntentDecodeError, StoreMigrationIntentDigest, StoreMigrationInventoryEntry,
-    StoreMigrationInventoryEntryCount, StoreMigrationInventoryEntryCountError,
-    StoreMigrationInventoryError, StoreMigrationInventoryHasher, StoreMigrationPhase,
-    StoreMigrationReceiptDecodeError, StoreMigrationStorage, StoreRootDeviceIdentity,
-    StoreRootFileIdentity, StoreRootIdentityCoordinate, StoreRootMountIdentity,
+    StoreInitializationError, StoreInitializationPhase, StoreInitializationReceipt,
+    StoreInitializationStorage, VersionTwoInitialization, VersionTwoInitializationBoundary,
+    VersionTwoInitializationDirectory, VersionTwoInitializationError,
+    VersionTwoInitializationPhase, VersionTwoInitializationPrefix, VersionTwoInitializationRefusal,
     VersionTwoRecordRefusal, WriterLockAcquireError, WriterLockAcquirePhase,
     admit_recovery_stage_bytes, assess_recovery_stage, classify_recovery_catalog_stage,
     classify_recovery_names, classify_recovery_next_head_stage, classify_recovery_segment_stage,
     classify_version_two_recovery_names, execute_recovery_next_head_finalization,
     execute_recovery_segment_resume, execute_recovery_stage_completion,
-    execute_recovery_stage_discard, execute_store_migration, fingerprint_recovery_stage,
-    initialize_store, plan_recovery_next_head_finalization, plan_recovery_segment_resume,
+    execute_recovery_stage_discard, fingerprint_recovery_stage, initialize_store,
+    plan_recovery_next_head_finalization, plan_recovery_segment_resume,
     plan_recovery_stage_completion, plan_recovery_stage_discard, publish_catalog_generation,
     read_recovery_inventory,
 };
@@ -189,13 +177,6 @@ pub use adapters::{
 #[cfg(any(test, feature = "repository-tasks"))]
 #[doc(hidden)]
 pub use adapters::{CatalogPublicationBoundary, CatalogPublicationObserver};
-pub use adapters::{
-    FilesystemMigrationRecoveryRefusal, FilesystemMigrationResidueKind, MIGRATION_NAMESPACE_PREFIX,
-    StoreMigrationEffect, StoreMigrationFixedStage, StoreMigrationNamespacePrefix,
-    StoreMigrationRecoveryAmbiguity, StoreMigrationRecoveryError, StoreMigrationRecoveryPlan,
-    StoreMigrationRecoveryReceipt, StoreMigrationRecoveryStorage, StoreMigrationResidue,
-    StoreMigrationStageDecodeError, plan_store_migration_recovery, recover_store_migration,
-};
 #[cfg(feature = "repository-tasks")]
 #[doc(hidden)]
 pub use adapters::{

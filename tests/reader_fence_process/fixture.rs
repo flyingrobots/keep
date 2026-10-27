@@ -1,44 +1,52 @@
-//! A migrated golden store for public reader-fence process laws.
+//! An initialized golden store for public reader-fence process laws.
 
+use super::populated_store::{self, FirstCatalogRecords, StoreAdmission};
 use super::sandbox::TestDirectory;
-use keep::{
-    FilesystemStoreMigrationAuthority, RepositoryInitializationStorage, SegmentReadPolicy,
-    execute_store_migration, initialize_store,
-};
-use std::{error::Error, fs};
+use keep::{FilesystemVersionTwoAdmission, FilesystemVersionTwoCatalogPublisher};
+use std::error::Error;
 
-pub(super) fn migrated(
+/// The shared builder's route outside the production platform profile.
+const UNCHECKED: StoreAdmission = StoreAdmission {
+    initialize: |root| {
+        Ok(
+            FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(root)?
+                .into_admission(),
+        )
+    },
+    reopen_version_two: |root| {
+        Ok(FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(root)?)
+    },
+};
+
+/// Creates the one-zero bundle store and keeps its writer authority.
+///
+/// Initialization and the first publication run through the public writer.
+/// Writer authority stays continuous while the caller arranges collection: a
+/// concurrent spawn may inherit lock descriptions until exec, so dropping and
+/// immediately reacquiring cannot assume all holders have disappeared.
+pub(super) fn initialized(
     name: &str,
-) -> Result<(TestDirectory, FilesystemStoreMigrationAuthority), Box<dyn Error>> {
+) -> Result<(TestDirectory, FilesystemVersionTwoCatalogPublisher), Box<dyn Error>> {
     let sandbox = TestDirectory::create(name)?;
-    let mut storage = RepositoryInitializationStorage::admit_unchecked(sandbox.path())?;
-    let _initialized = initialize_store(&mut storage)?;
-    for (name, hex) in [
-        (
-            "segments/221f6745cd8a5221c9a87c3707593608479282b54a4a74d0e753fd76f70e8db2.seg",
-            include_str!("../../conformance/segment-store/v1/one-zero-bundle-segment.hex"),
-        ),
-        (
-            "catalogs/0000000000000001-0b7cad1b6de663d34beacbc214db7497f2e36ab6b08dfbd5febbc8d06a418811.cat",
-            include_str!("../../conformance/segment-store/v1/one-zero-bundle-catalog.hex"),
-        ),
-        (
-            "HEAD",
-            include_str!("../../conformance/segment-store/v1/one-zero-bundle-head.hex"),
-        ),
-    ] {
-        fs::write(sandbox.path().join(name), decode(hex)?)?;
-    }
-    let mut migration = FilesystemStoreMigrationAuthority::open_unchecked_for_repository_tasks(
-        storage.into_writer_lock()?,
-        SegmentReadPolicy::MAXIMUM,
+    let (_created, writer) = populated_store::create_holding_authority(
+        sandbox.path(),
+        UNCHECKED,
+        &[&[0]],
+        FirstCatalogRecords::Complete,
     )?;
-    let intent = migration.observe_intent()?;
-    let _receipt = execute_store_migration(&mut migration, &intent)?;
-    // Keep writer authority continuous while the caller arranges collection.
-    // A concurrent spawn may inherit lock descriptions until exec, so dropping
-    // and immediately reacquiring cannot assume all holders have disappeared.
-    Ok((sandbox, migration))
+    populated_store::require_first_catalog(
+        sandbox.path(),
+        &decode(include_str!(
+            "../../conformance/segment-store/v1/one-zero-bundle-segment.hex"
+        ))?,
+        &decode(include_str!(
+            "../../conformance/segment-store/v1/one-zero-bundle-catalog.hex"
+        ))?,
+        &decode(include_str!(
+            "../../conformance/segment-store/v1/one-zero-bundle-head.hex"
+        ))?,
+    )?;
+    Ok((sandbox, writer))
 }
 
 fn decode(hex: &str) -> Result<Vec<u8>, Box<dyn Error>> {

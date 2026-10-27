@@ -128,7 +128,7 @@ cargo xtask durability-crash-matrix
 ```
 
 The 105 version-one cases are a subset of the complete command, which also
-executes version-two migration cases. The version-one subset executes the
+executes version-two cases. The version-one subset executes the
 three ordered positions for each stable `KEEP-CRASH-001`–`KEEP-CRASH-035`
 point. Each version-one case owns a
 fresh filesystem store and an isolated child process group. The child retains

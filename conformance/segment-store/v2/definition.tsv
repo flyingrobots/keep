@@ -1,6 +1,5 @@
 keep.segment-store.definition/v2
 key	value
-domain.empty-disposition-set	keep.empty-disposition-set/v2\0
 domain.format-definition	keep.segment-store-definition/v2\0
 domain.format-marker	keep.store-format-marker/v2\0
 domain.format-marker-checksum	keep.segment-store-marker-checksum/v2\0
@@ -8,12 +7,6 @@ domain.gc-candidate-set	keep.gc-candidate-set/v2\0
 domain.gc-intent	keep.gc-retirement-intent/v2\0
 domain.gc-intent-checksum	keep.gc-retirement-intent-checksum/v2\0
 domain.gc-receipt-checksum	keep.gc-retirement-receipt-checksum/v2\0
-domain.initial-gc-state	keep.initial-gc-state/v2\0
-domain.initial-retention-state	keep.initial-retention-state/v2\0
-domain.migration-intent	keep.store-migration-intent/v2\0
-domain.migration-intent-checksum	keep.store-migration-intent-checksum/v2\0
-domain.migration-inventory	keep.store-v1-pool-inventory/v2\0
-domain.migration-receipt-checksum	keep.store-migration-receipt-checksum/v2\0
 domain.recovery-disposition-checksum	keep.recovery-disposition-receipt-checksum/v2\0
 domain.retention-anchor-set	keep.retention-anchor-set/v2\0
 domain.retention-head-checksum	keep.retention-head-checksum/v2\0
@@ -24,7 +17,6 @@ domain.retention-namespace	keep.retention-namespace/v1\0
 domain.retention-profile	keep.retention-realization-profile/v1\0
 domain.retention-root	keep.retention-root/v2\0
 domain.retention-root-checksum	keep.retention-root-checksum/v2\0
-domain.store-identifier	keep.store-identifier/v2\0
 format.coordinate	keep.segment-store/v2
 format.marker.fields	magic:16,version:u16,record_length:u16,flags:u32,definition_digest:32,maximum_namespace_count:u32,reserved:u32,checksum:32
 format.marker.length	96
@@ -41,18 +33,6 @@ gc.receipt.fields	magic:16,version:u16,record_length:u16,flags:u32,generation:u6
 gc.receipt.length	320
 gc.receipt.magic	KEEP:GC:RECEIPT2
 gc.receipt.version	2
-migration.intent.fields	magic:16,version:u16,record_length:u16,flags:u32,catalog_generation:u64,catalog_length:u64,catalog_digest:32,predecessor_digest:32,inventory_digest:32,root_device:u64,root_mount:u64,root_file:u64,definition_digest:32,store_id:32,checksum:32
-migration.intent.length	256
-migration.intent.magic	KEEP:MIG:INT2\0\0\0
-migration.intent.version	2
-migration.inventory.entry-fields	kind:u8,reserved:7,catalog_generation:u64,artifact_length:u64,artifact_digest:32
-migration.inventory.entry-width	56
-migration.inventory.maximum-entries	2097152
-migration.receipt.fields	magic:16,version:u16,record_length:u16,flags:u32,intent_digest:32,store_id:32,format_marker_digest:32,initial_retention_digest:32,initial_gc_digest:32,disposition_set_digest:32,synchronization_mask:u64,checksum:32
-migration.receipt.length	256
-migration.receipt.magic	KEEP:MIG:REC2\0\0\0
-migration.receipt.synchronization-mask	0x00000000000003ff
-migration.receipt.version	2
 recovery.disposition.fields	magic:16,version:u16,record_length:u16,flags:u32,artifact_kind:u16,decision:u16,classification:u16,reserved:u16,artifact_length:u64,artifact_identity_digest:32,artifact_content_digest:32,publication_generation:u64,publication_checksum:32,catalog_generation:u64,catalog_digest:32,liveness_generation:u64,manifest_digest:32,reader_device:u64,reader_mount:u64,reader_file:u64,decision_evidence_digest:32,reserved:8,checksum:32
 recovery.disposition.length	320
 recovery.disposition.magic	KEEP:REC:DISP2\0\0

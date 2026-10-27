@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fmt;
 use std::io;
 
-use super::{StoreRootIdentityCoordinate, WriterLockAcquireError};
+use super::WriterLockAcquireError;
 
 /// Failure to reacquire writer authority over one published filesystem store.
 #[derive(Debug)]
@@ -25,22 +25,10 @@ pub enum FilesystemPlatformAdmissionError {
         /// Preserved namespace-admission failure.
         source: io::Error,
     },
-    /// A version-two migration record failed exact or joint admission.
-    MigrationRecord {
+    /// The version-two `FORMAT` marker failed exact admission.
+    FormatMarker {
         /// Preserved record-admission failure.
         source: io::Error,
-    },
-    /// The reopened root's physical identity is not the one the migration intent bound.
-    ///
-    /// Reopen compares the restart-stable device and file coordinates only; a
-    /// remounted store admits, so this variant never names `Mount`.
-    RootIdentityChanged {
-        /// The coordinate that disagreed.
-        coordinate: StoreRootIdentityCoordinate,
-        /// The value bound into `migration.intent`.
-        expected: u64,
-        /// The value observed on reopen.
-        observed: u64,
     },
 }
 
@@ -50,10 +38,7 @@ impl fmt::Display for FilesystemPlatformAdmissionError {
             Self::Platform { .. } => "published store platform admission failed",
             Self::WriterLock { .. } => "published store writer-lock acquisition failed",
             Self::Namespace { .. } => "published store namespace admission failed",
-            Self::MigrationRecord { .. } => "version-two migration record admission failed",
-            Self::RootIdentityChanged { .. } => {
-                "reopened root identity disagrees with the migration intent"
-            }
+            Self::FormatMarker { .. } => "version-two format marker admission failed",
         })
     }
 }
@@ -63,8 +48,7 @@ impl Error for FilesystemPlatformAdmissionError {
         match self {
             Self::Platform { source }
             | Self::Namespace { source }
-            | Self::MigrationRecord { source } => Some(source),
-            Self::RootIdentityChanged { .. } => None,
+            | Self::FormatMarker { source } => Some(source),
             Self::WriterLock { source } => Some(source),
         }
     }

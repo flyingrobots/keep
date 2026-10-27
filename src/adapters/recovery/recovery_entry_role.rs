@@ -38,10 +38,6 @@ pub enum RecoveryEntryRole {
     ReaderFence,
     /// Version-two format marker `FORMAT`.
     FormatMarker,
-    /// Version-two migration intent record.
-    MigrationIntent,
-    /// Version-two migration receipt record.
-    MigrationReceipt,
     /// Version-two `retention` protocol directory, admitted by retention recovery.
     RetentionDirectory,
     /// Version-two reserved `gc` protocol directory.

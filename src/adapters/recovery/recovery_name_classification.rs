@@ -23,13 +23,14 @@ pub fn classify_recovery_names(
     classify_inventory(inventory, StoreLayout::VersionOne)
 }
 
-/// Classifies one complete migrated version-two inventory without opening bytes.
+/// Classifies one complete committed version-two inventory without opening bytes.
 ///
 /// The version-one laws apply unchanged, and the version-two root entries
-/// `reader.lock`, `FORMAT`, `migration.intent`, `migration.receipt`,
-/// `retention`, `gc`, and `recovery` are classified as known roles, never as
-/// unexpected or ignored. Each of them and the published `HEAD` is required.
-/// Migration stages are unknown: a completely migrated root never holds one.
+/// `reader.lock`, `FORMAT`, `retention`, `gc`, and `recovery` are classified
+/// as known roles, never as unexpected or ignored. Each of them is required;
+/// catalog `HEAD` is not, because the first publication of an initialized
+/// store can be interrupted before it exists. `FORMAT.next` is unknown: a
+/// committed root never holds it.
 /// The contents of `retention`, `gc`, and `recovery` are not inventoried here;
 /// version-two admission and retention recovery own them.
 ///
@@ -129,8 +130,6 @@ fn classify_version_two_root(name: &[u8]) -> Result<RecoveryEntryRole, NameFailu
     match name {
         b"reader.lock" => Ok(RecoveryEntryRole::ReaderFence),
         b"FORMAT" => Ok(RecoveryEntryRole::FormatMarker),
-        b"migration.intent" => Ok(RecoveryEntryRole::MigrationIntent),
-        b"migration.receipt" => Ok(RecoveryEntryRole::MigrationReceipt),
         b"retention" => Ok(RecoveryEntryRole::RetentionDirectory),
         b"gc" => Ok(RecoveryEntryRole::GcDirectory),
         b"recovery" => Ok(RecoveryEntryRole::RecoveryDirectory),
@@ -152,16 +151,13 @@ enum NameFailure {
 }
 
 /// Required root entries in report order; version one requires the prefix.
-const REQUIRED: [RecoveryRequiredEntry; 12] = [
+const REQUIRED: [RecoveryRequiredEntry; 9] = [
     RecoveryRequiredEntry::WriterLock,
     RecoveryRequiredEntry::StagingDirectory,
     RecoveryRequiredEntry::SegmentPoolDirectory,
     RecoveryRequiredEntry::CatalogPoolDirectory,
-    RecoveryRequiredEntry::CurrentHead,
     RecoveryRequiredEntry::ReaderFence,
     RecoveryRequiredEntry::FormatMarker,
-    RecoveryRequiredEntry::MigrationIntent,
-    RecoveryRequiredEntry::MigrationReceipt,
     RecoveryRequiredEntry::RetentionDirectory,
     RecoveryRequiredEntry::GcDirectory,
     RecoveryRequiredEntry::RecoveryDirectory,
@@ -208,15 +204,13 @@ const fn required_entry(role: RecoveryEntryRole) -> Option<RecoveryRequiredEntry
         RecoveryEntryRole::CatalogPoolDirectory => {
             Some(RecoveryRequiredEntry::CatalogPoolDirectory)
         }
-        RecoveryEntryRole::CurrentHead => Some(RecoveryRequiredEntry::CurrentHead),
         RecoveryEntryRole::ReaderFence => Some(RecoveryRequiredEntry::ReaderFence),
         RecoveryEntryRole::FormatMarker => Some(RecoveryRequiredEntry::FormatMarker),
-        RecoveryEntryRole::MigrationIntent => Some(RecoveryRequiredEntry::MigrationIntent),
-        RecoveryEntryRole::MigrationReceipt => Some(RecoveryRequiredEntry::MigrationReceipt),
         RecoveryEntryRole::RetentionDirectory => Some(RecoveryRequiredEntry::RetentionDirectory),
         RecoveryEntryRole::GcDirectory => Some(RecoveryRequiredEntry::GcDirectory),
         RecoveryEntryRole::RecoveryDirectory => Some(RecoveryRequiredEntry::RecoveryDirectory),
-        RecoveryEntryRole::NextHeadStage
+        RecoveryEntryRole::CurrentHead
+        | RecoveryEntryRole::NextHeadStage
         | RecoveryEntryRole::SegmentStage
         | RecoveryEntryRole::CatalogStage
         | RecoveryEntryRole::ImmutableSegment { .. }

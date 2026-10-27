@@ -1,6 +1,6 @@
 //! This module owns execution of the production version-two catalog writer.
 //!
-//! The child migrates the bundle store, publishes retention generation one,
+//! The child initializes the bundle store, publishes retention generation one,
 //! then ingests one new blob through the version-two writer. An observer
 //! installed on the writer's own stage type blocks at the selected boundary
 //! for process death; no transition is reimplemented here.
@@ -77,11 +77,11 @@ pub(super) fn run(
         .map_err(|source| verification("execute version-two catalog publication", source))
 }
 
-/// Migrates the bundle store and publishes its golden retention root.
+/// Creates the bundle store and publishes its golden retention root.
 pub(in crate::durability_crash_matrix) fn retained_bundle_store(
     store_root: &Path,
 ) -> Result<(), DurabilityCrashMatrixError> {
-    let mut authority = retention::migrated_authority(store_root)?;
+    let mut authority = retention::bundle_authority(store_root)?;
     let root = GoldenFixture::retention_root()?;
     let preparation = retention::preparation(root.bytes())?;
     execute_retention_publication(&mut authority, &preparation)

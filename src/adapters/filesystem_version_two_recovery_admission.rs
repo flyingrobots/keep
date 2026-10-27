@@ -12,34 +12,33 @@ use super::{
     filesystem_platform_profile,
 };
 
-/// Exclusive writer authority over a migrated version-two root for stage recovery.
+/// Exclusive writer authority over a committed version-two root for stage recovery.
 ///
 /// Admission is the version-two writer admission with one difference: the
 /// root may retain the catalog `head.next` that an interrupted publication
 /// left. Every other law is the same: the production platform, the writer
-/// lock, the exact namespace with its protocol directories, the jointly
-/// admitted marker, intent, and receipt records, and the restart-stable root
-/// identity. The admitted `retention`, `roots`, and `manifests` capabilities
+/// lock, the exact namespace with its protocol directories, and the canonical
+/// `FORMAT` marker. The admitted `retention`, `roots`, and `manifests` capabilities
 /// are retained so recovery finalization verifies retained closures against
 /// the directories that passed admission.
 ///
 /// Only the version-two recovery constructors consume this value; version-one
 /// recovery keeps refusing a version-two root, and this admission refuses a
-/// version-one root because the marker and migration records are required.
+/// version-one root because the marker is required.
 #[must_use]
 pub struct FilesystemVersionTwoRecoveryAdmission {
     parts: AdmittedVersionTwoParts,
 }
 
 impl FilesystemVersionTwoRecoveryAdmission {
-    /// Acquires writer authority over one migrated store for stage recovery.
+    /// Acquires writer authority over one committed store for stage recovery.
     ///
     /// The call mutates no protocol state and may block on filesystem I/O.
     ///
     /// # Errors
     ///
     /// Returns [`FilesystemPlatformAdmissionError`] with the exact platform,
-    /// writer-lock, namespace, or migration-record boundary and preserved
+    /// writer-lock, namespace, or format-marker boundary and preserved
     /// source.
     pub fn reopen(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
         let root = filesystem_platform_profile::open_version_two(store_root)
@@ -47,9 +46,9 @@ impl FilesystemVersionTwoRecoveryAdmission {
         Self::admit(root)
     }
 
-    /// Reopens a migrated root without platform admission for repository tasks.
+    /// Reopens a committed root without platform admission for repository tasks.
     ///
-    /// Every namespace, record, and identity law still applies. Production
+    /// Every namespace and record law still applies. Production
     /// callers use [`Self::reopen`].
     ///
     /// # Errors

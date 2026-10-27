@@ -7,8 +7,7 @@ const RECOVERY: &str = include_str!("../../docs/formats/segment-store-v1/recover
 const REQUIREMENTS: &str = include_str!("../../docs/formats/segment-store-v1/requirements.md");
 const CORPUS_README: &str = include_str!("../../conformance/segment-store/v1/README.md");
 const V2_CORPUS_README: &str = include_str!("../../conformance/segment-store/v2/README.md");
-const MIGRATION_CRASH: &str =
-    include_str!("../../docs/formats/segment-store-v2/migration-crash.md");
+const INITIALIZATION: &str = include_str!("../../docs/formats/segment-store-v2/initialization.md");
 const V2_REQUIREMENTS: &str = include_str!("../../docs/formats/segment-store-v2/requirements.md");
 
 #[test]
@@ -18,12 +17,15 @@ fn living_documentation_routes_the_complete_crash_matrix_and_its_limits() {
         (RECOVERY, "## Process-death crash matrix"),
         (REQUIREMENTS, "`KEEP-RECOVERY-021`"),
         (CORPUS_README, "105 canonical process-death cases"),
-        (V2_CORPUS_README, "68 canonical process-death cases"),
         (
-            MIGRATION_CRASH,
-            "cargo xtask durability-crash-matrix --sequence migration",
+            V2_CORPUS_README,
+            "41 canonical initialization process-death cases",
         ),
-        (V2_REQUIREMENTS, "`KEEP-MIGRATION-007`"),
+        (
+            INITIALIZATION,
+            "cargo xtask durability-crash-matrix --sequence version-two-initialization",
+        ),
+        (V2_REQUIREMENTS, "`KEEP-INITIALIZATION-004`"),
     ] {
         assert!(
             document.contains(claim),
@@ -34,9 +36,5 @@ fn living_documentation_routes_the_complete_crash_matrix_and_its_limits() {
         "Process-death injection, retention, compaction, and garbage collection remain planned."
     ));
     assert!(RECOVERY.contains("does not simulate host power loss"));
-    assert!(
-        !MIGRATION_CRASH
-            .contains("this page claims in-process recovery, not process-death recovery")
-    );
-    assert!(!ROOT_README.contains("Process-death evidence for migration recovery"));
+    assert!(INITIALIZATION.contains("It is process-death evidence."));
 }

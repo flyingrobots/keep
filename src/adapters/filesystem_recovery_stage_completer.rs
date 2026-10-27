@@ -33,7 +33,7 @@ impl FilesystemRecoveryStageCompleter {
             .map_err(Into::into)
     }
 
-    /// Pins a migrated version-two store for explicit stage completion.
+    /// Pins a committed version-two store for explicit stage completion.
     ///
     /// The call performs no protocol mutation. Completion links a stage into
     /// an immutable pool and never changes `HEAD`.

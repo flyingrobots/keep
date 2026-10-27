@@ -2,24 +2,22 @@
 //!
 //! It is the crash matrix's counterpart of `tests/support/populated_store.rs`:
 //! the same public entry points, under the matrix's typed error, because a
-//! repository task cannot include integration-test support. Today creation is
-//! version-one initialization, the first catalog through
-//! `FilesystemCatalogPublisher`, and migration. When direct initialization
-//! replaces migration (#198), only [`create_bundle_store`] changes.
+//! repository task cannot include integration-test support. Creation is direct
+//! initialization, then the first catalog through
+//! `FilesystemVersionTwoCatalogPublisher` and the retained-closure gate.
 
 use std::fs;
 use std::path::Path;
 
 use keep::{
     AdmittedSegment, CanonicalCatalog, CatalogGeneration, CatalogPublicationExpectation,
-    FilesystemCatalogPublisher, FilesystemPlatformAdmission, FilesystemSegmentStage,
-    FilesystemStoreMigrationAuthority, SealedSegment, SegmentRecordLimit, StagedSegment,
-    execute_store_migration, publish_catalog_generation,
+    FilesystemSegmentStage, FilesystemVersionTwoAdmission, FilesystemVersionTwoCatalogPublisher,
+    SealedSegment, SegmentRecordLimit, StagedSegment, publish_retained_catalog_generation,
 };
 
 use super::crash_blob::CrashBlob;
 use super::fixture::{BUNDLE_CATALOG_NAME, BUNDLE_SEGMENT_NAME, GoldenFixture};
-use super::{DurabilityCrashMatrixError, initialization, verification};
+use super::{DurabilityCrashMatrixError, initialization, verification, version_two_catalog};
 
 /// Creates the one-zero bundle store at the empty directory `store_root`.
 ///
@@ -27,13 +25,22 @@ use super::{DurabilityCrashMatrixError, initialization, verification};
 /// against the frozen bundle snapshot and retention root, so the pools must
 /// hold exactly the frozen bundle bytes; any other bytes refuse here.
 pub(super) fn create_bundle_store(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
-    publish_bundle_catalog(store_root)?;
-    migrate(store_root)?;
+    let admission =
+        FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(store_root)
+            .map_err(|source| verification("initialize crash bundle store", source))?
+            .into_admission();
+    publish_bundle_catalog(store_root, admission)?;
     require_frozen_bundle(store_root)
 }
 
-fn publish_bundle_catalog(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
-    let mut publisher = initialization::publisher(store_root)?;
+/// Publishes the bundle blob as the first catalog of an initialized store.
+pub(in crate::durability_crash_matrix) fn publish_bundle_catalog(
+    store_root: &Path,
+    admission: FilesystemVersionTwoAdmission,
+) -> Result<(), DurabilityCrashMatrixError> {
+    let mut publisher =
+        FilesystemVersionTwoCatalogPublisher::open(admission, version_two_catalog::policy()?)
+            .map_err(|source| verification("open crash bundle publisher", source))?;
     let blob = CrashBlob::bundle()?;
     let sealed = stage_bundle(&publisher, &blob)?;
     let bytes = fs::read(store_root.join("staging/current.seg"))
@@ -49,7 +56,7 @@ fn publish_bundle_catalog(store_root: &Path) -> Result<(), DurabilityCrashMatrix
         .map_err(|source| verification("construct bundle catalog generation", source))?;
     let catalog = CanonicalCatalog::from_segments(generation, None, &segments)
         .map_err(|source| verification("encode bundle catalog", source))?;
-    publish_catalog_generation(
+    publish_retained_catalog_generation(
         &mut publisher,
         CatalogPublicationExpectation::uninitialized(),
         selection,
@@ -61,7 +68,7 @@ fn publish_bundle_catalog(store_root: &Path) -> Result<(), DurabilityCrashMatrix
 }
 
 fn stage_bundle<'publisher>(
-    publisher: &'publisher FilesystemCatalogPublisher,
+    publisher: &'publisher FilesystemVersionTwoCatalogPublisher,
     blob: &CrashBlob,
 ) -> Result<SealedSegment<FilesystemSegmentStage<'publisher>>, DurabilityCrashMatrixError> {
     let stage = publisher
@@ -79,21 +86,9 @@ fn stage_bundle<'publisher>(
         .map_err(|source| verification("seal bundle segment", source))
 }
 
-fn migrate(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
-    let admission = FilesystemPlatformAdmission::reopen(store_root)
-        .map_err(|source| verification("reopen bundle store for migration", source))?;
-    let mut migration =
-        FilesystemStoreMigrationAuthority::open(admission, initialization::segment_policy())
-            .map_err(|source| verification("open crash migration authority", source))?;
-    let intent = migration
-        .observe_intent()
-        .map_err(|source| verification("observe crash migration intent", source))?;
-    execute_store_migration(&mut migration, &intent)
-        .map(|_receipt| ())
-        .map_err(|source| verification("execute crash store migration", source))
-}
-
-fn require_frozen_bundle(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
+pub(in crate::durability_crash_matrix) fn require_frozen_bundle(
+    store_root: &Path,
+) -> Result<(), DurabilityCrashMatrixError> {
     for (artifact, relative, expected) in [
         (
             "bundle segment",

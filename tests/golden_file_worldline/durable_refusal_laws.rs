@@ -1,6 +1,6 @@
 //! Evidenced logical absence through a completely admitted durable catalog.
 //!
-//! Size: medium; production publication and migration in an owned ext4 namespace.
+//! Size: medium; production initialization and publication in an owned ext4 namespace.
 //! Oracle: a published layout names the exact missing chunk; no output is permitted.
 //! Delete when durable exact-layout reads are removed or stronger refusal evidence subsumes these laws.
 

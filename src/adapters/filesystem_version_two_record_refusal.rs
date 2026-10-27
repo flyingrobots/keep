@@ -4,15 +4,13 @@ use std::error::Error;
 use std::fmt;
 use std::io;
 
-use super::{
-    StoreFormatMarkerDecodeError, StoreMigrationIntentDecodeError, StoreMigrationReceiptDecodeError,
-};
+use super::StoreFormatMarkerDecodeError;
 
-/// Why `FORMAT`, `migration.intent`, or `migration.receipt` refused admission.
+/// Why the `FORMAT` record refused admission.
 ///
 /// Carried as the source of the `InvalidData` error behind
-/// [`FilesystemPlatformAdmissionError::MigrationRecord`](super::FilesystemPlatformAdmissionError::MigrationRecord),
-/// so a caller can tell which record refused and recover the decoder's own
+/// [`FilesystemPlatformAdmissionError::FormatMarker`](super::FilesystemPlatformAdmissionError::FormatMarker),
+/// so a caller can recover the decoder's own
 /// diagnosis instead of a rendered string.
 #[derive(Debug)]
 #[non_exhaustive]
@@ -36,16 +34,6 @@ pub enum VersionTwoRecordRefusal {
     Marker {
         /// The exact decode refusal.
         source: StoreFormatMarkerDecodeError,
-    },
-    /// `migration.intent` did not decode as a canonical intent.
-    Intent {
-        /// The exact decode refusal.
-        source: StoreMigrationIntentDecodeError,
-    },
-    /// `migration.receipt` did not admit against the decoded intent and marker.
-    Receipt {
-        /// The exact admission refusal.
-        source: StoreMigrationReceiptDecodeError,
     },
 }
 
@@ -78,12 +66,6 @@ impl fmt::Display for VersionTwoRecordRefusal {
             Self::Marker { .. } => {
                 formatter.write_str("version-two record FORMAT refused admission")
             }
-            Self::Intent { .. } => {
-                formatter.write_str("version-two record migration.intent refused admission")
-            }
-            Self::Receipt { .. } => {
-                formatter.write_str("version-two record migration.receipt refused admission")
-            }
         }
     }
 }
@@ -92,8 +74,6 @@ impl Error for VersionTwoRecordRefusal {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match self {
             Self::Marker { source } => Some(source),
-            Self::Intent { source } => Some(source),
-            Self::Receipt { source } => Some(source),
             Self::LengthOverflow { .. }
             | Self::KindOrLength { .. }
             | Self::TrailingBytes { .. } => None,

@@ -1,26 +1,25 @@
-//! Version-two reopen laws: writer authority requires jointly admitted migration records.
+//! Version-two reopen laws: writer authority requires a committed namespace and the canonical marker.
 
 use std::error::Error;
 use std::fs;
 
 use super::filesystem_retention_test_fixture::{
-    ROOT_HEX, fixture, initial_preparation, migrated_store, open_authority, refusal,
+    ROOT_HEX, fixture, initial_preparation, initialized_store, open_authority, refusal,
 };
 use super::{
     FilesystemRetentionPublicationAuthority, RetentionCurrentStateRefusal,
     RetentionPublicationStorage,
 };
-use crate::adapters::filesystem_root_identity::FilesystemRootIdentity;
-use crate::adapters::filesystem_version_two_admission::{BoundRootIdentity, require_root_identity};
+use crate::adapters::filesystem_test_sandbox::TestDirectory;
 use crate::adapters::{
-    FilesystemPlatformAdmissionError, FilesystemVersionTwoAdmission, StoreRootIdentityCoordinate,
+    FilesystemNamespaceRefusal, FilesystemPlatformAdmissionError, FilesystemVersionTwoAdmission,
     VersionTwoRecordRefusal,
 };
 use crate::execute_retention_publication;
 
 #[test]
 fn version_two_reopen_refuses_a_corrupt_format_marker() -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("version-two-admission-corrupt-marker")?;
+    let sandbox = initialized_store("version-two-admission-corrupt-marker")?;
     let marker = sandbox.path().join("FORMAT");
     let mut bytes = fs::read(&marker)?;
     *bytes
@@ -33,7 +32,7 @@ fn version_two_reopen_refuses_a_corrupt_format_marker() -> Result<(), Box<dyn Er
             .err()
             .ok_or("corrupt format marker was unexpectedly admitted")?;
 
-    let FilesystemPlatformAdmissionError::MigrationRecord { source } = error else {
+    let FilesystemPlatformAdmissionError::FormatMarker { source } = error else {
         return Err("corrupt format marker refused outside record admission".into());
     };
     assert!(matches!(
@@ -47,7 +46,7 @@ fn version_two_reopen_refuses_a_corrupt_format_marker() -> Result<(), Box<dyn Er
 
 #[test]
 fn version_two_reopen_refuses_an_oversized_format_marker() -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("version-two-admission-oversized-marker")?;
+    let sandbox = initialized_store("version-two-admission-oversized-marker")?;
     let marker = sandbox.path().join("FORMAT");
     let mut bytes = fs::read(&marker)?;
     bytes.push(0);
@@ -60,33 +59,14 @@ fn version_two_reopen_refuses_an_oversized_format_marker() -> Result<(), Box<dyn
 
     assert!(matches!(
         error,
-        FilesystemPlatformAdmissionError::MigrationRecord { .. }
+        FilesystemPlatformAdmissionError::FormatMarker { .. }
     ));
     Ok(())
 }
 
 #[test]
-fn version_two_reopen_refuses_a_receipt_that_disagrees_with_its_intent()
--> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("version-two-admission-receipt-disagrees")?;
-    let intent = fs::read(sandbox.path().join("migration.intent"))?;
-    fs::write(sandbox.path().join("migration.receipt"), &intent)?;
-
-    let error =
-        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())
-            .err()
-            .ok_or("receipt disagreeing with its intent was unexpectedly admitted")?;
-
-    assert!(matches!(
-        error,
-        FilesystemPlatformAdmissionError::MigrationRecord { .. }
-    ));
-    Ok(())
-}
-
-#[test]
-fn version_two_reopen_admits_exact_migration_records() -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("version-two-admission-exact")?;
+fn version_two_reopen_admits_a_canonical_marker() -> Result<(), Box<dyn Error>> {
+    let sandbox = initialized_store("version-two-admission-exact")?;
 
     let admission =
         FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
@@ -99,7 +79,7 @@ fn version_two_reopen_admits_exact_migration_records() -> Result<(), Box<dyn Err
 #[test]
 fn production_version_two_reopen_refuses_an_aliased_protocol_directory()
 -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("version-two-admission-aliased-gc")?;
+    let sandbox = initialized_store("version-two-admission-aliased-gc")?;
     let alias_target = sandbox.path().join("elsewhere");
     fs::create_dir(&alias_target)?;
     fs::remove_dir(sandbox.path().join("gc"))?;
@@ -118,8 +98,8 @@ fn production_version_two_reopen_refuses_an_aliased_protocol_directory()
 
 #[cfg(target_os = "linux")]
 #[test]
-fn production_version_two_reopen_admits_an_exact_migrated_store() -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("version-two-admission-production-exact")?;
+fn production_version_two_reopen_admits_an_exact_initialized_store() -> Result<(), Box<dyn Error>> {
+    let sandbox = initialized_store("version-two-admission-production-exact")?;
 
     let admission = FilesystemVersionTwoAdmission::reopen(sandbox.path())?;
 
@@ -127,41 +107,11 @@ fn production_version_two_reopen_admits_an_exact_migrated_store() -> Result<(), 
     Ok(())
 }
 
-/// A remount changes `statx.stx_mnt_id` but neither the device nor the root
-/// inode; reopen must admit that store. A different inode on the same device
-/// or a different device is a relocated or restored store and refuses.
-#[test]
-fn reopen_admits_a_remounted_root_and_refuses_a_moved_one() {
-    let bound = BoundRootIdentity::new(1, 3);
-
-    assert!(require_root_identity(bound, FilesystemRootIdentity::new(1, 2, 3)).is_ok());
-    assert!(
-        require_root_identity(bound, FilesystemRootIdentity::new(1, 7, 3)).is_ok(),
-        "a remounted root (same device and inode, new mount id) must reopen"
-    );
-    assert!(matches!(
-        require_root_identity(bound, FilesystemRootIdentity::new(1, 2, 4)),
-        Err(FilesystemPlatformAdmissionError::RootIdentityChanged {
-            coordinate: StoreRootIdentityCoordinate::File,
-            expected: 3,
-            observed: 4,
-        })
-    ));
-    assert!(matches!(
-        require_root_identity(bound, FilesystemRootIdentity::new(9, 2, 3)),
-        Err(FilesystemPlatformAdmissionError::RootIdentityChanged {
-            coordinate: StoreRootIdentityCoordinate::Device,
-            expected: 1,
-            observed: 9,
-        })
-    ));
-}
-
 fn refuses_namespace(
     name: &str,
     mutate: impl FnOnce(&std::path::Path) -> Result<(), Box<dyn Error>>,
 ) -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store(name)?;
+    let sandbox = initialized_store(name)?;
     mutate(sandbox.path())?;
 
     let error =
@@ -243,4 +193,58 @@ fn a_protocol_directory_replaced_after_reopen_is_neither_opened_nor_published_in
         Some(RetentionCurrentStateRefusal::ProtocolDirectoryReplaced)
     ));
     Ok(())
+}
+
+#[test]
+fn an_initialized_store_without_a_published_catalog_reopens() -> Result<(), Box<dyn Error>> {
+    let sandbox = TestDirectory::create("version-two-admission-unpublished")?;
+    drop(FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(sandbox.path())?);
+    assert!(!sandbox.path().join("HEAD").exists());
+
+    let admission =
+        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
+
+    drop(admission);
+    Ok(())
+}
+
+#[test]
+fn reopen_refuses_a_root_whose_marker_stage_remains() -> Result<(), Box<dyn Error>> {
+    let sandbox = initialized_store("version-two-admission-marker-stage")?;
+    fs::hard_link(
+        sandbox.path().join("FORMAT"),
+        sandbox.path().join("FORMAT.next"),
+    )?;
+
+    let error = reopen_namespace_refusal(sandbox.path())?;
+
+    assert_eq!(error, FilesystemNamespaceRefusal::InitializationIncomplete);
+    Ok(())
+}
+
+#[test]
+fn reopen_refuses_a_root_without_a_marker() -> Result<(), Box<dyn Error>> {
+    let sandbox = initialized_store("version-two-admission-no-marker")?;
+    fs::remove_file(sandbox.path().join("FORMAT"))?;
+
+    let error = reopen_namespace_refusal(sandbox.path())?;
+
+    assert_eq!(error, FilesystemNamespaceRefusal::MissingFormatMarker);
+    Ok(())
+}
+
+fn reopen_namespace_refusal(
+    root: &std::path::Path,
+) -> Result<FilesystemNamespaceRefusal, Box<dyn Error>> {
+    let error = FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(root)
+        .err()
+        .ok_or("an uncommitted root was unexpectedly admitted")?;
+    let FilesystemPlatformAdmissionError::Namespace { source } = error else {
+        return Err(format!("expected a namespace refusal, got {error:?}").into());
+    };
+    source
+        .get_ref()
+        .and_then(|cause| cause.downcast_ref::<FilesystemNamespaceRefusal>())
+        .copied()
+        .ok_or_else(|| "namespace refusal carried no typed cause".into())
 }

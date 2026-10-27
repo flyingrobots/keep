@@ -26,16 +26,6 @@ fn push_u64(bytes: &mut Vec<u8>, value: u64) {
     bytes.extend_from_slice(&value.to_be_bytes());
 }
 
-fn array_32(bytes: &[u8], offset: usize) -> Result<[u8; 32], String> {
-    let end = offset
-        .checked_add(32)
-        .ok_or_else(|| "32-byte field offset overflow".to_owned())?;
-    let field = bytes
-        .get(offset..end)
-        .ok_or_else(|| format!("missing 32-byte field at offset {offset}"))?;
-    <[u8; 32]>::try_from(field).map_err(|_| "32-byte field conversion failed".to_owned())
-}
-
 fn u64_at(bytes: &[u8], offset: usize) -> Result<u64, String> {
     let end = offset
         .checked_add(8)

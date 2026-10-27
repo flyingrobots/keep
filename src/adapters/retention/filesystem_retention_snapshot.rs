@@ -16,12 +16,10 @@ use super::{
 use crate::adapters::filesystem_exact_record::{
     self as exact_record, ExactRecordError, ExactRecordRefusal,
 };
-use crate::adapters::filesystem_platform_profile::root_identity;
-use crate::adapters::filesystem_version_two_admission::require_root_identity;
 use crate::adapters::{
     CatalogRestartError, CatalogRestartPolicy, ChecksummedPublicationHead,
-    FilesystemCatalogSnapshot, filesystem_initialization_namespace, filesystem_platform_profile,
-    filesystem_version_two_records, publication_head_decoder,
+    FilesystemCatalogSnapshot, filesystem_format_marker, filesystem_initialization_namespace,
+    filesystem_platform_profile, publication_head_decoder,
 };
 use crate::{RetentionHead, RetentionManifest, RetentionNamespaceDigest};
 
@@ -109,8 +107,8 @@ impl RetentionViewSource for Source {
 impl FilesystemRetentionSnapshot {
     /// Admits the production filesystem profile and version-two root, acquires the reader fence, and
     /// double-collects one consistent view within `limit` attempts.
-    /// Admission requires the opened directory's restart-stable device and
-    /// inode to match the jointly admitted migration records before fencing.
+    /// Admission requires the committed namespace and the canonical `FORMAT`
+    /// marker before fencing; nothing binds the store to the directory it is in.
     ///
     /// The call takes no writer authority and performs no namespace writes.
     /// Platform admission synchronizes the opened root directory; failure is
@@ -118,8 +116,10 @@ impl FilesystemRetentionSnapshot {
     /// while collection holds the fence exclusively.
     /// Platform admission requires the existing local writable, case-sensitive
     /// Linux ext4 profile across every present version-two protocol directory.
-    /// The same opened root capability is retained through namespace, migration
-    /// identity, fence, and coordinate admission; the ambient path is not reopened.
+    /// The same opened root capability is retained through namespace, marker,
+    /// fence, and coordinate admission; the ambient path is not reopened. A
+    /// committed store with no catalog `HEAD` refuses as `Unpublished` once the
+    /// fence is held.
     /// A retained or in-flight catalog `head.next` is admitted and ignored: the
     /// view selects only `HEAD`, so catalog publication runs beside readers.
     ///
@@ -151,13 +151,9 @@ impl FilesystemRetentionSnapshot {
             .map_err(|source| Error::Admission { source })?;
         filesystem_initialization_namespace::admit_version_two_with_catalog_stage(&root)
             .map_err(|source| Error::Admission { source })?;
-        let bound = filesystem_version_two_records::admit(&root)
-            .map_err(|source| Error::Admission { source })?;
-        let observed = root_identity(&root).map_err(|source| Error::Admission { source })?;
-        require_root_identity(bound, observed).map_err(|source| Error::Admission {
-            source: io::Error::new(io::ErrorKind::InvalidData, source),
-        })?;
+        filesystem_format_marker::admit(&root).map_err(|source| Error::Admission { source })?;
         let fence = ReaderFence::acquire(&root).map_err(|source| Error::Fence { source })?;
+        require_published(&root)?;
         let retention = root
             .open_dir_nofollow(pool_name::RETENTION)
             .map_err(|source| Error::Admission { source })?;
@@ -320,4 +316,16 @@ fn selected_namespace_directory(
     let name = pool_name::namespace(namespace);
     crate::adapters::filesystem_namespace_refusal::require_directory(roots, &name)?;
     roots.open_dir_nofollow(name)
+}
+
+/// Refuses a committed store that has not published its first catalog.
+///
+/// Checked under the fence, after admission: absence of `HEAD` is a defined
+/// state of an initialized store, reported as such instead of as a failed read.
+fn require_published(root: &Dir) -> Result<(), Error> {
+    match root.symlink_metadata(HEAD_NAME) {
+        Ok(_) => Ok(()),
+        Err(source) if source.kind() == io::ErrorKind::NotFound => Err(Error::Unpublished),
+        Err(source) => Err(Error::Admission { source }),
+    }
 }

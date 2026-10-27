@@ -35,7 +35,7 @@ impl FilesystemRecoverySegmentResumer {
             .map_err(Into::into)
     }
 
-    /// Pins a migrated version-two store for explicit segment continuation.
+    /// Pins a committed version-two store for explicit segment continuation.
     ///
     /// The call performs no protocol mutation.
     ///

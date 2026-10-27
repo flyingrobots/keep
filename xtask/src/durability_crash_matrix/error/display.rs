@@ -18,7 +18,7 @@ impl fmt::Display for DurabilityCrashMatrixError {
             | Self::HardLinkIdentityMismatch { .. }
             | Self::InventoryMismatch { .. }
             | Self::MissingVisibleRecord { .. }
-            | Self::RecoveryPlanMismatch { .. }
+            | Self::InitializationPrefixMismatch { .. }
             | Self::RepeatedInventoryPath { .. }
             | Self::SnapshotGenerationMismatch { .. }
             | Self::UnexpectedArtifactKind { .. } => format_state(self, formatter),
@@ -87,9 +87,9 @@ fn format_state(
                 "post-crash snapshot lacks visible record `{record}`"
             )
         }
-        DurabilityCrashMatrixError::RecoveryPlanMismatch { expected, observed } => write!(
+        DurabilityCrashMatrixError::InitializationPrefixMismatch { expected, observed } => write!(
             formatter,
-            "post-crash migration recovery planned {observed:?}, expected {expected:?}"
+            "post-crash initialization resumed from {observed:?}, expected {expected:?}"
         ),
         DurabilityCrashMatrixError::RepeatedInventoryPath { path } => {
             write!(formatter, "post-crash inventory repeated path `{path}`")
@@ -235,7 +235,7 @@ fn format_command(
         DurabilityCrashMatrixError::Usage => formatter.write_str(
             "usage: cargo xtask durability-crash-matrix \
              [--case <KEEP-CRASH-NNN> <before|during|after> [<occurrence>] \
-             | --sequence <segment|catalog|head|recovery-discard|initialization|migration>]",
+             | --sequence <segment|catalog|head|recovery-discard|initialization|retention|version-two-catalog|version-two-initialization>]",
         ),
         _ => Err(fmt::Error),
     }

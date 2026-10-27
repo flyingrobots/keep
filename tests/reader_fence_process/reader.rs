@@ -35,7 +35,7 @@ pub(super) fn serve() -> Result<(), Box<dyn Error>> {
     assert_eq!(
         snapshot.catalog().generation().get(),
         1,
-        "child must load the golden migrated catalog"
+        "child must load the golden first catalog"
     );
     channel.write_all(b"R")?;
     let mut stop = [0];

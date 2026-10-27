@@ -1,7 +1,7 @@
-//! Version-two catalog writer and stage-recovery laws on migrated stores.
+//! Version-two catalog writer and stage-recovery laws on initialized stores.
 //!
-//! Every law builds a real version-one store, migrates it, publishes a
-//! retention root, and then drives the version-two writer and recovery tools
+//! Every law initializes a real store, publishes its first catalog and a
+//! retention root through the public writer, and then drives the version-two writer and recovery tools
 //! through their public production entry points.
 
 #![cfg(target_os = "linux")]

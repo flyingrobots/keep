@@ -16,13 +16,13 @@ use super::populated_store;
 use super::retention_storage::CrashRetentionStorage;
 use super::{DurabilityCrashMatrixError, verification};
 
-/// Migrates a fresh bundle store and publishes retention generation one,
+/// Initializes a fresh bundle store and publishes retention generation one,
 /// dying at the selected coordinate.
 pub(super) fn run(
     store_root: &Path,
     control: &mut CrashControl,
 ) -> Result<(), DurabilityCrashMatrixError> {
-    let authority = migrated_authority(store_root)?;
+    let authority = bundle_authority(store_root)?;
     let root = GoldenFixture::retention_root()?;
     let preparation = preparation(root.bytes())?;
     let mut storage = CrashRetentionStorage::new(authority, control, store_root);
@@ -31,16 +31,16 @@ pub(super) fn run(
         .map_err(|source| verification("execute production retention publication", source))
 }
 
-/// Creates the bundle store through the public writer, then reopens it as
-/// version two and returns retention authority over it.
-pub(super) fn migrated_authority(
+/// Creates the bundle store through the public writer, then reopens it and
+/// returns retention authority over it.
+pub(super) fn bundle_authority(
     store_root: &Path,
 ) -> Result<FilesystemRetentionPublicationAuthority, DurabilityCrashMatrixError> {
     populated_store::create_bundle_store(store_root)?;
     reopened_authority(store_root)
 }
 
-/// Reopens the migrated store and returns retention authority over it.
+/// Reopens the bundle store and returns retention authority over it.
 pub(in crate::durability_crash_matrix) fn reopened_authority(
     store_root: &Path,
 ) -> Result<FilesystemRetentionPublicationAuthority, DurabilityCrashMatrixError> {

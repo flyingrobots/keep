@@ -31,24 +31,24 @@ fn retention_decoders_have_registered_seeded_fuzz_evidence() -> Result<(), Box<d
 }
 
 #[test]
-fn migration_decoders_have_registered_seeded_fuzz_evidence() -> Result<(), Box<dyn Error>> {
+fn format_marker_decoder_has_registered_seeded_fuzz_evidence() -> Result<(), Box<dyn Error>> {
     let repository_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .ok_or("xtask manifest must have a repository parent")?;
 
     assert!(
         repository_root
-            .join("fuzz/fuzz_targets/migration_format.rs")
+            .join("fuzz/fuzz_targets/format_marker.rs")
             .is_file()
     );
     assert!(
         repository_root
-            .join("xtask/src/fuzz_seed_corpus/migration_seeds.rs")
+            .join("xtask/src/fuzz_seed_corpus/format_marker_seeds.rs")
             .is_file()
     );
-    assert!(FUZZ_MANIFEST.contains("name = \"migration_format\""));
-    assert!(FUZZ_MANIFEST.contains("path = \"fuzz_targets/migration_format.rs\""));
-    assert!(FUZZ_GUIDE.contains("The `migration_format` seeds"));
-    assert!(REQUIREMENTS.contains("`migration_format`"));
+    assert!(FUZZ_MANIFEST.contains("name = \"format_marker\""));
+    assert!(FUZZ_MANIFEST.contains("path = \"fuzz_targets/format_marker.rs\""));
+    assert!(FUZZ_GUIDE.contains("The `format_marker` seeds"));
+    assert!(REQUIREMENTS.contains("`format_marker`"));
     Ok(())
 }

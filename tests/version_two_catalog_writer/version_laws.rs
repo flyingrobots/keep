@@ -1,9 +1,7 @@
 //! This module owns typed refusal of cross-version writer and recovery entry.
 
-use std::io;
-
 use keep::{
-    AdmittedSegment, AdmittedSegmentRecord, FilesystemCatalogPublisher,
+    AdmittedSegment, AdmittedSegmentRecord, FilesystemCatalogPublisher, FilesystemNamespaceRefusal,
     FilesystemPlatformAdmission, FilesystemPlatformAdmissionError,
     FilesystemRecoveryInventoryReader, FilesystemRecoveryNextHeadFinalizationOpenError,
     FilesystemRecoveryNextHeadFinalizer, FilesystemRecoveryStageDiscardOpenError,
@@ -60,8 +58,6 @@ fn version_one_entry_points_refuse_a_version_two_root() -> TestResult<()> {
     for role in [
         RecoveryEntryRole::ReaderFence,
         RecoveryEntryRole::FormatMarker,
-        RecoveryEntryRole::MigrationIntent,
-        RecoveryEntryRole::MigrationReceipt,
         RecoveryEntryRole::RetentionDirectory,
         RecoveryEntryRole::GcDirectory,
         RecoveryEntryRole::RecoveryDirectory,
@@ -84,7 +80,8 @@ fn version_two_entry_points_refuse_a_version_one_root() -> TestResult<()> {
         matches!(
             error,
             FilesystemPlatformAdmissionError::Namespace { source }
-                if source.kind() == io::ErrorKind::NotFound
+                if source.get_ref().and_then(|cause| cause.downcast_ref::<FilesystemNamespaceRefusal>())
+                    == Some(&FilesystemNamespaceRefusal::MissingFormatMarker)
         )
     };
 
@@ -114,7 +111,7 @@ fn version_two_entry_points_refuse_a_version_one_root() -> TestResult<()> {
     assert!(matches!(
         classify_version_two_recovery_names(inventory),
         Err(RecoveryNameClassificationError::Missing {
-            required: RecoveryRequiredEntry::CurrentHead
+            required: RecoveryRequiredEntry::ReaderFence
         })
     ));
     Ok(())

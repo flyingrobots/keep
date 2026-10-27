@@ -7,24 +7,31 @@ use cap_fs_ext::DirExt;
 use cap_std::ambient_authority;
 use cap_std::fs::Dir;
 
-use super::filesystem_root_identity::FilesystemRootIdentity;
-pub(super) use super::filesystem_version_two_records::BoundRootIdentity;
+#[cfg(any(test, feature = "repository-tasks"))]
+use super::VersionTwoInitializationObserver;
+use super::version_two_initialization::{self as initialization, PhaseObserver};
 use super::{
-    FilesystemPlatformAdmissionError, FilesystemWriterLock, StoreRootIdentityCoordinate,
-    filesystem_initialization_namespace, filesystem_platform_profile,
-    filesystem_version_two_records,
+    FilesystemPlatformAdmissionError, FilesystemWriterLock, VersionTwoInitialization,
+    VersionTwoInitializationError, filesystem_format_marker, filesystem_initialization_namespace,
+    filesystem_platform_profile,
 };
 
-/// Exclusive writer authority over a completely migrated version-two root.
+/// Exclusive writer authority over a committed version-two root.
 ///
 /// This type is deliberately distinct from
 /// [`FilesystemPlatformAdmission`](super::FilesystemPlatformAdmission): a
 /// version-one publisher cannot consume it, so version-one catalog publication
-/// can never run against a migrated root and leave residue no adapter admits.
-/// Fields are private so only version-two admission can create values. The
-/// admitted `retention`, `roots`, and `manifests` capabilities are retained,
-/// so the authority built from this value operates on the directories that
-/// passed admission and not on whatever those names resolve to later.
+/// can never run against a version-two root and leave residue no adapter
+/// admits. Fields are private so only version-two admission and
+/// initialization can create values. The admitted `retention`, `roots`, and
+/// `manifests` capabilities are retained, so the authority built from this
+/// value operates on the directories that passed admission and not on whatever
+/// those names resolve to later.
+///
+/// Admission binds the store to no directory: nothing persisted records the
+/// root's device, inode, mount, or path, so a quiescent copy opens wherever
+/// it is placed. Live authority is the writer lock and the pinned
+/// capabilities of this process.
 #[must_use]
 pub struct FilesystemVersionTwoAdmission {
     lock: FilesystemWriterLock,
@@ -34,31 +41,93 @@ pub struct FilesystemVersionTwoAdmission {
 }
 
 impl FilesystemVersionTwoAdmission {
-    /// Reacquires writer authority over one completely migrated version-two store.
+    /// Initializes a version-two store at `store_root`, or resumes an interrupted initialization.
+    ///
+    /// The root must exist. An empty root, or a recoverable prefix that an
+    /// interrupted call left, becomes a committed store with no catalog
+    /// `HEAD`; every other root is refused before it is mutated. The call
+    /// admits the production platform, holds exclusive writer authority from
+    /// its first mutation, and returns only after the commit point, the
+    /// removal of `FORMAT.next`, the final root synchronization, and complete
+    /// admission of the committed root. It is synchronous, allocates no
+    /// content-sized memory, and may block on filesystem I/O.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`VersionTwoInitializationError`] with the exact platform,
+    /// writer-lock, refusal, phase, or admission failure. A committed store
+    /// refuses as
+    /// [`AlreadyInitialized`](super::VersionTwoInitializationRefusal::AlreadyInitialized);
+    /// a concurrent attempt refuses with a busy writer lock.
+    pub fn initialize(
+        store_root: &Path,
+    ) -> Result<VersionTwoInitialization, VersionTwoInitializationError> {
+        let root = filesystem_platform_profile::open_version_two(store_root)
+            .map_err(|source| VersionTwoInitializationError::Platform { source })?;
+        initialize_root(&root, &mut |_, _| Ok(()))
+    }
+
+    /// Initializes without platform admission for repository tasks.
+    ///
+    /// Every protocol law after platform admission still applies. Production
+    /// callers use [`Self::initialize`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`VersionTwoInitializationError`] exactly as [`Self::initialize`]
+    /// does after platform admission.
+    #[cfg(any(test, feature = "repository-tasks"))]
+    pub fn initialize_unchecked_for_repository_tasks(
+        store_root: &Path,
+    ) -> Result<VersionTwoInitialization, VersionTwoInitializationError> {
+        initialize_root(&open_unchecked(store_root)?, &mut |_, _| Ok(()))
+    }
+
+    /// Initializes without platform admission, notifying `observer` around each phase.
+    ///
+    /// The crash matrix blocks inside the observer for process death; an
+    /// observer error fails the phase at that boundary.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`VersionTwoInitializationError`] as
+    /// [`Self::initialize_unchecked_for_repository_tasks`] does, or the
+    /// observer's error at its phase.
+    #[cfg(any(test, feature = "repository-tasks"))]
+    #[doc(hidden)]
+    pub fn initialize_observed_for_repository_tasks(
+        store_root: &Path,
+        mut observer: VersionTwoInitializationObserver,
+    ) -> Result<VersionTwoInitialization, VersionTwoInitializationError> {
+        initialize_root(&open_unchecked(store_root)?, &mut *observer)
+    }
+
+    /// Reacquires writer authority over one committed version-two store.
     ///
     /// The call mutates no protocol state. It admits the production platform
     /// for every version-two protocol directory, acquires the existing writer
-    /// lock, requires the exact version-two root namespace, and jointly admits
-    /// the marker, intent, and receipt records. Retention adapters perform
-    /// content-level validation under the returned authority. The synchronous
-    /// call may block on filesystem I/O.
+    /// lock, requires the exact committed root namespace, and admits the
+    /// canonical `FORMAT` marker. A store with no catalog `HEAD` admits.
+    /// Retention adapters perform content-level validation under the
+    /// returned authority. The synchronous call may block on filesystem I/O.
     ///
     /// # Errors
     ///
     /// Returns [`FilesystemPlatformAdmissionError`] with the exact platform,
-    /// writer-lock, namespace, or migration-record boundary and preserved
-    /// source.
+    /// writer-lock, namespace, or format-marker boundary and preserved source.
+    /// A root whose initialization has not committed refuses at the namespace
+    /// boundary.
     pub fn reopen(store_root: &Path) -> Result<Self, FilesystemPlatformAdmissionError> {
         let root = filesystem_platform_profile::open_version_two(store_root)
             .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
         Self::admit(root)
     }
 
-    /// Reopens a migrated root without platform admission for repository tasks.
+    /// Reopens a committed root without platform admission for repository tasks.
     ///
     /// The crash matrix and other repository tools run on hosts outside the
-    /// admitted Linux profile; every namespace, record, and identity law still
-    /// applies. Production callers use [`Self::reopen`].
+    /// admitted Linux profile; every namespace and record law still applies.
+    /// Production callers use [`Self::reopen`].
     ///
     /// # Errors
     ///
@@ -79,32 +148,62 @@ impl FilesystemVersionTwoAdmission {
     }
 
     fn admit(root: Dir) -> Result<Self, FilesystemPlatformAdmissionError> {
-        let (lock, retention, roots, manifests) =
-            admit_locked(root, filesystem_initialization_namespace::admit_version_two)?;
-        Ok(Self {
+        admit_locked(root, filesystem_initialization_namespace::admit_version_two)
+            .map(Self::from_parts)
+    }
+
+    fn from_parts((lock, retention, roots, manifests): AdmittedVersionTwoParts) -> Self {
+        Self {
             lock,
             retention,
             roots,
             manifests,
-        })
+        }
     }
 }
 
 /// Writer authority and the three pinned retention capabilities of one admitted root.
 pub(super) type AdmittedVersionTwoParts = (FilesystemWriterLock, Dir, Dir, Dir);
 
+#[cfg(any(test, feature = "repository-tasks"))]
+fn open_unchecked(store_root: &Path) -> Result<Dir, VersionTwoInitializationError> {
+    Dir::open_ambient_dir(store_root, ambient_authority())
+        .map_err(|source| VersionTwoInitializationError::Platform { source })
+}
+
+/// Runs the initialization protocol, then admits the committed root under its lock.
+fn initialize_root(
+    root: &Dir,
+    observer: PhaseObserver<'_>,
+) -> Result<VersionTwoInitialization, VersionTwoInitializationError> {
+    let (lock, found) = initialization::initialize(root, observer)?;
+    let parts = admit_under_lock(lock, filesystem_initialization_namespace::admit_version_two)
+        .map_err(|source| VersionTwoInitializationError::Admission { source })?;
+    Ok(VersionTwoInitialization::new(
+        FilesystemVersionTwoAdmission::from_parts(parts),
+        found,
+    ))
+}
+
 /// Acquires writer authority, then admits the root under `namespace`.
 ///
 /// Forward writers pass the exact version-two namespace law; catalog-stage
 /// recovery passes the law that also admits a retained `head.next`. Every
-/// other check is identical: the marker, intent, and receipt records, the
-/// restart-stable root identity, and the pinned retention directories.
+/// other check is identical: the `FORMAT` marker and the pinned retention
+/// directories.
 pub(super) fn admit_locked(
     root: Dir,
     namespace: fn(&Dir) -> std::io::Result<()>,
 ) -> Result<AdmittedVersionTwoParts, FilesystemPlatformAdmissionError> {
     let lock = FilesystemWriterLock::try_acquire_in(root)
         .map_err(|source| FilesystemPlatformAdmissionError::WriterLock { source })?;
+    admit_under_lock(lock, namespace)
+}
+
+fn admit_under_lock(
+    lock: FilesystemWriterLock,
+    namespace: fn(&Dir) -> std::io::Result<()>,
+) -> Result<AdmittedVersionTwoParts, FilesystemPlatformAdmissionError> {
     let directory = lock
         .clone_directory()
         .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
@@ -115,18 +214,15 @@ pub(super) fn admit_locked(
     Ok((lock, retention, roots, manifests))
 }
 
-/// Admits the namespace, migration records, and root identity without mutation.
+/// Admits the namespace and the `FORMAT` marker without mutation.
 pub(super) fn admit_root(
     directory: &Dir,
     namespace: fn(&Dir) -> std::io::Result<()>,
 ) -> Result<(), FilesystemPlatformAdmissionError> {
     namespace(directory)
         .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })?;
-    let observed = filesystem_platform_profile::root_identity(directory)
-        .map_err(|source| FilesystemPlatformAdmissionError::Platform { source })?;
-    let bound = filesystem_version_two_records::admit(directory)
-        .map_err(|source| FilesystemPlatformAdmissionError::MigrationRecord { source })?;
-    require_root_identity(bound, observed)
+    filesystem_format_marker::admit(directory)
+        .map_err(|source| FilesystemPlatformAdmissionError::FormatMarker { source })
 }
 
 /// Pins one admitted protocol directory without following links.
@@ -134,39 +230,4 @@ fn pin(parent: &Dir, name: &str) -> Result<Dir, FilesystemPlatformAdmissionError
     parent
         .open_dir_nofollow(name)
         .map_err(|source| FilesystemPlatformAdmissionError::Namespace { source })
-}
-
-/// Requires the reopened root to be the physical root the migration intent bound.
-///
-/// Only the restart-stable coordinates are compared: the root's device and its
-/// inode. The mount identity the intent also records is a same-process
-/// observation (`statx.stx_mnt_id` can change across mount instances and
-/// reboot), so a legitimately remounted store admits, while a relocated or
-/// restored store refuses rather than receiving retention authority over a
-/// root whose intent describes a different volume or inode.
-pub(super) fn require_root_identity(
-    bound: BoundRootIdentity,
-    observed: FilesystemRootIdentity,
-) -> Result<(), FilesystemPlatformAdmissionError> {
-    for (coordinate, expected, actual) in [
-        (
-            StoreRootIdentityCoordinate::Device,
-            bound.device(),
-            observed.device(),
-        ),
-        (
-            StoreRootIdentityCoordinate::File,
-            bound.file(),
-            observed.file(),
-        ),
-    ] {
-        if expected != actual {
-            return Err(FilesystemPlatformAdmissionError::RootIdentityChanged {
-                coordinate,
-                expected,
-                observed: actual,
-            });
-        }
-    }
-    Ok(())
 }

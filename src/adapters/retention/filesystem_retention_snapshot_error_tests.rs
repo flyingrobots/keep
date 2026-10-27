@@ -5,7 +5,7 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
-use super::filesystem_retention_test_fixture::{CATALOG_NAME, SEGMENT_NAME, migrated_store};
+use super::filesystem_retention_test_fixture::{CATALOG_NAME, SEGMENT_NAME, initialized_store};
 use super::{
     FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError as SnapshotError,
     ReaderAttemptLimit, RetentionViewError,
@@ -20,7 +20,7 @@ use crate::adapters::{
 // Delete when the reader API is removed or stronger public laws subsume these cases.
 #[test]
 fn a_missing_selected_catalog_reports_its_exact_catalog_refusal() -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("reader-error-missing-catalog")?;
+    let sandbox = initialized_store("reader-error-missing-catalog")?;
     fs::remove_file(sandbox.path().join("catalogs").join(CATALOG_NAME))?;
 
     let error = refusal(sandbox.path())?;
@@ -45,7 +45,7 @@ fn a_missing_selected_catalog_reports_its_exact_catalog_refusal() -> Result<(), 
 // Size: medium. Oracle and deletion criterion: the public catalog-boundary law above.
 #[test]
 fn a_missing_selected_segment_reports_its_exact_catalog_refusal() -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("reader-error-missing-segment")?;
+    let sandbox = initialized_store("reader-error-missing-segment")?;
     fs::remove_file(sandbox.path().join("segments").join(SEGMENT_NAME))?;
 
     let error = refusal(sandbox.path())?;
@@ -62,7 +62,7 @@ fn a_missing_selected_segment_reports_its_exact_catalog_refusal() -> Result<(), 
 // Size: medium. Oracle and deletion criterion: the public catalog-boundary law above.
 #[test]
 fn a_corrupt_selected_catalog_reports_its_decoder_refusal() -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("reader-error-corrupt-catalog")?;
+    let sandbox = initialized_store("reader-error-corrupt-catalog")?;
     let path = sandbox.path().join("catalogs").join(CATALOG_NAME);
     let mut bytes = fs::read(&path)?;
     let checksum = bytes
@@ -92,7 +92,7 @@ fn a_corrupt_selected_catalog_reports_its_decoder_refusal() -> Result<(), Box<dy
 // Delete when the coordinate-read contract is removed or a stronger law subsumes this case.
 #[test]
 fn a_corrupt_catalog_head_reports_its_exact_view_refusal() -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("reader-error-corrupt-head")?;
+    let sandbox = initialized_store("reader-error-corrupt-head")?;
     let path = sandbox.path().join("HEAD");
     let mut bytes = fs::read(&path)?;
     *bytes.last_mut().ok_or("HEAD absent")? ^= 1;

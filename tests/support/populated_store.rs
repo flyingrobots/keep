@@ -3,10 +3,9 @@
 //! Every populated version-two test store is created by [`create`] and then
 //! extended by [`retain`] and by the version-two writer in `successor_catalog.rs`.
 //! Only public production entry points run, so test code is not a second
-//! implementation of the store format. Today [`create`] initializes version
-//! one, publishes the first catalog through `FilesystemCatalogPublisher`, and
-//! migrates. When direct initialization replaces migration (#198), only that
-//! creation step changes.
+//! implementation of the store format. [`create`] initializes the store
+//! directly and publishes the first catalog through
+//! `FilesystemVersionTwoCatalogPublisher` and the retained-closure gate.
 //!
 //! Consumers include this file by path beside their laws, so it names the
 //! crate as `keep` and uses `super`-relative visibility.
@@ -19,16 +18,16 @@ use std::path::Path;
 use keep::{
     AdmittedLayout, AdmittedRetentionManifest, AdmittedRetentionRoot, AdmittedSegment,
     AdmittedSegmentRecord, BlobId, CanonicalCatalog, CanonicalLayoutRecord, CanonicalRetentionRoot,
-    CanonicalStoreMigrationReceipt, CatalogGeneration, CatalogPublicationExpectation,
-    CatalogPublicationReceipt, CatalogRestartByteLimit, CatalogRestartPolicy, ChunkId, ChunkSpan,
-    FastCdc, FilesystemCatalogPublisher, FilesystemCatalogSnapshot, FilesystemPlatformAdmission,
-    FilesystemRetentionPublicationAuthority, FilesystemStoreMigrationAuthority,
-    FilesystemVersionTwoAdmission, LayoutEntryLimit, RegisteredRetentionProfile,
-    RegisteredStorageProfile, RetentionAnchor, RetentionClosureLimits,
-    RetentionGenerationExpectation, RetentionNamespace, RetentionPolicy,
+    CatalogGeneration, CatalogPublicationExpectation, CatalogRestartByteLimit,
+    CatalogRestartPolicy, ChunkId, ChunkSpan, FastCdc, FilesystemCatalogSnapshot,
+    FilesystemRetentionPublicationAuthority, FilesystemVersionTwoAdmission,
+    FilesystemVersionTwoCatalogPublisher, LayoutEntryLimit, RegisteredRetentionProfile,
+    RegisteredStorageProfile, RetainedCatalogPublicationReceipt, RetentionAnchor,
+    RetentionClosureLimits, RetentionGenerationExpectation, RetentionNamespace, RetentionPolicy,
     RetentionPublicationReceipt, RetentionRoot, RootGeneration, SegmentReadPolicy,
-    SegmentRecordLimit, StagedSegment, execute_retention_publication, execute_store_migration,
-    preflight_retention_transition, prepare_retention_publication, publish_catalog_generation,
+    SegmentRecordLimit, StagedSegment, execute_retention_publication,
+    preflight_retention_transition, prepare_retention_publication,
+    publish_retained_catalog_generation,
 };
 
 pub(super) type TestResult<T> = Result<T, Box<dyn Error>>;
@@ -40,19 +39,16 @@ pub(super) type TestResult<T> = Result<T, Box<dyn Error>>;
 /// after admission is identical.
 #[derive(Clone, Copy)]
 pub(super) struct StoreAdmission {
-    /// Initializes an empty root.
-    pub(super) initialize: fn(&Path) -> TestResult<FilesystemPlatformAdmission>,
-    /// Reacquires authority over the published pre-migration root.
-    pub(super) reopen_version_one: fn(&Path) -> TestResult<FilesystemPlatformAdmission>,
-    /// Reacquires authority over the created version-two root.
+    /// Initializes an empty root and returns its writer authority.
+    pub(super) initialize: fn(&Path) -> TestResult<FilesystemVersionTwoAdmission>,
+    /// Reacquires authority over the created root.
     pub(super) reopen_version_two: fn(&Path) -> TestResult<FilesystemVersionTwoAdmission>,
 }
 
 impl StoreAdmission {
     /// The production platform profile.
     pub(super) const PLATFORM: Self = Self {
-        initialize: |root| Ok(FilesystemPlatformAdmission::initialize(root)?),
-        reopen_version_one: |root| Ok(FilesystemPlatformAdmission::reopen(root)?),
+        initialize: |root| Ok(FilesystemVersionTwoAdmission::initialize(root)?.into_admission()),
         reopen_version_two: |root| Ok(FilesystemVersionTwoAdmission::reopen(root)?),
     };
 }
@@ -81,13 +77,11 @@ impl FirstCatalogRecords {
     }
 }
 
-/// The receipts of one completed creation step.
+/// The receipt of one completed creation step.
 #[must_use]
 pub(super) struct CreatedStore {
-    /// The first catalog publication.
-    pub(super) catalog: CatalogPublicationReceipt,
-    /// The step that made the root version two.
-    pub(super) migration: CanonicalStoreMigrationReceipt,
+    /// The first catalog publication, through the retained-closure gate.
+    pub(super) catalog: RetainedCatalogPublicationReceipt,
 }
 
 /// The canonical identity of one blob under the registered storage profile.
@@ -130,9 +124,11 @@ pub(super) const fn segment_policy() -> SegmentReadPolicy {
     SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM)
 }
 
-/// Creates a version-two store at the empty directory `root`.
+/// Initializes a version-two store at the empty directory `root`.
 ///
-/// The first catalog holds one segment with the `selection` of `contents`'
+/// The store has no catalog `HEAD` and no retention head, so the first
+/// publication runs with no predecessor and proves both absences through
+/// the gate. The first catalog holds one segment with the `selection` of `contents`'
 /// records. Writer authority is released before this returns.
 pub(super) fn create(
     root: &Path,
@@ -140,27 +136,50 @@ pub(super) fn create(
     contents: &[&[u8]],
     selection: FirstCatalogRecords,
 ) -> TestResult<CreatedStore> {
+    let (created, publisher) = create_holding_authority(root, admission, contents, selection)?;
+    drop(publisher);
+    Ok(created)
+}
+
+/// Creates the store exactly as [`create`] does and keeps its writer authority.
+///
+/// The returned publisher still holds the writer lock, for laws that must
+/// exclude every competing writer from creation onward.
+pub(super) fn create_holding_authority(
+    root: &Path,
+    admission: StoreAdmission,
+    contents: &[&[u8]],
+    selection: FirstCatalogRecords,
+) -> TestResult<(CreatedStore, FilesystemVersionTwoCatalogPublisher)> {
     let identified = contents
         .iter()
         .map(|bytes| identify(bytes))
         .collect::<TestResult<Vec<_>>>()?;
     let blobs = contents.iter().copied().zip(&identified);
     let records = select_records(blobs, selection)?;
-    let catalog = publish_first_catalog(root, (admission.initialize)(root)?, records)?;
-    let migration = migrate(root, admission)?;
-    Ok(CreatedStore { catalog, migration })
+    let mut publisher =
+        FilesystemVersionTwoCatalogPublisher::open((admission.initialize)(root)?, policy()?)?;
+    let catalog = publish_first_catalog(root, &mut publisher, records)?;
+    Ok((CreatedStore { catalog }, publisher))
 }
 
-/// Makes the published root version two and releases writer authority.
-fn migrate(root: &Path, admission: StoreAdmission) -> TestResult<CanonicalStoreMigrationReceipt> {
-    let mut authority = FilesystemStoreMigrationAuthority::open(
-        (admission.reopen_version_one)(root)?,
-        segment_policy(),
-    )?;
-    let intent = authority.observe_intent()?;
-    let receipt = execute_store_migration(&mut authority, &intent)?;
-    drop(authority);
-    Ok(receipt)
+/// Publishes every record of `contents` as the first catalog of an initialized store.
+///
+/// The publication has no predecessor: it runs with the uninitialized
+/// expectation and proves through the gate that neither catalog `HEAD` nor
+/// `retention/HEAD` exists uncontradicted.
+pub(super) fn publish_first(
+    root: &Path,
+    publisher: &mut FilesystemVersionTwoCatalogPublisher,
+    contents: &[&[u8]],
+) -> TestResult<RetainedCatalogPublicationReceipt> {
+    let identified = contents
+        .iter()
+        .map(|bytes| identify(bytes))
+        .collect::<TestResult<Vec<_>>>()?;
+    let blobs = contents.iter().copied().zip(&identified);
+    let records = select_records(blobs, FirstCatalogRecords::Complete)?;
+    publish_first_catalog(root, publisher, records)
 }
 
 /// Every selected chunk record, deduplicated across blobs, then each new layout.
@@ -189,10 +208,9 @@ pub(super) fn select_records<'content>(
 
 fn publish_first_catalog(
     root: &Path,
-    admission: FilesystemPlatformAdmission,
+    publisher: &mut FilesystemVersionTwoCatalogPublisher,
     records: Vec<AdmittedSegmentRecord<'_>>,
-) -> TestResult<CatalogPublicationReceipt> {
-    let mut publisher = FilesystemCatalogPublisher::open(admission, policy()?)?;
+) -> TestResult<RetainedCatalogPublicationReceipt> {
     let mut stage = StagedSegment::begin(
         publisher.create_segment_stage()?,
         SegmentRecordLimit::MAXIMUM,
@@ -206,8 +224,8 @@ fn publish_first_catalog(
     let segment = segments.first().ok_or("segment absent")?;
     let selected = publisher.select_segment(sealed, segment)?;
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
-    Ok(publish_catalog_generation(
-        &mut publisher,
+    Ok(publish_retained_catalog_generation(
+        publisher,
         CatalogPublicationExpectation::uninitialized(),
         selected,
         &catalog,
