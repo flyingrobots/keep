@@ -2,33 +2,34 @@
 
 use std::io::{self, Write};
 
+use super::filesystem_catalog_stages::FilesystemCatalogStages;
 use super::{
     CanonicalPublicationHead, CatalogRestartArtifact, CatalogSnapshot,
-    FilesystemCatalogPublicationError, FilesystemCatalogPublisher, catalog_restart_loader,
-    filesystem_catalog_artifact, filesystem_catalog_publisher,
+    FilesystemCatalogPublicationError, catalog_restart_loader, filesystem_catalog_artifact,
+    filesystem_catalog_publisher,
 };
 
-pub(super) fn create_stage(publisher: &mut FilesystemCatalogPublisher) -> io::Result<()> {
-    if publisher.head_stage.is_some() {
+pub(super) fn create_stage(stages: &mut FilesystemCatalogStages) -> io::Result<()> {
+    if stages.head_stage.is_some() {
         return Err(stage_state());
     }
-    publisher.head_stage = Some(filesystem_catalog_artifact::create_exclusive(
-        &publisher.root,
+    stages.head_stage = Some(filesystem_catalog_artifact::create_exclusive(
+        &stages.root,
         filesystem_catalog_publisher::NEXT_HEAD,
     )?);
     Ok(())
 }
 
 pub(super) fn write(
-    publisher: &mut FilesystemCatalogPublisher,
+    stages: &mut FilesystemCatalogStages,
     head: &CanonicalPublicationHead,
 ) -> io::Result<()> {
-    write_bytes(publisher, head.encoded())
+    write_bytes(stages, head.encoded())
 }
 
 #[cfg(feature = "repository-tasks")]
 pub(super) fn write_prefix(
-    publisher: &mut FilesystemCatalogPublisher,
+    stages: &mut FilesystemCatalogStages,
     head: &CanonicalPublicationHead,
     prefix: usize,
 ) -> io::Result<()> {
@@ -36,32 +37,32 @@ pub(super) fn write_prefix(
         .encoded()
         .get(..prefix)
         .ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "head prefix exceeds bytes"))?;
-    write_bytes(publisher, bytes)
+    write_bytes(stages, bytes)
 }
 
-fn write_bytes(publisher: &mut FilesystemCatalogPublisher, bytes: &[u8]) -> io::Result<()> {
-    stage_mut(publisher)?.write_all(bytes)
+fn write_bytes(stages: &mut FilesystemCatalogStages, bytes: &[u8]) -> io::Result<()> {
+    stage_mut(stages)?.write_all(bytes)
 }
 
-pub(super) fn flush(publisher: &mut FilesystemCatalogPublisher) -> io::Result<()> {
-    stage_mut(publisher)?.flush()
+pub(super) fn flush(stages: &mut FilesystemCatalogStages) -> io::Result<()> {
+    stage_mut(stages)?.flush()
 }
 
-pub(super) fn synchronize(publisher: &mut FilesystemCatalogPublisher) -> io::Result<()> {
-    stage_mut(publisher)?.sync_all()
+pub(super) fn synchronize(stages: &mut FilesystemCatalogStages) -> io::Result<()> {
+    stage_mut(stages)?.sync_all()
 }
 
 pub(super) fn verify_view(
-    publisher: &mut FilesystemCatalogPublisher,
+    stages: &mut FilesystemCatalogStages,
     head: &CanonicalPublicationHead,
     expected: &CatalogSnapshot<'_, '_, '_>,
 ) -> io::Result<()> {
-    let stage = publisher.head_stage.take().ok_or_else(stage_state)?;
+    let stage = stages.head_stage.take().ok_or_else(stage_state)?;
     drop(stage);
     let observed = catalog_restart_loader::load_from_directory(
-        &publisher.root,
+        &stages.root,
         filesystem_catalog_publisher::NEXT_HEAD,
-        publisher.policy,
+        stages.policy,
     )
     .map_err(filesystem_catalog_artifact::invalid_data)?;
     if observed.head_bytes() != head.encoded() {
@@ -87,20 +88,20 @@ pub(super) fn verify_view(
     }
 }
 
-pub(super) fn replace(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
-    publisher.root.rename(
+pub(super) fn replace(stages: &FilesystemCatalogStages) -> io::Result<()> {
+    stages.root.rename(
         filesystem_catalog_publisher::NEXT_HEAD,
-        &publisher.root,
+        &stages.root,
         filesystem_catalog_publisher::HEAD,
     )
 }
 
-pub(super) fn synchronize_root(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
-    filesystem_catalog_artifact::synchronize_directory(&publisher.root)
+pub(super) fn synchronize_root(stages: &FilesystemCatalogStages) -> io::Result<()> {
+    filesystem_catalog_artifact::synchronize_directory(&stages.root)
 }
 
-fn stage_mut(publisher: &mut FilesystemCatalogPublisher) -> io::Result<&mut cap_std::fs::File> {
-    publisher.head_stage.as_mut().ok_or_else(stage_state)
+fn stage_mut(stages: &mut FilesystemCatalogStages) -> io::Result<&mut cap_std::fs::File> {
+    stages.head_stage.as_mut().ok_or_else(stage_state)
 }
 
 fn stage_state() -> io::Error {

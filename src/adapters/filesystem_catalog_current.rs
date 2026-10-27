@@ -2,29 +2,29 @@
 
 use std::io;
 
+use super::filesystem_catalog_stages::FilesystemCatalogStages;
 use super::{
     CatalogPublicationExpectation, CatalogPublicationReadiness, CatalogRestartError,
-    CatalogRestartPhase, CatalogSnapshot, FilesystemCatalogPublicationError,
-    FilesystemCatalogPublisher, SegmentPublication, catalog_restart_loader,
-    filesystem_catalog_artifact, filesystem_catalog_publisher,
+    CatalogRestartPhase, CatalogSnapshot, FilesystemCatalogPublicationError, SegmentPublication,
+    catalog_restart_loader, filesystem_catalog_artifact, filesystem_catalog_publisher,
 };
 
 pub(super) fn verify(
-    publisher: &FilesystemCatalogPublisher,
+    stages: &FilesystemCatalogStages,
     expected: CatalogPublicationExpectation,
     candidate: &CatalogSnapshot<'_, '_, '_>,
     segment: &SegmentPublication<'_, '_>,
 ) -> io::Result<CatalogPublicationReadiness> {
-    require_segment_authority(publisher, segment)?;
-    require_no_next_head(publisher)?;
-    require_no_catalog_stage(publisher)?;
+    require_segment_authority(stages, segment)?;
+    require_no_next_head(stages)?;
+    require_no_catalog_stage(stages)?;
     if segment.admitted().is_none() {
-        require_no_segment_stage(publisher)?;
+        require_no_segment_stage(stages)?;
     }
     let readiness = match catalog_restart_loader::load_from_directory(
-        &publisher.root,
+        &stages.root,
         filesystem_catalog_publisher::HEAD,
-        publisher.policy,
+        stages.policy,
     ) {
         Ok(observed) => {
             let observed_generation = Some(observed.generation());
@@ -49,22 +49,22 @@ pub(super) fn verify(
             }
         }
         Err(source) if head_is_absent(&source) && expected.current_generation().is_none() => {
-            require_empty_durable_pools(publisher)?;
+            require_empty_durable_pools(stages)?;
             Ok(CatalogPublicationReadiness::Ready)
         }
         Err(source) => Err(filesystem_catalog_artifact::invalid_data(source)),
     }?;
     if readiness == CatalogPublicationReadiness::AlreadyPublished {
-        require_no_segment_stage(publisher)?;
+        require_no_segment_stage(stages)?;
     }
     Ok(readiness)
 }
 
 fn require_segment_authority(
-    publisher: &FilesystemCatalogPublisher,
+    stages: &FilesystemCatalogStages,
     segment: &SegmentPublication<'_, '_>,
 ) -> io::Result<()> {
-    if segment.is_bound_to(&publisher.authority) {
+    if segment.is_bound_to(&stages.authority) {
         Ok(())
     } else {
         Err(filesystem_catalog_artifact::invalid_data(
@@ -73,8 +73,8 @@ fn require_segment_authority(
     }
 }
 
-fn require_no_next_head(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
-    match publisher
+fn require_no_next_head(stages: &FilesystemCatalogStages) -> io::Result<()> {
+    match stages
         .root
         .symlink_metadata(filesystem_catalog_publisher::NEXT_HEAD)
     {
@@ -86,29 +86,29 @@ fn require_no_next_head(publisher: &FilesystemCatalogPublisher) -> io::Result<()
     }
 }
 
-fn require_no_catalog_stage(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
+fn require_no_catalog_stage(stages: &FilesystemCatalogStages) -> io::Result<()> {
     require_absent(
-        &publisher.staging,
+        &stages.staging,
         filesystem_catalog_publisher::CURRENT_CATALOG,
         FilesystemCatalogPublicationError::CatalogRecoveryRequired,
     )
 }
 
-fn require_no_segment_stage(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
+fn require_no_segment_stage(stages: &FilesystemCatalogStages) -> io::Result<()> {
     require_absent(
-        &publisher.staging,
+        &stages.staging,
         filesystem_catalog_publisher::CURRENT_SEGMENT,
         FilesystemCatalogPublicationError::SegmentRecoveryRequired,
     )
 }
 
-fn require_empty_durable_pools(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
+fn require_empty_durable_pools(stages: &FilesystemCatalogStages) -> io::Result<()> {
     require_empty_pool(
-        &publisher.segments,
+        &stages.segments,
         FilesystemCatalogPublicationError::SegmentPoolRecoveryRequired,
     )?;
     require_empty_pool(
-        &publisher.catalogs,
+        &stages.catalogs,
         FilesystemCatalogPublicationError::CatalogPoolRecoveryRequired,
     )
 }

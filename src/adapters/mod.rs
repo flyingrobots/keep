@@ -83,10 +83,12 @@ mod filesystem_catalog_current;
 mod filesystem_catalog_head;
 mod filesystem_catalog_publication_error;
 mod filesystem_catalog_publisher;
+mod filesystem_catalog_publisher_storage;
 #[cfg(test)]
 mod filesystem_catalog_publisher_tests;
 mod filesystem_catalog_segment;
 mod filesystem_catalog_snapshot;
+mod filesystem_catalog_stages;
 mod filesystem_catalog_storage;
 mod filesystem_exact_record;
 mod filesystem_initialization_namespace;

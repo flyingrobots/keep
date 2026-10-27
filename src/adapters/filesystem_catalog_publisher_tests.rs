@@ -182,17 +182,25 @@ fn fixture(hex: &str) -> Result<Vec<u8>, Box<dyn Error>> {
 fn publisher_drop_closes_writable_stages_before_releasing_writer_authority()
 -> Result<(), Box<dyn Error>> {
     let source = include_str!("filesystem_catalog_publisher.rs");
-    let catalog_stage = source
-        .find("pub(super) catalog_stage:")
-        .ok_or("publisher must retain the catalog stage")?;
-    let head_stage = source
-        .find("pub(super) head_stage:")
-        .ok_or("publisher must retain the head stage")?;
+    let stages = source
+        .find("pub(super) stages: FilesystemCatalogStages,")
+        .ok_or("publisher must retain the shared catalog stages")?;
     let writer_lock = source
         .find("pub(super) _lock:")
         .ok_or("publisher must retain writer authority")?;
+    let shared = include_str!("filesystem_catalog_stages.rs");
+    let owner = shared
+        .find("pub(super) struct FilesystemCatalogStages")
+        .ok_or("shared stages must be one owned type")?;
+    let catalog_stage = shared
+        .find("pub(super) catalog_stage:")
+        .ok_or("shared stages must retain the catalog stage")?;
+    let head_stage = shared
+        .find("pub(super) head_stage:")
+        .ok_or("shared stages must retain the head stage")?;
 
-    assert!(catalog_stage < writer_lock);
-    assert!(head_stage < writer_lock);
+    assert!(stages < writer_lock);
+    assert!(owner < catalog_stage && owner < head_stage);
+    assert!(!shared.contains("FilesystemWriterLock"));
     Ok(())
 }
