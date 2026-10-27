@@ -26,19 +26,6 @@ pub(super) fn run(
         .map_err(|source| verification("execute production store initialization", source))
 }
 
-/// Initializes a fresh store and returns its retained writer lock.
-pub(super) fn initialized_lock(
-    store_root: &Path,
-) -> Result<keep::FilesystemWriterLock, DurabilityCrashMatrixError> {
-    let mut storage = RepositoryInitializationStorage::admit_unchecked(store_root)
-        .map_err(|source| DurabilityCrashMatrixError::io("open initialization storage", source))?;
-    let _receipt = initialize_store(&mut storage)
-        .map_err(|source| verification("initialize production crash store", source))?;
-    storage
-        .into_writer_lock()
-        .map_err(|source| DurabilityCrashMatrixError::io("retain initialized writer lock", source))
-}
-
 pub(super) fn publisher(
     store_root: &Path,
 ) -> Result<FilesystemCatalogPublisher, DurabilityCrashMatrixError> {

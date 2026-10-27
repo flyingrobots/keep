@@ -1,7 +1,7 @@
-//! This module owns the one blob the version-two crash campaign ingests.
+//! This module owns the blobs crash children ingest through the public writer.
 //!
-//! The child stages exactly these records, and restart reconstructs exactly
-//! these bytes, so both sides derive the blob from one definition.
+//! A child stages exactly these records, and restart reconstructs exactly
+//! these bytes, so both sides derive each blob from one definition.
 
 use keep::{
     AdmittedLayout, AdmittedSegmentRecord, BlobId, CanonicalLayoutRecord, ChunkSpan, FastCdc,
@@ -12,29 +12,43 @@ use super::super::DurabilityCrashMatrixError;
 use super::verification;
 
 /// The exact bytes the version-two writer ingests before process death.
-pub(in crate::durability_crash_matrix) const CONTENT: &[u8] =
+pub(in crate::durability_crash_matrix) const VERSION_TWO_CONTENT: &[u8] =
     b"keep version-two crash campaign: one blob ingested after migration";
 
-/// The canonical layout and chunk spans of [`CONTENT`].
-pub(in crate::durability_crash_matrix) struct VersionTwoBlob {
+/// The synthetic source byte of the frozen one-zero bundle corpus.
+const BUNDLE_CONTENT: &[u8] = &[0];
+
+/// One blob with its canonical layout and chunk spans.
+pub(in crate::durability_crash_matrix) struct CrashBlob {
+    content: &'static [u8],
     spans: Vec<ChunkSpan>,
     record: CanonicalLayoutRecord,
     target: BlobId,
 }
 
-impl VersionTwoBlob {
-    pub(in crate::durability_crash_matrix) fn identify() -> Result<Self, DurabilityCrashMatrixError>
-    {
-        let target = BlobId::hash_bytes(CONTENT)
-            .map_err(|source| verification("identify version-two crash blob", source))?;
+impl CrashBlob {
+    /// The blob the version-two writer ingests before process death.
+    pub(in crate::durability_crash_matrix) fn version_two()
+    -> Result<Self, DurabilityCrashMatrixError> {
+        Self::identify(VERSION_TWO_CONTENT)
+    }
+
+    /// The blob whose first catalog is the frozen bundle corpus.
+    pub(in crate::durability_crash_matrix) fn bundle() -> Result<Self, DurabilityCrashMatrixError> {
+        Self::identify(BUNDLE_CONTENT)
+    }
+
+    fn identify(content: &'static [u8]) -> Result<Self, DurabilityCrashMatrixError> {
+        let target = BlobId::hash_bytes(content)
+            .map_err(|source| verification("identify crash blob", source))?;
         let mut detector = FastCdc::new();
         let mut spans = Vec::new();
         detector
-            .feed(CONTENT, |span| spans.push(span))
-            .map_err(|source| verification("chunk version-two crash blob", source))?;
+            .feed(content, |span| spans.push(span))
+            .map_err(|source| verification("chunk crash blob", source))?;
         if let Some(span) = detector
             .finish()
-            .map_err(|source| verification("finish version-two crash blob", source))?
+            .map_err(|source| verification("finish crash blob", source))?
         {
             spans.push(span);
         }
@@ -44,11 +58,12 @@ impl VersionTwoBlob {
             spans.clone(),
             LayoutEntryLimit::MAXIMUM,
         )
-        .map_err(|source| verification("admit version-two crash layout", source))?;
+        .map_err(|source| verification("admit crash layout", source))?;
         let record = layout
             .encode_record()
-            .map_err(|source| verification("encode version-two crash layout", source))?;
+            .map_err(|source| verification("encode crash layout", source))?;
         Ok(Self {
+            content,
             spans,
             record,
             target,
@@ -62,20 +77,21 @@ impl VersionTwoBlob {
         let mut records = Vec::with_capacity(self.spans.len());
         for span in &self.spans {
             let start = usize::try_from(span.offset().get())
-                .map_err(|source| verification("bound version-two crash chunk", source))?;
+                .map_err(|source| verification("bound crash chunk", source))?;
             let end = usize::try_from(span.end().get())
-                .map_err(|source| verification("bound version-two crash chunk", source))?;
-            let bytes = CONTENT
+                .map_err(|source| verification("bound crash chunk", source))?;
+            let bytes = self
+                .content
                 .get(start..end)
                 .ok_or(DurabilityCrashMatrixError::FixtureRange)?;
             records.push(
                 AdmittedSegmentRecord::for_chunk(bytes)
-                    .map_err(|source| verification("admit version-two crash chunk", source))?,
+                    .map_err(|source| verification("admit crash chunk", source))?,
             );
         }
         records.push(
             AdmittedSegmentRecord::for_layout(&self.record)
-                .map_err(|source| verification("admit version-two crash layout", source))?,
+                .map_err(|source| verification("admit crash layout", source))?,
         );
         Ok(records)
     }

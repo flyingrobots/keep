@@ -24,10 +24,10 @@ use keep::{
 use xtask::{DurabilityCrashCase, DurabilityCrashPoint, DurabilityCrashPosition};
 
 use super::super::DurabilityCrashMatrixError;
+use super::super::production_protocol::crash_blob::{CrashBlob, VERSION_TWO_CONTENT};
 use super::super::production_protocol::fixture::GoldenFixture;
 use super::super::production_protocol::retention::reopened_authority;
 use super::super::production_protocol::verification;
-use super::super::production_protocol::version_two_blob::{CONTENT, VersionTwoBlob};
 use super::super::production_protocol::version_two_catalog::{admit_segments, policy};
 use super::version_two_recovery as recovery;
 
@@ -159,7 +159,7 @@ fn require_generation_two(store_root: &Path) -> Result<(), DurabilityCrashMatrix
 
 /// Retains the ingested blob in its own namespace, gated by the current catalog.
 fn retain_blob(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
-    let blob = VersionTwoBlob::identify()?;
+    let blob = CrashBlob::version_two()?;
     let root = RetentionRoot::new(
         RetentionNamespace::try_from(&b"version-two-crash"[..])
             .map_err(|source| verification("name crash retention namespace", source))?,
@@ -220,8 +220,8 @@ fn read_back(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
             return Err(mismatch("recovered retained blob changed identity".into()));
         }
     }
-    let ingested = reconstruct(&store, VersionTwoBlob::identify()?.target())?;
-    if ingested == CONTENT {
+    let ingested = reconstruct(&store, CrashBlob::version_two()?.target())?;
+    if ingested == VERSION_TWO_CONTENT {
         Ok(())
     } else {
         Err(mismatch(

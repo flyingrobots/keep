@@ -1,11 +1,13 @@
 //! This module owns real production protocol execution for crash children.
 
 mod control;
+pub(super) mod crash_blob;
 pub(super) mod fixture;
 pub(super) mod initialization;
 mod initialization_storage;
 mod migration;
 mod migration_storage;
+mod populated_store;
 mod publication;
 mod publication_storage;
 mod recovery;
@@ -13,7 +15,6 @@ mod recovery_storage;
 pub(super) mod retention;
 mod retention_storage;
 mod segment_stage;
-pub(super) mod version_two_blob;
 pub(super) mod version_two_catalog;
 
 use std::error::Error;
