@@ -25,4 +25,3 @@ fn build_format_marker(definition_digest: [u8; 32]) -> Result<Artifact, String> 
         bytes,
     })
 }
-
