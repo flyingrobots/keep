@@ -25,7 +25,7 @@ mod initialization_laws;
 mod populated_store;
 #[path = "portability_laws.rs"]
 mod portability_laws;
-#[path = "../version_two_catalog_writer/recovery_fixture.rs"]
+#[path = "../catalog_writer/recovery_fixture.rs"]
 #[allow(dead_code, reason = "these laws use finalization only")]
 mod recovery_fixture;
 #[path = "store_copy.rs"]
@@ -36,7 +36,9 @@ mod store_copy;
     reason = "these laws publish successors only through `publish`"
 )]
 mod successor_catalog;
-#[path = "../version_two_catalog_writer/writer_fixture.rs"]
+#[path = "unsupported_directory.rs"]
+mod unsupported_directory;
+#[path = "../catalog_writer/writer_fixture.rs"]
 #[allow(
     dead_code,
     unused_imports,

@@ -10,7 +10,7 @@ use super::{
 };
 use std::{error::Error, fs};
 
-// Size: medium. Oracle: version-two root/manifest count ceilings apply before stage discard.
+// Size: medium. Oracle: store root/manifest count ceilings apply before stage discard.
 // Delete only when stronger public recovery coverage subsumes excessive-count preservation.
 #[test]
 fn excessive_counts_in_short_headers_preserve_evidence() -> Result<(), Box<dyn Error>> {

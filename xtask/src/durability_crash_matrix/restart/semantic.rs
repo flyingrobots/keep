@@ -6,14 +6,14 @@ use std::path::Path;
 
 use keep::{
     AdmittedSegment, CatalogRestartByteLimit, CatalogRestartPolicy, ChecksummedCatalog, ChunkId,
-    FilesystemCatalogSnapshot, FilesystemWriterLock, LayoutEntryLimit, RecoveryCatalogStage,
+    FilesystemCatalogSnapshot, FilesystemRecoveryAdmission, LayoutEntryLimit, RecoveryCatalogStage,
     RecoveryNextHeadStage, RecoverySegmentStage, SegmentReadPolicy, SegmentRecordIdentity,
     SegmentRecordLimit, classify_recovery_catalog_stage, classify_recovery_next_head_stage,
     classify_recovery_segment_stage,
 };
 
 use super::expectation::{
-    ArtifactBytes, CATALOG_STAGE, ExpectedStoreState, HEAD, NEXT_HEAD, SEGMENT_STAGE, WRITER_LOCK,
+    ArtifactBytes, CATALOG_STAGE, ExpectedStoreState, HEAD, NEXT_HEAD, SEGMENT_STAGE,
 };
 use crate::durability_crash_matrix::DurabilityCrashMatrixError;
 use crate::durability_crash_matrix::production_protocol::fixture::{
@@ -26,7 +26,7 @@ pub(super) fn verify(
     store_root: &Path,
     expected: &ExpectedStoreState,
 ) -> Result<(), DurabilityCrashMatrixError> {
-    verify_writer_release(store_root, expected)?;
+    verify_recovery_admission(store_root)?;
     verify_segment_stage(store_root, expected)?;
     verify_catalog_stage(store_root, expected)?;
     verify_next_head(store_root, expected)?;
@@ -34,16 +34,15 @@ pub(super) fn verify(
     verify_published_snapshot(store_root, expected)
 }
 
-fn verify_writer_release(
-    store_root: &Path,
-    expected: &ExpectedStoreState,
-) -> Result<(), DurabilityCrashMatrixError> {
-    if expected.artifact(WRITER_LOCK).is_none() {
-        return Ok(());
-    }
-    let lock = FilesystemWriterLock::try_acquire(store_root)
-        .map_err(|source| verification("reacquire writer lock after process death", source))?;
-    drop(lock);
+/// Requires the dead writer's authority to be reacquirable over a lawful state.
+///
+/// Recovery admission takes the writer lock and admits the namespace and
+/// `FORMAT` marker: every residue a catalog-protocol crash leaves is a state
+/// of the format that recovery can open.
+fn verify_recovery_admission(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
+    let admission = FilesystemRecoveryAdmission::reopen_unchecked_for_repository_tasks(store_root)
+        .map_err(|source| verification("admit the crash residue for recovery", source))?;
+    drop(admission);
     Ok(())
 }
 
@@ -67,7 +66,7 @@ fn verify_segment_stage(
         ArtifactBytes::Segment(64 | 209) => "reusable",
         ArtifactBytes::Segment(337) => "complete",
         ArtifactBytes::Empty | ArtifactBytes::Segment(_) => "truncated",
-        ArtifactBytes::Catalog(_) | ArtifactBytes::Head(_) => {
+        ArtifactBytes::Marker | ArtifactBytes::Catalog(_) | ArtifactBytes::Head(_) => {
             return Err(DurabilityCrashMatrixError::UnexpectedArtifactKind {
                 artifact: SEGMENT_STAGE,
                 expected: "segment",
@@ -97,7 +96,7 @@ fn verify_catalog_stage(
     let expected_class = match bytes {
         ArtifactBytes::Catalog(352) => "complete",
         ArtifactBytes::Empty | ArtifactBytes::Catalog(_) => "truncated",
-        ArtifactBytes::Segment(_) | ArtifactBytes::Head(_) => {
+        ArtifactBytes::Marker | ArtifactBytes::Segment(_) | ArtifactBytes::Head(_) => {
             return Err(DurabilityCrashMatrixError::UnexpectedArtifactKind {
                 artifact: CATALOG_STAGE,
                 expected: "catalog",
@@ -126,7 +125,7 @@ fn verify_next_head(
     let expected_class = match bytes {
         ArtifactBytes::Head(128) => "complete",
         ArtifactBytes::Empty | ArtifactBytes::Head(_) => "truncated",
-        ArtifactBytes::Segment(_) | ArtifactBytes::Catalog(_) => {
+        ArtifactBytes::Marker | ArtifactBytes::Segment(_) | ArtifactBytes::Catalog(_) => {
             return Err(DurabilityCrashMatrixError::UnexpectedArtifactKind {
                 artifact: NEXT_HEAD,
                 expected: "head",

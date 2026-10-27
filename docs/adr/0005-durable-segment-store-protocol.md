@@ -35,7 +35,7 @@ segment writer, catalog publisher, and recovery engine can be implemented.
 ## Decision
 
 Keep adopts `keep.segment-store/v1`, specified in the
-[version-1 format and state protocol](../formats/segment-store-v1/README.md).
+[version-1 format and state protocol](../formats/store/README.md).
 The decision is one inseparable contract with three parts:
 
 1. canonical immutable segment, catalog-generation, and publication-head

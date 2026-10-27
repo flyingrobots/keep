@@ -31,7 +31,7 @@ fn initialization_and_recovery_define_every_authority_boundary()
         "`KEEP-CRASH-036`",
         "`KEEP-CRASH-081`",
         "`KEEP-CRASH-091`",
-        "Version-1 admission refuses",
+        "every open path now requires `FORMAT`",
         "`reader.lock`",
         "`GcRetirementIntent`",
         "`GcRetirementReceipt`",

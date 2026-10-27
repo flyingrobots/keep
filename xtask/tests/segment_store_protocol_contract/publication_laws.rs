@@ -31,22 +31,19 @@ fn immutable_pool_links_are_verified_after_namespace_resolution() {
 }
 
 #[test]
-fn initialization_is_writer_locked_idempotent_and_root_synchronized() {
+fn store_initialization_routes_to_the_single_format_protocol() {
     for required in [
-        "## Crash-safe initialization",
-        "acquires the exclusive advisory lock before\n\
-         creating any directory",
-        "partial canonical initialization set",
-        "synchronizes the store\n\
-         root (`KEEP-CRASH-035`)",
-        "Only the completed root synchronization admits an\n\
-         uninitialized store",
+        "## Store initialization",
+        "(initialization.md)",
+        "`KEEP-CRASH-081`–`KEEP-CRASH-091`",
+        "`KEEP-CRASH-031`–`KEEP-CRASH-035`; the",
     ] {
         assert!(
             SPECIFICATION.contains(required),
-            "missing crash-safe initialization law: {required}"
+            "missing single-format initialization route: {required}"
         );
     }
+    assert!(!SPECIFICATION.contains("## Crash-safe initialization"));
 }
 
 #[test]

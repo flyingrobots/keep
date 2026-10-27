@@ -235,7 +235,7 @@ fn format_command(
         DurabilityCrashMatrixError::Usage => formatter.write_str(
             "usage: cargo xtask durability-crash-matrix \
              [--case <KEEP-CRASH-NNN> <before|during|after> [<occurrence>] \
-             | --sequence <segment|catalog|head|recovery-discard|initialization|retention|version-two-catalog|version-two-initialization>]",
+             | --sequence <segment|catalog|head|recovery-discard|retention|retained-catalog|initialization>]",
         ),
         _ => Err(fmt::Error),
     }

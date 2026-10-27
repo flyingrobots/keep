@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fs;
 
 use super::{
-    FilesystemRecoveryStageDiscardOpenError, FilesystemRecoveryStageError, RecoveryStage,
+    FilesystemRecoveryStageError, FilesystemStoreAdmissionError, RecoveryStage,
     RecoveryStageDiscardError, RecoveryStageDiscardOutcome, RecoveryStageDiscardStorageError,
     WriterLockAcquireError, execute_recovery_stage_discard,
 };
@@ -81,10 +81,10 @@ fn symbolic_stage_is_never_followed_or_removed() -> Result<(), Box<dyn Error>> {
     let fixture = DiscardFixture::new("filesystem-stage-discard-symlink")?;
     let bytes = truncated_bytes(RecoveryStage::Segment, 1)?;
     let request = request(RecoveryStage::Segment, &bytes)?;
+    let mut discarder = fixture.discarder()?;
     let target = fixture.root().join("outside");
     fs::write(&target, &bytes)?;
     symlink(&target, fixture.stage_path(RecoveryStage::Segment))?;
-    let mut discarder = fixture.discarder()?;
 
     let error = execute_recovery_stage_discard(&mut discarder, request)
         .err()
@@ -190,13 +190,13 @@ fn retained_discarder_authority_excludes_a_second_writer() -> Result<(), Box<dyn
     let first = fixture.discarder()?;
 
     let error = fixture
-        .discarder()
+        .recovery_admission()
         .err()
         .ok_or("second recovery writer acquired authority")?;
 
     assert!(matches!(
         error,
-        FilesystemRecoveryStageDiscardOpenError::WriterLock {
+        FilesystemStoreAdmissionError::WriterLock {
             source: WriterLockAcquireError::Busy,
         }
     ));

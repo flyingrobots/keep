@@ -10,11 +10,11 @@ use std::io;
 use std::path::Path;
 
 use keep::{
-    CatalogPublicationBoundary, CatalogPublicationPhase, DurableStore, FilesystemCatalogSnapshot,
-    FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError, FilesystemVersionTwoAdmission,
-    FilesystemVersionTwoCatalogPublisher, ReaderAttemptLimit, RecoveryEntryRole,
+    CatalogPublicationBoundary, CatalogPublicationPhase, DurableStore, FilesystemCatalogPublisher,
+    FilesystemCatalogSnapshot, FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError,
+    FilesystemStoreAdmission, ReaderAttemptLimit, RecoveryEntryRole,
     RecoveryNextHeadFinalizationOutcome, RetainedCatalogPublicationError,
-    VersionTwoInitializationPrefix,
+    StoreInitializationPrefix,
 };
 
 use super::durable_fixture;
@@ -90,17 +90,15 @@ fn the_single_format_serves_every_operation_from_initialization_to_recovery() ->
     let (first, second) = (first_blob(), second_blob());
     let third = b"keep acceptance: the publication interrupted before HEAD. ".repeat(1_500);
 
-    let initialized = FilesystemVersionTwoAdmission::initialize(root)?;
-    assert_eq!(initialized.found(), VersionTwoInitializationPrefix::Empty);
-    let mut writer = FilesystemVersionTwoCatalogPublisher::open(
-        initialized.into_admission(),
-        populated_store::policy()?,
-    )?;
+    let initialized = FilesystemStoreAdmission::initialize(root)?;
+    assert_eq!(initialized.found(), StoreInitializationPrefix::Empty);
+    let mut writer =
+        FilesystemCatalogPublisher::open(initialized.into_admission(), populated_store::policy()?)?;
     let ingested = populated_store::publish_first(root, &mut writer, &[&first])?;
     assert_eq!(ingested.generation().get(), 1);
     drop(writer);
 
-    drop(FilesystemVersionTwoAdmission::reopen(root)?);
+    drop(FilesystemStoreAdmission::reopen(root)?);
     let layout = populated_store::identify(&first)?.record.id();
     let store = DurableStore::open(
         root,
@@ -171,7 +169,7 @@ fn a_backup_copy_reopens_verifies_and_recovers_an_interrupted_write() -> TestRes
     ));
 
     let root = backup.path();
-    drop(FilesystemVersionTwoAdmission::reopen(root)?);
+    drop(FilesystemStoreAdmission::reopen(root)?);
     assert_reads(root, &first)?;
     let candidate = interrupted_publication(root, &second_blob())?;
     recover(root, &candidate, 2)?;

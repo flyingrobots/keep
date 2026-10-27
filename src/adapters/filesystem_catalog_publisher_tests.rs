@@ -17,11 +17,12 @@ use super::filesystem_test_sandbox::TestDirectory;
 use super::test_support::decode_hex;
 use crate::{
     AdmittedSegment, AdmittedSegmentRecord, CanonicalCatalog, CatalogGeneration,
-    CatalogPublicationExpectation, CatalogPublicationOutcome, CatalogRestartByteLimit,
-    CatalogRestartPolicy, FilesystemCatalogPublisher, FilesystemCatalogSnapshot,
-    FilesystemPlatformAdmission, FilesystemSegmentStage, FilesystemWriterLock, LayoutEntryLimit,
+    CatalogPublicationError, CatalogPublicationExpectation, CatalogPublicationOutcome,
+    CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemCatalogPublisher,
+    FilesystemCatalogSnapshot, FilesystemSegmentStage, FilesystemStoreAdmission,
+    FilesystemStoreAdmissionError, LayoutEntryLimit, RetainedCatalogPublicationError,
     SealedSegment, SegmentPublication, SegmentReadPolicy, SegmentRecordLimit, StagedSegment,
-    publish_catalog_generation,
+    publish_retained_catalog_generation,
 };
 
 const SEGMENT_HEX: &str = include_str!("../../conformance/segment-store/v1/one-zero-segment.hex");
@@ -37,9 +38,7 @@ type StagedFixture<'publisher> = (SealedSegment<FilesystemSegmentStage<'publishe
 #[test]
 fn successful_publication_materializes_only_the_exact_durable_view() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-success")?;
-    let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher =
-        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
+    let mut publisher = open_publisher(&store)?;
     let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     assert_eq!(segment_bytes, fixture(SEGMENT_HEX)?);
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
@@ -47,7 +46,7 @@ fn successful_publication_materializes_only_the_exact_durable_view() -> Result<(
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
     let selection = publisher.select_segment(sealed, &segments[0])?;
 
-    let receipt = publish_catalog_generation(
+    let receipt = publish_retained_catalog_generation(
         &mut publisher,
         CatalogPublicationExpectation::uninitialized(),
         selection,
@@ -72,15 +71,13 @@ fn successful_publication_materializes_only_the_exact_durable_view() -> Result<(
 #[test]
 fn durable_publication_retry_returns_the_same_synchronized_receipt() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-retry")?;
-    let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher =
-        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
+    let mut publisher = open_publisher(&store)?;
     let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
     let segments = [segment];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
     let selection = publisher.select_segment(sealed, &segments[0])?;
-    let first = publish_catalog_generation(
+    let first = publish_retained_catalog_generation(
         &mut publisher,
         CatalogPublicationExpectation::uninitialized(),
         selection,
@@ -89,9 +86,8 @@ fn durable_publication_retry_returns_the_same_synchronized_receipt() -> Result<(
     )?;
     drop(publisher);
 
-    let admission = FilesystemPlatformAdmission::reopen_unchecked_for_tests(store.path())?;
-    let mut publisher = FilesystemCatalogPublisher::open(admission, restart_policy()?)?;
-    let retry = publish_catalog_generation(
+    let mut publisher = open_publisher(&store)?;
+    let retry = publish_retained_catalog_generation(
         &mut publisher,
         CatalogPublicationExpectation::uninitialized(),
         SegmentPublication::none(),
@@ -115,13 +111,9 @@ struct StoreFixture {
 impl StoreFixture {
     fn create(name: &str) -> Result<Self, Box<dyn Error>> {
         let sandbox = TestDirectory::create(name)?;
-        fs::write(sandbox.path().join("writer.lock"), [])?;
-        let staging = sandbox.path().join("staging");
+        drop(FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(sandbox.path())?);
         let segments = sandbox.path().join("segments");
         let catalogs = sandbox.path().join("catalogs");
-        fs::create_dir(&staging)?;
-        fs::create_dir(&segments)?;
-        fs::create_dir(&catalogs)?;
         Ok(Self {
             catalog_path: catalogs.join(format!("0000000000000001-{CATALOG_DIGEST}.cat")),
             segment_path: segments.join(format!("{SEGMENT_DIGEST}.seg")),
@@ -147,6 +139,31 @@ impl StoreFixture {
 
     fn remove(self) -> Result<(), Box<dyn Error>> {
         self.sandbox.remove().map_err(Into::into)
+    }
+}
+
+/// Reacquires single-format writer authority over the initialized store.
+fn admit_writer(
+    store: &StoreFixture,
+) -> Result<FilesystemStoreAdmission, FilesystemStoreAdmissionError> {
+    FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks(store.path())
+}
+
+/// Reopens the initialized store and pins its single-format writer.
+fn open_publisher(store: &StoreFixture) -> Result<FilesystemCatalogPublisher, Box<dyn Error>> {
+    Ok(FilesystemCatalogPublisher::open(
+        admit_writer(store)?,
+        restart_policy()?,
+    )?)
+}
+
+/// The catalog-protocol refusal inside one gated publication failure.
+fn catalog_refusal(
+    error: RetainedCatalogPublicationError,
+) -> Result<CatalogPublicationError, Box<dyn Error>> {
+    match error {
+        RetainedCatalogPublicationError::Catalog { source } => Ok(source),
+        other => Err(format!("refusal outside the catalog protocol: {other}").into()),
     }
 }
 
@@ -183,10 +200,10 @@ fn publisher_drop_closes_writable_stages_before_releasing_writer_authority()
 -> Result<(), Box<dyn Error>> {
     let source = include_str!("filesystem_catalog_publisher.rs");
     let stages = source
-        .find("pub(super) stages: FilesystemCatalogStages,")
-        .ok_or("publisher must retain the shared catalog stages")?;
+        .find("pub(super) stages: FilesystemRetainedCatalogStages,")
+        .ok_or("publisher must retain the gated catalog stages")?;
     let writer_lock = source
-        .find("pub(super) _lock:")
+        .find("    _lock: FilesystemWriterLock,")
         .ok_or("publisher must retain writer authority")?;
     let shared = include_str!("filesystem_catalog_stages.rs");
     let owner = shared

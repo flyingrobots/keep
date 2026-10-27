@@ -17,7 +17,7 @@ use crate::{
     AdmittedRetentionManifest, AdmittedRetentionRoot, CanonicalRetentionRoot,
     CatalogRestartByteLimit, CatalogRestartError, CatalogRestartPhase, CatalogRestartPolicy,
     DurableSnapshot, DurableStoreError, FilesystemRetentionPublicationAuthority,
-    FilesystemRetentionSnapshotError, FilesystemVersionTwoAdmission, LayoutEntryLimit,
+    FilesystemRetentionSnapshotError, FilesystemStoreAdmission, LayoutEntryLimit,
     ReaderAttemptLimit, RetentionPolicy, RetentionRoot, SegmentReadPolicy, SegmentRecordLimit,
     execute_retention_publication,
 };
@@ -48,7 +48,7 @@ fn a_pinned_read_keeps_its_retained_view_after_release_publication() -> Result<(
         .ok_or("golden anchor absent")?;
     let pinned = snapshot(sandbox.path())?;
     let admission =
-        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
+        FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
     let mut authority = FilesystemRetentionPublicationAuthority::open(admission)?;
     let state = authority.observe_current()?.ok_or("retention absent")?;
     let manifest = AdmittedRetentionManifest::decode(state.manifest_bytes())?;

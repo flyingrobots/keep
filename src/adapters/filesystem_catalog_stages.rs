@@ -1,10 +1,9 @@
-//! This module owns the catalog protocol stages shared by every writer authority.
+//! This module owns the catalog protocol stages and their fixed names.
 //!
 //! One implementation of the segment, catalog, and head transitions runs under
-//! version-one publication authority and under version-two retained-closure
-//! authority. Each authority owns its writer lock and decides which protocol
-//! entry point may drive these stages; the stages themselves never acquire,
-//! release, or widen authority.
+//! the writer's retained-closure authority, which owns its writer lock and
+//! decides which protocol entry point may drive these stages; the stages
+//! themselves never acquire, release, or widen authority.
 
 use std::io;
 
@@ -15,6 +14,15 @@ use super::{
     AdmittedSegment, CatalogRestartPolicy, ClosedSegment, FilesystemSegmentStage, SealedSegment,
     SegmentPublication, SegmentPublicationError, SegmentStageCreateError, sync_capable_directory,
 };
+
+/// The fixed segment stage inside `staging`.
+pub(super) const CURRENT_SEGMENT: &str = "current.seg";
+/// The fixed catalog stage inside `staging`.
+pub(super) const CURRENT_CATALOG: &str = "current.cat";
+/// The published catalog head in the store root.
+pub(super) const HEAD: &str = "HEAD";
+/// The staged catalog head in the store root.
+pub(super) const NEXT_HEAD: &str = "head.next";
 
 /// Pinned catalog-protocol directories and the stages one writer retains.
 ///

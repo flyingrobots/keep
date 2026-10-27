@@ -1,46 +1,173 @@
-//! This module owns execution of the production initialization protocol.
+//! This module owns execution of the production initializer.
+//!
+//! An observer installed on the initializer's own phases blocks at the
+//! selected boundary for process death; no phase is reimplemented here. The
+//! recovery row first stops one initialization after its writer lock, with an
+//! incomplete `FORMAT.next` in place, then dies inside the resuming call.
 
-use std::path::Path;
+use std::fs::OpenOptions;
+use std::io::{self, Write};
+use std::path::{Path, PathBuf};
 
 use keep::{
-    CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemCatalogPublisher,
-    FilesystemPlatformAdmission, LayoutEntryLimit, RepositoryInitializationStorage,
-    SegmentReadPolicy, SegmentRecordLimit, initialize_store,
+    CanonicalStoreFormatMarker, FilesystemStoreAdmission, StoreInitializationBoundary,
+    StoreInitializationDirectory, StoreInitializationObserver, StoreInitializationPhase,
 };
+use xtask::{DurabilityCrashOccurrence, DurabilityCrashPoint, DurabilityCrashPosition};
 
-use super::control::CrashControl;
-use super::initialization_storage::CrashInitializationStorage;
+use super::control::{CrashControl, DuringTiming};
 use super::{DurabilityCrashMatrixError, verification};
 
-const RESTART_BYTE_LIMIT: u64 = 1_048_576;
+/// Length of the incomplete marker stage a torn write leaves; a nonempty
+/// strict prefix of the 96-byte marker.
+pub(in crate::durability_crash_matrix) const INCOMPLETE_STAGE_LENGTH: usize = 48;
 
+/// Initializes the store root, dying at the selected coordinate.
 pub(super) fn run(
     store_root: &Path,
-    control: &mut CrashControl,
+    control: CrashControl,
 ) -> Result<(), DurabilityCrashMatrixError> {
-    let storage = RepositoryInitializationStorage::admit_unchecked(store_root)
-        .map_err(|source| DurabilityCrashMatrixError::io("open initialization storage", source))?;
-    let mut storage = CrashInitializationStorage::new(storage, control);
-    initialize_store(&mut storage)
-        .map(|_receipt| ())
-        .map_err(|source| verification("execute production store initialization", source))
+    if control
+        .position(DurabilityCrashPoint::InitializeDiscardIncompleteMarkerStage)
+        .is_some()
+    {
+        leave_incomplete_stage(store_root)?;
+    }
+    let observer = observer(control, store_root.to_path_buf());
+    FilesystemStoreAdmission::initialize_observed_for_repository_tasks(store_root, observer)
+        .map(drop)
+        .map_err(|source| verification("execute production initialization", source))
 }
 
-pub(super) fn publisher(
-    store_root: &Path,
-) -> Result<FilesystemCatalogPublisher, DurabilityCrashMatrixError> {
-    let admission = FilesystemPlatformAdmission::initialize(store_root)
-        .map_err(|source| verification("admit crash catalog publisher platform", source))?;
-    FilesystemCatalogPublisher::open(admission, restart_policy()?)
-        .map_err(|source| DurabilityCrashMatrixError::io("open crash catalog publisher", source))
+/// Stops a real initialization at its marker write with a torn stage in place.
+fn leave_incomplete_stage(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
+    let root = store_root.to_path_buf();
+    let observer: StoreInitializationObserver = Box::new(move |phase, boundary| {
+        if phase == StoreInitializationPhase::WriteMarkerStage
+            && boundary == StoreInitializationBoundary::Before
+        {
+            write_incomplete_stage(&root)?;
+            return Err(io::Error::other("stopped with an incomplete marker stage"));
+        }
+        Ok(())
+    });
+    match FilesystemStoreAdmission::initialize_observed_for_repository_tasks(store_root, observer) {
+        Err(_) => Ok(()),
+        Ok(_) => Err(verification(
+            "prepare an incomplete marker stage",
+            io::Error::other("initialization completed past the marker write"),
+        )),
+    }
 }
 
-pub(super) fn restart_policy() -> Result<CatalogRestartPolicy, DurabilityCrashMatrixError> {
-    let byte_limit = CatalogRestartByteLimit::new(RESTART_BYTE_LIMIT)
-        .map_err(|source| verification("construct crash restart byte limit", source))?;
-    Ok(CatalogRestartPolicy::new(segment_policy(), byte_limit))
+/// Writes the strict canonical prefix a torn write could leave, unsynchronized.
+fn write_incomplete_stage(root: &Path) -> io::Result<()> {
+    let marker = CanonicalStoreFormatMarker::version_two();
+    let prefix = marker
+        .encoded()
+        .get(..INCOMPLETE_STAGE_LENGTH)
+        .ok_or_else(|| io::Error::other("marker shorter than the incomplete stage"))?;
+    let mut stage = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(root.join("FORMAT.next"))?;
+    stage.write_all(prefix)?;
+    stage.flush()
 }
 
-pub(in crate::durability_crash_matrix) const fn segment_policy() -> SegmentReadPolicy {
-    SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM)
+/// Maps the initializer's own phases onto the eleven initialization crash points.
+fn observer(mut control: CrashControl, root: PathBuf) -> StoreInitializationObserver {
+    Box::new(move |phase, boundary| {
+        if phase == StoreInitializationPhase::WriteMarkerStage
+            && boundary == StoreInitializationBoundary::Before
+            && control.position(DurabilityCrashPoint::InitializeWriteMarkerStage)
+                == Some(DurabilityCrashPosition::During)
+        {
+            write_incomplete_stage(&root)?;
+            return control.await_process_death();
+        }
+        if let StoreInitializationPhase::AdmitDirectory(directory) = phase {
+            return directory_boundary(&mut control, directory, boundary);
+        }
+        let Some((point, timing)) = crash_point(phase) else {
+            return Ok(());
+        };
+        match boundary {
+            StoreInitializationBoundary::Before => control.before(point, timing),
+            StoreInitializationBoundary::After => control.after(point, timing),
+        }
+    })
+}
+
+/// Directory admission is one occurrence-counted point: `before` precedes the
+/// first directory, `after` follows the last, and `during` occurrence *k*
+/// follows directory *k* + 1.
+fn directory_boundary(
+    control: &mut CrashControl,
+    directory: StoreInitializationDirectory,
+    boundary: StoreInitializationBoundary,
+) -> io::Result<()> {
+    let point = DurabilityCrashPoint::InitializeAdmitDirectory;
+    let ordinal = StoreInitializationDirectory::ALL
+        .iter()
+        .position(|candidate| *candidate == directory)
+        .ok_or_else(|| io::Error::other("directory outside the creation order"))?;
+    let last = StoreInitializationDirectory::ALL.len().saturating_sub(1);
+    let selected = match (control.position(point), boundary) {
+        (Some(DurabilityCrashPosition::Before), StoreInitializationBoundary::Before) => {
+            ordinal == 0
+        }
+        (Some(DurabilityCrashPosition::After), StoreInitializationBoundary::After) => {
+            ordinal == last
+        }
+        (Some(DurabilityCrashPosition::During), StoreInitializationBoundary::After) => {
+            let occurrence = control
+                .occurrence()
+                .map_or(0, DurabilityCrashOccurrence::get);
+            usize::try_from(occurrence).map_err(io::Error::other)? == ordinal
+        }
+        _ => false,
+    };
+    if selected {
+        control.await_process_death()
+    } else {
+        Ok(())
+    }
+}
+
+const fn crash_point(
+    phase: StoreInitializationPhase,
+) -> Option<(DurabilityCrashPoint, DuringTiming)> {
+    use DurabilityCrashPoint as Point;
+    use StoreInitializationPhase as Phase;
+    Some(match phase {
+        Phase::OpenAndLockWriterFile => {
+            (Point::InitializeOpenAndLockWriterFile, DuringTiming::After)
+        }
+        Phase::WriteMarkerStage => (Point::InitializeWriteMarkerStage, DuringTiming::After),
+        Phase::SynchronizeMarkerStage => (
+            Point::InitializeSynchronizeMarkerStage,
+            DuringTiming::Before,
+        ),
+        Phase::SynchronizeRootAfterMarkerStage => (
+            Point::InitializeSynchronizeRootAfterMarkerStage,
+            DuringTiming::Before,
+        ),
+        Phase::AdmitReaderFence => (Point::InitializeAdmitReaderFence, DuringTiming::After),
+        Phase::LinkMarker => (Point::InitializeLinkMarker, DuringTiming::After),
+        Phase::SynchronizeRootAfterMarker => (
+            Point::InitializeSynchronizeRootAfterMarker,
+            DuringTiming::Before,
+        ),
+        Phase::RemoveMarkerStage => (Point::InitializeRemoveMarkerStage, DuringTiming::After),
+        Phase::SynchronizeRootAfterCleanup => (
+            Point::InitializeSynchronizeRootAfterCleanup,
+            DuringTiming::Before,
+        ),
+        Phase::DiscardIncompleteMarkerStage => (
+            Point::InitializeDiscardIncompleteMarkerStage,
+            DuringTiming::After,
+        ),
+        _ => return None,
+    })
 }

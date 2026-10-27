@@ -7,11 +7,11 @@ use std::io;
 use super::RetentionViewError;
 use crate::adapters::CatalogRestartError;
 
-/// Why a reader could not bind one consistent version-two view.
+/// Why a reader could not bind one consistent view.
 #[derive(Debug)]
 #[non_exhaustive]
 pub enum FilesystemRetentionSnapshotError {
-    /// The platform profile or exact version-two root admission failed.
+    /// The platform profile or exact store root admission failed.
     Admission {
         /// The exact platform I/O, namespace, or record failure.
         source: io::Error,
@@ -46,7 +46,7 @@ pub enum FilesystemRetentionSnapshotError {
 impl fmt::Display for FilesystemRetentionSnapshotError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(match self {
-            Self::Admission { .. } => "version-two reader admission refused",
+            Self::Admission { .. } => "reader admission refused",
             Self::Unpublished => "the store has published no catalog",
             Self::Fence { .. } => "reader fence acquisition failed",
             Self::View { .. } => "reader view collection refused",

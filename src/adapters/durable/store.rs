@@ -1,4 +1,4 @@
-//! This boundary module owns the durable store handle: a version-two root
+//! This boundary module owns the durable store handle: a store root
 //! that pins snapshots on demand.
 
 use std::io::Write;
@@ -11,7 +11,7 @@ use super::{
 use crate::adapters::{CatalogRestartPolicy, ReaderAttemptLimit};
 use crate::{BlobId, ByteRange, LayoutId};
 
-/// One committed version-two store to read from.
+/// One committed store to read from.
 ///
 /// The handle holds no fence and no view; every read pins a fresh
 /// [`DurableSnapshot`] unless the caller pins one with [`Self::snapshot`]
@@ -27,7 +27,7 @@ use crate::{BlobId, ByteRange, LayoutId};
 ///
 /// # Example
 ///
-/// On Linux, read an initialized version-two store with a retained blob.
+/// On Linux, read an initialized store with a retained blob.
 /// The caller owns output visibility: a failed write can leave an untrusted
 /// prefix. The receipt names the view; it does not extend retention after the
 /// snapshot is dropped. This example limits aggregate catalog-selected segment bytes;

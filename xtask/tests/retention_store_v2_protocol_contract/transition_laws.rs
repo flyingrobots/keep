@@ -38,7 +38,7 @@ enum LedgerRefusal {
 fn initialization_transition_coordinates_are_complete_and_ordered() {
     let points = DurabilityCrashPoint::ALL
         .into_iter()
-        .filter(|point| point.sequence() == DurabilityCrashSequence::VersionTwoInitialization)
+        .filter(|point| point.sequence() == DurabilityCrashSequence::Initialization)
         .count();
     assert_eq!(OPERATIONS.len(), points);
     assert_eq!(admit(TRANSITIONS), Ok(()));
@@ -119,7 +119,7 @@ fn admit_row(offset: usize, row: &str) -> Result<(), LedgerRefusal> {
         .ok_or(LedgerRefusal::Coordinate { row: offset })?;
     if id != format!("KEEP-CRASH-{ordinal:03}")
         || DurabilityCrashPoint::from_identifier(id).map(DurabilityCrashPoint::sequence)
-            != Some(DurabilityCrashSequence::VersionTwoInitialization)
+            != Some(DurabilityCrashSequence::Initialization)
         || phase != "initialization"
         || Some(&operation) != OPERATIONS.get(offset)
     {

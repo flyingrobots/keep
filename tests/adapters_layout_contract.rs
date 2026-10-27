@@ -70,8 +70,8 @@ const RECORD_READERS: [(&str, &str); 4] = [
         include_str!("../src/adapters/filesystem_format_marker.rs"),
     ),
     (
-        "src/adapters/version_two_initialization/initialization_observation.rs",
-        include_str!("../src/adapters/version_two_initialization/initialization_observation.rs"),
+        "src/adapters/store_initialization/initialization_observation.rs",
+        include_str!("../src/adapters/store_initialization/initialization_observation.rs"),
     ),
 ];
 
@@ -139,12 +139,12 @@ const EXACT_RECORD_CONSUMERS: [(&str, &str); 5] = [
         include_str!("../src/adapters/retention/filesystem_retention_stage.rs"),
     ),
     (
-        "src/adapters/version_two_initialization/initialization_entries.rs",
-        include_str!("../src/adapters/version_two_initialization/initialization_entries.rs"),
+        "src/adapters/store_initialization/initialization_entries.rs",
+        include_str!("../src/adapters/store_initialization/initialization_entries.rs"),
     ),
     (
-        "src/adapters/version_two_initialization/initialization_observation.rs",
-        include_str!("../src/adapters/version_two_initialization/initialization_observation.rs"),
+        "src/adapters/store_initialization/initialization_observation.rs",
+        include_str!("../src/adapters/store_initialization/initialization_observation.rs"),
     ),
 ];
 

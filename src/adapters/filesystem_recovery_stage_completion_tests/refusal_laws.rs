@@ -42,10 +42,10 @@ fn symbolic_stage_is_never_followed_or_linked() -> Result<(), Box<dyn Error>> {
     let fixture = CompletionFixture::new("filesystem-stage-completion-stage-link")?;
     let bytes = segment_bytes()?;
     let request = request(RecoveryStage::Segment, &bytes)?;
+    let mut completer = fixture.completer()?;
     let target = fixture.root().join("outside-stage");
     fs::write(&target, &bytes)?;
     symlink(&target, fixture.stage_path(RecoveryStage::Segment))?;
-    let mut completer = fixture.completer()?;
 
     let error = execute_recovery_stage_completion(&mut completer, request)
         .err()
@@ -73,11 +73,11 @@ fn symbolic_pool_is_never_followed_or_admitted() -> Result<(), Box<dyn Error>> {
     let fixture = CompletionFixture::new("filesystem-stage-completion-pool-link")?;
     let bytes = catalog_bytes()?;
     let request = request(RecoveryStage::Catalog, &bytes)?;
+    let mut completer = fixture.completer()?;
     let target = fixture.root().join("outside-pool");
     fs::write(fixture.stage_path(RecoveryStage::Catalog), &bytes)?;
     fs::write(&target, &bytes)?;
     symlink(&target, fixture.pool_path(request))?;
-    let mut completer = fixture.completer()?;
 
     let error = execute_recovery_stage_completion(&mut completer, request)
         .err()

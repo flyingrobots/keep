@@ -25,14 +25,18 @@ pub struct FilesystemCatalogSnapshot {
 }
 
 impl FilesystemCatalogSnapshot {
-    /// Loads and admits the exact snapshot selected by `HEAD`.
+    /// Admits `root` as a committed store, then loads the exact snapshot selected by `HEAD`.
     ///
-    /// The returned owner retains bounded segment bytes so every later logical
-    /// lookup remains pinned to this immutable generation.
+    /// Admission requires the exact store namespace, which may hold an in-flight
+    /// `head.next`, and the canonical `FORMAT` marker; it takes no lock and no
+    /// reader fence. The returned owner retains bounded segment bytes so every
+    /// later logical lookup remains pinned to this immutable generation.
     ///
     /// # Errors
     ///
-    /// Returns [`CatalogRestartError`] for filesystem refusal, malformed or
+    /// Returns [`CatalogRestartError::Admission`] for a root that is not a
+    /// committed store, including one without `FORMAT`, and otherwise
+    /// [`CatalogRestartError`] for filesystem refusal, malformed or
     /// noncanonical bytes, coordinate disagreement, resource-limit refusal, or
     /// failed catalog-to-record admission.
     pub fn load(root: &Path, policy: CatalogRestartPolicy) -> Result<Self, CatalogRestartError> {

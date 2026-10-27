@@ -10,9 +10,9 @@ use crate::adapters::filesystem_exact_record::ExactRecordError;
 use crate::adapters::{verification_admission, verification_ingress};
 use crate::{
     CatalogRestartPolicy, FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError,
-    ReaderAttemptLimit, RetentionNamespaceDigest, RetentionRootDecodeError, VerificationDepth,
-    VerificationError, VerificationRefusal, VerificationReport, VerificationSource,
-    VerificationSubject, VersionTwoRecordRefusal,
+    ReaderAttemptLimit, RetentionNamespaceDigest, RetentionRootDecodeError, StoreRecordRefusal,
+    VerificationDepth, VerificationError, VerificationRefusal, VerificationReport,
+    VerificationSource, VerificationSubject,
 };
 use std::io;
 
@@ -145,12 +145,12 @@ fn admission_is_corrupt(error: &io::Error) -> bool {
     {
         return true;
     }
-    if let Some(record) = source.downcast_ref::<VersionTwoRecordRefusal>() {
+    if let Some(record) = source.downcast_ref::<StoreRecordRefusal>() {
         return match record {
-            VersionTwoRecordRefusal::LengthOverflow { .. } => false,
-            VersionTwoRecordRefusal::KindOrLength { .. }
-            | VersionTwoRecordRefusal::TrailingBytes { .. }
-            | VersionTwoRecordRefusal::Marker { .. } => true,
+            StoreRecordRefusal::LengthOverflow { .. } => false,
+            StoreRecordRefusal::KindOrLength { .. }
+            | StoreRecordRefusal::TrailingBytes { .. }
+            | StoreRecordRefusal::Marker { .. } => true,
         };
     }
     false

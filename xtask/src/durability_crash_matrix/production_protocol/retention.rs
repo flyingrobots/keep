@@ -4,16 +4,16 @@ use std::path::Path;
 
 use keep::{
     AdmittedCatalog, AdmittedRetentionRoot, AdmittedSegment, ChecksummedCatalog,
-    ChecksummedPublicationHead, FilesystemRetentionPublicationAuthority,
-    FilesystemVersionTwoAdmission, RetentionGenerationExpectation, RetentionPublicationPreparation,
-    execute_retention_publication, preflight_retention_transition, prepare_retention_publication,
+    ChecksummedPublicationHead, FilesystemRetentionPublicationAuthority, FilesystemStoreAdmission,
+    RetentionGenerationExpectation, RetentionPublicationPreparation, execute_retention_publication,
+    preflight_retention_transition, prepare_retention_publication,
 };
 
 use super::control::CrashControl;
 use super::fixture::GoldenFixture;
-use super::initialization;
 use super::populated_store;
 use super::retention_storage::CrashRetentionStorage;
+use super::writer;
 use super::{DurabilityCrashMatrixError, verification};
 
 /// Initializes a fresh bundle store and publishes retention generation one,
@@ -44,9 +44,8 @@ pub(super) fn bundle_authority(
 pub(in crate::durability_crash_matrix) fn reopened_authority(
     store_root: &Path,
 ) -> Result<FilesystemRetentionPublicationAuthority, DurabilityCrashMatrixError> {
-    let admission =
-        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(store_root)
-            .map_err(|source| verification("reopen crash store as version two", source))?;
+    let admission = FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks(store_root)
+        .map_err(|source| verification("reopen crash store", source))?;
     FilesystemRetentionPublicationAuthority::open(admission)
         .map_err(|source| verification("open crash retention authority", source))
 }
@@ -61,9 +60,8 @@ pub(in crate::durability_crash_matrix) fn preparation(
     let head_fixture = GoldenFixture::bundle_head()?;
     let candidate = AdmittedRetentionRoot::decode(root_bytes)
         .map_err(|source| verification("decode crash retention root", source))?;
-    let segment =
-        AdmittedSegment::decode(segment_fixture.bytes(), initialization::segment_policy())
-            .map_err(|source| verification("admit bundle segment", source))?;
+    let segment = AdmittedSegment::decode(segment_fixture.bytes(), writer::segment_policy())
+        .map_err(|source| verification("admit bundle segment", source))?;
     let segments = [segment];
     let catalog: AdmittedCatalog<'_, '_> = ChecksummedCatalog::decode(catalog_fixture.bytes())
         .map_err(|source| verification("decode bundle catalog", source))?

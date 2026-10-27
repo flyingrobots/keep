@@ -39,10 +39,10 @@ impl FilesystemEntryKind {
 pub enum FilesystemNamespaceRefusal {
     /// An observed entry is outside the admitted protocol membership.
     UnexpectedEntry,
-    /// The root holds no `FORMAT` marker, so it is not a committed version-two store.
+    /// The root holds no `FORMAT` marker, so it is not a committed store.
     MissingFormatMarker,
     /// The root still holds `FORMAT.next`: initialization has not committed.
-    /// Resume it with `FilesystemVersionTwoAdmission::initialize`.
+    /// Resume it with `FilesystemStoreAdmission::initialize`.
     InitializationIncomplete,
     /// A no-follow metadata observation established the wrong entry kind.
     WrongKind {

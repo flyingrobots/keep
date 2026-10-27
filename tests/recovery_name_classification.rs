@@ -20,7 +20,7 @@ fn canonical_names_produce_exact_typed_roles() -> Result<(), Box<dyn Error>> {
     let segment_name = format!("{}.seg", "00".repeat(32));
     let catalog_name = format!("{:016x}-{}.cat", 1_u64, "11".repeat(32));
     let inventory = inventory([
-        names(&["writer.lock", "staging", "segments", "catalogs", "HEAD"])?,
+        names(&[INITIALIZED_ROOT.as_slice(), &["HEAD"]].concat())?,
         names(&["current.seg"])?,
         vec![name(segment_name.as_bytes())?],
         vec![name(catalog_name.as_bytes())?],
@@ -67,8 +67,21 @@ pub(crate) fn inventory(
     Ok(inventory)
 }
 
+/// Every root entry an initialized single-format store holds before its first `HEAD`.
+pub(crate) const INITIALIZED_ROOT: [&str; 9] = [
+    "writer.lock",
+    "staging",
+    "segments",
+    "catalogs",
+    "reader.lock",
+    "FORMAT",
+    "retention",
+    "gc",
+    "recovery",
+];
+
 pub(crate) fn initialized_root() -> Result<Vec<RecoveryEntryName>, Box<dyn Error>> {
-    names(&["writer.lock", "staging", "segments", "catalogs"])
+    names(&INITIALIZED_ROOT)
 }
 
 pub(crate) fn names(values: &[&str]) -> Result<Vec<RecoveryEntryName>, Box<dyn Error>> {

@@ -17,9 +17,26 @@ pub(super) const SEGMENT_STAGE: &str = "staging/current.seg";
 pub(super) const CATALOG_STAGE: &str = "staging/current.cat";
 pub(super) const NEXT_HEAD: &str = "head.next";
 pub(super) const HEAD: &str = "HEAD";
+pub(super) const READER_LOCK: &str = "reader.lock";
+pub(super) const FORMAT: &str = "FORMAT";
+
+/// Every protocol directory of a committed single-format store, parents first.
+const PROTOCOL_DIRECTORIES: [&str; 9] = [
+    STAGING,
+    SEGMENTS,
+    CATALOGS,
+    "retention",
+    "retention/roots",
+    "retention/manifests",
+    "gc",
+    "recovery",
+    "recovery/dispositions",
+];
 
 pub(super) enum ArtifactBytes {
     Empty,
+    /// The canonical `FORMAT` marker of the corpus.
+    Marker,
     Segment(usize),
     Catalog(usize),
     Head(usize),
@@ -29,6 +46,7 @@ impl ArtifactBytes {
     pub(super) const fn kind(&self) -> &'static str {
         match self {
             Self::Empty => "empty",
+            Self::Marker => "marker",
             Self::Segment(_) => "segment",
             Self::Catalog(_) => "catalog",
             Self::Head(_) => "head",
@@ -37,16 +55,40 @@ impl ArtifactBytes {
 
     pub(super) fn resolve<'a>(
         &self,
-        segment: &'a GoldenFixture,
-        catalog: &'a GoldenFixture,
-        head: &'a GoldenFixture,
+        fixtures: &'a ArtifactFixtures,
     ) -> Result<&'a [u8], DurabilityCrashMatrixError> {
+        let ArtifactFixtures {
+            marker,
+            segment,
+            catalog,
+            head,
+        } = fixtures;
         match self {
             Self::Empty => Ok(&[]),
+            Self::Marker => Ok(marker.bytes()),
             Self::Segment(end) => segment.prefix(*end),
             Self::Catalog(end) => catalog.prefix(*end),
             Self::Head(end) => head.prefix(*end),
         }
+    }
+}
+
+/// The decoded corpus artifacts expected bytes are prefixes of.
+pub(super) struct ArtifactFixtures {
+    pub(super) marker: GoldenFixture,
+    pub(super) segment: GoldenFixture,
+    pub(super) catalog: GoldenFixture,
+    pub(super) head: GoldenFixture,
+}
+
+impl ArtifactFixtures {
+    pub(super) fn load() -> Result<Self, DurabilityCrashMatrixError> {
+        Ok(Self {
+            marker: GoldenFixture::format_marker()?,
+            segment: GoldenFixture::segment()?,
+            catalog: GoldenFixture::catalog()?,
+            head: GoldenFixture::head()?,
+        })
     }
 }
 
@@ -63,10 +105,9 @@ impl ExpectedStoreState {
             DurabilityCrashSequence::Catalog => sequence::catalog(case),
             DurabilityCrashSequence::Head => sequence::head(case),
             DurabilityCrashSequence::RecoveryDiscard => sequence::recovery(case),
-            DurabilityCrashSequence::Initialization => sequence::initialization(case),
             DurabilityCrashSequence::Retention
-            | DurabilityCrashSequence::VersionTwoCatalog
-            | DurabilityCrashSequence::VersionTwoInitialization => {
+            | DurabilityCrashSequence::RetainedCatalog
+            | DurabilityCrashSequence::Initialization => {
                 Err(DurabilityCrashMatrixError::PointSequenceMismatch {
                     point: case.point(),
                 })
@@ -95,9 +136,16 @@ impl ExpectedStoreState {
         self.hard_link
     }
 
+    /// The committed single-format store that direct initialization leaves.
     fn initialized() -> Self {
-        let directories = [STAGING, SEGMENTS, CATALOGS].into_iter().collect();
-        let artifacts = std::iter::once((WRITER_LOCK, ArtifactBytes::Empty)).collect();
+        let directories = PROTOCOL_DIRECTORIES.into_iter().collect();
+        let artifacts = [
+            (WRITER_LOCK, ArtifactBytes::Empty),
+            (READER_LOCK, ArtifactBytes::Empty),
+            (FORMAT, ArtifactBytes::Marker),
+        ]
+        .into_iter()
+        .collect();
         Self {
             directories,
             artifacts,

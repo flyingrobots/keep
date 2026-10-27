@@ -86,19 +86,18 @@ mod filesystem_catalog_publisher;
 mod filesystem_catalog_publisher_storage;
 #[cfg(test)]
 mod filesystem_catalog_publisher_tests;
+#[cfg(all(test, target_os = "linux"))]
+mod filesystem_catalog_recovery_tests;
 mod filesystem_catalog_segment;
 mod filesystem_catalog_snapshot;
 mod filesystem_catalog_stages;
 mod filesystem_catalog_storage;
 mod filesystem_exact_record;
 mod filesystem_format_marker;
-mod filesystem_initialization_namespace;
-mod filesystem_initialization_storage;
 mod filesystem_namespace_refusal;
-mod filesystem_platform_admission;
-mod filesystem_platform_admission_error;
 mod filesystem_platform_profile;
 mod filesystem_publisher_authority;
+mod filesystem_recovery_admission;
 mod filesystem_recovery_inventory_reader;
 mod filesystem_recovery_inventory_scan;
 #[cfg(all(test, unix))]
@@ -134,23 +133,17 @@ mod filesystem_recovery_stage_materialization;
 mod filesystem_recovery_stage_sync;
 #[cfg(all(test, unix))]
 mod filesystem_recovery_stage_tests;
+mod filesystem_retained_catalog_stages;
 mod filesystem_segment_stage;
 #[cfg(test)]
 mod filesystem_segment_stage_tests;
-mod filesystem_store_initializer;
-#[cfg(test)]
-mod filesystem_store_initializer_tests;
+mod filesystem_store_admission;
+mod filesystem_store_admission_error;
+mod filesystem_store_namespace;
+mod filesystem_store_record_refusal;
 #[cfg(test)]
 #[path = "../../tests/segment_filesystem_stage/sandbox.rs"]
 mod filesystem_test_sandbox;
-mod filesystem_version_two_admission;
-mod filesystem_version_two_catalog_publisher;
-#[cfg(all(test, target_os = "linux"))]
-mod filesystem_version_two_catalog_recovery_tests;
-mod filesystem_version_two_catalog_stages;
-mod filesystem_version_two_catalog_storage;
-mod filesystem_version_two_record_refusal;
-mod filesystem_version_two_recovery_admission;
 mod filesystem_writer_lock;
 mod framed_blake3;
 mod layout_decode_error;
@@ -182,8 +175,6 @@ mod publication_head_decode_error_display;
 mod publication_head_decoder;
 mod publication_head_encoder;
 mod recovery;
-#[cfg(feature = "repository-tasks")]
-mod repository_initialization_storage;
 mod retained_catalog_publication;
 mod retention;
 mod sealed_segment;
@@ -250,10 +241,6 @@ mod storage_profile_id_text;
 mod storage_profile_id_text_error;
 mod store_format;
 mod store_initialization;
-mod store_initialization_error;
-mod store_initialization_phase;
-mod store_initialization_receipt;
-mod store_initialization_storage;
 mod sync_capable_directory;
 #[cfg(test)]
 #[path = "../../tests/support/mod.rs"]
@@ -263,7 +250,6 @@ mod verification_decode_error;
 mod verification_error;
 mod verification_failure_class;
 mod verification_ingress;
-mod version_two_initialization;
 mod writer_lock_acquire_error;
 mod writer_lock_acquire_phase;
 

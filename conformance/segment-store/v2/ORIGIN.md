@@ -9,7 +9,7 @@ The corpus was constructed on 2026-07-29 with:
 `transitions.tsv` was first added on 2026-09-30 for the 21 migration
 boundaries. On 2026-10-27 its migration rows were removed and its 11 rows were
 transcribed from the initialization crash points `KEEP-CRASH-081` to `-091`
-and the state table in `docs/formats/segment-store-v2/initialization.md`. No
+and the state table in `docs/formats/store/initialization.md`. No
 independent oracle constructs this ledger. Its committed-byte guard is `transition_laws.rs`
 under `xtask/tests/retention_store_v2_protocol_contract/`. The crash matrix
 checks runtime behavior at the same boundaries without reading the TSV.

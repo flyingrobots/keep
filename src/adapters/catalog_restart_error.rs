@@ -7,13 +7,20 @@ use std::io;
 
 use super::{
     CatalogAdmissionError, CatalogDecodeError, CatalogRestartArtifact, CatalogRestartPhase,
-    CatalogSnapshotError, PublicationHeadDecodeError, SegmentDigest, SegmentReadError,
+    CatalogSnapshotError, FilesystemStoreAdmissionError, PublicationHeadDecodeError, SegmentDigest,
+    SegmentReadError,
 };
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
 /// Failure to reconstruct one exact published catalog snapshot.
 #[derive(Debug)]
 pub enum CatalogRestartError {
+    /// The root is not an admitted committed store: its namespace or `FORMAT`
+    /// marker refused before any catalog artifact was opened.
+    Admission {
+        /// Preserved namespace or format-marker refusal.
+        source: Box<FilesystemStoreAdmissionError>,
+    },
     /// One capability-relative filesystem operation failed.
     Io {
         /// Exact operation that failed.
@@ -156,6 +163,7 @@ impl CatalogRestartError {
 impl fmt::Display for CatalogRestartError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Admission { .. } => formatter.write_str("catalog restart store admission failed"),
             Self::Io { phase, .. } | Self::SegmentIo { phase, .. } => {
                 write!(formatter, "catalog restart {phase} failed")
             }
@@ -201,6 +209,7 @@ impl Error for CatalogRestartError {
                 ..
             }
             | Self::SegmentIndexAllocation { source, .. } => Some(source),
+            Self::Admission { source } => Some(source),
             Self::Head { source } => Some(source),
             Self::Catalog { source } => Some(source),
             Self::Segment { source, .. } => Some(source),

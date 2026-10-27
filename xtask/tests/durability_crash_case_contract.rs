@@ -105,8 +105,7 @@ fn directory_occurrences_are_admitted_only_within_the_protocol_fixed_range()
 #[test]
 fn the_initialization_sequence_runs_its_documented_forty_one_cases() {
     let cases: Vec<_> =
-        DurabilityCrashCase::in_sequence(DurabilityCrashSequence::VersionTwoInitialization)
-            .collect();
+        DurabilityCrashCase::in_sequence(DurabilityCrashSequence::Initialization).collect();
     assert_eq!(cases.len(), 41);
     let directory_cases = cases
         .iter()

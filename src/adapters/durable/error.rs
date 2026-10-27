@@ -20,7 +20,7 @@ pub enum DurableStoreError {
         /// Original path-resolution failure, preserved without stringification.
         source: io::Error,
     },
-    /// The root did not admit as a version-two store, the fence could not
+    /// The root did not admit as a store, the fence could not
     /// be taken, or one consistent view could not be collected.
     Snapshot(Box<FilesystemRetentionSnapshotError>),
     /// The pinned catalog could not be re-admitted.

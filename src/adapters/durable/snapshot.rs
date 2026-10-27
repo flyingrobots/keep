@@ -14,7 +14,7 @@ use crate::adapters::{
 use crate::authenticated_read::{ChunkSource, read_admitted, reconstruct_admitted};
 use crate::{AdmittedLayout, BlobId, ByteRange, ChunkId, LayoutId};
 
-/// One consistent, fenced view of a version-two store.
+/// One consistent, fenced view of a store.
 ///
 /// The snapshot owns the shared reader fence for its lifetime, so no
 /// collector can retire a segment it may read; every read borrows the
@@ -72,7 +72,7 @@ impl ChunkSource for CatalogChunks<'_, '_, '_, '_> {
 }
 
 impl DurableSnapshot {
-    /// Admits `store_root` as a version-two store, acquires the shared
+    /// Admits `store_root` as a store, acquires the shared
     /// reader fence, double-collects one consistent view within `limit`
     /// attempts, and verifies every retained root's closure.
     ///

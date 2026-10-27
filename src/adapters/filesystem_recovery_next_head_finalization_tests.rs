@@ -51,13 +51,15 @@ fn one_writer_excludes_a_second_finalizer() -> Result<(), Box<dyn Error>> {
     let first = fixture.finalizer()?;
 
     let error = fixture
-        .finalizer()
+        .recovery_admission()
         .err()
         .ok_or("second next-head finalizer acquired writer authority")?;
 
     assert!(matches!(
-        error.downcast_ref::<super::FilesystemRecoveryNextHeadFinalizationOpenError>(),
-        Some(super::FilesystemRecoveryNextHeadFinalizationOpenError::WriterLock { .. })
+        error,
+        super::FilesystemStoreAdmissionError::WriterLock {
+            source: super::WriterLockAcquireError::Busy,
+        }
     ));
     drop(first);
     fixture.remove()?;

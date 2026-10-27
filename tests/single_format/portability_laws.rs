@@ -10,9 +10,9 @@ use std::io;
 use std::path::Path;
 
 use keep::{
-    FilesystemPlatformAdmissionError, FilesystemVersionTwoAdmission,
-    FilesystemVersionTwoCatalogPublisher, RetainedCatalogPublicationError,
-    RetentionCurrentStateRefusal, VersionTwoRecordRefusal, WriterLockAcquireError,
+    FilesystemCatalogPublisher, FilesystemStoreAdmission, FilesystemStoreAdmissionError,
+    RetainedCatalogPublicationError, RetentionCurrentStateRefusal, StoreRecordRefusal,
+    WriterLockAcquireError,
 };
 
 use super::durable_fixture;
@@ -37,7 +37,7 @@ fn a_valid_quiescent_copy_opens_and_reads_the_same_content() -> TestResult<()> {
     let original = durable_fixture::build("portable-original", &[&first])?;
     let copy = copied("portable-copy", original.path())?;
 
-    drop(FilesystemVersionTwoAdmission::reopen(copy.path())?);
+    drop(FilesystemStoreAdmission::reopen(copy.path())?);
 
     assert_reads(copy.path(), &first)
 }
@@ -86,23 +86,25 @@ fn a_replaced_lock_or_protocol_directory_during_an_operation_still_refuses() -> 
     let original = durable_fixture::build("portable-replaced-original", &[&first_blob()])?;
     let copy = copied("portable-replaced-copy", original.path())?;
     let root = copy.path();
-    let held = FilesystemVersionTwoAdmission::reopen(root)?;
+    let held = FilesystemStoreAdmission::reopen(root)?;
     fs::remove_file(root.join("writer.lock"))?;
     fs::write(root.join("writer.lock"), b"")?;
 
-    let contended = FilesystemVersionTwoAdmission::reopen(root);
+    let contended = FilesystemStoreAdmission::reopen(root);
 
     assert!(matches!(
         contended,
-        Err(FilesystemPlatformAdmissionError::WriterLock {
+        Err(FilesystemStoreAdmissionError::WriterLock {
             source: WriterLockAcquireError::Busy
         })
     ));
-    fs::rename(root.join("retention"), root.join("retention.moved"))?;
+    // The displaced directory leaves the root, so every path-based reader still
+    // admits it; only the publisher's pinned capability can notice.
+    let displaced = TestDirectory::create("portable-replaced-displaced")?;
+    fs::rename(root.join("retention"), displaced.path().join("retention"))?;
     fs::create_dir_all(root.join("retention/roots"))?;
     fs::create_dir(root.join("retention/manifests"))?;
-    let mut publisher =
-        FilesystemVersionTwoCatalogPublisher::open(held, populated_store::policy()?)?;
+    let mut publisher = FilesystemCatalogPublisher::open(held, populated_store::policy()?)?;
     let outcome = publish(&mut publisher, root, &second_blob(), Predecessor::Kept)?;
     let Err(RetainedCatalogPublicationError::RetentionStorage { source, .. }) = outcome else {
         return Err(format!("publication used a replaced retention directory: {outcome:?}").into());
@@ -162,21 +164,21 @@ fn a_copy_and_its_original_diverge_independently_and_keep_shared_identity() -> T
 }
 
 fn marker_refusal(root: &Path) -> TestResult<String> {
-    let Err(FilesystemPlatformAdmissionError::FormatMarker { source }) =
-        FilesystemVersionTwoAdmission::reopen(root)
+    let Err(FilesystemStoreAdmissionError::FormatMarker { source }) =
+        FilesystemStoreAdmission::reopen(root)
     else {
         return Err("a corrupt marker was not refused at the marker boundary".into());
     };
     let refusal = source
         .get_ref()
-        .and_then(|cause| cause.downcast_ref::<VersionTwoRecordRefusal>())
+        .and_then(|cause| cause.downcast_ref::<StoreRecordRefusal>())
         .ok_or("the marker refusal lost its typed cause")?;
     Ok(format!("{refusal:?}"))
 }
 
 fn namespace_refusal_kind(root: &Path) -> TestResult<io::ErrorKind> {
-    match FilesystemVersionTwoAdmission::reopen(root) {
-        Err(FilesystemPlatformAdmissionError::Namespace { source }) => Ok(source.kind()),
+    match FilesystemStoreAdmission::reopen(root) {
+        Err(FilesystemStoreAdmissionError::Namespace { source }) => Ok(source.kind()),
         Err(other) => Err(format!("unexpected incomplete-store refusal: {other:?}").into()),
         Ok(_) => Err("an incomplete store was admitted".into()),
     }

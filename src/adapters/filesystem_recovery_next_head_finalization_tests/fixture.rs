@@ -8,11 +8,12 @@ use crate::LayoutEntryLimit;
 
 use super::super::{
     AdmittedSegment, CatalogPublicationExpectation, CatalogRestartByteLimit, CatalogRestartPolicy,
-    CatalogSnapshot, ChecksummedCatalog, ChecksummedPublicationHead,
-    FilesystemRecoveryNextHeadFinalizer, RecoveryNextHeadFinalizationRequest, RecoveryStage,
-    RecoveryStageMetadata, SegmentReadPolicy, SegmentRecordLimit, admit_recovery_stage_bytes,
-    assess_recovery_stage, filesystem_test_sandbox::TestDirectory, fingerprint_recovery_stage,
-    physical_pool_name, plan_recovery_next_head_finalization, test_support::decode_hex,
+    CatalogSnapshot, ChecksummedCatalog, ChecksummedPublicationHead, FilesystemRecoveryAdmission,
+    FilesystemRecoveryNextHeadFinalizer, FilesystemStoreAdmission, FilesystemStoreAdmissionError,
+    RecoveryNextHeadFinalizationRequest, RecoveryStage, RecoveryStageMetadata, SegmentReadPolicy,
+    SegmentRecordLimit, admit_recovery_stage_bytes, assess_recovery_stage,
+    filesystem_test_sandbox::TestDirectory, fingerprint_recovery_stage, physical_pool_name,
+    plan_recovery_next_head_finalization, test_support::decode_hex,
 };
 
 const SEGMENT_HEX: &str =
@@ -33,10 +34,9 @@ pub(super) struct FinalizationFixture {
 impl FinalizationFixture {
     pub(super) fn new(name: &str) -> Result<Self, Box<dyn Error>> {
         let directory = TestDirectory::create(name)?;
-        fs::write(directory.path().join("writer.lock"), [])?;
-        for name in ["staging", "segments", "catalogs"] {
-            fs::create_dir(directory.path().join(name))?;
-        }
+        drop(
+            FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(directory.path())?,
+        );
         Ok(Self { directory })
     }
 
@@ -101,8 +101,18 @@ impl FinalizationFixture {
         )
     }
 
+    /// Acquires single-format recovery admission, the writer authority finalization runs under.
+    pub(super) fn recovery_admission(
+        &self,
+    ) -> Result<FilesystemRecoveryAdmission, FilesystemStoreAdmissionError> {
+        FilesystemRecoveryAdmission::reopen_unchecked_for_repository_tasks(self.root())
+    }
+
     pub(super) fn finalizer(&self) -> Result<FilesystemRecoveryNextHeadFinalizer, Box<dyn Error>> {
-        Ok(FilesystemRecoveryNextHeadFinalizer::open_unchecked_for_tests(self.root(), policy()?)?)
+        Ok(FilesystemRecoveryNextHeadFinalizer::open(
+            self.recovery_admission()?,
+            policy()?,
+        )?)
     }
 
     pub(super) fn remove(self) -> std::io::Result<()> {

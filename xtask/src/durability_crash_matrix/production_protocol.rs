@@ -4,17 +4,15 @@ mod control;
 pub(super) mod crash_blob;
 pub(super) mod fixture;
 pub(super) mod initialization;
-mod initialization_storage;
 pub(super) mod populated_store;
 mod publication;
-mod publication_storage;
 mod recovery;
 mod recovery_storage;
+pub(super) mod retained_catalog;
 pub(super) mod retention;
 mod retention_storage;
 mod segment_stage;
-pub(super) mod version_two_catalog;
-pub(super) mod version_two_initialization;
+pub(super) mod writer;
 
 use std::error::Error;
 use std::fs;
@@ -36,13 +34,10 @@ pub(super) fn run(
     let store_root = create_store_root(case_root)?;
     let mut control = CrashControl::new(case, readiness);
     match case.point().sequence() {
-        DurabilityCrashSequence::Initialization => {
-            initialization::run(&store_root, &mut control)?;
-        }
         DurabilityCrashSequence::Segment
         | DurabilityCrashSequence::Catalog
         | DurabilityCrashSequence::Head => {
-            publication::run(&store_root, &mut control)?;
+            publication::run(&store_root, control)?;
         }
         DurabilityCrashSequence::RecoveryDiscard => {
             recovery::run(&store_root, &mut control)?;
@@ -50,11 +45,11 @@ pub(super) fn run(
         DurabilityCrashSequence::Retention => {
             retention::run(&store_root, &mut control)?;
         }
-        DurabilityCrashSequence::VersionTwoInitialization => {
-            version_two_initialization::run(&store_root, control)?;
+        DurabilityCrashSequence::Initialization => {
+            initialization::run(&store_root, control)?;
         }
-        DurabilityCrashSequence::VersionTwoCatalog => {
-            version_two_catalog::run(&store_root, control)?;
+        DurabilityCrashSequence::RetainedCatalog => {
+            retained_catalog::run(&store_root, control)?;
         }
     }
     Err(DurabilityCrashMatrixError::PointSequenceMismatch {

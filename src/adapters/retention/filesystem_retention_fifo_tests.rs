@@ -11,7 +11,7 @@ use std::time::Duration;
 use super::filesystem_retention_test_fixture::{
     ROOT_HEX, fixture, initial_preparation, initialized_store, manifest_pool_path, open_authority,
 };
-use crate::adapters::FilesystemVersionTwoAdmission;
+use crate::adapters::FilesystemStoreAdmission;
 use crate::execute_retention_publication;
 
 const DEADLINE: Duration = Duration::from_secs(5);
@@ -35,7 +35,7 @@ fn a_fifo_at_the_format_marker_refuses_instead_of_blocking() -> Result<(), Box<d
     let path = sandbox.path().to_path_buf();
 
     let outcome = completes_within(move || {
-        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(&path).map(|_| ())
+        FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks(&path).map(|_| ())
     })?;
 
     assert!(

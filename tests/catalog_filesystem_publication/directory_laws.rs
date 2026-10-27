@@ -2,20 +2,78 @@ use std::error::Error;
 use std::fs;
 use std::io;
 
-use crate::{FilesystemCatalogPublisher, FilesystemWriterLock};
+use cap_std::ambient_authority;
+use cap_std::fs::Dir;
 
-use super::{StoreFixture, restart_policy};
+use crate::{FilesystemEntryKind, FilesystemNamespaceRefusal};
+
+use super::super::filesystem_catalog_stages::FilesystemCatalogStages;
+use super::super::test_support::namespace_refusal;
+use super::{StoreFixture, admit_writer, restart_policy};
 
 #[test]
 fn publisher_refuses_a_non_directory_protocol_namespace() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("catalog-filesystem-nondirectory")?;
     fs::remove_dir(store.staging())?;
     fs::write(store.staging(), [])?;
-    let lock = FilesystemWriterLock::try_acquire(store.path())?;
 
-    let Err(error) = FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)
-    else {
-        return Err("publisher admitted a non-directory namespace".into());
+    let Err(error) = admit_writer(&store) else {
+        return Err("writer admission accepted a non-directory namespace".into());
+    };
+
+    assert_eq!(
+        namespace_refusal(&error),
+        Some(FilesystemNamespaceRefusal::WrongKind {
+            expected: FilesystemEntryKind::Directory,
+            observed: FilesystemEntryKind::File,
+        })
+    );
+    store.remove()
+}
+
+#[cfg(unix)]
+#[test]
+fn publisher_never_follows_a_symbolic_protocol_namespace() -> Result<(), Box<dyn Error>> {
+    use std::os::unix::fs::symlink;
+
+    let store = StoreFixture::create("catalog-filesystem-directory-link")?;
+    fs::remove_dir(store.staging())?;
+    let target = store.path().join("segments");
+    symlink(&target, store.staging())?;
+
+    let Err(error) = admit_writer(&store) else {
+        return Err("writer admission followed a symbolic namespace".into());
+    };
+
+    assert_eq!(
+        namespace_refusal(&error),
+        Some(FilesystemNamespaceRefusal::WrongKind {
+            expected: FilesystemEntryKind::Directory,
+            observed: FilesystemEntryKind::Symlink,
+        })
+    );
+    assert!(store.staging().is_symlink());
+    store.remove()
+}
+
+/// Opens the shared catalog stages directly, past writer admission.
+///
+/// The stages repeat the no-follow directory check that admission performs,
+/// so a namespace replaced after admission still refuses here.
+fn open_stages_past_admission(store: &StoreFixture) -> Result<io::Result<()>, Box<dyn Error>> {
+    let root = Dir::open_ambient_dir(store.path(), ambient_authority())?;
+    Ok(FilesystemCatalogStages::open(&root, restart_policy()?).map(drop))
+}
+
+#[test]
+fn stages_refuse_a_non_directory_namespace_replaced_after_admission() -> Result<(), Box<dyn Error>>
+{
+    let store = StoreFixture::create("catalog-stages-nondirectory")?;
+    fs::remove_dir(store.staging())?;
+    fs::write(store.staging(), [])?;
+
+    let Err(error) = open_stages_past_admission(&store)? else {
+        return Err("catalog stages admitted a non-directory namespace".into());
     };
 
     assert_eq!(error.kind(), io::ErrorKind::NotADirectory);
@@ -24,7 +82,8 @@ fn publisher_refuses_a_non_directory_protocol_namespace() -> Result<(), Box<dyn 
 
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 #[test]
-fn publisher_never_follows_a_symbolic_protocol_namespace() -> Result<(), Box<dyn Error>> {
+fn stages_never_follow_a_symbolic_namespace_replaced_after_admission() -> Result<(), Box<dyn Error>>
+{
     use std::os::unix::fs::symlink;
 
     #[cfg(target_os = "linux")]
@@ -32,16 +91,12 @@ fn publisher_never_follows_a_symbolic_protocol_namespace() -> Result<(), Box<dyn
     #[cfg(target_os = "macos")]
     const SYMBOLIC_LINK_LOOP_ERROR: i32 = 62;
 
-    let store = StoreFixture::create("catalog-filesystem-directory-link")?;
+    let store = StoreFixture::create("catalog-stages-directory-link")?;
     fs::remove_dir(store.staging())?;
-    let target = store.path().join("replacement-staging");
-    fs::create_dir(&target)?;
-    symlink(&target, store.staging())?;
-    let lock = FilesystemWriterLock::try_acquire(store.path())?;
+    symlink(store.path().join("segments"), store.staging())?;
 
-    let Err(error) = FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)
-    else {
-        return Err("publisher followed a symbolic namespace".into());
+    let Err(error) = open_stages_past_admission(&store)? else {
+        return Err("catalog stages followed a symbolic namespace".into());
     };
 
     assert_eq!(error.raw_os_error(), Some(SYMBOLIC_LINK_LOOP_ERROR));

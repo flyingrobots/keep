@@ -1,6 +1,6 @@
 //! This module owns filesystem effects reported after recovery synchronization failures.
 
-use crate::adapters::FilesystemVersionTwoAdmission;
+use crate::adapters::FilesystemStoreAdmission;
 use crate::adapters::retention::filesystem_retention_test_fixture::{
     ROOT_HEX, drive_publication, fixture, initial_preparation, manifest_pool_path, open_authority,
     retention_witness, root_pool_path,
@@ -88,7 +88,7 @@ fn require_effects(case: &Case) -> Result<(), Box<dyn Error>> {
     );
     drop(authority);
     let mut restarted = FilesystemRetentionPublicationAuthority::open(
-        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?,
+        FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?,
     )?;
     let receipt = restarted.recover()?;
     assert_eq!(

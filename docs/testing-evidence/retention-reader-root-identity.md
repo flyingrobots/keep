@@ -1,6 +1,6 @@
 # Retention reader root-identity evidence
 
-Superseded (#198): ADR-0010 deleted migration and the persisted root binding this evidence tested; the law and its test were removed. The [retirement ledger](../formats/segment-store-v2/retired-identifiers.md) records the last evidence. This page is kept as history.
+Superseded (#198): ADR-0010 deleted migration and the persisted root binding this evidence tested; the law and its test were removed. The [retirement ledger](../formats/store/retired-identifiers.md) records the last evidence. This page is kept as history.
 
 Change kind: bug fix. Subject: Keep runtime fenced snapshot admission. Size: medium. Oracle: mutually consistent migration records are admissible for reading only when their restart-stable device and inode binding names the opened root; identity diagnostics preserve the bound and observed values.
 

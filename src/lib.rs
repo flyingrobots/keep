@@ -31,7 +31,7 @@
 //! Ordered publication revalidates authority, executes all durability phases,
 //! and returns a complete receipt. The exact version-2 store-format marker has
 //! canonical encoding, registered-definition admission, checksum verification,
-//! and domain-separated identity. [`FilesystemVersionTwoAdmission::initialize`]
+//! and domain-separated identity. [`FilesystemStoreAdmission::initialize`]
 //! creates a store directly under writer authority through a recoverable
 //! state machine with one durable commit point; an interrupted call resumes
 //! and every other nonempty root refuses before mutation. Filesystem
@@ -77,7 +77,7 @@ pub use adapters::{
 
 #[cfg(any(test, feature = "repository-tasks"))]
 #[doc(hidden)]
-pub use adapters::VersionTwoInitializationObserver;
+pub use adapters::StoreInitializationObserver;
 pub use adapters::{
     AdmittedCatalog, AdmittedRecoveryStageBytes, AdmittedSegment, AdmittedSegmentRecord,
     AdmittedStoreFormatMarker, BlobIdBinaryParseError, BlobIdTextParseError, CanonicalCatalog,
@@ -90,15 +90,14 @@ pub use adapters::{
     CatalogRestartPhase, CatalogRestartPolicy, CatalogSnapshot, CatalogSnapshotError,
     CatalogSuccessor, CatalogTransitionError, ChecksummedCatalog, ChecksummedPublicationHead,
     ChecksummedSegmentRecord, ClosedSegment, FilesystemCatalogPublicationError,
-    FilesystemCatalogPublisher, FilesystemCatalogSnapshot, FilesystemPlatformAdmission,
-    FilesystemPlatformAdmissionError, FilesystemRecoveryInventoryReader,
-    FilesystemRecoveryNextHeadFinalizationOpenError, FilesystemRecoveryNextHeadFinalizer,
-    FilesystemRecoverySegmentResumeOpenError, FilesystemRecoverySegmentResumer,
-    FilesystemRecoverySegmentStage, FilesystemRecoveryStageCompleter,
-    FilesystemRecoveryStageCompletionOpenError, FilesystemRecoveryStageDiscardOpenError,
-    FilesystemRecoveryStageDiscarder, FilesystemRecoveryStageError, FilesystemSegmentStage,
-    FilesystemVersionTwoAdmission, FilesystemVersionTwoCatalogPublisher,
-    FilesystemVersionTwoCatalogStages, FilesystemVersionTwoRecoveryAdmission, FilesystemWriterLock,
+    FilesystemCatalogPublisher, FilesystemCatalogSnapshot, FilesystemRecoveryAdmission,
+    FilesystemRecoveryInventoryReader, FilesystemRecoveryNextHeadFinalizationOpenError,
+    FilesystemRecoveryNextHeadFinalizer, FilesystemRecoverySegmentResumeOpenError,
+    FilesystemRecoverySegmentResumer, FilesystemRecoverySegmentStage,
+    FilesystemRecoveryStageCompleter, FilesystemRecoveryStageCompletionOpenError,
+    FilesystemRecoveryStageDiscardOpenError, FilesystemRecoveryStageDiscarder,
+    FilesystemRecoveryStageError, FilesystemRetainedCatalogStages, FilesystemSegmentStage,
+    FilesystemStoreAdmission, FilesystemStoreAdmissionError, FilesystemWriterLock,
     LayoutDecodeError, LayoutDecodePolicy, LayoutEncodeError, LayoutIdBinaryParseError,
     LayoutIdTextParseError, OpenedReusableSegment, PublicationHeadDecodeError,
     RecoveryCatalogStage, RecoveryCatalogStageError, RecoveryEntryName, RecoveryEntryNameError,
@@ -132,16 +131,13 @@ pub use adapters::{
     SegmentRecords, SegmentSeal, SegmentSealError, SegmentStage, SegmentStageCreateError,
     SegmentWriteError, SegmentWritePhase, StagedSegment, StorageProfileIdParseError,
     StoreFormatDefinitionDigest, StoreFormatMarkerDecodeError, StoreFormatMarkerDigest,
-    StoreInitializationError, StoreInitializationPhase, StoreInitializationReceipt,
-    StoreInitializationStorage, VersionTwoInitialization, VersionTwoInitializationBoundary,
-    VersionTwoInitializationDirectory, VersionTwoInitializationError,
-    VersionTwoInitializationPhase, VersionTwoInitializationPrefix, VersionTwoInitializationRefusal,
-    VersionTwoRecordRefusal, WriterLockAcquireError, WriterLockAcquirePhase,
+    StoreInitialization, StoreInitializationBoundary, StoreInitializationDirectory,
+    StoreInitializationError, StoreInitializationPhase, StoreInitializationPrefix,
+    StoreInitializationRefusal, StoreRecordRefusal, WriterLockAcquireError, WriterLockAcquirePhase,
     admit_recovery_stage_bytes, assess_recovery_stage, classify_recovery_catalog_stage,
     classify_recovery_names, classify_recovery_next_head_stage, classify_recovery_segment_stage,
-    classify_version_two_recovery_names, execute_recovery_next_head_finalization,
-    execute_recovery_segment_resume, execute_recovery_stage_completion,
-    execute_recovery_stage_discard, fingerprint_recovery_stage, initialize_store,
+    execute_recovery_next_head_finalization, execute_recovery_segment_resume,
+    execute_recovery_stage_completion, execute_recovery_stage_discard, fingerprint_recovery_stage,
     plan_recovery_next_head_finalization, plan_recovery_segment_resume,
     plan_recovery_stage_completion, plan_recovery_stage_discard, publish_catalog_generation,
     read_recovery_inventory,
@@ -179,10 +175,7 @@ pub use adapters::{
 pub use adapters::{CatalogPublicationBoundary, CatalogPublicationObserver};
 #[cfg(feature = "repository-tasks")]
 #[doc(hidden)]
-pub use adapters::{
-    ObservedSegmentStage, RepositoryInitializationStorage, SegmentStageDurabilityEvent,
-    SegmentStageObserver,
-};
+pub use adapters::{ObservedSegmentStage, SegmentStageDurabilityEvent, SegmentStageObserver};
 pub use adapters::{
     PreservedRetentionManifest, RetainedCatalogPublicationError, RetainedCatalogPublicationReceipt,
     RetainedCatalogPublicationStorage, RetainedClosureAdmission, RetentionEvidencePhase,

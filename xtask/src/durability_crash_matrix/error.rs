@@ -7,7 +7,7 @@ use std::error::Error;
 use std::io;
 use std::time::Duration;
 
-use keep::VersionTwoInitializationPrefix;
+use keep::StoreInitializationPrefix;
 use xtask::protocol_admission::HexError;
 use xtask::{
     DurabilityCrashCase, DurabilityCrashCaseError, DurabilityCrashOccurrence, DurabilityCrashPoint,
@@ -84,8 +84,8 @@ pub(crate) enum DurabilityCrashMatrixError {
         point: DurabilityCrashPoint,
     },
     InitializationPrefixMismatch {
-        expected: Option<VersionTwoInitializationPrefix>,
-        observed: Option<VersionTwoInitializationPrefix>,
+        expected: Option<StoreInitializationPrefix>,
+        observed: Option<StoreInitializationPrefix>,
     },
     RepeatedInventoryPath {
         path: String,

@@ -1,6 +1,6 @@
 //! This module owns test publication of catalogs after a store's first one.
 //!
-//! Every successor goes through `FilesystemVersionTwoCatalogPublisher` and the
+//! Every successor goes through `FilesystemCatalogPublisher` and the
 //! retained-closure gate, on a store created by `populated_store.rs`. Callers
 //! pass the publisher so they can observe or interrupt its transitions.
 //!
@@ -11,10 +11,10 @@ use std::path::Path;
 
 use keep::{
     AdmittedSegment, AdmittedSegmentRecord, CanonicalCatalog, CatalogGeneration,
-    CatalogPublicationExpectation, FilesystemCatalogSnapshot, FilesystemSegmentStage,
-    FilesystemVersionTwoCatalogPublisher, RetainedCatalogPublicationError,
-    RetainedCatalogPublicationReceipt, SealedSegment, SegmentPublication, SegmentRecordLimit,
-    StagedSegment, publish_retained_catalog_generation,
+    CatalogPublicationExpectation, FilesystemCatalogPublisher, FilesystemCatalogSnapshot,
+    FilesystemSegmentStage, RetainedCatalogPublicationError, RetainedCatalogPublicationReceipt,
+    SealedSegment, SegmentPublication, SegmentRecordLimit, StagedSegment,
+    publish_retained_catalog_generation,
 };
 
 use super::populated_store::{
@@ -35,13 +35,13 @@ pub(super) enum Predecessor {
     Dropped,
 }
 
-/// Opens the version-two writer over a created store.
+/// Opens the writer over a created store.
 pub(super) fn open_publisher(
     root: &Path,
     admission: StoreAdmission,
-) -> TestResult<FilesystemVersionTwoCatalogPublisher> {
-    Ok(FilesystemVersionTwoCatalogPublisher::open(
-        (admission.reopen_version_two)(root)?,
+) -> TestResult<FilesystemCatalogPublisher> {
+    Ok(FilesystemCatalogPublisher::open(
+        (admission.reopen)(root)?,
         policy()?,
     )?)
 }
@@ -75,7 +75,7 @@ pub(super) fn blob_records<'content>(
 
 /// Stages and seals every record of `content` without selecting the stage.
 pub(super) fn stage_blob<'publisher>(
-    publisher: &'publisher FilesystemVersionTwoCatalogPublisher,
+    publisher: &'publisher FilesystemCatalogPublisher,
     content: &[u8],
     identified: &Identified,
 ) -> TestResult<SealedSegment<FilesystemSegmentStage<'publisher>>> {
@@ -94,7 +94,7 @@ pub(super) fn stage_blob<'publisher>(
 /// The candidate references the current segments when `predecessor` is
 /// [`Predecessor::Kept`].
 pub(super) fn publish(
-    publisher: &mut FilesystemVersionTwoCatalogPublisher,
+    publisher: &mut FilesystemCatalogPublisher,
     root: &Path,
     content: &[u8],
     predecessor: Predecessor,
@@ -123,7 +123,7 @@ pub(super) fn publish(
 
 /// Publishes the next catalog generation over already pooled segments.
 pub(super) fn republish(
-    publisher: &mut FilesystemVersionTwoCatalogPublisher,
+    publisher: &mut FilesystemCatalogPublisher,
     root: &Path,
 ) -> TestResult<GateOutcome> {
     let current = FilesystemCatalogSnapshot::load(root, policy()?)?;

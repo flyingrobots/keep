@@ -34,15 +34,15 @@ pub enum RecoveryEntryRole {
         /// Physical catalog digest parsed from the name.
         digest: CatalogDigest,
     },
-    /// Version-two persistent reader fence `reader.lock`.
+    /// Persistent reader fence `reader.lock`.
     ReaderFence,
-    /// Version-two format marker `FORMAT`.
+    /// Format marker `FORMAT`.
     FormatMarker,
-    /// Version-two `retention` protocol directory, admitted by retention recovery.
+    /// The `retention` protocol directory, admitted by retention recovery.
     RetentionDirectory,
-    /// Version-two reserved `gc` protocol directory.
+    /// Reserved `gc` protocol directory.
     GcDirectory,
-    /// Version-two reserved `recovery` protocol directory.
+    /// Reserved `recovery` protocol directory.
     RecoveryDirectory,
 }
 

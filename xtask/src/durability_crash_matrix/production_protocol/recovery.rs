@@ -1,23 +1,24 @@
 //! This module owns execution of the production recovery-discard protocol.
 
 use std::fs;
-use std::io::Write;
+use std::io::{self, Write};
 use std::path::Path;
 
 use keep::{
-    AdmittedSegment, CanonicalCatalog, CanonicalPublicationHead, CatalogGeneration,
-    CatalogPublicationStorage, FilesystemRecoveryStageDiscarder, RecoveryStage,
-    RecoveryStageDiscardRequest, RecoveryStageMetadata, admit_recovery_stage_bytes,
-    assess_recovery_stage, execute_recovery_stage_discard, fingerprint_recovery_stage,
-    plan_recovery_stage_discard,
+    AdmittedSegment, CanonicalPublicationHead, CatalogPublicationBoundary, CatalogPublicationError,
+    CatalogPublicationExpectation, CatalogPublicationObserver, CatalogPublicationPhase,
+    FilesystemRecoveryAdmission, FilesystemRecoveryStageDiscarder, RecoveryStage,
+    RecoveryStageDiscardRequest, RecoveryStageMetadata, RetainedCatalogPublicationError,
+    admit_recovery_stage_bytes, assess_recovery_stage, execute_recovery_stage_discard,
+    fingerprint_recovery_stage, plan_recovery_stage_discard, publish_retained_catalog_generation,
 };
 use xtask::DurabilityCrashPoint;
 
 use super::control::CrashControl;
 use super::fixture::GoldenFixture;
-use super::initialization;
 use super::recovery_storage::CrashRecoveryStorage;
 use super::{DurabilityCrashMatrixError, verification};
+use super::{publication, writer};
 
 const SEGMENT_INTERRUPTION: usize = 32;
 const HEAD_INTERRUPTION: usize = 64;
@@ -32,7 +33,9 @@ pub(super) fn run(
         prepare_head(store_root)?
     };
     let request = discard_request(store_root, stage)?;
-    let storage = FilesystemRecoveryStageDiscarder::open_unchecked_for_repository_tasks(store_root)
+    let admission = FilesystemRecoveryAdmission::reopen_unchecked_for_repository_tasks(store_root)
+        .map_err(|source| verification("admit production recovery store", source))?;
+    let storage = FilesystemRecoveryStageDiscarder::open(admission)
         .map_err(|source| verification("open production recovery discarder", source))?;
     let mut storage = CrashRecoveryStorage::new(storage, control);
     execute_recovery_stage_discard(&mut storage, request)
@@ -50,7 +53,7 @@ fn targets_segment(control: &CrashControl) -> bool {
 }
 
 fn prepare_segment(store_root: &Path) -> Result<RecoveryStage, DurabilityCrashMatrixError> {
-    let publisher = initialization::publisher(store_root)?;
+    let publisher = writer::publisher(store_root)?;
     let mut stage = publisher
         .create_segment_stage()
         .map_err(|source| verification("create recovery segment precondition", source))?;
@@ -65,28 +68,77 @@ fn prepare_segment(store_root: &Path) -> Result<RecoveryStage, DurabilityCrashMa
     Ok(RecoveryStage::Segment)
 }
 
+/// Leaves the strict `head.next` prefix an interrupted first publication leaves.
+///
+/// The writer publishes the one-zero catalog through the gate; its observer
+/// writes the prefix into the `head.next` the writer created and then fails
+/// the head write, so the pools hold the published segment and catalog.
 fn prepare_head(store_root: &Path) -> Result<RecoveryStage, DurabilityCrashMatrixError> {
-    let mut publisher = initialization::publisher(store_root)?;
-    let segment_fixture = GoldenFixture::segment()?;
-    let segment =
-        AdmittedSegment::decode(segment_fixture.bytes(), initialization::segment_policy())
-            .map_err(|source| verification("admit recovery head segment", source))?;
-    let segments = [segment];
-    let generation = CatalogGeneration::new(1)
-        .map_err(|source| verification("construct recovery head generation", source))?;
-    let catalog = CanonicalCatalog::from_segments(generation, None, &segments)
-        .map_err(|source| verification("encode recovery head catalog", source))?;
+    let mut publisher = writer::publisher(store_root)?;
+    let sealed = publication::stage_one_zero(&publisher)?;
+    let segment_bytes = fs::read(store_root.join("staging/current.seg"))
+        .map_err(|source| DurabilityCrashMatrixError::io("read recovery head segment", source))?;
+    let segments = [
+        AdmittedSegment::decode(&segment_bytes, writer::segment_policy())
+            .map_err(|source| verification("admit recovery head segment", source))?,
+    ];
+    let catalog = publication::first_catalog(&segments)?;
+    let selection = publisher
+        .select_segment(sealed, &segments[0])
+        .map_err(|source| verification("select recovery head segment", source))?;
     let head = CanonicalPublicationHead::for_catalog(catalog.checksummed());
-    publisher.create_head_stage().map_err(|source| {
-        DurabilityCrashMatrixError::io("create recovery head precondition", source)
-    })?;
-    publisher
-        .write_head_prefix_for_repository_tasks(&head, HEAD_INTERRUPTION)
-        .map_err(|source| {
-            DurabilityCrashMatrixError::io("write recovery head precondition", source)
-        })?;
-    drop(publisher);
-    Ok(RecoveryStage::NextHead)
+    let torn = head
+        .encoded()
+        .get(..HEAD_INTERRUPTION)
+        .ok_or(DurabilityCrashMatrixError::FixtureRange)?
+        .to_vec();
+    publisher.observe_catalog_phases_for_repository_tasks(interrupt_head(store_root, torn));
+    require_interrupted_head(publish_retained_catalog_generation(
+        &mut publisher,
+        CatalogPublicationExpectation::uninitialized(),
+        selection,
+        &catalog,
+        &segments,
+    ))
+}
+
+/// Requires the precondition publication to have failed exactly at the head write.
+fn require_interrupted_head(
+    interrupted: Result<keep::RetainedCatalogPublicationReceipt, RetainedCatalogPublicationError>,
+) -> Result<RecoveryStage, DurabilityCrashMatrixError> {
+    match interrupted {
+        Err(RetainedCatalogPublicationError::Catalog {
+            source:
+                CatalogPublicationError::Storage {
+                    phase: CatalogPublicationPhase::WriteHead,
+                    ..
+                },
+        }) => Ok(RecoveryStage::NextHead),
+        Err(source) => Err(verification("interrupt recovery head precondition", source)),
+        Ok(_receipt) => Err(DurabilityCrashMatrixError::io(
+            "interrupt recovery head precondition",
+            io::Error::other("the precondition publication completed"),
+        )),
+    }
+}
+
+/// Writes `torn` into the created `head.next`, then fails the head write.
+fn interrupt_head(store_root: &Path, torn: Vec<u8>) -> CatalogPublicationObserver {
+    let stage = store_root.join("head.next");
+    Box::new(move |phase, boundary| {
+        if phase != CatalogPublicationPhase::WriteHead
+            || boundary != CatalogPublicationBoundary::Before
+        {
+            return Ok(());
+        }
+        fs::OpenOptions::new()
+            .write(true)
+            .open(&stage)?
+            .write_all(&torn)?;
+        Err(io::Error::other(
+            "recovery precondition interrupts the head write",
+        ))
+    })
 }
 
 fn discard_request(
@@ -108,7 +160,7 @@ fn discard_request(
         .map_err(|source| verification("fingerprint recovery precondition", source))?;
     let admitted = admit_recovery_stage_bytes(stage, evidence, &bytes)
         .map_err(|source| verification("admit recovery precondition bytes", source))?;
-    let assessment = assess_recovery_stage(&admitted, initialization::segment_policy())
+    let assessment = assess_recovery_stage(&admitted, writer::segment_policy())
         .map_err(|source| verification("assess recovery precondition", source))?;
     plan_recovery_stage_discard(&assessment)
         .map_err(|source| verification("plan production recovery discard", source))

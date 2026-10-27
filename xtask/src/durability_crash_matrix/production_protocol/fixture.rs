@@ -19,6 +19,8 @@ const BUNDLE_HEAD_HEX: &str =
     include_str!("../../../../conformance/segment-store/v1/one-zero-bundle-head.hex");
 const RETENTION_ROOT_HEX: &str =
     include_str!("../../../../conformance/segment-store/v2/one-anchor-root.hex");
+const FORMAT_MARKER_HEX: &str =
+    include_str!("../../../../conformance/segment-store/v2/format-marker.hex");
 /// Pool name of the bundle segment the retention root's closure references.
 pub(in crate::durability_crash_matrix) const BUNDLE_SEGMENT_NAME: &str =
     "221f6745cd8a5221c9a87c3707593608479282b54a4a74d0e753fd76f70e8db2.seg";
@@ -67,6 +69,11 @@ impl GoldenFixture {
 
     pub(in crate::durability_crash_matrix) fn head() -> Result<Self, DurabilityCrashMatrixError> {
         Self::decode("head", HEAD_HEX, 128)
+    }
+
+    pub(in crate::durability_crash_matrix) fn format_marker()
+    -> Result<Self, DurabilityCrashMatrixError> {
+        Self::decode("format marker", FORMAT_MARKER_HEX, 96)
     }
 
     pub(in crate::durability_crash_matrix) fn bytes(&self) -> &[u8] {

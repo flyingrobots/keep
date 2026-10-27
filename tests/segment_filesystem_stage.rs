@@ -14,7 +14,7 @@ use std::io::ErrorKind;
 
 use keep::{
     AdmittedSegment, AdmittedSegmentRecord, CatalogRestartByteLimit, CatalogRestartPolicy,
-    FilesystemCatalogPublisher, FilesystemPlatformAdmission, LayoutEntryLimit, SegmentHeader,
+    FilesystemCatalogPublisher, FilesystemStoreAdmission, LayoutEntryLimit, SegmentHeader,
     SegmentReadError, SegmentReadPolicy, SegmentRecordLimit, SegmentStageCreateError,
     StagedSegment,
 };
@@ -134,7 +134,7 @@ fn dropping_an_unsealed_stage_preserves_evidence_without_sealing() -> Result<(),
 }
 
 fn open_publisher(sandbox: &TestDirectory) -> Result<FilesystemCatalogPublisher, Box<dyn Error>> {
-    let admission = FilesystemPlatformAdmission::initialize(sandbox.path())?;
+    let admission = FilesystemStoreAdmission::initialize(sandbox.path())?.into_admission();
     let policy = CatalogRestartPolicy::new(read_policy(), CatalogRestartByteLimit::new(1_048_576)?);
     Ok(FilesystemCatalogPublisher::open(admission, policy)?)
 }

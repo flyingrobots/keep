@@ -1,68 +1,52 @@
-//! This module owns ordered segment-store namespace initialization.
+//! This module owns direct initialization of a store under writer authority.
+//!
+//! Initialization is the only way a store comes into existence. It is a
+//! recoverable state machine: every interrupted state is a classified prefix
+//! that a later call resumes, every other nonempty root is refused before any
+//! mutation, and the store admits only after one named durable commit point.
+//! The protocol, its states, and its crash matrix are specified in
+//! `docs/formats/store/initialization.md`.
 
-use std::io;
+mod initialization_entries;
+mod initialization_error;
+mod initialization_execution;
+mod initialization_namespace;
+mod initialization_observation;
+mod initialization_phase;
+mod initialization_prefix;
+#[cfg(test)]
+mod initialization_prefix_tests;
+mod initialization_reader_fence;
+mod initialization_receipt;
+mod initialization_refusal;
+#[cfg(test)]
+mod initialization_resume_tests;
+#[cfg(test)]
+mod initialization_test_fixture;
 
-use super::{
-    store_initialization_error::StoreInitializationError,
-    store_initialization_phase::StoreInitializationPhase,
-    store_initialization_receipt::StoreInitializationReceipt,
-    store_initialization_storage::StoreInitializationStorage,
-};
+pub use initialization_error::StoreInitializationError;
+pub use initialization_phase::{StoreInitializationDirectory, StoreInitializationPhase};
+pub use initialization_prefix::StoreInitializationPrefix;
+pub use initialization_receipt::StoreInitialization;
+pub use initialization_refusal::StoreInitializationRefusal;
 
-/// Executes the ordered segment-store initialization protocol.
-///
-/// The storage port must admit its platform before any namespace mutation,
-/// retain writer authority after opening the lock file, and make every
-/// directory operation idempotent by admitting an exact existing directory.
-/// The function returns a receipt only after root synchronization succeeds.
-/// It is synchronous, performs no internal heap allocation, invokes each port
-/// operation at most once, and may block only inside the supplied storage
-/// operations. Failure performs no implicit cleanup.
-///
-/// # Errors
-///
-/// Returns [`StoreInitializationError::Io`] at the first failed phase and does
-/// not execute any later phase.
-pub fn initialize_store(
-    storage: &mut impl StoreInitializationStorage,
-) -> Result<StoreInitializationReceipt, StoreInitializationError> {
-    phase(
-        StoreInitializationPhase::AdmitPlatform,
-        storage.admit_platform(),
-    )?;
-    phase(
-        StoreInitializationPhase::OpenAndLockWriterFile,
-        storage.open_and_lock_writer_file(),
-    )?;
-    admit_directories(storage)?;
-    phase(
-        StoreInitializationPhase::SynchronizeRoot,
-        storage.synchronize_root(),
-    )?;
-    Ok(StoreInitializationReceipt::new())
+pub(super) use initialization_execution::{PhaseObserver, initialize};
+
+/// Where an initialization observer runs relative to one phase.
+#[doc(hidden)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum StoreInitializationBoundary {
+    /// Before the phase begins.
+    Before,
+    /// After the phase returned successfully.
+    After,
 }
 
-fn admit_directories(
-    storage: &mut impl StoreInitializationStorage,
-) -> Result<(), StoreInitializationError> {
-    phase(
-        StoreInitializationPhase::AdmitStagingDirectory,
-        storage.admit_staging_directory(),
-    )?;
-    phase(
-        StoreInitializationPhase::AdmitSegmentPoolDirectory,
-        storage.admit_segment_pool_directory(),
-    )?;
-    phase(
-        StoreInitializationPhase::AdmitCatalogPoolDirectory,
-        storage.admit_catalog_pool_directory(),
-    )?;
-    Ok(())
-}
-
-fn phase(
-    phase: StoreInitializationPhase,
-    result: io::Result<()>,
-) -> Result<(), StoreInitializationError> {
-    result.map_err(|source| StoreInitializationError::Io { phase, source })
-}
+/// Repository-task observer of initialization phases.
+///
+/// Returning an error fails the phase at that boundary exactly as a storage
+/// failure would; the crash matrix blocks inside it for process death.
+#[cfg(any(test, feature = "repository-tasks"))]
+#[doc(hidden)]
+pub type StoreInitializationObserver =
+    Box<dyn FnMut(StoreInitializationPhase, StoreInitializationBoundary) -> std::io::Result<()>>;

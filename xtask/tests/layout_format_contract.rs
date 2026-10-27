@@ -90,10 +90,13 @@ fn format_registry_reports_flat_layout_as_implemented() {
 #[test]
 fn format_registry_reports_the_segment_store_implementation_boundary() {
     const EXPECTED_ROW: &str = "\
-| [Durable Segment Store v1](segment-store-v1/README.md) | \
-`keep.segment-store/v1` | Implemented through initialization, publication, \
-restart, and recovery in issues #14–#17 | \
-[Golden corpus](../../conformance/segment-store/v1/README.md) |";
+| [Keep store format](store/README.md) | `keep.segment-store/v2` | \
+The one store format: direct initialization and reopen, the segment, catalog, \
+publication, and stage-recovery protocol of issues #14–#17, the gated catalog \
+writer, and retention publication and recovery implemented; collection planned \
+in issue #21 | \
+[Segment, catalog, and head corpus](../../conformance/segment-store/v1/README.md) \
+· [Store corpus](../../conformance/segment-store/v2/README.md) |";
 
     assert!(
         FORMAT_REGISTRY.lines().any(|line| line == EXPECTED_ROW),

@@ -8,7 +8,7 @@ use super::filesystem_test_sandbox::TestDirectory;
 use super::test_support::decode_hex;
 use crate::{
     AdmittedSegmentRecord, CatalogRestartByteLimit, CatalogRestartPolicy,
-    FilesystemCatalogPublisher, FilesystemWriterLock, LayoutEntryLimit, SegmentHeader,
+    FilesystemCatalogPublisher, FilesystemStoreAdmission, LayoutEntryLimit, SegmentHeader,
     SegmentReadPolicy, SegmentRecordLimit, SegmentStageCreateError, StagedSegment,
 };
 
@@ -108,17 +108,14 @@ fn dropping_an_unsealed_stage_preserves_the_reusable_prefix() -> Result<(), Box<
     Ok(())
 }
 
+/// Initializes a single-format store in `sandbox` and opens its writer.
 fn open_publisher(sandbox: &TestDirectory) -> Result<FilesystemCatalogPublisher, Box<dyn Error>> {
-    fs::write(sandbox.path().join("writer.lock"), [])?;
-    fs::create_dir(sandbox.path().join("staging"))?;
-    fs::create_dir(sandbox.path().join("segments"))?;
-    fs::create_dir(sandbox.path().join("catalogs"))?;
-    let lock = FilesystemWriterLock::try_acquire(sandbox.path())?;
+    let admission =
+        FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(sandbox.path())?
+            .into_admission();
     let policy = CatalogRestartPolicy::new(
         SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
         CatalogRestartByteLimit::new(1_048_576)?,
     );
-    Ok(FilesystemCatalogPublisher::open_unchecked_for_tests(
-        lock, policy,
-    )?)
+    Ok(FilesystemCatalogPublisher::open(admission, policy)?)
 }

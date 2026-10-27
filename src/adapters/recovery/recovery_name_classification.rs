@@ -6,12 +6,18 @@ use super::{
     recovery_pool_name,
 };
 
-/// Classifies one complete version-one inventory without opening artifact bytes.
+/// Classifies one complete committed inventory without opening bytes.
 ///
 /// The operation preserves inventory order and allocates at most one manifest
-/// entry per inventory entry. It rejects unknown names, missing initialized
-/// root entries, noncanonical pool coordinates, and simultaneous fixed stages.
-/// Every version-two root entry is unknown here.
+/// entry per inventory entry. It rejects unknown names, missing root entries,
+/// noncanonical pool coordinates, and simultaneous fixed stages. The root
+/// entries `reader.lock`, `FORMAT`, `retention`, `gc`, and `recovery` are
+/// classified as known roles, never as unexpected or ignored. Each is required;
+/// catalog `HEAD` is not, because the first publication of an initialized
+/// store can be interrupted before it exists. `FORMAT.next` is unknown: a
+/// committed root never holds it.
+/// The contents of `retention`, `gc`, and `recovery` are not inventoried here;
+/// store admission and retention recovery own them.
 ///
 /// # Errors
 ///
@@ -20,47 +26,12 @@ use super::{
 pub fn classify_recovery_names(
     inventory: RecoveryInventory,
 ) -> Result<RecoveryNameManifest, RecoveryNameClassificationError> {
-    classify_inventory(inventory, StoreLayout::VersionOne)
-}
-
-/// Classifies one complete committed version-two inventory without opening bytes.
-///
-/// The version-one laws apply unchanged, and the version-two root entries
-/// `reader.lock`, `FORMAT`, `retention`, `gc`, and `recovery` are classified
-/// as known roles, never as unexpected or ignored. Each of them is required;
-/// catalog `HEAD` is not, because the first publication of an initialized
-/// store can be interrupted before it exists. `FORMAT.next` is unknown: a
-/// committed root never holds it.
-/// The contents of `retention`, `gc`, and `recovery` are not inventoried here;
-/// version-two admission and retention recovery own them.
-///
-/// # Errors
-///
-/// Returns [`RecoveryNameClassificationError`] at the first deterministic
-/// namespace, grammar, required-entry, or stage-conflict failure.
-pub fn classify_version_two_recovery_names(
-    inventory: RecoveryInventory,
-) -> Result<RecoveryNameManifest, RecoveryNameClassificationError> {
-    classify_inventory(inventory, StoreLayout::VersionTwo)
-}
-
-/// The root layout one classification admits.
-#[derive(Clone, Copy)]
-enum StoreLayout {
-    VersionOne,
-    VersionTwo,
-}
-
-fn classify_inventory(
-    inventory: RecoveryInventory,
-    layout: StoreLayout,
-) -> Result<RecoveryNameManifest, RecoveryNameClassificationError> {
     let mut required = RequiredEntries::default();
     let mut first_stage = None;
     let mut named = Vec::with_capacity(inventory.entries().len());
     for entry in inventory.into_entries() {
         let (namespace, name) = entry.into_parts();
-        let role = match classify(namespace, &name, layout) {
+        let role = match classify(namespace, &name) {
             Ok(role) => role,
             Err(NameFailure::Unexpected) => {
                 return Err(RecoveryNameClassificationError::Unexpected { namespace, name });
@@ -85,7 +56,7 @@ fn classify_inventory(
         }
         named.push(RecoveryNamedEntry::new(namespace, name, role));
     }
-    if let Some(required) = required.first_missing(layout) {
+    if let Some(required) = required.first_missing() {
         return Err(RecoveryNameClassificationError::Missing { required });
     }
     Ok(RecoveryNameManifest::new(named))
@@ -94,10 +65,9 @@ fn classify_inventory(
 fn classify(
     namespace: RecoveryNamespace,
     name: &RecoveryEntryName,
-    layout: StoreLayout,
 ) -> Result<RecoveryEntryRole, NameFailure> {
     match namespace {
-        RecoveryNamespace::Root => classify_root(name, layout),
+        RecoveryNamespace::Root => classify_root(name),
         RecoveryNamespace::Staging => classify_staging(name),
         RecoveryNamespace::Segments => recovery_pool_name::segment(name)
             .map(|digest| RecoveryEntryRole::ImmutableSegment { digest })
@@ -108,10 +78,7 @@ fn classify(
     }
 }
 
-fn classify_root(
-    name: &RecoveryEntryName,
-    layout: StoreLayout,
-) -> Result<RecoveryEntryRole, NameFailure> {
+fn classify_root(name: &RecoveryEntryName) -> Result<RecoveryEntryRole, NameFailure> {
     match name.as_bytes() {
         b"writer.lock" => Ok(RecoveryEntryRole::WriterLock),
         b"staging" => Ok(RecoveryEntryRole::StagingDirectory),
@@ -119,15 +86,6 @@ fn classify_root(
         b"catalogs" => Ok(RecoveryEntryRole::CatalogPoolDirectory),
         b"HEAD" => Ok(RecoveryEntryRole::CurrentHead),
         b"head.next" => Ok(RecoveryEntryRole::NextHeadStage),
-        other => match layout {
-            StoreLayout::VersionOne => Err(NameFailure::Unexpected),
-            StoreLayout::VersionTwo => classify_version_two_root(other),
-        },
-    }
-}
-
-fn classify_version_two_root(name: &[u8]) -> Result<RecoveryEntryRole, NameFailure> {
-    match name {
         b"reader.lock" => Ok(RecoveryEntryRole::ReaderFence),
         b"FORMAT" => Ok(RecoveryEntryRole::FormatMarker),
         b"retention" => Ok(RecoveryEntryRole::RetentionDirectory),
@@ -150,7 +108,7 @@ enum NameFailure {
     Pool(super::RecoveryPoolNameError),
 }
 
-/// Required root entries in report order; version one requires the prefix.
+/// Required root entries in report order.
 const REQUIRED: [RecoveryRequiredEntry; 9] = [
     RecoveryRequiredEntry::WriterLock,
     RecoveryRequiredEntry::StagingDirectory,
@@ -162,7 +120,6 @@ const REQUIRED: [RecoveryRequiredEntry; 9] = [
     RecoveryRequiredEntry::GcDirectory,
     RecoveryRequiredEntry::RecoveryDirectory,
 ];
-const VERSION_ONE_REQUIRED: usize = 4;
 
 #[derive(Default)]
 struct RequiredEntries {
@@ -181,15 +138,10 @@ impl RequiredEntries {
         }
     }
 
-    fn first_missing(&self, layout: StoreLayout) -> Option<RecoveryRequiredEntry> {
-        let count = match layout {
-            StoreLayout::VersionOne => VERSION_ONE_REQUIRED,
-            StoreLayout::VersionTwo => REQUIRED.len(),
-        };
+    fn first_missing(&self) -> Option<RecoveryRequiredEntry> {
         REQUIRED
             .into_iter()
             .zip(self.observed)
-            .take(count)
             .find_map(|(entry, seen)| (!seen).then_some(entry))
     }
 }

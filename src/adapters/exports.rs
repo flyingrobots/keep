@@ -39,8 +39,7 @@ pub use super::closed_segment::ClosedSegment;
 pub use super::filesystem_catalog_publication_error::FilesystemCatalogPublicationError;
 pub use super::filesystem_catalog_publisher::FilesystemCatalogPublisher;
 pub use super::filesystem_catalog_snapshot::FilesystemCatalogSnapshot;
-pub use super::filesystem_platform_admission::FilesystemPlatformAdmission;
-pub use super::filesystem_platform_admission_error::FilesystemPlatformAdmissionError;
+pub use super::filesystem_recovery_admission::FilesystemRecoveryAdmission;
 pub use super::filesystem_recovery_inventory_reader::FilesystemRecoveryInventoryReader;
 pub use super::filesystem_recovery_next_head_finalization_open_error::FilesystemRecoveryNextHeadFinalizationOpenError;
 pub use super::filesystem_recovery_next_head_finalizer::FilesystemRecoveryNextHeadFinalizer;
@@ -54,16 +53,15 @@ pub use super::filesystem_recovery_stage_discarder::FilesystemRecoveryStageDisca
 pub use super::filesystem_recovery_stage_error::{
     FilesystemRecoveryStageError, RecoveryStageNamespacePhase,
 };
-pub use super::filesystem_segment_stage::FilesystemSegmentStage;
-pub use super::filesystem_version_two_admission::FilesystemVersionTwoAdmission;
-pub use super::filesystem_version_two_catalog_publisher::FilesystemVersionTwoCatalogPublisher;
-pub use super::filesystem_version_two_catalog_stages::FilesystemVersionTwoCatalogStages;
+pub use super::filesystem_retained_catalog_stages::FilesystemRetainedCatalogStages;
 #[cfg(any(test, feature = "repository-tasks"))]
-pub use super::filesystem_version_two_catalog_stages::{
+pub use super::filesystem_retained_catalog_stages::{
     CatalogPublicationBoundary, CatalogPublicationObserver,
 };
-pub use super::filesystem_version_two_record_refusal::VersionTwoRecordRefusal;
-pub use super::filesystem_version_two_recovery_admission::FilesystemVersionTwoRecoveryAdmission;
+pub use super::filesystem_segment_stage::FilesystemSegmentStage;
+pub use super::filesystem_store_admission::FilesystemStoreAdmission;
+pub use super::filesystem_store_admission_error::FilesystemStoreAdmissionError;
+pub use super::filesystem_store_record_refusal::StoreRecordRefusal;
 pub use super::filesystem_writer_lock::FilesystemWriterLock;
 pub use super::layout_decode_error::LayoutDecodeError;
 pub use super::layout_decode_policy::LayoutDecodePolicy;
@@ -76,8 +74,6 @@ pub use super::observed_segment_stage::ObservedSegmentStage;
 pub use super::opened_reusable_segment::OpenedReusableSegment;
 pub use super::publication_head_decode_error::PublicationHeadDecodeError;
 pub use super::recovery::*;
-#[cfg(feature = "repository-tasks")]
-pub use super::repository_initialization_storage::RepositoryInitializationStorage;
 pub use super::retained_catalog_publication::{
     PreservedRetentionManifest, RetainedCatalogPublicationError, RetainedCatalogPublicationReceipt,
     RetainedCatalogPublicationStorage, RetainedClosureAdmission, RetentionEvidencePhase,
@@ -112,17 +108,12 @@ pub use super::segment_write_phase::{SegmentDurabilityPhase, SegmentWritePhase};
 pub use super::staged_segment::StagedSegment;
 pub use super::storage_profile_id_text_error::StorageProfileIdParseError;
 pub use super::store_format::*;
-pub use super::store_initialization::initialize_store;
-pub use super::store_initialization_error::StoreInitializationError;
-pub use super::store_initialization_phase::StoreInitializationPhase;
-pub use super::store_initialization_receipt::StoreInitializationReceipt;
-pub use super::store_initialization_storage::StoreInitializationStorage;
 #[cfg(any(test, feature = "repository-tasks"))]
-pub use super::version_two_initialization::VersionTwoInitializationObserver;
-pub use super::version_two_initialization::{
-    VersionTwoInitialization, VersionTwoInitializationBoundary, VersionTwoInitializationDirectory,
-    VersionTwoInitializationError, VersionTwoInitializationPhase, VersionTwoInitializationPrefix,
-    VersionTwoInitializationRefusal,
+pub use super::store_initialization::StoreInitializationObserver;
+pub use super::store_initialization::{
+    StoreInitialization, StoreInitializationBoundary, StoreInitializationDirectory,
+    StoreInitializationError, StoreInitializationPhase, StoreInitializationPrefix,
+    StoreInitializationRefusal,
 };
 pub use super::writer_lock_acquire_error::WriterLockAcquireError;
 pub use super::writer_lock_acquire_phase::WriterLockAcquirePhase;
