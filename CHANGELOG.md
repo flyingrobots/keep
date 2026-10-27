@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- ADR-0010 commits Keep to one storage format: direct initialization replaces version-1 initialization plus migration, complete stores become portable while live authority checks remain, and future format changes ship a separate upgrade tool. Main's behavior is unchanged until the units tracked in #198 land (#198).
+
 - Update the repository-only serde_json parser to 1.0.154 in both locked workspaces and refresh its dependency admission; the resolved transitive graph, features, license and MSRV are unchanged (#186).
 
 - Update the in-process BLAKE3 dependency to 1.8.7 in both locked workspaces, remove the unused arrayref license exception and renew its admission while retaining the external b3sum oracle and version-one identity contract (#94).

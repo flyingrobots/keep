@@ -6,6 +6,8 @@
 - Related issue:
   [#18](https://github.com/flyingrobots/keep/issues/18)
 - Depends on: ADR-0002, ADR-0005, issues #3, #16, and #17
+- Amended by: [ADR-0010](0010-one-storage-format.md), which replaces migration
+  as the only entry into the format with direct initialization
 
 ## Context
 

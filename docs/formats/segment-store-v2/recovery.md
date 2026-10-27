@@ -136,7 +136,9 @@ identity, caller identity, path, and time do not enter the identifier. The
 migration intent separately binds the physical root coordinates so in-place
 recovery refuses a substituted store.
 
-### Root identity across restart
+(../../adr/0010-one-storage-format.md) supersedes the restart
+requirement below and makes complete stores portable. Main enforces this
+section until that change lands.
 
 The three root coordinates the intent records do not have the same lifetime.
 `statx.stx_mnt_id` names a mount instance: it can change when a filesystem
