@@ -173,6 +173,7 @@ mod publication_head_encoder;
 mod recovery;
 #[cfg(feature = "repository-tasks")]
 mod repository_initialization_storage;
+mod retained_catalog_publication;
 mod retention;
 mod sealed_segment;
 mod segment_digest_builder;
