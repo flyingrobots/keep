@@ -57,7 +57,7 @@ rows whose interruption may leave an incomplete pre-commit stage and therefore
 the only rows that plan a discard; `-089` and `-090` admit the committed
 store.
 
-The `cargo xtask durability-crash-matrix --sequence version-two-initialization`
+The `cargo xtask durability-crash-matrix --sequence initialization`
 harness executes 41 canonical initialization process-death cases at the same
 11 boundaries: each at three positions plus one `during` case per directory
 for `KEEP-CRASH-086`. It kills an isolated writer process group, compares the

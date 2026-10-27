@@ -1,6 +1,6 @@
 //! This module owns bounded no-follow reads of retained-closure evidence.
 //!
-//! Version-two catalog publication and catalog-head recovery finalization read
+//! Catalog publication and catalog-head recovery finalization read
 //! the current retention head, its manifest, and every root it selects through
 //! this one reader before `HEAD` may change. The reader returns exact bytes;
 //! the retained-closure gate decodes and binds every record itself.

@@ -23,7 +23,7 @@ fn living_documentation_routes_the_complete_crash_matrix_and_its_limits() {
         ),
         (
             INITIALIZATION,
-            "cargo xtask durability-crash-matrix --sequence version-two-initialization",
+            "cargo xtask durability-crash-matrix --sequence initialization",
         ),
         (V2_REQUIREMENTS, "`KEEP-INITIALIZATION-004`"),
     ] {

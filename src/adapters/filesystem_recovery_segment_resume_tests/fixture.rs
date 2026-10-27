@@ -6,11 +6,10 @@ use std::path::{Path, PathBuf};
 use crate::LayoutEntryLimit;
 
 use super::super::{
-    FilesystemPlatformAdmissionError, FilesystemRecoverySegmentResumer,
-    FilesystemVersionTwoAdmission, FilesystemVersionTwoRecoveryAdmission,
-    RecoverySegmentResumeRequest, RecoveryStage, RecoveryStageMetadata, SegmentReadPolicy,
-    SegmentRecordLimit, admit_recovery_stage_bytes, assess_recovery_stage,
-    filesystem_test_sandbox::TestDirectory, fingerprint_recovery_stage,
+    FilesystemRecoveryAdmission, FilesystemRecoverySegmentResumer, FilesystemStoreAdmission,
+    FilesystemStoreAdmissionError, RecoverySegmentResumeRequest, RecoveryStage,
+    RecoveryStageMetadata, SegmentReadPolicy, SegmentRecordLimit, admit_recovery_stage_bytes,
+    assess_recovery_stage, filesystem_test_sandbox::TestDirectory, fingerprint_recovery_stage,
     plan_recovery_segment_resume, test_support::decode_hex,
 };
 
@@ -62,9 +61,7 @@ impl ResumeFixture {
     pub(super) fn new(name: &str) -> Result<Self, Box<dyn Error>> {
         let directory = TestDirectory::create(name)?;
         drop(
-            FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(
-                directory.path(),
-            )?,
+            FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(directory.path())?,
         );
         Ok(Self { directory })
     }
@@ -80,12 +77,12 @@ impl ResumeFixture {
     /// Acquires single-format recovery admission, the writer authority continuation runs under.
     pub(super) fn recovery_admission(
         &self,
-    ) -> Result<FilesystemVersionTwoRecoveryAdmission, FilesystemPlatformAdmissionError> {
-        FilesystemVersionTwoRecoveryAdmission::reopen_unchecked_for_repository_tasks(self.root())
+    ) -> Result<FilesystemRecoveryAdmission, FilesystemStoreAdmissionError> {
+        FilesystemRecoveryAdmission::reopen_unchecked_for_repository_tasks(self.root())
     }
 
     pub(super) fn resumer(&self) -> Result<FilesystemRecoverySegmentResumer, Box<dyn Error>> {
-        Ok(FilesystemRecoverySegmentResumer::open_version_two(
+        Ok(FilesystemRecoverySegmentResumer::open(
             self.recovery_admission()?,
         )?)
     }

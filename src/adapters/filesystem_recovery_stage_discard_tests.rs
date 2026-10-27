@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fs;
 
 use super::{
-    FilesystemPlatformAdmissionError, FilesystemRecoveryStageError, RecoveryStage,
+    FilesystemRecoveryStageError, FilesystemStoreAdmissionError, RecoveryStage,
     RecoveryStageDiscardError, RecoveryStageDiscardOutcome, RecoveryStageDiscardStorageError,
     WriterLockAcquireError, execute_recovery_stage_discard,
 };
@@ -196,7 +196,7 @@ fn retained_discarder_authority_excludes_a_second_writer() -> Result<(), Box<dyn
 
     assert!(matches!(
         error,
-        FilesystemPlatformAdmissionError::WriterLock {
+        FilesystemStoreAdmissionError::WriterLock {
             source: WriterLockAcquireError::Busy,
         }
     ));

@@ -11,14 +11,14 @@ pub enum DurabilityCrashSequence {
     Head,
     /// Explicit discard of fingerprint-bound recovery evidence.
     RecoveryDiscard,
-    /// Version-two retention publication, `KEEP-CRASH-036` through `052`.
+    /// Retention publication, `KEEP-CRASH-036` through `052`.
     Retention,
-    /// Direct version-two initialization and its recovery, `KEEP-CRASH-081`
+    /// Direct initialization and its recovery, `KEEP-CRASH-081`
     /// through `091`.
-    VersionTwoInitialization,
-    /// Version-two catalog publication and its stage recovery, `KEEP-CRASH-074`
+    Initialization,
+    /// Catalog publication and its stage recovery, `KEEP-CRASH-074`
     /// through `077`.
-    VersionTwoCatalog,
+    RetainedCatalog,
 }
 
 impl DurabilityCrashSequence {
@@ -29,8 +29,8 @@ impl DurabilityCrashSequence {
         Self::Head,
         Self::RecoveryDiscard,
         Self::Retention,
-        Self::VersionTwoCatalog,
-        Self::VersionTwoInitialization,
+        Self::RetainedCatalog,
+        Self::Initialization,
     ];
 
     /// Returns the stable identifier used by the crash-matrix command line.
@@ -42,8 +42,8 @@ impl DurabilityCrashSequence {
             Self::Head => "head",
             Self::RecoveryDiscard => "recovery-discard",
             Self::Retention => "retention",
-            Self::VersionTwoCatalog => "version-two-catalog",
-            Self::VersionTwoInitialization => "version-two-initialization",
+            Self::RetainedCatalog => "retained-catalog",
+            Self::Initialization => "initialization",
         }
     }
 
@@ -153,14 +153,14 @@ pub enum DurabilityCrashPoint {
     RemoveManifestStage,
     /// Retention cleanup synchronization.
     SynchronizeRetentionCleanup,
-    /// Link the version-two writer's sealed segment into the immutable pool.
-    VersionTwoLinkSegment,
-    /// Exclusively create the version-two writer's `staging/current.cat`.
-    VersionTwoCreateCatalogStage,
-    /// Synchronize the version-two writer's complete `head.next`.
-    VersionTwoSynchronizeHead,
-    /// Replace `HEAD` after the version-two retained-closure revalidation.
-    VersionTwoReplaceHead,
+    /// Link the writer's sealed segment into the immutable pool.
+    RetainedLinkSegment,
+    /// Exclusively create the writer's `staging/current.cat`.
+    RetainedCreateCatalogStage,
+    /// Synchronize the writer's complete `head.next`.
+    RetainedSynchronizeHead,
+    /// Replace `HEAD` after the retained-closure revalidation.
+    RetainedReplaceHead,
     /// Create or open `writer.lock`, lock it, and synchronize it and the root.
     InitializeOpenAndLockWriterFile,
     /// Exclusively create `FORMAT.next` and write the canonical marker; the
@@ -238,10 +238,10 @@ impl DurabilityCrashPoint {
         Self::RemoveRootStage,
         Self::RemoveManifestStage,
         Self::SynchronizeRetentionCleanup,
-        Self::VersionTwoLinkSegment,
-        Self::VersionTwoCreateCatalogStage,
-        Self::VersionTwoSynchronizeHead,
-        Self::VersionTwoReplaceHead,
+        Self::RetainedLinkSegment,
+        Self::RetainedCreateCatalogStage,
+        Self::RetainedSynchronizeHead,
+        Self::RetainedReplaceHead,
         Self::InitializeOpenAndLockWriterFile,
         Self::InitializeWriteMarkerStage,
         Self::InitializeSynchronizeMarkerStage,
@@ -329,12 +329,12 @@ impl DurabilityCrashPoint {
             | Self::InitializeRemoveMarkerStage
             | Self::InitializeSynchronizeRootAfterCleanup
             | Self::InitializeDiscardIncompleteMarkerStage => {
-                DurabilityCrashSequence::VersionTwoInitialization
+                DurabilityCrashSequence::Initialization
             }
-            Self::VersionTwoLinkSegment
-            | Self::VersionTwoCreateCatalogStage
-            | Self::VersionTwoSynchronizeHead
-            | Self::VersionTwoReplaceHead => DurabilityCrashSequence::VersionTwoCatalog,
+            Self::RetainedLinkSegment
+            | Self::RetainedCreateCatalogStage
+            | Self::RetainedSynchronizeHead
+            | Self::RetainedReplaceHead => DurabilityCrashSequence::RetainedCatalog,
         }
     }
 

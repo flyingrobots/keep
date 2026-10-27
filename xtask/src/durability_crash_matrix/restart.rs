@@ -1,13 +1,13 @@
 //! This module owns independent post-process-death store verification.
 
 mod expectation;
+mod initialization;
+mod retained_catalog;
 mod retention;
 mod retention_incomplete;
 mod retention_snapshot;
 mod semantic;
-mod version_two_catalog;
-mod version_two_initialization;
-mod version_two_recovery;
+mod stage_recovery;
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -25,11 +25,11 @@ pub(super) fn verify(
     if case.point().sequence() == xtask::DurabilityCrashSequence::Retention {
         return retention::verify(store_root, case);
     }
-    if case.point().sequence() == DurabilityCrashSequence::VersionTwoInitialization {
-        return version_two_initialization::verify(store_root, case);
+    if case.point().sequence() == DurabilityCrashSequence::Initialization {
+        return initialization::verify(store_root, case);
     }
-    if case.point().sequence() == DurabilityCrashSequence::VersionTwoCatalog {
-        return version_two_catalog::verify(store_root, case);
+    if case.point().sequence() == DurabilityCrashSequence::RetainedCatalog {
+        return retained_catalog::verify(store_root, case);
     }
     let expected = ExpectedStoreState::for_case(case)?;
     let observed_paths = inventory(store_root)?;

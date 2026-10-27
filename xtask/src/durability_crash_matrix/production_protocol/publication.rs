@@ -1,7 +1,7 @@
 //! This module owns execution of the production publication protocols.
 //!
 //! The child initializes a store directly and publishes its first catalog
-//! through `FilesystemVersionTwoCatalogPublisher` and the retained-closure
+//! through `FilesystemCatalogPublisher` and the retained-closure
 //! gate. Segment staging boundaries are observed through the segment-stage
 //! port and every pool, catalog, and head boundary through the writer's own
 //! catalog observer, so no transition is reimplemented here.
@@ -13,15 +13,15 @@ use std::path::{Path, PathBuf};
 use keep::{
     AdmittedSegment, AdmittedSegmentRecord, CanonicalCatalog, CanonicalPublicationHead,
     CatalogGeneration, CatalogPublicationBoundary, CatalogPublicationExpectation,
-    CatalogPublicationObserver, CatalogPublicationPhase, FilesystemSegmentStage,
-    FilesystemVersionTwoCatalogPublisher, ObservedSegmentStage, SealedSegment, SegmentRecordLimit,
-    StagedSegment, publish_retained_catalog_generation,
+    CatalogPublicationObserver, CatalogPublicationPhase, FilesystemCatalogPublisher,
+    FilesystemSegmentStage, ObservedSegmentStage, SealedSegment, SegmentRecordLimit, StagedSegment,
+    publish_retained_catalog_generation,
 };
 use xtask::{DurabilityCrashPoint, DurabilityCrashPosition};
 
 use super::control::{CrashControl, DuringTiming};
-use super::initialization;
 use super::segment_stage::CrashSegmentObserver;
+use super::writer;
 use super::{DurabilityCrashMatrixError, verification};
 
 const CATALOG_INTERRUPTION: usize = 176;
@@ -33,12 +33,12 @@ pub(super) fn run(
     store_root: &Path,
     mut control: CrashControl,
 ) -> Result<(), DurabilityCrashMatrixError> {
-    let mut publisher = initialization::publisher(store_root)?;
+    let mut publisher = writer::publisher(store_root)?;
     let sealed = stage_observed(&publisher, &mut control)?;
     let segment_bytes = fs::read(store_root.join("staging/current.seg"))
         .map_err(|source| DurabilityCrashMatrixError::io("read sealed crash segment", source))?;
     let segments = [
-        AdmittedSegment::decode(&segment_bytes, initialization::segment_policy())
+        AdmittedSegment::decode(&segment_bytes, writer::segment_policy())
             .map_err(|source| verification("admit sealed crash segment", source))?,
     ];
     let catalog = first_catalog(&segments)?;
@@ -70,7 +70,7 @@ pub(super) fn first_catalog(
 
 /// Stages and seals the one-zero segment with no crash observation.
 pub(super) fn stage_one_zero(
-    publisher: &FilesystemVersionTwoCatalogPublisher,
+    publisher: &FilesystemCatalogPublisher,
 ) -> Result<SealedSegment<FilesystemSegmentStage<'_>>, DurabilityCrashMatrixError> {
     let stage = publisher
         .create_segment_stage()
@@ -84,7 +84,7 @@ pub(super) fn stage_one_zero(
 }
 
 fn stage_observed<'publisher>(
-    publisher: &'publisher FilesystemVersionTwoCatalogPublisher,
+    publisher: &'publisher FilesystemCatalogPublisher,
     control: &mut CrashControl,
 ) -> Result<SealedSegment<FilesystemSegmentStage<'publisher>>, DurabilityCrashMatrixError> {
     let point = DurabilityCrashPoint::CreateSegmentStage;

@@ -1,7 +1,7 @@
 //! Linux filesystem platform-profile laws.
 
 use super::{
-    LinuxDirectoryProperties, VERSION_TWO_PROTOCOL_DIRECTORIES, admit_linux_child_properties,
+    LinuxDirectoryProperties, PROTOCOL_DIRECTORIES, admit_linux_child_properties,
     admit_linux_properties,
 };
 use rustix::fs::{NFS_SUPER_MAGIC, StatVfsMountFlags};
@@ -75,7 +75,7 @@ const fn properties(
 #[test]
 fn admission_covers_every_protocol_directory() {
     assert_eq!(
-        VERSION_TWO_PROTOCOL_DIRECTORIES,
+        PROTOCOL_DIRECTORIES,
         [
             "staging",
             "segments",

@@ -152,7 +152,7 @@ availability.
 The writer lock proves process-scoped exclusion; it does not prove
 case-sensitive names, single-host ownership, hard-link and replacement
 semantics, or directory durability. The writer therefore consumes an opaque
-admission value, now `FilesystemVersionTwoAdmission`, that owns the acquired
+admission value, now `FilesystemStoreAdmission`, that owns the acquired
 lock. The proof is bound to that exact root authority and cannot be
 constructed from metadata or caller assertion.
 

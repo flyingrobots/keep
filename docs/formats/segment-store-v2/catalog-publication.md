@@ -24,15 +24,15 @@ created by [direct initialization](initialization.md).
 
 ## Authority
 
-`FilesystemVersionTwoAdmission::reopen` admits the root and acquires the writer
-lock. `FilesystemVersionTwoCatalogPublisher::open` consumes that admission. It
+`FilesystemStoreAdmission::reopen` admits the root and acquires the writer
+lock. `FilesystemCatalogPublisher::open` consumes that admission. It
 pins the store root, `staging`, `segments`, `catalogs`, `retention`,
 `retention/roots`, and `retention/manifests`. A bare writer lock cannot open
 it.
 
 The publisher implements only `RetainedCatalogPublicationStorage`, so it
 publishes only through `publish_retained_catalog_generation`. Its stage type,
-`FilesystemVersionTwoCatalogStages`, has private fields and no public
+`FilesystemRetainedCatalogStages`, has private fields and no public
 constructor. It is reachable only through `catalog_stages`, which requires the
 gate's `RetainedClosureAdmission`. The ungated `publish_catalog_generation`
 therefore cannot drive version-2 stages.
@@ -102,21 +102,21 @@ must resolve it first.
 
 ### Recovery admission
 
-`FilesystemVersionTwoRecoveryAdmission::reopen` applies the writer admission
+`FilesystemRecoveryAdmission::reopen` applies the writer admission
 with one difference: the root may also hold `head.next`. It requires the
 platform profile, the writer lock, the exact version-2 namespace and protocol
 directories, and the canonical `FORMAT` marker. The recovery tools take it through their
-`open_version_two` constructors:
+`open` constructors:
 
 - `FilesystemRecoveryStageDiscarder`;
 - `FilesystemRecoveryStageCompleter`;
 - `FilesystemRecoverySegmentResumer`; and
 - `FilesystemRecoveryNextHeadFinalizer`.
 
-The read-only `FilesystemRecoveryInventoryReader::open_version_two` applies
+The read-only `FilesystemRecoveryInventoryReader::open` applies
 the same namespace and marker laws without the writer lock.
 
-`classify_version_two_recovery_names` classifies `reader.lock`, `FORMAT`,
+`classify_recovery_names` classifies `reader.lock`, `FORMAT`,
 `retention`, `gc`, and `recovery` as known roles and requires each of them. It
 does not require `HEAD`: the first publication of an initialized store can be
 interrupted before `HEAD` exists. `FORMAT.next` is an unknown entry.
@@ -144,7 +144,7 @@ pools hold artifacts, refuses in the same way.
   restart, and the retention and durable readers refuse a root without
   `FORMAT` as `MissingFormatMarker`, even when every other entry and record of
   a published, retained store is intact.
-- `classify_version_two_recovery_names` requires every root entry of an
+- `classify_recovery_names` requires every root entry of an
   initialized store and refuses a missing one as a missing required entry.
 - A segment stage sealed under one publisher's authority refuses selection by
   any other publisher.
@@ -154,7 +154,7 @@ are deleted (#198), so no cross-version entry remains.
 
 ## Process-death matrix
 
-`cargo xtask durability-crash-matrix --sequence version-two-catalog` runs the
+`cargo xtask durability-crash-matrix --sequence retained-catalog` runs the
 production version-2 writer in a child process. The child blocks at the
 selected boundary through an observer on the writer's own stage type. Restart
 then requires the exact stage residue, recovers it with the public version-2
@@ -179,7 +179,7 @@ The implemented rows are 12 cases. CI runs them with the complete matrix in
 debug and release builds. They establish recovery after process death; they do
 not simulate power loss. In-process laws add an injected storage-port failure
 after segment link, catalog-stage creation, and `head.next` synchronization
-(`filesystem_version_two_catalog_recovery_tests`), plus hand-staged complete
+(`filesystem_catalog_recovery_tests`), plus hand-staged complete
 `head.next` candidates that preserve or drop retained content
-(`tests/version_two_catalog_writer.rs`). Other boundaries rely on the shared
+(`tests/catalog_writer.rs`). Other boundaries rely on the shared
 version-1 stage implementation and its `KEEP-CRASH-001` to `030` evidence.

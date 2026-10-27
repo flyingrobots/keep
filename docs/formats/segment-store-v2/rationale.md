@@ -187,7 +187,7 @@ transitions as version 1. A copy would let the two formats drift in exactly
 the steps that decide durability. `FilesystemCatalogStages` therefore holds the
 pinned catalog directories, the writable stages, and the stage-authority
 token, and it is the only `CatalogPublicationStorage` implementation of those
-transitions. `FilesystemVersionTwoCatalogStages` wraps one under the writer lock
+transitions. `FilesystemRetainedCatalogStages` wraps one under the writer lock
 and has no public constructor; it forwards transitions unchanged. (Until #198
 deleted version 1, the version-1 `FilesystemCatalogPublisher` owned a second
 one beside its own writer lock.)
@@ -203,7 +203,7 @@ stop readers for the whole window in which publication stages a head. Writer
 admission still refuses it, so a writer never starts over unrecovered state.
 
 Catalog-stage recovery on version 2 reuses the version-1 executors under a
-separate `FilesystemVersionTwoRecoveryAdmission`. That admission differs from
+separate `FilesystemRecoveryAdmission`. That admission differs from
 writer admission only in admitting `head.next`. Next-head finalization is the
 one recovery route that changes `HEAD`, so a version-2 finalizer runs the
 gate's own `admit_retained_closures` before every candidate verification that
@@ -215,7 +215,7 @@ Rejected alternatives:
 - Copying the stage code into a version-2 publisher. The formats would drift.
 - Implementing the ungated port for the version-2 publisher behind a runtime
   check. The type system would no longer prevent ungated publication.
-- Letting `FilesystemVersionTwoAdmission` admit `head.next`. Writers and
+- Letting `FilesystemStoreAdmission` admit `head.next`. Writers and
   retention publication would then start over unrecovered catalog state.
 - Gating only the planner. Planning is pure and runs before the writer lock.
   The retention head can change between planning and replacement.

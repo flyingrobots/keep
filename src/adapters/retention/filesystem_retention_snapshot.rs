@@ -1,4 +1,4 @@
-//! This module owns one fenced, double-collected reader view of a version-two store.
+//! This module owns one fenced, double-collected reader view of a store.
 
 use std::io;
 use std::path::Path;
@@ -18,8 +18,8 @@ use crate::adapters::filesystem_exact_record::{
 };
 use crate::adapters::{
     CatalogRestartError, CatalogRestartPolicy, ChecksummedPublicationHead,
-    FilesystemCatalogSnapshot, filesystem_format_marker, filesystem_initialization_namespace,
-    filesystem_platform_profile, publication_head_decoder,
+    FilesystemCatalogSnapshot, filesystem_format_marker, filesystem_platform_profile,
+    filesystem_store_namespace, publication_head_decoder,
 };
 use crate::{RetentionHead, RetentionManifest, RetentionNamespaceDigest};
 
@@ -105,7 +105,7 @@ impl RetentionViewSource for Source {
 }
 
 impl FilesystemRetentionSnapshot {
-    /// Admits the production filesystem profile and version-two root, acquires the reader fence, and
+    /// Admits the production filesystem profile and store root, acquires the reader fence, and
     /// double-collects one consistent view within `limit` attempts.
     /// Admission requires the committed namespace and the canonical `FORMAT`
     /// marker before fencing; nothing binds the store to the directory it is in.
@@ -115,7 +115,7 @@ impl FilesystemRetentionSnapshot {
     /// returned as `Admission` with the original I/O cause. It may also block
     /// while collection holds the fence exclusively.
     /// Platform admission requires the existing local writable, case-sensitive
-    /// Linux ext4 profile across every present version-two protocol directory.
+    /// Linux ext4 profile across every present protocol directory.
     /// The same opened root capability is retained through namespace, marker,
     /// fence, and coordinate admission; the ambient path is not reopened. A
     /// committed store with no catalog `HEAD` refuses as `Unpublished` once the
@@ -147,9 +147,9 @@ impl FilesystemRetentionSnapshot {
         limit: ReaderAttemptLimit,
         collect: impl FnOnce(&mut Source, ReaderAttemptLimit) -> Result<View, E>,
     ) -> Result<Self, E> {
-        let root = filesystem_platform_profile::open_version_two(store_root)
+        let root = filesystem_platform_profile::open(store_root)
             .map_err(|source| Error::Admission { source })?;
-        filesystem_initialization_namespace::admit_version_two_with_catalog_stage(&root)
+        filesystem_store_namespace::admit_store_with_catalog_stage(&root)
             .map_err(|source| Error::Admission { source })?;
         filesystem_format_marker::admit(&root).map_err(|source| Error::Admission { source })?;
         let fence = ReaderFence::acquire(&root).map_err(|source| Error::Fence { source })?;

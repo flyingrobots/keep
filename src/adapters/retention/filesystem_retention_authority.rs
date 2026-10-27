@@ -10,7 +10,7 @@ use super::filesystem_retention_authority_error::{
 };
 use super::filesystem_retention_current::{self, ObservedRetentionState};
 use super::filesystem_retention_recovery::RetentionRecoveryContext;
-use crate::adapters::{FilesystemVersionTwoAdmission, FilesystemWriterLock};
+use crate::adapters::{FilesystemStoreAdmission, FilesystemWriterLock};
 
 /// Exclusive authority to publish retention transitions on one pinned root.
 ///
@@ -42,7 +42,7 @@ pub struct FilesystemRetentionPublicationAuthority {
 impl FilesystemRetentionPublicationAuthority {
     /// Pins one admitted root for retention publication.
     ///
-    /// Only [`FilesystemVersionTwoAdmission`] is accepted, so a bare writer
+    /// Only [`FilesystemStoreAdmission`] is accepted, so a bare writer
     /// lock, which proves neither the namespace nor the `FORMAT` marker, can
     /// never reach retention publication; the type system refuses it:
     ///
@@ -60,7 +60,7 @@ impl FilesystemRetentionPublicationAuthority {
     /// Returns [`FilesystemRetentionAuthorityError`](super::FilesystemRetentionAuthorityError)
     /// when the root capability cannot be cloned. The retention namespace and
     /// both immutable pools arrive already pinned by admission.
-    pub fn open(admission: FilesystemVersionTwoAdmission) -> Result<Self, Error> {
+    pub fn open(admission: FilesystemStoreAdmission) -> Result<Self, Error> {
         let (lock, retention, roots, manifests) = admission.into_parts();
         let root = lock.clone_directory().map_err(|source| Error::Directory {
             directory: Directory::Root,

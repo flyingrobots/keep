@@ -1,8 +1,8 @@
 //! This module owns pinned writer authority for filesystem stage discard.
 
 use super::{
-    FilesystemRecoveryInventoryReader, FilesystemRecoveryStageDiscardOpenError,
-    FilesystemVersionTwoRecoveryAdmission, FilesystemWriterLock,
+    FilesystemRecoveryAdmission, FilesystemRecoveryInventoryReader,
+    FilesystemRecoveryStageDiscardOpenError, FilesystemWriterLock,
 };
 
 /// Writer-authorized pinned filesystem adapter for exact stage discard.
@@ -30,20 +30,20 @@ impl FilesystemRecoveryStageDiscarder {
     ///
     /// Returns [`FilesystemRecoveryStageDiscardOpenError`] on root-clone or
     /// namespace pinning failure.
-    pub fn open_version_two(
-        admission: FilesystemVersionTwoRecoveryAdmission,
+    pub fn open(
+        admission: FilesystemRecoveryAdmission,
     ) -> Result<Self, FilesystemRecoveryStageDiscardOpenError> {
         let (lock, _retention, _roots, _manifests) = admission.into_parts();
-        Self::from_version_two_lock(lock)
+        Self::from_lock(lock)
     }
 
-    pub(super) fn from_version_two_lock(
+    pub(super) fn from_lock(
         authority: FilesystemWriterLock,
     ) -> Result<Self, FilesystemRecoveryStageDiscardOpenError> {
         let inventory_root = authority
             .clone_directory()
             .map_err(|source| FilesystemRecoveryStageDiscardOpenError::CloneRoot { source })?;
-        let inventory = FilesystemRecoveryInventoryReader::from_version_two_root(inventory_root)
+        let inventory = FilesystemRecoveryInventoryReader::from_admitted_root(inventory_root)
             .map_err(|source| FilesystemRecoveryStageDiscardOpenError::Namespace { source })?;
         Ok(Self {
             inventory,

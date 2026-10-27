@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fs;
 
 use super::{
-    FilesystemPlatformAdmissionError, RecoveryStage, RecoveryStageDiscardOutcome,
+    FilesystemStoreAdmissionError, RecoveryStage, RecoveryStageDiscardOutcome,
     RecoveryStagePoolOutcome, RecoveryStageSynchronizationOutcome, WriterLockAcquireError,
     execute_recovery_stage_completion,
 };
@@ -89,7 +89,7 @@ fn retained_completer_authority_excludes_a_second_writer() -> Result<(), Box<dyn
 
     assert!(matches!(
         error,
-        FilesystemPlatformAdmissionError::WriterLock {
+        FilesystemStoreAdmissionError::WriterLock {
             source: WriterLockAcquireError::Busy,
         }
     ));

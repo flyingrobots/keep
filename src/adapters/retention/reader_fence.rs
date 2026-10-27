@@ -1,4 +1,4 @@
-//! This module owns the shared reader fence over one version-two store root.
+//! This module owns the shared reader fence over one store root.
 
 use std::io;
 

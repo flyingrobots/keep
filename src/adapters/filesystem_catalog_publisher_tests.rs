@@ -18,9 +18,9 @@ use super::test_support::decode_hex;
 use crate::{
     AdmittedSegment, AdmittedSegmentRecord, CanonicalCatalog, CatalogGeneration,
     CatalogPublicationError, CatalogPublicationExpectation, CatalogPublicationOutcome,
-    CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemCatalogSnapshot,
-    FilesystemPlatformAdmissionError, FilesystemSegmentStage, FilesystemVersionTwoAdmission,
-    FilesystemVersionTwoCatalogPublisher, LayoutEntryLimit, RetainedCatalogPublicationError,
+    CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemCatalogPublisher,
+    FilesystemCatalogSnapshot, FilesystemSegmentStage, FilesystemStoreAdmission,
+    FilesystemStoreAdmissionError, LayoutEntryLimit, RetainedCatalogPublicationError,
     SealedSegment, SegmentPublication, SegmentReadPolicy, SegmentRecordLimit, StagedSegment,
     publish_retained_catalog_generation,
 };
@@ -111,11 +111,7 @@ struct StoreFixture {
 impl StoreFixture {
     fn create(name: &str) -> Result<Self, Box<dyn Error>> {
         let sandbox = TestDirectory::create(name)?;
-        drop(
-            FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(
-                sandbox.path(),
-            )?,
-        );
+        drop(FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(sandbox.path())?);
         let segments = sandbox.path().join("segments");
         let catalogs = sandbox.path().join("catalogs");
         Ok(Self {
@@ -149,15 +145,13 @@ impl StoreFixture {
 /// Reacquires single-format writer authority over the initialized store.
 fn admit_writer(
     store: &StoreFixture,
-) -> Result<FilesystemVersionTwoAdmission, FilesystemPlatformAdmissionError> {
-    FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(store.path())
+) -> Result<FilesystemStoreAdmission, FilesystemStoreAdmissionError> {
+    FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks(store.path())
 }
 
 /// Reopens the initialized store and pins its single-format writer.
-fn open_publisher(
-    store: &StoreFixture,
-) -> Result<FilesystemVersionTwoCatalogPublisher, Box<dyn Error>> {
-    Ok(FilesystemVersionTwoCatalogPublisher::open(
+fn open_publisher(store: &StoreFixture) -> Result<FilesystemCatalogPublisher, Box<dyn Error>> {
+    Ok(FilesystemCatalogPublisher::open(
         admit_writer(store)?,
         restart_policy()?,
     )?)
@@ -181,7 +175,7 @@ fn restart_policy() -> Result<CatalogRestartPolicy, Box<dyn Error>> {
 }
 
 fn stage_one_zero<'publisher>(
-    publisher: &'publisher FilesystemVersionTwoCatalogPublisher,
+    publisher: &'publisher FilesystemCatalogPublisher,
     store: &StoreFixture,
 ) -> Result<StagedFixture<'publisher>, Box<dyn Error>> {
     let stage = publisher.create_segment_stage()?;
@@ -204,9 +198,9 @@ fn fixture(hex: &str) -> Result<Vec<u8>, Box<dyn Error>> {
 #[test]
 fn publisher_drop_closes_writable_stages_before_releasing_writer_authority()
 -> Result<(), Box<dyn Error>> {
-    let source = include_str!("filesystem_version_two_catalog_publisher.rs");
+    let source = include_str!("filesystem_catalog_publisher.rs");
     let stages = source
-        .find("pub(super) stages: FilesystemVersionTwoCatalogStages,")
+        .find("pub(super) stages: FilesystemRetainedCatalogStages,")
         .ok_or("publisher must retain the gated catalog stages")?;
     let writer_lock = source
         .find("    _lock: FilesystemWriterLock,")

@@ -14,8 +14,8 @@ fn crash_children_execute_every_claimed_production_protocol() -> Result<(), Box<
         "durability_crash_matrix/production_protocol.rs",
         "durability_crash_matrix/production_protocol/publication.rs",
         "durability_crash_matrix/production_protocol/recovery.rs",
-        "durability_crash_matrix/production_protocol/version_two_initialization.rs",
-        "durability_crash_matrix/production_protocol/version_two_catalog.rs",
+        "durability_crash_matrix/production_protocol/initialization.rs",
+        "durability_crash_matrix/production_protocol/retained_catalog.rs",
     ]
     .into_iter()
     .map(|path| fs::read_to_string(source_root.join(path)))

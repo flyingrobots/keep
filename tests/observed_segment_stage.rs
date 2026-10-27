@@ -16,10 +16,10 @@ use std::fs;
 use std::io;
 
 use keep::{
-    AdmittedSegment, CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemVersionTwoAdmission,
-    FilesystemVersionTwoCatalogPublisher, LayoutEntryLimit, ObservedSegmentStage,
-    SegmentReadPolicy, SegmentRecordLimit, SegmentStageDurabilityEvent, SegmentStageObserver,
-    SegmentWriteError, SegmentWritePhase, StagedSegment,
+    AdmittedSegment, CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemCatalogPublisher,
+    FilesystemStoreAdmission, LayoutEntryLimit, ObservedSegmentStage, SegmentReadPolicy,
+    SegmentRecordLimit, SegmentStageDurabilityEvent, SegmentStageObserver, SegmentWriteError,
+    SegmentWritePhase, StagedSegment,
 };
 
 #[test]
@@ -134,9 +134,9 @@ impl SegmentStageObserver for Observer {
 
 fn publisher(
     directory: &sandbox::TestDirectory,
-) -> Result<FilesystemVersionTwoCatalogPublisher, Box<dyn Error>> {
-    let admission = FilesystemVersionTwoAdmission::initialize(directory.path())?.into_admission();
-    Ok(FilesystemVersionTwoCatalogPublisher::open(
+) -> Result<FilesystemCatalogPublisher, Box<dyn Error>> {
+    let admission = FilesystemStoreAdmission::initialize(directory.path())?.into_admission();
+    Ok(FilesystemCatalogPublisher::open(
         admission,
         CatalogRestartPolicy::new(read_policy(), CatalogRestartByteLimit::new(1_048_576)?),
     )?)

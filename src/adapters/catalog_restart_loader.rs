@@ -9,8 +9,8 @@ use crate::CatalogLength;
 use super::{
     CatalogRestartArtifact, CatalogRestartError, CatalogRestartPhase, CatalogRestartPolicy,
     ChecksummedCatalog, ChecksummedPublicationHead, FilesystemCatalogSnapshot, catalog_restart_io,
-    catalog_restart_segments, filesystem_initialization_namespace,
-    filesystem_version_two_admission, physical_pool_name,
+    catalog_restart_segments, filesystem_store_admission, filesystem_store_namespace,
+    physical_pool_name,
 };
 
 const HEAD_NAME: &str = "HEAD";
@@ -28,9 +28,9 @@ pub(super) fn load(
     policy: CatalogRestartPolicy,
 ) -> Result<FilesystemCatalogSnapshot, CatalogRestartError> {
     let directory = catalog_restart_io::open_root(root)?;
-    filesystem_version_two_admission::admit_root(
+    filesystem_store_admission::admit_root(
         &directory,
-        filesystem_initialization_namespace::admit_version_two_with_catalog_stage,
+        filesystem_store_namespace::admit_store_with_catalog_stage,
     )
     .map_err(|source| CatalogRestartError::Admission {
         source: Box::new(source),

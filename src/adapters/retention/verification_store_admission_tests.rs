@@ -4,8 +4,8 @@ use super::filesystem_retention_test_fixture::initialized_store;
 use crate::{
     CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemRetentionSnapshot,
     FilesystemRetentionSnapshotError, ReaderAttemptLimit, SegmentReadPolicy,
-    StoreFormatMarkerDecodeError, VerificationError, VerificationObservation, VerificationRefusal,
-    VerificationSource, VerificationSubject, VersionTwoRecordRefusal,
+    StoreFormatMarkerDecodeError, StoreRecordRefusal, VerificationError, VerificationObservation,
+    VerificationRefusal, VerificationSource, VerificationSubject,
 };
 use std::{error::Error, fs, io};
 
@@ -32,8 +32,8 @@ fn a_malformed_format_marker_is_corrupt_with_the_original_magic() -> ResultOf<()
     )?;
     let typed = source
         .get_ref()
-        .and_then(|source| source.downcast_ref::<VersionTwoRecordRefusal>());
-    let Some(VersionTwoRecordRefusal::Marker {
+        .and_then(|source| source.downcast_ref::<StoreRecordRefusal>());
+    let Some(StoreRecordRefusal::Marker {
         source: StoreFormatMarkerDecodeError::InvalidMagic { observed },
     }) = typed
     else {
@@ -84,7 +84,7 @@ fn policy() -> ResultOf<CatalogRestartPolicy> {
 fn inconclusive_admission_causes_remain_operational_without_losing_the_source() -> ResultOf<()> {
     let source = io::Error::new(
         io::ErrorKind::InvalidData,
-        VersionTwoRecordRefusal::LengthOverflow { name: "FORMAT" },
+        StoreRecordRefusal::LengthOverflow { name: "FORMAT" },
     );
     let error = VerificationError::from(FilesystemRetentionSnapshotError::Admission { source });
     let source = operational_cause(error)?;
@@ -92,8 +92,8 @@ fn inconclusive_admission_causes_remain_operational_without_losing_the_source() 
         matches!(
             source
                 .get_ref()
-                .and_then(|source| source.downcast_ref::<VersionTwoRecordRefusal>()),
-            Some(VersionTwoRecordRefusal::LengthOverflow { name: "FORMAT" })
+                .and_then(|source| source.downcast_ref::<StoreRecordRefusal>()),
+            Some(StoreRecordRefusal::LengthOverflow { name: "FORMAT" })
         ),
         "host-width cause must survive: {source:?}"
     );

@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fs;
 
 use super::{
-    FilesystemRecoveryInventoryReader, FilesystemRecoveryStageError, FilesystemVersionTwoAdmission,
+    FilesystemRecoveryInventoryReader, FilesystemRecoveryStageError, FilesystemStoreAdmission,
     RecoveryStage, RecoveryStageMetadataError, filesystem_test_sandbox::TestDirectory,
 };
 
@@ -175,9 +175,7 @@ impl StageFixture {
     fn new(name: &str) -> Result<Self, Box<dyn Error>> {
         let directory = TestDirectory::create(name)?;
         drop(
-            FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(
-                directory.path(),
-            )?,
+            FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(directory.path())?,
         );
         Ok(Self { directory })
     }
@@ -199,11 +197,7 @@ impl StageFixture {
     }
 
     fn reader(&self) -> Result<FilesystemRecoveryInventoryReader, Box<dyn Error>> {
-        Ok(
-            FilesystemRecoveryInventoryReader::open_version_two_unchecked_for_repository_tasks(
-                self.root(),
-            )?,
-        )
+        Ok(FilesystemRecoveryInventoryReader::open_unchecked_for_repository_tasks(self.root())?)
     }
 
     fn remove(self) -> std::io::Result<()> {

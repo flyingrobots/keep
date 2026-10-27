@@ -128,9 +128,9 @@ mod filesystem_retention_successor_tests;
 mod filesystem_retention_test_fixture;
 mod filesystem_retention_verification;
 #[cfg(test)]
-mod filesystem_verification_law_tests;
+mod filesystem_store_admission_tests;
 #[cfg(test)]
-mod filesystem_version_two_admission_tests;
+mod filesystem_verification_law_tests;
 mod head_decode_error;
 mod head_decode_error_display;
 mod head_decoder;

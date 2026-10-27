@@ -4,11 +4,11 @@ use std::fs;
 use std::io::ErrorKind;
 
 use keep::{
-    FilesystemNamespaceRefusal, FilesystemPlatformAdmissionError, FilesystemRetentionSnapshot,
-    FilesystemRetentionSnapshotError, FilesystemVersionTwoAdmission,
-    FilesystemVersionTwoCatalogPublisher, ReaderAttemptLimit, RetainedCatalogPublicationError,
-    RetentionCurrentStateRefusal, RetentionEvidencePhase, VersionTwoInitializationError,
-    VersionTwoInitializationPrefix, VersionTwoInitializationRefusal,
+    FilesystemCatalogPublisher, FilesystemNamespaceRefusal, FilesystemRetentionSnapshot,
+    FilesystemRetentionSnapshotError, FilesystemStoreAdmission, FilesystemStoreAdmissionError,
+    ReaderAttemptLimit, RetainedCatalogPublicationError, RetentionCurrentStateRefusal,
+    RetentionEvidencePhase, StoreInitializationError, StoreInitializationPrefix,
+    StoreInitializationRefusal,
 };
 
 use super::durable_sandbox::TestDirectory;
@@ -21,12 +21,12 @@ fn an_initialized_store_has_no_catalog_and_admits_writers_but_not_readers() -> T
     let sandbox = TestDirectory::create("single-format-unpublished")?;
     let root = sandbox.path();
 
-    let initialized = FilesystemVersionTwoAdmission::initialize(root)?;
+    let initialized = FilesystemStoreAdmission::initialize(root)?;
 
-    assert_eq!(initialized.found(), VersionTwoInitializationPrefix::Empty);
+    assert_eq!(initialized.found(), StoreInitializationPrefix::Empty);
     drop(initialized);
     assert!(!root.join("HEAD").exists());
-    drop(FilesystemVersionTwoAdmission::reopen(root)?);
+    drop(FilesystemStoreAdmission::reopen(root)?);
     let reader = FilesystemRetentionSnapshot::load(
         root,
         populated_store::policy()?,
@@ -43,9 +43,9 @@ fn an_initialized_store_has_no_catalog_and_admits_writers_but_not_readers() -> T
 fn initialization_refuses_an_unsupported_platform_before_any_mutation() -> TestResult<()> {
     let directory = UnsupportedDirectory::create()?;
 
-    let refused = FilesystemVersionTwoAdmission::initialize(directory.path());
+    let refused = FilesystemStoreAdmission::initialize(directory.path());
 
-    let Err(VersionTwoInitializationError::Platform { source }) = refused else {
+    let Err(StoreInitializationError::Platform { source }) = refused else {
         return Err("initialization admitted an unsupported platform".into());
     };
     assert_eq!(source.kind(), ErrorKind::Unsupported);
@@ -67,12 +67,12 @@ fn a_second_initialization_of_a_committed_store_refuses_unchanged() -> TestResul
     drop(writer);
     let before = witness(root)?;
 
-    let refused = FilesystemVersionTwoAdmission::initialize(root);
+    let refused = FilesystemStoreAdmission::initialize(root);
 
     assert!(matches!(
         refused,
-        Err(VersionTwoInitializationError::Refused {
-            refusal: VersionTwoInitializationRefusal::AlreadyInitialized
+        Err(StoreInitializationError::Refused {
+            refusal: StoreInitializationRefusal::AlreadyInitialized
         })
     ));
     assert_eq!(witness(root)?, before);
@@ -83,11 +83,11 @@ fn a_second_initialization_of_a_committed_store_refuses_unchanged() -> TestResul
 fn an_uncommitted_root_is_refused_by_writers_and_readers() -> TestResult<()> {
     let sandbox = TestDirectory::create("single-format-uncommitted")?;
     let root = sandbox.path();
-    drop(FilesystemVersionTwoAdmission::initialize(root)?);
+    drop(FilesystemStoreAdmission::initialize(root)?);
     fs::hard_link(root.join("FORMAT"), root.join("FORMAT.next"))?;
 
-    let Err(FilesystemPlatformAdmissionError::Namespace { source }) =
-        FilesystemVersionTwoAdmission::reopen(root)
+    let Err(FilesystemStoreAdmissionError::Namespace { source }) =
+        FilesystemStoreAdmission::reopen(root)
     else {
         return Err("an uncommitted root admitted a writer".into());
     };
@@ -107,8 +107,8 @@ fn an_uncommitted_root_is_refused_by_writers_and_readers() -> TestResult<()> {
         Err(FilesystemRetentionSnapshotError::Admission { .. })
     ));
     assert_eq!(
-        FilesystemVersionTwoAdmission::initialize(root)?.found(),
-        VersionTwoInitializationPrefix::MarkerLinked
+        FilesystemStoreAdmission::initialize(root)?.found(),
+        StoreInitializationPrefix::MarkerLinked
     );
     Ok(())
 }
@@ -120,12 +120,11 @@ fn an_uncommitted_root_is_refused_by_writers_and_readers() -> TestResult<()> {
 fn the_first_publication_refuses_retention_artifacts_without_a_head() -> TestResult<()> {
     let sandbox = TestDirectory::create("single-format-first-contradicted")?;
     let root = sandbox.path();
-    let admission = FilesystemVersionTwoAdmission::initialize(root)?.into_admission();
+    let admission = FilesystemStoreAdmission::initialize(root)?.into_admission();
     let namespace = root.join("retention/roots").join("a".repeat(64));
     fs::create_dir(&namespace)?;
     let before = witness(root)?;
-    let mut publisher =
-        FilesystemVersionTwoCatalogPublisher::open(admission, populated_store::policy()?)?;
+    let mut publisher = FilesystemCatalogPublisher::open(admission, populated_store::policy()?)?;
 
     let refused = populated_store::publish_first(root, &mut publisher, &[&first_blob()]);
     drop(publisher);

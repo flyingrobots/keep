@@ -8,11 +8,11 @@ pub(super) mod populated_store;
 mod publication;
 mod recovery;
 mod recovery_storage;
+pub(super) mod retained_catalog;
 pub(super) mod retention;
 mod retention_storage;
 mod segment_stage;
-pub(super) mod version_two_catalog;
-pub(super) mod version_two_initialization;
+pub(super) mod writer;
 
 use std::error::Error;
 use std::fs;
@@ -45,11 +45,11 @@ pub(super) fn run(
         DurabilityCrashSequence::Retention => {
             retention::run(&store_root, &mut control)?;
         }
-        DurabilityCrashSequence::VersionTwoInitialization => {
-            version_two_initialization::run(&store_root, control)?;
+        DurabilityCrashSequence::Initialization => {
+            initialization::run(&store_root, control)?;
         }
-        DurabilityCrashSequence::VersionTwoCatalog => {
-            version_two_catalog::run(&store_root, control)?;
+        DurabilityCrashSequence::RetainedCatalog => {
+            retained_catalog::run(&store_root, control)?;
         }
     }
     Err(DurabilityCrashMatrixError::PointSequenceMismatch {

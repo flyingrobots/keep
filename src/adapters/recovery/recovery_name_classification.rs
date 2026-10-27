@@ -6,7 +6,7 @@ use super::{
     recovery_pool_name,
 };
 
-/// Classifies one complete committed version-two inventory without opening bytes.
+/// Classifies one complete committed inventory without opening bytes.
 ///
 /// The operation preserves inventory order and allocates at most one manifest
 /// entry per inventory entry. It rejects unknown names, missing root entries,
@@ -17,13 +17,13 @@ use super::{
 /// store can be interrupted before it exists. `FORMAT.next` is unknown: a
 /// committed root never holds it.
 /// The contents of `retention`, `gc`, and `recovery` are not inventoried here;
-/// version-two admission and retention recovery own them.
+/// store admission and retention recovery own them.
 ///
 /// # Errors
 ///
 /// Returns [`RecoveryNameClassificationError`] at the first deterministic
 /// namespace, grammar, required-entry, or stage-conflict failure.
-pub fn classify_version_two_recovery_names(
+pub fn classify_recovery_names(
     inventory: RecoveryInventory,
 ) -> Result<RecoveryNameManifest, RecoveryNameClassificationError> {
     let mut required = RequiredEntries::default();

@@ -5,13 +5,13 @@ use std::path::Path;
 
 use cap_std::fs::Dir;
 
-/// Every version-two protocol directory, including nested immutable pools.
+/// Every protocol directory, including nested immutable pools.
 ///
-/// A version-two root receives writer authority only when each of these shares
+/// A store root receives writer authority only when each of these shares
 /// the root's filesystem type, device, and mount identity and is not
 /// casefolded or read-only.
 #[cfg(target_os = "linux")]
-const VERSION_TWO_PROTOCOL_DIRECTORIES: [&str; 9] = [
+const PROTOCOL_DIRECTORIES: [&str; 9] = [
     "staging",
     "segments",
     "catalogs",
@@ -34,13 +34,13 @@ struct LinuxDirectoryProperties {
     mount_id: u64,
 }
 
-/// Opens one version-two store root under the admitted Linux profile.
+/// Opens one store root under the admitted Linux profile.
 ///
 /// The root is opened without following links, and every protocol directory
 /// that exists must satisfy the same filesystem, mount, and inode-flag laws as
 /// the root; absence is left to namespace admission.
 #[cfg(target_os = "linux")]
-pub(super) fn open_version_two(store_root: &Path) -> io::Result<Dir> {
+pub(super) fn open(store_root: &Path) -> io::Result<Dir> {
     use std::fs::File;
 
     use rustix::fs::{CWD, Mode, OFlags, ResolveFlags, openat2};
@@ -53,15 +53,15 @@ pub(super) fn open_version_two(store_root: &Path) -> io::Result<Dir> {
         ResolveFlags::NO_MAGICLINKS | ResolveFlags::NO_SYMLINKS,
     )?;
     let directory = Dir::from_std_file(File::from(descriptor));
-    admit_linux_profile(&directory, &VERSION_TWO_PROTOCOL_DIRECTORIES)?;
+    admit_linux_profile(&directory, &PROTOCOL_DIRECTORIES)?;
     Ok(directory)
 }
 
 #[cfg(not(target_os = "linux"))]
-pub(super) fn open_version_two(_store_root: &Path) -> io::Result<Dir> {
+pub(super) fn open(_store_root: &Path) -> io::Result<Dir> {
     Err(io::Error::new(
         io::ErrorKind::Unsupported,
-        "version-two reopen currently requires the admitted Linux ext4 profile",
+        "store reopen currently requires the admitted Linux ext4 profile",
     ))
 }
 

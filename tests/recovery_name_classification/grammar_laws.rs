@@ -4,7 +4,7 @@ use std::error::Error;
 
 use keep::{
     RecoveryNameClassificationError, RecoveryNamespace, RecoveryPoolNameError,
-    classify_version_two_recovery_names,
+    classify_recovery_names,
 };
 
 use super::{initialized_root, inventory, name};
@@ -97,7 +97,7 @@ fn pool_error(
             return Err("pool grammar test requires an immutable namespace".into());
         }
     };
-    let Err(error) = classify_version_two_recovery_names(inventory(entries)?) else {
+    let Err(error) = classify_recovery_names(inventory(entries)?) else {
         return Err("name classification admitted a noncanonical pool name".into());
     };
     match error {

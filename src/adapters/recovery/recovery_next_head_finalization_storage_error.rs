@@ -61,7 +61,7 @@ pub enum RecoveryNextHeadFinalizationStorageError {
     },
     /// The candidate would lose content a current retention root retains.
     ///
-    /// Only version-two finalization reports this. The source is the forward
+    /// Finalization reports this. The source is the forward
     /// catalog gate's own evidence, binding, or closure refusal; its `Catalog`
     /// and `RetentionChanged` variants never arise here.
     RetainedClosure {

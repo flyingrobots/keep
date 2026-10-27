@@ -7,7 +7,7 @@ use std::path::Path;
 use keep::{
     AdmittedSegment, CanonicalPublicationHead, CatalogPublicationBoundary, CatalogPublicationError,
     CatalogPublicationExpectation, CatalogPublicationObserver, CatalogPublicationPhase,
-    FilesystemRecoveryStageDiscarder, FilesystemVersionTwoRecoveryAdmission, RecoveryStage,
+    FilesystemRecoveryAdmission, FilesystemRecoveryStageDiscarder, RecoveryStage,
     RecoveryStageDiscardRequest, RecoveryStageMetadata, RetainedCatalogPublicationError,
     admit_recovery_stage_bytes, assess_recovery_stage, execute_recovery_stage_discard,
     fingerprint_recovery_stage, plan_recovery_stage_discard, publish_retained_catalog_generation,
@@ -18,7 +18,7 @@ use super::control::CrashControl;
 use super::fixture::GoldenFixture;
 use super::recovery_storage::CrashRecoveryStorage;
 use super::{DurabilityCrashMatrixError, verification};
-use super::{initialization, publication};
+use super::{publication, writer};
 
 const SEGMENT_INTERRUPTION: usize = 32;
 const HEAD_INTERRUPTION: usize = 64;
@@ -33,10 +33,9 @@ pub(super) fn run(
         prepare_head(store_root)?
     };
     let request = discard_request(store_root, stage)?;
-    let admission =
-        FilesystemVersionTwoRecoveryAdmission::reopen_unchecked_for_repository_tasks(store_root)
-            .map_err(|source| verification("admit production recovery store", source))?;
-    let storage = FilesystemRecoveryStageDiscarder::open_version_two(admission)
+    let admission = FilesystemRecoveryAdmission::reopen_unchecked_for_repository_tasks(store_root)
+        .map_err(|source| verification("admit production recovery store", source))?;
+    let storage = FilesystemRecoveryStageDiscarder::open(admission)
         .map_err(|source| verification("open production recovery discarder", source))?;
     let mut storage = CrashRecoveryStorage::new(storage, control);
     execute_recovery_stage_discard(&mut storage, request)
@@ -54,7 +53,7 @@ fn targets_segment(control: &CrashControl) -> bool {
 }
 
 fn prepare_segment(store_root: &Path) -> Result<RecoveryStage, DurabilityCrashMatrixError> {
-    let publisher = initialization::publisher(store_root)?;
+    let publisher = writer::publisher(store_root)?;
     let mut stage = publisher
         .create_segment_stage()
         .map_err(|source| verification("create recovery segment precondition", source))?;
@@ -75,12 +74,12 @@ fn prepare_segment(store_root: &Path) -> Result<RecoveryStage, DurabilityCrashMa
 /// writes the prefix into the `head.next` the writer created and then fails
 /// the head write, so the pools hold the published segment and catalog.
 fn prepare_head(store_root: &Path) -> Result<RecoveryStage, DurabilityCrashMatrixError> {
-    let mut publisher = initialization::publisher(store_root)?;
+    let mut publisher = writer::publisher(store_root)?;
     let sealed = publication::stage_one_zero(&publisher)?;
     let segment_bytes = fs::read(store_root.join("staging/current.seg"))
         .map_err(|source| DurabilityCrashMatrixError::io("read recovery head segment", source))?;
     let segments = [
-        AdmittedSegment::decode(&segment_bytes, initialization::segment_policy())
+        AdmittedSegment::decode(&segment_bytes, writer::segment_policy())
             .map_err(|source| verification("admit recovery head segment", source))?,
     ];
     let catalog = publication::first_catalog(&segments)?;
@@ -161,7 +160,7 @@ fn discard_request(
         .map_err(|source| verification("fingerprint recovery precondition", source))?;
     let admitted = admit_recovery_stage_bytes(stage, evidence, &bytes)
         .map_err(|source| verification("admit recovery precondition bytes", source))?;
-    let assessment = assess_recovery_stage(&admitted, initialization::segment_policy())
+    let assessment = assess_recovery_stage(&admitted, writer::segment_policy())
         .map_err(|source| verification("assess recovery precondition", source))?;
     plan_recovery_stage_discard(&assessment)
         .map_err(|source| verification("plan production recovery discard", source))

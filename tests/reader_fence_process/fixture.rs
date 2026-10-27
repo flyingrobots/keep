@@ -2,20 +2,18 @@
 
 use super::populated_store::{self, FirstCatalogRecords, StoreAdmission};
 use super::sandbox::TestDirectory;
-use keep::{FilesystemVersionTwoAdmission, FilesystemVersionTwoCatalogPublisher};
+use keep::{FilesystemCatalogPublisher, FilesystemStoreAdmission};
 use std::error::Error;
 
 /// The shared builder's route outside the production platform profile.
 const UNCHECKED: StoreAdmission = StoreAdmission {
     initialize: |root| {
         Ok(
-            FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(root)?
+            FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(root)?
                 .into_admission(),
         )
     },
-    reopen_version_two: |root| {
-        Ok(FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(root)?)
-    },
+    reopen: |root| Ok(FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks(root)?),
 };
 
 /// Creates the one-zero bundle store and keeps its writer authority.
@@ -26,7 +24,7 @@ const UNCHECKED: StoreAdmission = StoreAdmission {
 /// immediately reacquiring cannot assume all holders have disappeared.
 pub(super) fn initialized(
     name: &str,
-) -> Result<(TestDirectory, FilesystemVersionTwoCatalogPublisher), Box<dyn Error>> {
+) -> Result<(TestDirectory, FilesystemCatalogPublisher), Box<dyn Error>> {
     let sandbox = TestDirectory::create(name)?;
     let (_created, writer) = populated_store::create_holding_authority(
         sandbox.path(),

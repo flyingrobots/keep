@@ -1,8 +1,8 @@
 //! This module owns resource-versus-content classification at durable ingress.
 
 use crate::{
-    CatalogAdmissionError, CatalogRestartError, FilesystemPlatformAdmissionError,
-    LayoutDecodeError, SegmentReadError, SegmentRecordAdmissionError,
+    CatalogAdmissionError, CatalogRestartError, FilesystemStoreAdmissionError, LayoutDecodeError,
+    SegmentReadError, SegmentRecordAdmissionError,
 };
 
 #[derive(Clone, Copy)]
@@ -119,10 +119,10 @@ fn admission_class(error: &CatalogAdmissionError) -> FailureClass {
 
 /// A namespace or marker refusal is demonstrated corruption; anything else
 /// that stopped admission is an operational failure.
-fn store_admission_class(error: &FilesystemPlatformAdmissionError) -> FailureClass {
+fn store_admission_class(error: &FilesystemStoreAdmissionError) -> FailureClass {
     match error {
-        FilesystemPlatformAdmissionError::Namespace { source }
-        | FilesystemPlatformAdmissionError::FormatMarker { source }
+        FilesystemStoreAdmissionError::Namespace { source }
+        | FilesystemStoreAdmissionError::FormatMarker { source }
             if source.kind() == std::io::ErrorKind::InvalidData =>
         {
             FailureClass::Corrupt

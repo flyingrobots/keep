@@ -29,7 +29,7 @@ the configured and protocol ceilings, count stability, duplicate refusal, and
 namespace-plus-raw-byte ordering. `FilesystemRecoveryInventoryReader` pins the
 root and three no-follow child directories, bounds each scan by the remaining
 global budget, preserves raw Linux name bytes, and verifies child-directory
-identity before and after inventory. `classify_version_two_recovery_names`
+identity before and after inventory. `classify_recovery_names`
 requires every root entry of an initialized store, types each fixed name and
 immutable-pool coordinate, and refuses an unknown or conflicting name without
 artifact I/O.
@@ -39,9 +39,9 @@ maximum, and returns its exact observed length and
 `KEEP:RECOVERY:STAGE\0` fingerprint.
 
 New stores obtain writer authority through
-`FilesystemVersionTwoAdmission::initialize`. A committed store reacquires
-authority through `FilesystemVersionTwoAdmission::reopen`, and every recovery
-tool through `FilesystemVersionTwoRecoveryAdmission::reopen`; each performs no
+`FilesystemStoreAdmission::initialize`. A committed store reacquires
+authority through `FilesystemStoreAdmission::reopen`, and every recovery
+tool through `FilesystemRecoveryAdmission::reopen`; each performs no
 protocol mutation, admits the production platform, acquires the existing
 writer lock, and requires the exact committed namespace and the `FORMAT`
 marker, with `HEAD` optional and, for recovery only, a retained `head.next`.

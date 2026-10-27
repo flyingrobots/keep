@@ -70,7 +70,7 @@ identifies the format contract, not the software release that wrote the store.
 `AdmittedStoreFormatMarker` admits its framing, checksum, definition, and
 namespace bound. Writer admission, catalog-stage recovery, recovery inventory,
 and reader admission each read `FORMAT` no-follow, bounded to its exact length,
-and refuse a trailing byte. `FilesystemPlatformAdmissionError::FormatMarker`
+and refuse a trailing byte. `FilesystemStoreAdmissionError::FormatMarker`
 carries the decoder's typed refusal as its source.
 
 ## Reader fence
@@ -140,6 +140,6 @@ binding satisfied.
 `GcRetirementIntent`, `GcRetirementReceipt`, and `RecoveryDispositionReceipt` are owned by the [GC specification](gc.md). Until issue #21 implements them, any such artifact is unsupported and refuses.
 
 Initialization recovery is part of the initialization protocol: an interrupted
-call is resumed by calling `FilesystemVersionTwoAdmission::initialize` again,
+call is resumed by calling `FilesystemStoreAdmission::initialize` again,
 which classifies the root and replays the idempotent remaining phases. Its
 process death states are specified in [Direct initialization](initialization.md).

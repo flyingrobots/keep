@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use keep::{
     AdmittedSegment, AdmittedSegmentRecord, CanonicalCatalog, CatalogGeneration,
     CatalogPublicationExpectation, CatalogRestartByteLimit, CatalogRestartPolicy, ChunkId,
-    FilesystemCatalogSnapshot, FilesystemVersionTwoAdmission, FilesystemVersionTwoCatalogPublisher,
+    FilesystemCatalogPublisher, FilesystemCatalogSnapshot, FilesystemStoreAdmission,
     LayoutEntryLimit, SegmentReadPolicy, SegmentRecordIdentity, SegmentRecordLimit, StagedSegment,
     publish_retained_catalog_generation,
 };
@@ -110,8 +110,8 @@ fn fixture(hex: &str) -> Result<Vec<u8>, Box<dyn Error>> {
 
 /// Publishes generation one holding only the one-zero chunk record.
 fn publish_one_zero(root: &Path) -> Result<(), Box<dyn Error>> {
-    let admission = FilesystemVersionTwoAdmission::initialize(root)?.into_admission();
-    let mut publisher = FilesystemVersionTwoCatalogPublisher::open(admission, restart_policy()?)?;
+    let admission = FilesystemStoreAdmission::initialize(root)?.into_admission();
+    let mut publisher = FilesystemCatalogPublisher::open(admission, restart_policy()?)?;
     let sealed = StagedSegment::begin(
         publisher.create_segment_stage()?,
         SegmentRecordLimit::MAXIMUM,

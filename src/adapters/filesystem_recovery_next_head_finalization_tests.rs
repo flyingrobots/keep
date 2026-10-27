@@ -57,7 +57,7 @@ fn one_writer_excludes_a_second_finalizer() -> Result<(), Box<dyn Error>> {
 
     assert!(matches!(
         error,
-        super::FilesystemPlatformAdmissionError::WriterLock {
+        super::FilesystemStoreAdmissionError::WriterLock {
             source: super::WriterLockAcquireError::Busy,
         }
     ));

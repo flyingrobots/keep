@@ -106,8 +106,8 @@ process-scoped exclusion are unsupported.
 `FilesystemWriterLock::try_acquire` opens the existing regular `writer.lock`
 without following symbolic links and acquires its exclusive advisory lock
 without blocking. That lock alone cannot construct a publisher.
-`FilesystemVersionTwoCatalogPublisher::open` consumes
-`FilesystemVersionTwoAdmission`, which owns the lock after the production
+`FilesystemCatalogPublisher::open` consumes
+`FilesystemStoreAdmission`, which owns the lock after the production
 platform, the exact committed namespace, and the `FORMAT` marker are admitted,
 then pins the store root plus `staging`, `segments`, and `catalogs` and the
 retention directories. Both operations perform blocking filesystem I/O.
@@ -115,9 +115,9 @@ Neither operation repairs, enumerates, or removes protocol state.
 
 The admission has private fields, so only Keep's own initialization and
 admission boundary can produce a value. A new store obtains one through
-`FilesystemVersionTwoAdmission::initialize`, which runs the
+`FilesystemStoreAdmission::initialize`, which runs the
 [initialization protocol](../segment-store-v2/initialization.md); a committed
-store reacquires one through `FilesystemVersionTwoAdmission::reopen`, which
+store reacquires one through `FilesystemStoreAdmission::reopen`, which
 mutates nothing. A root without the `FORMAT` marker refuses at every open
 path. The version-1 initializer, `FilesystemPlatformAdmission`, and their
 rows `KEEP-CRASH-031`–`-035` are retired.
@@ -138,7 +138,7 @@ protocol advances. Publisher teardown closes retained writable handles and
 pinned directory capabilities before releasing the writer lock.
 
 Publishing a new filesystem segment additionally requires
-`FilesystemVersionTwoCatalogPublisher::select_segment`. The method consumes the
+`FilesystemCatalogPublisher::select_segment`. The method consumes the
 `SealedSegment`, drops Keep's owned writable stage, proves that this publisher
 created the stage, and binds its record count, byte length, and digest to the
 exact `AdmittedSegment` bytes. A storage-agnostic
@@ -146,7 +146,7 @@ exact `AdmittedSegment` bytes. A storage-agnostic
 adapters, but its handle-free `ClosedSegment` receipt cannot authorize
 `staging/current.seg`. Catalog publication cannot select an unrelated or
 still-open sealed stage.
-`FilesystemVersionTwoCatalogPublisher::create_segment_stage` is the only public
+`FilesystemCatalogPublisher::create_segment_stage` is the only public
 filesystem-stage constructor. Its returned lifetime keeps the acquired writer
 authority borrowed while `current.seg` remains writable.
 

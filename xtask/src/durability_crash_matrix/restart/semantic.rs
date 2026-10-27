@@ -6,10 +6,10 @@ use std::path::Path;
 
 use keep::{
     AdmittedSegment, CatalogRestartByteLimit, CatalogRestartPolicy, ChecksummedCatalog, ChunkId,
-    FilesystemCatalogSnapshot, FilesystemVersionTwoRecoveryAdmission, LayoutEntryLimit,
-    RecoveryCatalogStage, RecoveryNextHeadStage, RecoverySegmentStage, SegmentReadPolicy,
-    SegmentRecordIdentity, SegmentRecordLimit, classify_recovery_catalog_stage,
-    classify_recovery_next_head_stage, classify_recovery_segment_stage,
+    FilesystemCatalogSnapshot, FilesystemRecoveryAdmission, LayoutEntryLimit, RecoveryCatalogStage,
+    RecoveryNextHeadStage, RecoverySegmentStage, SegmentReadPolicy, SegmentRecordIdentity,
+    SegmentRecordLimit, classify_recovery_catalog_stage, classify_recovery_next_head_stage,
+    classify_recovery_segment_stage,
 };
 
 use super::expectation::{
@@ -40,9 +40,8 @@ pub(super) fn verify(
 /// `FORMAT` marker: every residue a catalog-protocol crash leaves is a state
 /// of the format that recovery can open.
 fn verify_recovery_admission(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
-    let admission =
-        FilesystemVersionTwoRecoveryAdmission::reopen_unchecked_for_repository_tasks(store_root)
-            .map_err(|source| verification("admit the crash residue for recovery", source))?;
+    let admission = FilesystemRecoveryAdmission::reopen_unchecked_for_repository_tasks(store_root)
+        .map_err(|source| verification("admit the crash residue for recovery", source))?;
     drop(admission);
     Ok(())
 }

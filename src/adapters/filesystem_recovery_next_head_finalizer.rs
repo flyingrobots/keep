@@ -4,9 +4,9 @@ use cap_std::fs::Dir;
 
 use super::retention::FilesystemRetainedEvidence;
 use super::{
-    CatalogRestartPolicy, FilesystemRecoveryNextHeadFinalizationOpenError,
-    FilesystemRecoveryStageDiscardOpenError, FilesystemRecoveryStageDiscarder,
-    FilesystemVersionTwoRecoveryAdmission, RecoveryStageParent,
+    CatalogRestartPolicy, FilesystemRecoveryAdmission,
+    FilesystemRecoveryNextHeadFinalizationOpenError, FilesystemRecoveryStageDiscardOpenError,
+    FilesystemRecoveryStageDiscarder, RecoveryStageParent,
 };
 
 /// Writer-authorized pinned filesystem adapter for exact next-head finalization.
@@ -40,15 +40,15 @@ impl FilesystemRecoveryNextHeadFinalizer {
     ///
     /// Returns [`FilesystemRecoveryNextHeadFinalizationOpenError`] on root-clone
     /// or namespace pinning failure.
-    pub fn open_version_two(
-        admission: FilesystemVersionTwoRecoveryAdmission,
+    pub fn open(
+        admission: FilesystemRecoveryAdmission,
         policy: CatalogRestartPolicy,
     ) -> Result<Self, FilesystemRecoveryNextHeadFinalizationOpenError> {
         let (lock, retention, roots, manifests) = admission.into_parts();
         let root = lock
             .clone_directory()
             .map_err(|source| FilesystemRecoveryStageDiscardOpenError::CloneRoot { source })?;
-        let discarder = FilesystemRecoveryStageDiscarder::from_version_two_lock(lock)?;
+        let discarder = FilesystemRecoveryStageDiscarder::from_lock(lock)?;
         Ok(Self {
             discarder,
             policy,

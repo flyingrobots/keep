@@ -7,8 +7,8 @@ use std::io;
 
 use super::{
     CatalogAdmissionError, CatalogDecodeError, CatalogRestartArtifact, CatalogRestartPhase,
-    CatalogSnapshotError, FilesystemPlatformAdmissionError, PublicationHeadDecodeError,
-    SegmentDigest, SegmentReadError,
+    CatalogSnapshotError, FilesystemStoreAdmissionError, PublicationHeadDecodeError, SegmentDigest,
+    SegmentReadError,
 };
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
@@ -19,7 +19,7 @@ pub enum CatalogRestartError {
     /// marker refused before any catalog artifact was opened.
     Admission {
         /// Preserved namespace or format-marker refusal.
-        source: Box<FilesystemPlatformAdmissionError>,
+        source: Box<FilesystemStoreAdmissionError>,
     },
     /// One capability-relative filesystem operation failed.
     Io {

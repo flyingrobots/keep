@@ -12,7 +12,7 @@ use std::error::Error;
 use inventory_double::InventoryDouble;
 use keep::{
     RecoveryEntryName, RecoveryEntryRole, RecoveryInventory, RecoveryInventoryLimit,
-    classify_version_two_recovery_names, read_recovery_inventory,
+    classify_recovery_names, read_recovery_inventory,
 };
 
 #[test]
@@ -26,7 +26,7 @@ fn canonical_names_produce_exact_typed_roles() -> Result<(), Box<dyn Error>> {
         vec![name(catalog_name.as_bytes())?],
     ])?;
 
-    let manifest = classify_version_two_recovery_names(inventory)?;
+    let manifest = classify_recovery_names(inventory)?;
 
     assert!(
         manifest

@@ -4,8 +4,8 @@ use std::error::Error;
 use std::fs;
 
 use super::{
-    AdmittedSegment, AdmittedSegmentRecord, FilesystemPlatformAdmissionError,
-    WriterLockAcquireError, execute_recovery_segment_resume,
+    AdmittedSegment, AdmittedSegmentRecord, FilesystemStoreAdmissionError, WriterLockAcquireError,
+    execute_recovery_segment_resume,
 };
 
 mod fixture;
@@ -50,7 +50,7 @@ fn exact_prefix_resumes_seals_and_retains_writer_authority() -> Result<(), Box<d
 
     assert!(matches!(
         second,
-        FilesystemPlatformAdmissionError::WriterLock {
+        FilesystemStoreAdmissionError::WriterLock {
             source: WriterLockAcquireError::Busy
         }
     ));

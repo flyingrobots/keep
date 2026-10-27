@@ -5,10 +5,10 @@ use std::error::Error;
 use crate::LayoutEntryLimit;
 
 use super::super::{
-    FilesystemPlatformAdmissionError, FilesystemRecoveryStageDiscarder,
-    FilesystemVersionTwoAdmission, FilesystemVersionTwoRecoveryAdmission, RecoveryStage,
-    RecoveryStageDiscardRequest, RecoveryStageEvidence, RecoveryStageMetadata, SegmentReadPolicy,
-    SegmentRecordLimit, admit_recovery_stage_bytes, assess_recovery_stage, catalog_decoder,
+    FilesystemRecoveryAdmission, FilesystemRecoveryStageDiscarder, FilesystemStoreAdmission,
+    FilesystemStoreAdmissionError, RecoveryStage, RecoveryStageDiscardRequest,
+    RecoveryStageEvidence, RecoveryStageMetadata, SegmentReadPolicy, SegmentRecordLimit,
+    admit_recovery_stage_bytes, assess_recovery_stage, catalog_decoder,
     filesystem_test_sandbox::TestDirectory, fingerprint_recovery_stage,
     plan_recovery_stage_discard, publication_head_decoder, segment_header,
 };
@@ -61,9 +61,7 @@ impl DiscardFixture {
     pub(super) fn new(name: &str) -> Result<Self, Box<dyn Error>> {
         let directory = TestDirectory::create(name)?;
         drop(
-            FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(
-                directory.path(),
-            )?,
+            FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(directory.path())?,
         );
         Ok(Self { directory })
     }
@@ -83,12 +81,12 @@ impl DiscardFixture {
     /// Acquires single-format recovery admission, the writer authority discard runs under.
     pub(super) fn recovery_admission(
         &self,
-    ) -> Result<FilesystemVersionTwoRecoveryAdmission, FilesystemPlatformAdmissionError> {
-        FilesystemVersionTwoRecoveryAdmission::reopen_unchecked_for_repository_tasks(self.root())
+    ) -> Result<FilesystemRecoveryAdmission, FilesystemStoreAdmissionError> {
+        FilesystemRecoveryAdmission::reopen_unchecked_for_repository_tasks(self.root())
     }
 
     pub(super) fn discarder(&self) -> Result<FilesystemRecoveryStageDiscarder, Box<dyn Error>> {
-        Ok(FilesystemRecoveryStageDiscarder::open_version_two(
+        Ok(FilesystemRecoveryStageDiscarder::open(
             self.recovery_admission()?,
         )?)
     }

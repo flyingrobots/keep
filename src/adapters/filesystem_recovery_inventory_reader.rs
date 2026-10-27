@@ -7,15 +7,14 @@ use std::path::Path;
 use cap_std::ambient_authority;
 use cap_std::fs::Dir;
 
-use super::filesystem_version_two_admission::admit_root;
+use super::filesystem_store_admission::admit_root;
 use super::{
     FilesystemRecoveryStageError, RecoveryEntryName, RecoveryInventory, RecoveryInventoryError,
     RecoveryInventoryLimit, RecoveryInventoryOperation, RecoveryInventoryStorage,
     RecoveryNamespace, RecoveryStage, RecoveryStageCompletionPool, RecoveryStageEvidence,
-    RecoveryStageNamespacePhase, RecoveryStageParent, filesystem_initialization_namespace,
-    filesystem_platform_profile, filesystem_recovery_inventory_scan,
-    filesystem_recovery_namespace::PinnedRecoveryDirectory, filesystem_recovery_stage,
-    read_recovery_inventory,
+    RecoveryStageNamespacePhase, RecoveryStageParent, filesystem_platform_profile,
+    filesystem_recovery_inventory_scan, filesystem_recovery_namespace::PinnedRecoveryDirectory,
+    filesystem_recovery_stage, filesystem_store_namespace, read_recovery_inventory,
 };
 
 const STAGING_NAME: &str = "staging";
@@ -44,19 +43,19 @@ impl FilesystemRecoveryInventoryReader {
     /// optional retained catalog `head.next`, and the canonical `FORMAT` marker.
     /// No writer lock is taken
     /// and no protocol state is mutated. Classify the resulting inventory with
-    /// [`classify_version_two_recovery_names`](crate::classify_version_two_recovery_names).
+    /// [`classify_recovery_names`](crate::classify_recovery_names).
     ///
     /// # Errors
     ///
     /// Returns [`RecoveryInventoryError::Io`] for the store root when platform
-    /// or version-two admission refuses; the source carries the exact
-    /// [`FilesystemPlatformAdmissionError`](crate::FilesystemPlatformAdmissionError).
+    /// or store admission refuses; the source carries the exact
+    /// [`FilesystemStoreAdmissionError`](crate::FilesystemStoreAdmissionError).
     /// A root without the `FORMAT` marker refuses.
-    pub fn open_version_two(store_root: &Path) -> Result<Self, RecoveryInventoryError> {
-        let root = filesystem_platform_profile::open_version_two(store_root).map_err(root_error)?;
+    pub fn open(store_root: &Path) -> Result<Self, RecoveryInventoryError> {
+        let root = filesystem_platform_profile::open(store_root).map_err(root_error)?;
         admit_root(
             &root,
-            filesystem_initialization_namespace::admit_version_two_with_catalog_stage,
+            filesystem_store_namespace::admit_store_with_catalog_stage,
         )
         .map_err(|source| root_error(io::Error::new(io::ErrorKind::InvalidData, source)))?;
         Self::pin(root)
@@ -64,30 +63,29 @@ impl FilesystemRecoveryInventoryReader {
 
     /// Opens a committed root without platform admission for repository tasks.
     ///
-    /// Every namespace, record, and identity law of [`Self::open_version_two`]
+    /// Every namespace, record, and identity law of [`Self::open`]
     /// still applies.
     ///
     /// # Errors
     ///
-    /// As [`Self::open_version_two`] after platform admission.
+    /// As [`Self::open`] after platform admission.
     #[cfg(any(test, feature = "repository-tasks"))]
     #[doc(hidden)]
-    pub fn open_version_two_unchecked_for_repository_tasks(
+    pub fn open_unchecked_for_repository_tasks(
         store_root: &Path,
     ) -> Result<Self, RecoveryInventoryError> {
         let root = Dir::open_ambient_dir(store_root, ambient_authority()).map_err(root_error)?;
         admit_root(
             &root,
-            filesystem_initialization_namespace::admit_version_two_with_catalog_stage,
+            filesystem_store_namespace::admit_store_with_catalog_stage,
         )
         .map_err(|source| root_error(io::Error::new(io::ErrorKind::InvalidData, source)))?;
         Self::pin(root)
     }
 
-    /// Pins an already admitted, writer-locked version-two root.
-    pub(super) fn from_version_two_root(root: Dir) -> Result<Self, RecoveryInventoryError> {
-        filesystem_initialization_namespace::admit_version_two_with_catalog_stage(&root)
-            .map_err(root_error)?;
+    /// Pins an already admitted, writer-locked store root.
+    pub(super) fn from_admitted_root(root: Dir) -> Result<Self, RecoveryInventoryError> {
+        filesystem_store_namespace::admit_store_with_catalog_stage(&root).map_err(root_error)?;
         Self::pin(root)
     }
 

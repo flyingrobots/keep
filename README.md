@@ -55,7 +55,7 @@ Keep is required to refuse all three, before mutating anything.
   at 156 before/during/after coordinates (`KEEP-CRASH-001`–`052`) and
   verifies the store lands in exactly one documented lawful state each time,
   for version-1 publication and for version-2 retention publication.
-- **One store format, created directly.** `FilesystemVersionTwoAdmission::initialize`
+- **One store format, created directly.** `FilesystemStoreAdmission::initialize`
   creates a version-2 store through a recoverable state machine with one
   durable commit point; an interrupted call resumes, and any other nonempty
   directory refuses before it is touched. A 41-case process-death matrix
@@ -237,10 +237,9 @@ Select a crash campaign with `--sequence NAME` using these exact CLI names:
 | `catalog` | Catalog publication |
 | `head` | Publication-head replacement |
 | `recovery-discard` | Explicit recovery evidence discard |
-| `initialization` | Writer-locked initialization |
 | `retention` | Retention root, manifest, and head publication |
-| `version-two-catalog` | Version-two catalog writer and stage recovery |
-| `version-two-initialization` | Direct initialization and its recovery |
+| `retained-catalog` | Successor catalog publication beside a retained root, and its stage recovery |
+| `initialization` | Direct initialization and its recovery |
 
 ```bash
 cargo xtask durability-crash-matrix --sequence retention

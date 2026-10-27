@@ -20,8 +20,7 @@ use crate::adapters::populated_store::{self, FirstCatalogRecords, StoreAdmission
 use crate::adapters::test_support::decode_hex;
 use crate::adapters::{
     AdmittedCatalog, AdmittedSegment, CatalogSnapshot, ChecksummedCatalog,
-    ChecksummedPublicationHead, FilesystemVersionTwoAdmission, SegmentReadPolicy,
-    SegmentRecordLimit,
+    ChecksummedPublicationHead, FilesystemStoreAdmission, SegmentReadPolicy, SegmentRecordLimit,
 };
 use crate::{
     RetentionGenerationExpectation, RetentionNamespace, RetentionPolicy, RetentionRoot,
@@ -53,14 +52,14 @@ pub(super) const CATALOG_NAME: &str =
 /// Builds one initialized version-2 store and pins its retention authority.
 ///
 /// The fixture initializes the store, publishes the exact bundle corpus as
-/// its first catalog through the version-two writer, releases writer
+/// its first catalog through the writer, releases writer
 /// authority, then reopens the admitted root for retention publication.
 pub(super) fn open_authority(
     name: &str,
 ) -> Result<(TestDirectory, FilesystemRetentionPublicationAuthority), Box<dyn Error>> {
     let sandbox = initialized_store(name)?;
     let admission =
-        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
+        FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
     let authority = FilesystemRetentionPublicationAuthority::open(admission)?;
     Ok((sandbox, authority))
 }
@@ -247,13 +246,11 @@ fn hex(bytes: &[u8; 32]) -> String {
 const UNCHECKED: StoreAdmission = StoreAdmission {
     initialize: |root| {
         Ok(
-            FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(root)?
+            FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(root)?
                 .into_admission(),
         )
     },
-    reopen_version_two: |root| {
-        Ok(FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(root)?)
-    },
+    reopen: |root| Ok(FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks(root)?),
 };
 
 /// Builds one version-2 store holding the frozen bundle, with writer authority released.

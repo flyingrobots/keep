@@ -88,9 +88,9 @@ generations, realization profiles, closure policies, anchors, and roots;
 canonical root, manifest, head, and marker codecs matching their golden
 records; storage-independent transition planning, bounded closure
 verification against one pinned catalog, preflight, preparation, and the
-17-phase publication port; `FilesystemVersionTwoAdmission::initialize`, which
+17-phase publication port; `FilesystemStoreAdmission::initialize`, which
 creates or resumes a store through the initialization protocol and its 41-case
-process-death matrix; `FilesystemVersionTwoAdmission::reopen`, which admits
+process-death matrix; `FilesystemStoreAdmission::reopen`, which admits
 the committed namespace and the marker and pins the retention directories it
 admitted; and `FilesystemRetentionPublicationAuthority`, which publishes
 initial and successor generations against the observed head, binds this
@@ -111,7 +111,7 @@ Writer authority coordinates cooperating writers in a managed namespace; it does
 
 `FilesystemRetentionSnapshot` binds a catalog, retention head and manifest under a shared reader fence and verifies selected roots on demand. `DurableStore` composes that view with authenticated whole-blob and exact-range reads, delivered in [PR #164](https://github.com/flyingrobots/keep/pull/164); the [read contract](../../invariants/authenticated-reconstruction/README.md) records proof and allocation limits.
 
-The candidate-catalog retained-closure gate is implemented over its storage port ([#125](https://github.com/flyingrobots/keep/issues/125)). `FilesystemVersionTwoCatalogPublisher` ingests one segment and publishes a catalog successor through it, including the first catalog of an initialized store, and version-two next-head finalization runs the same admission before replacing `HEAD` ([#198](https://github.com/flyingrobots/keep/issues/198)); see [catalog publication and stage recovery](catalog-publication.md). Verifying a new retention root against the current catalog is a different operation.
+The candidate-catalog retained-closure gate is implemented over its storage port ([#125](https://github.com/flyingrobots/keep/issues/125)). `FilesystemCatalogPublisher` ingests one segment and publishes a catalog successor through it, including the first catalog of an initialized store, and version-two next-head finalization runs the same admission before replacing `HEAD` ([#198](https://github.com/flyingrobots/keep/issues/198)); see [catalog publication and stage recovery](catalog-publication.md). Verifying a new retention root against the current catalog is a different operation.
 
 [Durable verification reports](../../invariants/verification/README.md) are delivered in [PR #165](https://github.com/flyingrobots/keep/pull/165), with explicit subject/depth evidence and typed non-success outcomes.
 

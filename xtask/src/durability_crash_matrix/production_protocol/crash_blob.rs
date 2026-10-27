@@ -11,8 +11,8 @@ use keep::{
 use super::super::DurabilityCrashMatrixError;
 use super::verification;
 
-/// The exact bytes the version-two writer ingests before process death.
-pub(in crate::durability_crash_matrix) const VERSION_TWO_CONTENT: &[u8] =
+/// The exact bytes the writer ingests before process death.
+pub(in crate::durability_crash_matrix) const SUCCESSOR_CONTENT: &[u8] =
     b"keep version-two crash campaign: one blob ingested after the first catalog";
 
 /// The synthetic source byte of the frozen one-zero bundle corpus.
@@ -27,10 +27,10 @@ pub(in crate::durability_crash_matrix) struct CrashBlob {
 }
 
 impl CrashBlob {
-    /// The blob the version-two writer ingests before process death.
-    pub(in crate::durability_crash_matrix) fn version_two()
-    -> Result<Self, DurabilityCrashMatrixError> {
-        Self::identify(VERSION_TWO_CONTENT)
+    /// The blob the writer ingests before process death.
+    pub(in crate::durability_crash_matrix) fn successor() -> Result<Self, DurabilityCrashMatrixError>
+    {
+        Self::identify(SUCCESSOR_CONTENT)
     }
 
     /// The blob whose first catalog is the frozen bundle corpus.

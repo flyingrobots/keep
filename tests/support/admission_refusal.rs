@@ -1,6 +1,6 @@
 //! This module owns extraction of typed namespace refusals from store admission.
 
-use keep::{FilesystemNamespaceRefusal, FilesystemPlatformAdmissionError};
+use keep::{FilesystemNamespaceRefusal, FilesystemStoreAdmissionError};
 
 /// The namespace refusal one store admission failure carries, if any.
 ///
@@ -8,9 +8,9 @@ use keep::{FilesystemNamespaceRefusal, FilesystemPlatformAdmissionError};
 /// so laws assert the exact contradiction instead of an error string.
 #[must_use]
 pub(crate) fn namespace_refusal(
-    error: &FilesystemPlatformAdmissionError,
+    error: &FilesystemStoreAdmissionError,
 ) -> Option<FilesystemNamespaceRefusal> {
-    let FilesystemPlatformAdmissionError::Namespace { source } = error else {
+    let FilesystemStoreAdmissionError::Namespace { source } = error else {
         return None;
     };
     source

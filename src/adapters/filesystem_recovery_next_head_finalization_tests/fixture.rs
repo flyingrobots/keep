@@ -8,9 +8,8 @@ use crate::LayoutEntryLimit;
 
 use super::super::{
     AdmittedSegment, CatalogPublicationExpectation, CatalogRestartByteLimit, CatalogRestartPolicy,
-    CatalogSnapshot, ChecksummedCatalog, ChecksummedPublicationHead,
-    FilesystemPlatformAdmissionError, FilesystemRecoveryNextHeadFinalizer,
-    FilesystemVersionTwoAdmission, FilesystemVersionTwoRecoveryAdmission,
+    CatalogSnapshot, ChecksummedCatalog, ChecksummedPublicationHead, FilesystemRecoveryAdmission,
+    FilesystemRecoveryNextHeadFinalizer, FilesystemStoreAdmission, FilesystemStoreAdmissionError,
     RecoveryNextHeadFinalizationRequest, RecoveryStage, RecoveryStageMetadata, SegmentReadPolicy,
     SegmentRecordLimit, admit_recovery_stage_bytes, assess_recovery_stage,
     filesystem_test_sandbox::TestDirectory, fingerprint_recovery_stage, physical_pool_name,
@@ -36,9 +35,7 @@ impl FinalizationFixture {
     pub(super) fn new(name: &str) -> Result<Self, Box<dyn Error>> {
         let directory = TestDirectory::create(name)?;
         drop(
-            FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(
-                directory.path(),
-            )?,
+            FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(directory.path())?,
         );
         Ok(Self { directory })
     }
@@ -107,12 +104,12 @@ impl FinalizationFixture {
     /// Acquires single-format recovery admission, the writer authority finalization runs under.
     pub(super) fn recovery_admission(
         &self,
-    ) -> Result<FilesystemVersionTwoRecoveryAdmission, FilesystemPlatformAdmissionError> {
-        FilesystemVersionTwoRecoveryAdmission::reopen_unchecked_for_repository_tasks(self.root())
+    ) -> Result<FilesystemRecoveryAdmission, FilesystemStoreAdmissionError> {
+        FilesystemRecoveryAdmission::reopen_unchecked_for_repository_tasks(self.root())
     }
 
     pub(super) fn finalizer(&self) -> Result<FilesystemRecoveryNextHeadFinalizer, Box<dyn Error>> {
-        Ok(FilesystemRecoveryNextHeadFinalizer::open_version_two(
+        Ok(FilesystemRecoveryNextHeadFinalizer::open(
             self.recovery_admission()?,
             policy()?,
         )?)

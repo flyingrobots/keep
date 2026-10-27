@@ -6,12 +6,12 @@ use std::path::{Path, PathBuf};
 use crate::LayoutEntryLimit;
 
 use super::super::{
-    FilesystemPlatformAdmissionError, FilesystemRecoveryStageCompleter,
-    FilesystemVersionTwoAdmission, FilesystemVersionTwoRecoveryAdmission, RecoveryStage,
-    RecoveryStageCompletionRequest, RecoveryStageCompletionTarget, RecoveryStageMetadata,
-    SegmentReadPolicy, SegmentRecordLimit, admit_recovery_stage_bytes, assess_recovery_stage,
-    filesystem_test_sandbox::TestDirectory, fingerprint_recovery_stage, physical_pool_name,
-    plan_recovery_stage_completion, test_support::decode_hex,
+    FilesystemRecoveryAdmission, FilesystemRecoveryStageCompleter, FilesystemStoreAdmission,
+    FilesystemStoreAdmissionError, RecoveryStage, RecoveryStageCompletionRequest,
+    RecoveryStageCompletionTarget, RecoveryStageMetadata, SegmentReadPolicy, SegmentRecordLimit,
+    admit_recovery_stage_bytes, assess_recovery_stage, filesystem_test_sandbox::TestDirectory,
+    fingerprint_recovery_stage, physical_pool_name, plan_recovery_stage_completion,
+    test_support::decode_hex,
 };
 
 const SEGMENT_HEX: &str =
@@ -58,9 +58,7 @@ impl CompletionFixture {
     pub(super) fn new(name: &str) -> Result<Self, Box<dyn Error>> {
         let directory = TestDirectory::create(name)?;
         drop(
-            FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(
-                directory.path(),
-            )?,
+            FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(directory.path())?,
         );
         Ok(Self { directory })
     }
@@ -95,12 +93,12 @@ impl CompletionFixture {
     /// Acquires single-format recovery admission, the writer authority completion runs under.
     pub(super) fn recovery_admission(
         &self,
-    ) -> Result<FilesystemVersionTwoRecoveryAdmission, FilesystemPlatformAdmissionError> {
-        FilesystemVersionTwoRecoveryAdmission::reopen_unchecked_for_repository_tasks(self.root())
+    ) -> Result<FilesystemRecoveryAdmission, FilesystemStoreAdmissionError> {
+        FilesystemRecoveryAdmission::reopen_unchecked_for_repository_tasks(self.root())
     }
 
     pub(super) fn completer(&self) -> Result<FilesystemRecoveryStageCompleter, Box<dyn Error>> {
-        Ok(FilesystemRecoveryStageCompleter::open_version_two(
+        Ok(FilesystemRecoveryStageCompleter::open(
             self.recovery_admission()?,
         )?)
     }

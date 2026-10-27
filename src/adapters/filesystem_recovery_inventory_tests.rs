@@ -9,8 +9,8 @@ use std::os::unix::ffi::OsStringExt;
 
 use super::filesystem_test_sandbox::TestDirectory;
 use super::{
-    FilesystemEntryKind, FilesystemNamespaceRefusal, FilesystemPlatformAdmissionError,
-    FilesystemRecoveryInventoryReader, FilesystemVersionTwoAdmission, RecoveryInventoryError,
+    FilesystemEntryKind, FilesystemNamespaceRefusal, FilesystemRecoveryInventoryReader,
+    FilesystemStoreAdmission, FilesystemStoreAdmissionError, RecoveryInventoryError,
     RecoveryInventoryLimit, RecoveryInventoryOperation, RecoveryNamespace,
 };
 
@@ -99,13 +99,12 @@ fn filesystem_inventory_never_follows_protocol_directory_links() -> Result<(), B
     let sandbox = TestDirectory::create("recovery-inventory-symlink")?;
     let store = sandbox.path().join("store");
     fs::create_dir(&store)?;
-    drop(FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(&store)?);
+    drop(FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(&store)?);
     fs::create_dir(sandbox.path().join("target"))?;
     fs::remove_dir(store.join(STAGING_NAME))?;
     symlink("../target", store.join(STAGING_NAME))?;
 
-    let Err(error) =
-        FilesystemRecoveryInventoryReader::open_version_two_unchecked_for_repository_tasks(&store)
+    let Err(error) = FilesystemRecoveryInventoryReader::open_unchecked_for_repository_tasks(&store)
     else {
         return Err("filesystem inventory followed a staging-directory link".into());
     };
@@ -157,24 +156,22 @@ fn replaced_protocol_directory_refuses_the_pinned_inventory() -> Result<(), Box<
 /// A store committed by direct initialization.
 fn initialized_namespace(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
     let sandbox = TestDirectory::create(name)?;
-    drop(FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(sandbox.path())?);
+    drop(FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(sandbox.path())?);
     Ok(sandbox)
 }
 
 fn open_reader(
     sandbox: &TestDirectory,
 ) -> Result<FilesystemRecoveryInventoryReader, RecoveryInventoryError> {
-    FilesystemRecoveryInventoryReader::open_version_two_unchecked_for_repository_tasks(
-        sandbox.path(),
-    )
+    FilesystemRecoveryInventoryReader::open_unchecked_for_repository_tasks(sandbox.path())
 }
 
 /// The namespace refusal one root admission failure carries, if any.
 fn namespace_refusal(source: &std::io::Error) -> Option<FilesystemNamespaceRefusal> {
     let admission = source
         .get_ref()?
-        .downcast_ref::<FilesystemPlatformAdmissionError>()?;
-    let FilesystemPlatformAdmissionError::Namespace { source } = admission else {
+        .downcast_ref::<FilesystemStoreAdmissionError>()?;
+    let FilesystemStoreAdmissionError::Namespace { source } = admission else {
         return None;
     };
     source

@@ -5,7 +5,7 @@ use std::fmt;
 /// One fixed entry required in an initialized store root.
 ///
 /// The first four are required in every root. The remaining entries are
-/// required only when a version-two root is classified. Catalog `HEAD` is
+/// required only when a store root is classified. Catalog `HEAD` is
 /// required by neither: a store holds none until its first publication.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RecoveryRequiredEntry {

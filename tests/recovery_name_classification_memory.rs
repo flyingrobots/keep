@@ -9,7 +9,7 @@ use allocation_counter::measure;
 use inventory_double::InventoryDouble;
 use keep::{
     RecoveryEntryName, RecoveryInventoryLimit, RecoveryNameClassificationError,
-    classify_version_two_recovery_names, read_recovery_inventory,
+    classify_recovery_names, read_recovery_inventory,
 };
 
 #[test]
@@ -40,7 +40,7 @@ fn refusal_moves_the_exact_name_without_an_extra_allocation() -> Result<(), Box<
 
     let allocations = measure(|| {
         if let Some(inventory) = input.take() {
-            result = Some(classify_version_two_recovery_names(inventory));
+            result = Some(classify_recovery_names(inventory));
         }
     });
     let error = match result.ok_or("name classification did not run")? {

@@ -1,8 +1,8 @@
 //! This module owns pinned writer authority for filesystem stage completion.
 
 use super::{
-    FilesystemRecoveryStageCompletionOpenError, FilesystemRecoveryStageDiscarder,
-    FilesystemVersionTwoRecoveryAdmission,
+    FilesystemRecoveryAdmission, FilesystemRecoveryStageCompletionOpenError,
+    FilesystemRecoveryStageDiscarder,
 };
 
 /// Writer-authorized pinned filesystem adapter for exact stage completion.
@@ -26,10 +26,10 @@ impl FilesystemRecoveryStageCompleter {
     ///
     /// Returns [`FilesystemRecoveryStageCompletionOpenError`] on root-clone or
     /// namespace pinning failure.
-    pub fn open_version_two(
-        admission: FilesystemVersionTwoRecoveryAdmission,
+    pub fn open(
+        admission: FilesystemRecoveryAdmission,
     ) -> Result<Self, FilesystemRecoveryStageCompletionOpenError> {
-        FilesystemRecoveryStageDiscarder::open_version_two(admission)
+        FilesystemRecoveryStageDiscarder::open(admission)
             .map(|discarder| Self { discarder })
             .map_err(Into::into)
     }

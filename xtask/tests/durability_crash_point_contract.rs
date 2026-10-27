@@ -5,7 +5,7 @@
 use xtask::{DurabilityCrashPoint, DurabilityCrashSequence};
 
 use DurabilityCrashSequence::{
-    Catalog, Head, RecoveryDiscard, Retention, Segment, VersionTwoCatalog, VersionTwoInitialization,
+    Catalog, Head, Initialization, RecoveryDiscard, RetainedCatalog, Retention, Segment,
 };
 
 const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
@@ -221,79 +221,79 @@ const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
         Retention,
     ),
     (
-        DurabilityCrashPoint::VersionTwoLinkSegment,
+        DurabilityCrashPoint::RetainedLinkSegment,
         "KEEP-CRASH-074",
-        VersionTwoCatalog,
+        RetainedCatalog,
     ),
     (
-        DurabilityCrashPoint::VersionTwoCreateCatalogStage,
+        DurabilityCrashPoint::RetainedCreateCatalogStage,
         "KEEP-CRASH-075",
-        VersionTwoCatalog,
+        RetainedCatalog,
     ),
     (
-        DurabilityCrashPoint::VersionTwoSynchronizeHead,
+        DurabilityCrashPoint::RetainedSynchronizeHead,
         "KEEP-CRASH-076",
-        VersionTwoCatalog,
+        RetainedCatalog,
     ),
     (
-        DurabilityCrashPoint::VersionTwoReplaceHead,
+        DurabilityCrashPoint::RetainedReplaceHead,
         "KEEP-CRASH-077",
-        VersionTwoCatalog,
+        RetainedCatalog,
     ),
     (
         DurabilityCrashPoint::InitializeOpenAndLockWriterFile,
         "KEEP-CRASH-081",
-        VersionTwoInitialization,
+        Initialization,
     ),
     (
         DurabilityCrashPoint::InitializeWriteMarkerStage,
         "KEEP-CRASH-082",
-        VersionTwoInitialization,
+        Initialization,
     ),
     (
         DurabilityCrashPoint::InitializeSynchronizeMarkerStage,
         "KEEP-CRASH-083",
-        VersionTwoInitialization,
+        Initialization,
     ),
     (
         DurabilityCrashPoint::InitializeSynchronizeRootAfterMarkerStage,
         "KEEP-CRASH-084",
-        VersionTwoInitialization,
+        Initialization,
     ),
     (
         DurabilityCrashPoint::InitializeAdmitReaderFence,
         "KEEP-CRASH-085",
-        VersionTwoInitialization,
+        Initialization,
     ),
     (
         DurabilityCrashPoint::InitializeAdmitDirectory,
         "KEEP-CRASH-086",
-        VersionTwoInitialization,
+        Initialization,
     ),
     (
         DurabilityCrashPoint::InitializeLinkMarker,
         "KEEP-CRASH-087",
-        VersionTwoInitialization,
+        Initialization,
     ),
     (
         DurabilityCrashPoint::InitializeSynchronizeRootAfterMarker,
         "KEEP-CRASH-088",
-        VersionTwoInitialization,
+        Initialization,
     ),
     (
         DurabilityCrashPoint::InitializeRemoveMarkerStage,
         "KEEP-CRASH-089",
-        VersionTwoInitialization,
+        Initialization,
     ),
     (
         DurabilityCrashPoint::InitializeSynchronizeRootAfterCleanup,
         "KEEP-CRASH-090",
-        VersionTwoInitialization,
+        Initialization,
     ),
     (
         DurabilityCrashPoint::InitializeDiscardIncompleteMarkerStage,
         "KEEP-CRASH-091",
-        VersionTwoInitialization,
+        Initialization,
     ),
 ];
 
@@ -338,7 +338,7 @@ fn initialization_directory_admission_runs_one_during_case_per_directory() {
     }
     assert_eq!(
         DurabilityCrashPoint::INITIALIZATION_DIRECTORIES,
-        u32::try_from(keep::VersionTwoInitializationDirectory::ALL.len()).unwrap_or(u32::MAX)
+        u32::try_from(keep::StoreInitializationDirectory::ALL.len()).unwrap_or(u32::MAX)
     );
 }
 
@@ -358,7 +358,7 @@ fn retired_crash_identifiers_are_never_reassigned() {
 fn initialization_boundaries_take_consecutive_new_identifiers() {
     let initialization: Vec<_> = DurabilityCrashPoint::ALL
         .into_iter()
-        .filter(|point| point.sequence() == VersionTwoInitialization)
+        .filter(|point| point.sequence() == Initialization)
         .map(DurabilityCrashPoint::identifier)
         .collect();
     let expected: Vec<_> = (81..=91)
@@ -378,8 +378,8 @@ fn crash_matrix_cli_admits_its_stable_sequence_names() {
         ("head", Head),
         ("recovery-discard", RecoveryDiscard),
         ("retention", Retention),
-        ("version-two-catalog", VersionTwoCatalog),
-        ("version-two-initialization", VersionTwoInitialization),
+        ("retained-catalog", RetainedCatalog),
+        ("initialization", Initialization),
     ] {
         assert_eq!(
             DurabilityCrashSequence::from_identifier(name),

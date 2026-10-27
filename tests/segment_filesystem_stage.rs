@@ -14,9 +14,9 @@ use std::io::ErrorKind;
 
 use keep::{
     AdmittedSegment, AdmittedSegmentRecord, CatalogRestartByteLimit, CatalogRestartPolicy,
-    FilesystemVersionTwoAdmission, FilesystemVersionTwoCatalogPublisher, LayoutEntryLimit,
-    SegmentHeader, SegmentReadError, SegmentReadPolicy, SegmentRecordLimit,
-    SegmentStageCreateError, StagedSegment,
+    FilesystemCatalogPublisher, FilesystemStoreAdmission, LayoutEntryLimit, SegmentHeader,
+    SegmentReadError, SegmentReadPolicy, SegmentRecordLimit, SegmentStageCreateError,
+    StagedSegment,
 };
 use sandbox::TestDirectory;
 use support::decode_hex;
@@ -133,14 +133,10 @@ fn dropping_an_unsealed_stage_preserves_evidence_without_sealing() -> Result<(),
     Ok(())
 }
 
-fn open_publisher(
-    sandbox: &TestDirectory,
-) -> Result<FilesystemVersionTwoCatalogPublisher, Box<dyn Error>> {
-    let admission = FilesystemVersionTwoAdmission::initialize(sandbox.path())?.into_admission();
+fn open_publisher(sandbox: &TestDirectory) -> Result<FilesystemCatalogPublisher, Box<dyn Error>> {
+    let admission = FilesystemStoreAdmission::initialize(sandbox.path())?.into_admission();
     let policy = CatalogRestartPolicy::new(read_policy(), CatalogRestartByteLimit::new(1_048_576)?);
-    Ok(FilesystemVersionTwoCatalogPublisher::open(
-        admission, policy,
-    )?)
+    Ok(FilesystemCatalogPublisher::open(admission, policy)?)
 }
 
 const fn read_policy() -> SegmentReadPolicy {

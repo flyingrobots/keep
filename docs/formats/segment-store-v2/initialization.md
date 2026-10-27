@@ -41,7 +41,7 @@ admission and the reader fence.
 
 ## Forward protocol
 
-`FilesystemVersionTwoAdmission::initialize` runs under exclusive writer
+`FilesystemStoreAdmission::initialize` runs under exclusive writer
 authority. It performs these phases in order:
 
 | Phase | Operation | Durable effect |
@@ -110,10 +110,10 @@ an existing `reader.lock` or directory is admitted by kind, length, and
 membership and its parent is synchronized again, and the link never replaces
 an entry. Replay therefore never depends on knowing which synchronization
 completed before process death. A synchronization failure returns
-`VersionTwoInitializationError::Io` at that phase and leaves the state on the
+`StoreInitializationError::Io` at that phase and leaves the state on the
 table, so a retry resumes and repeats the synchronization.
 
-Refusals carry their evidence as `VersionTwoInitializationRefusal`:
+Refusals carry their evidence as `StoreInitializationRefusal`:
 
 - an entry outside the initialization namespace, a directory or `reader.lock`
   without `FORMAT.next`, a directory out of order, or an entry inside a
@@ -165,7 +165,7 @@ path refuses it as `MissingFormatMarker`. A root holding only an empty
 
 ## Process-death matrix
 
-`cargo xtask durability-crash-matrix --sequence version-two-initialization`
+`cargo xtask durability-crash-matrix --sequence initialization`
 runs the production initializer in a subprocess and kills it before, during,
 and after each boundary. The parent then checks the exact inventory and bytes,
 the admission refusal or result, and runs `initialize` again as recovery. It

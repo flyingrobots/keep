@@ -8,8 +8,8 @@ use super::filesystem_test_sandbox::TestDirectory;
 use super::test_support::decode_hex;
 use crate::{
     AdmittedSegmentRecord, CatalogRestartByteLimit, CatalogRestartPolicy,
-    FilesystemVersionTwoAdmission, FilesystemVersionTwoCatalogPublisher, LayoutEntryLimit,
-    SegmentHeader, SegmentReadPolicy, SegmentRecordLimit, SegmentStageCreateError, StagedSegment,
+    FilesystemCatalogPublisher, FilesystemStoreAdmission, LayoutEntryLimit, SegmentHeader,
+    SegmentReadPolicy, SegmentRecordLimit, SegmentStageCreateError, StagedSegment,
 };
 
 const ONE_ZERO_SEGMENT_HEX: &str =
@@ -109,17 +109,13 @@ fn dropping_an_unsealed_stage_preserves_the_reusable_prefix() -> Result<(), Box<
 }
 
 /// Initializes a single-format store in `sandbox` and opens its writer.
-fn open_publisher(
-    sandbox: &TestDirectory,
-) -> Result<FilesystemVersionTwoCatalogPublisher, Box<dyn Error>> {
+fn open_publisher(sandbox: &TestDirectory) -> Result<FilesystemCatalogPublisher, Box<dyn Error>> {
     let admission =
-        FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(sandbox.path())?
+        FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(sandbox.path())?
             .into_admission();
     let policy = CatalogRestartPolicy::new(
         SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
         CatalogRestartByteLimit::new(1_048_576)?,
     );
-    Ok(FilesystemVersionTwoCatalogPublisher::open(
-        admission, policy,
-    )?)
+    Ok(FilesystemCatalogPublisher::open(admission, policy)?)
 }

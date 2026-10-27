@@ -4,19 +4,19 @@ use std::io;
 
 use cap_std::fs::Dir;
 
-use super::VersionTwoRecordRefusal as Refusal;
+use super::StoreRecordRefusal as Refusal;
 use super::filesystem_exact_record::{self as exact_record, ExactRecordError, ExactRecordRefusal};
 use super::{AdmittedStoreFormatMarker, FORMAT_MARKER_LENGTH};
 
 const MARKER_NAME: &str = "FORMAT";
 
-/// Reads and admits `FORMAT` as the one registered version-two marker.
+/// Reads and admits `FORMAT` as the one registered format marker.
 ///
 /// The record is reopened without following links, bounded to its exact
-/// canonical length, and decoded. Writer authority over a version-two root
+/// canonical length, and decoded. Writer authority over a store root
 /// must not be returned before this admission succeeds. Every refusal is an
 /// `InvalidData` error whose source is a
-/// [`VersionTwoRecordRefusal`](super::VersionTwoRecordRefusal). Nothing about
+/// [`StoreRecordRefusal`](super::StoreRecordRefusal). Nothing about
 /// the root directory's own identity is compared: the marker binds the format
 /// contract, not a location.
 pub(super) fn admit(root: &Dir) -> io::Result<()> {

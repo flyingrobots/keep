@@ -240,7 +240,7 @@ fn cleanup_sync_failure_reports_removed_stage_and_preserved_pool() -> Result<(),
     );
     drop(authority);
     let admission =
-        crate::adapters::FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(
+        crate::adapters::FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks(
             sandbox.path(),
         )?;
     let mut restarted =
