@@ -142,14 +142,19 @@ deadline bounds failure handling; successful synchronization does not depend
 on elapsed time, sleeps, or test ordering.
 
 The production protocol driver and expected-state model are separate
-implementations. The driver delegates every target mutation to the ordinary
-filesystem adapters. Repository-only partial-write methods share the same
-catalog and head stage writers and stop at deterministic proper prefixes;
-they do not hand-construct a replacement namespace. Restart inspection proves
-the complete path set and exact Golden File Worldline bytes. It additionally
-verifies hard-link identity at link transitions, reacquires `writer.lock`
-after process death, classifies `current.seg`, `current.cat`, and `head.next`
-through the production recovery classifiers, admits immutable segment and
+implementations. The segment, catalog, head, and recovery-discard rows run on
+a store created by direct initialization and published through the
+single-format writer and the retained-closure gate; the driver observes the
+writer's own segment-stage port and catalog transitions and delegates every
+target mutation to them. A `during` catalog or head write is the crash itself:
+the driver writes a deterministic proper prefix into the stage file the writer
+created and dies before the writer's own write. It does not hand-construct a
+namespace. Restart inspection proves the complete path set, including the
+canonical `FORMAT` marker, and exact Golden File Worldline bytes. It
+additionally verifies hard-link identity at link transitions, admits every
+catalog-protocol residue through single-format recovery admission, classifies
+`current.seg`, `current.cat`, and `head.next` through the production recovery
+classifiers, admits immutable segment and
 catalog bytes through the production decoders, and loads the exact
 generation-1 snapshot when `HEAD` is present. That snapshot must expose the
 one-zero chunk with the exact payload `00`.

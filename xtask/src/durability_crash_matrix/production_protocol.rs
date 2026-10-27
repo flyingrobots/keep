@@ -7,7 +7,6 @@ pub(super) mod initialization;
 mod initialization_storage;
 pub(super) mod populated_store;
 mod publication;
-mod publication_storage;
 mod recovery;
 mod recovery_storage;
 pub(super) mod retention;
@@ -42,7 +41,7 @@ pub(super) fn run(
         DurabilityCrashSequence::Segment
         | DurabilityCrashSequence::Catalog
         | DurabilityCrashSequence::Head => {
-            publication::run(&store_root, &mut control)?;
+            publication::run(&store_root, control)?;
         }
         DurabilityCrashSequence::RecoveryDiscard => {
             recovery::run(&store_root, &mut control)?;

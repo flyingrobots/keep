@@ -26,7 +26,6 @@ fn crash_children_execute_every_claimed_production_protocol() -> Result<(), Box<
     assert!(!child.contains("state::prepare("));
     for required in [
         "StagedSegment::begin(",
-        "publish_catalog_generation(",
         "initialize_store(",
         "execute_recovery_stage_discard(",
         "initialize_observed_for_repository_tasks(",

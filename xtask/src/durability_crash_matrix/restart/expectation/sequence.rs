@@ -98,6 +98,19 @@ pub(super) fn recovery(
     case: DurabilityCrashCase,
 ) -> Result<ExpectedStoreState, DurabilityCrashMatrixError> {
     let mut state = ExpectedStoreState::initialized();
+    if matches!(
+        case.point(),
+        DurabilityCrashPoint::RemoveRecoveryHead
+            | DurabilityCrashPoint::SynchronizeRootAfterRecovery
+    ) {
+        // The interrupted first publication linked both pools before `head.next`.
+        state
+            .artifacts
+            .insert(SEGMENT_POOL_PATH, ArtifactBytes::Segment(337));
+        state
+            .artifacts
+            .insert(CATALOG_POOL_PATH, ArtifactBytes::Catalog(352));
+    }
     match case.point() {
         DurabilityCrashPoint::RemoveRecoveryStage
             if case.position() == DurabilityCrashPosition::Before =>

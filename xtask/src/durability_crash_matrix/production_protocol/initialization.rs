@@ -3,8 +3,8 @@
 use std::path::Path;
 
 use keep::{
-    CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemCatalogPublisher,
-    FilesystemPlatformAdmission, LayoutEntryLimit, RepositoryInitializationStorage,
+    CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemVersionTwoAdmission,
+    FilesystemVersionTwoCatalogPublisher, LayoutEntryLimit, RepositoryInitializationStorage,
     SegmentReadPolicy, SegmentRecordLimit, initialize_store,
 };
 
@@ -26,12 +26,14 @@ pub(super) fn run(
         .map_err(|source| verification("execute production store initialization", source))
 }
 
+/// Initializes the single-format store and opens its writer, as production does.
 pub(super) fn publisher(
     store_root: &Path,
-) -> Result<FilesystemCatalogPublisher, DurabilityCrashMatrixError> {
-    let admission = FilesystemPlatformAdmission::initialize(store_root)
-        .map_err(|source| verification("admit crash catalog publisher platform", source))?;
-    FilesystemCatalogPublisher::open(admission, restart_policy()?)
+) -> Result<FilesystemVersionTwoCatalogPublisher, DurabilityCrashMatrixError> {
+    let admission = FilesystemVersionTwoAdmission::initialize(store_root)
+        .map_err(|source| verification("initialize crash catalog store", source))?
+        .into_admission();
+    FilesystemVersionTwoCatalogPublisher::open(admission, restart_policy()?)
         .map_err(|source| DurabilityCrashMatrixError::io("open crash catalog publisher", source))
 }
 
