@@ -285,7 +285,7 @@ pub(super) fn require_pinned_directories(
     Ok(())
 }
 
-fn require_no_retained_stage(retention: &Dir) -> io::Result<()> {
+pub(super) fn require_no_retained_stage(retention: &Dir) -> io::Result<()> {
     for stage in [
         pool_name::ROOT_STAGE,
         pool_name::MANIFEST_STAGE,

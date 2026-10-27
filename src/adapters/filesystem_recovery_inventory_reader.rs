@@ -3,10 +3,11 @@
 use std::io;
 use std::path::Path;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "repository-tasks"))]
 use cap_std::ambient_authority;
 use cap_std::fs::Dir;
 
+use super::filesystem_version_two_admission::admit_root;
 use super::{
     FilesystemRecoveryStageError, RecoveryEntryName, RecoveryInventory, RecoveryInventoryError,
     RecoveryInventoryLimit, RecoveryInventoryOperation, RecoveryInventoryStorage,
@@ -70,14 +71,66 @@ impl FilesystemRecoveryInventoryReader {
         Self::from_root(root)
     }
 
+    /// Opens one migrated version-two store for read-only stage inventory.
+    ///
+    /// Admission is the version-two recovery law: the production platform for
+    /// every version-two protocol directory, the exact namespace with an
+    /// optional retained catalog `head.next`, the jointly admitted migration
+    /// records, and the restart-stable root identity. No writer lock is taken
+    /// and no protocol state is mutated. Classify the resulting inventory with
+    /// [`classify_version_two_recovery_names`](crate::classify_version_two_recovery_names).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RecoveryInventoryError::Io`] for the store root when platform
+    /// or version-two admission refuses; the source carries the exact
+    /// [`FilesystemPlatformAdmissionError`](crate::FilesystemPlatformAdmissionError).
+    /// A version-one root refuses because its marker and records are absent.
+    pub fn open_version_two(store_root: &Path) -> Result<Self, RecoveryInventoryError> {
+        let root = filesystem_platform_profile::open_version_two(store_root).map_err(root_error)?;
+        admit_root(
+            &root,
+            filesystem_initialization_namespace::admit_version_two_with_catalog_stage,
+        )
+        .map_err(|source| root_error(io::Error::new(io::ErrorKind::InvalidData, source)))?;
+        Self::pin(root)
+    }
+
+    /// Opens a migrated root without platform admission for repository tasks.
+    ///
+    /// Every namespace, record, and identity law of [`Self::open_version_two`]
+    /// still applies.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::open_version_two`] after platform admission.
+    #[cfg(any(test, feature = "repository-tasks"))]
+    #[doc(hidden)]
+    pub fn open_version_two_unchecked_for_repository_tasks(
+        store_root: &Path,
+    ) -> Result<Self, RecoveryInventoryError> {
+        let root = Dir::open_ambient_dir(store_root, ambient_authority()).map_err(root_error)?;
+        admit_root(
+            &root,
+            filesystem_initialization_namespace::admit_version_two_with_catalog_stage,
+        )
+        .map_err(|source| root_error(io::Error::new(io::ErrorKind::InvalidData, source)))?;
+        Self::pin(root)
+    }
+
     pub(super) fn from_root(root: Dir) -> Result<Self, RecoveryInventoryError> {
-        filesystem_initialization_namespace::admit_recoverable(&root).map_err(|source| {
-            RecoveryInventoryError::io(
-                RecoveryNamespace::Root,
-                RecoveryInventoryOperation::OpenNamespace,
-                source,
-            )
-        })?;
+        filesystem_initialization_namespace::admit_recoverable(&root).map_err(root_error)?;
+        Self::pin(root)
+    }
+
+    /// Pins an already admitted, writer-locked version-two root.
+    pub(super) fn from_version_two_root(root: Dir) -> Result<Self, RecoveryInventoryError> {
+        filesystem_initialization_namespace::admit_version_two_with_catalog_stage(&root)
+            .map_err(root_error)?;
+        Self::pin(root)
+    }
+
+    fn pin(root: Dir) -> Result<Self, RecoveryInventoryError> {
         let staging =
             PinnedRecoveryDirectory::open(&root, RecoveryNamespace::Staging, STAGING_NAME)?;
         let segments =
@@ -220,4 +273,12 @@ impl RecoveryInventoryStorage for FilesystemRecoveryInventoryReader {
             expected_count,
         )
     }
+}
+
+const fn root_error(source: io::Error) -> RecoveryInventoryError {
+    RecoveryInventoryError::io(
+        RecoveryNamespace::Root,
+        RecoveryInventoryOperation::OpenNamespace,
+        source,
+    )
 }

@@ -2,7 +2,10 @@
 
 use std::path::Path;
 
-use super::{FilesystemRecoveryStageCompletionOpenError, FilesystemRecoveryStageDiscarder};
+use super::{
+    FilesystemRecoveryStageCompletionOpenError, FilesystemRecoveryStageDiscarder,
+    FilesystemVersionTwoRecoveryAdmission,
+};
 
 /// Writer-authorized pinned filesystem adapter for exact stage completion.
 ///
@@ -26,6 +29,23 @@ impl FilesystemRecoveryStageCompleter {
     /// writer-authority, root-clone, or namespace admission failure.
     pub fn open(store_root: &Path) -> Result<Self, FilesystemRecoveryStageCompletionOpenError> {
         FilesystemRecoveryStageDiscarder::open(store_root)
+            .map(|discarder| Self { discarder })
+            .map_err(Into::into)
+    }
+
+    /// Pins a migrated version-two store for explicit stage completion.
+    ///
+    /// The call performs no protocol mutation. Completion links a stage into
+    /// an immutable pool and never changes `HEAD`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FilesystemRecoveryStageCompletionOpenError`] on root-clone or
+    /// namespace pinning failure.
+    pub fn open_version_two(
+        admission: FilesystemVersionTwoRecoveryAdmission,
+    ) -> Result<Self, FilesystemRecoveryStageCompletionOpenError> {
+        FilesystemRecoveryStageDiscarder::open_version_two(admission)
             .map(|discarder| Self { discarder })
             .map_err(Into::into)
     }

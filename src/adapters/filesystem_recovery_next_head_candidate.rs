@@ -2,8 +2,10 @@
 
 use std::io;
 
+use super::filesystem_recovery_next_head_finalizer::FinalizationRetention;
+use super::retained_catalog_publication::admit_retained_closures;
 use super::{
-    FilesystemRecoveryNextHeadFinalizer, FilesystemRecoveryStageError,
+    CatalogSnapshot, FilesystemRecoveryNextHeadFinalizer, FilesystemRecoveryStageError,
     RecoveryNextHeadFinalizationRequest, RecoveryNextHeadFinalizationStorageError,
     RecoveryNextHeadFinalizationTarget, RecoveryStage, RecoveryStageEvidence,
     RecoveryStageNamespacePhase, catalog_restart_loader, filesystem_recovery_stage,
@@ -37,6 +39,7 @@ pub(super) fn verify(
             },
         );
     }
+    require_retained_closures(finalizer, &snapshot)?;
     verify_evidence(finalizer, request)
 }
 
@@ -108,5 +111,31 @@ fn map_stage(
 fn stage(source: FilesystemRecoveryStageError) -> RecoveryNextHeadFinalizationStorageError {
     RecoveryNextHeadFinalizationStorageError::Stage {
         source: Box::new(source),
+    }
+}
+
+/// Runs the forward catalog gate's retained-closure admission on the candidate.
+///
+/// Version-two finalization changes `HEAD` exactly as forward publication
+/// does, so every root named by the current retention head must reconstruct
+/// its complete closure from the candidate catalog. The check reads retention
+/// evidence under the finalizer's writer authority and mutates nothing; a
+/// refusal leaves `head.next` and `HEAD` untouched.
+fn require_retained_closures(
+    finalizer: &FilesystemRecoveryNextHeadFinalizer,
+    candidate: &CatalogSnapshot<'_, '_, '_>,
+) -> Result<(), RecoveryNextHeadFinalizationStorageError> {
+    match &finalizer.retention {
+        FinalizationRetention::VersionOne => Ok(()),
+        FinalizationRetention::VersionTwo(evidence) => {
+            let mut source = evidence;
+            admit_retained_closures(&mut source, candidate)
+                .map(|_admission| ())
+                .map_err(
+                    |source| RecoveryNextHeadFinalizationStorageError::RetainedClosure {
+                        source: Box::new(source),
+                    },
+                )
+        }
     }
 }

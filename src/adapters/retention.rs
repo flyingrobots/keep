@@ -19,6 +19,7 @@ mod durable_read_law_tests;
 mod durable_view_law_tests;
 #[cfg(test)]
 mod filesystem_recovery_admission_tests;
+mod filesystem_retained_evidence;
 #[cfg(test)]
 mod filesystem_retention_anchor_order_prefix_tests;
 mod filesystem_retention_attempt;
@@ -242,6 +243,7 @@ pub use canonical_root::CanonicalRetentionRoot;
 pub use checksummed_head::ChecksummedRetentionHead;
 pub use closure_error::RetentionClosureVerificationError;
 pub use closure_verifier::verify_retention_closure;
+pub(in crate::adapters) use filesystem_retained_evidence::FilesystemRetainedEvidence;
 pub use filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
 pub use filesystem_retention_authority_error::{
     FilesystemRetentionAuthorityError, RetentionAuthorityDirectory,

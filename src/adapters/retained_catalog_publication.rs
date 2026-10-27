@@ -25,6 +25,8 @@ pub use retained_catalog_publication_storage::RetainedCatalogPublicationStorage;
 pub use retained_closure_admission::RetainedClosureAdmission;
 pub use retention_evidence_phase::RetentionEvidencePhase;
 
+pub(in crate::adapters) use retained_evidence_source::RetainedEvidenceSource;
+
 use retained_evidence_source::PublicationEvidence;
 
 use super::catalog_publication_execution as execution;
@@ -123,4 +125,22 @@ fn stage_candidate(
     execution::execute_catalog(stages, candidate.catalog, candidate.catalog.checksummed())?;
     execution::execute_head_stage(stages, candidate.head, candidate.snapshot)?;
     Ok(())
+}
+
+/// Verifies every current retained closure against one candidate snapshot.
+///
+/// This is the gate's own admission, exposed to routes that change `HEAD`
+/// without running the forward catalog protocol: recovery finalization of a
+/// staged `head.next` runs it immediately before replacement. It performs only
+/// the reads described by [`RetainedEvidenceSource`] and no mutation.
+///
+/// # Errors
+///
+/// Returns the forward gate's evidence, binding, or closure refusal. The
+/// `Catalog` and `RetentionChanged` variants never arise from this check.
+pub(in crate::adapters) fn admit_retained_closures(
+    evidence: &mut impl RetainedEvidenceSource,
+    candidate: &CatalogSnapshot<'_, '_, '_>,
+) -> Result<RetainedClosureAdmission, RetainedCatalogPublicationError> {
+    retained_evidence_admission::admit(evidence, candidate)
 }

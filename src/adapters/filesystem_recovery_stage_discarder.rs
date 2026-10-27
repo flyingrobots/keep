@@ -8,7 +8,7 @@ use cap_std::fs::Dir;
 
 use super::{
     FilesystemRecoveryInventoryReader, FilesystemRecoveryStageDiscardOpenError,
-    FilesystemWriterLock, filesystem_platform_profile,
+    FilesystemVersionTwoRecoveryAdmission, FilesystemWriterLock, filesystem_platform_profile,
 };
 #[cfg(any(test, feature = "repository-tasks"))]
 use super::{RecoveryInventoryError, RecoveryInventoryOperation, RecoveryNamespace};
@@ -73,6 +73,38 @@ impl FilesystemRecoveryStageDiscarder {
             }
         })?;
         Self::from_root(root)
+    }
+
+    /// Pins a migrated version-two store for explicit stage discard.
+    ///
+    /// The admission already holds writer authority over a root that passed
+    /// version-two recovery admission; this call pins the catalog-protocol
+    /// directories under it and performs no protocol mutation. The retained
+    /// retention capabilities are released: discard never changes `HEAD`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`FilesystemRecoveryStageDiscardOpenError`] on root-clone or
+    /// namespace pinning failure.
+    pub fn open_version_two(
+        admission: FilesystemVersionTwoRecoveryAdmission,
+    ) -> Result<Self, FilesystemRecoveryStageDiscardOpenError> {
+        let (lock, _retention, _roots, _manifests) = admission.into_parts();
+        Self::from_version_two_lock(lock)
+    }
+
+    pub(super) fn from_version_two_lock(
+        authority: FilesystemWriterLock,
+    ) -> Result<Self, FilesystemRecoveryStageDiscardOpenError> {
+        let inventory_root = authority
+            .clone_directory()
+            .map_err(|source| FilesystemRecoveryStageDiscardOpenError::CloneRoot { source })?;
+        let inventory = FilesystemRecoveryInventoryReader::from_version_two_root(inventory_root)
+            .map_err(|source| FilesystemRecoveryStageDiscardOpenError::Namespace { source })?;
+        Ok(Self {
+            inventory,
+            _authority: authority,
+        })
     }
 
     fn from_root(root: Dir) -> Result<Self, FilesystemRecoveryStageDiscardOpenError> {
