@@ -603,8 +603,8 @@ filesystem that violates the admitted atomicity contract. See F-41 T-41.2.
 ### F-14 Segment store v1 living documentation refresh
 
 **Status:** Done (#69, P2, M4; delivered by #136); an absence law in
-`xtask/tests/segment_store_implementation_documentation.rs`, extended by
-#136, keeps the stale phrases from returning.
+`xtask/tests/segment_store_implementation_documentation.rs`, extended
+by #136, keeps the stale phrases from returning.
 
 Before #136, `docs/formats/segment-store-v1/README.md` and
 `publication.md` said initialization, platform admission, and explicit
@@ -1093,8 +1093,8 @@ clocks, paths, environment, and caller identity out of the core.
 ### F-21 Precise verification reports and corruption refusal
 
 **Status:** Partial (#20, P1, M4). The report types and durable
-subject-specific depths (T-21.1; `KEEP-VERIFY-006`) are on `main` through
-#165 (#114). The permanent corruption ledgers (T-21.2) and durable
+subject-specific depths (T-21.1; `KEEP-VERIFY-006`) are on `main`
+through #165 (#114). The permanent corruption ledgers (T-21.2) and durable
 receipts (T-21.3; `KEEP-VERIFY-007`) exist only on the archived #107
 branch. `SnapshotBinding` refuses as unsupported until its separate
 protocol exists. The most-cited open blocker: F-22,
