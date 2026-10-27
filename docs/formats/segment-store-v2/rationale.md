@@ -173,12 +173,10 @@ Crash and refusal states:
 - Process death at any point leaves exactly the version-1 crash states. The
   gate adds only reads.
 
-Recovery implication: today's next-head finalization admits only version-1
-writer authority, so it cannot finalize a version-2 `head.next`. When the
-single-format writer moves stage recovery onto version 2 (#198), finalizing a
-staged catalog head must run this same retained-closure admission against the
-staged catalog. Changing the admission type that recovery accepts is not
-enough.
+Recovery implication: finalizing a staged catalog head must run this same
+retained-closure admission against the staged catalog; changing the admission
+type that recovery accepts is not enough. Version-2 next-head finalization
+(#198) does exactly that, as recorded below.
 
 Rejected alternatives:
 
@@ -192,3 +190,42 @@ Rejected alternatives:
   comparison sufficient.
 - Relying on ingestion's preserve-all-records behaviour. That is a property of
   one writer, not of the publication boundary.
+
+## Run one stage implementation under both writer authorities
+
+The version-2 writer (#198) needs the same segment, catalog, and head
+transitions as version 1. A copy would let the two formats drift in exactly
+the steps that decide durability. `FilesystemCatalogStages` therefore holds the
+pinned catalog directories, the writable stages, and the stage-authority
+token, and it is the only `CatalogPublicationStorage` implementation of those
+transitions. `FilesystemCatalogPublisher` owns one beside its version-1 writer
+lock. `FilesystemVersionTwoCatalogStages` wraps one under the version-2 writer
+lock and has no public constructor. Each forwards transitions unchanged.
+
+The version-2 stage type is reachable only through `catalog_stages`, so only
+the retained-closure gate can drive it. Repository tasks install an observer
+on that type for crash injection rather than wrapping the port, because a
+wrapper cannot obtain the stages without the gate's admission.
+
+Readers admit a retained catalog `head.next`. It is a version-1 file that
+version 2 preserves, and a reader selects only `HEAD`, so refusing it would
+stop readers for the whole window in which publication stages a head. Writer
+admission still refuses it, so a writer never starts over unrecovered state.
+
+Catalog-stage recovery on version 2 reuses the version-1 executors under a
+separate `FilesystemVersionTwoRecoveryAdmission`. That admission differs from
+writer admission only in admitting `head.next`. Next-head finalization is the
+one recovery route that changes `HEAD`, so a version-2 finalizer runs the
+gate's own `admit_retained_closures` before every candidate verification that
+can precede replacement, including the one immediately before the rename.
+Refusal leaves `head.next` and the pools unchanged.
+
+Rejected alternatives:
+
+- Copying the stage code into a version-2 publisher. The formats would drift.
+- Implementing the ungated port for the version-2 publisher behind a runtime
+  check. The type system would no longer prevent ungated publication.
+- Letting `FilesystemVersionTwoAdmission` admit `head.next`. Writers and
+  retention publication would then start over unrecovered catalog state.
+- Gating only the planner. Planning is pure and runs before the writer lock.
+  The retention head can change between planning and replacement.

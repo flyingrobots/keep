@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Version-2 stores can ingest: `FilesystemVersionTwoCatalogPublisher` stages one segment and publishes a catalog successor through the retained-closure gate, version-2 catalog-stage recovery classifies version-2 roots and finalizes a staged head only after the same gate admits it, and `KEEP-CRASH-074` through `077` cover writer process death (#198).
+
 - Version-2 catalog publication can refuse candidates that lose retained content: `publish_retained_catalog_generation` verifies every current retained closure against the candidate before any catalog mutation and revalidates the retention head before `HEAD` replacement (#125).
 
 - Update the repository-only serde_json parser to 1.0.154 in both locked workspaces and refresh its dependency admission; the resolved transitive graph, features, license and MSRV are unchanged (#186).
