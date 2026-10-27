@@ -136,7 +136,9 @@ identity, caller identity, path, and time do not enter the identifier. The
 migration intent separately binds the physical root coordinates so in-place
 recovery refuses a substituted store.
 
-(../../adr/0010-one-storage-format.md) supersedes the restart
+### Root identity across restart
+
+[ADR-0010](../../adr/0010-one-storage-format.md) supersedes the restart
 requirement below and makes complete stores portable. Main enforces this
 section until that change lands.
 

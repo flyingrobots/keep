@@ -34,8 +34,7 @@ The two formats split Keep's capabilities between them:
 - Every version-2 test, fixture, and crash case first builds a version-1
   store and migrates it. The migration accounts for about 10,500 lines under
   `src/adapters/store_migration`, 2,000 lines of integration tests, 1,100
-  lines of repository tasks, two golden records and their source table, and
-the
+  lines of repository tasks, two golden records and their source table, and the
   `KEEP-CRASH-053..073` process-death matrix.
 
 Nothing has been released. The crate is `0.0.0` with `publish = false`. On
