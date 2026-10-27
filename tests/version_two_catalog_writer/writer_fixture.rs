@@ -154,17 +154,29 @@ fn stage_records<'publisher>(
         publisher.create_segment_stage()?,
         SegmentRecordLimit::MAXIMUM,
     )?;
+    for record in blob_records(content, identified)? {
+        stage = stage.append(record)?;
+    }
+    Ok(stage.seal()?)
+}
+
+/// Every distinct chunk record of `content` followed by its layout record.
+pub(super) fn blob_records<'content>(
+    content: &'content [u8],
+    identified: &'content Identified,
+) -> TestResult<Vec<AdmittedSegmentRecord<'content>>> {
     let mut chunks = BTreeSet::new();
+    let mut records = Vec::new();
     for span in &identified.spans {
         if chunks.insert(span.id()) {
             let start = usize::try_from(span.offset().get())?;
             let end = usize::try_from(span.end().get())?;
             let bytes = content.get(start..end).ok_or("chunk outside source")?;
-            stage = stage.append(AdmittedSegmentRecord::for_chunk(bytes)?)?;
+            records.push(AdmittedSegmentRecord::for_chunk(bytes)?);
         }
     }
-    stage = stage.append(AdmittedSegmentRecord::for_layout(&identified.record)?)?;
-    Ok(stage.seal()?)
+    records.push(AdmittedSegmentRecord::for_layout(&identified.record)?);
+    Ok(records)
 }
 
 /// Publishes a new generation-one retention root that anchors `content`.
