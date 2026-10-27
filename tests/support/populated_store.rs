@@ -163,6 +163,25 @@ pub(super) fn create_holding_authority(
     Ok((CreatedStore { catalog }, publisher))
 }
 
+/// Publishes every record of `contents` as the first catalog of an initialized store.
+///
+/// The publication has no predecessor: it runs with the uninitialized
+/// expectation and proves through the gate that neither catalog `HEAD` nor
+/// `retention/HEAD` exists uncontradicted.
+pub(super) fn publish_first(
+    root: &Path,
+    publisher: &mut FilesystemVersionTwoCatalogPublisher,
+    contents: &[&[u8]],
+) -> TestResult<RetainedCatalogPublicationReceipt> {
+    let identified = contents
+        .iter()
+        .map(|bytes| identify(bytes))
+        .collect::<TestResult<Vec<_>>>()?;
+    let blobs = contents.iter().copied().zip(&identified);
+    let records = select_records(blobs, FirstCatalogRecords::Complete)?;
+    publish_first_catalog(root, publisher, records)
+}
+
 /// Every selected chunk record, deduplicated across blobs, then each new layout.
 pub(super) fn select_records<'content>(
     blobs: impl IntoIterator<Item = (&'content [u8], &'content Identified)>,

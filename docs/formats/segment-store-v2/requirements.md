@@ -43,11 +43,26 @@ case is not evidence.
 
 | ID | Requirement | Evidence | Status |
 | --- | --- | --- | --- |
-| `KEEP-INITIALIZATION-001` | Direct initialization creates exactly the committed namespace under exclusive writer authority, links `FORMAT` from a durable `FORMAT.next` without replacement, and returns authority only after the commit and cleanup synchronizations and complete admission | `a_fresh_root_commits_to_exactly_the_initialized_namespace` in `initialization_resume_tests` | Implemented (#198) |
+| `KEEP-INITIALIZATION-001` | Direct initialization creates exactly the committed namespace under exclusive writer authority, links `FORMAT` from a durable `FORMAT.next` without replacement, and returns authority only after the commit and cleanup synchronizations and complete admission | `a_fresh_root_commits_to_exactly_the_initialized_namespace` in `initialization_resume_tests`; production-profile laws in `tests/single_format.rs` | Implemented (#198) |
 | `KEEP-INITIALIZATION-002` | Every interrupted state classifies as exactly one prefix and resumes idempotently; every other nonempty root, including a committed one, refuses with typed evidence before any mutation, writer-lock creation included | `every_interrupted_boundary_classifies_and_resumes_to_one_store` (every boundary of a recorded run, against a model of the protocol table) and the incomplete-stage and sync-failure laws in `initialization_resume_tests`; foreign, out-of-order, stray-retention, foreign-stage, nonempty-lock, linked-directory, committed, and copied-marker refusals with unchanged witnesses in `initialization_prefix_tests` | Implemented (#198) |
-| `KEEP-INITIALIZATION-003` | Admission requires a committed marker: writers and readers refuse `FORMAT.next` as `InitializationIncomplete` and a missing `FORMAT` as `MissingFormatMarker`; a committed store without catalog `HEAD` admits writers, refuses readers as `Unpublished`, and its first publication proves both absences instead of assuming them | `filesystem_version_two_admission_tests` | Implemented (#198) |
+| `KEEP-INITIALIZATION-003` | Admission requires a committed marker: writers and readers refuse `FORMAT.next` as `InitializationIncomplete` and a missing `FORMAT` as `MissingFormatMarker`; a committed store without catalog `HEAD` admits writers, refuses readers as `Unpublished`, and its first publication proves both absences instead of assuming them | `filesystem_version_two_admission_tests`; `tests/single_format.rs` initialization laws, including a first publication refused by a stray retention root with an unchanged store | Implemented (#198) |
 | `KEEP-INITIALIZATION-004` | Process death before, during, and after every initialization boundary reaches a documented state that `initialize` recovers | `cargo xtask durability-crash-matrix --sequence version-two-initialization` runs 41 cases at `KEEP-CRASH-081..=091`, checks the exact inventory, marker bytes and inode, admission result, and resumed state, then publishes, retains, and reconstructs the first blob | Implemented (#198); process death only, not power loss |
 | `KEEP-INITIALIZATION-005` | Concurrent initialization attempts have exactly one initializer: the other refuses on writer authority and, after commit, as already initialized | `concurrent_attempts_have_exactly_one_initializer` in `initialization_resume_tests` | Implemented (#198) |
+| `KEEP-INITIALIZATION-006` | One public-API sequence initializes, ingests, reopens, reconstructs exact bytes, retains, publishes a second catalog, interrupts publication, recovers, and reads both retained contents; a candidate that would lose retained content refuses with its evidence intact | `the_single_format_serves_every_operation_from_initialization_to_recovery` in `tests/single_format.rs` | Implemented (#198) |
+
+<!-- markdownlint-enable MD013 -->
+
+## Portability
+
+<!-- markdownlint-disable MD013 -->
+
+| ID | Requirement | Evidence | Status |
+| --- | --- | --- | --- |
+| `KEEP-PORTABILITY-001` | A valid quiescent copy opens and reads the same content; nothing persisted binds a store to its directory | `a_valid_quiescent_copy_opens_and_reads_the_same_content` in `tests/single_format.rs` | Implemented (#198) |
+| `KEEP-PORTABILITY-002` | A corrupt or incomplete copy refuses exactly as the original with the same damage would | `a_corrupt_copy_refuses_exactly_as_the_corrupt_original_would` and `an_incomplete_copy_refuses_exactly_as_the_incomplete_original_would` | Implemented (#198) |
+| `KEEP-PORTABILITY-003` | A lock file or protocol directory replaced during an operation still refuses | `a_replaced_lock_or_protocol_directory_during_an_operation_still_refuses` | Implemented (#198) |
+| `KEEP-PORTABILITY-004` | A copy and its original take independent locks and diverge independently while unchanged content keeps its identity and bytes | `a_copy_and_its_original_diverge_independently_and_keep_shared_identity` | Implemented (#198) |
+| `KEEP-PORTABILITY-005` | Backup round trip: close, copy, make the original unavailable, reopen and verify the copy, interrupt a new write on the copy, and recover it | `a_backup_copy_reopens_verifies_and_recovers_an_interrupted_write` | Implemented (#198) |
 
 <!-- markdownlint-enable MD013 -->
 
