@@ -145,9 +145,9 @@ generation and digest or a retention head digest. A record restored alongside
 everything else cannot show that newer history existed. Keep may later offer
 such an expected-state check, but only as an explicit caller input.
 
-The store identifier stays a deterministic, content-derived value. It is not
-a unique installation identity, and two stores with identical initial states
-may share it.
+Keep persists no store identifier. The only one, the content-derived
+identifier in the migration records, is deleted with migration, and
+initialization records no installation identity in its place.
 
 ### Writer before deletion
 
