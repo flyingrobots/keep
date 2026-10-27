@@ -14,3 +14,9 @@ mod durable_locator_laws;
     reason = "locator laws use Drop cleanup; other filesystem laws check explicit removal"
 )]
 mod durable_sandbox;
+#[path = "../support/populated_store.rs"]
+#[allow(
+    dead_code,
+    reason = "each consumer uses a subset of the shared builder; none reads every receipt"
+)]
+mod populated_store;

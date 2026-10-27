@@ -11,9 +11,10 @@ use keep::{
 
 use super::durable_fixture;
 use super::recovery_fixture::{complete, discard, stage_roles};
+use super::successor_catalog::blob_records;
 use super::writer_fixture::{
-    Predecessor, TestResult, assert_reads, blob_records, first_blob, open_publisher, publish,
-    republish, retain, second_blob, segment_policy,
+    Predecessor, TestResult, assert_reads, first_blob, open_publisher, publish, republish, retain,
+    second_blob, segment_policy,
 };
 
 #[test]

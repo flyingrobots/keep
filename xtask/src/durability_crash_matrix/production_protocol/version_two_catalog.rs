@@ -18,8 +18,8 @@ use keep::{
 use xtask::DurabilityCrashPoint;
 
 use super::control::{CrashControl, DuringTiming};
+use super::crash_blob::CrashBlob;
 use super::fixture::GoldenFixture;
-use super::version_two_blob::VersionTwoBlob;
 use super::{DurabilityCrashMatrixError, initialization, retention, verification};
 
 /// Ingests the version-two crash blob, dying at the selected coordinate.
@@ -34,7 +34,7 @@ pub(super) fn run(
     let mut publisher = FilesystemVersionTwoCatalogPublisher::open(admission, policy()?)
         .map_err(|source| verification("open version-two catalog publisher", source))?;
     publisher.observe_catalog_phases_for_repository_tasks(observer(control));
-    let blob = VersionTwoBlob::identify()?;
+    let blob = CrashBlob::version_two()?;
     let mut stage = StagedSegment::begin(
         publisher
             .create_segment_stage()

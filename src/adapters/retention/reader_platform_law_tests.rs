@@ -10,14 +10,11 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 
-use super::filesystem_retention_test_fixture::{
-    CATALOG_NAME, SEGMENT_NAME, fixture, migrated_store,
-};
+use super::filesystem_retention_test_fixture::{migrated_store, populate_bundle};
 use crate::{
     CatalogRestartByteLimit, CatalogRestartPolicy, DurableSnapshot, DurableStoreError,
-    FilesystemPlatformAdmission, FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError,
-    FilesystemStoreMigrationAuthority, FilesystemWriterLock, ReaderAttemptLimit, SegmentReadPolicy,
-    execute_store_migration,
+    FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError, FilesystemWriterLock,
+    ReaderAttemptLimit, SegmentReadPolicy,
 };
 
 #[test]
@@ -97,27 +94,7 @@ impl TmpfsStore {
             "negative profile requires Linux tmpfs"
         );
         let store = Self::reserve(name)?;
-        let admission = FilesystemPlatformAdmission::initialize_unchecked_for_tests(&store.0)?;
-        for (name, encoded) in [
-            (
-                format!("segments/{SEGMENT_NAME}"),
-                include_str!("../../../conformance/segment-store/v1/one-zero-bundle-segment.hex"),
-            ),
-            (
-                format!("catalogs/{CATALOG_NAME}"),
-                include_str!("../../../conformance/segment-store/v1/one-zero-bundle-catalog.hex"),
-            ),
-            (
-                "HEAD".into(),
-                include_str!("../../../conformance/segment-store/v1/one-zero-bundle-head.hex"),
-            ),
-        ] {
-            fs::write(store.0.join(name), fixture(encoded)?)?;
-        }
-        let mut authority =
-            FilesystemStoreMigrationAuthority::open(admission, SegmentReadPolicy::MAXIMUM)?;
-        let intent = authority.observe_intent()?;
-        let _receipt = execute_store_migration(&mut authority, &intent)?;
+        populate_bundle(&store.0)?;
         Ok(store)
     }
 }

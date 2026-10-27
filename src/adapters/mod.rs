@@ -174,6 +174,10 @@ mod lower_hex;
 mod observed_segment_stage;
 mod opened_reusable_segment;
 mod physical_pool_name;
+#[cfg(test)]
+#[path = "../../tests/support/populated_store.rs"]
+#[allow(dead_code, reason = "each consumer uses a builder subset")]
+mod populated_store;
 mod publication_head_decode_error;
 mod publication_head_decode_error_display;
 mod publication_head_decoder;

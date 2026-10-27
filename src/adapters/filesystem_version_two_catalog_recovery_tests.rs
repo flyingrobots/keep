@@ -16,6 +16,12 @@ mod durable_fixture;
     reason = "interruption laws finalize and complete; the public suite also inspects roles"
 )]
 mod recovery_fixture;
+#[path = "../../tests/support/successor_catalog.rs"]
+#[allow(
+    dead_code,
+    reason = "interruption laws publish and republish; the public suite also stages by hand"
+)]
+mod successor_catalog;
 #[path = "../../tests/version_two_catalog_writer/writer_fixture.rs"]
 #[allow(
     dead_code,
@@ -27,6 +33,7 @@ use std::io;
 use std::path::Path;
 
 use super::filesystem_test_sandbox as durable_sandbox;
+use super::populated_store;
 
 use crate::{CatalogPublicationError, CatalogPublicationPhase, RetainedCatalogPublicationError};
 
