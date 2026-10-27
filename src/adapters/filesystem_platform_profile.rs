@@ -5,13 +5,11 @@ use std::path::Path;
 
 use cap_std::fs::Dir;
 
-use super::filesystem_root_identity::FilesystemRootIdentity;
-
 #[cfg(target_os = "linux")]
 const PROTOCOL_DIRECTORIES: [&str; 3] = ["staging", "segments", "catalogs"];
 /// Every version-two protocol directory, including nested immutable pools.
 ///
-/// A migrated root receives writer authority only when each of these shares
+/// A version-two root receives writer authority only when each of these shares
 /// the root's filesystem type, device, and mount identity and is not
 /// casefolded or read-only.
 #[cfg(target_os = "linux")]
@@ -58,13 +56,12 @@ pub(super) fn open(store_root: &Path) -> io::Result<Dir> {
 
 /// Applies the production profile to the root already pinned by writer authority.
 #[cfg(all(target_os = "linux", feature = "repository-tasks"))]
-pub(super) fn admit_locked_root(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-    admit_linux_profile(directory, &PROTOCOL_DIRECTORIES)?;
-    root_identity(directory)
+pub(super) fn admit_locked_root(directory: &Dir) -> io::Result<()> {
+    admit_linux_profile(directory, &PROTOCOL_DIRECTORIES)
 }
 
 #[cfg(all(not(target_os = "linux"), feature = "repository-tasks"))]
-pub(super) fn admit_locked_root(_directory: &Dir) -> io::Result<FilesystemRootIdentity> {
+pub(super) fn admit_locked_root(_directory: &Dir) -> io::Result<()> {
     Err(io::Error::new(
         io::ErrorKind::Unsupported,
         "catalog publication requires the admitted Linux ext4 profile",
@@ -166,115 +163,6 @@ fn linux_directory_properties(file: &std::fs::File) -> io::Result<LinuxDirectory
     })
 }
 
-/// Whether an identity probe may proceed when `statx` omits `STATX_MNT_ID`.
-///
-/// Production admission requires the mount identity: without it a bind-mounted
-/// or relocated root cannot be told apart from the original. The test and
-/// repository-task bypass records an unreported mount identity as zero instead,
-/// so the suite runs on kernels older than 5.8 while every production probe
-/// stays strict.
-#[cfg(any(target_os = "linux", test))]
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum MountIdentityPolicy {
-    Required,
-    #[cfg(any(test, feature = "repository-tasks"))]
-    Lenient,
-}
-
-/// Selects the recorded mount identity from what `statx` reported.
-///
-/// Returns `None` exactly when the policy requires a mount identity the kernel
-/// did not report.
-#[cfg(any(target_os = "linux", test))]
-const fn admit_mount_identity(
-    policy: MountIdentityPolicy,
-    reported: bool,
-    mount_id: u64,
-) -> Option<u64> {
-    match (policy, reported) {
-        (_, true) => Some(mount_id),
-        (MountIdentityPolicy::Required, false) => None,
-        #[cfg(any(test, feature = "repository-tasks"))]
-        (MountIdentityPolicy::Lenient, false) => Some(0),
-    }
-}
-
-#[cfg(target_os = "linux")]
-pub(super) fn root_identity(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-    let file = directory.try_clone()?.into_std_file();
-    linux_file_identity(&file, MountIdentityPolicy::Required)
-}
-
-/// Probes root identity for the test and repository-task admission bypass.
-///
-/// Identical to [`root_identity`] except that an unreported mount identity is
-/// recorded as zero instead of refusing; production admission never uses it.
-#[cfg(all(target_os = "linux", any(test, feature = "repository-tasks")))]
-pub(super) fn root_identity_lenient(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-    let file = directory.try_clone()?.into_std_file();
-    linux_file_identity(&file, MountIdentityPolicy::Lenient)
-}
-
-#[cfg(target_os = "linux")]
-fn linux_file_identity(
-    file: &std::fs::File,
-    policy: MountIdentityPolicy,
-) -> io::Result<FilesystemRootIdentity> {
-    use rustix::fs::{AtFlags, StatxFlags, statx};
-
-    let requested = StatxFlags::BASIC_STATS | StatxFlags::MNT_ID;
-    let status = statx(file, ".", AtFlags::empty(), requested)?;
-    let observed = StatxFlags::from_bits_retain(status.stx_mask);
-    if !observed.contains(StatxFlags::BASIC_STATS) {
-        return Err(unsupported_linux_profile());
-    }
-    let reported = observed.contains(StatxFlags::MNT_ID);
-    let mount_id = admit_mount_identity(policy, reported, status.stx_mnt_id)
-        .ok_or_else(unsupported_linux_profile)?;
-    Ok(linux_root_identity(
-        status.stx_dev_major,
-        status.stx_dev_minor,
-        mount_id,
-        status.stx_ino,
-    ))
-}
-
-#[cfg(target_os = "linux")]
-fn linux_root_identity(
-    device_major: u32,
-    device_minor: u32,
-    mount_id: u64,
-    inode: u64,
-) -> FilesystemRootIdentity {
-    let device = rustix::fs::makedev(device_major, device_minor);
-    FilesystemRootIdentity::new(device, mount_id, inode)
-}
-
-#[cfg(all(not(target_os = "linux"), any(test, feature = "repository-tasks")))]
-pub(super) fn root_identity(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-    use cap_fs_ext::MetadataExt;
-
-    let metadata = directory.dir_metadata()?;
-    Ok(FilesystemRootIdentity::new(
-        metadata.dev(),
-        metadata.dev(),
-        metadata.ino(),
-    ))
-}
-
-#[cfg(all(not(target_os = "linux"), any(test, feature = "repository-tasks")))]
-pub(super) fn root_identity_lenient(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-    root_identity(directory)
-}
-
-#[cfg(all(not(target_os = "linux"), not(any(test, feature = "repository-tasks"))))]
-pub(super) fn root_identity(_directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-    Err(io::Error::new(
-        io::ErrorKind::Unsupported,
-        "filesystem root identity currently requires the admitted Linux ext4 profile",
-    ))
-}
-
 #[cfg(target_os = "linux")]
 fn admit_linux_properties(
     filesystem_type: rustix::fs::FsWord,
@@ -322,7 +210,3 @@ fn unsupported_linux_profile() -> io::Error {
 #[cfg(all(test, target_os = "linux"))]
 #[path = "filesystem_platform_profile_tests.rs"]
 mod tests;
-
-#[cfg(test)]
-#[path = "filesystem_platform_profile_policy_tests.rs"]
-mod policy_tests;

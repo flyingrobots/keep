@@ -3,6 +3,12 @@
 
 #[path = "reader_fence_process/fixture.rs"]
 pub mod fixture;
+#[path = "support/populated_store.rs"]
+#[allow(
+    dead_code,
+    reason = "each consumer uses a subset of the shared builder; none reads every receipt"
+)]
+pub mod populated_store;
 #[path = "reader_fence_process/reader.rs"]
 pub mod reader;
 #[path = "segment_filesystem_stage/sandbox.rs"]
@@ -24,7 +30,7 @@ fn reader_death_releases_collection_without_replacing_the_fence() -> Result<(), 
     if reader::is_child() {
         return reader::serve();
     }
-    let (store, writer) = fixture::migrated("reader-death")?;
+    let (store, writer) = fixture::initialized("reader-death")?;
     assert!(
         matches!(
             FilesystemWriterLock::try_acquire(store.path()),
@@ -67,7 +73,7 @@ fn collection_excludes_a_new_snapshot_until_release() -> Result<(), Box<dyn Erro
     if reader::is_child() {
         return reader::serve();
     }
-    let (store, writer) = fixture::migrated("collector-exclusion")?;
+    let (store, writer) = fixture::initialized("collector-exclusion")?;
     assert!(
         matches!(
             FilesystemWriterLock::try_acquire(store.path()),

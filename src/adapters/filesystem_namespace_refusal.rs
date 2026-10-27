@@ -39,6 +39,11 @@ impl FilesystemEntryKind {
 pub enum FilesystemNamespaceRefusal {
     /// An observed entry is outside the admitted protocol membership.
     UnexpectedEntry,
+    /// The root holds no `FORMAT` marker, so it is not a committed version-two store.
+    MissingFormatMarker,
+    /// The root still holds `FORMAT.next`: initialization has not committed.
+    /// Resume it with `FilesystemVersionTwoAdmission::initialize`.
+    InitializationIncomplete,
     /// A no-follow metadata observation established the wrong entry kind.
     WrongKind {
         /// Kind required by the protocol.
@@ -52,6 +57,10 @@ impl fmt::Display for FilesystemNamespaceRefusal {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnexpectedEntry => formatter.write_str("unexpected protocol namespace entry"),
+            Self::MissingFormatMarker => formatter.write_str("the root holds no FORMAT marker"),
+            Self::InitializationIncomplete => {
+                formatter.write_str("initialization has not committed: FORMAT.next is present")
+            }
             Self::WrongKind { expected, observed } => write!(
                 formatter,
                 "protocol entry kind is {observed:?}, expected {expected:?}"

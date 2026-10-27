@@ -13,7 +13,7 @@ use super::verification;
 
 /// The exact bytes the version-two writer ingests before process death.
 pub(in crate::durability_crash_matrix) const VERSION_TWO_CONTENT: &[u8] =
-    b"keep version-two crash campaign: one blob ingested after migration";
+    b"keep version-two crash campaign: one blob ingested after the first catalog";
 
 /// The synthetic source byte of the frozen one-zero bundle corpus.
 const BUNDLE_CONTENT: &[u8] = &[0];

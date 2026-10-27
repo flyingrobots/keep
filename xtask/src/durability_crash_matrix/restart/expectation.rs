@@ -65,8 +65,8 @@ impl ExpectedStoreState {
             DurabilityCrashSequence::RecoveryDiscard => sequence::recovery(case),
             DurabilityCrashSequence::Initialization => sequence::initialization(case),
             DurabilityCrashSequence::Retention
-            | DurabilityCrashSequence::Migration
-            | DurabilityCrashSequence::VersionTwoCatalog => {
+            | DurabilityCrashSequence::VersionTwoCatalog
+            | DurabilityCrashSequence::VersionTwoInitialization => {
                 Err(DurabilityCrashMatrixError::PointSequenceMismatch {
                     point: case.point(),
                 })

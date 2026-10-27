@@ -3,7 +3,7 @@
 //! Size: medium. Oracle: canonical protocol membership and no-follow entry kinds.
 //! Delete if stronger public namespace laws subsume these exact boundaries.
 
-use super::filesystem_retention_test_fixture::migrated_store;
+use super::filesystem_retention_test_fixture::initialized_store;
 use crate::{
     CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemEntryKind, FilesystemNamespaceRefusal,
     FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError, ReaderAttemptLimit,
@@ -16,7 +16,7 @@ type ResultOf<T> = Result<T, Box<dyn Error>>;
 
 #[test]
 fn unexpected_store_entries_are_published_view_corruption() -> ResultOf<()> {
-    let store = migrated_store("verification-unexpected-entry")?;
+    let store = initialized_store("verification-unexpected-entry")?;
     let path = store.path().join("unexpected-entry");
     fs::write(&path, b"preserve unexpected evidence")?;
     assert_corrupt(store.path(), FilesystemNamespaceRefusal::UnexpectedEntry)?;
@@ -26,7 +26,7 @@ fn unexpected_store_entries_are_published_view_corruption() -> ResultOf<()> {
 
 #[test]
 fn required_directory_files_are_published_view_corruption() -> ResultOf<()> {
-    let store = migrated_store("verification-required-directory-file")?;
+    let store = initialized_store("verification-required-directory-file")?;
     let path = store.path().join("gc");
     fs::remove_dir(&path)?;
     fs::write(&path, b"preserve wrong kind")?;
@@ -43,7 +43,7 @@ fn required_directory_files_are_published_view_corruption() -> ResultOf<()> {
 
 #[test]
 fn required_directory_symlinks_are_published_view_corruption() -> ResultOf<()> {
-    let store = migrated_store("verification-required-directory-symlink")?;
+    let store = initialized_store("verification-required-directory-symlink")?;
     let path = store.path().join("gc");
     let target = store.path().join("retention");
     fs::remove_dir(&path)?;

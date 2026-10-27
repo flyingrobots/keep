@@ -111,12 +111,19 @@ pub use super::segment_write_error::SegmentWriteError;
 pub use super::segment_write_phase::{SegmentDurabilityPhase, SegmentWritePhase};
 pub use super::staged_segment::StagedSegment;
 pub use super::storage_profile_id_text_error::StorageProfileIdParseError;
+pub use super::store_format::*;
 pub use super::store_initialization::initialize_store;
 pub use super::store_initialization_error::StoreInitializationError;
 pub use super::store_initialization_phase::StoreInitializationPhase;
 pub use super::store_initialization_receipt::StoreInitializationReceipt;
 pub use super::store_initialization_storage::StoreInitializationStorage;
-pub use super::store_migration::*;
+#[cfg(any(test, feature = "repository-tasks"))]
+pub use super::version_two_initialization::VersionTwoInitializationObserver;
+pub use super::version_two_initialization::{
+    VersionTwoInitialization, VersionTwoInitializationBoundary, VersionTwoInitializationDirectory,
+    VersionTwoInitializationError, VersionTwoInitializationPhase, VersionTwoInitializationPrefix,
+    VersionTwoInitializationRefusal,
+};
 pub use super::writer_lock_acquire_error::WriterLockAcquireError;
 pub use super::writer_lock_acquire_phase::WriterLockAcquirePhase;
 pub use crate::segment_digest::SegmentDigest;

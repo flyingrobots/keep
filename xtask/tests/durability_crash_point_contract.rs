@@ -5,8 +5,8 @@
 use xtask::{DurabilityCrashPoint, DurabilityCrashSequence};
 
 use DurabilityCrashSequence::{
-    Catalog, Head, Initialization, Migration, RecoveryDiscard, Retention, Segment,
-    VersionTwoCatalog,
+    Catalog, Head, Initialization, RecoveryDiscard, Retention, Segment, VersionTwoCatalog,
+    VersionTwoInitialization,
 };
 
 const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
@@ -247,111 +247,6 @@ const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
         Retention,
     ),
     (
-        DurabilityCrashPoint::MigrationWriteIntentStage,
-        "KEEP-CRASH-053",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationSynchronizeIntentStage,
-        "KEEP-CRASH-054",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationLinkIntent,
-        "KEEP-CRASH-055",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationSynchronizeRootAfterIntent,
-        "KEEP-CRASH-056",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationRemoveIntentStage,
-        "KEEP-CRASH-057",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationSynchronizeRootAfterIntentCleanup,
-        "KEEP-CRASH-058",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationAdmitReaderFence,
-        "KEEP-CRASH-059",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationAdmitNamespacePrefix,
-        "KEEP-CRASH-060",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationSynchronizeRootAfterNamespace,
-        "KEEP-CRASH-061",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationWriteMarkerStage,
-        "KEEP-CRASH-062",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationSynchronizeMarkerStage,
-        "KEEP-CRASH-063",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationLinkMarker,
-        "KEEP-CRASH-064",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationSynchronizeRootAfterMarker,
-        "KEEP-CRASH-065",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationRemoveMarkerStage,
-        "KEEP-CRASH-066",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationSynchronizeRootAfterMarkerCleanup,
-        "KEEP-CRASH-067",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationWriteReceiptStage,
-        "KEEP-CRASH-068",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationSynchronizeReceiptStage,
-        "KEEP-CRASH-069",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationLinkReceipt,
-        "KEEP-CRASH-070",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationSynchronizeRootAfterReceipt,
-        "KEEP-CRASH-071",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationRemoveReceiptStage,
-        "KEEP-CRASH-072",
-        Migration,
-    ),
-    (
-        DurabilityCrashPoint::MigrationSynchronizeRootAfterReceiptCleanup,
-        "KEEP-CRASH-073",
-        Migration,
-    ),
-    (
         DurabilityCrashPoint::VersionTwoLinkSegment,
         "KEEP-CRASH-074",
         VersionTwoCatalog,
@@ -371,6 +266,61 @@ const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
         "KEEP-CRASH-077",
         VersionTwoCatalog,
     ),
+    (
+        DurabilityCrashPoint::InitializeOpenAndLockWriterFile,
+        "KEEP-CRASH-081",
+        VersionTwoInitialization,
+    ),
+    (
+        DurabilityCrashPoint::InitializeWriteMarkerStage,
+        "KEEP-CRASH-082",
+        VersionTwoInitialization,
+    ),
+    (
+        DurabilityCrashPoint::InitializeSynchronizeMarkerStage,
+        "KEEP-CRASH-083",
+        VersionTwoInitialization,
+    ),
+    (
+        DurabilityCrashPoint::InitializeSynchronizeRootAfterMarkerStage,
+        "KEEP-CRASH-084",
+        VersionTwoInitialization,
+    ),
+    (
+        DurabilityCrashPoint::InitializeAdmitReaderFence,
+        "KEEP-CRASH-085",
+        VersionTwoInitialization,
+    ),
+    (
+        DurabilityCrashPoint::InitializeAdmitDirectory,
+        "KEEP-CRASH-086",
+        VersionTwoInitialization,
+    ),
+    (
+        DurabilityCrashPoint::InitializeLinkMarker,
+        "KEEP-CRASH-087",
+        VersionTwoInitialization,
+    ),
+    (
+        DurabilityCrashPoint::InitializeSynchronizeRootAfterMarker,
+        "KEEP-CRASH-088",
+        VersionTwoInitialization,
+    ),
+    (
+        DurabilityCrashPoint::InitializeRemoveMarkerStage,
+        "KEEP-CRASH-089",
+        VersionTwoInitialization,
+    ),
+    (
+        DurabilityCrashPoint::InitializeSynchronizeRootAfterCleanup,
+        "KEEP-CRASH-090",
+        VersionTwoInitialization,
+    ),
+    (
+        DurabilityCrashPoint::InitializeDiscardIncompleteMarkerStage,
+        "KEEP-CRASH-091",
+        VersionTwoInitialization,
+    ),
 ];
 
 #[test]
@@ -382,7 +332,7 @@ fn crash_boundaries_have_one_contiguous_stable_vocabulary() {
 }
 
 #[test]
-fn only_record_append_and_namespace_prefix_select_an_occurrence() {
+fn only_record_append_and_initialization_directories_select_an_occurrence() {
     let occurrence_counted: Vec<_> = DurabilityCrashPoint::ALL
         .into_iter()
         .filter(|point| point.occurrence_counted())
@@ -392,16 +342,16 @@ fn only_record_append_and_namespace_prefix_select_an_occurrence() {
         occurrence_counted,
         [
             DurabilityCrashPoint::AppendSegmentRecord,
-            DurabilityCrashPoint::MigrationAdmitNamespacePrefix
+            DurabilityCrashPoint::InitializeAdmitDirectory
         ]
     );
 }
 
 #[test]
-fn the_namespace_prefix_runs_one_during_case_per_directory() {
+fn initialization_directory_admission_runs_one_during_case_per_directory() {
     for point in DurabilityCrashPoint::ALL {
-        let expected = if point == DurabilityCrashPoint::MigrationAdmitNamespacePrefix {
-            DurabilityCrashPoint::NAMESPACE_PREFIX_DIRECTORIES
+        let expected = if point == DurabilityCrashPoint::InitializeAdmitDirectory {
+            DurabilityCrashPoint::INITIALIZATION_DIRECTORIES
         } else {
             1
         };
@@ -412,27 +362,35 @@ fn the_namespace_prefix_runs_one_during_case_per_directory() {
             point.identifier()
         );
     }
-    assert_eq!(DurabilityCrashPoint::NAMESPACE_PREFIX_DIRECTORIES, 6);
+    assert_eq!(
+        DurabilityCrashPoint::INITIALIZATION_DIRECTORIES,
+        u32::try_from(keep::VersionTwoInitializationDirectory::ALL.len()).unwrap_or(u32::MAX)
+    );
 }
 
 #[test]
-fn migration_boundaries_follow_the_twenty_one_phases_in_order() {
-    let migration: Vec<_> = DurabilityCrashPoint::ALL
-        .into_iter()
-        .filter(|point| point.sequence() == Migration)
-        .collect();
+fn retired_crash_identifiers_are_never_reassigned() {
+    for ordinal in (53..=73).chain(78..=80) {
+        let identifier = format!("KEEP-CRASH-{ordinal:03}");
+        assert_eq!(
+            DurabilityCrashPoint::from_identifier(&identifier),
+            None,
+            "{identifier} is retired or reserved and must not name a boundary"
+        );
+    }
+}
 
-    assert_eq!(migration, DurabilityCrashPoint::MIGRATION);
-    assert_eq!(migration.len(), keep::StoreMigrationPhase::ALL.len());
-    assert_eq!(
-        DurabilityCrashPoint::MIGRATION.map(DurabilityCrashPoint::identifier),
-        std::array::from_fn::<_, 21, _>(|index| {
-            let ordinal = 53 + index;
-            let identifier = format!("KEEP-CRASH-{ordinal:03}");
-            DurabilityCrashPoint::from_identifier(&identifier)
-                .map_or("missing", DurabilityCrashPoint::identifier)
-        })
-    );
+#[test]
+fn initialization_boundaries_take_consecutive_new_identifiers() {
+    let initialization: Vec<_> = DurabilityCrashPoint::ALL
+        .into_iter()
+        .filter(|point| point.sequence() == VersionTwoInitialization)
+        .map(DurabilityCrashPoint::identifier)
+        .collect();
+    let expected: Vec<_> = (81..=91)
+        .map(|ordinal| format!("KEEP-CRASH-{ordinal:03}"))
+        .collect();
+    assert_eq!(initialization, expected);
 }
 
 // Subject: repository-tool runtime, not Keep recovery acceptance evidence.
@@ -447,8 +405,8 @@ fn crash_matrix_cli_admits_its_stable_sequence_names() {
         ("recovery-discard", RecoveryDiscard),
         ("initialization", Initialization),
         ("retention", Retention),
-        ("migration", Migration),
         ("version-two-catalog", VersionTwoCatalog),
+        ("version-two-initialization", VersionTwoInitialization),
     ] {
         assert_eq!(
             DurabilityCrashSequence::from_identifier(name),

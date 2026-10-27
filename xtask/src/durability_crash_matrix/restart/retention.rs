@@ -1,6 +1,6 @@
 //! This module owns post-process-death verification of retention publication.
 //!
-//! After the child dies at its coordinate, restart reopens the migrated store
+//! After the child dies at its coordinate, restart reopens the initialized store
 //! through the same admission a production caller would use, runs retention
 //! recovery, and requires the documented steps and outcome for that exact
 //! prefix; then it independently reads the persistent snapshot before requiring

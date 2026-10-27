@@ -1,7 +1,7 @@
 //! Reader platform admission at the public snapshot boundaries.
 //!
 //! Size: medium. Oracle: production readers require the existing writable,
-//! case-sensitive local ext4 profile, independently of valid migration bytes.
+//! case-sensitive local ext4 profile, independently of valid store bytes.
 //! The negative fixture deliberately uses test-only writer admission on tmpfs.
 //! Delete when the supported reader profile changes or stronger public laws subsume it.
 
@@ -10,7 +10,7 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 
-use super::filesystem_retention_test_fixture::{migrated_store, populate_bundle};
+use super::filesystem_retention_test_fixture::{initialized_store, populate_bundle};
 use crate::{
     CatalogRestartByteLimit, CatalogRestartPolicy, DurableSnapshot, DurableStoreError,
     FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError, FilesystemWriterLock,
@@ -23,7 +23,7 @@ fn a_canonical_tmpfs_store_refuses_the_public_reader_profile() -> Result<(), Box
     let refusal =
         FilesystemRetentionSnapshot::load(&store.0, policy()?, ReaderAttemptLimit::DEFAULT)
             .err()
-            .ok_or("valid migration bytes admitted an unsupported reader filesystem")?;
+            .ok_or("valid store bytes admitted an unsupported reader filesystem")?;
     assert!(
         matches!(&refusal, FilesystemRetentionSnapshotError::Admission { source }
         if source.kind() == io::ErrorKind::Unsupported),
@@ -49,7 +49,7 @@ fn a_canonical_tmpfs_store_refuses_durable_snapshot_admission() -> Result<(), Bo
 
 #[test]
 fn reader_platform_admission_does_not_acquire_writer_authority() -> Result<(), Box<dyn Error>> {
-    let store = migrated_store("reader-platform-existing-writer")?;
+    let store = initialized_store("reader-platform-existing-writer")?;
     let writer = FilesystemWriterLock::try_acquire(store.path())?;
 
     let snapshot =

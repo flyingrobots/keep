@@ -5,7 +5,8 @@ use std::fmt;
 /// One fixed entry required in an initialized store root.
 ///
 /// The first four are required in every root. The remaining entries are
-/// required only when a migrated version-two root is classified.
+/// required only when a version-two root is classified. Catalog `HEAD` is
+/// required by neither: a store holds none until its first publication.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RecoveryRequiredEntry {
     /// Persistent `writer.lock`.
@@ -16,16 +17,10 @@ pub enum RecoveryRequiredEntry {
     SegmentPoolDirectory,
     /// `catalogs` directory.
     CatalogPoolDirectory,
-    /// Published catalog `HEAD`, required in a version-two root.
-    CurrentHead,
     /// Persistent `reader.lock`.
     ReaderFence,
     /// `FORMAT` marker.
     FormatMarker,
-    /// `migration.intent` record.
-    MigrationIntent,
-    /// `migration.receipt` record.
-    MigrationReceipt,
     /// `retention` directory.
     RetentionDirectory,
     /// `gc` directory.
@@ -41,11 +36,8 @@ impl fmt::Display for RecoveryRequiredEntry {
             Self::StagingDirectory => "staging",
             Self::SegmentPoolDirectory => "segments",
             Self::CatalogPoolDirectory => "catalogs",
-            Self::CurrentHead => "HEAD",
             Self::ReaderFence => "reader.lock",
             Self::FormatMarker => "FORMAT",
-            Self::MigrationIntent => "migration.intent",
-            Self::MigrationReceipt => "migration.receipt",
             Self::RetentionDirectory => "retention",
             Self::GcDirectory => "gc",
             Self::RecoveryDirectory => "recovery",

@@ -5,7 +5,7 @@ use std::fs;
 
 use super::{Source, collect_retention_view, pool_name};
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
-use crate::adapters::retention::filesystem_retention_test_fixture::migrated_store;
+use crate::adapters::retention::filesystem_retention_test_fixture::initialized_store;
 use crate::adapters::retention::{ReaderAttemptLimit, RetentionViewSource};
 use crate::adapters::{CatalogRestartByteLimit, CatalogRestartPolicy, SegmentReadPolicy};
 use cap_fs_ext::DirExt;
@@ -16,7 +16,7 @@ use cap_std::fs::Dir;
 // Delete only when pinned reader collection is removed or a stronger law subsumes it.
 #[test]
 fn replacing_the_ambient_root_preserves_the_pinned_catalog() -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("reader-catalog-path-pinning")?;
+    let sandbox = initialized_store("reader-catalog-path-pinning")?;
     let moved = TestDirectory::create("reader-catalog-path-pinning-moved")?;
     let root = Dir::open_ambient_dir(sandbox.path(), cap_std::ambient_authority())?;
     let retention = root.open_dir_nofollow(pool_name::RETENTION)?;

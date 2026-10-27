@@ -71,12 +71,12 @@ impl FilesystemRecoveryInventoryReader {
         Self::from_root(root)
     }
 
-    /// Opens one migrated version-two store for read-only stage inventory.
+    /// Opens one committed version-two store for read-only stage inventory.
     ///
     /// Admission is the version-two recovery law: the production platform for
     /// every version-two protocol directory, the exact namespace with an
-    /// optional retained catalog `head.next`, the jointly admitted migration
-    /// records, and the restart-stable root identity. No writer lock is taken
+    /// optional retained catalog `head.next`, and the canonical `FORMAT` marker.
+    /// No writer lock is taken
     /// and no protocol state is mutated. Classify the resulting inventory with
     /// [`classify_version_two_recovery_names`](crate::classify_version_two_recovery_names).
     ///
@@ -96,7 +96,7 @@ impl FilesystemRecoveryInventoryReader {
         Self::pin(root)
     }
 
-    /// Opens a migrated root without platform admission for repository tasks.
+    /// Opens a committed root without platform admission for repository tasks.
     ///
     /// Every namespace, record, and identity law of [`Self::open_version_two`]
     /// still applies.

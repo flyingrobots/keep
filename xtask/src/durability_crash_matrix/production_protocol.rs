@@ -5,9 +5,7 @@ pub(super) mod crash_blob;
 pub(super) mod fixture;
 pub(super) mod initialization;
 mod initialization_storage;
-mod migration;
-mod migration_storage;
-mod populated_store;
+pub(super) mod populated_store;
 mod publication;
 mod publication_storage;
 mod recovery;
@@ -16,6 +14,7 @@ pub(super) mod retention;
 mod retention_storage;
 mod segment_stage;
 pub(super) mod version_two_catalog;
+pub(super) mod version_two_initialization;
 
 use std::error::Error;
 use std::fs;
@@ -51,8 +50,8 @@ pub(super) fn run(
         DurabilityCrashSequence::Retention => {
             retention::run(&store_root, &mut control)?;
         }
-        DurabilityCrashSequence::Migration => {
-            migration::run(&store_root, &mut control)?;
+        DurabilityCrashSequence::VersionTwoInitialization => {
+            version_two_initialization::run(&store_root, control)?;
         }
         DurabilityCrashSequence::VersionTwoCatalog => {
             version_two_catalog::run(&store_root, control)?;

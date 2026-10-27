@@ -1,4 +1,4 @@
-//! Public verification outcomes over owned migrated filesystem witnesses.
+//! Public verification outcomes over owned initialized filesystem witnesses.
 
 use super::filesystem_retention_test_fixture::{
     ROOT_HEX, fixture, initial_preparation, open_authority, retention_witness, root_pool_path,

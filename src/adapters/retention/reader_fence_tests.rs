@@ -5,7 +5,7 @@ use std::fs;
 use std::io;
 
 use super::ReaderFence;
-use crate::adapters::retention::filesystem_retention_test_fixture::migrated_store;
+use crate::adapters::retention::filesystem_retention_test_fixture::initialized_store;
 use cap_std::fs::Dir;
 
 // Size: medium (owned filesystem). Oracle: a fence must lock the same inode
@@ -13,7 +13,7 @@ use cap_std::fs::Dir;
 // Delete when reader fencing is removed or stronger scheduling evidence subsumes this law.
 #[test]
 fn replacing_the_reader_lock_during_acquisition_refuses_the_fence() -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("reader-fence-replaced-during-acquisition")?;
+    let sandbox = initialized_store("reader-fence-replaced-during-acquisition")?;
     let root = Dir::open_ambient_dir(sandbox.path(), cap_std::ambient_authority())?;
     let path = sandbox.path().join("reader.lock");
 

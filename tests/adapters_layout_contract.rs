@@ -66,12 +66,12 @@ const RECORD_READERS: [(&str, &str); 4] = [
         include_str!("../src/adapters/retention/filesystem_retention_catalog.rs"),
     ),
     (
-        "src/adapters/filesystem_version_two_records.rs",
-        include_str!("../src/adapters/filesystem_version_two_records.rs"),
+        "src/adapters/filesystem_format_marker.rs",
+        include_str!("../src/adapters/filesystem_format_marker.rs"),
     ),
     (
-        "src/adapters/store_migration/filesystem_migration_namespace.rs",
-        include_str!("../src/adapters/store_migration/filesystem_migration_namespace.rs"),
+        "src/adapters/version_two_initialization/initialization_observation.rs",
+        include_str!("../src/adapters/version_two_initialization/initialization_observation.rs"),
     ),
 ];
 
@@ -125,10 +125,10 @@ fn no_source_module_spawns_a_process() -> Result<(), Box<dyn std::error::Error>>
     Ok(())
 }
 
-const EXACT_RECORD_CONSUMERS: [(&str, &str); 4] = [
+const EXACT_RECORD_CONSUMERS: [(&str, &str); 5] = [
     (
-        "src/adapters/filesystem_version_two_records.rs",
-        include_str!("../src/adapters/filesystem_version_two_records.rs"),
+        "src/adapters/filesystem_format_marker.rs",
+        include_str!("../src/adapters/filesystem_format_marker.rs"),
     ),
     (
         "src/adapters/retention/filesystem_retention_current.rs",
@@ -139,8 +139,12 @@ const EXACT_RECORD_CONSUMERS: [(&str, &str); 4] = [
         include_str!("../src/adapters/retention/filesystem_retention_stage.rs"),
     ),
     (
-        "src/adapters/store_migration/filesystem_migration_fixed_artifact.rs",
-        include_str!("../src/adapters/store_migration/filesystem_migration_fixed_artifact.rs"),
+        "src/adapters/version_two_initialization/initialization_entries.rs",
+        include_str!("../src/adapters/version_two_initialization/initialization_entries.rs"),
+    ),
+    (
+        "src/adapters/version_two_initialization/initialization_observation.rs",
+        include_str!("../src/adapters/version_two_initialization/initialization_observation.rs"),
     ),
 ];
 

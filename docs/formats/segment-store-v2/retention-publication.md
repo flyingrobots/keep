@@ -3,7 +3,7 @@
 This page owns closure admission and the generation transition for
 `keep.segment-store/v2`. The record grammars it publishes are owned by
 [Retention records](retention.md); restart behaviour for a retained stage is
-owned by [Migration and recovery](recovery.md).
+owned by [Retention publication recovery](retention-recovery.md).
 
 ## Closure admission
 

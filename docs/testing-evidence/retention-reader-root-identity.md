@@ -1,5 +1,7 @@
 # Retention reader root-identity evidence
 
+Superseded (#198): ADR-0010 deleted migration and the persisted root binding this evidence tested; the law and its test were removed. The [retirement ledger](../formats/segment-store-v2/retired-identifiers.md) records the last evidence. This page is kept as history.
+
 Change kind: bug fix. Subject: Keep runtime fenced snapshot admission. Size: medium. Oracle: mutually consistent migration records are admissible for reading only when their restart-stable device and inode binding names the opened root; identity diagnostics preserve the bound and observed values.
 
 Regression commit `5c32126`, based on `5d73016`, transplants the complete migration-record set from one controlled migrated directory into a second directory on the same filesystem, then invokes `FilesystemRetentionSnapshot::load`. The unfixed reader returned a snapshot and the regression was observed RED with `reader accepted migration records naming another physical root`. This was a runtime acceptance failure rather than setup or source-spelling evidence.

@@ -1,4 +1,4 @@
-//! This test module owns one migrated version-2 retention publication fixture.
+//! This test module owns one initialized version-2 retention publication fixture.
 
 use std::collections::BTreeSet;
 use std::error::Error;
@@ -20,8 +20,8 @@ use crate::adapters::populated_store::{self, FirstCatalogRecords, StoreAdmission
 use crate::adapters::test_support::decode_hex;
 use crate::adapters::{
     AdmittedCatalog, AdmittedSegment, CatalogSnapshot, ChecksummedCatalog,
-    ChecksummedPublicationHead, FilesystemPlatformAdmission, FilesystemVersionTwoAdmission,
-    SegmentReadPolicy, SegmentRecordLimit,
+    ChecksummedPublicationHead, FilesystemVersionTwoAdmission, SegmentReadPolicy,
+    SegmentRecordLimit,
 };
 use crate::{
     RetentionGenerationExpectation, RetentionNamespace, RetentionPolicy, RetentionRoot,
@@ -50,15 +50,15 @@ pub(super) const SEGMENT_NAME: &str =
 pub(super) const CATALOG_NAME: &str =
     "0000000000000001-0b7cad1b6de663d34beacbc214db7497f2e36ab6b08dfbd5febbc8d06a418811.cat";
 
-/// Builds one migrated version-2 store and pins its retention authority.
+/// Builds one initialized version-2 store and pins its retention authority.
 ///
-/// The fixture publishes the exact bundle version-1 corpus, executes the
-/// complete forward migration, releases writer authority, then reopens the
-/// admitted root for retention publication.
+/// The fixture initializes the store, publishes the exact bundle corpus as
+/// its first catalog through the version-two writer, releases writer
+/// authority, then reopens the admitted root for retention publication.
 pub(super) fn open_authority(
     name: &str,
 ) -> Result<(TestDirectory, FilesystemRetentionPublicationAuthority), Box<dyn Error>> {
-    let sandbox = migrated_store(name)?;
+    let sandbox = initialized_store(name)?;
     let admission =
         FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
     let authority = FilesystemRetentionPublicationAuthority::open(admission)?;
@@ -246,14 +246,10 @@ fn hex(bytes: &[u8; 32]) -> String {
 /// The shared builder's route on hosts outside the admitted platform profile.
 const UNCHECKED: StoreAdmission = StoreAdmission {
     initialize: |root| {
-        Ok(FilesystemPlatformAdmission::initialize_unchecked_for_tests(
-            root,
-        )?)
-    },
-    reopen_version_one: |root| {
-        Ok(FilesystemPlatformAdmission::reopen_unchecked_for_tests(
-            root,
-        )?)
+        Ok(
+            FilesystemVersionTwoAdmission::initialize_unchecked_for_repository_tasks(root)?
+                .into_admission(),
+        )
     },
     reopen_version_two: |root| {
         Ok(FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(root)?)
@@ -261,7 +257,7 @@ const UNCHECKED: StoreAdmission = StoreAdmission {
 };
 
 /// Builds one version-2 store holding the frozen bundle, with writer authority released.
-pub(super) fn migrated_store(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
+pub(super) fn initialized_store(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
     let sandbox = TestDirectory::create(name)?;
     populate_bundle(sandbox.path())?;
     Ok(sandbox)

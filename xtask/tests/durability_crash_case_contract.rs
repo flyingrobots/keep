@@ -6,7 +6,7 @@ use std::error::Error;
 
 use xtask::{
     DurabilityCrashCase, DurabilityCrashCaseError, DurabilityCrashOccurrence, DurabilityCrashPoint,
-    DurabilityCrashPosition,
+    DurabilityCrashPosition, DurabilityCrashSequence,
 };
 
 #[test]
@@ -70,12 +70,12 @@ fn identifiers_and_positions_round_trip_without_aliases() {
 }
 
 #[test]
-fn namespace_occurrences_are_admitted_only_within_the_protocol_fixed_range()
+fn directory_occurrences_are_admitted_only_within_the_protocol_fixed_range()
 -> Result<(), Box<dyn Error>> {
-    let point = DurabilityCrashPoint::MigrationAdmitNamespacePrefix;
+    let point = DurabilityCrashPoint::InitializeAdmitDirectory;
     for position in DurabilityCrashPosition::ALL {
         let exclusive_limit = if position == DurabilityCrashPosition::During {
-            DurabilityCrashPoint::NAMESPACE_PREFIX_DIRECTORIES
+            DurabilityCrashPoint::INITIALIZATION_DIRECTORIES
         } else {
             1
         };
@@ -97,4 +97,20 @@ fn namespace_occurrences_are_admitted_only_within_the_protocol_fixed_range()
         }
     }
     Ok(())
+}
+
+/// The documented 41 initialization cases: eleven boundaries at three
+/// positions, plus one extra `during` case for each of the nine directories
+/// beyond the first.
+#[test]
+fn the_initialization_sequence_runs_its_documented_forty_one_cases() {
+    let cases: Vec<_> =
+        DurabilityCrashCase::in_sequence(DurabilityCrashSequence::VersionTwoInitialization)
+            .collect();
+    assert_eq!(cases.len(), 41);
+    let directory_cases = cases
+        .iter()
+        .filter(|case| case.point() == DurabilityCrashPoint::InitializeAdmitDirectory)
+        .count();
+    assert_eq!(directory_cases, 11);
 }

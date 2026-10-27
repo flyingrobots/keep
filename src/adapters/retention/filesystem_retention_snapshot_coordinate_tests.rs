@@ -6,7 +6,7 @@ use std::io;
 use std::num::NonZeroU32;
 
 use super::{Source, collect_retention_view, pool_name};
-use crate::adapters::retention::filesystem_retention_test_fixture::migrated_store;
+use crate::adapters::retention::filesystem_retention_test_fixture::initialized_store;
 use crate::adapters::retention::{
     ReaderAttemptLimit, ReaderFence, RetentionViewCoordinates, RetentionViewError,
     RetentionViewSource,
@@ -41,7 +41,7 @@ impl<F: FnMut() -> io::Result<()>> RetentionViewSource for RewriteHead<F> {
 // Delete when double collection is removed or a stronger filesystem law subsumes this schedule.
 #[test]
 fn a_changed_catalog_length_refuses_the_loaded_reader_view() -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("reader-changed-catalog-length")?;
+    let sandbox = initialized_store("reader-changed-catalog-length")?;
     let root = Dir::open_ambient_dir(sandbox.path(), cap_std::ambient_authority())?;
     let _fence = ReaderFence::acquire(&root)?;
     let retention = root.open_dir_nofollow(pool_name::RETENTION)?;

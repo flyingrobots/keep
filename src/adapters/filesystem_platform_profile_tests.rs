@@ -2,7 +2,7 @@
 
 use super::{
     LinuxDirectoryProperties, PROTOCOL_DIRECTORIES, VERSION_TWO_PROTOCOL_DIRECTORIES,
-    admit_linux_child_properties, admit_linux_properties, linux_root_identity,
+    admit_linux_child_properties, admit_linux_properties,
 };
 use rustix::fs::{NFS_SUPER_MAGIC, StatVfsMountFlags};
 
@@ -46,14 +46,6 @@ fn every_protocol_child_must_share_the_root_filesystem_and_mount() {
     assert_unsupported(&admit_linux_child_properties(root, casefolded));
     assert_unsupported(&admit_linux_child_properties(root, read_only));
     assert_unsupported(&admit_linux_child_properties(root, foreign_format));
-}
-
-#[test]
-fn root_identity_uses_linux_device_mount_and_inode_coordinates() {
-    let identity = linux_root_identity(8, 1, 41, 73);
-    assert_eq!(identity.device(), rustix::fs::makedev(8, 1));
-    assert_eq!(identity.mount(), 41);
-    assert_eq!(identity.file(), 73);
 }
 
 fn assert_unsupported(result: &std::io::Result<()>) {

@@ -3,7 +3,7 @@
 //! After the child dies at its coordinate, restart requires the exact stage
 //! residue that coordinate leaves, recovers it with the public version-two
 //! recovery tools, republishes when the candidate never reached `HEAD`, and
-//! then reads both the migrated retained blob and the ingested blob through
+//! then reads both the retained bundle blob and the ingested blob through
 //! the production durable reader.
 
 use std::fs;
@@ -205,7 +205,7 @@ fn retain_blob(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
         .map_err(|source| verification("publish crash blob retention", source))
 }
 
-/// Reads the migrated retained blob and the ingested blob through the durable reader.
+/// Reads the retained bundle blob and the ingested blob through the durable reader.
 fn read_back(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
     let store = DurableStore::open(store_root, policy()?, ReaderAttemptLimit::DEFAULT)
         .map_err(|source| verification("open recovered durable store", source))?;

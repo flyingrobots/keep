@@ -12,7 +12,7 @@ const CORPUS_README: &str = include_str!("../../conformance/segment-store/v1/REA
 fn version_one_crash_evidence_is_distinguished_from_the_complete_command() {
     assert!(
         RECOVERY.contains("105 version-one cases are a subset"),
-        "the unqualified crash command also executes version-two migration cases"
+        "the unqualified crash command also executes version-two cases"
     );
 }
 

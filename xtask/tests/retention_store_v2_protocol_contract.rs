@@ -4,8 +4,8 @@
 
 #[path = "retention_store_v2_protocol_contract/closure_contract_laws.rs"]
 mod closure_contract_laws;
-#[path = "retention_store_v2_protocol_contract/migration_contract_laws.rs"]
-mod migration_contract_laws;
+#[path = "retention_store_v2_protocol_contract/initialization_contract_laws.rs"]
+mod initialization_contract_laws;
 #[path = "retention_store_v2_protocol_contract/parser_fuzz_laws.rs"]
 mod parser_fuzz_laws;
 #[path = "retention_store_v2_protocol_contract/transition_laws.rs"]
@@ -56,10 +56,8 @@ fn version_two_is_one_routed_protocol() -> Result<(), Box<dyn std::error::Error>
         "[Closure verification](closure.md)",
         "[Closure corruption boundary](closure-corruption.md)",
         "[GC and disposition records](gc.md)",
-        "[Migration and recovery](recovery.md)",
-        "[Migration protocol and recovery](migration-recovery.md)",
-        "[Migration crash points](migration-crash.md)",
-        "[Migration inventory](migration-inventory.md)",
+        "[Format, namespace, and portability](recovery.md)",
+        "[Direct initialization](initialization.md)",
         "[Requirements and evidence](requirements.md)",
         "[Format rationale](rationale.md)",
     ] {
@@ -145,10 +143,9 @@ fn version_two_pages_stay_within_the_review_threshold() -> Result<(), Box<dyn st
         "README.md",
         "closure-corruption.md",
         "closure.md",
+        "catalog-publication.md",
         "gc.md",
-        "migration-crash.md",
-        "migration-inventory.md",
-        "migration-recovery.md",
+        "initialization.md",
         "rationale.md",
         "recovery.md",
         "requirements.md",

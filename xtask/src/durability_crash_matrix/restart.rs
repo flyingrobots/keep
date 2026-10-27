@@ -1,13 +1,12 @@
 //! This module owns independent post-process-death store verification.
 
 mod expectation;
-mod migration;
-mod migration_expectation;
 mod retention;
 mod retention_incomplete;
 mod retention_snapshot;
 mod semantic;
 mod version_two_catalog;
+mod version_two_initialization;
 mod version_two_recovery;
 
 use std::collections::BTreeSet;
@@ -27,8 +26,8 @@ pub(super) fn verify(
     if case.point().sequence() == xtask::DurabilityCrashSequence::Retention {
         return retention::verify(store_root, case);
     }
-    if case.point().sequence() == DurabilityCrashSequence::Migration {
-        return migration::verify(store_root, case);
+    if case.point().sequence() == DurabilityCrashSequence::VersionTwoInitialization {
+        return version_two_initialization::verify(store_root, case);
     }
     if case.point().sequence() == DurabilityCrashSequence::VersionTwoCatalog {
         return version_two_catalog::verify(store_root, case);

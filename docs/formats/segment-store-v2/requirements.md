@@ -18,7 +18,7 @@ case is not evidence.
 | `KEEP-RETENTION-007` | Complete-stage recovery preserves canonical history; incomplete stages require disposition before mutation | Complete publication-prefix recovery and reader-state laws remain; incomplete direct/publication recovery and process-death laws now require typed refusal and preserved bytes. See [landing ledger](../../testing-evidence/retention-landing.md). | Implemented under the bounded scope merged in #99; automatic incomplete-stage disposition deferred to #155 |
 | `KEEP-RETENTION-008` | Readers double-collect catalog and retention heads and bind one complete catalog, manifest, and root-generation view under a `ReaderFence` | `ReaderFence` holds a shared kernel lock on a verified zero-length `reader.lock`; `collect_retention_view` accepts a view only when both head coordinates agree before and after loading and refuses an exhausted attempt limit (`retention_view_collector_tests`); `FilesystemRetentionSnapshot` binds the catalog snapshot, retention head, and manifest under the fence and verifies each selected root on demand while the fence is held, refusing a substituted root and a replaced fence, and two readers share the fence while an exclusive lock waits (`filesystem_retention_snapshot_tests`); Linux public snapshot process laws prove live-reader exclusion, SIGKILL fence release with persistent inode preservation, and kernel-queued new-reader exclusion until collection releases the fence (`tests/reader_fence_process.rs`; [evidence](../../testing-evidence/reader-fence-process.md)) | Implemented |
 | `KEEP-RETENTION-009` | Exact already-committed retry is idempotent only while its successor remains current | byte-identical planning in `tests/retention_transition.rs`; authority-revalidated zero-mutation retry receipt in `tests/retention_publication_execution.rs`; exact already-committed filesystem retry with a byte-identical retention witness in `filesystem_retention_storage_tests`; superseded-candidate filesystem refusal with zero mutation in `filesystem_retention_successor_tests`; committed retry reopens the head-selected manifest entry and root pool bytes, refusing absent, changed, or corrupt evidence in `filesystem_retention_current_tests`; every refusal is a typed `RetentionCurrentStateRefusal` source, with superseded, committed-root-absent, committed-root-changed, and head-absent-with-artifacts pinned by downcast | Implemented |
-| `KEEP-RETENTION-010` | Model operation sequences agree with a deterministic namespace-to-anchor-set map and never admit caller identity, paths, clocks, or application policy | all three-operation histories over initial publications of two namespaces, successor, release, restore, byte-identical retry and stale initial (343 histories, each in a fresh migrated store) compare fenced namespace generations, anchor sets and liveness against an operation-derived model after every step; exact typed refusals remain checked. The count describes exploration, not correctness. See [release/restore evidence](../../testing-evidence/retention-release-restore-model.md). Core architecture checks remain separate static evidence. | Implemented; release/restore model coverage added for #128 |
+| `KEEP-RETENTION-010` | Model operation sequences agree with a deterministic namespace-to-anchor-set map and never admit caller identity, paths, clocks, or application policy | all three-operation histories over initial publications of two namespaces, successor, release, restore, byte-identical retry and stale initial (343 histories, each in a fresh initialized store) compare fenced namespace generations, anchor sets and liveness against an operation-derived model after every step; exact typed refusals remain checked. The count describes exploration, not correctness. See [release/restore evidence](../../testing-evidence/retention-release-restore-model.md). Core architecture checks remain separate static evidence. | Implemented; release/restore model coverage added for #128 |
 | `KEEP-RETENTION-011` | Catalog publication over retention state admits the current retention head, manifest, and every manifest root under writer authority; verifies every retained closure against the candidate before any catalog storage call; and refuses `HEAD` replacement if the retention head changed | port-level laws in `tests/retained_catalog_publication.rs`: dropped and substituted members refuse with the exact missing identity and no catalog stage; every manifest root is verified wherever it sorts; absent, corrupt, substituted, and contradictory head, manifest, and root evidence refuse with typed expected and observed state; a head changed, removed, or published before commit refuses after `head.next` verification without `replace_head`; an exhaustive 24-case candidate-by-root-set model and a repeat-run determinism check | Implemented at the storage port; the filesystem version-2 publisher and version-2 next-head finalization use it (#198, `KEEP-RETENTION-012` and `013`) |
 | `KEEP-RETENTION-012` | Under version-2 writer authority, one staged segment and a catalog successor publish only through the retained-closure gate, with no-follow bounded retention reads, head absence admitted only when uncontradicted, fixed retention stages refused, and no reader fence taken | `FilesystemVersionTwoCatalogPublisher`; `tests/version_two_catalog_writer.rs`: a preserving successor publishes, reopens, and reads both blobs while the retention root still verifies; a pinned reader view keeps its generation across publication; a candidate that drops retained content, a contradicted head absence, and a fixed retention stage each refuse with the exact typed error and an unchanged store witness; runtime RED for the contradiction and stage checks | Implemented for one staged segment per publication; segment rollover is #121 |
 | `KEEP-RETENTION-013` | Version-2 segment and catalog stage recovery admits version-2 root entries as known, reuses the version-1 executors, and finalizes a staged `head.next` only after the retained-closure gate admits it | `FilesystemVersionTwoRecoveryAdmission`, `classify_version_two_recovery_names`, and the `open_version_two` constructors; `tests/version_two_catalog_writer.rs` covers classification, completion, discard, reusable-prefix segment resume, and finalization that preserves or would lose retained content (runtime RED with the gate result ignored); `filesystem_version_two_catalog_recovery_tests` recovers injected interruptions after segment link, catalog-stage creation, and `head.next` synchronization | Implemented |
@@ -27,22 +27,36 @@ case is not evidence.
 
 <!-- markdownlint-enable MD013 -->
 
-## Migration
+## Format marker
 
 <!-- markdownlint-disable MD013 -->
 
 | ID | Requirement | Evidence | Status |
 | --- | --- | --- | --- |
-| `KEEP-MIGRATION-001` | Exact version-1 stores remain admitted until a durable migration artifact exists | `tests/store_migration_recovery.rs` admits the artifact-free version-one observation; `src/adapters/store_migration/filesystem_migration_recovery_tests.rs` verifies every forward prefix under a fresh authority | Implemented; compatibility expansion in #112 |
-| `KEEP-MIGRATION-002` | Format marker, intent, and receipt have complete fixed byte tables, named domains, bounds, checksums, deterministic store identity, and exact initial-state digests | exact admission in `tests/store_format_marker.rs`, `tests/store_migration_intent.rs`, and `tests/store_migration_receipt.rs`; canonical construction in `tests/store_migration_intent_encoding.rs` and `tests/store_migration_receipt_encoding.rs`; seeded `migration_format` fuzz target | Implemented |
-| `KEEP-MIGRATION-003` | Migration revalidates version-1 head, catalog, pools, root identity (all three coordinates within the migrating process; device and file across restart), and writer authority before mutation | bounded canonical pool inventory in `tests/store_migration_inventory.rs`; writer-locked filesystem pool admission in `filesystem_inventory_*_tests`; exact authority observation and drift refusal in `filesystem_migration_authority_tests`; verification-first execution in `tests/store_migration_execution.rs`; fresh filesystem integration and post-publication drift refusal in `filesystem_migration_storage_tests`; a version-one store still holding a retained stage refuses before the intent is observed in `filesystem_migration_storage_tests` | Implemented |
-| `KEEP-MIGRATION-004` | Every partial migration prefix continues idempotently under writer authority, comparing only the restart-stable root coordinates (device and file) against the persisted intent | restart-stable coordinate laws in `filesystem_version_two_admission_tests` and complete reopen laws in `filesystem_migration_remount_tests`; `tests/store_migration_recovery.rs` and `tests/store_migration_recovery_order.rs` freeze planner and ordering laws; `src/adapters/store_migration/filesystem_migration_recovery_tests.rs` covers every forward prefix; `src/adapters/store_migration/filesystem_migration_recovery_truncation_tests.rs` covers every strict fixed-stage truncation | Implemented in #108 |
-| `KEEP-MIGRATION-005` | Unknown, out-of-order, substituted, corrupt, conflicting, or changed evidence is unrecoverable ambiguity | Forward-execution laws remain. Filesystem restart record, pair, ordering, root, pool and namespace laws assert exact existing refusal boundaries and preserve complete names, device/inode identities and bytes; see [restart matrix](../../testing-evidence/migration-restart-matrix.md) for scenarios, calibration, diagnostic limits and validation ownership. | Evidence delivered in merged PR #161 (#111), including complete-state namespace refusal; see the restart matrix for bounded coverage and separate diagnostic obligations |
-| `KEEP-MIGRATION-006` | Migration never rewrites or deletes admitted version-1 immutable bytes | exact segment, catalog, and head witnesses in `src/adapters/store_migration/filesystem_migration_storage_tests.rs`, `src/adapters/store_migration/filesystem_migration_recovery_tests.rs`, and `src/adapters/store_migration/filesystem_migration_recovery_truncation_tests.rs`; subprocess restart witnesses in `cargo xtask durability-crash-matrix --sequence migration` | Implemented in #108 |
-| `KEEP-MIGRATION-007` | Process death around every intent stage, canonical link, namespace prefix, marker stage, receipt stage, cleanup, and synchronization boundary reaches a documented lawful state | ordered phases and capabilities in `tests/store_migration_phase.rs` and `tests/store_migration_storage.rs`; exact phase-failure execution in `tests/store_migration_execution.rs`; production 21-phase forward execution in `filesystem_migration_storage_tests`; `cargo xtask durability-crash-matrix --sequence migration` runs 68 production subprocess cases at `KEEP-CRASH-053..=073`, debug and release | Implemented in #108 |
-| `KEEP-MIGRATION-008` | Version-1 admission refuses every version-2 or partial-migration artifact after migration begins | Every forward-prefix compatibility law preserves v1 HEAD/catalog/segment bytes and refuses v1 authority after migration effects; public decoder laws pin unsupported versions and every mandatory flag bit; bounded seeded migration parser/recovery-planner fuzzing explores valid and malformed transitions. Existing jointly bound version-two admission and root-identity laws remain. See [compatibility evidence](../../testing-evidence/migration-compatibility-fuzz.md) for coverage, calibration and limits. | Implemented |
+| `KEEP-FORMAT-001` | `FORMAT` has a complete fixed byte table, named domains, a checksum, the registered definition digest, and exact admission; every admission reads it no-follow, bounded, and refuses trailing bytes | `tests/store_format_marker.rs`; independent golden oracle `xtask/tests/retention_store_v2_format_oracle.rs`; corrupt and oversized marker refusals in `filesystem_version_two_admission_tests` and `verification_store_admission_tests`; seeded `format_marker` fuzz target | Implemented (#198); marker obligation of retired `KEEP-MIGRATION-002` |
 
 <!-- markdownlint-enable MD013 -->
+
+## Initialization
+
+<!-- markdownlint-disable MD013 -->
+
+| ID | Requirement | Evidence | Status |
+| --- | --- | --- | --- |
+| `KEEP-INITIALIZATION-001` | Direct initialization creates exactly the committed namespace under exclusive writer authority, links `FORMAT` from a durable `FORMAT.next` without replacement, and returns authority only after the commit and cleanup synchronizations and complete admission | `a_fresh_root_commits_to_exactly_the_initialized_namespace` in `initialization_resume_tests` | Implemented (#198) |
+| `KEEP-INITIALIZATION-002` | Every interrupted state classifies as exactly one prefix and resumes idempotently; every other nonempty root, including a committed one, refuses with typed evidence before any mutation, writer-lock creation included | `every_interrupted_boundary_classifies_and_resumes_to_one_store` (every boundary of a recorded run, against a model of the protocol table) and the incomplete-stage and sync-failure laws in `initialization_resume_tests`; foreign, out-of-order, stray-retention, foreign-stage, nonempty-lock, linked-directory, committed, and copied-marker refusals with unchanged witnesses in `initialization_prefix_tests` | Implemented (#198) |
+| `KEEP-INITIALIZATION-003` | Admission requires a committed marker: writers and readers refuse `FORMAT.next` as `InitializationIncomplete` and a missing `FORMAT` as `MissingFormatMarker`; a committed store without catalog `HEAD` admits writers, refuses readers as `Unpublished`, and its first publication proves both absences instead of assuming them | `filesystem_version_two_admission_tests` | Implemented (#198) |
+| `KEEP-INITIALIZATION-004` | Process death before, during, and after every initialization boundary reaches a documented state that `initialize` recovers | `cargo xtask durability-crash-matrix --sequence version-two-initialization` runs 41 cases at `KEEP-CRASH-081..=091`, checks the exact inventory, marker bytes and inode, admission result, and resumed state, then publishes, retains, and reconstructs the first blob | Implemented (#198); process death only, not power loss |
+| `KEEP-INITIALIZATION-005` | Concurrent initialization attempts have exactly one initializer: the other refuses on writer authority and, after commit, as already initialized | `concurrent_attempts_have_exactly_one_initializer` in `initialization_resume_tests` | Implemented (#198) |
+
+<!-- markdownlint-enable MD013 -->
+
+## Retired identifiers
+
+The `KEEP-MIGRATION-001` to `-008` requirements and the `KEEP-CRASH-053` to
+`-073` process-death rows were retired with migration. They are never reused.
+The [retirement ledger](retired-identifiers.md) maps each one to its last
+evidence and states where its obligation went.
 
 ## Garbage collection reservation
 
@@ -57,15 +71,15 @@ case is not evidence.
 
 ## Compatibility and nonclaims
 
-- Version 2 preserves exact version-1 segment, catalog, and publication-head
-  bytes.
-- Migration is one-way and provides no downgrade.
+- Version 2 keeps the version-1 segment, catalog, and publication-head
+  grammars byte for byte. A version-1 store is not converted: version-2 code
+  refuses it, and no migration or downgrade exists.
 - Retention evidence proves a bounded physical reconstruction claim, not
   application meaning, causal ownership, future policy, or secure erasure.
 - A fresh forward writer is not proof that version 2 is restart-safe or
   production-admitted; partial-prefix recovery and crash evidence remain
   mandatory. This applies to retention publication exactly as it applies to
-  migration: the filesystem publication writer never continues a retained
+  initialization: the filesystem publication writer never continues a retained
   stage; it recovers complete evidence first, preserving incomplete stages for disposition,
   finalizing a complete head, and refusing a complete orphan until explicit
   disposition. A stage left behind by a failed write is recovery evidence like
@@ -73,5 +87,7 @@ case is not evidence.
 - Publication binds this store's catalog `HEAD` to the verified closure and
   reopens the head-selected catalog and its segments under authority. Forward
   publication and recovery both replay the bounded live closure before effects.
-- Benchmarks are required before performance-sensitive retention or migration
-  optimization.
+- Admission does not detect an unintended but valid store or an older valid
+  state; a copy of a store is a second, independent store.
+- Benchmarks are required before performance-sensitive retention or
+  initialization optimization.

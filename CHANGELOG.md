@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Keep has one storage format: `FilesystemVersionTwoAdmission::initialize` creates a store directly through a recoverable protocol with one durable commit point and a 41-case crash matrix (`KEEP-CRASH-081`–`091`), migration and its public API, records, golden fixtures, and crash rows `KEEP-CRASH-053`–`073` are deleted, the persisted root device-and-inode binding is removed so quiescent copies and backups open, and the format-definition digest changes to `f1a0ce10…361d` (#198).
+
 - Version-2 stores can ingest: `FilesystemVersionTwoCatalogPublisher` stages one segment and publishes a catalog successor through the retained-closure gate, version-2 catalog-stage recovery classifies version-2 roots and finalizes a staged head only after the same gate admits it, and `KEEP-CRASH-074` through `077` cover writer process death (#198).
 
 - Version-2 catalog publication can refuse candidates that lose retained content: `publish_retained_catalog_generation` verifies every current retained closure against the candidate before any catalog mutation and revalidates the retention head before `HEAD` replacement (#125).

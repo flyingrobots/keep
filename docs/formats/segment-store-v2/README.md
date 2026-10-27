@@ -1,14 +1,15 @@
 # Durable Segment Store Version 2
 
-`keep.segment-store/v2` is the accepted successor to
-`keep.segment-store/v1`. It preserves every admitted version-1 segment,
-catalog, and publication-head byte while adding explicit retention state,
-reader fences, migration evidence, and reserved GC and recovery-disposition
-namespaces.
+`keep.segment-store/v2` is the successor to `keep.segment-store/v1` and the
+one store format Keep creates. It keeps the version-1 segment, catalog, and
+publication-head grammars byte for byte and adds the `FORMAT` marker, the
+reader fence, explicit retention state, and reserved GC and
+recovery-disposition namespaces.
 
-ADR-0009 owns the cross-cutting retention and liveness decision. These pages own its durable representation.
-
-The one-way migration, version-two reopen, forward retention publication, partial-prefix migration recovery, complete-stage retention recovery, and fenced retention snapshots are implemented on main through [PR #99](https://github.com/flyingrobots/keep/pull/99).
+ADR-0009 owns the cross-cutting retention and liveness decision.
+[ADR-0010](https://github.com/flyingrobots/keep/pull/199) makes this the only
+storage format and replaces migration with direct initialization. These pages
+own the durable representation.
 
 The [requirements ledger](requirements.md) records evidence and remaining obligations; the laws below are normative requirements, not a claim that every corresponding runtime surface exists.
 
@@ -17,10 +18,13 @@ The [requirements ledger](requirements.md) records evidence and remaining obliga
 Version 2 retains every version-1 physical law and adds these:
 
 - the format version is explicit and cannot be inferred from path existence;
-- a complete version-2 store is entered only by the specified version-1
-  migration; direct version-2 initialization is undefined;
-- migration is one-way, writer-authorized, durable, and recoverable from every
-  documented prefix;
+- a store is created only by direct initialization, a recoverable state
+  machine under writer authority with one durable commit point, and it does
+  not admit before that point;
+- an initialized store with no published catalog is a defined, admitted
+  state;
+- nothing persisted binds a store to its directory: a quiescent copy is the
+  same store, and live authority comes from the opening process;
 - retention authority exists only through one verified retention head and its
   complete immutable manifest;
 - each manifest binds every admitted namespace to one exact root generation
@@ -38,6 +42,12 @@ Version 2 retains every version-1 physical law and adds these:
 
 The following pages form one protocol:
 
+- [Direct initialization](initialization.md) owns how a store comes into
+  existence: the forward protocol, its commit point, every interrupted state
+  and its one result, and the initialization process-death boundaries.
+- [Format, namespace, and portability](recovery.md) owns the exact root
+  namespace, the `FORMAT` marker, the reader fence, the GC and
+  recovery-disposition reservation, and the laws that keep a store portable.
 - [Retention records](retention.md) owns canonical namespace, root-generation,
   manifest, and retention-head rules.
 - [Retention publication](retention-publication.md) owns closure admission and
@@ -52,23 +62,16 @@ The following pages form one protocol:
   ingress proof and its exact refusal evidence.
 - [GC and disposition records](gc.md) owns the canonical planned intent,
   completion, and recovery-disposition byte grammars.
-- [Migration and recovery](recovery.md) owns the exact root namespace,
-  version marker, reader fence, migration records, GC reservation,
-  recovery-disposition reservation, and restart behavior.
-- [Migration protocol and recovery](migration-recovery.md) owns the ordered
-  one-way migration protocol and partial-migration recovery.
-- [Migration crash points](migration-crash.md) owns fixed-stage publication and
-  the exact process-death boundaries for migration.
-- [Migration inventory](migration-inventory.md) owns the bounded canonical
-  digest over preserved version-1 immutable pools.
 - [Requirements and evidence](requirements.md) owns stable requirement and
   crash identifiers, evidence status, compatibility, and nonclaims.
+- [Retired identifiers](retired-identifiers.md) maps every retired
+  requirement and crash identifier to its last evidence.
 - [Format rationale](rationale.md) records format-local choices and rejected
   alternatives.
 
 The [version-2 golden corpus](../../../conformance/segment-store/v2/README.md)
-freezes independent definition, profile, inventory, and record bytes. It is
-format evidence, not production-writer evidence.
+freezes independent definition, profile, marker, and retention record bytes.
+It is format evidence, not production-writer evidence.
 
 The version-1 [segment](../segment-store-v1/segment.md),
 [catalog](../segment-store-v1/catalog.md), and
@@ -78,23 +81,23 @@ re-encode them.
 
 ## Status
 
-The format contract is frozen by ADR-0009 and this specification.
+The format contract is frozen by ADR-0009, ADR-0010, and this specification.
 
 Implemented with executable evidence: public core types for namespaces,
 generations, realization profiles, closure policies, anchors, and roots;
-canonical root, manifest, and head codecs matching their golden records;
-storage-independent transition planning, bounded closure verification against
-one pinned catalog, preflight, preparation, and the 17-phase publication port;
-fresh writer-locked filesystem migration through all 21 phases, refusing a
-version-one store that still holds a retained stage;
-`FilesystemVersionTwoAdmission::reopen`, which jointly admits the marker,
-intent, and receipt, binds the root's restart-stable device and inode identity
-to the intent, and pins the retention directories it admitted; and
-`FilesystemRetentionPublicationAuthority`, which publishes initial and
-successor generations against the observed head, binds this store's catalog
-head and the catalog it selects, and refuses superseded candidates, retained
-stages, replaced protocol directories, and every namespace or capacity
-violation before mutation, each as a typed `RetentionCurrentStateRefusal`.
+canonical root, manifest, head, and marker codecs matching their golden
+records; storage-independent transition planning, bounded closure
+verification against one pinned catalog, preflight, preparation, and the
+17-phase publication port; `FilesystemVersionTwoAdmission::initialize`, which
+creates or resumes a store through the initialization protocol and its 41-case
+process-death matrix; `FilesystemVersionTwoAdmission::reopen`, which admits
+the committed namespace and the marker and pins the retention directories it
+admitted; and `FilesystemRetentionPublicationAuthority`, which publishes
+initial and successor generations against the observed head, binds this
+store's catalog head and the catalog it selects, and refuses superseded
+candidates, retained stages, replaced protocol directories, and every
+namespace or capacity violation before mutation, each as a typed
+`RetentionCurrentStateRefusal`.
 
 Retention publication recovery, fenced retention snapshots and model-based transition evidence are implemented on main.
 
@@ -108,7 +111,7 @@ Writer authority coordinates cooperating writers in a managed namespace; it does
 
 `FilesystemRetentionSnapshot` binds a catalog, retention head and manifest under a shared reader fence and verifies selected roots on demand. `DurableStore` composes that view with authenticated whole-blob and exact-range reads, delivered in [PR #164](https://github.com/flyingrobots/keep/pull/164); the [read contract](../../invariants/authenticated-reconstruction/README.md) records proof and allocation limits.
 
-The candidate-catalog retained-closure gate is implemented over its storage port ([#125](https://github.com/flyingrobots/keep/issues/125)). `FilesystemVersionTwoCatalogPublisher` ingests one segment and publishes a catalog successor through it, and version-two next-head finalization runs the same admission before replacing `HEAD` ([#198](https://github.com/flyingrobots/keep/issues/198)); see [catalog publication and stage recovery](catalog-publication.md). Verifying a new retention root against the current catalog is a different operation.
+The candidate-catalog retained-closure gate is implemented over its storage port ([#125](https://github.com/flyingrobots/keep/issues/125)). `FilesystemVersionTwoCatalogPublisher` ingests one segment and publishes a catalog successor through it, including the first catalog of an initialized store, and version-two next-head finalization runs the same admission before replacing `HEAD` ([#198](https://github.com/flyingrobots/keep/issues/198)); see [catalog publication and stage recovery](catalog-publication.md). Verifying a new retention root against the current catalog is a different operation.
 
 [Durable verification reports](../../invariants/verification/README.md) are delivered in [PR #165](https://github.com/flyingrobots/keep/pull/165), with explicit subject/depth evidence and typed non-success outcomes.
 
@@ -116,11 +119,4 @@ Production durable ingestion ([#82](https://github.com/flyingrobots/keep/issues/
 
 The `KEEP-CRASH-036..052` initial-publication process-death sequence includes independent recovered-reader checks; its [evidence receipt](../../testing-evidence/retention-crash-reader-oracle.md) records the assertions, calibration, and scope.
 
-Partial-prefix migration recovery and the 68-case `KEEP-CRASH-053..073`
-process-death matrix are implemented.
-
-The [migration restart matrix](../../testing-evidence/migration-restart-matrix.md) and [compatibility and fuzz evidence](../../testing-evidence/migration-compatibility-fuzz.md) record the additional merged #111/#112 evidence and its remaining limits.
-
-Reopen compares restart-stable root coordinates, device and inode, against the intent; see [root identity across restart](recovery.md#root-identity-across-restart).
-
-A version-1 store remains admitted until its owner migrates it. The [requirements ledger](requirements.md) records implementation and evidence gaps; planned cases are not proof.
+Version-1 admission still exists and refuses every version-2 store; version-2 admission refuses every version-1 store. No conversion between them exists. Version-1 admission is removed by a later unit of [#198](https://github.com/flyingrobots/keep/issues/198).

@@ -22,29 +22,24 @@ const PUBLISHED_NAMES: [&str; 5] = [
     CATALOGS_NAME,
     HEAD_NAME,
 ];
-const VERSION_TWO_MARKERS: [&str; 10] = [
+const VERSION_TWO_MARKERS: [&str; 6] = [
     "reader.lock",
     "FORMAT",
     "FORMAT.next",
-    "migration.intent",
-    "migration.intent.next",
-    "migration.receipt",
-    "migration.receipt.next",
     "retention",
     "gc",
     "recovery",
 ];
 const READER_LOCK_NAME: &str = "reader.lock";
 const MARKER_NAME: &str = "FORMAT";
-const INTENT_NAME: &str = "migration.intent";
-const RECEIPT_NAME: &str = "migration.receipt";
+const MARKER_STAGE_NAME: &str = "FORMAT.next";
 const RETENTION_NAME: &str = "retention";
 const GC_NAME: &str = "gc";
 const RECOVERY_NAME: &str = "recovery";
 const ROOTS_NAME: &str = "roots";
 const MANIFESTS_NAME: &str = "manifests";
 const DISPOSITIONS_NAME: &str = "dispositions";
-const VERSION_TWO_NAMES: [&str; 12] = [
+const VERSION_TWO_NAMES: [&str; 10] = [
     LOCK_NAME,
     STAGING_NAME,
     SEGMENTS_NAME,
@@ -52,14 +47,12 @@ const VERSION_TWO_NAMES: [&str; 12] = [
     HEAD_NAME,
     READER_LOCK_NAME,
     MARKER_NAME,
-    INTENT_NAME,
-    RECEIPT_NAME,
     RETENTION_NAME,
     GC_NAME,
     RECOVERY_NAME,
 ];
 const NEXT_HEAD_NAME: &str = "head.next";
-const VERSION_TWO_STAGED_NAMES: [&str; 13] = [
+const VERSION_TWO_STAGED_NAMES: [&str; 11] = [
     LOCK_NAME,
     STAGING_NAME,
     SEGMENTS_NAME,
@@ -68,8 +61,6 @@ const VERSION_TWO_STAGED_NAMES: [&str; 13] = [
     NEXT_HEAD_NAME,
     READER_LOCK_NAME,
     MARKER_NAME,
-    INTENT_NAME,
-    RECEIPT_NAME,
     RETENTION_NAME,
     GC_NAME,
     RECOVERY_NAME,
@@ -92,15 +83,15 @@ pub(super) fn admit_published(directory: &Dir) -> io::Result<()> {
     admit_membership(directory, &PUBLISHED_NAMES)
 }
 
-/// Refuses version-two residue before version-one recovery touches a pool.
+/// Refuses version-two state before version-one recovery touches a pool.
 ///
 /// Recovery may open a store at any lawful point of its version-one lifecycle,
 /// including before first publication and with `head.next` retained, and the
 /// recovery inventory already classifies every unknown root entry as
-/// unexpected. What that classification cannot express is that a root has left
-/// version one entirely: a format marker, reader fence, migration record or
-/// stage, or a `retention`, `gc`, or `recovery` directory means version-one
-/// recovery must refuse before pinning anything.
+/// unexpected. What that classification cannot express is that a root is a
+/// version-two store: a format marker or its stage, a reader fence, or a
+/// `retention`, `gc`, or `recovery` directory means version-one recovery must
+/// refuse before pinning anything.
 pub(super) fn admit_recoverable(directory: &Dir) -> io::Result<()> {
     for entry in directory.entries()? {
         let name = entry?.file_name();
@@ -111,18 +102,21 @@ pub(super) fn admit_recoverable(directory: &Dir) -> io::Result<()> {
     Ok(())
 }
 
-/// Admits the exact completely migrated version-2 root namespace.
+/// Admits the exact committed version-2 root namespace.
 ///
-/// Every version-1 published entry, the persistent reader fence, the format
-/// marker, both migration records, and all three protocol directories must be
-/// present. Any other entry is unrecoverable ambiguity.
+/// `writer.lock`, `staging`, `segments`, `catalogs`, the persistent reader
+/// fence, the format marker, and all three protocol directories must be
+/// present; catalog `HEAD` is optional, because an initialized store holds
+/// none until its first publication. A root that still holds `FORMAT.next`
+/// refuses as `InitializationIncomplete` and a root without `FORMAT` as
+/// `MissingFormatMarker`. Any other entry is unrecoverable ambiguity.
 pub(super) fn admit_version_two(directory: &Dir) -> io::Result<()> {
     admit_version_two_required(directory)?;
     admit_membership(directory, &VERSION_TWO_NAMES)?;
     admit_version_two_protocol_directories(directory)
 }
 
-/// Admits a completely migrated version-2 root that may retain a catalog `head.next`.
+/// Admits a committed version-2 root that may retain a catalog `head.next`.
 ///
 /// `head.next` is the version-1 catalog-protocol head stage, which version 2
 /// preserves unchanged. A reader selects only `HEAD`, so a retained or
@@ -138,28 +132,31 @@ pub(super) fn admit_version_two_with_catalog_stage(directory: &Dir) -> io::Resul
 }
 
 fn admit_version_two_required(directory: &Dir) -> io::Result<()> {
+    admit_committed(directory)?;
+    admit_version_two_layout(directory)
+}
+
+/// Admits every committed root entry by kind; catalog `HEAD` is optional.
+fn admit_version_two_layout(directory: &Dir) -> io::Result<()> {
     admit_required_file(directory, LOCK_NAME)?;
     admit_required_directory(directory, STAGING_NAME)?;
     admit_required_directory(directory, SEGMENTS_NAME)?;
     admit_required_directory(directory, CATALOGS_NAME)?;
-    admit_required_file(directory, HEAD_NAME)?;
+    admit_optional_file(directory, HEAD_NAME)?;
     admit_required_file(directory, READER_LOCK_NAME)?;
     admit_required_file(directory, MARKER_NAME)?;
-    admit_required_file(directory, INTENT_NAME)?;
-    admit_required_file(directory, RECEIPT_NAME)?;
     admit_required_directory(directory, RETENTION_NAME)?;
     admit_required_directory(directory, GC_NAME)?;
     admit_required_directory(directory, RECOVERY_NAME)
 }
 
-/// Admits the nested version-2 protocol directories the migration writer left.
+/// Admits the nested version-2 protocol directories initialization created.
 ///
 /// `retention` must carry both immutable pools (its head and stages belong to
 /// retention publication); `gc` must be empty until `KEEP-GC-001` implements
-/// its records; `recovery` must hold exactly an empty `dispositions`. This is
-/// the same membership `verify_prefix_directories` requires at the end of
-/// migration, so a root that drifted after migration refuses here rather than
-/// as a later pinning failure.
+/// its records; `recovery` must hold exactly an empty `dispositions`. A root
+/// that drifted after initialization refuses here rather than as a later
+/// pinning failure.
 fn admit_version_two_protocol_directories(directory: &Dir) -> io::Result<()> {
     let retention = directory.open_dir_nofollow(RETENTION_NAME)?;
     admit_required_directory(&retention, ROOTS_NAME)?;
@@ -236,34 +233,34 @@ fn ambiguous_namespace() -> io::Error {
     FilesystemNamespaceRefusal::UnexpectedEntry.into_io()
 }
 
-/// Admits a published version-1 root carrying any subset of migration
-/// residue, for migration recovery only.
+/// Admits a committed root whose `FORMAT.next` cleanup was interrupted.
 ///
-/// The five published names are required with their kinds; every migration
-/// record, stage, the reader fence, and the three protocol directories are
-/// optional but must have their kinds; anything else refuses. Which subsets
-/// are lawful is the recovery planner's decision, not this admission's.
-pub(super) fn admit_migrating(directory: &Dir) -> io::Result<()> {
-    admit_required_file(directory, LOCK_NAME)?;
-    admit_required_directory(directory, STAGING_NAME)?;
-    admit_required_directory(directory, SEGMENTS_NAME)?;
-    admit_required_directory(directory, CATALOGS_NAME)?;
-    admit_required_file(directory, HEAD_NAME)?;
-    for name in [
-        READER_LOCK_NAME,
-        MARKER_NAME,
-        "FORMAT.next",
-        INTENT_NAME,
-        "migration.intent.next",
-        RECEIPT_NAME,
-        "migration.receipt.next",
-    ] {
-        admit_optional_file(directory, name)?;
+/// Initialization uses this law only after it has proven that `FORMAT` and
+/// `FORMAT.next` name one canonical marker inode. Every committed entry is
+/// admitted as [`admit_version_two_with_catalog_stage`] admits it, and
+/// `FORMAT.next` is additionally required.
+pub(super) fn admit_version_two_marker_linked(directory: &Dir) -> io::Result<()> {
+    admit_required_file(directory, MARKER_STAGE_NAME)?;
+    admit_version_two_layout(directory)?;
+    admit_optional_file(directory, NEXT_HEAD_NAME)?;
+    let mut allowed: Vec<&str> = VERSION_TWO_STAGED_NAMES.to_vec();
+    allowed.push(MARKER_STAGE_NAME);
+    admit_membership(directory, &allowed)?;
+    admit_version_two_protocol_directories(directory)
+}
+
+/// Refuses an uncommitted root with a typed reason before any other law.
+fn admit_committed(directory: &Dir) -> io::Result<()> {
+    match directory.symlink_metadata(MARKER_STAGE_NAME) {
+        Ok(_) => return Err(FilesystemNamespaceRefusal::InitializationIncomplete.into_io()),
+        Err(source) if source.kind() == io::ErrorKind::NotFound => {}
+        Err(source) => return Err(source),
     }
-    for name in [RETENTION_NAME, GC_NAME, RECOVERY_NAME] {
-        admit_optional_directory(directory, name)?;
+    match directory.symlink_metadata(MARKER_NAME) {
+        Ok(_) => Ok(()),
+        Err(source) if source.kind() == io::ErrorKind::NotFound => {
+            Err(FilesystemNamespaceRefusal::MissingFormatMarker.into_io())
+        }
+        Err(source) => Err(source),
     }
-    let mut allowed: Vec<&str> = PUBLISHED_NAMES.to_vec();
-    allowed.extend_from_slice(&VERSION_TWO_MARKERS);
-    admit_membership(directory, &allowed)
 }

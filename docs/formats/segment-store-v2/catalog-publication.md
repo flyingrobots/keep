@@ -1,11 +1,11 @@
 # Catalog Publication and Stage Recovery
 
-This page owns segment ingestion and catalog publication on a completely
-migrated `keep.segment-store/v2` store, and recovery of the catalog-protocol
+This page owns segment ingestion and catalog publication on a committed
+`keep.segment-store/v2` store, and recovery of the catalog-protocol
 stages that publication leaves. It adds no byte format: the segment, catalog,
 and publication-head grammars stay the version-1 grammars, and the retention
 records stay those of [Retention records](retention.md). Version-2 stores are
-still created only by migration.
+created by [direct initialization](initialization.md).
 
 ## Supported envelope
 
@@ -17,8 +17,10 @@ still created only by migration.
   references. The version-1 catalog, segment, and head bounds apply unchanged.
 - Retention evidence is bounded by one manifest of at most 4,096 entries and
   one root at a time. Each closure is bounded by its root's admitted limits.
-- The store must be a completely migrated version-2 root. Direct version-2
-  initialization is still undefined.
+- The store must be a committed version-2 root. A freshly initialized store
+  has no `HEAD`; its first publication uses the uninitialized expectation,
+  has no predecessor, and is admitted only when `segments`, `catalogs`, and
+  both retention pools are empty.
 
 ## Authority
 
@@ -103,8 +105,7 @@ must resolve it first.
 `FilesystemVersionTwoRecoveryAdmission::reopen` applies the writer admission
 with one difference: the root may also hold `head.next`. It requires the
 platform profile, the writer lock, the exact version-2 namespace and protocol
-directories, the jointly admitted marker, intent, and receipt, and the
-restart-stable root identity. The recovery tools take it through their
+directories, and the canonical `FORMAT` marker. The recovery tools take it through their
 `open_version_two` constructors:
 
 - `FilesystemRecoveryStageDiscarder`;
@@ -113,12 +114,13 @@ restart-stable root identity. The recovery tools take it through their
 - `FilesystemRecoveryNextHeadFinalizer`.
 
 The read-only `FilesystemRecoveryInventoryReader::open_version_two` applies
-the same namespace, record, and identity laws without the writer lock.
+the same namespace and marker laws without the writer lock.
 
 `classify_version_two_recovery_names` classifies `reader.lock`, `FORMAT`,
-`migration.intent`, `migration.receipt`, `retention`, `gc`, and `recovery` as
-known roles. It requires each of them and `HEAD`. Migration stages are unknown
-entries. Version-2 admission owns the contents of the three protocol
+`retention`, `gc`, and `recovery` as known roles and requires each of them. It
+does not require `HEAD`: the first publication of an initialized store can be
+interrupted before `HEAD` exists. `FORMAT.next` is an unknown entry.
+Version-2 admission owns the contents of the three protocol
 directories, and retention recovery owns `retention`.
 
 Stage discard, completion, and segment resume execute the version-1

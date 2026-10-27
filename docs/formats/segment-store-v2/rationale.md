@@ -7,27 +7,33 @@ authoritative for the cross-cutting retention and GC decision.
 
 Extending the version-1 root shape was rejected. Version 1 deliberately refuses
 unknown entries, so treating new retention state as optional would weaken its
-admission law and make old readers misclassify a mutated store. A durable
-migration intent creates an explicit authority boundary.
+admission law and make old readers misclassify a mutated store.
 
-Direct version-2 initialization was rejected for this version. Requiring one
-admitted version-1 predecessor gives migration, compatibility, and recovery one
-starting law instead of defining a second initialization protocol without a
-consumer requirement.
+## Initialize directly instead of migrating
 
-## Stage fixed migration records
+The first revision entered version 2 only by migrating a version-1 store.
+ADR-0010 replaced that with direct initialization: nothing was released and
+no store of value existed, and carrying a migration made every capability
+exist twice. After the first release, a format change ships a separately
+invoked upgrade tool that writes a new store and never modifies the source;
+see the ADR.
 
-Writing `migration.intent`, `FORMAT`, or `migration.receipt` in place was
-rejected because process death can expose partial canonical bytes. Exact
-`.next` stages make incomplete bytes non-authoritative and publish each
-canonical fixed record through an immutable no-replacement link.
+## Commit by linking the marker last
 
-## Preserve version-1 immutable bytes
+Writing `FORMAT` in place was rejected because process death can expose
+partial canonical bytes. `FORMAT.next` is written and synchronized before any
+directory exists, so its presence is the evidence of an initialization in
+progress, and it is linked to `FORMAT` without replacement only after the
+complete namespace is durable. Its removal follows the commit
+synchronization, so a root without `FORMAT.next` can only be observed after
+the commit is durable. A separate commit record was rejected: it would add a
+second fixed record to admit with no state the stage does not already prove.
+Recording the root directory's identity was rejected by ADR-0010.
 
-Re-encoding segments, catalogs, or publication heads during migration was
+## Keep version-1 grammars byte for byte
+
+Re-encoding segments, catalogs, or publication heads in version 2 was
 rejected. Their bytes are already canonical and independently evidenced.
-Preservation narrows migration to new authority and namespace state and permits
-byte-for-byte rollback analysis without promising an automatic downgrade.
 
 ## Keep namespace bytes out of paths
 
@@ -82,12 +88,13 @@ order avoids lock inversion. Publication does not take the reader lock because
 it deletes no published immutable segment. Readers therefore double-collect
 both mutable heads around transitive admission and reject a mixed view.
 
-## Derive logical store identity
+## Persist no store identifier
 
-Random or physical-location store identifiers were rejected. A deterministic
-digest of the admitted version-1 catalog, immutable pools, and target format
-definition gives byte-identical stores one logical identity while the migration
-intent separately binds physical coordinates for in-place recovery.
+Random or physical-location store identifiers were rejected. The migration
+intent once carried a deterministic, content-derived identifier; it was
+deleted with migration, and initialization records none. Two stores with the
+same bytes are indistinguishable by design; telling an intended store from a
+valid stranger needs an expectation the caller keeps, as ADR-0010 states.
 
 ## Reserve GC names but refuse their state
 
@@ -97,32 +104,14 @@ also rejected. Version 2 reserves the names, while their presence remains an
 unsupported mandatory state until issue #21 supplies complete byte, parser,
 crash, recovery, corruption, and fuzz evidence.
 
-## Compare restart-stable root coordinates on reopen
+## Bind no store to its root directory
 
-The migration intent records the root's device, mount, and inode identity.
-Only the first and last survive a remount: `statx.stx_mnt_id` is a mount
-instance, not a volume. Comparing it on reopen made a correctly remounted
-store refuse and would have made partial-prefix migration recovery reject
-the store's own intent after a reboot.
-
-Reopen therefore compares device and inode only, and future restart recovery
-must apply the same rule. Meanwhile,
-the migrating process still compares all three against its own observation.
-The intent bytes are unchanged.
-
-Rejected: removing the mount field. The definition digest covers the intent
-layout, so the change would re-derive the format marker, the receipt, and
-every version-2 fixture for no gain in restart safety. Rejected: the
-filesystem UUID as the device coordinate in this change. That would require
-separate platform admission, compatibility, and format decisions. Device
-renumbering remains a refusal; this change does not introduce re-admission or
-silently substitute a different identity coordinate.
-
-## Verify completed migration before reporting completion
-
-An exact receipt proves the migration records agree; it does not prove the current reserved namespace still admits. Recovery therefore invokes the read-only `StoreMigrationRecoveryStorage::verify_complete` capability after planning selects `Complete` and before returning success. The filesystem adapter reuses version-two namespace admission, retaining the original cause through `Observation` and `NamespacePreflight`. Existing corruption/planning refusals retain priority because this check follows planning. No namespace effect, synchronization or retention recovery is initiated.
-
-Completed stores may contain published retention roots, manifests and heads. Reusing the partial-migration empty-directory preflight would reject valid post-migration state, so completion uses the existing version-two admission policy instead. Migration completion verifies its root/reserved directory contract; retention owns the interpretation of retention artifacts and stages. This adds a required method to the public recovery storage port; external implementations must implement equivalent effect-free admission. On-disk formats and identities are unchanged.
+The migration intent recorded the root's device, mount, and inode, and reopen
+compared device and inode. That binding refused every backup restore and copy
+while proving less than it seemed: an intact store renamed into the path, or
+an older snapshot restored into the same inode, still admitted. ADR-0010
+removed it with migration. Live checks remain: lock-file identity, the
+same-process protocol-directory binding, and no-follow capability access.
 
 ## Gate catalog publication on every retained closure
 

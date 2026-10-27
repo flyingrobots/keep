@@ -221,36 +221,6 @@ pub(super) fn open_regular(directory: &Dir, name: &str) -> io::Result<File> {
     open_read(directory, name)
 }
 
-/// Reads at most `bound` bytes of the regular file `name`, or `None` if absent.
-///
-/// Residue observers use this to see an incomplete, exact, or overlong record
-/// as it is; a present entry that is not a regular file refuses by kind.
-pub(super) fn read_bounded_optional(
-    directory: &Dir,
-    name: &str,
-    bound: usize,
-) -> Result<Option<Vec<u8>>, ExactRecordError> {
-    match directory.symlink_metadata(name) {
-        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(source) => return Err(source.into()),
-        Ok(metadata) if !metadata.is_file() => {
-            return Err(ExactRecordRefusal::KindOrLength.into());
-        }
-        Ok(_) => {}
-    }
-    let file = match open_read(directory, name) {
-        Ok(file) => file,
-        Err(source) if source.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(source) => return Err(source.into()),
-    };
-    if !file.metadata()?.is_file() {
-        return Err(ExactRecordRefusal::KindOrLength.into());
-    }
-    let mut bytes = Vec::new();
-    file.take(exact_length(bound)?).read_to_end(&mut bytes)?;
-    Ok(Some(bytes))
-}
-
 /// Opens a record read-only without following links or blocking.
 pub(super) fn open_read(directory: &Dir, name: &str) -> io::Result<File> {
     let mut options = OpenOptions::new();
