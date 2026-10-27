@@ -58,7 +58,7 @@ pub use super::filesystem_segment_stage::FilesystemSegmentStage;
 pub use super::filesystem_version_two_admission::FilesystemVersionTwoAdmission;
 pub use super::filesystem_version_two_catalog_publisher::FilesystemVersionTwoCatalogPublisher;
 pub use super::filesystem_version_two_catalog_stages::FilesystemVersionTwoCatalogStages;
-#[cfg(feature = "repository-tasks")]
+#[cfg(any(test, feature = "repository-tasks"))]
 pub use super::filesystem_version_two_catalog_stages::{
     CatalogPublicationBoundary, CatalogPublicationObserver,
 };

@@ -189,9 +189,12 @@ pub use adapters::{
 #[cfg(feature = "repository-tasks")]
 #[doc(hidden)]
 pub use adapters::{
-    CatalogPublicationBoundary, CatalogPublicationObserver, ObservedSegmentStage,
-    RepositoryInitializationStorage, SegmentStageDurabilityEvent, SegmentStageObserver,
+    ObservedSegmentStage, RepositoryInitializationStorage, SegmentStageDurabilityEvent,
+    SegmentStageObserver,
 };
+#[cfg(any(test, feature = "repository-tasks"))]
+#[doc(hidden)]
+pub use adapters::{CatalogPublicationBoundary, CatalogPublicationObserver};
 pub use adapters::{
     FilesystemMigrationRecoveryRefusal, FilesystemMigrationResidueKind, MIGRATION_NAMESPACE_PREFIX,
     StoreMigrationEffect, StoreMigrationFixedStage, StoreMigrationNamespacePrefix,
