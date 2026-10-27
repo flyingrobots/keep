@@ -6,6 +6,7 @@ use xtask::{DurabilityCrashPoint, DurabilityCrashSequence};
 
 use DurabilityCrashSequence::{
     Catalog, Head, Initialization, Migration, RecoveryDiscard, Retention, Segment,
+    VersionTwoCatalog,
 };
 
 const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
@@ -350,6 +351,26 @@ const EXPECTED: &[(DurabilityCrashPoint, &str, DurabilityCrashSequence)] = &[
         "KEEP-CRASH-073",
         Migration,
     ),
+    (
+        DurabilityCrashPoint::VersionTwoLinkSegment,
+        "KEEP-CRASH-074",
+        VersionTwoCatalog,
+    ),
+    (
+        DurabilityCrashPoint::VersionTwoCreateCatalogStage,
+        "KEEP-CRASH-075",
+        VersionTwoCatalog,
+    ),
+    (
+        DurabilityCrashPoint::VersionTwoSynchronizeHead,
+        "KEEP-CRASH-076",
+        VersionTwoCatalog,
+    ),
+    (
+        DurabilityCrashPoint::VersionTwoReplaceHead,
+        "KEEP-CRASH-077",
+        VersionTwoCatalog,
+    ),
 ];
 
 #[test]
@@ -427,6 +448,7 @@ fn crash_matrix_cli_admits_its_stable_sequence_names() {
         ("initialization", Initialization),
         ("retention", Retention),
         ("migration", Migration),
+        ("version-two-catalog", VersionTwoCatalog),
     ] {
         assert_eq!(
             DurabilityCrashSequence::from_identifier(name),

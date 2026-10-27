@@ -243,6 +243,7 @@ Select a crash campaign with `--sequence NAME` using these exact CLI names:
 | `initialization` | Writer-locked initialization |
 | `retention` | Retention root, manifest, and head publication |
 | `migration` | Version-one to version-two migration |
+| `version-two-catalog` | Version-two catalog writer and stage recovery |
 
 ```bash
 cargo xtask durability-crash-matrix --sequence retention

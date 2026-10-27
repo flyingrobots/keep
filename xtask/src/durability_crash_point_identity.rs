@@ -80,6 +80,10 @@ impl DurabilityCrashPoint {
             Self::MigrationSynchronizeRootAfterReceipt => "KEEP-CRASH-071",
             Self::MigrationRemoveReceiptStage => "KEEP-CRASH-072",
             Self::MigrationSynchronizeRootAfterReceiptCleanup => "KEEP-CRASH-073",
+            Self::VersionTwoLinkSegment => "KEEP-CRASH-074",
+            Self::VersionTwoCreateCatalogStage => "KEEP-CRASH-075",
+            Self::VersionTwoSynchronizeHead => "KEEP-CRASH-076",
+            Self::VersionTwoReplaceHead => "KEEP-CRASH-077",
         }
     }
 }
