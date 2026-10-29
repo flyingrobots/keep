@@ -183,12 +183,19 @@ disappeared with migration or moved to the single format.
 After the first release, a release that changes the format ships a separately
 invoked upgrade tool. Normal opening never converts a store.
 
-The tool reads the source store with the previous release's code, pinned to
-its tag, and writes a new store with the current code. It never modifies the
-source. It checks every content identity and every retention root against
-the source. The destination does not admit until the tool's completion
-record is durable. The tool's crash protocol is defined with it, and its test
-upgrades a fixture store from every prior release.
+Each upgrade tool converts exactly one step: from the format of the previous
+format-changing release to the current one. It reads the source store with
+that release's code, pinned to its tag, and writes a new store with the
+current code. It never modifies the source. It checks every content identity
+and every retention root against the source. The destination does not admit
+until the tool's completion record is durable. The tool's crash protocol is
+defined with it.
+
+A store several format changes behind upgrades through a chain: the tool of
+each intermediate format-changing release, run in order. Each step reads its
+source marker and refuses any other, so a step cannot be skipped or run out of
+order. Released tools stay available, and every release tests the full chain
+from a fixture store of each prior format to the current one.
 
 ## Alternatives considered
 
@@ -217,6 +224,10 @@ upgrades a fixture store from every prior release.
   changes. In-place conversion needs a crash matrix over every partial prefix.
   Copying into a new store leaves the source intact at every crash point, at
   the cost of space for two stores during the upgrade.
+- **One upgrade tool that embeds a reader for every prior format.** Rejected.
+  The tool would accumulate every retired format's code, which is the
+  multi-format codebase this decision forbids. A chain of one-step tools keeps
+  each retired reader in its own released tag.
 - **Self-describing records with tagged, skippable fields.** Rejected. They
   give up fixed offsets and bounds checked before allocation, and they
   conflict with refusing unknown and noncanonical content.
