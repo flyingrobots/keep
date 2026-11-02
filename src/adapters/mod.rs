@@ -91,6 +91,7 @@ mod filesystem_catalog_storage;
 mod filesystem_exact_record;
 mod filesystem_initialization_namespace;
 mod filesystem_initialization_storage;
+mod filesystem_mount_refusal;
 mod filesystem_namespace_refusal;
 mod filesystem_platform_admission;
 mod filesystem_platform_admission_error;
@@ -160,12 +161,16 @@ mod layout_record_decoder;
 mod layout_record_encoder;
 mod layout_record_format;
 mod layout_record_framing;
+#[cfg(target_os = "linux")]
+mod linux_filesystem;
 mod loaded_segment;
 mod lower_hex;
+mod native_filesystem;
 #[cfg(feature = "repository-tasks")]
 mod observed_segment_stage;
 mod opened_reusable_segment;
 mod physical_pool_name;
+mod platform_filesystem;
 mod publication_head_decode_error;
 mod publication_head_decode_error_display;
 mod publication_head_decoder;
@@ -246,6 +251,8 @@ mod sync_capable_directory;
 #[cfg(test)]
 #[path = "../../tests/support/mod.rs"]
 mod test_support;
+#[cfg(not(target_os = "linux"))]
+mod unsupported_filesystem;
 mod verification_admission;
 mod verification_decode_error;
 mod verification_error;
