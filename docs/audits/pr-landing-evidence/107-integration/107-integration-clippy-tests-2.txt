@@ -1,0 +1,82 @@
+    Checking keep v0.0.0 (/build/keep107-integration-round2)
+error: couldn't read `tests/../src/reference/chunk_reader.rs`: No such file or directory (os error 2)
+ --> tests/transfer_port_architecture.rs:6:9
+  |
+6 |         include_str!("../src/reference/chunk_reader.rs"),
+  |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error: pub(crate) struct inside private module
+  --> tests/golden_file_worldline/durable_fixture.rs:32:1
+   |
+32 | pub(super) struct Identified {
+   | ----------^^^^^^^^^^^^^^^^^^
+   | |
+   | help: consider using: `pub`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#redundant_pub_crate
+   = note: `-D clippy::redundant-pub-crate` implied by `-D clippy::nursery`
+   = help: to override `-D clippy::nursery` add `#[allow(clippy::redundant_pub_crate)]`
+
+error: pub(crate) function inside private module
+  --> tests/golden_file_worldline/durable_fixture.rs:38:1
+   |
+38 | pub(super) fn identify(bytes: &[u8]) -> TestResult<Identified> {
+   | ----------^^^^^^^^^^^^
+   | |
+   | help: consider using: `pub`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#redundant_pub_crate
+
+error: pub(crate) function inside private module
+  --> tests/golden_file_worldline/durable_fixture.rs:59:1
+   |
+59 | pub(super) fn policy() -> TestResult<CatalogRestartPolicy> {
+   | ----------^^^^^^^^^^
+   | |
+   | help: consider using: `pub`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#redundant_pub_crate
+
+error: pub(crate) function inside private module
+  --> tests/golden_file_worldline/durable_fixture.rs:66:1
+   |
+66 | pub(super) fn build(name: &str, contents: &[&[u8]]) -> TestResult<TestDirectory> {
+   | ----------^^^^^^^^^
+   | |
+   | help: consider using: `pub`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#redundant_pub_crate
+
+error: pub(crate) function inside private module
+  --> tests/golden_file_worldline/durable_fixture.rs:78:1
+   |
+78 | pub(super) fn build_missing_chunk(name: &str, content: &[u8]) -> TestResult<TestDirectory> {
+   | ----------^^^^^^^^^^^^^^^^^^^^^^^
+   | |
+   | help: consider using: `pub`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#redundant_pub_crate
+
+error: pub(crate) function inside private module
+  --> tests/golden_file_worldline/durable_fixture.rs:86:1
+   |
+86 | pub(super) fn build_selected_chunk(
+   | ----------^^^^^^^^^^^^^^^^^^^^^^^^
+   | |
+   | help: consider using: `pub`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#redundant_pub_crate
+
+error: could not compile `keep` (test "transfer_port_architecture") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: pub(crate) struct inside private module
+ --> tests/segment_filesystem_stage/sandbox.rs:8:1
+  |
+8 | pub(super) struct TestDirectory {
+  | ----------^^^^^^^^^^^^^^^^^^^^^
+  | |
+  | help: consider using: `pub`
+  |
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#redundant_pub_crate
+
+error: could not compile `keep` (test "gc_authority_root") due to 7 previous errors

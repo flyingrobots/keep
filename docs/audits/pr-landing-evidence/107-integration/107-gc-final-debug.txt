@@ -1,0 +1,30 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.50s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 19 tests
+test adapters::gc::filesystem_gc_tests::a_reader_holding_the_fence_refuses_retirement_without_waiting ... ok
+test adapters::gc::filesystem_gc_tests::a_durable_intent_excludes_retention_publication_and_another_retirement ... ok
+test adapters::gc::filesystem_gc_tests::a_second_retirement_succeeds_the_first_receipts_generation ... ok
+test adapters::gc::filesystem_gc_tests::admission_refuses_a_foreign_gc_entry_or_a_directory_in_place_of_a_record ... ok
+test adapters::gc::filesystem_gc_tests::an_absent_candidate_after_a_present_one_is_ambiguous_and_touches_nothing ... ok
+test adapters::gc::filesystem_gc_tests::a_truncated_stage_is_discarded_and_the_retirement_then_completes ... ok
+test adapters::gc::filesystem_gc_tests::effect_tests::candidate_absence_failure_reports_the_completed_unlink ... ok
+test adapters::gc::filesystem_gc_tests::effect_tests::candidate_verification_refusal_reports_no_removal ... ok
+test adapters::gc::filesystem_gc_tests::effect_tests::candidate_unlink_failure_reports_uncertainty_before_reobservation ... ok
+test adapters::gc::filesystem_gc_tests::effect_tests::intent_absence_failure_preserves_the_completed_receipt ... ok
+test adapters::gc::filesystem_gc_tests::effect_tests::intent_cleanup_sync_failure_does_not_retire_any_candidate ... ok
+test adapters::gc::filesystem_gc_tests::effect_tests::intent_removal_sync_failure_retains_the_final_receipt ... ok
+test adapters::gc::filesystem_gc_tests::effect_tests::intent_sync_failure_does_not_remove_its_retained_stage ... ok
+test adapters::gc::filesystem_gc_tests::effect_tests::receipt_sync_failure_preserves_intent_for_recovery ... ok
+test adapters::gc::filesystem_gc_tests::effect_tests::segment_sync_failure_does_not_undo_candidate_removal ... ok
+test adapters::gc::filesystem_gc_tests::nothing_to_retire_and_a_stale_plan_refuse_before_any_intent ... ok
+test adapters::gc::filesystem_gc_tests::stage_identity_tests::gc_preserves_the_original_stage_refusal_before_linking ... ok
+test adapters::gc::filesystem_gc_tests::retiring_the_disposed_orphan_leaves_the_receipt_and_the_live_segment ... ok
+test adapters::gc::filesystem_gc_tests::every_interrupted_prefix_recovers_to_the_same_complete_state ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 489 filtered out; finished in 1.20s
+
+
+Guarded command exit: 0

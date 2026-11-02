@@ -1,0 +1,154 @@
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+error[E0425]: cannot find function `require_derivable_segment` in this scope
+   --> src/adapters/compaction/recovery_preflight.rs:130:17
+    |
+130 |                 require_derivable_segment(discarder, segment, policy)?
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+note: function `crate::adapters::compaction::recovery::require_derivable_segment` exists but is inaccessible
+   --> src/adapters/compaction/recovery.rs:299:1
+    |
+299 | / fn require_derivable_segment(
+300 | |     discarder: &FilesystemRecoveryStageDiscarder,
+301 | |     segment: &AdmittedSegment<'_>,
+302 | |     policy: CatalogRestartPolicy,
+...   |
+328 | |     Ok(())
+329 | | }
+    | |_^ not accessible
+
+error[E0425]: cannot find function `require_unpublished_segment` in this scope
+   --> src/adapters/compaction/recovery_preflight.rs:133:17
+    |
+133 |                 require_unpublished_segment(discarder, segment, policy)?
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+note: function `crate::adapters::compaction::recovery::require_unpublished_segment` exists but is inaccessible
+   --> src/adapters/compaction/recovery.rs:333:1
+    |
+333 | / fn require_unpublished_segment(
+334 | |     discarder: &FilesystemRecoveryStageDiscarder,
+335 | |     segment: &AdmittedSegment<'_>,
+336 | |     policy: CatalogRestartPolicy,
+...   |
+353 | |     Ok(())
+354 | | }
+    | |_^ not accessible
+
+error[E0425]: cannot find function `require_successor_candidate` in this scope
+   --> src/adapters/compaction/recovery_preflight.rs:144:13
+    |
+144 |             require_successor_candidate(discarder, catalog, policy)?;
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+note: function `crate::adapters::compaction::recovery::require_successor_candidate` exists but is inaccessible
+   --> src/adapters/compaction/recovery.rs:359:1
+    |
+359 | / fn require_successor_candidate(
+360 | |     discarder: &FilesystemRecoveryStageDiscarder,
+361 | |     catalog: &ChecksummedCatalog<'_>,
+362 | |     policy: CatalogRestartPolicy,
+...   |
+381 | | }
+    | |_^ not accessible
+
+error[E0603]: function `admitted_stage` is private
+   --> src/adapters/compaction/recovery_preflight.rs:4:72
+    |
+  4 |     CompleteStageEvidence, FilesystemCompactionRecoveryError as Error, admitted_stage, read_stage,
+    |                                                                        ^^^^^^^^^^^^^^ private function
+    |
+note: the function `admitted_stage` is defined here
+   --> src/adapters/compaction/recovery.rs:225:1
+    |
+225 | / fn admitted_stage(
+226 | |     stage: RecoveryStage,
+227 | |     bytes: &[u8],
+228 | | ) -> Result<crate::adapters::AdmittedRecoveryStageBytes<'_>, FilesystemCompactionRecoveryError> {
+...   |
+235 | |         .map_err(|source| refused("admit stage bytes", source))
+236 | | }
+    | |_^
+
+error[E0603]: function `read_stage` is private
+   --> src/adapters/compaction/recovery_preflight.rs:4:88
+    |
+  4 |     CompleteStageEvidence, FilesystemCompactionRecoveryError as Error, admitted_stage, read_stage,
+    |                                                                                        ^^^^^^^^^^ private function
+    |
+note: the function `read_stage` is defined here
+   --> src/adapters/compaction/recovery.rs:208:1
+    |
+208 | / fn read_stage(
+209 | |     discarder: &FilesystemRecoveryStageDiscarder,
+210 | |     parent: RecoveryStageParent,
+211 | |     name: &str,
+...   |
+222 | |     Ok(Some(bytes))
+223 | | }
+    | |_^
+
+error[E0603]: function `refused` is private
+  --> src/adapters/compaction/recovery_preflight.rs:5:5
+   |
+ 5 |     refused,
+   |     ^^^^^^^ private function
+   |
+note: the function `refused` is defined here
+  --> src/adapters/compaction/recovery.rs:77:1
+   |
+77 | / fn refused(
+78 | |     phase: &'static str,
+79 | |     source: impl Error + Send + Sync + 'static,
+80 | | ) -> FilesystemCompactionRecoveryError {
+81 | |     FilesystemCompactionRecoveryError::refused(phase, source)
+82 | | }
+   | |_^
+
+error: unused imports: `AdmittedSegment` and `ChecksummedCatalog`
+ --> src/adapters/compaction/recovery_preflight.rs:8:5
+  |
+8 |     AdmittedSegment, CatalogPublicationExpectation, CatalogRestartError, CatalogRestartPhase,
+  |     ^^^^^^^^^^^^^^^
+9 |     CatalogRestartPolicy, ChecksummedCatalog, FilesystemRecoveryStageDiscarder,
+  |                           ^^^^^^^^^^^^^^^^^^
+  |
+note: the lint level is defined here
+ --> src/lib.rs:1:9
+  |
+1 | #![deny(warnings)]
+  |         ^^^^^^^^
+  = note: `#[deny(unused_imports)]` implied by `#[deny(warnings)]`
+
+error[E0277]: the size for values of type `[u8]` cannot be known at compilation time
+   --> src/adapters/compaction/recovery_preflight.rs:47:16
+    |
+ 47 |         if let Some(bytes) = read_stage(discarder, stage.parent(), stage.file_name())? {
+    |                ^^^^^^^^^^^ doesn't have a size known at compile-time
+    |
+    = help: the trait `Sized` is not implemented for `[u8]`
+note: required by a bound in `Some`
+   --> /usr/local/rustup/toolchains/1.96.0-aarch64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs:600:17
+    |
+600 | pub enum Option<T> {
+    |                 ^ required by this bound in `Some`
+...
+608 |     Some(#[stable(feature = "rust1", since = "1.0.0")] T),
+    |     ---- required by a bound in this tuple variant
+
+error[E0308]: mismatched types
+  --> src/adapters/compaction/recovery_preflight.rs:51:17
+   |
+51 |                 bytes,
+   |                 ^^^^^ expected `Vec<u8>`, found `[u8]`
+   |
+   = note: expected struct `Vec<u8>`
+               found slice `[u8]`
+help: try using a conversion method
+   |
+51 |                 bytes: bytes.to_vec(),
+   |                 ++++++      +++++++++
+
+Some errors have detailed explanations: E0277, E0308, E0425, E0603.
+For more information about an error, try `rustc --explain E0277`.
+error: could not compile `keep` (lib) due to 9 previous errors

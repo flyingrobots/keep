@@ -1,0 +1,24 @@
+   Compiling keep v0.0.0 (<isolated-build>)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.37s
+     Running tests/recovery_duplicate_tail_probe.rs (<isolated-build>/debug/deps/recovery_duplicate_tail_probe-ec09477950ce7801)
+
+running 1 test
+test incomplete_tail_does_not_erase_proven_duplicate_corruption ... FAILED
+
+failures:
+
+---- incomplete_tail_does_not_erase_proven_duplicate_corruption stdout ----
+
+thread 'incomplete_tail_does_not_erase_proven_duplicate_corruption' (1822723) panicked at tests/recovery_duplicate_tail_probe.rs:33:5:
+assertion `left == right` failed: known duplicate corruption escaped as discard plans
+  left: ["record-header: Segment(TailHeader { record_index: 2, offset: 354, required: 112, observed: 1 })", "record-payload: Segment(Record { record_index: 2, offset: 354, expected: 145, observed: 120 })", "seal: Segment(Seal { offset: 354, required: 128, observed: 16 })"]
+ right: []
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    incomplete_tail_does_not_erase_proven_duplicate_corruption
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--test recovery_duplicate_tail_probe`

@@ -1,0 +1,5 @@
+markdownlint-cli2 v0.23.3 (markdownlint v0.41.1)
+Finding: **/*.md **/*.md
+Linting: 48 files
+Summary: 1 issue in 1 file
+docs/formats/segment-store-v1/requirements.md:107:81 error MD013/line-length Line length [Expected: 80; Actual: 313]

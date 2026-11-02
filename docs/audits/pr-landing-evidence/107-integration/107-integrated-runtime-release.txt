@@ -1,0 +1,118 @@
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `release` profile [optimized] target(s) in 5.40s
+     Running unittests src/lib.rs (/build/keep107-coordinate-target/release/deps/keep-8ca1b588e6dfe3ea)
+
+running 1 test
+test reference::verification::tests::tampered_stored_chunk_is_corrupt_at_the_chunk_identity_stage ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 473 filtered out; finished in 0.00s
+
+    Finished `release` profile [optimized] target(s) in 0.01s
+     Running unittests src/lib.rs (/build/keep107-coordinate-target/release/deps/keep-8ca1b588e6dfe3ea)
+
+running 17 tests
+test adapters::durable::ingestion_bound_tests::a_grown_sealed_stage_refuses_before_payload_allocation_or_publication ... ok
+test adapters::durable::writer_tests::limit_and_identity_refusals_leave_nothing_visible ... ok
+test adapters::durable::writer_tests::an_interrupted_source_leaves_a_stage_that_recovery_discards ... ok
+test adapters::durable::refusal_source_tests::a_non_regular_selected_root_keeps_the_exact_record_refusal ... ok
+test adapters::durable::writer_tests::one_pass_commits_a_blob_readable_by_layout_then_by_anchor ... ok
+test adapters::durable::refusal_source_tests::a_corrupt_retained_root_keeps_its_typed_cause_through_durable_admission ... ok
+test adapters::durable::transfer_tests::a_reference_store_copies_into_a_durable_writer ... ok
+test adapters::durable::tests::absence_is_evidence_against_the_pinned_view ... ok
+test adapters::durable::tests::a_failing_writer_returns_no_receipt_and_the_exact_accepted_prefix ... ok
+test adapters::durable::tests::identical_views_yield_identical_receipts_across_reopen ... ok
+test adapters::durable::tests::ranges_across_chunk_boundaries_emit_exactly_the_requested_bytes ... ok
+test adapters::durable::tests::every_anchored_blob_reconstructs_exactly_with_a_receipt_naming_the_view ... ok
+test adapters::durable::transfer_tests::a_durable_snapshot_copies_into_a_reference_store_and_transfers_to_a_sink ... ok
+test adapters::durable::writer_tests::nearby_content_reuses_every_unchanged_chunk_and_an_exact_re_ingest_publishes_nothing ... ok
+test adapters::durable::port_tests::durable_backend_satisfies_the_read_laws_through_the_port ... ok
+test adapters::durable::writer_tests::an_anchored_ingest_satisfies_the_port_laws_beside_the_fixture_store ... ok
+test adapters::durable::tests::a_pinned_snapshot_keeps_its_view_beside_a_successor_and_blocks_collection ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 457 filtered out; finished in 0.47s
+
+    Finished `release` profile [optimized] target(s) in 0.01s
+     Running unittests src/lib.rs (/build/keep107-coordinate-target/release/deps/keep-8ca1b588e6dfe3ea)
+
+running 9 tests
+test adapters::gc::filesystem_gc_tests::admission_refuses_a_foreign_gc_entry_or_a_directory_in_place_of_a_record ... ok
+test adapters::gc::filesystem_gc_tests::nothing_to_retire_and_a_stale_plan_refuse_before_any_intent ... ok
+test adapters::gc::filesystem_gc_tests::an_absent_candidate_after_a_present_one_is_ambiguous_and_touches_nothing ... ok
+test adapters::gc::filesystem_gc_tests::a_reader_holding_the_fence_refuses_retirement_without_waiting ... ok
+test adapters::gc::filesystem_gc_tests::retiring_the_disposed_orphan_leaves_the_receipt_and_the_live_segment ... ok
+test adapters::gc::filesystem_gc_tests::a_durable_intent_excludes_retention_publication_and_another_retirement ... ok
+test adapters::gc::filesystem_gc_tests::a_second_retirement_succeeds_the_first_receipts_generation ... ok
+test adapters::gc::filesystem_gc_tests::a_truncated_stage_is_discarded_and_the_retirement_then_completes ... ok
+test adapters::gc::filesystem_gc_tests::every_interrupted_prefix_recovers_to_the_same_complete_state ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 465 filtered out; finished in 1.53s
+
+    Finished `release` profile [optimized] target(s) in 0.01s
+     Running unittests src/lib.rs (/build/keep107-coordinate-target/release/deps/keep-8ca1b588e6dfe3ea)
+
+running 4 tests
+test adapters::compaction::filesystem_tests::recovery_over_an_untouched_store_is_idle ... ok
+test adapters::compaction::filesystem_tests::a_mixed_segment_plans_its_live_records_for_copy_and_the_rest_for_omission ... ok
+test adapters::compaction::filesystem_tests::compaction_preserves_every_identity_and_closure_and_frees_the_mixed_segment ... ok
+test adapters::compaction::filesystem_tests::refusals_happen_before_any_stage_is_written ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 470 filtered out; finished in 0.15s
+
+    Checking keep v0.0.0 (/build/keep107-integration-round2)
+error: this argument (320 byte) is passed by value, but might be more efficient if passed by reference (limit: 256 byte)
+  --> tests/segment_verification/record_laws.rs:94:13
+   |
+94 |     report: VerificationReport,
+   |             ^^^^^^^^^^^^^^^^^^ help: consider passing by reference instead: `&VerificationReport`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#large_types_passed_by_value
+   = note: requested on the command line with `-D clippy::large-types-passed-by-value`
+
+error[E0369]: binary operation `<` cannot be applied to type `keep::VerificationDepth`
+   --> tests/segment_store_mutations.rs:151:40
+    |
+151 |     assert!(VerificationDepth::Framing < VerificationDepth::Checksum);
+    |             -------------------------- ^ --------------------------- keep::VerificationDepth
+    |             |
+    |             keep::VerificationDepth
+    |
+note: `keep::VerificationDepth` does not implement `std::cmp::PartialOrd`
+   --> src/verification/depth.rs:18:1
+    |
+ 18 | pub enum VerificationDepth {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^ `keep::VerificationDepth` is defined in another crate
+
+error[E0369]: binary operation `<` cannot be applied to type `keep::VerificationDepth`
+   --> tests/segment_store_mutations.rs:152:41
+    |
+152 |     assert!(VerificationDepth::Checksum < VerificationDepth::ChunkIdentity);
+    |             --------------------------- ^ -------------------------------- keep::VerificationDepth
+    |             |
+    |             keep::VerificationDepth
+    |
+note: `keep::VerificationDepth` does not implement `std::cmp::PartialOrd`
+   --> src/verification/depth.rs:18:1
+    |
+ 18 | pub enum VerificationDepth {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^ `keep::VerificationDepth` is defined in another crate
+
+error: could not compile `keep` (test "segment_verification") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+For more information about this error, try `rustc --explain E0369`.
+error: could not compile `keep` (test "segment_store_mutations") due to 2 previous errors
+error: item in documentation is missing backticks
+   --> tests/verification_receipt.rs:308:72
+    |
+308 | /// Size: small. Oracle: v1 registers exactly depth codes 1 through 7; SnapshotBinding has no slot.
+    |                                                                        ^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#doc_markdown
+    = note: `-D clippy::doc-markdown` implied by `-D clippy::pedantic`
+    = help: to override `-D clippy::pedantic` add `#[allow(clippy::doc_markdown)]`
+help: try
+    |
+308 - /// Size: small. Oracle: v1 registers exactly depth codes 1 through 7; SnapshotBinding has no slot.
+308 + /// Size: small. Oracle: v1 registers exactly depth codes 1 through 7; `SnapshotBinding` has no slot.
+    |
+
+error: could not compile `keep` (test "verification_receipt") due to 1 previous error

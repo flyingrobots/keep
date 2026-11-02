@@ -1,0 +1,6 @@
+.git
+target
+fuzz/target
+xtask/target
+**/node_modules
+**/.DS_Store

@@ -1,0 +1,27 @@
+   Compiling keep v0.0.0 (/build/keep107-coordinate-source)
+error[E0425]: cannot find function `build` in module `durable_fixture`
+  --> tests/compaction_recovery_preflight.rs:21:34
+   |
+21 |     let store = durable_fixture::build("compaction-later-corrupt", &[b"retained"])?;
+   |                                  ^^^^^ not found in `durable_fixture`
+
+error[E0425]: cannot find function `policy` in module `durable_fixture`
+  --> tests/compaction_recovery_preflight.rs:28:67
+   |
+28 |     let error = recover_compaction(store.path(), durable_fixture::policy()?)
+   |                                                                   ^^^^^^ not found in `durable_fixture`
+
+error[E0425]: cannot find function `build` in module `durable_fixture`
+  --> tests/compaction_recovery_preflight.rs:40:34
+   |
+40 |     let store = durable_fixture::build("compaction-current-corrupt", &[b"retained"])?;
+   |                                  ^^^^^ not found in `durable_fixture`
+
+error[E0425]: cannot find function `policy` in module `durable_fixture`
+  --> tests/compaction_recovery_preflight.rs:47:67
+   |
+47 |     let error = recover_compaction(store.path(), durable_fixture::policy()?)
+   |                                                                   ^^^^^^ not found in `durable_fixture`
+
+For more information about this error, try `rustc --explain E0425`.
+error: could not compile `keep` (test "compaction_recovery_preflight") due to 4 previous errors

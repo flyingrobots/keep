@@ -1,0 +1,9 @@
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.03s
+     Running tests/gc_authority_root.rs (/build/keep107-coordinate-target/debug/deps/gc_authority_root-77a332d5e3506dac)
+
+running 2 tests
+test compaction_refuses_an_observation_locator_for_another_store ... ok
+test gc_refuses_an_observation_locator_for_another_store ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.31s
