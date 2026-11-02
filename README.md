@@ -170,6 +170,10 @@ The core holds no clock, no caller identity, no paths, and no application
 policy. Retention proves a *physical reconstruction* claim only — never what
 the content means, who owns it, or whether deleting it is legally safe.
 
+The [filesystem platform design](docs/architecture/filesystem-platforms.md)
+defines the shared Linux/macOS adapter boundary and native APFS acceptance
+work. It is a design in implementation, not a claim of shipped macOS support.
+
 ## Try it
 
 Keep is `0.0.0` and unpublished; build from source. The in-memory
