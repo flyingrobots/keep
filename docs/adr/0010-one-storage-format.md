@@ -191,6 +191,15 @@ and every retention root against the source. The destination does not admit
 until the tool's completion record is durable. The tool's crash protocol is
 defined with it.
 
+The tool needs one consistent view of its source, and per-item identity checks
+do not provide one. It holds the source's writer lock from before its first
+read until the destination's completion record is durable, and refuses if the
+lock is held or cannot be taken. So no publication can begin during the run,
+and a long upgrade blocks writers by design. Taking the lock does not modify
+stored content. Existing readers may continue, because they don't change the
+source. The tool does not take a filesystem copy of a live store as its source;
+a copy qualifies only under the quiescence rule above.
+
 A store several format changes behind upgrades through a chain: the tool of
 each intermediate format-changing release, run in order. Each step reads its
 source marker and refuses any other, so a step cannot be skipped or run out of
