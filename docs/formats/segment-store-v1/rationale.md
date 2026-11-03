@@ -201,6 +201,12 @@ name selects its format maximum and a limit-plus-one stream proves the complete
 observed bytes fit. Oversized evidence is preserved and refused before hashing
 rather than turned into unbounded recovery work.
 
+## Recovery synchronization failures
+
+A failed parent-directory synchronization cannot undo a successful unlink or rename. Recovery therefore preserves the removal/finalization outcome in the synchronization error, alongside the original typed I/O cause and stage or target. This also distinguishes an effect performed in the current invocation from an already-absent or already-current retry. Omitting the outcome forces callers to guess which path ran; labeling every synchronization failure as a new mutation falsely attributes an earlier invocation's work to a retry.
+
+The error provides no durability receipt and makes no claim that an earlier removal or replacement capability could not fail after effects. No wire format, publication order, writer-authority rule or re-observation requirement changes. Adding the outcome field changes exhaustive source patterns over the affected public error variants; callers may bind it or use `..`.
+
 ## Deferred capabilities
 
 Version 1 does not define retention roots, deletion, garbage collection,

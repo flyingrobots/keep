@@ -19,7 +19,10 @@ use super::{
 /// # Errors
 ///
 /// Returns [`RecoveryNextHeadFinalizationError`] without a receipt at the exact
-/// verification, atomic replacement, or root synchronization phase.
+/// verification, atomic replacement, or root synchronization phase. Root-sync
+/// errors retain whether this call replaced the head or found it already current.
+/// The failed sync leaves directory durability unconfirmed; it does not roll back
+/// replacement. A replacement error makes no claim that the capability had no effects.
 pub fn execute_recovery_next_head_finalization(
     storage: &mut impl RecoveryNextHeadFinalizationStorage,
     request: RecoveryNextHeadFinalizationRequest,
@@ -51,8 +54,12 @@ pub fn execute_recovery_next_head_finalization(
             RecoveryNextHeadFinalizationOutcome::AlreadyFinalized
         }
     };
-    storage
-        .synchronize_root()
-        .map_err(|source| RecoveryNextHeadFinalizationError::SynchronizeRoot { target, source })?;
+    storage.synchronize_root().map_err(|source| {
+        RecoveryNextHeadFinalizationError::SynchronizeRoot {
+            target,
+            outcome,
+            source,
+        }
+    })?;
     Ok(RecoveryNextHeadFinalizationReceipt::new(request, outcome))
 }

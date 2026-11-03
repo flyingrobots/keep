@@ -14,6 +14,7 @@ after its public API and format compatibility policies are established.
 
 - Update the pinned taiki-e/install-action action to v2.88.0 in the Rust quality gates and Dependency policy jobs, which also moves the cargo-binstall version that installs the b3sum vector tool to 1.26.1. That binary's third-party QuickInstall source predates this bump, and #210 tracks admitting it (#206).
 
+- Preserve removal and head-finalization outcomes in recovery directory-sync errors, distinguishing effects from already-completed retries while retaining the original I/O cause and unconfirmed durability; exhaustive public error patterns must admit the new `outcome` field. Salvaged from the closed #107 landing branch.
 - Update the repository-only serde_json parser to 1.0.154 in both locked workspaces and refresh its dependency admission; the resolved transitive graph, features, license and MSRV are unchanged (#186).
 
 - Update the in-process BLAKE3 dependency to 1.8.7 in both locked workspaces, remove the unused arrayref license exception and renew its admission while retaining the external b3sum oracle and version-one identity contract (#94).

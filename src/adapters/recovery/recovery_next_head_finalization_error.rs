@@ -5,8 +5,8 @@ use std::fmt;
 use std::io;
 
 use super::{
-    RecoveryNextHeadFinalizationStorageError, RecoveryNextHeadFinalizationTarget,
-    RecoveryStageEvidence,
+    RecoveryNextHeadFinalizationOutcome, RecoveryNextHeadFinalizationStorageError,
+    RecoveryNextHeadFinalizationTarget, RecoveryStageEvidence,
 };
 
 /// Exact failed phase of recovery next-head finalization.
@@ -37,6 +37,9 @@ pub enum RecoveryNextHeadFinalizationError {
     SynchronizeRoot {
         /// Candidate whose current state was not durably confirmed.
         target: RecoveryNextHeadFinalizationTarget,
+        /// Replacement or already-current state established before the failed sync.
+        /// This is not a durable receipt; root-directory durability is unconfirmed.
+        outcome: RecoveryNextHeadFinalizationOutcome,
         /// Exact underlying synchronization failure.
         source: io::Error,
     },
@@ -60,9 +63,13 @@ impl fmt::Display for RecoveryNextHeadFinalizationError {
                 "failed to finalize {} evidence: {source}",
                 evidence.stage()
             ),
-            Self::SynchronizeRoot { target, source } => write!(
+            Self::SynchronizeRoot {
+                target,
+                outcome,
+                source,
+            } => write!(
                 formatter,
-                "failed to synchronize recovery head generation {}: {source}",
+                "failed to synchronize recovery head generation {} after {outcome:?} (durability unconfirmed): {source}",
                 target.generation().get()
             ),
         }

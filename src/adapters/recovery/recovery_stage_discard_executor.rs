@@ -13,7 +13,10 @@ use super::{
 /// # Errors
 ///
 /// Returns [`RecoveryStageDiscardError`] without a receipt when exact-evidence
-/// removal, absence admission, or parent synchronization fails.
+/// removal, absence admission, or parent synchronization fails. Synchronization
+/// errors retain whether this call removed the stage or found it already absent.
+/// The failed sync leaves directory durability unconfirmed; it does not roll back
+/// removal. A removal error makes no claim that the capability had no effects.
 pub fn execute_recovery_stage_discard(
     storage: &mut impl RecoveryStageDiscardStorage,
     request: RecoveryStageDiscardRequest,
@@ -24,6 +27,10 @@ pub fn execute_recovery_stage_discard(
         .map_err(|source| RecoveryStageDiscardError::Remove { source })?;
     storage
         .synchronize_parent(stage.parent())
-        .map_err(|source| RecoveryStageDiscardError::Synchronize { stage, source })?;
+        .map_err(|source| RecoveryStageDiscardError::Synchronize {
+            stage,
+            outcome,
+            source,
+        })?;
     Ok(RecoveryStageDiscardReceipt::new(request, outcome))
 }
