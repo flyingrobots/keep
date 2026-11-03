@@ -5,23 +5,23 @@ use crate::repository_file::RepositoryRoot;
 #[path = "tests/lock_graph.rs"]
 mod lock_graph;
 
-const MANIFEST: &str = r#"{"dependencies":{"markdownlint-cli2":"0.23.3"}}"#;
+const MANIFEST: &str = r#"{"dependencies":{"markdownlint-cli2":"0.24.0"}}"#;
 const LOCK: &str = r#"{
   "lockfileVersion": 3,
   "packages": {
-    "": {"dependencies": {"markdownlint-cli2": "0.23.3"}},
+    "": {"dependencies": {"markdownlint-cli2": "0.24.0"}},
     "node_modules/markdownlint-cli2": {
-      "dependencies": {"js-yaml": "5.4.1"},
+      "dependencies": {"js-yaml": "5.4.3"},
       "resolved": "example",
       "integrity": "example"
     },
     "node_modules/js-yaml": {
-      "version": "5.4.1",
+      "version": "5.4.3",
       "resolved": "example",
       "integrity": "example"
     },
     "node_modules/markdown-it": {
-      "version": "15.0.1",
+      "version": "15.0.3",
       "resolved": "example",
       "integrity": "example"
     }
@@ -43,7 +43,7 @@ fn admitted_node_toolchain_is_exact_and_lockfile_installed() {
 
 #[test]
 fn dependency_overrides_are_refused() {
-    let manifest = r#"{"overrides":{},"dependencies":{"markdownlint-cli2":"0.23.3"}}"#;
+    let manifest = r#"{"overrides":{},"dependencies":{"markdownlint-cli2":"0.24.0"}}"#;
     assert!(matches!(
         super::admit(manifest, LOCK, INSTALLER),
         Err(super::DocumentationError::RepositoryContract {
@@ -61,7 +61,7 @@ fn manifest_dependency_version_drift_is_refused() {
         Err(super::DocumentationError::RepositoryValue {
             path: super::MANIFEST_PATH,
             field: "dependencies.markdownlint-cli2",
-            expected: "0.23.3",
+            expected: "0.24.0",
             observed: Some(ref observed),
         }) if observed == "999.0.0"
     ));
@@ -71,11 +71,11 @@ fn manifest_dependency_version_drift_is_refused() {
 fn duplicate_object_members_are_refused_at_every_depth() {
     let manifest = concat!(
         r#"{"dependencies":{"markdownlint-cli2":"999.0.0"},"#,
-        r#""dependencies":{"markdownlint-cli2":"0.23.3"}}"#,
+        r#""dependencies":{"markdownlint-cli2":"0.24.0"}}"#,
     );
     let lock = LOCK.replacen(
-        r#""version": "15.0.1","#,
-        r#""version": "999.0.0", "version": "15.0.1","#,
+        r#""version": "15.0.3","#,
+        r#""version": "999.0.0", "version": "15.0.3","#,
         1,
     );
     for result in [
@@ -91,14 +91,14 @@ fn duplicate_object_members_are_refused_at_every_depth() {
 
 #[test]
 fn dependency_version_drift_is_refused() {
-    let lock = LOCK.replacen("\"5.4.1\"", "\"5.2.1\"", 1);
+    let lock = LOCK.replacen("\"5.4.3\"", "\"5.2.1\"", 1);
     let error = super::admit(MANIFEST, &lock, INSTALLER);
     assert!(matches!(
         &error,
         Err(super::DocumentationError::RepositoryValue {
             path: super::LOCK_PATH,
             field: "packages[\"node_modules/markdownlint-cli2\"].dependencies.js-yaml",
-            expected: "5.4.1",
+            expected: "5.4.3",
             observed: Some(observed),
         }) if observed == "5.2.1"
     ));
@@ -107,20 +107,20 @@ fn dependency_version_drift_is_refused() {
         Err(String::from(concat!(
             "repository file `scripts/documentation-tools/package-lock.json` requires ",
             "`packages[\"node_modules/markdownlint-cli2\"].dependencies.js-yaml` to be ",
-            "\"5.4.1\"; observed \"5.2.1\""
+            "\"5.4.3\"; observed \"5.2.1\""
         )))
     );
 }
 
 #[test]
 fn missing_dependency_coordinate_is_refused_precisely() {
-    let lock = LOCK.replacen("\"version\": \"15.0.1\"", "\"missing\": \"15.0.1\"", 1);
+    let lock = LOCK.replacen("\"version\": \"15.0.3\"", "\"missing\": \"15.0.3\"", 1);
     assert!(matches!(
         super::admit(MANIFEST, &lock, INSTALLER),
         Err(super::DocumentationError::RepositoryValue {
             path: super::LOCK_PATH,
             field: "packages[\"node_modules/markdown-it\"].version",
-            expected: "15.0.1",
+            expected: "15.0.3",
             observed: None,
         })
     ));

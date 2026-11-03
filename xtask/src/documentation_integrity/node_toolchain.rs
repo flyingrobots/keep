@@ -15,8 +15,8 @@ const INSTALLER_DIGEST: [u8; 32] = [
     0x8b, 0x35, 0x54, 0xea, 0x2a, 0x90, 0xeb, 0xd4, 0x82, 0xd7, 0x4a, 0x61, 0x1f, 0xf6, 0xd3, 0xfd,
 ];
 const LOCK_DIGEST: [u8; 32] = [
-    0x9e, 0x80, 0x9c, 0x6a, 0xe7, 0xef, 0x97, 0xc5, 0xce, 0x95, 0x97, 0xb8, 0xa9, 0xf0, 0x2d, 0x3f,
-    0xee, 0xee, 0xf8, 0xba, 0xa2, 0xd4, 0x8a, 0x54, 0x0f, 0xf5, 0x10, 0x5c, 0x84, 0x5f, 0x5d, 0x37,
+    0xb3, 0x30, 0xc6, 0x08, 0x27, 0xf5, 0x5e, 0x5b, 0x34, 0x29, 0xf3, 0x11, 0xe1, 0x9c, 0xfc, 0xf9,
+    0x18, 0x14, 0xe1, 0xa5, 0x6f, 0xce, 0xe1, 0x4d, 0x20, 0x1a, 0xa0, 0xc9, 0x14, 0x57, 0x0e, 0x81,
 ];
 const LOCK_PATH: &str = "scripts/documentation-tools/package-lock.json";
 const MANIFEST_PATH: &str = "scripts/documentation-tools/package.json";
@@ -51,13 +51,13 @@ fn admit_manifest(manifest: &Value) -> Result<(), DocumentationError> {
         .get("dependencies")
         .and_then(|dependencies| dependencies.get("markdownlint-cli2"))
         .and_then(Value::as_str);
-    if observed == Some("0.23.3") {
+    if observed == Some("0.24.0") {
         Ok(())
     } else {
         Err(DocumentationError::RepositoryValue {
             path: MANIFEST_PATH,
             field: "dependencies.markdownlint-cli2",
-            expected: "0.23.3",
+            expected: "0.24.0",
             observed: observed.map(str::to_owned),
         })
     }
@@ -78,28 +78,28 @@ fn admit_lock(lock: &Value) -> Result<(), DocumentationError> {
         "",
         &["dependencies", "markdownlint-cli2"],
         "packages[\"\"].dependencies.markdownlint-cli2",
-        "0.23.3",
+        "0.24.0",
     )?;
     require_package_value(
         packages,
         "node_modules/markdownlint-cli2",
         &["dependencies", "js-yaml"],
         "packages[\"node_modules/markdownlint-cli2\"].dependencies.js-yaml",
-        "5.4.1",
+        "5.4.3",
     )?;
     require_package_value(
         packages,
         "node_modules/js-yaml",
         &["version"],
         "packages[\"node_modules/js-yaml\"].version",
-        "5.4.1",
+        "5.4.3",
     )?;
     require_package_value(
         packages,
         "node_modules/markdown-it",
         &["version"],
         "packages[\"node_modules/markdown-it\"].version",
-        "15.0.1",
+        "15.0.3",
     )?;
     require_provenance(packages)?;
     Ok(())

@@ -10,6 +10,14 @@ const EXT4_SUPER_MAGIC: rustix::fs::FsWord = 0x0000_ef53;
 const EXT4_CASEFOLD_FLAG: u32 = 0x4000_0000;
 
 #[test]
+fn the_read_only_mount_flag_constant_is_st_rdonly() {
+    // The refusal laws use the same symbol as the predicate, so only this law
+    // notices a dependency editing the constant. It does not cover how fstatvfs
+    // passes kernel flags through, and no law uses a real read-only mount.
+    assert_eq!(StatVfsMountFlags::RDONLY.bits(), 0x0001);
+}
+
+#[test]
 fn only_writable_case_sensitive_ext4_is_admitted() {
     assert!(admit_linux_properties(EXT4_SUPER_MAGIC, StatVfsMountFlags::empty(), 0).is_ok());
     assert_unsupported(&admit_linux_properties(

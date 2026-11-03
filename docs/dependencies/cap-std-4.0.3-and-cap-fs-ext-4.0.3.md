@@ -1,20 +1,21 @@
-# Dependency Admission: cap-std 4.0.3, cap-fs-ext 4.0.2, and rustix 1.1.5
+# Dependency Admission: cap-std 4.0.3, cap-fs-ext 4.0.3, and rustix 1.1.6
 
 - Status: Accepted for repository-task and segment-store filesystem boundaries
 - Date: 2026-07-26
-- Rustix admission updated: 2026-10-03 (#102)
-- Capability admission updated: 2026-10-03 (#93)
+- Rustix and cap-fs-ext admission updated: 2026-11-03 (#207, #189)
+- Earlier Rustix admission update: 2026-10-03 (#102)
+- Earlier cap-std admission update: 2026-10-03 (#93)
 - Owner: Keep repository verification
 - Upstream:
   [bytecodealliance/cap-std](https://github.com/bytecodealliance/cap-std)
 
 ## Admitted use
 
-Keep admits the exactly pinned `cap-std` 4.0.3 and `cap-fs-ext` 4.0.2 packages for the library's segment-store filesystem adapter and behind the `xtask` crate's `repository-tasks` feature. The library also admits Rustix 1.1.5 for safe Linux filesystem-profile inspection and no-symlink root opening; `xtask` uses the same exact version behind `repository-tasks`.
+Keep admits the exactly pinned `cap-std` 4.0.3 and `cap-fs-ext` 4.0.3 packages for the library's segment-store filesystem adapter and behind the `xtask` crate's `repository-tasks` feature. The library also admits Rustix 1.1.6 for safe Linux filesystem-profile inspection, no-symlink root opening, and writer and reader locks; `xtask` uses the same exact version behind `repository-tasks`.
 
 `cap-std::fs::Dir` pins the admitted repository or corpus directory and opens entries relative to that capability. `cap-fs-ext` supplies no-follow and nonblocking open options plus cross-platform device and file identifiers. After Git inventory, the source check compares the retained repository directory's identity with a fresh open of the configured pathname. Together, these operations let repository checks refuse persistent root replacement, path substitution, symlinked protocol tables, FIFOs, sockets, devices, and other ambiguous filesystem state before reading source or protocol bytes.
 
-The capability packages are present in Keep's published library graph and production filesystem behavior. No dependency-owned type crosses Keep's public API or enters content identities or durable formats. The segment-store writer lock retains the root capability plus root-lock and writer-lock file handles behind `FilesystemWriterLock`; its public acquisition boundary accepts only `std::path::Path`. The production initializer uses Rustix's safe `openat2`, `fstatfs`, `fstatvfs`, and ext4 inode flag APIs to admit only the documented writable, non-casefolded Linux ext4 profile.
+The capability packages are present in Keep's published library graph and production filesystem behavior. No dependency-owned type crosses Keep's public API or enters content identities or durable formats. The segment-store writer lock retains the root capability plus root-lock and writer-lock file handles behind `FilesystemWriterLock`; its public acquisition boundary accepts only `std::path::Path`. The production initializer uses Rustix's safe `openat2`, `fstatfs`, `fstatvfs`, `statx`, and ext4 inode flag APIs to admit only the documented writable, non-casefolded Linux ext4 profile.
 
 The bounded subprocess adapter uses Rustix's safe filesystem API to mark child stdin nonblocking before deadline-bounded input transfer. It uses Rustix's safe process API to send `SIGKILL` to a dedicated child process group after a subprocess deadline or collection failure. This prevents a non-reading child from blocking its parent indefinitely and prevents descendants that inherited an output pipe from surviving the failed repository task. The [signal-hook dependency admission](signal-hook-0.4.4.md) records the terminal-signal guard that routes interruption through the same authoritative cleanup boundary.
 
@@ -44,14 +45,14 @@ The locked non-Windows graph introduced for this boundary is:
 - `linux-raw-sys` 0.12.1;
 - `maybe-owned` 0.3.4;
 - `once_cell` 1.21.4;
-- `rustix` 1.1.5; and
+- `rustix` 1.1.6; and
 - `rustix-linux-procfs` 0.1.1.
 
 Windows resolution additionally retains the locked `windows-sys`, `windows-targets`, and architecture packages recorded in `Cargo.lock`. The library therefore exempts only Clippy's `multiple_crate_versions` cargo lint; exact direct versions, the committed lockfile, dependency policy, and advisory checks remain authoritative.
 
 ## Safety, licensing, and compatibility
 
-The capability packages declare `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT`; Keep selects an admitted license through repository policy. Rustix declares `Apache-2.0 OR MIT`. The locked `winx` 0.36.4 transitive package declares only `Apache-2.0 WITH LLVM-exception`, so `deny.toml` admits that exact package and license combination rather than broadening the global license allowlist. The cap-std and cap-fs-ext manifests declare no Rust-version floor. Rustix 1.1.5 declares Rust 1.65, below Keep's pinned Rust 1.96.0; its previous 1.1.4 release declared 1.63. The version floor is compatibility metadata, not execution evidence. Keep's debug, release, Clippy, dependency-policy and advisory lanes remain required for the updated graph.
+The capability packages declare `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT`; Keep selects an admitted license through repository policy. Rustix declares `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT`. The locked `winx` 0.36.4 transitive package declares only `Apache-2.0 WITH LLVM-exception`, so `deny.toml` admits that exact package and license combination rather than broadening the global license allowlist. The cap-std and cap-fs-ext manifests declare no Rust-version floor. Rustix 1.1.6 declares Rust 1.65, the same floor as 1.1.5 and below Keep's pinned Rust 1.96.0. The version floor is compatibility metadata, not execution evidence. Keep's debug, release, Clippy, dependency-policy and advisory lanes remain required for the updated graph.
 
 The admitted packages and their platform dependencies may contain unsafe code around operating-system calls and handles. Keep-owned code invokes only their safe APIs, retains handles and process identifiers in private adapter types, checks resulting metadata, bounds reads, and never treats a dependency as proof of content identity. `cargo deny` and RustSec checks remain mandatory point-in-time evidence; they do not transfer Keep's unsafe-code guarantee to dependencies.
 
@@ -65,13 +66,13 @@ Reopen this admission if any direct version, selected feature, resolved graph, l
 
 ## Rustix 1.1.5 update
 
-The root, repository-task and isolated process-spawn manifests select the same exact Rustix version. The independently locked fuzz workspace also selects 1.1.5. The upgrade does not change selected features, Keep source or existing test expectations; filesystem admission, writer/reader locks, typed failures and bounded subprocess cleanup retain their existing contracts.
+The root, repository-task and isolated process-spawn manifests select the same exact Rustix version. The independently locked fuzz workspace also selected 1.1.5 at this update. The upgrade does not change selected features, Keep source or existing test expectations; filesystem admission, writer/reader locks, typed failures and bounded subprocess cleanup retain their existing contracts.
 
 Current validation must exercise the admitted Linux filesystem and process boundaries with the new graph. Historical recovery, crash and benchmark receipts remain evidence for their recorded builds, not new measurements of this dependency release. Finite conformance and regression runs do not establish universal equivalence or validation of every upstream platform.
 
 ## cap-std 4.0.3 update
 
-The root and repository-task manifests pin cap-std 4.0.3, and both locked workspaces resolve cap-primitives 4.0.3. The direct cap-fs-ext pin remains 4.0.2; its compatible cap-primitives requirement resolves to the same reviewed 4.0.3 package. Selected features and the Rustix 1.1.5 admission are unchanged.
+The root and repository-task manifests pin cap-std 4.0.3, and both locked workspaces resolve cap-primitives 4.0.3. The direct cap-fs-ext pin remained 4.0.2 at this update; its compatible cap-primitives requirement resolves to the same reviewed 4.0.3 package. Selected features and the Rustix 1.1.5 admission were unchanged by it.
 
 Published cap-std runtime source is unchanged from 4.0.2. In cap-primitives' manual component resolution, the new version passes the final component without re-appending a trailing slash before its no-follow open. Directory-required handling and subsequent explicit symlink handling remain in the resolver. This is a path-resolution semantic correction in the dependency, not a claim of universal equivalence across upstream platforms.
 
@@ -80,3 +81,21 @@ Keep retains its no-follow, identity, exact-byte, namespace and corruption check
 Pre-effect refusal and execution failure remain distinct under the [bounded recovery contract](../adr/retention-bounded-recovery-landing.md). An execution failure can follow namespace effects or uncertain durability; the dependency upgrade does not imply rollback or broaden incomplete-stage disposal.
 
 The existing public filesystem, writer/reader, recovery and repository-tool laws must pass with the new graph. Historical receipts retain their recorded dependency coordinates, and no new performance or all-platform isolation guarantee is asserted by this admission.
+
+## Rustix 1.1.6 and cap-fs-ext 4.0.3 update
+
+The root, repository-task (`xtask`) and isolated process-spawn manifests select the same exact Rustix 1.1.6, and the root and repository-task manifests pin cap-fs-ext 4.0.3. The independently locked fuzz workspace resolves both versions. Selected features and the other resolved packages are unchanged. Rustix raises its minimum `bitflags` requirement from 2.4.0 to 2.9.2, which the locked `bitflags` 2.13.1 satisfies. Its runtime `libc` requirement stays at 0.2.182, which the locked `libc` 0.2.186 satisfies; only its development dependency on `libc` moves.
+
+**Security.** Rustix 1.1.6 contains the upstream fix for [GHSA-jh2m-fhpj-3vr7](https://github.com/bytecodealliance/rustix/security/advisories/GHSA-jh2m-fhpj-3vr7), rated high: safe Rust could trigger undefined behavior in extended-attribute buffer handling on zero-size queries. Earlier admitted Rustix versions were affected. A search for `xattr`, `getxattr` and `listxattr` found no extended-attribute use in Keep or in the capability crates named below, so no Keep exposure was found. The update removes the affected version from Keep's two lock graphs. CI's separately locked `cargo install cargo-fuzz` still compiles Rustix 1.1.4, which #210 covers.
+
+**What was reviewed.** An AI agent carried out this review at the maintainer's direction, on [#208](https://github.com/flyingrobots/keep/pull/208). It compared the registry packages that `Cargo.lock` checksums bind, not only the upstream Git history. The [Rustix comparison](https://github.com/bytecodealliance/rustix/compare/v1.1.5...v1.1.6) is a convenient view of the same change. Published cap-fs-ext 4.0.3 changes only its cap-primitives and cap-std requirements and one import order, apart from version and packaging metadata.
+
+Published Rustix 1.1.6 needs two checks at Keep's Linux boundary, and both hold on source reading. First, its `linux_raw` backend replaces `StatVfsMountFlags` constants derived from `MS_*` values with the kernel's `ST_*` values. Keep's production code tests only `RDONLY`, whose value remains `0x0001`; a law in `filesystem_platform_profile_tests.rs` now pins that constant, because the existing refusal laws use the same symbol as the predicate. That law catches only an edit to the constant. It would also have passed on 1.1.5, it does not pin how `fstatvfs` passes kernel flags through, and no test uses a real read-only mount. Second, it changes padding fields in its `Statx`, `StatFs` and `Stat` layouts to `Padding`, a `#[repr(transparent)]` wrapper. Keep does call `statx`, `fstatfs` and `fstatvfs`, but it reads no padding field.
+
+The comparison touches other areas too, including `recvmsg` truncation, termios, `inotify`, `tcgetpgrp`, 32-bit `chown` and `getgroups` selection, Apple `fallocate` and socket options. This list is a summary, not every changed file. A search of Keep, cap-std, cap-fs-ext, cap-primitives, fs-set-times and rustix-linux-procfs found no reach into the changed behavior. cap-primitives does call `ttyname`, whose code did not change. Keep's own manifests request `fs`, `std` and `process`, and other crates in the graph add the rest: `cargo tree` resolves `alloc`, `default`, `fs`, `process`, `std`, `termios` and `time`. Neither `net` nor `thread` is enabled, so the socket changes and the thread-module changes are not compiled.
+
+**What was run.** CI run [41665161676](https://github.com/flyingrobots/keep/actions/runs/41665161676) at `de515f3` passed all four jobs with this graph on `x86_64-unknown-linux-gnu`: Rust quality gates in debug and release, including the filesystem and process laws and the new law, Dependency policy, Runtime fuzz smoke, and Documentation and workflow integrity. It is not a physical power-loss experiment. Later commits on #208 carry their own runs, and #208 records them. At `de515f3`, the workspace also passes `cargo check --workspace --all-features --locked` on `aarch64-apple-darwin`. That is a compile check only: it uses Rustix's libc backend and excludes Keep's Linux admission code, so it says nothing about the two checks above. `aarch64-unknown-linux-gnu` has no CI lane and was not checked.
+
+**Corrections.** This update also corrects two earlier statements on this page. Rustix's license is the three-way expression above, as it was in 1.1.5; upstream did not relicense. The production initializer already used `statx` before this update; the API list had omitted it.
+
+This review does not assert universal equivalence. Historical recovery, crash and benchmark receipts remain evidence for their recorded builds.
