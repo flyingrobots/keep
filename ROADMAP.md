@@ -1271,7 +1271,7 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
   `src/adapters/gc/`, `tests/gc_retirement_intent.rs`,
   `tests/gc_retirement_receipt.rs`, `fuzz/fuzz_targets/gc_format.rs`,
   fixtures `one-candidate-gc-intent.hex` and `one-candidate-gc-receipt.hex`.
-  Original task fields:
+  Original task fields: see `ROADMAP.md` at `68b81ee` (there titled "GC record codecs and namespace admission").
 - [ ] T-22.1a Register the disposition enumerations and ship its codec —
   not on `main`. On the archived #107 branch only: seven `definition.tsv`
   rows, the corpus rematerialized through the oracle

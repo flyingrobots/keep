@@ -14,11 +14,11 @@ after its public API and format compatibility policies are established.
 
 - Update the pinned taiki-e/install-action action to v2.88.0 in the Rust quality gates and Dependency policy jobs, which also moves the cargo-binstall version that installs the b3sum vector tool to 1.26.1. That binary's third-party QuickInstall source predates this bump, and #210 tracks admitting it (#206).
 
-- Preserve removal and head-finalization outcomes in recovery directory-sync errors, distinguishing effects from already-completed retries while retaining the original I/O cause and unconfirmed durability; exhaustive public error patterns must admit the new `outcome` field. Salvaged from the closed #107 landing branch.
+- Preserve removal and head-finalization outcomes in recovery stage-discard and next-head-finalization directory-sync errors, distinguishing effects from already-completed retries while retaining the original I/O cause and unconfirmed durability; exhaustive public error patterns must admit the new `outcome` field. Stage completion does not yet follow this rule (#213). Salvaged from the closed #107 landing branch.
 
-- Add the feature and task roadmap, salvaged from the closed #107 branch with statuses reconciled to main.
+- Add the feature and task roadmap, salvaged from the closed #107 branch with statuses reconciled to main at the snapshot it names.
 
-- Add per-field mutation laws for the version-2 retention root, manifest, and head decoders: each law mutates one structural field of the frozen corpus record, reseals every digest and checksum it did not target, and asserts the exact named refusal; KEEP-RETENTION-003 is implemented for whole-record decoding. Salvaged from the closed #107 branch; tests and ledger only.
+- Add field-mutation laws for selected version-2 retention root, manifest, and head fields: rows mutate the frozen corpus record, reseal every digest and checksum they did not target, and assert the named refusal variant. KEEP-RETENTION-003 remains in progress (#212). Salvaged from the closed #107 branch; tests and ledger only.
 
 - Update the repository-only serde_json parser to 1.0.154 in both locked workspaces and refresh its dependency admission; the resolved transitive graph, features, license and MSRV are unchanged (#186).
 

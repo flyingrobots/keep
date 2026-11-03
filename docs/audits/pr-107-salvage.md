@@ -39,7 +39,7 @@ means it has no remaining value.
 | `34732b2` | Merge of #99 into the branch | #99 merged directly |
 | `0bafaa7` | Durable authenticated reads over a fenced snapshot | #164 (different module layout) |
 | `420964e` | Retention release/restore model sequences | #159 |
-| `a5c6701`, `fed314e`, `1a586d8` | Living-page and status reconciliation | #130, #136 |
+| `a5c6701`, `fed314e`, `1a586d8` | Living-page and status reconciliation | #163, #136 |
 | `5a23238` | Explicit-depth verification reports | #165 for durable views; the branch's reference-view report conflicts with #165's model (ordinal depths, range of supported depths) and is deferred below |
 
 ### Ported to salvage branches
@@ -49,7 +49,7 @@ means it has no remaining value.
 | `0d300db`, part of `ee4ef54` | `salvage/107-content-store-port` | `contains_blob` is fallible to match main's durable snapshot; generic laws assert typed refusals through per-backend oracles; `DurableSnapshot` implements the read half; the `ChunkSink` generalization waits for durable ingestion. |
 | `1dbbf7f`, `80c8042`, `652059e` (#127) | `salvage/107-transfer-pipeline` (stacked on the port) | Starts from the #127 inward shape; `ChunkReader` lives in the shared read core; the pipeline lives at `src/pipeline` because it imports only ports; `DurableSnapshot` is a transfer source; the source-text architecture test is not carried over (#168). |
 | `29690fc`, `6a84324`, `b5ecd97` | `salvage/107-retention-mutation-laws` | Root, manifest, and head field-mutation matrices for KEEP-RETENTION-003; helpers added to main's newer `tests/support/byte_patches.rs`. |
-| landing `494e193`, `691e454`, `66384de` | `salvage/107-recovery-sync-outcomes` | Shared v1 recovery: directory-sync errors keep the removal or finalization outcome. Main's affected files were byte-identical to the fix's parent, so the defect is live on main. The landing evidence receipts are replaced by fresh evidence on main. |
+| landing `494e193`, `691e454`, `66384de` | `salvage/107-recovery-sync-outcomes` | Shared v1 recovery: stage-discard and next-head-finalization sync errors keep the outcome; stage completion does not (#213). Main's production files were byte-identical to the fix's parent, so the defect was live on main until this salvage merged. The landing evidence receipts are replaced by fresh evidence on main. |
 | `e4fb098` and codec review fixes `fb9f129`, `b1eaa59`, `f00e780`, `a62bfb8`, `5b533b0` | `salvage/107-gc-retirement-codecs` | GC retirement intent and receipt codecs only; no planning, execution, writer, or change to the v2 format-definition digest. Execution-only additions from `9a10b22` (`decode_unbound`, `from_fields`, `candidate_set_digest`) and every disposition part are stripped. Review finding: `docs/formats/segment-store-v2/gc.md` does not state that the candidate-set digest hashes a big-endian `u32` candidate count before the entries; the codec and the independent oracle agree, so the page needs that sentence. |
 | `66c0e46` (#133) | `salvage/107-typed-refusals` | Re-derived against main's rewritten retention and migration code for the erasures still present on main; runtime downcast laws replace the branch's source-text contract test. Same-pattern sites outside the audited list remain: `sync_capable_directory.rs`, `filesystem_initialization_namespace.rs`, `filesystem_recovery_stage_materialization.rs`, `observed_segment_stage.rs`, `filesystem_migration_authority.rs`, and the lossy `read_exact_optional` collapse into `RecordKindOrLength`. |
 | `24c2d93`, `cec0559` and later roadmap edits | `salvage/107-roadmap` | `ROADMAP.md` with stable F/T identifiers and full task fields, statuses reconciled to main's ledgers. |
@@ -58,7 +58,7 @@ means it has no remaining value.
 
 | Branch commits | Outcome | Blocked by |
 | --- | --- | --- |
-| `668fd5f`, `5bba27e` | Deterministic GC planning from a fenced liveness snapshot | Main lacks `CatalogSnapshot::record_segments` and retained-closure member verification; main's snapshot load adds a root-identity check the planner must adopt. Lands after the codecs. |
+| `668fd5f`, `5bba27e` | Deterministic GC planning from a fenced liveness snapshot | Main lacks `CatalogSnapshot::record_segments`; whether main's live closure-member verification serves the planner is unassessed; main's snapshot load adds a root-identity check the planner must adopt. Lands after the codecs. |
 | `9a10b22`, landing `8828db1`, `20dec6d`, `f6aca41` | GC execution, retirement, recovery, crash rows `KEEP-CRASH-074`–`087`, failing-capability reporting | Exclusive reader-fence API absent on main; typed `RetentionStorageError`; KEEP-GC-001 namespace admission must change from "empty `gc/`"; the `gc/intent.next` and `gc/receipt.next` stage names and rename-replacement of the receipt need a protocol ruling against main's "fixed names are never replaced" rule. |
 | `2859f68` | Disposition enumerations and receipt codec | **Format decision.** The branch adds seven rows to `docs/formats/segment-store-v2/definition.tsv`, changing `StoreFormatDefinitionDigest::VERSION_TWO` from main's `32381f1a…` to `a4a010ce…`. Stores migrated by either side would refuse the other. v2 is unreleased, so a bump is possible, but only as an explicit decision record. |
 | `aa371ae`, landing `f21589f` | Explicit finalize-or-retire disposition of protected retention orphans | The format decision above; main's retention authority and storage port changed; overlaps #155. The landing RED test is reusable as a test idea only. |
@@ -79,11 +79,27 @@ means it has no remaining value.
 
 | Commits or files | Reason |
 | --- | --- |
-| landing `43eaeb3`, `34db571`, `864f804` | Re-integration merges of #133 and an older main; superseded by the typed-refusal salvage and by main itself. |
+| landing `43eaeb3`, `864f804` | Re-integration merges of #133 and an older main; superseded by the typed-refusal salvage and by main itself. |
+| landing `34db571` | Source fix to `verification_observation_error.rs`, not a merge; its classification is addressed by `salvage/107-typed-refusals`. |
 | `docs/dependencies/{blake3-1.8.5,cap-std-and-cap-fs-ext-4.0.2,yaml-rust2-0.11.0}.md` | Main admits newer versions. |
 | `docs/architecture/durable-store/{README,rationale}.md` | Describe the branch's durable read API; main documents its own in `src/adapters/durable/rationale.md` and the reconstruction ledger. |
 | `docs/audits/pr-landing-*` and `pr-landing-evidence/107-integration/*` on the audit branch | Session process logs for a merge queue that no longer exists. They remain on the source branches and the audit branch only. |
 | Branch edits to `README.md`, `CHANGELOG.md`, and requirement ledgers | They would revert main's delivered state (for example KEEP-VERIFY-006 back to Planned). Only the entries belonging to a ported change travel with that change. |
+
+## Landing state
+
+Recorded when #211 was opened; GitHub is authoritative afterwards.
+
+| Branch | PR | State |
+| --- | --- | --- |
+| `salvage/107-recovery-sync-outcomes` | #190 | Landing in #211 |
+| `salvage/107-retention-mutation-laws` | #194 | Landing in #211 |
+| `salvage/107-roadmap` | #196 | Landing in #211 |
+| `salvage/107-ledger` | #197 | Landing in #211 |
+| `salvage/107-typed-refusals` | #191 | Open |
+| `salvage/107-content-store-port` | #192 | Open |
+| `salvage/107-transfer-pipeline` | #193 | Open, stacked on #192 |
+| `salvage/107-gc-retirement-codecs` | #195 | Open |
 
 ## Ordering
 
