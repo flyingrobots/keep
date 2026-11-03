@@ -30,7 +30,7 @@ The merged code is sound and no data is at risk, but its headline claims exceed 
 
 ## The Repair Menu
 
-Applied in the commit after `ce998c8`: M1 to M11. M12 (resolve the #194 thread) follows the merge. Carried forward: C13 to C15 in #213; C16 to C19 in #212; C20 as a note on #204; C21 with #195; C22 with #191; C23 and C24 as filed or noted. C23's roadmap sweep has no issue yet.
+Applied in `6d0d837` and `803e789`: M1 to M11. M12 (resolve the #194 thread) follows the merge. Carried forward: C13 to C15 in #213; C16 to C19 in #212; C20 as a note on #204; C21 with #195; C22 with #191; C23 and C24 as filed or noted. C23's roadmap sweep has no issue yet.
 
 ## Ship Verdict
 
@@ -41,4 +41,5 @@ Applied in the commit after `ce998c8`: M1 to M11. M12 (resolve the #194 thread) 
 - Graft MCP was unavailable. Holmes was split into code and documents because the diff exceeded 3,000 lines.
 - Nothing was compiled by detectives. CI passed all four jobs at `ce998c8` (run 41670124897).
 - Repairs were not re-testified, as the front office told the maintainer in advance.
+- Front-office error: the repair script stopped on a wrong assumption after the roadmap edits, and the front office committed, pushed and filed this case without checking its exit status. `6d0d837` therefore held only the roadmap repairs. `803e789` completes them. The error was caught before merge.
 - One repair wording departs from Watson's: the rationale also names #214. F-25's list and status words are as he proposed.
