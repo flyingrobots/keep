@@ -46,3 +46,10 @@ Deferred, for the maintainer: R11 (the Rustix API list, which needs its own read
 - Moriarty and Watson cited CI as still running; all four gates later passed on `9878aab` (run 41660329996).
 - The case is filed on local branch `cases/open-prs-integration`, not on the integration branch, so that testimony files do not enter `main` or the documentation lint corpus.
 - The front office's own earlier error: the first push missed the lock digest because the pin search looked only for version strings. CI caught it.
+
+## Later rounds
+
+- **Round 2, at `00a36e0`:** Fidelity A, Clarity C+, Resilience B+. Found the undisclosed Rustix advisory, the uncited Linux runs and the unpinned `RDONLY` value.
+- **Round 3, at `de515f3`:** Clarity B+, Resilience B+. Holmes did not run. Moriarty showed the "removes more than it adds" reasoning applied reachability to one side only; the front office reproduced this with module-load traces on both linter versions. Repaired in the following commit.
+- **Standing verdict:** ELEMENTARY for behaviour: no round found a Keep behaviour defect. The final repairs are prose and one test rename, and were not re-testified. Overall adjudicated A-: the record is accurate as far as known, but the top grade was never given by an independent reader of the final commit.
+- **Not pursued:** Moriarty's objection to one bisection boundary over three dependency families stands recorded; the maintainer chose this shape. No physical power-loss, `aarch64-unknown-linux-gnu` or read-only mount evidence exists.
