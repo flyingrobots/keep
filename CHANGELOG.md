@@ -12,7 +12,7 @@ after its public API and format compatibility policies are established.
 
 - Update Rustix to 1.1.6 and cap-fs-ext to 4.0.3 in both locked workspaces and renew their dependency admission; selected features and the Rust floor are unchanged (#207, #189).
 
-- Update the pinned taiki-e/install-action action to v2.88.0 in the Rust quality gates and Dependency policy jobs (#206).
+- Update the pinned taiki-e/install-action action to v2.88.0 in the Rust quality gates and Dependency policy jobs, which also moves the cargo-binstall version that installs the b3sum vector tool to 1.26.1; #210 tracks admitting that install path (#206).
 
 - Update the repository-only serde_json parser to 1.0.154 in both locked workspaces and refresh its dependency admission; the resolved transitive graph, features, license and MSRV are unchanged (#186).
 
