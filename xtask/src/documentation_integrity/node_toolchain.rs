@@ -51,13 +51,13 @@ fn admit_manifest(manifest: &Value) -> Result<(), DocumentationError> {
         .get("dependencies")
         .and_then(|dependencies| dependencies.get("markdownlint-cli2"))
         .and_then(Value::as_str);
-    if observed == Some("0.23.3") {
+    if observed == Some("0.24.0") {
         Ok(())
     } else {
         Err(DocumentationError::RepositoryValue {
             path: MANIFEST_PATH,
             field: "dependencies.markdownlint-cli2",
-            expected: "0.23.3",
+            expected: "0.24.0",
             observed: observed.map(str::to_owned),
         })
     }
@@ -78,28 +78,28 @@ fn admit_lock(lock: &Value) -> Result<(), DocumentationError> {
         "",
         &["dependencies", "markdownlint-cli2"],
         "packages[\"\"].dependencies.markdownlint-cli2",
-        "0.23.3",
+        "0.24.0",
     )?;
     require_package_value(
         packages,
         "node_modules/markdownlint-cli2",
         &["dependencies", "js-yaml"],
         "packages[\"node_modules/markdownlint-cli2\"].dependencies.js-yaml",
-        "5.4.1",
+        "5.4.3",
     )?;
     require_package_value(
         packages,
         "node_modules/js-yaml",
         &["version"],
         "packages[\"node_modules/js-yaml\"].version",
-        "5.4.1",
+        "5.4.3",
     )?;
     require_package_value(
         packages,
         "node_modules/markdown-it",
         &["version"],
         "packages[\"node_modules/markdown-it\"].version",
-        "15.0.1",
+        "15.0.3",
     )?;
     require_provenance(packages)?;
     Ok(())

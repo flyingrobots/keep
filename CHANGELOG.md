@@ -8,6 +8,12 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Update the development-only Markdown validation graph and exact admission policy to markdownlint-cli2 0.24.0, removing the markdown-it and smol-toml advisories while documenting the new re2js advisory that its exact markdownlint pin retains (#188).
+
+- Update Rustix to 1.1.6 and cap-fs-ext to 4.0.3 in both locked workspaces and renew their dependency admission; selected features are unchanged (#207, #189).
+
+- Update the CI job's pinned taiki-e/install-action action to v2.88.0 (#206).
+
 - Update the repository-only serde_json parser to 1.0.154 in both locked workspaces and refresh its dependency admission; the resolved transitive graph, features, license and MSRV are unchanged (#186).
 
 - Update the in-process BLAKE3 dependency to 1.8.7 in both locked workspaces, remove the unused arrayref license exception and renew its admission while retaining the external b3sum oracle and version-one identity contract (#94).

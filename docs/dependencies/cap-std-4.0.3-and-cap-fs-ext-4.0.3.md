@@ -1,8 +1,9 @@
-# Dependency Admission: cap-std 4.0.3, cap-fs-ext 4.0.2, and rustix 1.1.5
+# Dependency Admission: cap-std 4.0.3, cap-fs-ext 4.0.3, and rustix 1.1.6
 
 - Status: Accepted for repository-task and segment-store filesystem boundaries
 - Date: 2026-07-26
-- Rustix admission updated: 2026-10-03 (#102)
+- Rustix and cap-fs-ext admission updated: 2026-11-03 (#207, #189)
+- Earlier Rustix admission update: 2026-10-03 (#102)
 - Capability admission updated: 2026-10-03 (#93)
 - Owner: Keep repository verification
 - Upstream:
@@ -10,7 +11,7 @@
 
 ## Admitted use
 
-Keep admits the exactly pinned `cap-std` 4.0.3 and `cap-fs-ext` 4.0.2 packages for the library's segment-store filesystem adapter and behind the `xtask` crate's `repository-tasks` feature. The library also admits Rustix 1.1.5 for safe Linux filesystem-profile inspection and no-symlink root opening; `xtask` uses the same exact version behind `repository-tasks`.
+Keep admits the exactly pinned `cap-std` 4.0.3 and `cap-fs-ext` 4.0.3 packages for the library's segment-store filesystem adapter and behind the `xtask` crate's `repository-tasks` feature. The library also admits Rustix 1.1.6 for safe Linux filesystem-profile inspection and no-symlink root opening; `xtask` uses the same exact version behind `repository-tasks`.
 
 `cap-std::fs::Dir` pins the admitted repository or corpus directory and opens entries relative to that capability. `cap-fs-ext` supplies no-follow and nonblocking open options plus cross-platform device and file identifiers. After Git inventory, the source check compares the retained repository directory's identity with a fresh open of the configured pathname. Together, these operations let repository checks refuse persistent root replacement, path substitution, symlinked protocol tables, FIFOs, sockets, devices, and other ambiguous filesystem state before reading source or protocol bytes.
 
@@ -44,7 +45,7 @@ The locked non-Windows graph introduced for this boundary is:
 - `linux-raw-sys` 0.12.1;
 - `maybe-owned` 0.3.4;
 - `once_cell` 1.21.4;
-- `rustix` 1.1.5; and
+- `rustix` 1.1.6; and
 - `rustix-linux-procfs` 0.1.1.
 
 Windows resolution additionally retains the locked `windows-sys`, `windows-targets`, and architecture packages recorded in `Cargo.lock`. The library therefore exempts only Clippy's `multiple_crate_versions` cargo lint; exact direct versions, the committed lockfile, dependency policy, and advisory checks remain authoritative.
@@ -80,3 +81,11 @@ Keep retains its no-follow, identity, exact-byte, namespace and corruption check
 Pre-effect refusal and execution failure remain distinct under the [bounded recovery contract](../adr/retention-bounded-recovery-landing.md). An execution failure can follow namespace effects or uncertain durability; the dependency upgrade does not imply rollback or broaden incomplete-stage disposal.
 
 The existing public filesystem, writer/reader, recovery and repository-tool laws must pass with the new graph. Historical receipts retain their recorded dependency coordinates, and no new performance or all-platform isolation guarantee is asserted by this admission.
+
+## Rustix 1.1.6 and cap-fs-ext 4.0.3 update
+
+The root, repository-task and isolated process-spawn manifests select the same exact Rustix 1.1.6, and the root and repository-task manifests pin cap-fs-ext 4.0.3. The independently locked fuzz workspace resolves both versions. Selected features and the remaining resolved package set are unchanged; Rustix's declared minimums for its `bitflags` and `libc` dependencies rise, and the locked `bitflags` 2.13.1 and `libc` 0.2.186 already satisfy them.
+
+Published cap-fs-ext 4.0.3 changes only its cap-primitives and cap-std requirements and one import order. Published Rustix 1.1.6 reaches Keep's boundary in one place that needs review: its `linux_raw` backend replaces `StatVfsMountFlags` constants derived from `MS_*` values with the kernel's `ST_*` values. Keep reads only `RDONLY`, whose value remains `0x0001`. The other reviewed changes to `statx` padding fields, 32-bit `chown` and `getgroups` selection, Apple `fallocate` and socket options are outside the operations Keep invokes on its supported targets.
+
+This review is of the published source differences. It does not assert universal equivalence. Current validation must exercise the admitted filesystem and process boundaries with the new graph. Historical recovery, crash and benchmark receipts remain evidence for their recorded builds.

@@ -22,7 +22,7 @@ impl DocumentationTool {
         match self {
             Self::Actionlint => "1.7.12",
             Self::Lychee => "0.21.0",
-            Self::Markdownlint => "0.23.3",
+            Self::Markdownlint => "0.24.0",
         }
     }
 
@@ -30,7 +30,7 @@ impl DocumentationTool {
         match self {
             Self::Actionlint => "1.7.12",
             Self::Lychee => "lychee 0.21.0",
-            Self::Markdownlint => "markdownlint-cli2 v0.23.3 (markdownlint v0.41.1)",
+            Self::Markdownlint => "markdownlint-cli2 v0.24.0 (markdownlint v0.42.0)",
         }
     }
 
