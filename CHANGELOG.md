@@ -8,11 +8,11 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
-- Update the development-only Markdown validation graph and exact admission policy to markdownlint-cli2 0.24.0. On the 2026-11-03 audit this removes the markdown-it and smol-toml advisories and adds the high-severity re2js advisory GHSA-gg6h-894w-4m9c through markdownlint's exact pin; the toolchain admission records why the affected path appears unreachable, and #209 tracks removing it (#188).
+- Update the development-only Markdown validation graph and exact admission policy to markdownlint-cli2 0.24.0. On the 2026-11-03 audit this removes the markdown-it and smol-toml reports and adds the high-severity re2js advisory GHSA-gg6h-894w-4m9c through markdownlint's exact pin. This is a currency update, not a demonstrated security gain: markdown-it was not loaded on Keep's path, re2js now is, and the admission records why its affected path appears unreachable. MD011 also reports slightly less, and #209 tracks removing re2js (#188).
 
 - Update Rustix to 1.1.6, which fixes the high-severity GHSA-jh2m-fhpj-3vr7 extended-attribute undefined behavior with no Keep exposure found, and cap-fs-ext to 4.0.3 in both locked workspaces. Renew their dependency admission and pin the `RDONLY` mount-flag value in a law; selected features and the Rust floor are unchanged (#207, #189).
 
-- Update the pinned taiki-e/install-action action to v2.88.0 in the Rust quality gates and Dependency policy jobs, which also moves the cargo-binstall version that installs the b3sum vector tool to 1.26.1. That binary comes from the third-party QuickInstall source, and #210 tracks admitting that install path (#206).
+- Update the pinned taiki-e/install-action action to v2.88.0 in the Rust quality gates and Dependency policy jobs, which also moves the cargo-binstall version that installs the b3sum vector tool to 1.26.1. That binary's third-party QuickInstall source predates this bump, and #210 tracks admitting it (#206).
 
 - Update the repository-only serde_json parser to 1.0.154 in both locked workspaces and refresh its dependency admission; the resolved transitive graph, features, license and MSRV are unchanged (#186).
 

@@ -107,16 +107,16 @@ mutating network operation.
 
 ## Advisory position on 2026-11-03
 
-This development-tool update does not claim a clean npm audit. The lock graph has five `npm audit` reports from two advisories, which are `re2js` and `katex` with their dependents. The previous graph had six reports. These results are a dated snapshot, and no CI job re-runs `npm audit`.
+This development-tool update does not claim a clean npm audit. The lock graph has five `npm audit` reports from two advisories, which are `re2js` and `katex` with their dependents. The previous graph had six reports. These results are a dated snapshot, and no CI job re-runs `npm audit`. Report counts are not a measure of exposure: npm's high bucket rises from one package to three because `re2js` rolls up through its dependents, while unique advisories fall from five to two.
 
 - **Removed by this update:** `markdown-it` ([GHSA-r7fv-28h4-cvq7](https://github.com/advisories/GHSA-r7fv-28h4-cvq7) high, [GHSA-gfr2-rv44-r23c](https://github.com/advisories/GHSA-gfr2-rv44-r23c) high, [GHSA-vfgh-jcmw-g37q](https://github.com/advisories/GHSA-vfgh-jcmw-g37q) low) and `smol-toml` ([GHSA-r4xh-jqrq-34v2](https://github.com/advisories/GHSA-r4xh-jqrq-34v2) medium).
 - **Added by this update, rated high:** `re2js` 2.8.6 ([GHSA-gg6h-894w-4m9c](https://github.com/advisories/GHSA-gg6h-894w-4m9c)), a quadratic-time denial of service. `markdownlint` 0.42.0 requires exactly that version; the patched range starts at 2.8.7.
-- **Retained, rated low:** `katex` ([GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7)), which `npm audit` also reports through `micromark-extension-math`. The advisory needs an already polluted prototype or influenced renderer options, and neither `markdownlint` nor `markdownlint-cli2` imports `katex` or the math HTML renderer directly. No issue tracks it.
+- **Retained, rated low:** `katex` ([GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7)), which `npm audit` also reports through `micromark-extension-math`. The advisory needs an already polluted prototype or influenced renderer options. A load trace shows `katex` is imported on every run, through `micromark-extension-math`, but neither `markdownlint` nor `markdownlint-cli2` references `mathHtml` or `renderToString`. No issue tracks it.
 - **No longer reported:** the graph retains `braces` 3.0.3, but GitHub withdrew [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) on 2026-10-23, which is why [#176](https://github.com/flyingrobots/keep/issues/176) no longer applies.
 
 ### Why the `re2js` advisory is accepted
 
-Keep accepts this advisory instead of staying on 0.23.3, which would retain the removed reports above with no reachability review of them. Follow-up [#209](https://github.com/flyingrobots/keep/issues/209) tracks removing it, and repeats this check.
+This update is kept for currency and a clean audit of the removed reports, not as a demonstrated security gain. A module-load trace with Keep's configuration shows `markdown-it` is not loaded by either version, so its two high advisories were not on Keep's path, while `re2js` is loaded on every run of 0.24.0. `smol-toml` loads on both. Follow-up [#209](https://github.com/flyingrobots/keep/issues/209) tracks removing `re2js`, and repeats this check.
 
 The advisory requires the opt-in `LOOKBEHINDS` flag. The published `markdownlint` 0.42.0 and `markdownlint-cli2` 0.24.0 packages do not set it, and a trial `RE2JS.compile` of `(?<=a)b` without the flag is refused. `.markdownlint-cli2.yaml` sets no front-matter pattern, which is the one place configuration reaches `re2js`, and such a pattern takes the same flagless route. So we found no path to the affected matching. That is a source review and one trial, not a proof.
 
@@ -126,7 +126,7 @@ The [Node toolchain contract](../../xtask/src/documentation_integrity/node_toolc
 
 ### Rule behavior
 
-`markdownlint` 0.42.0 changes many rule files, and they were not reviewed one by one. All tracked Markdown passes, which shows only that nothing fails. At least one rule narrows: MD011 no longer reports reversed links inside HTML blocks.
+`markdownlint` 0.42.0 changes many rule files, and they were not reviewed one by one. All tracked Markdown passes, which shows only that nothing fails. MD011 narrows in two ways we reproduced. It no longer reports reversed links inside HTML blocks, and it misses the second link in `(a)[b](c)[d]`, which 0.41.1 reported. Keep accepts this small loss of lint coverage.
 
 ## Alternatives rejected
 
@@ -135,9 +135,10 @@ The [Node toolchain contract](../../xtask/src/documentation_integrity/node_toolc
 - Online external-link validation makes required pull-request CI depend on
   systems outside Keep's authority.
 - Scanning every filesystem Markdown path admits ignored and generated state.
-- Staying on `markdownlint-cli2` 0.23.3 retains the `markdown-it` and `smol-toml`
-  reports without a reachability review. npm `overrides` for `re2js` are refused
-  by the toolchain contract.
+- Staying on `markdownlint-cli2` 0.23.3 was viable on security grounds, because its
+  `markdown-it` advisories are not on Keep's path. It was rejected to stay on a
+  current release and clear those audit reports. npm `overrides` for `re2js` are
+  refused by the toolchain contract.
 - Reimplementing Markdown, GitHub anchor, and workflow parsers locally would
   add a larger and less reviewed parser surface.
 
