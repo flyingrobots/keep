@@ -14,12 +14,13 @@ Where this page and a ledger disagree, the ledger wins.
 Provenance: this page was originally authored on the closed #107 branch
 (`feature/roadmap-m4-tasks`). Its feature and task identifiers and every
 task's field set are carried over unchanged, because open issues cite them.
-Every status claim has been reconciled to `main`. Work that exists only on
+Every status claim was reconciled to `main` at the snapshot below; later
+merges are named where they change a status. Work that exists only on
 that branch is not counted as done here: it is shown as Planned or Partial,
 its implementation is kept on the branch `feature/roadmap-m4-tasks` (`57b6c37`), and its
-salvage is tracked in the #107 salvage ledger. The branch's 2026-09-30
+salvage is tracked in the [#107 salvage ledger](docs/audits/pr-107-salvage.md). The branch's 2026-09-30
 completed-task audit (`docs/audits/completed-roadmap-2026-09-30.md`) is
-archived at the same tag and is not on `main`.
+kept on the same branch and is not on `main`.
 
 Snapshot: main at 3887f2a, 2026-10-26.
 
@@ -38,7 +39,8 @@ Every feature has a status word:
 | Out of scope | Refused or deferred by a decision record; listed so nobody re-proposes it by accident |
 
 A feature is a capability a user can name. A task is one unit of work that
-delivers part of a feature. Each unfinished task carries the full field set:
+delivers part of a feature. Most unfinished tasks carry the full field set
+(T-01.2, T-03.3, T-05.5, T-22.1, T-25.2, T-41.4, and T-45.3 do not yet):
 requirements, acceptance criteria, scope, user stories, interface, contract
 schema, test plan, definition of done, complexity, documentation, and
 dependencies. Completed tasks carry a checkbox and a pointer to their
@@ -105,7 +107,7 @@ names; use those in code, tests, and commits.
 ### Retention and version 2 (M4)
 
 - [x] [F-15 Retention roots, release, and GC liveness model](#f-15-retention-roots-release-and-gc-liveness-model) — Done (ADR-0009)
-- [ ] [F-16 Version-2 format records and codecs](#f-16-version-2-format-records-and-codecs) — Partial (the `KEEP-RETENTION-003` mutation matrix, T-16.5, is not on `main`)
+- [ ] [F-16 Version-2 format records and codecs](#f-16-version-2-format-records-and-codecs) — Partial (T-16.5: selected-field mutation laws via #194; the complete matrix remains open in #212)
 - [x] [F-17 One-way migration from version 1 to version 2](#f-17-one-way-migration-from-version-1-to-version-2) — Done (#97 via #137; recovery and the `KEEP-CRASH-053`–`073` matrix via #138; restart and compatibility evidence via #161 and #162)
 - [ ] [F-18 Retention publication](#f-18-retention-publication) — Partial (bounded recovery and the `KEEP-CRASH-036`–`052` matrix via #99; orphan disposition, T-22.5, is not on `main`; incomplete-stage disposition deferred to #155)
 - [x] [F-19 Reader fence and immutable version-2 snapshots](#f-19-reader-fence-and-immutable-version-2-snapshots) — Done (#99; process-death evidence via #160 and #175)
@@ -117,7 +119,7 @@ names; use those in code, tests, and commits.
 
 ### Integration (M5)
 
-- [x] [F-25 Echo adapter and transaction boundary](#f-25-echo-adapter-and-transaction-boundary) — Partially implemented in the Echo repository
+- [ ] [F-25 Echo adapter and transaction boundary](#f-25-echo-adapter-and-transaction-boundary) — Partial (T-25.2 is in the Echo repository)
 - [ ] [F-26 Graft Golden File Worldline end to end](#f-26-graft-golden-file-worldline-end-to-end) — Planned (#24)
 - [ ] [F-27 git-cas import posture](#f-27-git-cas-import-posture) — Planned (#25)
 
@@ -468,8 +470,9 @@ unconfigured.
 `cargo xtask benchmark-baseline` runs thirteen scenarios over a 16 MiB
 generated corpus, compares the registered profile with benchmark-only
 FastCDC sizes, fixed-size chunking, and git-cas Buzhash, and writes a TSV
-with environment and commit identity. One baseline exists:
-`benchmark/baselines/c529c07-aarch64-apple-darwin.tsv`.
+with environment and commit identity. Two baselines exist:
+`benchmark/baselines/c529c07-aarch64-apple-darwin.tsv` and
+`benchmark/baselines/30ffe90-aarch64-apple-darwin.tsv`.
 
 - [x] T-09.1 Corpus, scenarios, metrics, and one baseline —
   `docs/benchmarks/streaming-cas-baseline-v1/README.md`.
@@ -669,9 +672,9 @@ raise the 4,096 namespace ceiling or reclaim tombstones.
 
 ### F-16 Version-2 format records and codecs
 
-**Status:** Partial (issue #19, PR #78). The `main` ledger row
-`KEEP-RETENTION-003` reads "In progress in #19"; its mutation matrix
-(T-16.5) exists only on the archived #107 branch.
+**Status:** Partial (issue #19, PR #78). Mutation laws for selected fields
+landed via #194. The `KEEP-RETENTION-003` ledger row owns what remains, tracked
+in #212.
 
 `keep.segment-store/v2` adds a 96-byte `FORMAT` marker, 256-byte migration
 intent and receipt, root-generation records (192-byte header, 119-byte
@@ -693,12 +696,11 @@ decoder that refuses every structural fault before admission.
   `fuzz/fuzz_targets/migration_format.rs`.
 - [x] T-16.4 Seeded `retention_format` fuzz target.
 - [ ] T-16.5 Complete the corruption matrix (`KEEP-RETENTION-003`) —
-  Planned on `main`. The mutation modules
+  Partial on `main`. The mutation modules
   `tests/retention_root_decoding/mutation_laws.rs`,
   `tests/retention_manifest_codec/mutation_laws.rs`, and
-  `tests/retention_head_codec/mutation_laws.rs` exist only on the archived
-  #107 branch (`feature/roadmap-m4-tasks` at `57b6c37`); salvage is tracked in the #107
-  salvage ledger. Original task fields:
+  `tests/retention_head_codec/mutation_laws.rs` cover selected fields, salvaged
+  via #194. Remaining work is tracked in #212. Original task fields:
   - **Requirements:** every structural field of root, manifest, and head
     has a permanent mutation case with the exact typed refusal it must
     produce; no field is covered only by the fuzz target.
@@ -1271,9 +1273,9 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
   fixtures `one-candidate-gc-intent.hex` and `one-candidate-gc-receipt.hex`.
   Original task fields:
 - [ ] T-22.1a Register the disposition enumerations and ship its codec —
-  not on `main`. On the archived #107 branch only: four `definition.tsv`
+  not on `main`. On the archived #107 branch only: seven `definition.tsv`
   rows, the corpus rematerialized through the oracle
-  (new definition digest `6cbc1c75…`), `src/adapters/gc/disposition*.rs`,
+  (new definition digest `a4a010ce…`), `src/adapters/gc/disposition*.rs`,
   `tests/recovery_disposition_receipt.rs`, `gc_format` selector 2.
   Original task fields:
   - **Requirements:** `gc.md` says the artifact kind, decision, and
@@ -1712,7 +1714,7 @@ error precision.
 
 ### F-25 Echo adapter and transaction boundary
 
-**Status:** Partially implemented in the Echo repository (issues #22 and #23 closed
+**Status:** Partial; the remainder is in the Echo repository (issues #22 and #23 closed
 2026-08-15; work tracked as flyingrobots/echo#721 and #722). Keep's side
 is the authenticated reconstruction contract (F-07) and the no-Echo-types
 law (`KEEP-STORE-016`).
@@ -2219,7 +2221,7 @@ and #59; ADR-0006, ADR-0007, ADR-0008).
 
 `cargo xtask` is the single repository-owned automation boundary, in
 Rust, with no tracked Python: `verify`, `documentation-integrity-check`
-(markdownlint-cli2 0.23.3, lychee 0.21.0 offline with fragments, actionlint
+(markdownlint-cli2 0.24.0, lychee 0.21.0 offline with fragments, actionlint
 1.7.12), `documentation-refusal-check`, `source-structure-check` (500-line
 hard limit, forbidden filenames), `golden-file-worldline-check`,
 `conformance-check`, `durability-crash-matrix`, `benchmark-baseline`,
