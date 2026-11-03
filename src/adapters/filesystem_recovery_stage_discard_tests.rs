@@ -10,6 +10,7 @@ use super::{
 };
 
 mod fixture;
+mod sync_failure_laws;
 
 use fixture::{DiscardFixture, evidence, request, truncated_bytes};
 
