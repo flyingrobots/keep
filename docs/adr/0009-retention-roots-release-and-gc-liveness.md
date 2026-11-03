@@ -5,7 +5,7 @@
 - Owners: Keep retention, catalog, recovery, verification, and GC boundaries
 - Related issue:
   [#18](https://github.com/flyingrobots/keep/issues/18)
-- Depends on: ADR-0002, ADR-0005, issues #3, #16, and #17
+- Depends on: ADR-0002, ADR-0005, issues #3, #16, and #17; amended by [ADR-0010](0010-one-storage-format.md)
 
 ## Context
 

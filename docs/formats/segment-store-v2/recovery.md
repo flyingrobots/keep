@@ -138,6 +138,10 @@ recovery refuses a substituted store.
 
 ### Root identity across restart
 
+[ADR-0010](../../adr/0010-one-storage-format.md) supersedes the restart
+requirement below and makes complete stores portable. Main enforces this
+section until that change lands.
+
 The three root coordinates the intent records do not have the same lifetime.
 `statx.stx_mnt_id` names a mount instance: it can change when a filesystem
 is unmounted and mounted again or after a reboot. A restart path must not
