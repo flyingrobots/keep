@@ -6,8 +6,8 @@ use std::io;
 
 use keep::{
     AdmittedRetentionRoot, RetentionClosureLimit, RetentionClosureLimitError,
-    RetentionProfileAdmissionError, RetentionRootDecodeError as Refusal, RetentionRootError,
-    RootGenerationError,
+    RetentionNamespaceError, RetentionProfileAdmissionError, RetentionRootDecodeError as Refusal,
+    RetentionRootError, RootGenerationError,
 };
 
 use super::{ANCHOR_BODY_OFFSET, ANCHOR_SET_DIGEST_OFFSET, ROOT_DIGEST_OFFSET, fixture_bytes};
@@ -337,13 +337,20 @@ fn namespace_length_bounds_refuse_after_complete_integrity()
     let empty = reframe(&[], &anchors, 1)?;
     assert!(matches!(
         AdmittedRetentionRoot::decode(&empty),
-        Err(Refusal::Namespace { .. })
+        Err(Refusal::Namespace {
+            source: RetentionNamespaceError::Empty,
+        })
     ));
 
     let too_long = reframe(&[0x2f; 256], &anchors, 1)?;
     assert!(matches!(
         AdmittedRetentionRoot::decode(&too_long),
-        Err(Refusal::Namespace { .. })
+        Err(Refusal::Namespace {
+            source: RetentionNamespaceError::TooLong {
+                maximum: u8::MAX,
+                observed: 256,
+            },
+        })
     ));
     Ok(())
 }
