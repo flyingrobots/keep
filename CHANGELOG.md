@@ -8,11 +8,11 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
-- Update the development-only Markdown validation graph and exact admission policy to markdownlint-cli2 0.24.0, removing the markdown-it and smol-toml advisories while documenting the new re2js advisory that its exact markdownlint pin retains (#188).
+- Update the development-only Markdown validation graph and exact admission policy to markdownlint-cli2 0.24.0. On the 2026-11-03 audit this removes the markdown-it and smol-toml advisories and adds the high-severity re2js advisory GHSA-gg6h-894w-4m9c through markdownlint's exact pin; the toolchain admission records why the affected path appears unreachable (#188).
 
-- Update Rustix to 1.1.6 and cap-fs-ext to 4.0.3 in both locked workspaces and renew their dependency admission; selected features are unchanged (#207, #189).
+- Update Rustix to 1.1.6 and cap-fs-ext to 4.0.3 in both locked workspaces and renew their dependency admission; selected features and the Rust floor are unchanged (#207, #189).
 
-- Update the CI job's pinned taiki-e/install-action action to v2.88.0 (#206).
+- Update the pinned taiki-e/install-action action to v2.88.0 in the Rust quality gates and Dependency policy jobs (#206).
 
 - Update the repository-only serde_json parser to 1.0.154 in both locked workspaces and refresh its dependency admission; the resolved transitive graph, features, license and MSRV are unchanged (#186).
 

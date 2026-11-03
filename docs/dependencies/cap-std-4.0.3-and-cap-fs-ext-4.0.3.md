@@ -4,7 +4,7 @@
 - Date: 2026-07-26
 - Rustix and cap-fs-ext admission updated: 2026-11-03 (#207, #189)
 - Earlier Rustix admission update: 2026-10-03 (#102)
-- Capability admission updated: 2026-10-03 (#93)
+- Earlier cap-std admission update: 2026-10-03 (#93)
 - Owner: Keep repository verification
 - Upstream:
   [bytecodealliance/cap-std](https://github.com/bytecodealliance/cap-std)
@@ -52,7 +52,7 @@ Windows resolution additionally retains the locked `windows-sys`, `windows-targe
 
 ## Safety, licensing, and compatibility
 
-The capability packages declare `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT`; Keep selects an admitted license through repository policy. Rustix declares `Apache-2.0 OR MIT`. The locked `winx` 0.36.4 transitive package declares only `Apache-2.0 WITH LLVM-exception`, so `deny.toml` admits that exact package and license combination rather than broadening the global license allowlist. The cap-std and cap-fs-ext manifests declare no Rust-version floor. Rustix 1.1.5 declares Rust 1.65, below Keep's pinned Rust 1.96.0; its previous 1.1.4 release declared 1.63. The version floor is compatibility metadata, not execution evidence. Keep's debug, release, Clippy, dependency-policy and advisory lanes remain required for the updated graph.
+The capability packages declare `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT`; Keep selects an admitted license through repository policy. Rustix declares `Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT`. The locked `winx` 0.36.4 transitive package declares only `Apache-2.0 WITH LLVM-exception`, so `deny.toml` admits that exact package and license combination rather than broadening the global license allowlist. The cap-std and cap-fs-ext manifests declare no Rust-version floor. Rustix 1.1.6 declares Rust 1.65, the same floor as 1.1.5 and below Keep's pinned Rust 1.96.0. The version floor is compatibility metadata, not execution evidence. Keep's debug, release, Clippy, dependency-policy and advisory lanes remain required for the updated graph.
 
 The admitted packages and their platform dependencies may contain unsafe code around operating-system calls and handles. Keep-owned code invokes only their safe APIs, retains handles and process identifiers in private adapter types, checks resulting metadata, bounds reads, and never treats a dependency as proof of content identity. `cargo deny` and RustSec checks remain mandatory point-in-time evidence; they do not transfer Keep's unsafe-code guarantee to dependencies.
 
@@ -84,8 +84,10 @@ The existing public filesystem, writer/reader, recovery and repository-tool laws
 
 ## Rustix 1.1.6 and cap-fs-ext 4.0.3 update
 
-The root, repository-task and isolated process-spawn manifests select the same exact Rustix 1.1.6, and the root and repository-task manifests pin cap-fs-ext 4.0.3. The independently locked fuzz workspace resolves both versions. Selected features and the remaining resolved package set are unchanged; Rustix's declared minimums for its `bitflags` and `libc` dependencies rise, and the locked `bitflags` 2.13.1 and `libc` 0.2.186 already satisfy them.
+The root, repository-task and isolated process-spawn manifests select the same exact Rustix 1.1.6, and the root and repository-task manifests pin cap-fs-ext 4.0.3. The independently locked fuzz workspace resolves both versions. Selected features and the other resolved packages are unchanged; Rustix raises its minimum `bitflags` requirement from 2.4.0 to 2.9.2, which the locked `bitflags` 2.13.1 satisfies. Its runtime `libc` requirement stays at 0.2.182, which the locked `libc` 0.2.186 satisfies; only its development dependency on `libc` moves.
 
-Published cap-fs-ext 4.0.3 changes only its cap-primitives and cap-std requirements and one import order. Published Rustix 1.1.6 reaches Keep's boundary in one place that needs review: its `linux_raw` backend replaces `StatVfsMountFlags` constants derived from `MS_*` values with the kernel's `ST_*` values. Keep reads only `RDONLY`, whose value remains `0x0001`. The other reviewed changes to `statx` padding fields, 32-bit `chown` and `getgroups` selection, Apple `fallocate` and socket options are outside the operations Keep invokes on its supported targets.
+Published cap-fs-ext 4.0.3 changes only its cap-primitives and cap-std requirements and one import order, apart from version and packaging metadata. Published Rustix 1.1.6 needs two checks at Keep's Linux boundary, and both pass. First, its `linux_raw` backend replaces `StatVfsMountFlags` constants derived from `MS_*` values with the kernel's `ST_*` values. Keep's production code tests only `RDONLY`, whose value remains `0x0001`. Second, it changes padding fields in its `Statx`, `StatFs` and `Stat` layouts to `Padding`, a `#[repr(transparent)]` wrapper. Keep does call `statx`, `fstatfs` and `fstatvfs`, but it reads no padding field, and neither Keep nor the locked capability crates name those fields.
+
+The [Rustix comparison](https://github.com/bytecodealliance/rustix/compare/v1.1.5...v1.1.6) touches other areas too, including extended attributes, `recvmsg` truncation, termios, `inotify`, `tcgetpgrp`, 32-bit `chown` and `getgroups` selection, Apple `fallocate` and socket options. A search of Keep and the locked capability crates found no behavioural reach into them. This paragraph summarises the comparison and does not list every changed file.
 
 This review is of the published source differences. It does not assert universal equivalence. Current validation must exercise the admitted filesystem and process boundaries with the new graph. Historical recovery, crash and benchmark receipts remain evidence for their recorded builds.
