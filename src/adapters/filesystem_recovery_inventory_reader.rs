@@ -3,9 +3,9 @@
 use std::io;
 use std::path::Path;
 
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 #[cfg(test)]
 use cap_std::ambient_authority;
-use cap_std::fs::Dir;
 
 use super::{
     FilesystemRecoveryStageError, RecoveryEntryName, RecoveryInventory, RecoveryInventoryError,
@@ -24,7 +24,7 @@ const CATALOGS_NAME: &str = "catalogs";
 /// A pinned, read-only view of the four recovery inventory namespaces.
 ///
 /// Opening performs no protocol mutation. The production constructor admits
-/// the same Linux ext4 profile as store initialization and pins all three child
+/// the same platform profile as store initialization and pins all three child
 /// directories without following symbolic links.
 #[must_use]
 pub struct FilesystemRecoveryInventoryReader {

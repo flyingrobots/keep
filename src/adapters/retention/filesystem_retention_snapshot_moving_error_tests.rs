@@ -5,6 +5,7 @@ use std::fs;
 use std::io;
 
 use super::{Source, collect_retention_view, pool_name};
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 use crate::adapters::retention::filesystem_retention_test_fixture::{
     CATALOG_NAME, ROOT_HEX, fixture, initial_preparation, open_authority,
 };
@@ -13,8 +14,6 @@ use crate::adapters::retention::{
 };
 use crate::adapters::{CatalogRestartByteLimit, CatalogRestartPolicy, SegmentReadPolicy};
 use crate::execute_retention_publication;
-use cap_fs_ext::DirExt;
-use cap_std::fs::Dir;
 
 struct AfterLoad<F> {
     source: Source,

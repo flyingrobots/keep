@@ -14,7 +14,7 @@
 //! immutable-segment writing and verified reading, canonical catalog
 //! generations, platform-gated filesystem publication mechanics, bounded
 //! immutable restart snapshots, typed store-initialization orchestration, and
-//! production initialization for the admitted Linux ext4 profile. Recovery
+//! production initialization for the admitted Linux ext4 and macOS APFS profiles. Recovery
 //! inventory, name classification, bounded stage fingerprinting, exact
 //! truncated-stage discard, and complete-stage valid-orphan recovery are
 //! explicit. Exact next-head finalization now has a storage-independent

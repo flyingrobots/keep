@@ -1,6 +1,6 @@
 //! This module owns bounded loading of catalog-selected immutable segments.
 
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use super::loaded_segment::LoadedSegment;
 use super::segment_header::MAXIMUM_SEGMENT_LENGTH;

@@ -17,8 +17,15 @@ impl TestDirectory {
     /// Returns the exact filesystem failure from scratch-root creation,
     /// removal of same-process stale test evidence, or sandbox creation.
     pub(super) fn create(name: &str) -> io::Result<Self> {
-        let root = option_env!("CARGO_TARGET_TMPDIR").map_or_else(
-            || Path::new(env!("CARGO_MANIFEST_DIR")).join("target/tmp"),
+        // A runner selects a specific filesystem here; Cargo's scratch sits with the
+        // build output, on whatever volume holds that.
+        let root = std::env::var_os("KEEP_TEST_SCRATCH_ROOT").map_or_else(
+            || {
+                option_env!("CARGO_TARGET_TMPDIR").map_or_else(
+                    || Path::new(env!("CARGO_MANIFEST_DIR")).join("target/tmp"),
+                    PathBuf::from,
+                )
+            },
             PathBuf::from,
         );
         fs::create_dir_all(&root)?;

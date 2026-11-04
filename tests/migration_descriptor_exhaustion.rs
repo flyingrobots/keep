@@ -1,6 +1,9 @@
 //! This module owns migration admission diagnostics under descriptor exhaustion.
 
-#![cfg(all(feature = "repository-tasks", target_os = "linux"))]
+#![cfg(all(
+    feature = "repository-tasks",
+    any(target_os = "linux", target_os = "macos")
+))]
 
 #[path = "segment_filesystem_stage/sandbox.rs"]
 pub mod sandbox;
@@ -25,12 +28,10 @@ fn a_root_clone_failure_reports_the_namespace_boundary() -> Result<(), Box<dyn E
     if std::env::var_os(CHILD).is_some() {
         return exhaust_descriptors();
     }
-    let output = Command::new("timeout")
+    let output = watchdog_shell()
         .args([
-            "20s",
-            "/bin/sh",
             "-c",
-            "ulimit -n 64; exec \"$@\"",
+            "ulimit -t 20; ulimit -n 64; exec \"$@\"",
             "migration-descriptor-test",
         ])
         .arg(std::env::current_exe()?)
@@ -45,6 +46,20 @@ fn a_root_clone_failure_reports_the_namespace_boundary() -> Result<(), Box<dyn E
         String::from_utf8_lossy(&output.stderr)
     );
     Ok(())
+}
+
+// GNU timeout bounds wall-clock time on Linux. macOS ships no equivalent, so the
+// script's CPU ceiling applies inside the native runner's whole-command deadline.
+#[cfg(target_os = "linux")]
+fn watchdog_shell() -> Command {
+    let mut command = Command::new("timeout");
+    command.args(["20s", "/bin/sh"]);
+    command
+}
+
+#[cfg(target_os = "macos")]
+fn watchdog_shell() -> Command {
+    Command::new("/bin/sh")
 }
 
 fn exhaust_descriptors() -> Result<(), Box<dyn Error>> {

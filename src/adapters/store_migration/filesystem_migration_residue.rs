@@ -2,8 +2,7 @@
 
 use std::io;
 
-use cap_fs_ext::DirExt;
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use super::FilesystemMigrationRecoveryRefusal as Refusal;
 use super::filesystem_migration_recovery_refusal::{invalid, kind};

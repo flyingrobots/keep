@@ -3,7 +3,7 @@
 use std::io;
 use std::path::Path;
 
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use super::FilesystemMigrationRecoveryRefusal as Refusal;
 use super::filesystem_migration_authority::MigrationNamespacePolicy;

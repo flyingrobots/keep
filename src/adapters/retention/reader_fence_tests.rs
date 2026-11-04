@@ -5,8 +5,8 @@ use std::fs;
 use std::io;
 
 use super::ReaderFence;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 use crate::adapters::retention::filesystem_retention_test_fixture::migrated_store;
-use cap_std::fs::Dir;
 
 // Size: medium (owned filesystem). Oracle: a fence must lock the same inode
 // its directory entry names after acquisition, even when both files are empty.

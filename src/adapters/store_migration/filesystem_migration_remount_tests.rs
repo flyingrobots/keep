@@ -76,9 +76,14 @@ fn substitute_coordinate(
         StoreRootIdentityCoordinate::Mount => original.root_mount_identity().get(),
         StoreRootIdentityCoordinate::File => original.root_file_identity().get(),
     };
-    let expected = observed
-        .checked_add(1)
-        .ok_or("fixture coordinate overflow")?;
+    // Only the top bit of a device coordinate survives a restart on Darwin.
+    let expected = if coordinate == StoreRootIdentityCoordinate::Device {
+        observed ^ (1 << 63)
+    } else {
+        observed
+            .checked_add(1)
+            .ok_or("fixture coordinate overflow")?
+    };
     let changed = |selected, value| {
         if coordinate == selected {
             expected

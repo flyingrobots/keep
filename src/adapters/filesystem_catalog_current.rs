@@ -114,7 +114,7 @@ fn require_empty_durable_pools(publisher: &FilesystemCatalogPublisher) -> io::Re
 }
 
 fn require_empty_pool(
-    directory: &cap_std::fs::Dir,
+    directory: &crate::adapters::filesystem_directory::FilesystemDirectory,
     error: FilesystemCatalogPublicationError,
 ) -> io::Result<()> {
     match directory.entries()?.next() {
@@ -125,7 +125,7 @@ fn require_empty_pool(
 }
 
 fn require_absent(
-    directory: &cap_std::fs::Dir,
+    directory: &crate::adapters::filesystem_directory::FilesystemDirectory,
     name: &str,
     error: FilesystemCatalogPublicationError,
 ) -> io::Result<()> {

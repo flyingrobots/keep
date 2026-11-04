@@ -87,6 +87,67 @@ jobs:
           cargo check --manifest-path fuzz/Cargo.toml --bins --locked
           cargo clippy --manifest-path fuzz/Cargo.toml --bins --locked -- -D warnings
 
+  macos:
+    name: Native macOS storage
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned toolchain
+        run: rustup show
+
+      # The default macOS TMPDIR traverses the /var symlink, which admission refuses.
+      - name: Select an admitted scratch directory
+        run: echo "TMPDIR=$RUNNER_TEMP/" >> "$GITHUB_ENV"
+
+      - name: Lint all features
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+      - name: Select default APFS for tests
+        run: |
+          mkdir "$RUNNER_TEMP/keep-default"
+          echo "KEEP_TEST_SCRATCH_ROOT=$RUNNER_TEMP/keep-default" >> "$GITHUB_ENV"
+          echo "KEEP_TEST_EXPECT_APFS_VARIANT=default" >> "$GITHUB_ENV"
+
+      - name: Run process-death crash matrix on default APFS (debug)
+        run: cargo run --quiet --locked --package xtask -- durability-crash-matrix
+
+      - name: Run process-death crash matrix on default APFS (optimized)
+        run: cargo run --quiet --profile release --locked --package xtask -- durability-crash-matrix
+
+      - name: Test debug profile on default APFS
+        run: cargo test --all-features --locked
+
+      - name: Test release profile on default APFS
+        run: cargo test --all-features --release --locked
+
+      - name: Mount case-sensitive APFS
+        run: |
+          hdiutil create -size 1g -type SPARSE -fs "Case-sensitive APFS" -volname keep-cs "$RUNNER_TEMP/keep-cs.sparseimage"
+          mkdir "$RUNNER_TEMP/keep-cs"
+          hdiutil attach -nobrowse -mountpoint "$RUNNER_TEMP/keep-cs" "$RUNNER_TEMP/keep-cs.sparseimage"
+
+      - name: Test debug profile on case-sensitive APFS
+        run: KEEP_TEST_SCRATCH_ROOT="$RUNNER_TEMP/keep-cs" KEEP_TEST_EXPECT_APFS_VARIANT=case-sensitive cargo test --all-features --locked
+
+      - name: Reopen a migrated store after reattaching its volume
+        run: |
+          hdiutil create -size 16m -type SPARSE -fs APFS -volname keep-occupier "$RUNNER_TEMP/keep-occupier.sparseimage"
+          mkdir "$RUNNER_TEMP/keep-occupier"
+          KEEP_TEST_SCRATCH_ROOT="$RUNNER_TEMP/keep-cs" \
+          KEEP_TEST_REATTACH_IMAGE="$RUNNER_TEMP/keep-cs.sparseimage" \
+          KEEP_TEST_REATTACH_MOUNT="$RUNNER_TEMP/keep-cs" \
+          KEEP_TEST_REATTACH_OCCUPIER="$RUNNER_TEMP/keep-occupier.sparseimage" \
+          KEEP_TEST_REATTACH_OCCUPIER_MOUNT="$RUNNER_TEMP/keep-occupier" \
+          cargo test --all-features --locked --test darwin_volume_reattach
+
+      - name: Run process-death crash matrix on case-sensitive APFS
+        run: TMPDIR="$RUNNER_TEMP/keep-cs/" cargo run --quiet --locked --package xtask -- durability-crash-matrix
+
   documentation:
     name: Documentation and workflow integrity
     runs-on: ubuntu-latest

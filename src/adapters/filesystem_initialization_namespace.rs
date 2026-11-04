@@ -6,8 +6,7 @@ use std::io;
 use super::filesystem_namespace_refusal::{
     self as namespace, FilesystemEntryKind, FilesystemNamespaceRefusal,
 };
-use cap_fs_ext::DirExt;
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 const LOCK_NAME: &str = "writer.lock";
 const STAGING_NAME: &str = "staging";

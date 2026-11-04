@@ -2,12 +2,11 @@
 
 use std::path::Path;
 
-use cap_fs_ext::DirExt;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 #[cfg(any(test, feature = "repository-tasks"))]
 use cap_std::ambient_authority;
-use cap_std::fs::Dir;
 
-use super::filesystem_root_identity::FilesystemRootIdentity;
+use super::filesystem_root_identity::{FilesystemRootIdentity, restart_stable_device};
 pub(super) use super::filesystem_version_two_records::BoundRootIdentity;
 use super::{
     FilesystemPlatformAdmissionError, FilesystemWriterLock, StoreRootIdentityCoordinate,
@@ -112,8 +111,8 @@ fn pin(parent: &Dir, name: &str) -> Result<Dir, FilesystemPlatformAdmissionError
 
 /// Requires the reopened root to be the physical root the migration intent bound.
 ///
-/// Only the restart-stable coordinates are compared: the root's device and its
-/// inode. The mount identity the intent also records is a same-process
+/// Only the restart-stable coordinates are compared: the root's device, as far as
+/// the platform keeps it stable, and its inode. The mount identity the intent also records is a same-process
 /// observation (`statx.stx_mnt_id` can change across mount instances and
 /// reboot), so a legitimately remounted store admits, while a relocated or
 /// restored store refuses rather than receiving retention authority over a
@@ -122,19 +121,23 @@ pub(super) fn require_root_identity(
     bound: BoundRootIdentity,
     observed: FilesystemRootIdentity,
 ) -> Result<(), FilesystemPlatformAdmissionError> {
-    for (coordinate, expected, actual) in [
+    let device_is_stable =
+        restart_stable_device(bound.device()) == restart_stable_device(observed.device());
+    for (coordinate, expected, actual, stable) in [
         (
             StoreRootIdentityCoordinate::Device,
             bound.device(),
             observed.device(),
+            device_is_stable,
         ),
         (
             StoreRootIdentityCoordinate::File,
             bound.file(),
             observed.file(),
+            bound.file() == observed.file(),
         ),
     ] {
-        if expected != actual {
+        if !stable {
             return Err(FilesystemPlatformAdmissionError::RootIdentityChanged {
                 coordinate,
                 expected,

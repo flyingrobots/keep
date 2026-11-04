@@ -2,9 +2,7 @@
 
 use std::io;
 
-use cap_std::fs::Dir;
-
-use cap_fs_ext::DirExt;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use super::filesystem_retention_current::read_exact_optional;
 use super::{RetentionCurrentStateRefusal, RetentionPublicationPreparation};

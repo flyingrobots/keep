@@ -3,9 +3,10 @@
 use std::io::{self, Read};
 use std::path::Path;
 
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
 use cap_std::ambient_authority;
-use cap_std::fs::{Dir, File, OpenOptions};
+use cap_std::fs::{File, OpenOptions};
 
 use super::{CatalogRestartArtifact, CatalogRestartError, CatalogRestartPhase};
 

@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Admit macOS APFS as a production storage platform, on both default and case-sensitive volumes. Keep requires every existing protocol name byte-for-byte in a listing of its parent, so `head` never answers for `HEAD`. Adds a native macOS CI job; no format, dependency, or unsafe change. The crash matrix passes natively, but no power-loss experiment has been run on APFS.
+
 - Update the development-only Markdown validation graph and exact admission policy to markdownlint-cli2 0.24.0. On the 2026-11-03 audit this removes the markdown-it and smol-toml reports and adds the high-severity re2js advisory GHSA-gg6h-894w-4m9c through markdownlint's exact pin. This is a currency update, not a demonstrated security gain: markdown-it was not loaded on Keep's path, re2js now is, and the admission records why its affected path appears unreachable. MD011 also reports slightly less, and #209 tracks removing re2js (#188).
 
 - Update Rustix to 1.1.6, which fixes the high-severity GHSA-jh2m-fhpj-3vr7 extended-attribute undefined behavior with no Keep exposure found, and cap-fs-ext to 4.0.3 in both locked workspaces. Renew their dependency admission and pin the `RDONLY` mount-flag value in a law; selected features and the Rust floor are unchanged (#207, #189).

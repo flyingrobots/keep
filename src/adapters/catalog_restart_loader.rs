@@ -2,8 +2,6 @@
 
 use std::path::Path;
 
-use cap_fs_ext::DirExt;
-
 use crate::CatalogLength;
 
 use super::{
@@ -26,7 +24,7 @@ pub(super) fn load(
 }
 
 pub(super) fn load_from_directory(
-    directory: &cap_std::fs::Dir,
+    directory: &crate::adapters::filesystem_directory::FilesystemDirectory,
     head_name: &str,
     policy: CatalogRestartPolicy,
 ) -> Result<FilesystemCatalogSnapshot, CatalogRestartError> {

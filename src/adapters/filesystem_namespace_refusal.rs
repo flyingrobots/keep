@@ -1,6 +1,7 @@
 //! This module owns demonstrated protocol namespace contradictions.
 
-use cap_std::fs::{Dir, FileType};
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
+use cap_std::fs::FileType;
 use std::{error::Error, fmt, io};
 
 /// No-follow kind observed for one protocol namespace entry.

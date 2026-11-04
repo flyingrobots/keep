@@ -2,7 +2,8 @@
 
 use std::io;
 
-use cap_std::fs::{Dir, File};
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
+use cap_std::fs::File;
 
 use super::filesystem_publisher_authority::FilesystemPublisherAuthority;
 use super::{

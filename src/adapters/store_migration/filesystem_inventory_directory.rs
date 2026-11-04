@@ -1,6 +1,6 @@
 //! This module owns pinned migration pool-directory identity.
 
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use crate::adapters::filesystem_exact_record::EntryIdentity;
 

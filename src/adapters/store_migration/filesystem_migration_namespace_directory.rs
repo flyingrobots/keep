@@ -3,7 +3,7 @@
 use std::ffi::OsStr;
 use std::io;
 
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use crate::adapters::filesystem_exact_record::EntryIdentity;
 

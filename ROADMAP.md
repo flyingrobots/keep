@@ -147,7 +147,7 @@ names; use those in code, tests, and commits.
 
 - [ ] [F-39 Compression representation codec](#f-39-compression-representation-codec) — Proposed
 - [ ] [F-40 Additional chunking profiles and hierarchical layouts](#f-40-additional-chunking-profiles-and-hierarchical-layouts) — Proposed
-- [ ] [F-41 Platform adapters beyond Linux ext4](#f-41-platform-adapters-beyond-linux-ext4) — Proposed
+- [ ] [F-41 Platform adapters beyond Linux ext4](#f-41-platform-adapters-beyond-linux-ext4) — In progress; macOS APFS done
 - [ ] [F-42 Operator surfaces](#f-42-operator-surfaces) — Proposed (CLI and MCP adapters)
 - [ ] [F-43 Public release and API stability](#f-43-public-release-and-api-stability) — Proposed
 - [ ] [F-44 Multi-writer, replication, and remote tiers](#f-44-multi-writer-replication-and-remote-tiers) — Out of scope
@@ -582,7 +582,7 @@ in place. One writer holds kernel advisory locks on the store root and
 **Status:** Done (issue #17, M3).
 
 Production initialization admits only a writable, non-casefolded Linux
-ext4 root on a single local host. Opening is observational; recovery is
+ext4 root or a writable local macOS APFS root, on a single local host. Opening is observational; recovery is
 explicit and planned against storage ports: inventory, name classification,
 stage fingerprint and assessment, then discard, completion, next-head
 finalization, or segment resume. `cargo xtask durability-crash-matrix`
@@ -2396,11 +2396,11 @@ plan or needs bounded plan streaming.
 
 ### F-41 Platform adapters beyond Linux ext4
 
-**Status:** Proposed. `recovery.md` defers Windows "until an adapter and
-crash harness prove equivalent semantics"; macOS is not admitted for
-production; the crash matrix does not simulate power loss.
+**Status:** In progress. `recovery.md` defers Windows "until an adapter and
+crash harness prove equivalent semantics"; macOS APFS is admitted (T-41.1);
+the crash matrix does not simulate power loss.
 
-- [ ] T-41.1 macOS APFS production admission.
+- [x] T-41.1 macOS APFS production admission.
   - **Requirements:** a platform profile that probes APFS for the same
     capabilities (atomic no-clobber link, atomic same-filesystem
     replacement, durable `fsync` semantics including `F_FULLFSYNC`,
@@ -2409,7 +2409,8 @@ production; the crash matrix does not simulate power loss.
   - **Acceptance criteria:** `KEEP-RECOVERY-003` gains a macOS row; the
     105-case matrix (and the v2 matrices) green on a macOS runner.
   - **Scope:** in — `filesystem_platform_profile.rs` sibling. Out —
-    case-insensitive volumes (refuse), network volumes.
+    network volumes. Case-insensitive volumes are in, with exact-spelling
+    checks (see the platform adapter decision).
   - **User stories:** Human — a developer on a Mac runs a durable store
     locally. API user — same API. MCP user — same. Agent — same.
   - **Interface:** none new.

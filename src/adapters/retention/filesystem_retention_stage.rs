@@ -7,7 +7,8 @@ use super::{
 use super::{RetentionRecordRefusal, RetentionStorageError};
 use std::io::{self, Write};
 
-use cap_std::fs::{Dir, File};
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
+use cap_std::fs::File;
 
 use crate::adapters::filesystem_catalog_artifact;
 use crate::adapters::filesystem_exact_record::{
