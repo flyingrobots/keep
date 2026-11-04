@@ -19,7 +19,7 @@ Darwin 27.0.0, arm64, pinned `rustc 1.96.0`, under `scripts/native/check.sh`.
 
 | Check | Default APFS | Case-sensitive APFS |
 | --- | --- | --- |
-| `cargo test --all-features` (keep package, debug) | failed passed, 0 failed | failed passed, 0 failed |
+| `cargo test --all-features` (keep package, debug) | 963 passed, 0 failed | 963 passed, 0 failed |
 | `cargo xtask durability-crash-matrix` | exit 0 | exit 0 |
 
 The volumes are sparse images: default APFS `data` and case-sensitive APFS
@@ -103,9 +103,9 @@ and separate public laws exercise production admission.
 
 ## Runner bounds
 
-Compilation and test output stays on the reusable 1.5 GiB `build` image, 349 MiB
-used after a clean run. Each data image stayed under 4 MiB used. Logs total
-1.1 MiB. The sandbox denies network except local Unix sockets, which the process
+Compilation and test output stays on the reusable 1.5 GiB `build` image, 353 MiB
+used after a clean run. Each data image stayed under 7 MiB used, and logs total
+1.9 MiB. The sandbox denies network except local Unix sockets, which the process
 laws need, and denies writes outside the build and selected data images.
 
 The runner watches only its own process group, so a law that starts its own group
