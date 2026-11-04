@@ -5,9 +5,10 @@ use std::{error::Error, fs, io, path::Path, thread};
 use cap_fs_ext::MetadataExt;
 use cap_std::{ambient_authority, fs::OpenOptions};
 
-use super::{DARWIN_COORDINATE_DOMAIN, DarwinFilesystem};
+use super::DarwinFilesystem;
 use crate::adapters::filesystem_directory::FilesystemDirectory;
 use crate::adapters::filesystem_entry_spelling::EntrySpellingMismatch;
+use crate::adapters::filesystem_root_identity::{DARWIN_COORDINATE_DOMAIN, restart_stable_device};
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
 use crate::adapters::platform_filesystem::PlatformFilesystem;
 
@@ -21,11 +22,17 @@ fn read_options() -> OpenOptions {
     options
 }
 
-/// Observes this run's volume, so one law states both APFS naming variants.
+/// Observes this run's volume, so one law states both APFS naming variants. A
+/// runner that names the variant it selected fails here if it got the other one.
 fn folds_case(root: &Path) -> io::Result<bool> {
     fs::write(root.join("variant-probe"), [])?;
     let folds = root.join("VARIANT-PROBE").try_exists()?;
     fs::remove_file(root.join("variant-probe"))?;
+    match std::env::var("KEEP_TEST_EXPECT_APFS_VARIANT").as_deref() {
+        Ok("default") => assert!(folds, "expected default APFS"),
+        Ok("case-sensitive") => assert!(!folds, "expected case-sensitive APFS"),
+        _ => {}
+    }
     Ok(folds)
 }
 
@@ -186,4 +193,16 @@ fn read_only_apfs_volumes_are_refused() -> Result<(), Box<dyn Error>> {
     let refusal = DarwinFilesystem.admit_directory(&directory);
     assert!(matches!(refusal, Err(source) if source.kind() == io::ErrorKind::Unsupported));
     Ok(())
+}
+
+#[test]
+fn a_renumbered_volume_keeps_its_restart_coordinate_but_another_os_does_not() {
+    let first = DARWIN_COORDINATE_DOMAIN | 0x0100_0023;
+    let reattached = DARWIN_COORDINATE_DOMAIN | 0x0100_0027;
+    let linux = 0x0100_0023;
+    assert_eq!(
+        restart_stable_device(first),
+        restart_stable_device(reattached)
+    );
+    assert_ne!(restart_stable_device(first), restart_stable_device(linux));
 }

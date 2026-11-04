@@ -146,7 +146,9 @@ fn require_exact_bytes(
 mod tests {
     use std::error::Error;
 
-    use cap_std::{ambient_authority, fs::Dir};
+    use cap_std::ambient_authority;
+
+    use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
     use super::super::filesystem_test_sandbox::TestDirectory;
 

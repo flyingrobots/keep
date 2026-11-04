@@ -61,3 +61,20 @@ fn a_respelled_format_marker_refuses_until_its_exact_name_returns() -> Result<()
 fn a_respelled_segment_pool_refuses_until_its_exact_name_returns() -> Result<(), Box<dyn Error>> {
     assert_respelling_refuses("darwin-respelled-pool", "segments", "Segments")
 }
+
+// Finder can write this into any folder it displays. Refusal is deliberate until
+// an owner decides otherwise: the namespace admits no entry it cannot account for.
+#[test]
+fn a_finder_metadata_file_in_the_root_refuses_until_it_is_removed() -> Result<(), Box<dyn Error>> {
+    let (store, writer) = fixture::migrated("darwin-finder-metadata")?;
+    drop(writer);
+    let metadata = store.path().join(".DS_Store");
+    fs::write(&metadata, [])?;
+    assert!(
+        load(store.path()).is_err(),
+        "a foreign root entry was admitted"
+    );
+    fs::remove_file(&metadata)?;
+    drop(load(store.path())?);
+    Ok(())
+}

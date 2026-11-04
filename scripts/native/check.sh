@@ -10,6 +10,8 @@ readonly build_dir="$native_root/build"
 # data is default case-insensitive APFS; data-cs is the case-sensitive variant.
 readonly data_image="${KEEP_NATIVE_DATA_IMAGE:-data}"
 case "$data_image" in data|data-cs) ;; *) exit 2 ;; esac
+if [[ "$data_image" == data ]]; then data_variant=default; else data_variant=case-sensitive; fi
+readonly data_variant
 readonly scratch_dir="$native_root/$data_image/tmp"
 readonly logs_dir="$native_root/logs"
 readonly profile="$native_root/compiler.sb"
@@ -56,7 +58,7 @@ trap stop_child EXIT INT TERM
 /usr/bin/perl -MPOSIX=setsid -e \
   'setsid() >= 0 or die "setsid failed"; exec @ARGV or die "exec failed";' \
   /bin/bash "$worker" "$source_dir" "$build_dir" "$scratch_dir" \
-  "$log_path" "$profile" "$check_scope" &
+  "$log_path" "$profile" "$check_scope" "$data_variant" &
 task_pid=$!
 readonly task_started=$SECONDS
 failure=''

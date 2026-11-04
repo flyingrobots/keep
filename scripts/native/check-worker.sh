@@ -7,6 +7,7 @@ readonly scratch_dir="$3"
 readonly log_path="$4"
 readonly sandbox_profile="$5"
 readonly check_scope="$6"
+readonly data_variant="$7"
 
 export CARGO_HOME="$build_dir/cargo-home"
 export CARGO_TARGET_DIR="$build_dir/target"
@@ -17,6 +18,8 @@ export CARGO_PROFILE_DEV_DEBUG=0
 export CARGO_PROFILE_TEST_DEBUG=0
 export TMPDIR="$scratch_dir/"
 export CARGO_TARGET_TMPDIR="$scratch_dir/test"
+export KEEP_TEST_SCRATCH_ROOT="${scratch_dir%/}/test"
+export KEEP_TEST_EXPECT_APFS_VARIANT="$data_variant"
 unset RUSTC_WRAPPER RUSTC_WORKSPACE_WRAPPER
 cd "$source_dir"
 

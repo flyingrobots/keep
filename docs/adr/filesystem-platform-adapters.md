@@ -80,8 +80,13 @@ durability protocol. Filesystem support stays explicit and fail-closed.
 
 Existing Linux wire bytes remain unchanged. Darwin recovery coordinates set the
 top device bit and store `st_dev` as both device and mount, because each mounted
-APFS volume has its own `st_dev`; a record written on one OS can never match a
-root on the other. Logical content identity does not incorporate native metadata.
+APFS volume has its own `st_dev`. Darwin renumbers `st_dev` when a volume is
+reattached, so its restart check compares only that top bit and the inode: a record
+from another OS still refuses, but a store moved to another volume at the same inode
+number is admitted. Logical content identity does not incorporate native metadata.
+
+Finder metadata such as `.DS_Store` in a store root refuses admission, like any
+other entry the namespace cannot account for.
 
 On macOS, opening an existing entry costs one streaming scan of its parent
 directory. A rename that replaces a name during that scan could in principle hide

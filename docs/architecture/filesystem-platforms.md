@@ -156,6 +156,8 @@ is independently observed mount identity. Symbolic links in the selected path
 remain a refusal. The documentation must explain that `/tmp` on macOS is a
 symlink and use the actual selected directory instead of silently resolving it.
 
+Finder can write `.DS_Store` into a folder it displays. That entry refuses admission
+until removed, so operators should not browse a store root in Finder.
 Case-insensitive APFS needs an explicit naming contract. Keep-generated names
 are canonical ASCII; their grammar must be injective under APFS name matching.
 The actual names observed during namespace admission must match the grammar
@@ -194,6 +196,8 @@ The Darwin mapping sets the top bit of the device coordinate over the checked
 32-bit `st_dev`, uses that value for both device and mount, and stores the inode
 unchanged. A negative `st_dev` refuses instead of being truncated. The top bit
 keeps Darwin coordinates apart from Linux ones without changing the wire grammar.
+Darwin renumbers `st_dev` on reattach, so the restart check compares only that bit
+and the inode. Live same-process checks still compare the full coordinate.
 
 Cross-OS movement of a physical store is not ordinary reopen. A store whose
 recovery evidence binds it to another physical root must refuse. Logical

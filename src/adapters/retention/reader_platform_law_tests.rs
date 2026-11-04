@@ -10,13 +10,11 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 
-use super::filesystem_retention_test_fixture::{
-    CATALOG_NAME, SEGMENT_NAME, fixture, migrated_store,
-};
+use super::filesystem_retention_test_fixture::{CATALOG_NAME, SEGMENT_NAME, fixture};
 use crate::{
     CatalogRestartByteLimit, CatalogRestartPolicy, DurableSnapshot, DurableStoreError,
     FilesystemPlatformAdmission, FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError,
-    FilesystemStoreMigrationAuthority, FilesystemWriterLock, ReaderAttemptLimit, SegmentReadPolicy,
+    FilesystemStoreMigrationAuthority, ReaderAttemptLimit, SegmentReadPolicy,
     execute_store_migration,
 };
 

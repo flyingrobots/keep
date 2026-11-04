@@ -10,12 +10,8 @@ use cap_fs_ext::MetadataExt;
 use cap_std::fs::Dir;
 use rustix::fs::{CWD, Mode, OFlags, fstatfs, openat};
 
-use super::filesystem_root_identity::FilesystemRootIdentity;
+use super::filesystem_root_identity::{DARWIN_COORDINATE_DOMAIN, FilesystemRootIdentity};
 use super::platform_filesystem::PlatformFilesystem;
-
-/// Separates Darwin device coordinates from Linux ones in persisted records, so
-/// a record written on one OS can never match a live root on the other.
-const DARWIN_COORDINATE_DOMAIN: u64 = 0x8000_0000_0000_0000;
 
 pub(super) struct DarwinFilesystem;
 

@@ -147,13 +147,15 @@ fn reopen_admits_a_remounted_root_and_refuses_a_moved_one() {
             observed: 4,
         })
     ));
+    // Only the top bit of a device coordinate survives a restart on Darwin.
+    let foreign_device = 1 | (1 << 63);
     assert!(matches!(
-        require_root_identity(bound, FilesystemRootIdentity::new(9, 2, 3)),
+        require_root_identity(bound, FilesystemRootIdentity::new(foreign_device, 2, 3)),
         Err(FilesystemPlatformAdmissionError::RootIdentityChanged {
             coordinate: StoreRootIdentityCoordinate::Device,
             expected: 1,
-            observed: 9,
-        })
+            observed,
+        }) if observed == foreign_device
     ));
 }
 

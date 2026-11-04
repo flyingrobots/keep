@@ -19,16 +19,20 @@ Darwin 27.0.0, arm64, pinned `rustc 1.96.0`, under `scripts/native/check.sh`.
 
 | Check | Default APFS | Case-sensitive APFS |
 | --- | --- | --- |
-| `cargo test --all-features` (keep package, debug) | 959 passed, 0 failed | 959 passed, 0 failed |
+| `cargo test --all-features` (keep package, debug) | failed passed, 0 failed | failed passed, 0 failed |
 | `cargo xtask durability-crash-matrix` | exit 0 | exit 0 |
 
 The volumes are sparse images: default APFS `data` and case-sensitive APFS
-`data-cs`, 256 MiB each, selected with `KEEP_NATIVE_DATA_IMAGE`. Release-profile
-tests, `xtask` tests, and lint run in the `Native macOS storage` CI job.
+`data-cs`, 256 MiB each, selected with `KEEP_NATIVE_DATA_IMAGE`. The worker points
+`KEEP_TEST_SCRATCH_ROOT` at the selected image and sets
+`KEEP_TEST_EXPECT_APFS_VARIANT`, and the spelling laws fail if the volume is the
+other variant. Release-profile tests and the optimized crash matrix run in the
+`Native macOS storage` CI job. `xtask` tests do not run on macOS.
 
-An earlier set of native runs used Homebrew's Rust 1.98 ahead of rustup on `PATH`
-and is not counted. The worker now selects the pinned toolchain and asserts its
-version before running.
+Two earlier sets of native runs are not counted. One used Homebrew's Rust 1.98
+ahead of rustup on `PATH`; the worker now selects the pinned toolchain and asserts
+its version. Another claimed both variants, but the test sandbox ignored `TMPDIR`,
+so both runs used the default-APFS build image. Independent review found this.
 
 ## Spelling oracle
 
@@ -44,6 +48,18 @@ Calibration with the check disabled, on default APFS:
   `mutation_through_a_foreign_spelling_leaves_the_entry_unchanged` **fail**.
 - `darwin_store_spelling` laws **still pass**. Namespace admission independently
   refuses the foreign entry, so those laws do not witness the per-lookup check.
+
+## Volume reattachment
+
+Darwin assigns `st_dev` per mount and reuses a freed number. Mounting another
+volume in the gap moved a volume from 16777251 to 16777255, with its root inode
+unchanged. Comparing the full device coordinate therefore refused a migrated store
+for good, with `RootIdentityChanged`. `tests/darwin_volume_reattach.rs` reproduces
+this: it fails when the full coordinate is compared and passes with the fix.
+
+The restart check on Darwin now compares only the coordinate domain and the inode.
+This is weaker than on Linux: a migrated store moved to another volume at the same
+inode number is admitted. Reboot itself has not been exercised.
 
 ## Laws that remain Linux-only, and why
 
@@ -62,6 +78,20 @@ Calibration with the check disabled, on default APFS:
   `/proc/locks`. It requires that no snapshot escapes for two seconds, so a late
   child can weaken it but cannot falsely fail it.
 - Isolated laws use `ulimit -t` where Linux uses wall-clock `timeout`.
+
+## Known refusal: Finder metadata
+
+Finder can write `.DS_Store` into a folder it displays. The namespace admits no
+entry it cannot account for, so the store then refuses until that file is removed.
+`a_finder_metadata_file_in_the_root_refuses_until_it_is_removed` pins this. It
+fails closed and loses nothing, but an operator browsing a store in Finder will
+hit it, and whether to tolerate the name is an owner decision.
+
+## Crash matrix scope
+
+The matrix uses repository entry points that skip the production platform probe,
+as it does on Linux. It exercises the protocols and the spelling boundary on APFS,
+and separate public laws exercise production admission.
 
 ## Not measured
 
