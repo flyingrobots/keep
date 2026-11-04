@@ -37,6 +37,11 @@ pub(super) fn require_exact(directory: &Dir, name: &OsStr) -> io::Result<()> {
 // Production Linux admission excludes casefold directories. Other platforms
 // have no production admission; their repository fixtures retain old behavior.
 #[cfg(not(target_os = "macos"))]
+#[allow(
+    clippy::missing_const_for_fn,
+    clippy::unnecessary_wraps,
+    reason = "this mirrors the fallible Darwin signature its callers share"
+)]
 pub(super) fn require_exact(_directory: &Dir, _name: &OsStr) -> io::Result<()> {
     Ok(())
 }
