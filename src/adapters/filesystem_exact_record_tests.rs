@@ -3,7 +3,7 @@
 use std::error::Error;
 use std::fs;
 
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use super::{
     EntryIdentity, ExactRecordError, ExactRecordRefusal, read_exact_optional, read_exact_regular,
@@ -88,7 +88,7 @@ fn verify_named_refuses_different_bytes_and_a_byte_equal_substitute() -> Result<
     let directory = open(&sandbox)?;
     let path = sandbox.path().join("record");
     fs::write(&path, b"exact")?;
-    let identity = EntryIdentity::of_file(&directory.open("record")?)?;
+    let identity = EntryIdentity::of_file(&directory.raw().open("record")?)?;
 
     super::verify_named(&directory, "record", b"exact", identity)?;
     let bytes = super::verify_named(&directory, "record", b"other", identity)

@@ -2,8 +2,9 @@
 
 use std::io;
 
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 use cap_fs_ext::MetadataExt;
-use cap_std::fs::{Dir, File, Metadata};
+use cap_std::fs::{File, Metadata};
 use rustix::fs::{FlockOperation, flock};
 
 use crate::adapters::filesystem_exact_record;

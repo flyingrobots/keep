@@ -366,7 +366,7 @@ from an untrusted count before bounds and exact total length agree.
 
 ## Platform contract
 
-The initial production adapter is supported only on Linux when it proves:
+The Linux production adapter is supported when it proves:
 
 - capability-relative no-follow access to regular files and directories;
 - an ext4 store root whose inode does not enable ext4 casefolding;
@@ -384,12 +384,19 @@ The initial production adapter is supported only on Linux when it proves:
 
 The adapter refuses every non-ext4 filesystem, read-only mount, casefolded
 store or protocol directory, protocol-directory mount point, foreign
-protocol-directory device, symlinked selected path, or platform other than
-Linux. A single local host is an explicit deployment precondition: filesystem
+protocol-directory device, symlinked selected path, or platform with no adapter. A single local host is an explicit deployment precondition: filesystem
 metadata cannot prove that an administrator has not exposed one block device
 to another host. Shared ext4 is therefore unsupported even though the adapter
 cannot distinguish it from a valid local mount. Windows support is deferred
 until an adapter and crash harness prove equivalent semantics.
+
+The macOS production adapter applies the same protocol to writable local APFS,
+in either naming variant. It refuses read-only and non-local mounts, every other
+filesystem, foreign protocol-directory devices, and symlinked selected paths.
+Because a case-insensitive lookup can resolve a different spelling, it requires
+each existing protocol name byte-for-byte in a listing of its parent before
+reading, reusing, or mutating it. File and directory synchronization use
+`F_FULLFSYNC`.
 
 The protocol cannot compensate for hardware or an operating system that
 acknowledges synchronization without honoring it. Documentation and receipts

@@ -4,12 +4,11 @@ use std::error::Error;
 use std::fs;
 
 use super::{Source, collect_retention_view, pool_name};
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
 use crate::adapters::retention::filesystem_retention_test_fixture::migrated_store;
 use crate::adapters::retention::{ReaderAttemptLimit, RetentionViewSource};
 use crate::adapters::{CatalogRestartByteLimit, CatalogRestartPolicy, SegmentReadPolicy};
-use cap_fs_ext::DirExt;
-use cap_std::fs::Dir;
 
 // Size: medium (owned filesystem). Oracle: a pinned reader's catalog must
 // match its original validated HEAD despite replacement of the ambient path.

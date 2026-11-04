@@ -7,8 +7,9 @@ use keep::{
 use std::error::Error;
 use std::fs::{self, File};
 use std::io::{Read, Write};
+#[cfg(target_os = "linux")]
+use std::os::unix::fs::MetadataExt;
 use std::os::unix::{
-    fs::MetadataExt,
     net::{UnixListener, UnixStream},
     process::ExitStatusExt,
 };
@@ -18,6 +19,8 @@ use std::time::{Duration, Instant};
 
 const CHILD_ROOT: &str = "KEEP_FENCE_CHILD_ROOT";
 const WATCHDOG: Duration = Duration::from_secs(20);
+#[cfg(target_os = "macos")]
+const ESCAPE_WINDOW: Duration = Duration::from_secs(2);
 
 pub(super) fn is_child() -> bool {
     std::env::var_os(CHILD_ROOT).is_some()
@@ -89,6 +92,7 @@ impl Reader {
         Ok(())
     }
 
+    #[cfg(target_os = "linux")]
     pub(super) fn await_kernel_wait(&mut self, fence: &File) -> Result<(), Box<dyn Error>> {
         let pid = self.child.id().to_string();
         let inode = format!(":{}", fence.metadata()?.ino());
@@ -113,6 +117,22 @@ impl Reader {
             }
             require_live(&mut self.child, started)?;
             std::thread::yield_now();
+        }
+    }
+
+    /// Darwin exposes no queued-lock table, so this cannot prove the child reached
+    /// its flock wait. It can only require that no snapshot escapes the fence for a
+    /// bounded window: a late child weakens the law but cannot falsely fail it.
+    #[cfg(target_os = "macos")]
+    pub(super) fn await_kernel_wait(&mut self, _fence: &File) -> Result<(), Box<dyn Error>> {
+        self.channel.set_read_timeout(Some(ESCAPE_WINDOW))?;
+        let mut byte = [0];
+        let observed = self.channel.read(&mut byte);
+        self.channel.set_read_timeout(Some(WATCHDOG))?;
+        match observed {
+            Ok(1) => Err("snapshot escaped the exclusive collector fence".into()),
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => Ok(()),
+            result => Err(format!("reader failed during the fence window: {result:?}").into()),
         }
     }
 
@@ -158,7 +178,11 @@ fn connect(listener: &UnixListener, child: &mut Child) -> Result<UnixStream, Box
     let started = Instant::now();
     loop {
         match listener.accept() {
-            Ok((channel, _address)) => return Ok(channel),
+            Ok((channel, _address)) => {
+                // BSD sockets inherit the listener's nonblocking mode on accept.
+                channel.set_nonblocking(false)?;
+                return Ok(channel);
+            }
             Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {}
             Err(error) => return Err(error.into()),
         }
@@ -177,6 +201,7 @@ fn require_live(child: &mut Child, started: Instant) -> Result<(), Box<dyn Error
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
 fn queued_reader(line: &str, pid: &str, inode: &str) -> bool {
     let mut fields = line.split_whitespace();
     let _row = fields.next();

@@ -1,7 +1,5 @@
 //! This module owns exact writer-locked filesystem migration authority.
 
-use cap_fs_ext::DirExt;
-
 use super::filesystem_inventory_file::{self, FilesystemInventoryFilePolicy};
 use super::filesystem_migration_authority_error::{
     FilesystemMigrationAuthorityArtifact as Artifact, FilesystemMigrationAuthorityError as Error,
@@ -221,7 +219,7 @@ impl FilesystemStoreMigrationAuthority {
         verify_catalog(head, catalog)
     }
 
-    pub(super) const fn root(&self) -> &cap_std::fs::Dir {
+    pub(super) const fn root(&self) -> &crate::adapters::filesystem_directory::FilesystemDirectory {
         self.inventory.root()
     }
 }

@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-# Bounded native compilation. Invoke under the workstation resource locks.
+# Bounded native compilation and test execution. Invoke under the workstation resource locks.
 set -euo pipefail
 
 readonly source_dir="$(cd -- "${1:?usage: check.sh CHECKOUT}" && pwd)"
+readonly check_scope="${2:---lib}"
+case "$check_scope" in --lib|--tests|--run-tests|--crash-matrix|--clippy) ;; *) exit 2 ;; esac
 readonly native_root="${KEEP_NATIVE_ROOT:-$HOME/Library/Caches/keep-native-validation}"
 readonly build_dir="$native_root/build"
-readonly scratch_dir="$native_root/data/tmp"
+# data is default case-insensitive APFS; data-cs is the case-sensitive variant.
+readonly data_image="${KEEP_NATIVE_DATA_IMAGE:-data}"
+case "$data_image" in data|data-cs) ;; *) exit 2 ;; esac
+readonly scratch_dir="$native_root/$data_image/tmp"
 readonly logs_dir="$native_root/logs"
 readonly profile="$native_root/compiler.sb"
 readonly log_path="$logs_dir/$(date -u +%Y%m%dT%H%M%SZ)-check.log"
@@ -17,7 +22,7 @@ readonly minimum_free_kib=52428800
 # Setup is deliberate and separate. Refuse an absent quota filesystem instead
 # of compiling into an ordinary directory left behind by an unmount.
 [[ "$(df -Pk "$build_dir" | awk 'END {print $6}')" == "$build_dir" ]]
-[[ "$(df -Pk "$scratch_dir" | awk 'END {print $6}')" == "$native_root/data" ]]
+[[ "$(df -Pk "$scratch_dir" | awk 'END {print $6}')" == "$native_root/$data_image" ]]
 [[ "$(df -Pk "$build_dir" | awk 'END {print $2}')" -le 1572864 ]]
 [[ "$(df -Pk "$scratch_dir" | awk 'END {print $2}')" -le 262144 ]]
 [[ "$(df -Pk "$source_dir" | awk 'END {print $4}')" -ge "$minimum_free_kib" ]]
@@ -27,6 +32,8 @@ cat > "$profile" <<PROFILE
 (version 1)
 (allow default)
 (deny network*)
+(allow network* (local unix-socket))
+(allow network* (remote unix-socket))
 (deny file-write*)
 (allow file-write*
   (subpath "$build_dir/target")
@@ -44,12 +51,12 @@ stop_child() {
 }
 trap stop_child EXIT INT TERM
 
-# setsid gives the compiler tree one owned process group. This runner admits
-# compilation only, excluding test harnesses that create their own groups.
+# setsid gives the compiler or test tree one owned process group. It excludes
+# nothing else here, but a law that starts its own group relies on its watchdog.
 /usr/bin/perl -MPOSIX=setsid -e \
   'setsid() >= 0 or die "setsid failed"; exec @ARGV or die "exec failed";' \
   /bin/bash "$worker" "$source_dir" "$build_dir" "$scratch_dir" \
-  "$log_path" "$profile" &
+  "$log_path" "$profile" "$check_scope" &
 task_pid=$!
 readonly task_started=$SECONDS
 failure=''

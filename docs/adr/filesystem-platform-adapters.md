@@ -1,6 +1,6 @@
-# ADR-0010: Filesystem Platform Adapters
+# Filesystem Platform Adapters
 
-- Status: Accepted design; implementation and native acceptance in progress
+- Status: Accepted; implemented for Linux ext4 and macOS APFS
 - Date: 2026-11-02
 - Owners: Keep storage implementation and repository owner
 - Related issue: none; directly requested platform design and implementation
@@ -29,8 +29,11 @@ the operations, ownership, Linux profile extension rules, APFS naming and
 durability obligations, and acceptance gates. Backend selection happens once.
 It must not alter logical identities or duplicate protocol state machines.
 
-Native macOS support targets writable local APFS. Exact namespace spelling
-must remain enforced on case-insensitive volumes. Other Linux filesystems
+Native macOS support admits writable local APFS in both naming variants, with
+no format difference between them. Case-insensitive volumes keep exact namespace
+spelling: a name the lookup resolves must also appear byte-for-byte in a listing
+of its parent, or the operation refuses before it reads, reuses, or mutates the
+entry. No unsafe code or Darwin-specific dependency is needed. Other Linux filesystems
 are distinct admitted profiles with their own evidence, rather than being
 accepted because they provide familiar POSIX operations. Windows and network
 filesystems are excluded from this implementation.
@@ -59,6 +62,12 @@ selection and must never create independent competing writer authorities.
 - **Require a separate case-sensitive volume without evaluating default
   APFS:** avoids a useful native deployment but leaves ordinary Mac storage
   unsupported. Exact canonical namespace handling is part of the target.
+- **Check spelling with `F_GETPATH`:** it reports a name cached on the vnode.
+  With hard links, which publication uses, it can name another link of the same
+  file, so it both refuses valid entries and misreports aliases.
+- **Detect the naming variant and scan only on case-insensitive volumes:** needs
+  an unsafe `fpathconf` binding to save a scan, and adds a branch whose untaken
+  side no single volume exercises.
 - **Claim support from Linux containers on a Mac:** exercises Linux semantics,
   not Darwin/APFS. Native acceptance requires native production-path evidence.
 
@@ -69,13 +78,16 @@ of descriptors and filesystem-library types. Adding an OS entails one adapter,
 one selector entry, and its conformance evidence, rather than changing every
 durability protocol. Filesystem support stays explicit and fail-closed.
 
-Existing Linux wire bytes remain unchanged. Darwin physical recovery
-coordinates need a documented mapping and compatibility analysis; logical
-content identity must not incorporate native metadata. Any format change
-discovered necessary during implementation requires an explicit revision of
-this decision and the format contract before it ships.
+Existing Linux wire bytes remain unchanged. Darwin recovery coordinates set the
+top device bit and store `st_dev` as both device and mount, because each mounted
+APFS volume has its own `st_dev`; a record written on one OS can never match a
+root on the other. Logical content identity does not incorporate native metadata.
+
+On macOS, opening an existing entry costs one streaming scan of its parent
+directory. A rename that replaces a name during that scan could in principle hide
+it and cause a false refusal; a bounded stress law did not observe one, and such
+a refusal fails closed.
 
 The native validation environment is separately bounded and serialized within
 the same project resource budget. Successful process-death recovery is not
-evidence of physical power-loss survival. Design acceptance does not claim
-that implementation, resource enforcement, or platform validation is complete.
+evidence of physical power-loss survival.

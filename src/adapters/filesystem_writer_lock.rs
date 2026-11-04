@@ -4,9 +4,10 @@ use std::fs::{File, TryLockError};
 use std::io;
 use std::path::Path;
 
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt, OpenOptionsSyncExt};
 use cap_std::ambient_authority;
-use cap_std::fs::{Dir, Metadata, OpenOptions};
+use cap_std::fs::{Metadata, OpenOptions};
 use rustix::fs::{FlockOperation, Mode, OFlags, flock, openat};
 use rustix::io::Errno;
 

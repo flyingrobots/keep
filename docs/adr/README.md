@@ -61,4 +61,4 @@ encryption, concurrency, or public-API surface it governs.
 - [ADR-0007: Terminal signal process-group guard](0007-terminal-signal-process-group-guard.md)
 - [ADR-0008: Deadline-bounded reader retirement](0008-deadline-bounded-reader-retirement.md)
 - [ADR-0009: Retention roots, release, and GC liveness](0009-retention-roots-release-and-gc-liveness.md)
-- [ADR-0010: Filesystem platform adapters](0010-filesystem-platform-adapters.md)
+- [Filesystem platform adapters](filesystem-platform-adapters.md)

@@ -45,6 +45,6 @@ impl PlatformFilesystem for UnsupportedFilesystem {
 fn unsupported() -> io::Error {
     io::Error::new(
         io::ErrorKind::Unsupported,
-        "filesystem initialization currently requires the admitted Linux ext4 profile",
+        "filesystem initialization requires an admitted Linux ext4 or macOS APFS profile",
     )
 }

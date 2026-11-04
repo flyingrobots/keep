@@ -2,7 +2,7 @@
 
 use std::collections::TryReserveError;
 
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use super::StoreMigrationInventoryEntry;
 use super::filesystem_inventory_error::{

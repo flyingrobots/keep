@@ -2,7 +2,7 @@
 
 use std::{io, path::Path};
 
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use super::filesystem_mount_refusal::FilesystemMountRefusal;
 use super::filesystem_root_identity::FilesystemRootIdentity;
@@ -41,12 +41,12 @@ pub(super) fn admit_locked_root(directory: &Dir) -> io::Result<FilesystemRootIde
 }
 
 pub(super) fn root_identity(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-    NativeFilesystem.root_identity(directory)
+    NativeFilesystem.root_identity(directory.raw())
 }
 
 #[cfg(any(test, feature = "repository-tasks"))]
 pub(super) fn root_identity_lenient(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-    NativeFilesystem.repository_identity(directory)
+    NativeFilesystem.repository_identity(directory.raw())
 }
 
 fn open_profile(
@@ -54,7 +54,7 @@ fn open_profile(
     store_root: &Path,
     protocol_directories: &[&str],
 ) -> io::Result<Dir> {
-    let directory = platform.open_root(store_root)?;
+    let directory = Dir::from_raw(platform.open_root(store_root)?);
     admit_profile(platform, &directory, protocol_directories)?;
     Ok(directory)
 }
@@ -64,14 +64,14 @@ fn admit_profile(
     directory: &Dir,
     protocol_directories: &[&str],
 ) -> io::Result<()> {
-    let root = platform.admit_directory(directory)?;
+    let root = platform.admit_directory(directory.raw())?;
     for name in protocol_directories {
         let child = match open_protocol_directory(directory, name) {
             Ok(child) => child,
             Err(source) if source.kind() == io::ErrorKind::NotFound => continue,
             Err(source) => return Err(source),
         };
-        let child = platform.admit_directory(&child)?;
+        let child = platform.admit_directory(child.raw())?;
         admit_child_identity(root, child)?;
     }
     directory.try_clone()?.into_std_file().sync_all()

@@ -2,10 +2,9 @@
 
 use std::path::Path;
 
-use cap_fs_ext::DirExt;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 #[cfg(any(test, feature = "repository-tasks"))]
 use cap_std::ambient_authority;
-use cap_std::fs::Dir;
 
 use super::filesystem_root_identity::FilesystemRootIdentity;
 pub(super) use super::filesystem_version_two_records::BoundRootIdentity;

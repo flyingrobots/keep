@@ -5,6 +5,6 @@ pub(crate) mod support;
 #[path = "golden_file_worldline/suite.rs"]
 mod suite;
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[path = "layout_mutations/support.rs"]
 pub(crate) mod layout_mutation_support;

@@ -1,5 +1,8 @@
 //! Public snapshot fencing across actual reader process death and collection.
-#![cfg(all(feature = "repository-tasks", target_os = "linux"))]
+#![cfg(all(
+    feature = "repository-tasks",
+    any(target_os = "linux", target_os = "macos")
+))]
 
 #[path = "reader_fence_process/fixture.rs"]
 pub mod fixture;

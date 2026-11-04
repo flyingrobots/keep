@@ -12,8 +12,9 @@ use std::error::Error;
 use std::fmt;
 use std::io::{self, Read};
 
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt, OpenOptionsSyncExt};
-use cap_std::fs::{Dir, File, Metadata, OpenOptions};
+use cap_std::fs::{File, Metadata, OpenOptions};
 
 /// Device and inode identity of one directory entry or open handle.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

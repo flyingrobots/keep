@@ -2,9 +2,9 @@
 
 use std::path::Path;
 
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 #[cfg(any(test, feature = "repository-tasks"))]
 use cap_std::ambient_authority;
-use cap_std::fs::Dir;
 
 use super::{
     FilesystemRecoveryInventoryReader, FilesystemRecoveryStageDiscardOpenError,

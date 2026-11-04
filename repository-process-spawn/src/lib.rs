@@ -1,6 +1,6 @@
 //! Isolated child-process setup for descriptor-bound working directories.
 //!
-//! This crate contains Keep's only admitted unsafe boundary. It exists because
+//! This crate contains Keep's child-process unsafe boundary. It exists because
 //! [`std::process::Command`] exposes child setup through an unsafe hook, while
 //! an opened directory descriptor is required to prevent pathname-replacement
 //! races. No filesystem, storage, identity, or durable-format code belongs

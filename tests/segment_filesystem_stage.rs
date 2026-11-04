@@ -2,7 +2,7 @@
 //! Oracle: specified exclusive creation and explicit sealing; independent v1 golden vectors.
 //! Retire only if this public stage contract is removed or stronger public evidence replaces it.
 
-#![cfg(target_os = "linux")]
+#![cfg(any(target_os = "linux", target_os = "macos"))]
 
 #[path = "segment_filesystem_stage/sandbox.rs"]
 pub mod sandbox;

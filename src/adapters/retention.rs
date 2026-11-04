@@ -198,6 +198,8 @@ mod verified_closure;
 mod filesystem_retention_forward_error_tests;
 mod reader_attempt_limit;
 mod reader_fence;
+#[cfg(test)]
+mod reader_platform_authority_tests;
 #[cfg(all(test, target_os = "linux"))]
 mod reader_platform_law_tests;
 mod recovery_evidence;

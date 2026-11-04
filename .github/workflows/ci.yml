@@ -87,6 +87,47 @@ jobs:
           cargo check --manifest-path fuzz/Cargo.toml --bins --locked
           cargo clippy --manifest-path fuzz/Cargo.toml --bins --locked -- -D warnings
 
+  macos:
+    name: Native macOS storage
+    runs-on: macos-15
+    timeout-minutes: 90
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pinned toolchain
+        run: rustup show
+
+      # The default macOS TMPDIR traverses the /var symlink, which admission refuses.
+      - name: Select an admitted scratch directory
+        run: echo "TMPDIR=$RUNNER_TEMP/" >> "$GITHUB_ENV"
+
+      - name: Lint all features
+        run: cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+
+      - name: Run process-death crash matrix on default APFS
+        run: cargo xtask durability-crash-matrix
+
+      - name: Test debug profile on default APFS
+        run: cargo test --all-features --locked
+
+      - name: Test release profile on default APFS
+        run: cargo test --all-features --release --locked
+
+      - name: Mount case-sensitive APFS
+        run: |
+          hdiutil create -size 1g -type SPARSE -fs "Case-sensitive APFS" -volname keep-cs "$RUNNER_TEMP/keep-cs.sparseimage"
+          mkdir "$RUNNER_TEMP/keep-cs"
+          hdiutil attach -nobrowse -mountpoint "$RUNNER_TEMP/keep-cs" "$RUNNER_TEMP/keep-cs.sparseimage"
+
+      - name: Test debug profile on case-sensitive APFS
+        run: TMPDIR="$RUNNER_TEMP/keep-cs/" cargo test --all-features --locked
+
+      - name: Run process-death crash matrix on case-sensitive APFS
+        run: TMPDIR="$RUNNER_TEMP/keep-cs/" cargo xtask durability-crash-matrix
+
   documentation:
     name: Documentation and workflow integrity
     runs-on: ubuntu-latest

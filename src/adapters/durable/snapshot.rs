@@ -76,8 +76,8 @@ impl DurableSnapshot {
     /// reader fence, double-collects one consistent view within `limit`
     /// attempts, and verifies every retained root's closure.
     ///
-    /// The reader enforces the existing local writable, case-sensitive Linux
-    /// ext4 profile without acquiring writer authority. The admitted directory
+    /// The reader enforces an admitted local writable Linux ext4 or macOS
+    /// APFS profile without acquiring writer authority. The admitted directory
     /// capability is retained through view collection. Platform admission
     /// synchronizes the root directory before fencing; a synchronization
     /// failure is preserved under the snapshot's admission error.

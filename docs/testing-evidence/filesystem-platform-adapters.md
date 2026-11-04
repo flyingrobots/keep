@@ -1,94 +1,82 @@
 # Filesystem platform adapter evidence
 
 This is an implementation record, not platform certification. The design is
-in [filesystem platforms](../architecture/filesystem-platforms.md).
+in [filesystem platforms](../architecture/filesystem-platforms.md) and the
+decision in [filesystem platform adapters](../adr/filesystem-platform-adapters.md).
 
-## Claims and current status
+## Claims and status
 
-- Product: native production storage on ordinary and case-sensitive APFS.
-  **Pending implementation and native runtime evidence.**
-- Product: Linux ext4 admission, authority, and durability laws survive the
-  extraction of the native mechanism boundary. **Runtime validation pending.**
-- Static/API: focused protocol ports and public constructors remain available.
-  Source inspection establishes the intended preservation; compilation pending.
-- Tool: bounded native compilation without writes outside admitted outputs.
-  Runner implemented; execution and guard calibration pending.
-- Documentation: architecture and decision record delivered unchanged to Reader.
-  Receipt `f8a83855-f07e-4622-ac91-25b5bcf72b34`, `awaiting_filing`,
-  `integrity: intact`, for design commit `ba99881`.
+- Native production storage on default and case-sensitive APFS: **implemented**.
+  Process-death evidence below. No power-loss experiment has been run on APFS.
+- Linux ext4 admission, authority, and durability laws survive extraction of the
+  native boundary: established by the Linux CI jobs on the merge candidate.
+- No format change: no golden fixture changed, and Linux coordinates are untouched.
+- No unsafe code and no new dependency: `Cargo.toml` and `Cargo.lock` are unchanged.
 
-The author owns the evidence; repository owner `@flyingrobots` owns policy.
-No missing gate is treated as an approved waiver.
+## Native execution
 
-## Native mechanism observations
+Darwin 27.0.0, arm64, pinned `rustc 1.96.0`, under `scripts/native/check.sh`.
 
-On the workstation's existing writable APFS data volume, read-only descriptor
-observations established that `README.md` and `readme.md` resolve to the same
-device/inode. `F_GETPATH` returned the actual stored spelling in both cases.
-A bounded one-byte fixture with two hard links returned each opened link's
-actual spelling, including when one was opened using an uppercase alias.
-The fixture was removed. `F_FULLFSYNC` on an open repository directory returned
-success. These observations motivate the adapter; they are not permanent
-production tests, a concurrency proof, or a power-loss experiment.
+| Check | Default APFS | Case-sensitive APFS |
+| --- | --- | --- |
+| `cargo test --all-features` (keep package, debug) | 959 passed, 0 failed | 959 passed, 0 failed |
+| `cargo xtask durability-crash-matrix` | exit 0 | exit 0 |
 
-The pinned Rust 1.96 standard library's Apple implementation of
-`File::sync_all` calls `F_FULLFSYNC`. A new adapter must not weaken that call.
+The volumes are sparse images: default APFS `data` and case-sensitive APFS
+`data-cs`, 256 MiB each, selected with `KEEP_NATIVE_DATA_IMAGE`. Release-profile
+tests, `xtask` tests, and lint run in the `Native macOS storage` CI job.
 
-## Native compilation launch contract
+An earlier set of native runs used Homebrew's Rust 1.98 ahead of rustup on `PATH`
+and is not counted. The worker now selects the pinned toolchain and asserts its
+version before running.
 
-The initial compiler-only runner is `scripts/native/check.sh`. It does not
-launch test executables or crash campaigns. Its admitted child tree is Cargo,
-the pinned compiler, linker, and admitted dependency build scripts; workloads
-that detach process groups are excluded from this runner.
+## Spelling oracle
 
-- Reused Linux worker: `keep-validation`, image `rust:1.96.0`; idle at inspection.
-  The stopped historical documentation worker is `keep114-closure-docs`.
-- Workstation lock store: `/Users/Shared/git-locks/workstation.git`.
-  Hold `host/cache/keep-native-validation/`, `host/docker/keep-validation/`, and
-  `host/docker/keep114-closure-docs/` together for project-budget admission.
-- Measured Docker writable layers: 19,150,114,816 and 271,781,888 bytes.
-  Counting their entire layers conservatively gives 19,421,896,704 bytes.
-- Native build allocation: one reusable 1.5 GiB APFS sparse image, mounted under
-  `$HOME/Library/Caches/keep-native-validation/build`. Target and Cargo-local
-  metadata are the only compiler-writable build paths. Existing registry
-  contents and toolchains are read-only inputs. No second target is permitted.
-- The conservative existing-layer total plus the full native build capacity
-  is 21,032,509,440 bytes, below the 21,474,836,480-byte project build budget.
-- Native scratch: a separate 256 MiB APFS image at the adjacent `data` mount;
-  `TMPDIR` points to its `tmp` directory. It is scratch, not durability evidence.
-- Logs: adjacent owned `logs/`; each logger has a 4 MiB file-size ceiling.
-  Launch refuses above 20 MiB already retained, bounding native logs at 24 MiB.
-  Existing worker log rotation permits at most 100 MiB; combined ceilings stay
-  below 128 MiB. Evidence must be exported before owned logs are recycled.
-- Disk admission observed about 557 GiB host and 530 GiB Docker backing free.
-  The native run monitors host free space and stops below 50 GiB. It does not
-  generate Docker output while holding both worker locks.
-- Hard filesystem capacities bound build and temporary output. The compiler
-  sandbox denies network and all filesystem writes except target, Cargo-local
-  metadata, scratch, and `/dev/null`; its log writer is separately size-limited.
-- Two Cargo jobs; inherited 900-second per-process CPU ceiling and 4 GiB
-  per-process virtual-address-space ceiling. The parent monitors aggregate
-  process-group RSS and refuses above 6 GiB. Whole-command deadline: 1,200 seconds.
-- The compiler tree has a fresh process group. Limit breach, monitor failure,
-  interruption, or exit kills the owned group and waits for its leader.
-  The reservation must exceed the deadline and cleanup time.
+`F_GETPATH` was rejected. With a descriptor retained on `a/HEAD`, a probe of its
+hard link reported `b/head` for it, so the name is vnode state, not bound to the
+descriptor, and publication uses hard links. Directory listings return the stored spelling, so the check is
+byte equality against a listing of the parent.
 
-The native images are retained reusable caches, not per-revision artifacts.
-Their measured usage and execution receipts must be added after validation.
-This contract does not authorize another cache when one fills.
+Calibration with the check disabled, on default APFS:
 
-## Oracles and remaining acceptance
+- `a_foreign_spelling_never_answers_for_a_protocol_name`,
+  `a_non_ascii_fold_never_answers_for_a_protocol_name`, and
+  `mutation_through_a_foreign_spelling_leaves_the_entry_unchanged` **fail**.
+- `darwin_store_spelling` laws **still pass**. Namespace admission independently
+  refuses the foreign entry, so those laws do not witness the per-lookup check.
 
-Shared mount-admission laws compare exact typed device/mount contradictions
-and permit a child inode distinct from its parent on the same mount. Existing
-Linux profile laws retain writable ext4 and casefold rejection. The old combined
-child-policy unit law is separated into native profile laws and common mount
-laws because those responsibilities now have different owners. Production
-directory traversal and child-admission coverage still require execution.
+## Laws that remain Linux-only, and why
 
-Native product acceptance must exercise public production admission, exact
-content reads, publication, retention, migration/reopen, writer exclusion,
-case aliases, malformed namespaces, substitutions, and interrupted recovery.
-Both APFS naming variants require actual runs. Debug/release, strict Clippy,
-dependency checks, Linux regressions, CI configuration, and replayable crash
-evidence remain pending. No native support or regression-free claim is made.
+- tmpfs refusal (`reader_platform_law_tests`, `a_writer_lock_cannot_mint_...`):
+  no tmpfs. Darwin refusal of non-APFS uses devfs and of read-only APFS uses the
+  sealed system volume, both at the adapter rather than the public boundary.
+- Raw non-UTF-8 names: APFS refuses to create them.
+- `filesystem_retention_fifo_tests`: Rustix omits `mknodat` on Apple targets and
+  `std`'s `mkfifo` is unstable. `tests/darwin_fifo_refusal.rs` covers a FIFO at
+  `HEAD` only.
+- O_PATH directory synchronization and ext4 profile laws: Linux mechanisms.
+
+## Weaker on macOS
+
+- The reader-fence law cannot observe a queued `flock`, because Darwin has no
+  `/proc/locks`. It requires that no snapshot escapes for two seconds, so a late
+  child can weaken it but cannot falsely fail it.
+- Isolated laws use `ulimit -t` where Linux uses wall-clock `timeout`.
+
+## Not measured
+
+- The cost of the parent scan per existing-entry lookup. It is linear in the
+  directory size and matters most for a large segment pool.
+- `F_FULLFSYNC` durability. A successful call is not proof that hardware honored
+  it.
+- A real non-APFS or network volume at the public boundary.
+
+## Runner bounds
+
+Compilation and test output stays on the reusable 1.5 GiB `build` image, 349 MiB
+used after a clean run. Each data image stayed under 4 MiB used. Logs total
+1.1 MiB. The sandbox denies network except local Unix sockets, which the process
+laws need, and denies writes outside the build and selected data images.
+
+The runner watches only its own process group, so a law that starts its own group
+is bounded by that law's watchdog, not by the runner.

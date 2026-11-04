@@ -1,24 +1,32 @@
 //! Public platform-admission laws; medium Linux filesystem evidence for #150.
 //! Oracle: KEEP-CATALOG-007 requires platform admission independently of lock ownership.
 
-#![cfg(all(target_os = "linux", feature = "repository-tasks"))]
+#![cfg(all(
+    any(target_os = "linux", target_os = "macos"),
+    feature = "repository-tasks"
+))]
 
 #[path = "segment_filesystem_stage/sandbox.rs"]
 pub mod admitted_directory;
+#[cfg(target_os = "linux")]
 #[path = "catalog_platform_admission/unsupported_directory.rs"]
 pub mod unsupported_directory;
 
 use std::error::Error;
 use std::fs;
+#[cfg(target_os = "linux")]
 use std::io::ErrorKind;
 use std::io::Write;
 
 use keep::{
     CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemCatalogPublisher,
     FilesystemPlatformAdmission, FilesystemWriterLock, LayoutEntryLimit, SegmentReadPolicy,
-    SegmentRecordLimit, StoreInitializationError, StoreInitializationPhase,
+    SegmentRecordLimit,
 };
+#[cfg(target_os = "linux")]
+use keep::{StoreInitializationError, StoreInitializationPhase};
 
+#[cfg(target_os = "linux")]
 #[test]
 fn a_writer_lock_cannot_mint_publication_authority_on_a_refused_platform()
 -> Result<(), Box<dyn Error>> {

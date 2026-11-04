@@ -3,8 +3,9 @@
 use std::error::Error;
 use std::io;
 
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
-use cap_std::fs::{Dir, File, OpenOptions};
+use cap_std::fs::{File, OpenOptions};
 
 use super::segment_header::MAXIMUM_SEGMENT_LENGTH;
 use super::{

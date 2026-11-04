@@ -3,14 +3,14 @@
 use std::error::Error;
 use std::io;
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 use keep::FilesystemPlatformAdmission;
 use keep::{
     StoreInitializationError, StoreInitializationPhase, StoreInitializationStorage,
     initialize_store,
 };
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 #[path = "segment_filesystem_stage/sandbox.rs"]
 pub mod sandbox;
 
@@ -58,7 +58,7 @@ fn initialization_stops_at_and_preserves_every_exact_failure_phase() -> Result<(
     Ok(())
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 #[test]
 fn unsupported_production_platform_refuses_before_namespace_mutation() -> Result<(), Box<dyn Error>>
 {

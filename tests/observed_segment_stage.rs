@@ -1,7 +1,10 @@
 //! Medium public filesystem laws for sealed observation; oracle: canonical bytes or typed refusal.
 //! Delete only when the observation capability is removed or stronger boundary laws replace these.
 
-#![cfg(all(target_os = "linux", feature = "repository-tasks"))]
+#![cfg(all(
+    any(target_os = "linux", target_os = "macos"),
+    feature = "repository-tasks"
+))]
 
 #[path = "observed_segment_stage/byte_equivalence.rs"]
 mod byte_equivalence;

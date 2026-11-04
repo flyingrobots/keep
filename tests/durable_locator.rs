@@ -5,7 +5,7 @@
 //! executables have separate descriptor tables even when Cargo runs in parallel.
 //! The locator parent owns no store; each admitted child runs one law serially.
 
-#![cfg(target_os = "linux")]
+#![cfg(any(target_os = "linux", target_os = "macos"))]
 
 #[path = "durable_locator/suite.rs"]
 mod suite;

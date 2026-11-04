@@ -3,8 +3,7 @@
 use std::io;
 use std::path::Path;
 
-use cap_fs_ext::DirExt;
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use super::filesystem_retention_current::{self, ObservedRetentionState};
 use super::filesystem_retention_pool_name as pool_name;
@@ -116,8 +115,8 @@ impl FilesystemRetentionSnapshot {
     /// Platform admission synchronizes the opened root directory; failure is
     /// returned as `Admission` with the original I/O cause. It may also block
     /// while collection holds the fence exclusively.
-    /// Platform admission requires the existing local writable, case-sensitive
-    /// Linux ext4 profile across every present version-two protocol directory.
+    /// Platform admission requires an admitted local writable Linux ext4 or
+    /// macOS APFS profile across every present version-two protocol directory.
     /// The same opened root capability is retained through namespace, migration
     /// identity, fence, and coordinate admission; the ambient path is not reopened.
     ///

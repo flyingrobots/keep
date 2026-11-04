@@ -74,6 +74,8 @@ mod checksummed_catalog;
 mod checksummed_publication_head;
 mod checksummed_segment_record;
 mod closed_segment;
+#[cfg(target_os = "macos")]
+mod darwin_filesystem;
 mod decoded_catalog_entry;
 mod digest_hex;
 mod exports;
@@ -88,6 +90,8 @@ mod filesystem_catalog_publisher_tests;
 mod filesystem_catalog_segment;
 mod filesystem_catalog_snapshot;
 mod filesystem_catalog_storage;
+mod filesystem_directory;
+mod filesystem_entry_spelling;
 mod filesystem_exact_record;
 mod filesystem_initialization_namespace;
 mod filesystem_initialization_storage;
@@ -251,7 +255,7 @@ mod sync_capable_directory;
 #[cfg(test)]
 #[path = "../../tests/support/mod.rs"]
 mod test_support;
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 mod unsupported_filesystem;
 mod verification_admission;
 mod verification_decode_error;

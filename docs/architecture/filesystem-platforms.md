@@ -1,7 +1,8 @@
 # Filesystem platform adapters
 
-Status: implementation design. The checked-in Linux adapter remains the only
-production-admitted backend until the acceptance gates below have evidence.
+Status: implemented. Production admits Linux ext4 and macOS APFS; the
+[evidence record](../testing-evidence/filesystem-platform-adapters.md) states
+what has been exercised and what has not.
 
 This design adds native macOS storage while retaining Keep's exact-byte,
 exclusive-writer, immutable-publication, and recovery contracts. It also defines
@@ -144,7 +145,7 @@ allow adding either without editing the protocol orchestrators.
 
 ## macOS profiles
 
-The intended native target is local writable APFS, including the ordinary
+The native target is local writable APFS, including the ordinary
 case-insensitive variant and case-sensitive APFS. HFS+ and other filesystems
 remain explicit future profiles. APFS snapshots and read-only mounts refuse
 writer admission.
@@ -161,20 +162,21 @@ The actual names observed during namespace admission must match the grammar
 byte-for-byte. `HEAD` must not be admitted through a foreign `head` entry,
 and uppercase digest names must not silently alias canonical lowercase names.
 The same obligation applies to reads, recovery, and publication reuse, not
-only to store initialization. Implement and test exact-spelling checks before
-admitting this profile. Unicode normalization is irrelevant to generated names
-but must not turn malformed foreign names into admitted protocol entries.
+only to store initialization. The adapter resolves a name, then requires it
+byte-for-byte in a listing of the parent, on either naming variant. The listing
+is the only observation of the stored spelling: `F_GETPATH` reports a name cached
+on the vnode, which can belong to another hard link of the same file. Case
+folding beyond ASCII and Unicode normalization need no special handling, because
+the comparison is byte equality against whatever the lookup resolved.
 
 Regular-file synchronization preserves the pinned Rust toolchain's full-flush
 semantics. Rust 1.96's Apple `File::sync_all` calls `F_FULLFSYNC`. Directory
-synchronization requires native validation of the same guarantee; do not
+synchronization uses the same call on the directory descriptor; do not
 catch `EINVAL` or `ENOTSUP` and return success, and do not silently substitute
 plain `fsync` for a stronger promised operation.
 
-The native adapter must use safe existing wrappers where available. If a
-required descriptor-bound observation has no safe wrapper, isolate the minimal
-FFI in a dedicated crate with documented invariants and boundary tests. Adding
-a broad platform dependency merely for one syscall is not the default choice.
+The native adapter uses existing safe wrappers and needs no FFI: `fsid` only
+repeats `st_dev` beside the filesystem type, so it is not read.
 
 ## Physical coordinates and durable compatibility
 
@@ -188,11 +190,10 @@ same-process evidence and compares device/inode for restart. Preserve that
 distinction; never replace a persisted intent merely because a mount number
 changed after restart.
 
-Document a named Darwin coordinate mapping and its validation before emitting
-such records. It must be deterministic, checked, and must reject copied roots.
-Do not hash arbitrary OS structs or truncate native fields. If the existing
-wire grammar cannot distinguish a necessary coordinate domain, make a
-versioned format decision rather than silently reinterpreting existing bytes.
+The Darwin mapping sets the top bit of the device coordinate over the checked
+32-bit `st_dev`, uses that value for both device and mount, and stores the inode
+unchanged. A negative `st_dev` refuses instead of being truncated. The top bit
+keeps Darwin coordinates apart from Linux ones without changing the wire grammar.
 
 Cross-OS movement of a physical store is not ordinary reopen. A store whose
 recovery evidence binds it to another physical root must refuse. Logical
@@ -244,14 +245,10 @@ ceiling. Use one serialized reusable cache per incompatible OS toolchain;
 native validation cannot reuse Linux object files. Every launch records actual
 usage, free space, lock, enforced limits, timeout, and descendant cleanup.
 
-The implementation is complete only when the design is reflected in code,
-Linux behavior remains verified, native production APFS paths are exercised,
-and copies of this design and its decision record have intact Reader receipts.
-
 ## Sources and related contracts
 
 - [Hexagonal boundaries](https://github.com/flyingrobots/keep/blob/3887f2a/docs/adr/0004-hexagonal-boundary-architecture.md).
-- [Platform adapter decision](../adr/0010-filesystem-platform-adapters.md).
+- [Platform adapter decision](../adr/filesystem-platform-adapters.md).
 - [Current filesystem contract](https://github.com/flyingrobots/keep/blob/3887f2a/docs/formats/segment-store-v1/recovery.md#platform-contract).
 - [Migration recovery](https://github.com/flyingrobots/keep/blob/3887f2a/docs/formats/segment-store-v2/migration-recovery.md).
 - [Apple APFS naming variants](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/APFS_Guide/FAQ/FAQ.html).
