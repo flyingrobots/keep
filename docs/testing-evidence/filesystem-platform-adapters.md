@@ -93,10 +93,22 @@ The matrix uses repository entry points that skip the production platform probe,
 as it does on Linux. It exercises the protocols and the spelling boundary on APFS,
 and separate public laws exercise production admission.
 
+## Parent scan cost
+
+One release-mode run on the default APFS image, 200 opens of one existing file, using
+an unrepeated throwaway test. The cost grows with the directory, as expected.
+
+| Directory entries | Plain open | With spelling check |
+| --- | --- | --- |
+| 10 | 25 µs | 74 µs |
+| 1,000 | 9 µs | 282 µs |
+| 10,000 | 11 µs | 475 µs |
+| 50,000 | 17 µs | 3.4 ms |
+
+This is the per-open overhead only, not a store workload.
+
 ## Not measured
 
-- The cost of the parent scan per existing-entry lookup. It is linear in the
-  directory size and matters most for a large segment pool.
 - `F_FULLFSYNC` durability. A successful call is not proof that hardware honored
   it.
 - A real non-APFS or network volume at the public boundary.
