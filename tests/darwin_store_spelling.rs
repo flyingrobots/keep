@@ -26,8 +26,9 @@ pub mod sandbox;
 use std::{error::Error, fs, path::Path};
 
 use keep::{
-    CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemRetentionSnapshot, ReaderAttemptLimit,
-    SegmentReadPolicy,
+    CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemRetentionSnapshot,
+    FilesystemStoreAdmission, ReaderAttemptLimit, SegmentReadPolicy, StoreExpectation,
+    StoreInitializationError, StoreInitializationRefusal,
 };
 
 fn load(root: &Path) -> Result<FilesystemRetentionSnapshot, Box<dyn Error>> {
@@ -39,6 +40,7 @@ fn load(root: &Path) -> Result<FilesystemRetentionSnapshot, Box<dyn Error>> {
         root,
         policy,
         ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
     )?)
 }
 
@@ -50,6 +52,10 @@ fn assert_respelling_refuses(law: &str, stored: &str, foreign: &str) -> Result<(
     assert!(
         load(store.path()).is_err(),
         "{foreign} answered for {stored}"
+    );
+    assert!(
+        FilesystemStoreAdmission::reopen(store.path(), StoreExpectation::NoExpectation).is_err(),
+        "{foreign} gave the writer authority for {stored}"
     );
     fs::rename(store.path().join(foreign), store.path().join(stored))?;
     drop(load(store.path())?);
@@ -69,6 +75,23 @@ fn a_respelled_format_marker_refuses_until_its_exact_name_returns() -> Result<()
 #[test]
 fn a_respelled_segment_pool_refuses_until_its_exact_name_returns() -> Result<(), Box<dyn Error>> {
     assert_respelling_refuses("darwin-respelled-pool", "segments", "Segments")
+}
+
+#[test]
+fn initialization_refuses_a_foreign_spelling_and_leaves_it_in_place() -> Result<(), Box<dyn Error>>
+{
+    let sandbox = sandbox::TestDirectory::create("darwin-initialization-alias")?;
+    fs::write(sandbox.path().join("Format"), b"foreign")?;
+    let refused = FilesystemStoreAdmission::initialize(sandbox.path());
+    assert!(matches!(
+        refused,
+        Err(StoreInitializationError::Refused {
+            refusal: StoreInitializationRefusal::NotAPrefix { .. }
+        })
+    ));
+    assert_eq!(fs::read(sandbox.path().join("Format"))?, b"foreign");
+    assert_eq!(fs::read_dir(sandbox.path())?.count(), 1);
+    Ok(())
 }
 
 // Finder can write this into any folder it displays. Refusal is deliberate until

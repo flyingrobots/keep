@@ -49,6 +49,14 @@ Calibration with the check disabled, on default APFS:
 - `darwin_store_spelling` laws **still pass**. Namespace admission independently
   refuses the foreign entry, so those laws do not witness the per-lookup check.
 
+## Single-format store paths
+
+The initialization, marker, admission, and namespace code from ADR-0010 uses the
+same exact-name directory as every other path. `darwin_filesystem_tests` pins the
+per-lookup check below namespace admission for `FORMAT`, `HEAD`, and a protocol
+directory, and `tests/darwin_store_spelling.rs` covers the public reader, writer,
+and initialization routes.
+
 ## Volume reattachment
 
 Darwin assigns `st_dev` per mount and reuses a freed number. Mounting another
