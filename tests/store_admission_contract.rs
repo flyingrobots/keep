@@ -20,7 +20,9 @@ fn every_writer_consumes_admitted_authority() {
 #[test]
 fn reopen_admits_the_marker_under_the_production_profile() {
     assert!(STORE_ADMISSION.contains("pub struct FilesystemStoreAdmission"));
-    assert!(STORE_ADMISSION.contains("pub fn reopen(store_root: &Path)"));
+    assert!(STORE_ADMISSION.contains(
+        "pub fn reopen(\n        store_root: &Path,\n        expectation: StoreExpectation,"
+    ));
     assert!(STORE_ADMISSION.contains("pub fn initialize("));
     assert!(STORE_ADMISSION.contains("filesystem_format_marker::admit"));
     assert!(STORE_ADMISSION.contains("filesystem_platform_profile::open"));
