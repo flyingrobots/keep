@@ -10,11 +10,11 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 
-use super::filesystem_retention_test_fixture::{initialized_store, populate_bundle};
+use super::filesystem_retention_test_fixture::populate_bundle;
 use crate::{
     CatalogRestartByteLimit, CatalogRestartPolicy, DurableSnapshot, DurableStoreError,
-    FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError, FilesystemWriterLock,
-    ReaderAttemptLimit, SegmentReadPolicy,
+    FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError, ReaderAttemptLimit,
+    SegmentReadPolicy,
 };
 
 #[test]

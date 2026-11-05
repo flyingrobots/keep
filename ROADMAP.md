@@ -4,8 +4,8 @@ This page has one job: to list every feature Keep has, is building, or
 intends, and to break the unfinished ones into tasks precise enough to
 start. It is a plan. It is not evidence. The authoritative status of every
 requirement, with the test that proves it, remains the requirement ledgers:
-[`segment-store-v1/requirements.md`](docs/formats/segment-store-v1/requirements.md),
-[`segment-store-v2/requirements.md`](docs/formats/segment-store-v2/requirements.md),
+[`segment-store-v1/requirements.md`](docs/formats/store/catalog-protocol-requirements.md),
+[`segment-store-v2/requirements.md`](docs/formats/store/requirements.md),
 [`authenticated-reconstruction/requirements.md`](docs/invariants/authenticated-reconstruction/requirements.md),
 and
 [`verification/requirements.md`](docs/invariants/verification/requirements.md).
