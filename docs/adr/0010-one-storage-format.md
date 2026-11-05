@@ -91,8 +91,8 @@ not cover the segment, catalog, and head grammars
 ([#205](https://github.com/flyingrobots/keep/issues/205)), so this is a
 requirement rather than a current property, and #205 must close before the first
 release. Before the first release, a grammar change regenerates the affected
-golden fixtures and needs no conversion. After the first release, it follows [Future format
-changes](#future-format-changes).
+golden fixtures and needs no conversion. After the first release, it follows
+[Future format changes](#future-format-changes).
 
 ### Direct initialization
 
@@ -209,7 +209,9 @@ not been rewritten.
 Catalog, publication-head, retention, and other mutable metadata has one
 current version. A release that changes it, or that changes the definition
 digest, ships a separately invoked metadata upgrade, which also rewrites the
-`FORMAT` marker. Normal opening never converts a store, and it refuses a marker
+`FORMAT` marker. It holds the writer lock from before its first read until its
+completion is durable, and refuses if the lock is held, so it sees one consistent
+source and blocks writers by design. Normal opening never converts a store, and it refuses a marker
 other than the current one until that upgrade has run.
 
 Reads never upgrade. A read holds no writer authority, must behave the same on
