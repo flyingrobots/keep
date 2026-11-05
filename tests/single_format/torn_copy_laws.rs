@@ -1,15 +1,24 @@
 //! This module owns the ADR-0010 law for a copy torn by a concurrent writer.
 //!
-//! A copy taken while a writer publishes can hold any mix of the states before
+//! A copy taken while a writer publishes can hold a mix of the states before
 //! and after that publication, and a partly copied file. These laws enumerate
-//! those mixes directly, so they need no scheduling or timing. Every mix must
+//! every mix of two quiescent published states, and one half-length file over
+//! the newer state, so they need no scheduling or timing. Every such copy must
 //! refuse or return exactly the bytes a content identity names.
+//!
+//! They do not cover a copy that holds a writer's in-flight stage, a file at
+//! another length than half, or a tear over the older state.
 
 use std::collections::BTreeMap;
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 
-use keep::{DurableStore, ReaderAttemptLimit, StoreExpectation};
+use keep::{
+    CatalogRestartError, DurableOutcome, DurableReadError, DurableStore, DurableStoreError,
+    FilesystemRetentionSnapshotError, ReaderAttemptLimit, RetentionClosureVerificationError,
+    RetentionViewError, StoreExpectation,
+};
 
 use super::durable_fixture;
 use super::durable_sandbox::TestDirectory;
@@ -24,7 +33,7 @@ const MAXIMUM_CHANGED_FILES: usize = 12;
 
 type Files = BTreeMap<PathBuf, Vec<u8>>;
 
-/// How many mixes refused and how many read, so the laws cannot pass vacuously.
+/// How many reads refused and how many returned bytes, over torn copies only.
 #[derive(Default)]
 struct Outcomes {
     refused: usize,
@@ -88,7 +97,45 @@ fn torn(name: &str, base: &Path, overlay: &[(&Path, &[u8])]) -> TestResult<TestD
     Ok(copy)
 }
 
-/// Requires `content` to reconstruct exactly, or to refuse with a verified prefix.
+/// Whether an I/O cause is evidence about the copy: an absent or malformed artifact.
+fn evidenced(source: &io::Error) -> bool {
+    matches!(
+        source.kind(),
+        io::ErrorKind::NotFound | io::ErrorKind::InvalidData
+    )
+}
+
+/// Whether `refusal` is evidence that the copy is incomplete or damaged.
+///
+/// Anything else, such as a permission, resource, or locator failure, is an
+/// operational failure of the test and must not count as a refusal.
+fn lawful(refusal: &DurableOutcome) -> bool {
+    use FilesystemRetentionSnapshotError as Snapshot;
+    match refusal {
+        DurableOutcome::Read(DurableReadError::BlobMissing { .. }) => true,
+        DurableOutcome::Store(DurableStoreError::Closure { source, .. }) => matches!(
+            **source,
+            RetentionClosureVerificationError::MissingMember { .. }
+        ),
+        DurableOutcome::Store(DurableStoreError::Snapshot(source)) => match &**source {
+            Snapshot::Admission { source }
+            | Snapshot::Root { source }
+            | Snapshot::View {
+                source: RetentionViewError::Io { source, .. },
+            } => evidenced(source),
+            Snapshot::Catalog { source } => match source {
+                CatalogRestartError::Io { source, .. }
+                | CatalogRestartError::SegmentIo { source, .. } => evidenced(source),
+                CatalogRestartError::Length { .. } | CatalogRestartError::Segment { .. } => true,
+                _ => false,
+            },
+            _ => false,
+        },
+        _ => false,
+    }
+}
+
+/// Requires `content` to reconstruct exactly, or to refuse lawfully with a verified prefix.
 fn exact_or_refused(root: &Path, content: &[u8], outcomes: &mut Outcomes) -> TestResult<()> {
     let target = populated_store::identify(content)?.target;
     let store = DurableStore::open(
@@ -103,7 +150,11 @@ fn exact_or_refused(root: &Path, content: &[u8], outcomes: &mut Outcomes) -> Tes
             assert_eq!(output, content, "a torn copy returned other bytes");
             outcomes.read = outcomes.read.saturating_add(1);
         }
-        Err(_refusal) => {
+        Err(refusal) => {
+            assert!(
+                lawful(&refusal),
+                "a torn copy failed for another cause than its own state: {refusal:?}"
+            );
             assert!(
                 content.starts_with(&output),
                 "a refused read emitted bytes its identity does not name"
@@ -120,10 +171,11 @@ fn both_blobs(root: &Path, outcomes: &mut Outcomes) -> TestResult<()> {
 }
 
 #[test]
-fn every_mix_of_two_published_states_refuses_or_returns_exact_bytes() -> TestResult<()> {
+fn every_mix_of_two_quiescent_published_states_refuses_or_returns_exact_bytes() -> TestResult<()> {
     let (base, _before, changed, after) = two_states("torn-mix")?;
-    let mut outcomes = Outcomes::default();
-    for mask in 0_u32..(1_u32 << changed.len()) {
+    let newer = (1_u32 << changed.len()).saturating_sub(1);
+    let mut torn_outcomes = Outcomes::default();
+    for mask in 0_u32..=newer {
         let mut overlay: Vec<(&Path, &[u8])> = Vec::new();
         for (bit, path) in changed.iter().enumerate() {
             if mask & (1_u32 << bit) != 0 {
@@ -132,15 +184,24 @@ fn every_mix_of_two_published_states_refuses_or_returns_exact_bytes() -> TestRes
             }
         }
         let copy = torn("torn-mix-copy", base.path(), &overlay)?;
-        both_blobs(copy.path(), &mut outcomes)?;
+        // The two ends are whole states. They must hold the law, but only a
+        // real mix may satisfy the guards below.
+        let mut whole_state = Outcomes::default();
+        let outcomes = if mask == 0 || mask == newer {
+            &mut whole_state
+        } else {
+            &mut torn_outcomes
+        };
+        both_blobs(copy.path(), outcomes)?;
     }
-    assert!(outcomes.read > 0, "no torn mix read anything");
-    assert!(outcomes.refused > 0, "no torn mix refused anything");
+    assert!(torn_outcomes.read > 0, "no torn mix read anything");
+    assert!(torn_outcomes.refused > 0, "no torn mix refused anything");
     Ok(())
 }
 
 #[test]
-fn every_partly_copied_file_refuses_or_returns_exact_bytes() -> TestResult<()> {
+fn a_half_length_copy_of_any_one_file_over_the_newer_state_refuses_or_returns_exact_bytes()
+-> TestResult<()> {
     let (base, before, changed, after) = two_states("torn-partial")?;
     let mut outcomes = Outcomes::default();
     let whole: Vec<(&Path, &[u8])> = after
@@ -151,6 +212,10 @@ fn every_partly_copied_file_refuses_or_returns_exact_bytes() -> TestResult<()> {
     for path in before.keys().chain(changed.iter()) {
         let source = after.get(path).or_else(|| before.get(path));
         let bytes = source.ok_or("the file left both states")?;
+        if bytes.is_empty() {
+            // Half of an empty lock file is the whole file: not a tear.
+            continue;
+        }
         let half = bytes
             .get(..bytes.len() >> 1)
             .ok_or("half is out of range")?;
