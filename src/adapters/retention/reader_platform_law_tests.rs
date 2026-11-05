@@ -20,10 +20,14 @@ use crate::{
 #[test]
 fn a_canonical_tmpfs_store_refuses_the_public_reader_profile() -> Result<(), Box<dyn Error>> {
     let store = TmpfsStore::create("direct")?;
-    let refusal =
-        FilesystemRetentionSnapshot::load(&store.0, policy()?, ReaderAttemptLimit::DEFAULT)
-            .err()
-            .ok_or("valid store bytes admitted an unsupported reader filesystem")?;
+    let refusal = FilesystemRetentionSnapshot::load(
+        &store.0,
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        crate::StoreExpectation::NoExpectation,
+    )
+    .err()
+    .ok_or("valid store bytes admitted an unsupported reader filesystem")?;
     assert!(
         matches!(&refusal, FilesystemRetentionSnapshotError::Admission { source }
         if source.kind() == io::ErrorKind::Unsupported),
@@ -35,9 +39,14 @@ fn a_canonical_tmpfs_store_refuses_the_public_reader_profile() -> Result<(), Box
 #[test]
 fn a_canonical_tmpfs_store_refuses_durable_snapshot_admission() -> Result<(), Box<dyn Error>> {
     let store = TmpfsStore::create("durable")?;
-    let refusal = DurableSnapshot::open(&store.0, policy()?, ReaderAttemptLimit::DEFAULT)
-        .err()
-        .ok_or("durable snapshot accepted an unsupported filesystem")?;
+    let refusal = DurableSnapshot::open(
+        &store.0,
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        crate::StoreExpectation::NoExpectation,
+    )
+    .err()
+    .ok_or("durable snapshot accepted an unsupported filesystem")?;
     assert!(
         matches!(&refusal, DurableStoreError::Snapshot(source)
         if matches!(source.as_ref(), FilesystemRetentionSnapshotError::Admission { source }

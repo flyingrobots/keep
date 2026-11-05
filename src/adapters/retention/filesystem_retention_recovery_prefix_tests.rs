@@ -265,7 +265,12 @@ fn require_successor_view(
         SegmentReadPolicy::MAXIMUM,
         CatalogRestartByteLimit::new(1_048_576)?,
     );
-    let view = FilesystemRetentionSnapshot::load(root, policy, ReaderAttemptLimit::DEFAULT)?;
+    let view = FilesystemRetentionSnapshot::load(
+        root,
+        policy,
+        ReaderAttemptLimit::DEFAULT,
+        crate::StoreExpectation::NoExpectation,
+    )?;
     let expected_root = AdmittedRetentionRoot::decode(expected)?;
     let head = view
         .retention_head()

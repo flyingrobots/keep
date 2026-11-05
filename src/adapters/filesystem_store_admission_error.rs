@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fmt;
 use std::io;
 
-use super::WriterLockAcquireError;
+use super::{CatalogRestartError, StoreExpectationMismatch, WriterLockAcquireError};
 
 /// Failure to reacquire writer authority over one published filesystem store.
 #[derive(Debug)]
@@ -30,6 +30,16 @@ pub enum FilesystemStoreAdmissionError {
         /// Preserved record-admission failure.
         source: io::Error,
     },
+    /// The published `HEAD` needed to compare the caller's expectation refused.
+    ExpectationHead {
+        /// Preserved head read or decode failure.
+        source: Box<CatalogRestartError>,
+    },
+    /// The store does not hold the catalog the caller expected.
+    Expectation {
+        /// The expected and observed catalogs.
+        source: StoreExpectationMismatch,
+    },
 }
 
 impl fmt::Display for FilesystemStoreAdmissionError {
@@ -39,6 +49,10 @@ impl fmt::Display for FilesystemStoreAdmissionError {
             Self::WriterLock { .. } => "published store writer-lock acquisition failed",
             Self::Namespace { .. } => "published store namespace admission failed",
             Self::FormatMarker { .. } => "format marker admission failed",
+            Self::ExpectationHead { .. } => {
+                "published head could not be compared with the expectation"
+            }
+            Self::Expectation { .. } => "the store does not hold the expected catalog",
         })
     }
 }
@@ -50,6 +64,8 @@ impl Error for FilesystemStoreAdmissionError {
             | Self::Namespace { source }
             | Self::FormatMarker { source } => Some(source),
             Self::WriterLock { source } => Some(source),
+            Self::ExpectationHead { source } => Some(source),
+            Self::Expectation { source } => Some(source),
         }
     }
 }

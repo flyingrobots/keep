@@ -62,7 +62,8 @@ fn every_open_path_refuses_a_root_without_the_format_marker() -> TestResult<()> 
 }
 
 fn require_writer_paths_refuse(root: &Path) -> TestResult<()> {
-    let Err(writer) = FilesystemStoreAdmission::reopen(root) else {
+    let Err(writer) = FilesystemStoreAdmission::reopen(root, keep::StoreExpectation::NoExpectation)
+    else {
         return Err("writer admission admitted a root without FORMAT".into());
     };
     require_missing_marker(&writer)?;
@@ -104,14 +105,23 @@ fn require_content_readers_refuse(root: &Path) -> TestResult<()> {
     };
     require_missing_marker(&source)?;
     let Err(FilesystemRetentionSnapshotError::Admission { source }) =
-        FilesystemRetentionSnapshot::load(root, policy, ReaderAttemptLimit::DEFAULT)
+        FilesystemRetentionSnapshot::load(
+            root,
+            policy,
+            ReaderAttemptLimit::DEFAULT,
+            keep::StoreExpectation::NoExpectation,
+        )
     else {
         return Err("the retention reader admitted a root without FORMAT".into());
     };
     require_refusal(&source)?;
-    let Err(DurableStoreError::Snapshot(snapshot)) =
-        DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT)?.snapshot()
-    else {
+    let Err(DurableStoreError::Snapshot(snapshot)) = DurableStore::open(
+        root,
+        policy,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot() else {
         return Err("the durable reader admitted a root without FORMAT".into());
     };
     let FilesystemRetentionSnapshotError::Admission { source } = snapshot.as_ref() else {

@@ -15,6 +15,8 @@ mod durable_fixture;
     reason = "these laws use Drop cleanup; other filesystem laws check explicit removal"
 )]
 mod durable_sandbox;
+#[path = "expectation_laws.rs"]
+mod expectation_laws;
 #[path = "initialization_laws.rs"]
 mod initialization_laws;
 #[path = "../support/populated_store.rs"]
@@ -36,6 +38,8 @@ mod store_copy;
     reason = "these laws publish successors only through `publish`"
 )]
 mod successor_catalog;
+#[path = "torn_copy_laws.rs"]
+mod torn_copy_laws;
 #[cfg(target_os = "linux")]
 #[path = "unsupported_directory.rs"]
 mod unsupported_directory;

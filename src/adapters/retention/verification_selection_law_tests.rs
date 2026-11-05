@@ -118,8 +118,12 @@ fn a_selected_root_coordinate_refusal_keeps_its_typed_evidence() -> Result<(), B
         replacement.encoded(),
     )?;
     let before = retention_witness(sandbox.path())?;
-    let view =
-        FilesystemRetentionSnapshot::load(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
+    let view = FilesystemRetentionSnapshot::load(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        crate::StoreExpectation::NoExpectation,
+    )?;
     let error = view
         .retained_root(expected.root().namespace().digest())
         .err()

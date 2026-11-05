@@ -9,7 +9,7 @@ use super::{
 };
 use crate::adapters::{
     AdmittedSegmentRecord, CatalogRestartPolicy, CatalogSnapshot, FilesystemRetentionSnapshot,
-    LayoutDecodePolicy, ReaderAttemptLimit, SegmentRecordIdentity,
+    LayoutDecodePolicy, ReaderAttemptLimit, SegmentRecordIdentity, StoreExpectation,
 };
 use crate::authenticated_read::{ChunkSource, read_admitted, reconstruct_admitted};
 use crate::{AdmittedLayout, BlobId, ByteRange, ChunkId, LayoutId};
@@ -91,14 +91,15 @@ impl DurableSnapshot {
     ///
     /// # Errors
     ///
-    /// Returns [`DurableStoreError`] at the exact admission, fence,
-    /// collection, or retained-root refusal.
+    /// Returns [`DurableStoreError`] at the exact admission, fence, collection,
+    /// expectation, or retained-root refusal.
     pub fn open(
         store_root: &Path,
         policy: CatalogRestartPolicy,
         limit: ReaderAttemptLimit,
+        expectation: StoreExpectation,
     ) -> Result<Self, DurableStoreError> {
-        let view = FilesystemRetentionSnapshot::load(store_root, policy, limit)
+        let view = FilesystemRetentionSnapshot::load(store_root, policy, limit, expectation)
             .map_err(|source| DurableStoreError::Snapshot(Box::new(source)))?;
         let coordinates = DurableView::new(
             view.catalog().generation(),

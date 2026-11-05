@@ -10,9 +10,9 @@ use cap_std::ambient_authority;
 use super::StoreInitializationObserver;
 use super::store_initialization::{self as initialization, PhaseObserver};
 use super::{
-    FilesystemStoreAdmissionError, FilesystemWriterLock, StoreInitialization,
-    StoreInitializationError, filesystem_format_marker, filesystem_platform_profile,
-    filesystem_store_namespace,
+    FilesystemStoreAdmissionError, FilesystemWriterLock, StoreExpectation, StoreInitialization,
+    StoreInitializationError, catalog_restart_loader, filesystem_format_marker,
+    filesystem_platform_profile, filesystem_store_namespace,
 };
 
 /// Exclusive writer authority over a committed store root.
@@ -102,20 +102,28 @@ impl FilesystemStoreAdmission {
     /// The call mutates no protocol state. It admits the production platform
     /// for every protocol directory, acquires the existing writer
     /// lock, requires the exact committed root namespace, and admits the
-    /// canonical `FORMAT` marker. A store with no catalog `HEAD` admits.
+    /// canonical `FORMAT` marker. A store with no catalog `HEAD` admits under
+    /// [`StoreExpectation::NoExpectation`]. Any other `expectation` reads `HEAD`
+    /// under the lock and compares its generation and digest.
     /// Retention adapters perform content-level validation under the
     /// returned authority. The synchronous call may block on filesystem I/O.
     ///
     /// # Errors
     ///
     /// Returns [`FilesystemStoreAdmissionError`] with the exact platform,
-    /// writer-lock, namespace, or format-marker boundary and preserved source.
+    /// writer-lock, namespace, format-marker, or expectation boundary and
+    /// preserved source.
     /// A root whose initialization has not committed refuses at the namespace
     /// boundary.
-    pub fn reopen(store_root: &Path) -> Result<Self, FilesystemStoreAdmissionError> {
+    pub fn reopen(
+        store_root: &Path,
+        expectation: StoreExpectation,
+    ) -> Result<Self, FilesystemStoreAdmissionError> {
         let root = filesystem_platform_profile::open(store_root)
             .map_err(|source| FilesystemStoreAdmissionError::Platform { source })?;
-        Self::admit(root)
+        let admission = Self::admit(root)?;
+        admission.require_expectation(expectation)?;
+        Ok(admission)
     }
 
     /// Reopens a committed root without platform admission for repository tasks.
@@ -135,6 +143,28 @@ impl FilesystemStoreAdmission {
         let root = Dir::open_ambient_dir(store_root, ambient_authority())
             .map_err(|source| FilesystemStoreAdmissionError::Platform { source })?;
         Self::admit(root)
+    }
+
+    fn require_expectation(
+        &self,
+        expectation: StoreExpectation,
+    ) -> Result<(), FilesystemStoreAdmissionError> {
+        if expectation == StoreExpectation::NoExpectation {
+            return Ok(());
+        }
+        let directory = self
+            .lock
+            .clone_directory()
+            .map_err(|source| FilesystemStoreAdmissionError::Namespace { source })?;
+        let observed =
+            catalog_restart_loader::observe_published_catalog(&directory).map_err(|source| {
+                FilesystemStoreAdmissionError::ExpectationHead {
+                    source: Box::new(source),
+                }
+            })?;
+        expectation
+            .require(observed)
+            .map_err(|source| FilesystemStoreAdmissionError::Expectation { source })
     }
 
     /// Releases the writer lock and the three pinned retention capabilities.

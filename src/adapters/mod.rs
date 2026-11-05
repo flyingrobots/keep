@@ -249,6 +249,7 @@ mod segment_write_phase;
 mod staged_segment;
 mod storage_profile_id_text;
 mod storage_profile_id_text_error;
+mod store_expectation;
 mod store_format;
 mod store_initialization;
 mod sync_capable_directory;

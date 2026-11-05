@@ -8,6 +8,8 @@ after its public API and format compatibility policies are established.
 
 ## [Unreleased]
 
+- Opening a store requires a typed choice: `FilesystemStoreAdmission::reopen`, `FilesystemRetentionSnapshot::load`, `DurableSnapshot::open`, and `DurableStore::open` take a `StoreExpectation` with no default. `Catalog` refuses any other published catalog with the expected and observed values, and `NoExpectation` accepts any valid store at the path. Enumerated laws show that a copy torn by a concurrent writer refuses or returns exact bytes.
+
 - Stop naming Cargo workspace members as Dependabot update directories. Dependabot refuses to update from inside a member and the job for the workspace root already updates member manifests, so those entries failed the scheduled run without adding coverage. The dependency policy check now reads the root workspace member list, refuses a member listed as an update directory, and still requires an entry for every standalone manifest.
 
 - Admit macOS APFS as a production storage platform, on both default and case-sensitive volumes. Keep requires every existing protocol name byte-for-byte in a listing of its parent, so `head` never answers for `HEAD`. Adds a native macOS CI job; no format, dependency, or unsafe change. The crash matrix passes natively, but no power-loss experiment has been run on APFS.

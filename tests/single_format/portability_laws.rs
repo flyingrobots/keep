@@ -37,7 +37,10 @@ fn a_valid_quiescent_copy_opens_and_reads_the_same_content() -> TestResult<()> {
     let original = durable_fixture::build("portable-original", &[&first])?;
     let copy = copied("portable-copy", original.path())?;
 
-    drop(FilesystemStoreAdmission::reopen(copy.path())?);
+    drop(FilesystemStoreAdmission::reopen(
+        copy.path(),
+        keep::StoreExpectation::NoExpectation,
+    )?);
 
     assert_reads(copy.path(), &first)
 }
@@ -86,11 +89,11 @@ fn a_replaced_lock_or_protocol_directory_during_an_operation_still_refuses() -> 
     let original = durable_fixture::build("portable-replaced-original", &[&first_blob()])?;
     let copy = copied("portable-replaced-copy", original.path())?;
     let root = copy.path();
-    let held = FilesystemStoreAdmission::reopen(root)?;
+    let held = FilesystemStoreAdmission::reopen(root, keep::StoreExpectation::NoExpectation)?;
     fs::remove_file(root.join("writer.lock"))?;
     fs::write(root.join("writer.lock"), b"")?;
 
-    let contended = FilesystemStoreAdmission::reopen(root);
+    let contended = FilesystemStoreAdmission::reopen(root, keep::StoreExpectation::NoExpectation);
 
     assert!(matches!(
         contended,
@@ -165,7 +168,7 @@ fn a_copy_and_its_original_diverge_independently_and_keep_shared_identity() -> T
 
 fn marker_refusal(root: &Path) -> TestResult<String> {
     let Err(FilesystemStoreAdmissionError::FormatMarker { source }) =
-        FilesystemStoreAdmission::reopen(root)
+        FilesystemStoreAdmission::reopen(root, keep::StoreExpectation::NoExpectation)
     else {
         return Err("a corrupt marker was not refused at the marker boundary".into());
     };
@@ -177,7 +180,7 @@ fn marker_refusal(root: &Path) -> TestResult<String> {
 }
 
 fn namespace_refusal_kind(root: &Path) -> TestResult<io::ErrorKind> {
-    match FilesystemStoreAdmission::reopen(root) {
+    match FilesystemStoreAdmission::reopen(root, keep::StoreExpectation::NoExpectation) {
         Err(FilesystemStoreAdmissionError::Namespace { source }) => Ok(source.kind()),
         Err(other) => Err(format!("unexpected incomplete-store refusal: {other:?}").into()),
         Ok(_) => Err("an incomplete store was admitted".into()),

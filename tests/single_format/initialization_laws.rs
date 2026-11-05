@@ -27,11 +27,15 @@ fn an_initialized_store_has_no_catalog_and_admits_writers_but_not_readers() -> T
     assert_eq!(initialized.found(), StoreInitializationPrefix::Empty);
     drop(initialized);
     assert!(!root.join("HEAD").exists());
-    drop(FilesystemStoreAdmission::reopen(root)?);
+    drop(FilesystemStoreAdmission::reopen(
+        root,
+        keep::StoreExpectation::NoExpectation,
+    )?);
     let reader = FilesystemRetentionSnapshot::load(
         root,
         populated_store::policy()?,
         ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
     );
     assert!(matches!(
         reader,
@@ -102,7 +106,7 @@ fn an_uncommitted_root_is_refused_by_writers_and_readers() -> TestResult<()> {
     fs::hard_link(root.join("FORMAT"), root.join("FORMAT.next"))?;
 
     let Err(FilesystemStoreAdmissionError::Namespace { source }) =
-        FilesystemStoreAdmission::reopen(root)
+        FilesystemStoreAdmission::reopen(root, keep::StoreExpectation::NoExpectation)
     else {
         return Err("an uncommitted root admitted a writer".into());
     };
@@ -117,7 +121,8 @@ fn an_uncommitted_root_is_refused_by_writers_and_readers() -> TestResult<()> {
         FilesystemRetentionSnapshot::load(
             root,
             populated_store::policy()?,
-            ReaderAttemptLimit::DEFAULT
+            ReaderAttemptLimit::DEFAULT,
+            keep::StoreExpectation::NoExpectation
         ),
         Err(FilesystemRetentionSnapshotError::Admission { .. })
     ));

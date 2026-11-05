@@ -47,7 +47,13 @@ fn a_fifo_at_the_head_refuses_without_blocking_the_reader() -> Result<(), Box<dy
         let policy = CatalogRestartByteLimit::new(1_048_576)
             .map(|limit| CatalogRestartPolicy::new(SegmentReadPolicy::MAXIMUM, limit));
         let refused = policy.is_ok_and(|policy| {
-            FilesystemRetentionSnapshot::load(&root, policy, ReaderAttemptLimit::DEFAULT).is_err()
+            FilesystemRetentionSnapshot::load(
+                &root,
+                policy,
+                ReaderAttemptLimit::DEFAULT,
+                keep::StoreExpectation::NoExpectation,
+            )
+            .is_err()
         });
         let _ = sender.send(refused);
     });

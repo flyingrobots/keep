@@ -5,7 +5,7 @@ use std::fmt;
 use std::io;
 
 use super::RetentionViewError;
-use crate::adapters::CatalogRestartError;
+use crate::adapters::{CatalogRestartError, StoreExpectationMismatch};
 
 /// Why a reader could not bind one consistent view.
 #[derive(Debug)]
@@ -36,6 +36,11 @@ pub enum FilesystemRetentionSnapshotError {
         /// The exact restart refusal.
         source: CatalogRestartError,
     },
+    /// The store does not hold the catalog the caller expected.
+    Expectation {
+        /// The expected and observed catalogs.
+        source: StoreExpectationMismatch,
+    },
     /// A selected root pool entry is absent, unreadable, or not the manifest's.
     Root {
         /// The exact filesystem or decode refusal.
@@ -52,6 +57,7 @@ impl fmt::Display for FilesystemRetentionSnapshotError {
             Self::View { .. } => "reader view collection refused",
             Self::Catalog { .. } => "catalog snapshot refused",
             Self::Root { .. } => "selected retention root refused",
+            Self::Expectation { .. } => "the store does not hold the expected catalog",
         })
     }
 }
@@ -64,6 +70,7 @@ impl Error for FilesystemRetentionSnapshotError {
             }
             Self::View { source } => Some(source),
             Self::Catalog { source } => Some(source),
+            Self::Expectation { source } => Some(source),
             Self::Unpublished => None,
         }
     }

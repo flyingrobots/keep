@@ -115,5 +115,11 @@ fn refusal(path: &Path) -> Result<Option<SnapshotError>, Box<dyn Error>> {
         SegmentReadPolicy::MAXIMUM,
         CatalogRestartByteLimit::new(1_048_576)?,
     );
-    Ok(FilesystemRetentionSnapshot::load(path, policy, ReaderAttemptLimit::DEFAULT).err())
+    Ok(FilesystemRetentionSnapshot::load(
+        path,
+        policy,
+        ReaderAttemptLimit::DEFAULT,
+        crate::StoreExpectation::NoExpectation,
+    )
+    .err())
 }

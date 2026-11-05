@@ -46,6 +46,7 @@ pub(super) fn assert_reads(root: &Path, content: &[u8]) -> TestResult<()> {
         root,
         populated_store::policy()?,
         ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
     )?;
     let mut output = Vec::new();
     let _receipt = store.reconstruct(target, &mut output)?;

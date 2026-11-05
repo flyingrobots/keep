@@ -48,6 +48,7 @@ fn publication_runs_beside_a_pinned_reader_view() -> TestResult<()> {
         root,
         durable_fixture::policy()?,
         ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
     )?;
     let view = store.snapshot()?;
 

@@ -34,7 +34,12 @@ pub(super) fn serve() -> Result<(), Box<dyn Error>> {
         SegmentReadPolicy::MAXIMUM,
         CatalogRestartByteLimit::new(1_048_576)?,
     );
-    let snapshot = FilesystemRetentionSnapshot::load(&root, policy, ReaderAttemptLimit::DEFAULT)?;
+    let snapshot = FilesystemRetentionSnapshot::load(
+        &root,
+        policy,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?;
     assert_eq!(
         snapshot.catalog().generation().get(),
         1,

@@ -205,8 +205,13 @@ fn retain_blob(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
 
 /// Reads the retained bundle blob and the ingested blob through the durable reader.
 fn read_back(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
-    let store = DurableStore::open(store_root, policy()?, ReaderAttemptLimit::DEFAULT)
-        .map_err(|source| verification("open recovered durable store", source))?;
+    let store = DurableStore::open(
+        store_root,
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )
+    .map_err(|source| verification("open recovered durable store", source))?;
     let golden = GoldenFixture::retention_root()?;
     let retained = AdmittedRetentionRoot::decode(golden.bytes())
         .map_err(|source| verification("decode golden retention root", source))?;

@@ -49,7 +49,12 @@ impl StoreAdmission {
     /// The production platform profile.
     pub(super) const PLATFORM: Self = Self {
         initialize: |root| Ok(FilesystemStoreAdmission::initialize(root)?.into_admission()),
-        reopen: |root| Ok(FilesystemStoreAdmission::reopen(root)?),
+        reopen: |root| {
+            Ok(FilesystemStoreAdmission::reopen(
+                root,
+                keep::StoreExpectation::NoExpectation,
+            )?)
+        },
     };
 }
 

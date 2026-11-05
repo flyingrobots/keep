@@ -104,7 +104,8 @@ evidence and states where its obligation went.
 - Publication binds this store's catalog `HEAD` to the verified closure and
   reopens the head-selected catalog and its segments under authority. Forward
   publication and recovery both replay the bounded live closure before effects.
-- Admission does not detect an unintended but valid store or an older valid
-  state; a copy of a store is a second, independent store.
+- Admission alone does not detect an unintended but valid store or an older
+  valid state, so every open requires an explicit expectation choice; a copy of
+  a store is a second, independent store.
 - Benchmarks are required before performance-sensitive retention or
   initialization optimization.

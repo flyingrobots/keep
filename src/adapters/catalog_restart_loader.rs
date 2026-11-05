@@ -6,9 +6,9 @@ use crate::CatalogLength;
 
 use super::{
     CatalogRestartArtifact, CatalogRestartError, CatalogRestartPhase, CatalogRestartPolicy,
-    ChecksummedCatalog, ChecksummedPublicationHead, FilesystemCatalogSnapshot, catalog_restart_io,
-    catalog_restart_segments, filesystem_store_admission, filesystem_store_namespace,
-    physical_pool_name,
+    ChecksummedCatalog, ChecksummedPublicationHead, ExpectedCatalog, FilesystemCatalogSnapshot,
+    catalog_restart_io, catalog_restart_segments, filesystem_store_admission,
+    filesystem_store_namespace, physical_pool_name,
 };
 
 const HEAD_NAME: &str = "HEAD";
@@ -36,11 +36,35 @@ pub(super) fn load(
     load_from_directory(&directory, HEAD_NAME, policy)
 }
 
-pub(super) fn load_from_directory(
+/// Reads the published catalog's coordinates from `HEAD`, or `None` when none is published.
+///
+/// The checksummed head names the catalog; this neither opens nor verifies it.
+pub(super) fn observe_published_catalog(
+    directory: &crate::adapters::filesystem_directory::FilesystemDirectory,
+) -> Result<Option<ExpectedCatalog>, CatalogRestartError> {
+    match directory.symlink_metadata(HEAD_NAME) {
+        Err(source) if source.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        Err(source) => {
+            return Err(CatalogRestartError::io(
+                CatalogRestartPhase::OpenHead,
+                source,
+            ));
+        }
+        Ok(_) => {}
+    }
+    let head_bytes = read_head_bytes(directory, HEAD_NAME)?;
+    let head = ChecksummedPublicationHead::decode(&head_bytes)
+        .map_err(|source| CatalogRestartError::Head { source })?;
+    Ok(Some(ExpectedCatalog::new(
+        head.generation(),
+        head.catalog_digest(),
+    )))
+}
+
+fn read_head_bytes(
     directory: &crate::adapters::filesystem_directory::FilesystemDirectory,
     head_name: &str,
-    policy: CatalogRestartPolicy,
-) -> Result<FilesystemCatalogSnapshot, CatalogRestartError> {
+) -> Result<Vec<u8>, CatalogRestartError> {
     let (head_file, observed_head_length) = catalog_restart_io::open_regular(
         directory,
         head_name,
@@ -55,12 +79,20 @@ pub(super) fn load_from_directory(
             observed: observed_head_length,
         });
     }
-    let head_bytes = catalog_restart_io::read_exact(
+    catalog_restart_io::read_exact(
         head_file,
         CatalogRestartArtifact::Head,
         CatalogRestartPhase::ReadHead,
         HEAD_LENGTH,
-    )?;
+    )
+}
+
+pub(super) fn load_from_directory(
+    directory: &crate::adapters::filesystem_directory::FilesystemDirectory,
+    head_name: &str,
+    policy: CatalogRestartPolicy,
+) -> Result<FilesystemCatalogSnapshot, CatalogRestartError> {
+    let head_bytes = read_head_bytes(directory, head_name)?;
     let head = ChecksummedPublicationHead::decode(&head_bytes)
         .map_err(|source| CatalogRestartError::Head { source })?;
     let catalogs = directory

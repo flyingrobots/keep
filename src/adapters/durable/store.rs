@@ -8,7 +8,7 @@ use super::{
     DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt, DurableSnapshot,
     DurableStoreError,
 };
-use crate::adapters::{CatalogRestartPolicy, ReaderAttemptLimit};
+use crate::adapters::{CatalogRestartPolicy, ReaderAttemptLimit, StoreExpectation};
 use crate::{BlobId, ByteRange, LayoutId};
 
 /// One committed store to read from.
@@ -42,14 +42,14 @@ use crate::{BlobId, ByteRange, LayoutId};
 /// ) -> Result<keep::DurableReconstructionReceipt, Box<dyn std::error::Error>> {
 ///     use keep::{
 ///         CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, LayoutEntryLimit,
-///         ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit,
+///         ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit, StoreExpectation,
 ///     };
 ///     // Limit catalog-selected segment bytes; catalog and metadata allocate separately.
 ///     let policy = CatalogRestartPolicy::new(
 ///         SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
 ///         CatalogRestartByteLimit::new(16_777_216)?,
 ///     );
-///     let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT)?;
+///     let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT, StoreExpectation::NoExpectation)?;
 ///     let snapshot = store.snapshot()?;
 ///     Ok(snapshot.reconstruct(target, output)?)
 /// }
@@ -60,6 +60,7 @@ pub struct DurableStore {
     root: PathBuf,
     policy: CatalogRestartPolicy,
     limit: ReaderAttemptLimit,
+    expectation: StoreExpectation,
 }
 
 impl DurableStore {
@@ -70,7 +71,9 @@ impl DurableStore {
     /// relative path. It does not open the store or prove that it exists.
     /// Later working-directory changes cannot retarget this handle. The path
     /// remains a locator, not a content identity or a pinned directory handle;
-    /// snapshot admission still checks the named store on every call.
+    /// snapshot admission still checks the named store on every call, including
+    /// `expectation`, so a handle expecting one catalog refuses once the store
+    /// publishes another.
     ///
     /// # Errors
     ///
@@ -81,6 +84,7 @@ impl DurableStore {
         root: &Path,
         policy: CatalogRestartPolicy,
         limit: ReaderAttemptLimit,
+        expectation: StoreExpectation,
     ) -> Result<Self, DurableStoreError> {
         let root =
             std::path::absolute(root).map_err(|source| DurableStoreError::Locator { source })?;
@@ -88,6 +92,7 @@ impl DurableStore {
             root,
             policy,
             limit,
+            expectation,
         })
     }
 
@@ -104,7 +109,7 @@ impl DurableStore {
     /// Returns [`DurableStoreError`] at the exact admission, fence,
     /// collection, or retained-root refusal.
     pub fn snapshot(&self) -> Result<DurableSnapshot, DurableStoreError> {
-        DurableSnapshot::open(&self.root, self.policy, self.limit)
+        DurableSnapshot::open(&self.root, self.policy, self.limit, self.expectation)
     }
 
     /// Whether some retained root anchors `target` in a fresh view.

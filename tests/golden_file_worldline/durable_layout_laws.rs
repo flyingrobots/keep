@@ -20,8 +20,13 @@ fn durable_layout_ingress_routes_return_identical_authenticated_bytes() -> Resul
     let identified = identify(bytes)?;
     let decode = LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM);
     let layout = AdmittedLayout::decode_record(identified.record.bytes(), decode)?;
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let mut admitted_output = Vec::new();
     let admitted = snapshot.reconstruct_admitted_layout(&layout, &mut admitted_output)?;
     let mut record_output = Vec::new();
@@ -59,8 +64,13 @@ fn a_wrong_whole_blob_claim_refuses_before_any_durable_output() -> Result<(), Bo
         LayoutEntryLimit::MAXIMUM,
     )?;
     let layout_id = layout.encode_record()?.id();
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let mut output = vec![0xAB];
     let failure = snapshot
         .reconstruct_admitted_layout(&layout, &mut output)
@@ -90,8 +100,13 @@ fn supplied_range_layouts_cannot_replace_the_catalogued_target_binding()
         LayoutEntryLimit::MAXIMUM,
     )?;
     let record = layout.encode_record()?;
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let requested = ByteRange::new(ByteOffset::new(0), ByteLength::new(1))?;
     let mut output = vec![0xAB];
     let failure = snapshot
@@ -128,8 +143,13 @@ fn supplied_corrupt_whole_record_reports_input_decode_before_output() -> Result<
     let expected: [u8; 32] = encoded.get(offset..).ok_or("checksum absent")?.try_into()?;
     *encoded.last_mut().ok_or("record empty")? ^= 1;
     let observed: [u8; 32] = encoded.get(offset..).ok_or("checksum absent")?.try_into()?;
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let decode = LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM);
     let mut output = vec![0xAB];
 
@@ -158,8 +178,13 @@ fn supplied_corrupt_range_record_reports_input_decode_before_output() -> Result<
     let expected: [u8; 32] = encoded.get(offset..).ok_or("checksum absent")?.try_into()?;
     *encoded.last_mut().ok_or("record empty")? ^= 1;
     let observed: [u8; 32] = encoded.get(offset..).ok_or("checksum absent")?.try_into()?;
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let decode = LayoutDecodePolicy::new(LayoutEntryLimit::MAXIMUM);
     let mut output = vec![0xAB];
 
@@ -189,8 +214,13 @@ fn a_content_correct_durable_layout_refuses_false_profile_boundaries() -> Result
     let first = vec![0_u8; 262_143];
     let last = [0_u8; 2];
     let sandbox = build("durable-false-profile", &[&first, &last])?;
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let mut output = vec![0xAB];
     let failure = snapshot
         .reconstruct_record(

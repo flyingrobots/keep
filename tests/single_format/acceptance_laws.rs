@@ -98,12 +98,16 @@ fn the_single_format_serves_every_operation_from_initialization_to_recovery() ->
     assert_eq!(ingested.generation().get(), 1);
     drop(writer);
 
-    drop(FilesystemStoreAdmission::reopen(root)?);
+    drop(FilesystemStoreAdmission::reopen(
+        root,
+        keep::StoreExpectation::NoExpectation,
+    )?);
     let layout = populated_store::identify(&first)?.record.id();
     let store = DurableStore::open(
         root,
         populated_store::policy()?,
         ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
     )?;
     let mut output = Vec::new();
     let _receipt = store.reconstruct_layout(layout, &mut output)?;
@@ -162,6 +166,7 @@ fn a_backup_copy_reopens_verifies_and_recovers_an_interrupted_write() -> TestRes
         original.path(),
         populated_store::policy()?,
         ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
     );
     assert!(matches!(
         unavailable,
@@ -169,7 +174,10 @@ fn a_backup_copy_reopens_verifies_and_recovers_an_interrupted_write() -> TestRes
     ));
 
     let root = backup.path();
-    drop(FilesystemStoreAdmission::reopen(root)?);
+    drop(FilesystemStoreAdmission::reopen(
+        root,
+        keep::StoreExpectation::NoExpectation,
+    )?);
     assert_reads(root, &first)?;
     let candidate = interrupted_publication(root, &second_blob())?;
     recover(root, &candidate, 2)?;

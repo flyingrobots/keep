@@ -18,8 +18,13 @@ fn durable_reconstruction_does_not_allocate_an_additional_whole_blob() -> Result
     let case = find_case("large-ramp")?;
     let bytes = case.bytes()?;
     let sandbox = build("durable-read-allocation", &[&bytes])?;
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let target = case.expected_id()?;
     let mut output = io::sink();
     let mut result = None;

@@ -132,6 +132,7 @@ fn snapshot(store: &Store) -> Result<FilesystemRetentionSnapshot, Box<dyn Error>
         &store.path,
         policy()?,
         ReaderAttemptLimit::DEFAULT,
+        crate::StoreExpectation::NoExpectation,
     )?)
 }
 

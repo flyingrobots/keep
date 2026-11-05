@@ -275,8 +275,13 @@ fn publish_and_read(store_root: &Path) -> Result<(), DurabilityCrashMatrixError>
         .map(drop)
         .map_err(|source| verification("retain recovered bundle", source))?;
     drop(authority);
-    let store = DurableStore::open(store_root, policy()?, ReaderAttemptLimit::DEFAULT)
-        .map_err(|source| verification("open recovered durable store", source))?;
+    let store = DurableStore::open(
+        store_root,
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )
+    .map_err(|source| verification("open recovered durable store", source))?;
     let bundle = CrashBlob::bundle()?;
     let mut output = Vec::new();
     store

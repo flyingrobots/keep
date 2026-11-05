@@ -36,10 +36,16 @@ impl FilesystemRetentionSnapshot {
         policy: CatalogRestartPolicy,
         limit: ReaderAttemptLimit,
     ) -> Result<Self, VerificationError> {
-        Self::load_with(root, policy, limit, |source, limit| {
-            super::collect_verification_view(source, limit)?
-                .map_err(verification_ingress::catalog_error)
-        })
+        Self::load_with(
+            root,
+            policy,
+            limit,
+            crate::StoreExpectation::NoExpectation,
+            |source, limit| {
+                super::collect_verification_view(source, limit)?
+                    .map_err(verification_ingress::catalog_error)
+            },
+        )
     }
 
     /// Verifies the exact root selected for `namespace` in this fenced view.

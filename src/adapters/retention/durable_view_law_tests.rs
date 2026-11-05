@@ -30,6 +30,7 @@ fn snapshot(path: &std::path::Path) -> Result<DurableSnapshot, Box<dyn Error>> {
             CatalogRestartByteLimit::new(1_048_576)?,
         ),
         ReaderAttemptLimit::DEFAULT,
+        crate::StoreExpectation::NoExpectation,
     )?)
 }
 

@@ -62,6 +62,7 @@ fn load(root: &Path) -> Result<(), Box<dyn Error>> {
         root,
         policy,
         ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
     )?);
     Ok(())
 }

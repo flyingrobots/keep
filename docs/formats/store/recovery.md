@@ -114,14 +114,29 @@ Live authority is unchanged:
   applies, so a corrupt or incomplete copy refuses exactly as the original
   would.
 
+A copy taken while a writer publishes is outside this guarantee, but it cannot make
+Keep return other bytes. It may hold any mix of two published states and a partly
+copied file, and every such mix refuses or returns exactly the bytes an identity
+names. It need not open at all, and it can lose the newer state.
+
 A copy and its original are two stores. Each takes its own locks, and their
 histories diverge independently while unchanged content keeps its identity.
 Copies are not replication and are never coordinated.
 
-Admission does not detect an unintended but valid store, or an older valid
+Admission alone does not detect an unintended but valid store, or an older valid
 state of the intended one. Detecting either needs an expectation the caller
-supplies and keeps outside the checked state, such as an exact catalog
-generation and digest. Keep does not claim either check.
+supplies and keeps outside the checked state. `FilesystemStoreAdmission::reopen`,
+`FilesystemRetentionSnapshot::load`, `DurableSnapshot::open`, and
+`DurableStore::open` therefore require a `StoreExpectation`, with no default:
+
+- `Catalog` names an exact catalog generation and digest, and any other published
+  catalog, or none, refuses with the expected and observed values; and
+- `NoExpectation` accepts any valid store at the path, and says so at the call site.
+
+The writer compares under the writer lock and the reader compares its collected
+view under the fence. `Catalog` does not detect a rollback that leaves the catalog
+unchanged, such as restored retention state alone. Recovery and verification opens
+take no expectation: they examine whatever state the path holds.
 
 ### Root identity across restart
 

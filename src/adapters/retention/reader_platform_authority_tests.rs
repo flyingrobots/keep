@@ -20,8 +20,12 @@ fn reader_platform_admission_does_not_acquire_writer_authority() -> Result<(), B
         CatalogRestartByteLimit::new(1_048_576)?,
     );
 
-    let snapshot =
-        FilesystemRetentionSnapshot::load(store.path(), policy, ReaderAttemptLimit::DEFAULT)?;
+    let snapshot = FilesystemRetentionSnapshot::load(
+        store.path(),
+        policy,
+        ReaderAttemptLimit::DEFAULT,
+        crate::StoreExpectation::NoExpectation,
+    )?;
 
     assert_eq!(
         snapshot.catalog().generation().get(),

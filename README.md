@@ -212,14 +212,14 @@ fn copy_retained_blob(
 ) -> Result<keep::DurableReconstructionReceipt, Box<dyn std::error::Error>> {
     use keep::{
         CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, LayoutEntryLimit,
-        ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit,
+        ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit, StoreExpectation,
     };
     // Limit catalog-selected segment bytes; catalog and metadata allocate separately.
     let policy = CatalogRestartPolicy::new(
         SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
         CatalogRestartByteLimit::new(16_777_216)?,
     );
-    let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT)?;
+    let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT, StoreExpectation::NoExpectation)?;
     let snapshot = store.snapshot()?;
     Ok(snapshot.reconstruct(target, output)?)
 }

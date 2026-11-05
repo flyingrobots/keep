@@ -82,9 +82,10 @@ fn production_reopen_refuses_an_aliased_protocol_directory() -> Result<(), Box<d
     fs::remove_dir(sandbox.path().join("gc"))?;
     std::os::unix::fs::symlink(&alias_target, sandbox.path().join("gc"))?;
 
-    let error = FilesystemStoreAdmission::reopen(sandbox.path())
-        .err()
-        .ok_or("aliased gc protocol directory was unexpectedly admitted")?;
+    let error =
+        FilesystemStoreAdmission::reopen(sandbox.path(), crate::StoreExpectation::NoExpectation)
+            .err()
+            .ok_or("aliased gc protocol directory was unexpectedly admitted")?;
 
     assert!(matches!(
         error,
@@ -98,7 +99,8 @@ fn production_reopen_refuses_an_aliased_protocol_directory() -> Result<(), Box<d
 fn production_reopen_admits_an_exact_initialized_store() -> Result<(), Box<dyn Error>> {
     let sandbox = initialized_store("store-admission-production-exact")?;
 
-    let admission = FilesystemStoreAdmission::reopen(sandbox.path())?;
+    let admission =
+        FilesystemStoreAdmission::reopen(sandbox.path(), crate::StoreExpectation::NoExpectation)?;
 
     drop(admission);
     Ok(())

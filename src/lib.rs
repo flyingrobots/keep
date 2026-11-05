@@ -70,6 +70,8 @@ mod retention;
 mod segment_digest;
 mod verification;
 
+pub use adapters::{ExpectedCatalog, StoreExpectation, StoreExpectationMismatch};
+
 pub use adapters::{
     DurableOutcome, DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt,
     DurableSnapshot, DurableStore, DurableStoreError, DurableView,

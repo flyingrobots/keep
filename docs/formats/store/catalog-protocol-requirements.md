@@ -32,6 +32,8 @@ evidence](requirements.md).
 | `KEEP-STORE-018` | Truncated-stage discard has explicit unlink and directory-sync crash boundaries | `KEEP-CRASH-027`–`028` | Specified in #14 |
 | `KEEP-STORE-019` | Leftover next-head recovery either finalizes an exact successor or discards explicit evidence durably | `KEEP-CRASH-025`–`026`, `029`–`030` | Specified in #14 |
 | `KEEP-STORE-021` | Explicit recovery completes a durable fixed-name stage into its immutable pool without publishing a head | `KEEP-CRASH-008`–`012`, `016`–`020` | Specified in #14 |
+| `KEEP-STORE-022` | Opening a store requires a typed expectation choice with no default; an expected catalog refuses any other published catalog, or none, with the expected and observed values | `tests/single_format/expectation_laws.rs` | Implemented in #198 |
+| `KEEP-STORE-023` | Every mix of two published states and every partly copied file refuses or returns exactly the bytes an identity names | `tests/single_format/torn_copy_laws.rs` | Implemented in #198 |
 
 <!-- markdownlint-enable MD013 -->
 

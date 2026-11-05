@@ -107,6 +107,7 @@ pub use super::segment_write_error::SegmentWriteError;
 pub use super::segment_write_phase::{SegmentDurabilityPhase, SegmentWritePhase};
 pub use super::staged_segment::StagedSegment;
 pub use super::storage_profile_id_text_error::StorageProfileIdParseError;
+pub use super::store_expectation::{ExpectedCatalog, StoreExpectation, StoreExpectationMismatch};
 pub use super::store_format::*;
 #[cfg(any(test, feature = "repository-tasks"))]
 pub use super::store_initialization::StoreInitializationObserver;

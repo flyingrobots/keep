@@ -153,7 +153,9 @@ Before the first release, opening a store therefore requires a typed choice:
 the caller passes the state it expects, and a mismatch refuses, or the caller
 explicitly states that it has no expectation. Neither is a default, so removing
 the binding never silently removes the question. Keep does not store the
-expectation.
+expectation. An expected state names an exact catalog generation and digest, so it
+does not detect a rollback that leaves the catalog unchanged. Recovery and
+verification take no expectation, because they examine whatever state is there.
 
 Keep persists no store identifier. The only one, the content-derived
 identifier in the migration records, is deleted with migration, and

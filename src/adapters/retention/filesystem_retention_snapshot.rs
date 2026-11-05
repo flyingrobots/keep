@@ -16,9 +16,9 @@ use crate::adapters::filesystem_exact_record::{
     self as exact_record, ExactRecordError, ExactRecordRefusal,
 };
 use crate::adapters::{
-    CatalogRestartError, CatalogRestartPolicy, ChecksummedPublicationHead,
-    FilesystemCatalogSnapshot, filesystem_format_marker, filesystem_platform_profile,
-    filesystem_store_namespace, publication_head_decoder,
+    CatalogRestartError, CatalogRestartPolicy, ChecksummedPublicationHead, ExpectedCatalog,
+    FilesystemCatalogSnapshot, StoreExpectation, filesystem_format_marker,
+    filesystem_platform_profile, filesystem_store_namespace, publication_head_decoder,
 };
 use crate::{RetentionHead, RetentionManifest, RetentionNamespaceDigest};
 
@@ -121,19 +121,21 @@ impl FilesystemRetentionSnapshot {
     /// fence is held.
     /// A retained or in-flight catalog `head.next` is admitted and ignored: the
     /// view selects only `HEAD`, so catalog publication runs beside readers.
+    /// `expectation` is compared with the collected view under the fence.
     ///
     /// # Errors
     ///
     /// Returns [`FilesystemRetentionSnapshotError`](super::FilesystemRetentionSnapshotError)
-    /// at the exact admission, fence, collection, or catalog refusal.
+    /// at the exact admission, fence, collection, catalog, or expectation refusal.
     /// A catalog admission result is returned only after both coordinate
     /// reads agree; a moving head discards that result and retries.
     pub fn load(
         store_root: &Path,
         policy: CatalogRestartPolicy,
         limit: ReaderAttemptLimit,
+        expectation: StoreExpectation,
     ) -> Result<Self, Error> {
-        Self::load_with(store_root, policy, limit, |source, limit| {
+        Self::load_with(store_root, policy, limit, expectation, |source, limit| {
             collect_retention_view(source, limit)
                 .map_err(|source| Error::View { source })?
                 .map_err(|source| Error::Catalog { source })
@@ -144,6 +146,7 @@ impl FilesystemRetentionSnapshot {
         store_root: &Path,
         policy: CatalogRestartPolicy,
         limit: ReaderAttemptLimit,
+        expectation: StoreExpectation,
         collect: impl FnOnce(&mut Source, ReaderAttemptLimit) -> Result<View, E>,
     ) -> Result<Self, E> {
         let root = filesystem_platform_profile::open(store_root)
@@ -152,7 +155,7 @@ impl FilesystemRetentionSnapshot {
             .map_err(|source| Error::Admission { source })?;
         filesystem_format_marker::admit(&root).map_err(|source| Error::Admission { source })?;
         let fence = ReaderFence::acquire(&root).map_err(|source| Error::Fence { source })?;
-        require_published(&root)?;
+        require_published(&root, expectation)?;
         let retention = root
             .open_dir_nofollow(pool_name::RETENTION)
             .map_err(|source| Error::Admission { source })?;
@@ -169,6 +172,12 @@ impl FilesystemRetentionSnapshot {
             policy,
         };
         let view = collect(&mut source, limit)?;
+        expectation
+            .require(Some(ExpectedCatalog::new(
+                view.catalog.generation(),
+                view.catalog.catalog_digest(),
+            )))
+            .map_err(|source| Error::Expectation { source })?;
         Ok(Self {
             _fence: fence,
             roots,
@@ -321,10 +330,15 @@ fn selected_namespace_directory(
 ///
 /// Checked under the fence, after admission: absence of `HEAD` is a defined
 /// state of an initialized store, reported as such instead of as a failed read.
-fn require_published(root: &Dir) -> Result<(), Error> {
+fn require_published(root: &Dir, expectation: StoreExpectation) -> Result<(), Error> {
     match root.symlink_metadata(HEAD_NAME) {
         Ok(_) => Ok(()),
-        Err(source) if source.kind() == io::ErrorKind::NotFound => Err(Error::Unpublished),
+        Err(source) if source.kind() == io::ErrorKind::NotFound => {
+            expectation
+                .require(None)
+                .map_err(|source| Error::Expectation { source })?;
+            Err(Error::Unpublished)
+        }
         Err(source) => Err(Error::Admission { source }),
     }
 }
