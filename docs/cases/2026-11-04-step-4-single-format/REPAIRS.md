@@ -2,11 +2,13 @@
 
 - **Date:** 2026-11-05
 - **Verdict repaired:** REQUIRES INVESTIGATION at `fb355d66` ([case file](CASE_FILE.md))
-- **Repaired head:** `bea75ae9` on `integrate/open-prs`, PR #220, CI run 41999700415
+- **Repaired head:** `0ab39da6` on `integrate/open-prs`, PR #220, CI run 42005696619
+- **First repaired head:** `bea75ae9`, CI run 41999700415
 
 This page records what was done about each item in the Repair Menu. It is the
-author's own account. No detective has re-examined the repaired head, so nothing
-here changes the verdict above, which stays valid only for `fb355d66`.
+author's own account. The Agency has not re-examined the repaired head, so
+nothing here changes the verdict above, which stays valid only for `fb355d66`.
+One fresh reviewer read the first six repair commits; see the second pass below.
 
 ## Owner decisions
 
@@ -65,13 +67,37 @@ expectation. The last also fails the retained-catalog crash sequence.
   "case-sensitive, byte-preserving directory names", which stopped being true
   when default APFS was admitted. The law now pins the rule that replaced it.
 
+## Second pass
+
+A reviewer with no shared context read `fb355d66..bea75ae9` statically and ran
+nothing. It found nothing blocking, four items to fix and six minor ones. All
+ten were addressed in four further commits.
+
+| Finding | Outcome | Commit |
+| --- | --- | --- |
+| `load` compared after loading the whole store, so damage or a limit could mask a mismatch | Compares what `HEAD` names before the catalog is read. A law pins the order. | `a172b4cd` |
+| The torn-copy refusal list accepted policy and resource errors | Accepts only errors about a segment's own bytes. | `e1fb91c3` |
+| A mix that behaves as the older state could satisfy both torn-copy guards | The laws also require a refusal at an absent or malformed artifact. | `e1fb91c3` |
+| The recorded catalog was shown to admit in six of twelve crash cases | Checked before recovery in every case that left `HEAD` at generation one. | `33a99772` |
+| Six wording and assertion items | Corrected. | `a172b4cd`, `0ab39da6` |
+
+The message of `7c03b179` says initialization delegates every root
+synchronization. That is false: only the lock phase and the three
+root-synchronization phases are delegated. The code comment and the docs are
+corrected in `0ab39da6`; the commit message stands, because the branch is not
+rewritten. The message of `0037255f` states the crash check more broadly than
+that commit implemented; `33a99772` makes it true.
+
+The reviewer did not reach most of `docs/architecture/filesystem-platforms.md`
+or the rest of `ROADMAP.md`.
+
 ## Evidence at the repaired head
 
-- Native macOS, Rust 1.96: 945 passed and 0 failed on default and on
+- Native macOS, Rust 1.96: 946 passed and 0 failed on default and on
   case-sensitive APFS; workspace clippy passes; `source-structure-check` passes.
-- Crash matrix: exit 0 on both variants, run on the repaired source before it was
-  committed. The Rust changes after that run are one assertion message and one
-  documentation-contract law.
+- Crash matrix: the full matrix exited 0 on both variants on `bea75ae9`'s source.
+  The `retained-catalog` sequence, the only crash-matrix code changed since,
+  exited 0 at `0ab39da6` on default APFS. CI runs the full matrix at this head.
 - `cargo test -p xtask` locally: 419 passed, 7 failed, all seven caused by the
   local runner or a missing `b3sum`.
 - Not run locally: Linux, and the checks that need pinned documentation tools.
