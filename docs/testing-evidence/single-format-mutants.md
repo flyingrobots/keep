@@ -1,6 +1,6 @@
 # Single-format mutation record
 
-Change kind: evidence calibration for #198, on PR #220. Owner: `@flyingrobots`. Six source mutants were run by hand to find out whether named laws fail when the behavior they describe is removed. No mutant was committed. This is not a mutation score: the mutants were chosen because a review predicted they would survive.
+Change kind: evidence calibration for #198, on PR #220. Owner: `@flyingrobots`. Six mutants, five in source and one in a test body, were run by hand to find out whether named laws fail when the behavior they describe is removed. No mutant was committed. This is not a mutation score: the mutants were chosen because a review predicted they would survive.
 
 ## Why these mutants
 

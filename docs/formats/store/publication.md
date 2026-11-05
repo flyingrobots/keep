@@ -161,8 +161,9 @@ authority borrowed while `current.seg` remains writable.
 
 `FilesystemCatalogSnapshot::load` is the unfenced reader boundary: it takes
 no writer lock, no reader fence, and no platform admission. It is a normal
-open, so it requires a `StoreExpectation` and compares it with the snapshot
-after that snapshot verifies; a mismatch is `CatalogRestartError::Expectation`
+open, so it requires a `StoreExpectation` and compares it with what the
+checksummed `HEAD` names, before it reads the catalog or any segment; a
+mismatch is `CatalogRestartError::Expectation`
 ([Portable stores](recovery.md#portable-stores)). Its
 `CatalogRestartPolicy` combines segment parser limits with a positive maximum
 for aggregate retained segment bytes. The loader follows only exact

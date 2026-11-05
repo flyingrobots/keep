@@ -171,8 +171,8 @@ check:
   marker-linked state admits a populated committed namespace
   ([initialization](../formats/store/initialization.md)), so that call can finish
   the cleanup of a store that already holds content; and
-- the repository-task reopen, which is compiled only for tests and the
-  `repository-tasks` feature and also skips platform admission.
+- the repository-task entry points, which are compiled only for tests and the
+  `repository-tasks` feature and also skip platform admission.
 
 Keep persists no store identifier. The only one, the content-derived
 identifier in the migration records, is deleted with migration, and

@@ -145,8 +145,9 @@ requires a `StoreExpectation`, with no default:
 
 - `FilesystemStoreAdmission::reopen`, which compares `HEAD` under the writer
   lock;
-- `FilesystemCatalogSnapshot::load`, which compares the snapshot it loaded
-  after that snapshot verifies, with no lock and no fence;
+- `FilesystemCatalogSnapshot::load`, which compares what the checksummed
+  `HEAD` names before it reads the catalog or any segment, with no lock and
+  no fence;
 - `FilesystemRetentionSnapshot::load` and `DurableSnapshot::open`, which
   compare the collected view under the reader fence; and
 - `DurableStore::open`, which only records the choice: it checks nothing until
@@ -174,9 +175,10 @@ These routes take no expectation, so a caller of them does not get this check:
 - `FilesystemStoreAdmission::initialize`, including when it resumes a
   marker-linked root that already holds published state
   ([States and results](initialization.md#states-and-results)); and
-- the repository-task entry point
-  `FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks`, which
-  exists only under the `repository-tasks` feature.
+- the repository-task entry points, which exist only under the
+  `repository-tasks` feature: the two unchecked initializers and
+  `reopen_unchecked_for_repository_tasks` on `FilesystemStoreAdmission`, and
+  the unchecked variants of the recovery admission and inventory reader.
 
 ### Keeping an expectation
 
@@ -212,10 +214,11 @@ of the recorded catalog is not implemented.
 The crash matrix pins this for the gated writer. In every `retained-catalog`
 case (`KEEP-CRASH-074` to `-077`), restart builds the generation-one catalog a
 caller would have recorded before the interrupted publication
-(`xtask/src/durability_crash_matrix/restart/recorded_catalog.rs`). In the
-cases that recover by republication, `HEAD` still names generation one, and
-the load under that expectation is admitted. In every case, once `HEAD` names
-generation two, the same expectation must refuse and report generation two.
+(`xtask/src/durability_crash_matrix/restart/recorded_catalog.rs`). In every
+case where the crash left `HEAD` at generation one, the load under that
+expectation must admit before any recovery runs, beside whatever stage the
+publication left. In every case, once `HEAD` names generation two, the same
+expectation must refuse and report generation two.
 
 ### Root identity across restart
 

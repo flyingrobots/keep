@@ -58,7 +58,7 @@ Keep is required to refuse all three, before mutating anything.
   segment, catalog and head publication, recovery discard, and retention
   publication (the 47 live rows of `KEEP-CRASH-001`–`052`), 12 for catalog
   publication beside a retained root (`KEEP-CRASH-074`–`077`), and 41 for
-  initialization (`KEEP-CRASH-081`–`091`). Process death is not power loss,
+  initialization (`KEEP-CRASH-081`–`091`, with one case per directory). Process death is not power loss,
   which nothing here tests.
 - **One store format, created directly.** `FilesystemStoreAdmission::initialize`
   creates a version-2 store through a recoverable state machine with one

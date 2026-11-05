@@ -115,7 +115,7 @@ fn the_commit_synchronization_runs_after_the_link_and_before_stage_removal() -> 
             COMMIT,
             root(true, false)
         ],
-        "each of the four root-synchronization phases requests exactly one"
+        "the lock phase and the three root-synchronization phases each request exactly one"
     );
     Ok(())
 }

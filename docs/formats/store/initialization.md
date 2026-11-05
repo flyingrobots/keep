@@ -84,8 +84,8 @@ synchronization returned, so a root holding `FORMAT` without `FORMAT.next` can
 be observed only after the commit is durable. Initialization returns writer
 authority only after `SynchronizeRootAfterCleanup`.
 
-What the laws witness is the order of requests, not durability. The four
-root-synchronization phases call one synchronizer, which
+What the laws witness is the order of requests, not durability. The lock
+phase and the three root-synchronization phases call one synchronizer, which
 `initialization_commit_tests` substitutes:
 
 - `the_commit_synchronization_runs_after_the_link_and_before_stage_removal`
@@ -97,6 +97,9 @@ root-synchronization phases call one synchronizer, which
   `SynchronizeRootAfterMarker`, no later phase, an admission refusal as
   `InitializationIncomplete`, and a retry that resumes from the marker-linked
   state.
+
+The reader fence, each directory admission, and the discard of an incomplete
+stage synchronize their parent directly. No law observes those calls.
 
 That the production synchronizer makes the root durable is established by
 reading it, not by a test. A synchronizer changed to do nothing passed the

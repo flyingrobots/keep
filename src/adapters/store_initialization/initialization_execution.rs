@@ -47,7 +47,11 @@ pub(in crate::adapters) fn initialize(
     initialize_with(root, observer, &mut entries::synchronize_root)
 }
 
-/// Runs [`initialize`] with every root synchronization delegated to `synchronize_root`.
+/// Runs [`initialize`] with its four requested root synchronizations delegated to
+/// `synchronize_root`: the one in the lock phase and the three `SynchronizeRoot*` phases.
+///
+/// The reader fence, each directory admission, and the discard of an incomplete
+/// stage synchronize their parent directly and are not delegated.
 ///
 /// # Errors
 ///

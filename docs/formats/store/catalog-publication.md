@@ -203,10 +203,9 @@ recovery tools, retains the ingested blob, and reads both blobs through
 The implemented rows are 12 cases. CI runs them with the complete matrix in
 debug and release builds. They establish recovery after process death; they do
 not simulate power loss. Restart also holds the generation-one catalog a
-caller would have recorded before the publication. In the cases that recover
-by republication it must admit while `HEAD` names generation one, and in every
-case it must refuse, reporting generation two, once `HEAD` names generation
-two
+caller would have recorded before the publication. Before any recovery it must
+admit in every case that left `HEAD` at generation one, and in every case it
+must refuse, reporting generation two, once `HEAD` names generation two
 ([Recovering a stale expectation](recovery.md#recovering-a-stale-expectation)).
 
 `KEEP-CRASH-079` and `-080` have no implementation. The plan placed them
