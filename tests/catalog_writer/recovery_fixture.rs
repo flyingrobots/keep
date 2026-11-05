@@ -95,7 +95,11 @@ pub(super) fn finalize(
     let candidate = head.admit(ChecksummedCatalog::decode(&catalog_bytes)?.admit(&segments)?)?;
     let admitted = admit_recovery_stage_bytes(RecoveryStage::NextHead, evidence, &head_bytes)?;
     let assessment = assess_recovery_stage(&admitted, segment_policy())?;
-    let current = FilesystemCatalogSnapshot::load(root, durable_fixture::policy()?)?;
+    let current = FilesystemCatalogSnapshot::load(
+        root,
+        durable_fixture::policy()?,
+        keep::StoreExpectation::NoExpectation,
+    )?;
     let expectation = CatalogPublicationExpectation::successor_of(&current.snapshot()?);
     let request = plan_recovery_next_head_finalization(&assessment, &candidate, expectation)?;
     let admission = FilesystemRecoveryAdmission::reopen(root)?;

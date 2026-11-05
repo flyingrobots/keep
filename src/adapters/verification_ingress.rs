@@ -60,7 +60,8 @@ impl FilesystemCatalogSnapshot {
         root: &Path,
         policy: CatalogRestartPolicy,
     ) -> Result<Self, VerificationError> {
-        Self::load(root, policy).map_err(catalog_error)
+        // Verification examines whatever the path holds, so it names no expectation.
+        Self::load(root, policy, crate::StoreExpectation::NoExpectation).map_err(catalog_error)
     }
 
     /// Reports the requested catalog evidence over this exact owned view.

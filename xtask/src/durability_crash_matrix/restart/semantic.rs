@@ -166,8 +166,12 @@ fn verify_published_snapshot(
     if expected.artifact(HEAD).is_none() {
         return Ok(());
     }
-    let loaded = FilesystemCatalogSnapshot::load(store_root, restart_policy()?)
-        .map_err(|source| verification("load published restart snapshot", source))?;
+    let loaded = FilesystemCatalogSnapshot::load(
+        store_root,
+        restart_policy()?,
+        keep::StoreExpectation::NoExpectation,
+    )
+    .map_err(|source| verification("load published restart snapshot", source))?;
     let observed_generation = loaded.generation().get();
     if observed_generation != 1 {
         return Err(DurabilityCrashMatrixError::SnapshotGenerationMismatch {

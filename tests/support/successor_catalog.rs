@@ -100,7 +100,8 @@ pub(super) fn publish(
     predecessor: Predecessor,
 ) -> TestResult<GateOutcome> {
     let identified = identify(content)?;
-    let current = FilesystemCatalogSnapshot::load(root, policy()?)?;
+    let current =
+        FilesystemCatalogSnapshot::load(root, policy()?, keep::StoreExpectation::NoExpectation)?;
     let expectation = CatalogPublicationExpectation::successor_of(&current.snapshot()?);
     let mut encoded = match predecessor {
         Predecessor::Kept => pool_segments(root)?,
@@ -126,7 +127,8 @@ pub(super) fn republish(
     publisher: &mut FilesystemCatalogPublisher,
     root: &Path,
 ) -> TestResult<GateOutcome> {
-    let current = FilesystemCatalogSnapshot::load(root, policy()?)?;
+    let current =
+        FilesystemCatalogSnapshot::load(root, policy()?, keep::StoreExpectation::NoExpectation)?;
     let expectation = CatalogPublicationExpectation::successor_of(&current.snapshot()?);
     let encoded = pool_segments(root)?;
     let segments = admit_all(&encoded)?;

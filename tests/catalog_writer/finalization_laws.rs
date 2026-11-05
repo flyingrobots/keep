@@ -45,7 +45,11 @@ fn stage_next_head(
     };
     candidate.push(staged);
     let segments = admit_all(&candidate)?;
-    let current = FilesystemCatalogSnapshot::load(root, durable_fixture::policy()?)?;
+    let current = FilesystemCatalogSnapshot::load(
+        root,
+        durable_fixture::policy()?,
+        keep::StoreExpectation::NoExpectation,
+    )?;
     let catalog = CanonicalCatalog::from_segments(
         CatalogGeneration::new(2)?,
         Some(current.catalog_digest()),

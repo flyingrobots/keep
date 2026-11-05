@@ -87,7 +87,10 @@ pub(super) fn catalog_class(error: &CatalogRestartError) -> FailureClass {
         | CatalogRestartError::SegmentIndexLength
         | CatalogRestartError::SegmentIndexAllocation { .. }
         | CatalogRestartError::RetainedSegmentBytes { .. }
-        | CatalogRestartError::RetainedSegmentByteArithmetic { .. } => FailureClass::Operational,
+        | CatalogRestartError::RetainedSegmentByteArithmetic { .. }
+        // Verification loads name no expectation, so this cannot arise from one. A
+        // mismatch is in any case not evidence of damage.
+        | CatalogRestartError::Expectation { .. } => FailureClass::Operational,
         CatalogRestartError::Admission { source } => store_admission_class(source),
         CatalogRestartError::Segment { source, .. } => segment_class(source),
         CatalogRestartError::CatalogAdmission { source } => admission_class(source),

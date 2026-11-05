@@ -72,11 +72,13 @@ fn recover(root: &Path, candidate: &[Vec<u8>], generation: u64) -> TestResult<()
 }
 
 fn current_generation(root: &Path) -> TestResult<u64> {
-    Ok(
-        FilesystemCatalogSnapshot::load(root, populated_store::policy()?)?
-            .generation()
-            .get(),
-    )
+    Ok(FilesystemCatalogSnapshot::load(
+        root,
+        populated_store::policy()?,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .generation()
+    .get())
 }
 
 /// ADR-0010 step 4: initialize, ingest, reopen, reconstruct exact bytes,

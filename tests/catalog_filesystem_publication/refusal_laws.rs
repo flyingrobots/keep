@@ -31,7 +31,11 @@ fn conflicting_immutable_pool_bytes_refuse_before_visibility() -> Result<(), Box
         &initial_segments,
     )?;
     let initial_head = fs::read(store.path().join("HEAD"))?;
-    let current = FilesystemCatalogSnapshot::load(store.path(), restart_policy()?)?;
+    let current = FilesystemCatalogSnapshot::load(
+        store.path(),
+        restart_policy()?,
+        keep::StoreExpectation::NoExpectation,
+    )?;
     let current_snapshot = current.snapshot()?;
     let expectation = CatalogPublicationExpectation::successor_of(&current_snapshot);
     let (sealed, segment_bytes) = stage_one_zero(&publisher, &store)?;

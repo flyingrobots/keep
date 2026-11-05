@@ -31,7 +31,9 @@ use crate::{BlobId, ByteRange, LayoutId};
 /// The caller owns output visibility: a failed write can leave an untrusted
 /// prefix. The receipt names the view; it does not extend retention after the
 /// snapshot is dropped. This example limits aggregate catalog-selected segment bytes;
-/// catalog bytes and decoded metadata allocate separately.
+/// catalog bytes and decoded metadata allocate separately. It names no
+/// expectation, which accepts any valid store at the path; a caller that has
+/// recorded a catalog names it instead, as [`StoreExpectation`] describes.
 ///
 /// ```no_run
 /// #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -64,10 +66,11 @@ pub struct DurableStore {
 }
 
 impl DurableStore {
-    /// Names the store at `root`, reading under `policy` and collecting a
-    /// consistent view within `limit` attempts.
+    /// Names the store at `root` without opening it: nothing, including
+    /// `expectation`, is checked until a snapshot is pinned.
     ///
-    /// Allocates an absolute locator and queries the current directory for a
+    /// Reads use `policy` and collect a consistent view within `limit`
+    /// attempts. Allocates an absolute locator and queries the current directory for a
     /// relative path. It does not open the store or prove that it exists.
     /// Later working-directory changes cannot retarget this handle. The path
     /// remains a locator, not a content identity or a pinned directory handle;
@@ -107,7 +110,7 @@ impl DurableStore {
     /// # Errors
     ///
     /// Returns [`DurableStoreError`] at the exact admission, fence,
-    /// collection, or retained-root refusal.
+    /// collection, expectation, or retained-root refusal.
     pub fn snapshot(&self) -> Result<DurableSnapshot, DurableStoreError> {
         DurableSnapshot::open(&self.root, self.policy, self.limit, self.expectation)
     }

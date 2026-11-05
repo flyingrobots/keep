@@ -263,7 +263,8 @@ pub(super) fn retain(
     )?;
     let canonical = CanonicalRetentionRoot::from_root(&retained)?;
     let candidate = AdmittedRetentionRoot::decode(canonical.encoded())?;
-    let current = FilesystemCatalogSnapshot::load(root, policy()?)?;
+    let current =
+        FilesystemCatalogSnapshot::load(root, policy()?, keep::StoreExpectation::NoExpectation)?;
     let snapshot = current.snapshot()?;
     let preflight = preflight_retention_transition(
         RetentionGenerationExpectation::Absent,

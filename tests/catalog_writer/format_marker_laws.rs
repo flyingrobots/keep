@@ -99,7 +99,7 @@ fn require_inventory_refuses(root: &Path) -> TestResult<()> {
 fn require_content_readers_refuse(root: &Path) -> TestResult<()> {
     let policy = durable_fixture::policy()?;
     let Err(CatalogRestartError::Admission { source }) =
-        FilesystemCatalogSnapshot::load(root, policy)
+        FilesystemCatalogSnapshot::load(root, policy, keep::StoreExpectation::NoExpectation)
     else {
         return Err("catalog restart admitted a root without FORMAT".into());
     };

@@ -34,7 +34,11 @@ const RETAINED_SEGMENT_LIMIT: u64 = 1_048_576;
 #[test]
 fn restart_reconstructs_the_exact_published_snapshot() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("restart-published")?;
-    let loaded = FilesystemCatalogSnapshot::load(store.path(), restart_policy()?)?;
+    let loaded = FilesystemCatalogSnapshot::load(
+        store.path(),
+        restart_policy()?,
+        keep::StoreExpectation::NoExpectation,
+    )?;
     let snapshot = loaded.snapshot()?;
     let identity = SegmentRecordIdentity::Chunk(ChunkId::hash_bytes(&[0])?);
 

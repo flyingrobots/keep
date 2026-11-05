@@ -63,7 +63,11 @@ fn successful_publication_materializes_only_the_exact_durable_view() -> Result<(
     assert!(!store.staging().join("current.seg").exists());
     assert!(!store.staging().join("current.cat").exists());
     assert!(!store.path().join("head.next").exists());
-    let loaded = FilesystemCatalogSnapshot::load(store.path(), restart_policy()?)?;
+    let loaded = FilesystemCatalogSnapshot::load(
+        store.path(),
+        restart_policy()?,
+        crate::StoreExpectation::NoExpectation,
+    )?;
     assert_eq!(loaded.catalog_digest(), receipt.catalog_digest());
     store.remove()
 }

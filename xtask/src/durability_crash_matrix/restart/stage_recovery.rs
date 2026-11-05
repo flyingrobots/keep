@@ -112,8 +112,9 @@ pub(super) fn finalize_head(
         .map_err(|source| verification("admit recovered next-head stage", source))?;
     let assessment = assess_recovery_stage(&admitted, segment_policy())
         .map_err(|source| verification("assess recovered next-head stage", source))?;
-    let current = FilesystemCatalogSnapshot::load(root, policy()?)
-        .map_err(|source| verification("load recovered current catalog", source))?;
+    let current =
+        FilesystemCatalogSnapshot::load(root, policy()?, keep::StoreExpectation::NoExpectation)
+            .map_err(|source| verification("load recovered current catalog", source))?;
     let expectation = CatalogPublicationExpectation::successor_of(
         &current
             .snapshot()

@@ -16,8 +16,8 @@ use crate::adapters::filesystem_exact_record::{
     self as exact_record, ExactRecordError, ExactRecordRefusal,
 };
 use crate::adapters::{
-    CatalogRestartError, CatalogRestartPolicy, ChecksummedPublicationHead, ExpectedCatalog,
-    FilesystemCatalogSnapshot, StoreExpectation, filesystem_format_marker,
+    CatalogRestartError, CatalogRestartPolicy, ChecksummedPublicationHead,
+    FilesystemCatalogSnapshot, ObservedCatalog, StoreExpectation, filesystem_format_marker,
     filesystem_platform_profile, filesystem_store_namespace, publication_head_decoder,
 };
 use crate::{RetentionHead, RetentionManifest, RetentionNamespaceDigest};
@@ -173,7 +173,7 @@ impl FilesystemRetentionSnapshot {
         };
         let view = collect(&mut source, limit)?;
         expectation
-            .require(Some(ExpectedCatalog::new(
+            .require(Some(ObservedCatalog::new(
                 view.catalog.generation(),
                 view.catalog.catalog_digest(),
             )))

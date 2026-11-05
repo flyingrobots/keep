@@ -1,14 +1,17 @@
-//! This module owns the ADR-0010 expected-state laws at every public open.
+//! This module owns the ADR-0010 expected-state laws at every normal open.
 //!
 //! A restored store's records are all consistent, so only state the caller kept
-//! outside the store can refuse it. Each law opens through a production entry
-//! point and asserts the exact expected and observed catalogs.
+//! outside the store can refuse it. Each law opens through the five production
+//! entry points that take a `StoreExpectation` and asserts the exact expected
+//! and observed catalogs. Recovery tools, verification loads, and initialization
+//! take no expectation and are outside these laws.
 
 use std::fs;
 use std::path::Path;
 
 use keep::{
-    DurableSnapshot, DurableStore, DurableStoreError, ExpectedCatalog, FilesystemRetentionSnapshot,
+    CatalogGeneration, CatalogRestartError, DurableSnapshot, DurableStore, DurableStoreError,
+    ExpectedCatalog, FilesystemCatalogSnapshot, FilesystemRetentionSnapshot,
     FilesystemRetentionSnapshotError, FilesystemStoreAdmission, FilesystemStoreAdmissionError,
     ReaderAttemptLimit, StoreExpectation, StoreExpectationMismatch,
 };
@@ -44,7 +47,7 @@ fn publish_second(root: &Path) -> TestResult<()> {
     retain(root, b"second", &second)
 }
 
-/// Requires every public open of `root` to refuse with exactly this mismatch.
+/// Requires every normal open of `root` to refuse with exactly this mismatch.
 fn every_open_refuses(
     root: &Path,
     expected: ExpectedCatalog,
@@ -71,6 +74,11 @@ fn every_open_refuses(
         return Err("the writer did not refuse at the expectation boundary".into());
     };
     require_mismatch(source, expected, observed);
+    let catalog = FilesystemCatalogSnapshot::load(root, policy, expectation);
+    let Err(CatalogRestartError::Expectation { source }) = catalog else {
+        return Err("the catalog snapshot did not refuse at the expectation boundary".into());
+    };
+    require_mismatch(source, expected, observed);
     Ok(())
 }
 
@@ -80,7 +88,10 @@ fn require_mismatch(
     observed: Option<ExpectedCatalog>,
 ) {
     assert_eq!(mismatch.expected(), expected);
-    assert_eq!(mismatch.observed(), observed);
+    let found = mismatch
+        .observed()
+        .map(|found| ExpectedCatalog::new(found.generation(), found.digest()));
+    assert_eq!(found, observed);
 }
 
 fn every_open_admits(root: &Path, expectation: StoreExpectation) -> TestResult<()> {
@@ -94,6 +105,7 @@ fn every_open_admits(root: &Path, expectation: StoreExpectation) -> TestResult<(
     )?);
     drop(DurableStore::open(root, policy, limit, expectation)?.snapshot()?);
     drop(FilesystemStoreAdmission::reopen(root, expectation)?);
+    drop(FilesystemCatalogSnapshot::load(root, policy, expectation)?);
     Ok(())
 }
 
@@ -160,6 +172,15 @@ fn a_store_with_no_catalog_refuses_an_expected_catalog() -> TestResult<()> {
         ),
         Err(FilesystemRetentionSnapshotError::Unpublished)
     ));
+    // The catalog snapshot has nothing to load, and says so at the head boundary.
+    assert!(matches!(
+        FilesystemCatalogSnapshot::load(
+            empty.path(),
+            populated_store::policy()?,
+            StoreExpectation::NoExpectation,
+        ),
+        Err(CatalogRestartError::Io { source, .. }) if source.kind() == std::io::ErrorKind::NotFound
+    ));
     drop(FilesystemStoreAdmission::reopen(
         empty.path(),
         StoreExpectation::NoExpectation,
@@ -205,4 +226,27 @@ fn a_catalog_expectation_does_not_detect_a_retention_only_rollback() -> TestResu
     )?;
 
     every_open_admits(store.path(), StoreExpectation::Catalog(wanted))
+}
+
+/// A later process holds only what the caller recorded: a `u64` and 32 bytes.
+/// The expectation rebuilt from them admits the recorded catalog and refuses
+/// its successor through every normal open.
+#[test]
+fn an_expectation_rebuilt_from_recorded_values_admits_and_refuses_as_the_original() -> TestResult<()>
+{
+    let store = durable_fixture::build("expected-recorded", &[&first_blob()])?;
+    let original = published(store.path())?;
+    let recorded: (u64, [u8; 32]) = (original.generation().get(), original.digest_bytes());
+
+    let rebuilt = ExpectedCatalog::from_recorded(CatalogGeneration::new(recorded.0)?, recorded.1);
+
+    assert_eq!(rebuilt, original);
+    every_open_admits(store.path(), StoreExpectation::Catalog(rebuilt))?;
+    publish_second(store.path())?;
+    let successor = published(store.path())?;
+    every_open_refuses(store.path(), rebuilt, Some(successor))?;
+    let mut damaged = recorded.1;
+    *damaged.first_mut().ok_or("empty digest")? ^= 1;
+    let wrong = ExpectedCatalog::from_recorded(successor.generation(), damaged);
+    every_open_refuses(store.path(), wrong, Some(successor))
 }

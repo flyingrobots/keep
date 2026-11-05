@@ -28,6 +28,7 @@ use super::super::production_protocol::fixture::GoldenFixture;
 use super::super::production_protocol::retained_catalog::{admit_segments, policy};
 use super::super::production_protocol::retention::reopened_authority;
 use super::super::production_protocol::verification;
+use super::recorded_catalog;
 use super::stage_recovery as recovery;
 
 /// The catalog-protocol residue one coordinate leaves.
@@ -66,6 +67,7 @@ pub(super) fn verify(
     }
     recover(store_root, residue)?;
     require_generation_two(store_root)?;
+    recorded_catalog::require_refused_at_generation_two(store_root)?;
     retain_blob(store_root)?;
     read_back(store_root)
 }
@@ -108,7 +110,9 @@ fn republish(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
     let pool = pool_segments(store_root)?;
     let encoded: Vec<&[u8]> = pool.iter().map(Vec::as_slice).collect();
     let segments = admit_segments(&encoded)?;
-    let current = FilesystemCatalogSnapshot::load(store_root, policy()?)
+    // The publication never reached `HEAD`, so the catalog recorded before it still admits.
+    let recorded = keep::StoreExpectation::Catalog(recorded_catalog::generation_one()?);
+    let current = FilesystemCatalogSnapshot::load(store_root, policy()?, recorded)
         .map_err(|source| verification("load generation-one catalog", source))?;
     let expectation = CatalogPublicationExpectation::successor_of(
         &current
@@ -143,8 +147,12 @@ fn republish(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
 }
 
 fn require_generation_two(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
-    let current = FilesystemCatalogSnapshot::load(store_root, policy()?)
-        .map_err(|source| verification("load recovered catalog", source))?;
+    let current = FilesystemCatalogSnapshot::load(
+        store_root,
+        policy()?,
+        keep::StoreExpectation::NoExpectation,
+    )
+    .map_err(|source| verification("load recovered catalog", source))?;
     if current.generation().get() == 2 {
         Ok(())
     } else {
@@ -175,8 +183,12 @@ fn retain_blob(store_root: &Path) -> Result<(), DurabilityCrashMatrixError> {
         .map_err(|source| verification("encode crash retention root", source))?;
     let candidate = AdmittedRetentionRoot::decode(canonical.encoded())
         .map_err(|source| verification("admit crash retention root", source))?;
-    let current = FilesystemCatalogSnapshot::load(store_root, policy()?)
-        .map_err(|source| verification("load recovered catalog for retention", source))?;
+    let current = FilesystemCatalogSnapshot::load(
+        store_root,
+        policy()?,
+        keep::StoreExpectation::NoExpectation,
+    )
+    .map_err(|source| verification("load recovered catalog for retention", source))?;
     let snapshot = current
         .snapshot()
         .map_err(|source| verification("admit recovered catalog for retention", source))?;

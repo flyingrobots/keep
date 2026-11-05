@@ -2,6 +2,7 @@
 
 mod expectation;
 mod initialization;
+mod recorded_catalog;
 mod retained_catalog;
 mod retention;
 mod retention_incomplete;

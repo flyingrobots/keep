@@ -5,7 +5,7 @@ use std::path::Path;
 use super::loaded_segment::LoadedSegment;
 use super::{
     AdmittedSegment, CatalogRestartError, CatalogRestartPolicy, CatalogSnapshot,
-    ChecksummedCatalog, ChecksummedPublicationHead, catalog_restart_loader,
+    ChecksummedCatalog, ChecksummedPublicationHead, StoreExpectation, catalog_restart_loader,
 };
 use crate::{CatalogDigest, CatalogGeneration};
 
@@ -29,18 +29,27 @@ impl FilesystemCatalogSnapshot {
     ///
     /// Admission requires the exact store namespace, which may hold an in-flight
     /// `head.next`, and the canonical `FORMAT` marker; it takes no lock and no
-    /// reader fence. The returned owner retains bounded segment bytes so every
-    /// later logical lookup remains pinned to this immutable generation.
+    /// reader fence, and it does not admit a platform profile. The returned
+    /// owner retains bounded segment bytes so every later logical lookup remains
+    /// pinned to this immutable generation. `expectation` is compared with the
+    /// loaded generation and digest after the snapshot verifies.
     ///
     /// # Errors
     ///
     /// Returns [`CatalogRestartError::Admission`] for a root that is not a
-    /// committed store, including one without `FORMAT`, and otherwise
+    /// committed store, including one without `FORMAT`;
+    /// [`CatalogRestartError::Expectation`] when the store publishes another
+    /// catalog than [`StoreExpectation::Catalog`] names, or none; and otherwise
     /// [`CatalogRestartError`] for filesystem refusal, malformed or
     /// noncanonical bytes, coordinate disagreement, resource-limit refusal, or
-    /// failed catalog-to-record admission.
-    pub fn load(root: &Path, policy: CatalogRestartPolicy) -> Result<Self, CatalogRestartError> {
-        catalog_restart_loader::load(root, policy)
+    /// failed catalog-to-record admission. A damaged store refuses at its own
+    /// boundary before the expectation is compared.
+    pub fn load(
+        root: &Path,
+        policy: CatalogRestartPolicy,
+        expectation: StoreExpectation,
+    ) -> Result<Self, CatalogRestartError> {
+        catalog_restart_loader::load(root, policy, expectation)
     }
 
     /// Returns the exact generation selected during restart.

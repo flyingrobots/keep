@@ -8,7 +8,7 @@ use std::io;
 use super::{
     CatalogAdmissionError, CatalogDecodeError, CatalogRestartArtifact, CatalogRestartPhase,
     CatalogSnapshotError, FilesystemStoreAdmissionError, PublicationHeadDecodeError, SegmentDigest,
-    SegmentReadError,
+    SegmentReadError, StoreExpectationMismatch,
 };
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
@@ -141,6 +141,11 @@ pub enum CatalogRestartError {
         /// Preserved snapshot refusal.
         source: CatalogSnapshotError,
     },
+    /// The loaded store does not hold the catalog its caller expected.
+    Expectation {
+        /// The expected and observed published catalogs.
+        source: StoreExpectationMismatch,
+    },
 }
 
 impl CatalogRestartError {
@@ -196,6 +201,9 @@ impl fmt::Display for CatalogRestartError {
             }
             Self::CatalogAdmission { .. } => formatter.write_str("catalog record binding failed"),
             Self::Snapshot { .. } => formatter.write_str("restart snapshot binding failed"),
+            Self::Expectation { .. } => {
+                formatter.write_str("the store does not hold the expected published catalog")
+            }
         }
     }
 }
@@ -215,6 +223,7 @@ impl Error for CatalogRestartError {
             Self::Segment { source, .. } => Some(source),
             Self::CatalogAdmission { source } => Some(source),
             Self::Snapshot { source } => Some(source),
+            Self::Expectation { source } => Some(source),
             Self::NotRegular { .. }
             | Self::Length { .. }
             | Self::LengthArithmetic { .. }

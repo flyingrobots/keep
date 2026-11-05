@@ -6,8 +6,8 @@ use crate::CatalogLength;
 
 use super::{
     CatalogRestartArtifact, CatalogRestartError, CatalogRestartPhase, CatalogRestartPolicy,
-    ChecksummedCatalog, ChecksummedPublicationHead, ExpectedCatalog, FilesystemCatalogSnapshot,
-    catalog_restart_io, catalog_restart_segments, filesystem_store_admission,
+    ChecksummedCatalog, ChecksummedPublicationHead, FilesystemCatalogSnapshot, ObservedCatalog,
+    StoreExpectation, catalog_restart_io, catalog_restart_segments, filesystem_store_admission,
     filesystem_store_namespace, physical_pool_name,
 };
 
@@ -20,10 +20,12 @@ const HEAD_LENGTH: u64 = 128;
 ///
 /// Admission is the reader law: the exact namespace, which may hold an
 /// in-flight `head.next`, and the canonical `FORMAT` marker. A root without the
-/// marker refuses before any catalog artifact is opened.
+/// marker refuses before any catalog artifact is opened. `expectation` is
+/// compared with the loaded snapshot, or with the absence of `HEAD`.
 pub(super) fn load(
     root: &Path,
     policy: CatalogRestartPolicy,
+    expectation: StoreExpectation,
 ) -> Result<FilesystemCatalogSnapshot, CatalogRestartError> {
     let directory = catalog_restart_io::open_root(root)?;
     filesystem_store_admission::admit_root(
@@ -33,7 +35,39 @@ pub(super) fn load(
     .map_err(|source| CatalogRestartError::Admission {
         source: Box::new(source),
     })?;
-    load_from_directory(&directory, HEAD_NAME, policy)
+    match load_from_directory(&directory, HEAD_NAME, policy) {
+        Ok(snapshot) => {
+            let observed = ObservedCatalog::new(snapshot.generation(), snapshot.catalog_digest());
+            require(expectation, Some(observed))?;
+            Ok(snapshot)
+        }
+        Err(source) => {
+            if missing_head(&source) {
+                require(expectation, None)?;
+            }
+            Err(source)
+        }
+    }
+}
+
+fn require(
+    expectation: StoreExpectation,
+    observed: Option<ObservedCatalog>,
+) -> Result<(), CatalogRestartError> {
+    expectation
+        .require(observed)
+        .map_err(|source| CatalogRestartError::Expectation { source })
+}
+
+/// Whether `error` is exactly the absence of the published head.
+pub(super) fn missing_head(error: &CatalogRestartError) -> bool {
+    matches!(
+        error,
+        CatalogRestartError::Io {
+            phase: CatalogRestartPhase::OpenHead,
+            source,
+        } if source.kind() == std::io::ErrorKind::NotFound
+    )
 }
 
 /// Reads the published catalog's coordinates from `HEAD`, or `None` when none is published.
@@ -41,7 +75,7 @@ pub(super) fn load(
 /// The checksummed head names the catalog; this neither opens nor verifies it.
 pub(super) fn observe_published_catalog(
     directory: &crate::adapters::filesystem_directory::FilesystemDirectory,
-) -> Result<Option<ExpectedCatalog>, CatalogRestartError> {
+) -> Result<Option<ObservedCatalog>, CatalogRestartError> {
     match directory.symlink_metadata(HEAD_NAME) {
         Err(source) if source.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         Err(source) => {
@@ -55,7 +89,7 @@ pub(super) fn observe_published_catalog(
     let head_bytes = read_head_bytes(directory, HEAD_NAME)?;
     let head = ChecksummedPublicationHead::decode(&head_bytes)
         .map_err(|source| CatalogRestartError::Head { source })?;
-    Ok(Some(ExpectedCatalog::new(
+    Ok(Some(ObservedCatalog::new(
         head.generation(),
         head.catalog_digest(),
     )))
