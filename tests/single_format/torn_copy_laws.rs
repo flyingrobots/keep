@@ -17,7 +17,7 @@ use std::path::{Path, PathBuf};
 use keep::{
     CatalogRestartError, DurableOutcome, DurableReadError, DurableStore, DurableStoreError,
     FilesystemRetentionSnapshotError, ReaderAttemptLimit, RetentionClosureVerificationError,
-    RetentionViewError, StoreExpectation,
+    RetentionViewError, SegmentReadError, StoreExpectation,
 };
 
 use super::durable_fixture;
@@ -37,6 +37,9 @@ type Files = BTreeMap<PathBuf, Vec<u8>>;
 #[derive(Default)]
 struct Outcomes {
     refused: usize,
+    /// Refusals at an absent or malformed artifact. A blob the selected state
+    /// never held is refused by a whole state too, so it does not count here.
+    damaged: usize,
     read: usize,
 }
 
@@ -105,6 +108,20 @@ fn evidenced(source: &io::Error) -> bool {
     )
 }
 
+/// Whether a segment refused for its own bytes and not for a policy or resource limit.
+const fn malformed(source: &SegmentReadError) -> bool {
+    matches!(
+        source,
+        SegmentReadError::WrongLength { .. }
+            | SegmentReadError::Header { .. }
+            | SegmentReadError::Seal { .. }
+            | SegmentReadError::RecordHeaderTruncated { .. }
+            | SegmentReadError::RecordHeader { .. }
+            | SegmentReadError::RecordTruncated { .. }
+            | SegmentReadError::RecordDecode { .. }
+    )
+}
+
 /// Whether `refusal` is evidence that the copy is incomplete or damaged.
 ///
 /// Anything else, such as a permission, resource, or locator failure, is an
@@ -126,7 +143,8 @@ fn lawful(refusal: &DurableOutcome) -> bool {
             Snapshot::Catalog { source } => match source {
                 CatalogRestartError::Io { source, .. }
                 | CatalogRestartError::SegmentIo { source, .. } => evidenced(source),
-                CatalogRestartError::Length { .. } | CatalogRestartError::Segment { .. } => true,
+                CatalogRestartError::Length { .. } => true,
+                CatalogRestartError::Segment { source, .. } => malformed(source),
                 _ => false,
             },
             _ => false,
@@ -160,6 +178,12 @@ fn exact_or_refused(root: &Path, content: &[u8], outcomes: &mut Outcomes) -> Tes
                 "a refused read emitted bytes its identity does not name"
             );
             outcomes.refused = outcomes.refused.saturating_add(1);
+            if !matches!(
+                refusal,
+                DurableOutcome::Read(DurableReadError::BlobMissing { .. })
+            ) {
+                outcomes.damaged = outcomes.damaged.saturating_add(1);
+            }
         }
     }
     Ok(())
@@ -196,6 +220,10 @@ fn every_mix_of_two_quiescent_published_states_refuses_or_returns_exact_bytes() 
     }
     assert!(torn_outcomes.read > 0, "no torn mix read anything");
     assert!(torn_outcomes.refused > 0, "no torn mix refused anything");
+    assert!(
+        torn_outcomes.damaged > 0,
+        "no torn mix refused at an absent or malformed artifact"
+    );
     Ok(())
 }
 
@@ -225,6 +253,9 @@ fn a_half_length_copy_of_any_one_file_over_the_newer_state_refuses_or_returns_ex
         let copy = torn("torn-partial-copy", base.path(), &overlay)?;
         both_blobs(copy.path(), &mut outcomes)?;
     }
-    assert!(outcomes.refused > 0, "no partial copy refused anything");
+    assert!(
+        outcomes.damaged > 0,
+        "no partial copy refused at a malformed artifact"
+    );
     Ok(())
 }
