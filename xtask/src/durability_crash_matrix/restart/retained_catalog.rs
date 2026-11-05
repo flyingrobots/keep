@@ -65,6 +65,9 @@ pub(super) fn verify(
             case.position()
         )));
     }
+    if residue != Residue::Published {
+        recorded_catalog::require_admitted_at_generation_one(store_root)?;
+    }
     recover(store_root, residue)?;
     require_generation_two(store_root)?;
     recorded_catalog::require_refused_at_generation_two(store_root)?;

@@ -54,3 +54,16 @@ pub(super) fn require_refused_at_generation_two(
         )),
     }
 }
+
+/// Requires the recorded generation-one catalog to admit while `HEAD` still names it.
+///
+/// Called before any recovery, so the catalog snapshot opens beside whatever
+/// stage the interrupted publication left.
+pub(super) fn require_admitted_at_generation_one(
+    store_root: &Path,
+) -> Result<(), DurabilityCrashMatrixError> {
+    let recorded = generation_one()?;
+    FilesystemCatalogSnapshot::load(store_root, policy()?, StoreExpectation::Catalog(recorded))
+        .map(|_snapshot| ())
+        .map_err(|source| verification("admit the recorded generation-one catalog", source))
+}
