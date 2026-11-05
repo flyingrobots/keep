@@ -14,8 +14,10 @@ ADR-0005 records the segment, catalog, and publication-head protocol.
 ADR-0009 owns the retention and liveness decision.
 [ADR-0010](../../adr/0010-one-storage-format.md) makes this the only
 storage format and replaces migration with direct initialization. These pages
-are one normative set; every page describes the behaviour of `main`, and the
-two requirement ledgers name the test behind each claim.
+are one normative set. Every page describes `main` after #198, the two
+requirement ledgers name the test behind each claim, and the
+[nonclaims](requirements.md#compatibility-and-nonclaims) list what is not
+established.
 
 Segment writing and verified reading are implemented in issue #15. Catalog
 generation, writer-locked publication, and immutable restart snapshots are
@@ -54,8 +56,11 @@ The store adds these laws to the catalog protocol:
   not admit before that point;
 - an initialized store with no published catalog is a defined, admitted
   state;
-- nothing persisted binds a store to its directory: a quiescent copy is the
-  same store, and live authority comes from the opening process;
+- nothing persisted binds a store to its directory: a quiescent copy opens
+  and holds the same content, and it is a second, independent store; live
+  authority comes from the opening process;
+- admission cannot tell the intended store from another valid one or an older
+  state, so every normal open takes a `StoreExpectation` with no default;
 - retention authority exists only through one verified retention head and its
   complete immutable manifest;
 - each manifest binds every admitted namespace to one exact root generation
@@ -116,7 +121,7 @@ Evidence and decisions:
   owns the segment, catalog, and stage-recovery requirement ledger, security
   nonclaims, and golden evidence.
 - [Retired identifiers](retired-identifiers.md) maps every retired
-  requirement and crash identifier to its last evidence.
+  requirement and crash identifier to evidence on `main`.
 - [Format rationale](rationale.md) and the
   [catalog-protocol rationale](catalog-protocol-rationale.md) record
   format-local choices and rejected alternatives.
@@ -138,8 +143,11 @@ these pages. They are format evidence, not production-writer evidence.
 
 ## Status
 
-The format contract is frozen by ADR-0005, ADR-0009, ADR-0010, and these
-pages.
+ADR-0005, ADR-0009, ADR-0010, and these pages are the current format
+contract. Nothing is released, so until the first release a grammar change
+regenerates the fixtures. [#205](https://github.com/flyingrobots/keep/issues/205)
+must close before then: the format-definition digest does not yet cover the
+segment, catalog, and head grammars.
 
 Implemented with executable evidence: the segment, catalog, and head codecs
 and the shared catalog stages; public core types for namespaces, generations,
@@ -150,7 +158,8 @@ one pinned catalog, preflight, preparation, and the 17-phase publication
 port; `FilesystemStoreAdmission::initialize`, which creates or resumes a
 store through the initialization protocol and its 41-case process-death
 matrix; `FilesystemStoreAdmission::reopen`, which admits the committed
-namespace and the marker and pins the retention directories it admitted;
+namespace and the marker, compares the caller's `StoreExpectation` with `HEAD`
+([Portable stores](recovery.md#portable-stores)), and pins its retention directories;
 `FilesystemCatalogPublisher`, which ingests one segment and publishes a
 catalog through the retained-closure gate
 ([#125](https://github.com/flyingrobots/keep/issues/125)), including the first
@@ -174,10 +183,14 @@ automatic disposal remains deferred in
 [#155](https://github.com/flyingrobots/keep/issues/155). Writer authority
 coordinates cooperating writers in a managed namespace; it does not isolate
 arbitrary out-of-band filesystem mutation or make pathname unlink conditional
-on inode identity. Production durable ingestion
-([#82](https://github.com/flyingrobots/keep/issues/82)), garbage collection,
-and compaction ([#21](https://github.com/flyingrobots/keep/issues/21)) remain
-absent from main.
+on inode identity.
+
+`FilesystemCatalogPublisher` publishes at most one new segment and one
+caller-supplied catalog per call. Production durable ingestion
+([#82](https://github.com/flyingrobots/keep/issues/82)), garbage collection, and
+compaction ([#21](https://github.com/flyingrobots/keep/issues/21)) remain absent
+from main. The recovery crash rows `KEEP-CRASH-079` and `-080` are planned in
+[#221](https://github.com/flyingrobots/keep/issues/221).
 
 The `KEEP-CRASH-036..052` initial-publication process-death sequence includes
 independent recovered-reader checks; its

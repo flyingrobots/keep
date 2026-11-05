@@ -381,8 +381,11 @@ The Linux production adapter is supported when it proves:
 
 - capability-relative no-follow access to regular files and directories;
 - an ext4 store root whose inode does not enable ext4 casefolding;
-- `staging`, `segments`, and `catalogs` are independently writable,
-  non-casefolded ext4 directories on the root's device and mount;
+- each of the nine protocol directories that exists (`staging`, `segments`,
+  `catalogs`, `retention`, `retention/roots`, `retention/manifests`, `gc`,
+  `recovery`, and `recovery/dispositions`) is an independently writable,
+  non-casefolded ext4 directory on the root's device and mount; an absent one
+  is left to namespace admission;
 - a writable mount and successful file and directory synchronization calls;
 - atomic same-filesystem no-clobber hard-link creation;
 - atomic same-filesystem replacement of one regular file by another;
@@ -408,6 +411,21 @@ Because a case-insensitive lookup can resolve a different spelling, it requires
 each existing protocol name byte-for-byte in a listing of its parent before
 reading, reusing, or mutating it. File and directory synchronization use
 `F_FULLFSYNC`.
+
+Platform admission runs at the entry points that take store authority or the
+reader fence: `FilesystemStoreAdmission::initialize` and `reopen`,
+`FilesystemRecoveryAdmission::reopen`,
+`FilesystemRecoveryInventoryReader::open`, and
+`FilesystemRetentionSnapshot::load` with the durable readers built on it. The
+refusals above, including a symlinked root path, hold on those routes only.
+`FilesystemCatalogSnapshot::load`, its `load_for_verification`,
+`FilesystemWriterLock::try_acquire`, and the repository-task entry points open
+the root path ambiently and check no filesystem type, mount, device, or
+casefold flag. Every entry below the opened root is still opened without
+following links, and on macOS the byte-for-byte name requirement still
+applies, because it belongs to the directory capability and not to platform
+admission. Whether a casefolded ext4 directory can answer another spelling on
+the unadmitted Linux routes has not been tested.
 
 The protocol cannot compensate for hardware or an operating system that
 acknowledges synchronization without honoring it. Documentation and receipts

@@ -4,8 +4,8 @@ This page has one job: to list every feature Keep has, is building, or
 intends, and to break the unfinished ones into tasks precise enough to
 start. It is a plan. It is not evidence. The authoritative status of every
 requirement, with the test that proves it, remains the requirement ledgers:
-[`segment-store-v1/requirements.md`](docs/formats/store/catalog-protocol-requirements.md),
-[`segment-store-v2/requirements.md`](docs/formats/store/requirements.md),
+[`store/catalog-protocol-requirements.md`](docs/formats/store/catalog-protocol-requirements.md),
+[`store/requirements.md`](docs/formats/store/requirements.md),
 [`authenticated-reconstruction/requirements.md`](docs/invariants/authenticated-reconstruction/requirements.md),
 and
 [`verification/requirements.md`](docs/invariants/verification/requirements.md).
@@ -147,7 +147,7 @@ names; use those in code, tests, and commits.
 
 - [ ] [F-39 Compression representation codec](#f-39-compression-representation-codec) — Proposed
 - [ ] [F-40 Additional chunking profiles and hierarchical layouts](#f-40-additional-chunking-profiles-and-hierarchical-layouts) — Proposed
-- [ ] [F-41 Platform adapters beyond Linux ext4](#f-41-platform-adapters-beyond-linux-ext4) — In progress; macOS APFS done
+- [ ] [F-41 Platform adapters beyond Linux ext4](#f-41-platform-adapters-beyond-linux-ext4) — In progress; macOS APFS admitted, its ledger row owed
 - [ ] [F-42 Operator surfaces](#f-42-operator-surfaces) — Proposed (CLI and MCP adapters)
 - [ ] [F-43 Public release and API stability](#f-43-public-release-and-api-stability) — Proposed
 - [ ] [F-44 Multi-writer, replication, and remote tiers](#f-44-multi-writer-replication-and-remote-tiers) — Out of scope
@@ -1246,10 +1246,15 @@ the `main` ledger marks `KEEP-GC-001` and `KEEP-GC-002` "Planned in #21",
 and `recovery.md` says any GC or disposition artifact is unsupported and
 refuses until #21 implements it. All three codecs (T-22.1, T-22.1a), the
 deterministic planner (T-22.2), explicit orphan disposition (T-22.5),
-retirement with recovery and its `KEEP-CRASH-074` to `-087` process-death
-matrix (T-22.4), and identity-preserving compaction (T-22.3) exist only on
+retirement with recovery and its 42-case process-death matrix (T-22.4), and
+identity-preserving compaction (T-22.3) exist only on
 the archived #107 branch (`feature/roadmap-m4-tasks` at `57b6c37`); salvage is tracked in
 the #107 salvage ledger, and a salvage of the T-22.1 codecs is in progress.
+The branch numbered that matrix `KEEP-CRASH-074` to `-087`. The single format
+(#198) has since taken `KEEP-CRASH-074` to `-091`: `-074` to `-077` and `-081`
+to `-091` are implemented, `-078` is retired, and `-079` and `-080` are
+reserved (#221). Retired and assigned identifiers are never reused, so a GC
+salvage renumbers its crash points from `KEEP-CRASH-092`.
 The branch itself still owed the disposition-phase and compaction
 process-death sequences, the 65,536-candidate stress run, compaction
 benchmarks, and re-encoding.
@@ -1392,7 +1397,9 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
     benchmarks report amplification, sync count, reclaimed bytes, latency,
     and peak temporary space.
   - **Scope:** in — compaction planner, executor, storage port, filesystem
-    adapter, crash points `KEEP-CRASH-074` onward. Out — re-encoding
+    adapter, and new crash points numbered after the GC rows (the branch
+    wrote `KEEP-CRASH-074` onward, which the single format now uses; see
+    the F-22 status). Out — re-encoding
     (representation change) which waits for F-28 or F-39.
   - **User stories:** Human — an operator reclaims space from a store
     whose segments are half released. API user — `compact(plan)` returns a
@@ -1412,14 +1419,16 @@ disposition receipt exists. `BlobId`, `ChunkId`, and `LayoutId` never move.
   - **Documentation:** `gc.md` compaction section; ADR-0002 compaction
     example cross-linked.
   - **Dependencies:** T-22.2.
-- [ ] T-22.4 GC execution, retirement, and recovery — not on `main`; no
-  `KEEP-CRASH-074` or later point exists there. On the archived #107 branch
+- [ ] T-22.4 GC execution, retirement, and recovery — not on `main`; no GC
+  crash point exists there. On the archived #107 branch
   only: `FilesystemGcAuthority::{prepare, execute, recover}`, the 14-phase
   `GcExecutionPhase` protocol over the `GcExecutionStorage` port,
   `GcResidue` and `plan_gc_recovery`, the registered proof, pool, and
   disposition-set derivations, `filesystem_gc_tests` (every prefix, both
-  truncated stages, readers, stale plan, exclusion), and the
-  `KEEP-CRASH-074..087` matrix (`--sequence gc`, 42 cases). `KEEP-GC-002`
+  truncated stages, readers, stale plan, exclusion), and the 42-case matrix
+  (`--sequence gc`), which the branch numbered `KEEP-CRASH-074..087`. Those
+  identifiers now belong to the single format (#198), so a salvage renumbers
+  the matrix from `KEEP-CRASH-092`; see the F-22 status. `KEEP-GC-002`
   stays In progress until compaction (T-22.3); the 65,536-candidate stress
   run and the disposition-phase process-death matrix promised by T-22.5 are
   still owed under #21. Original task fields:
@@ -2397,17 +2406,29 @@ plan or needs bounded plan streaming.
 ### F-41 Platform adapters beyond Linux ext4
 
 **Status:** In progress. `recovery.md` defers Windows "until an adapter and
-crash harness prove equivalent semantics"; macOS APFS is admitted (T-41.1);
-the crash matrix does not simulate power loss.
+crash harness prove equivalent semantics"; macOS APFS is admitted (T-41.1,
+whose ledger row is still owed); the crash matrix does not simulate power loss.
 
-- [x] T-41.1 macOS APFS production admission.
+- [ ] T-41.1 macOS APFS production admission — admission shipped in #216,
+  and the single-format store paths (#198) run on it: default and
+  case-sensitive APFS admit, with evidence in the
+  [platform adapter evidence record](docs/testing-evidence/filesystem-platform-adapters.md)
+  and the `Native macOS storage` CI job, which runs the complete
+  process-death crash matrix natively. Still owed: no requirement ledger
+  names macOS. The original criterion asked for a macOS row under
+  `KEEP-RECOVERY-003`, which #198 retired; the
+  [retirement ledger](docs/formats/store/retired-identifiers.md) moves that
+  profile obligation to single-format admission, where no live row cites
+  macOS evidence yet.
   - **Requirements:** a platform profile that probes APFS for the same
     capabilities (atomic no-clobber link, atomic same-filesystem
     replacement, durable `fsync` semantics including `F_FULLFSYNC`,
     advisory locks, device and inode identity); refuses anything else;
     the crash matrix runs on macOS in CI.
-  - **Acceptance criteria:** `KEEP-RECOVERY-003` gains a macOS row; the
-    105-case matrix (and the v2 matrices) green on a macOS runner.
+  - **Acceptance criteria:** a live requirement row in
+    [`store/requirements.md`](docs/formats/store/requirements.md) names
+    macOS APFS admission and its evidence; the complete process-death crash
+    matrix is green on a macOS runner (met by the CI job above).
   - **Scope:** in — `filesystem_platform_profile.rs` sibling. Out —
     network volumes. Case-insensitive volumes are in, with exact-spelling
     checks (see the platform adapter decision).

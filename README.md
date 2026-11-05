@@ -45,7 +45,7 @@ Keep is required to refuse all three, before mutating anything.
   single byte reaches the caller. It also provides
   authenticated exact byte-range reads that load only the overlapping chunks
   and state their narrower claim explicitly.
-- **Durable version-1 segment store.** `StagedSegment` writes only
+- **Durable segment store.** `StagedSegment` writes only
   content-admitted records; `AdmittedSegment` exposes payloads only after
   complete framing, checksum, and identity verification. Immutable segments,
   generation-versioned catalogs, and a fixed-width `HEAD` are published
@@ -53,16 +53,23 @@ Keep is required to refuse all three, before mutating anything.
   Platform admission is non-casefolded Linux ext4 or local writable macOS APFS,
   one writer.
 - **Process-death recovery evidence.** The crash matrix kills real writer processes
-  at 156 before/during/after coordinates (`KEEP-CRASH-001`–`052`) and
-  verifies the store lands in exactly one documented lawful state each time,
-  for version-1 publication and for version-2 retention publication.
+  at 194 before/during/after coordinates over 62 boundaries and verifies the
+  store lands in exactly one documented lawful state each time: 141 for
+  segment, catalog and head publication, recovery discard, and retention
+  publication (the 47 live rows of `KEEP-CRASH-001`–`052`), 12 for catalog
+  publication beside a retained root (`KEEP-CRASH-074`–`077`), and 41 for
+  initialization (`KEEP-CRASH-081`–`091`). Process death is not power loss,
+  which nothing here tests.
 - **One store format, created directly.** `FilesystemStoreAdmission::initialize`
   creates a version-2 store through a recoverable state machine with one
   durable commit point; an interrupted call resumes, and any other nonempty
   directory refuses before it is touched. A 41-case process-death matrix
   (`KEEP-CRASH-081`–`091`) covers every boundary. Nothing persisted binds a
   store to its directory: a quiescent copy or restored backup opens wherever
-  it is placed. There is no migration; see the
+  it is placed, as a second, independent store. Nothing in a valid store
+  shows that it is the wrong one or an older state, so every normal open
+  takes a `StoreExpectation`: the exact catalog the caller recorded, or an
+  explicit statement that it has none. There is no migration; see the
   [retirement ledger](docs/formats/store/retired-identifiers.md).
 - **Version-2 retention, forward path.** Explicit retention roots,
   deterministic closure verification, the gated segment and catalog writer,
@@ -201,7 +208,7 @@ assert_eq!(output, b"exact bytes, or nothing");
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-On an admitted Linux ext4 or macOS APFS volume, read an initialized store whose retention roots anchor the requested blob. The following example is also compiled in the `DurableStore` API documentation. Its 16 MiB limit applies to aggregate catalog-selected segment bytes; catalog bytes and decoded metadata allocate separately.
+On an admitted Linux ext4 or macOS APFS volume, read an initialized store whose retention roots anchor the requested blob. The following example is also compiled in the `DurableStore` API documentation. Its 16 MiB limit applies to aggregate catalog-selected segment bytes; catalog bytes and decoded metadata allocate separately. It passes `StoreExpectation::NoExpectation`, which accepts any valid store at the path, including a different store or an older state of the intended one. That is the right choice for a first open. A caller that has recorded a catalog from a publication receipt or a view passes `StoreExpectation::Catalog` instead, rebuilt with `ExpectedCatalog::from_recorded`, and the open refuses with the expected and observed catalogs when they differ.
 
 ```rust
 #[cfg(any(target_os = "linux", target_os = "macos"))]

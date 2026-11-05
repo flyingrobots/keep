@@ -95,6 +95,9 @@ intent once carried a deterministic, content-derived identifier; it was
 deleted with migration, and initialization records none. Two stores with the
 same bytes are indistinguishable by design; telling an intended store from a
 valid stranger needs an expectation the caller keeps, as ADR-0010 states.
+Keep stores no part of that expectation: the caller records a catalog
+generation and digest and names them at every normal open
+([Portable stores](recovery.md#portable-stores)).
 
 ## Reserve GC names but refuse their state
 
@@ -118,9 +121,9 @@ same-process protocol-directory binding, and no-follow capability access.
 ADR-0009 requires version-2 catalog publication to verify every current
 retained closure against the candidate catalog before it replaces `HEAD`.
 `publish_retained_catalog_generation` implements that rule over the
-`RetainedCatalogPublicationStorage` port (#125). It is the entry point a
-version-2 catalog writer plugs into; this change adds no filesystem version-2
-catalog publisher.
+`RetainedCatalogPublicationStorage` port (#125). `FilesystemCatalogPublisher`
+is the filesystem writer that plugs into it, and it implements no other
+publication port ([catalog publication](catalog-publication.md#authority)).
 
 Under writer authority, the gate runs the pure catalog preflight first. It
 then reads the retention head, the manifest that head names, and every root

@@ -26,9 +26,14 @@ capability-relative and refuse symlinks, nonregular files, alternate
 spellings, unknown entries in protocol-owned directories, and replacement of
 the opened store root.
 
-The filesystem must expose case-sensitive, byte-preserving directory names.
-The capability probe refuses case-folding or normalization aliases before a
-store root is initialized or admitted.
+No protocol name may be answered by another spelling. On Linux, platform
+admission refuses a casefolded ext4 root or protocol directory before a store
+is initialized or admitted. On macOS, APFS is admitted in both naming
+variants, including the case-insensitive default, so a lookup can resolve a
+case-folded or normalized spelling. Every lookup of an existing protocol
+entry therefore requires that exact name, byte for byte, in a listing of its
+parent, and refuses otherwise. The [platform contract](stage-recovery.md#platform-contract) names
+the entry points that run platform admission.
 
 The names are physical adapter coordinates, not stable public handles.
 `writer.lock` persists; its existence and contents prove nothing.
@@ -120,9 +125,10 @@ admission boundary can produce a value. A new store obtains one through
 `FilesystemStoreAdmission::initialize`, which runs the
 [initialization protocol](initialization.md); a committed
 store reacquires one through `FilesystemStoreAdmission::reopen`, which
-mutates nothing. A root without the `FORMAT` marker refuses at every open
-path. The version-1 initializer, `FilesystemPlatformAdmission`, and their
-rows `KEEP-CRASH-031`–`-035` are retired.
+mutates nothing and takes the caller's `StoreExpectation`. A root without
+the `FORMAT` marker refuses at every open path. The version-1 initializer,
+`FilesystemPlatformAdmission`, and their rows `KEEP-CRASH-031`–`-035` are
+retired.
 
 The crash matrix initializes its store and opens the writer through these
 production entry points, then observes the writer's own transitions.
@@ -153,7 +159,11 @@ still-open sealed stage.
 filesystem-stage constructor. Its returned lifetime keeps the acquired writer
 authority borrowed while `current.seg` remains writable.
 
-`FilesystemCatalogSnapshot::load` is the observational reader boundary. Its
+`FilesystemCatalogSnapshot::load` is the unfenced reader boundary: it takes
+no writer lock, no reader fence, and no platform admission. It is a normal
+open, so it requires a `StoreExpectation` and compares it with the snapshot
+after that snapshot verifies; a mismatch is `CatalogRestartError::Expectation`
+([Portable stores](recovery.md#portable-stores)). Its
 `CatalogRestartPolicy` combines segment parser limits with a positive maximum
 for aggregate retained segment bytes. The loader follows only exact
 head-selected coordinates, refuses symbolic links and nonregular artifacts,

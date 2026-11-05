@@ -3,10 +3,11 @@
 use super::SPECIFICATION;
 
 #[test]
-fn physical_namespace_refuses_aliasing_filesystems() {
+fn physical_namespace_never_answers_for_another_spelling() {
     for required in [
-        "case-sensitive, byte-preserving directory names",
-        "case-folding or normalization aliases",
+        "No protocol name may be answered by another spelling",
+        "refuses a casefolded ext4 root or protocol directory",
+        "requires that exact name, byte for byte, in a listing of its",
     ] {
         assert!(
             SPECIFICATION.contains(required),

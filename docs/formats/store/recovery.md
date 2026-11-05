@@ -114,10 +114,25 @@ Live authority is unchanged:
   applies, so a corrupt or incomplete copy refuses exactly as the original
   would.
 
-A copy taken while a writer publishes is outside this guarantee, but it cannot make
-Keep return other bytes. It may hold any mix of two published states and a partly
-copied file, and every such mix refuses or returns exactly the bytes an identity
-names. It need not open at all, and it can lose the newer state.
+A copy taken while a writer publishes is outside this guarantee. Such a copy
+may hold a mix of the states before and after the publication, a partly copied
+file, and the writer's in-flight stages. It need not open at all, and it can
+lose the newer state. The law it must still obey is the core law: it refuses
+or returns exactly the bytes an identity names.
+
+That law is tested for part of what a torn copy may contain
+(`tests/single_format/torn_copy_laws.rs`, `KEEP-STORE-023`):
+
+- every mix of two adjacent quiescent published states, file by file
+  (`every_mix_of_two_quiescent_published_states_refuses_or_returns_exact_bytes`);
+  and
+- one file at half its length over the newer state, for each nonempty file in
+  turn
+  (`a_half_length_copy_of_any_one_file_over_the_newer_state_refuses_or_returns_exact_bytes`).
+
+A refusal counts only when its typed cause is an absent or malformed artifact;
+any other failure fails the law. A copy that holds an in-flight stage, a file
+at another length than half, or a tear over the older state is not tested.
 
 A copy and its original are two stores. Each takes its own locks, and their
 histories diverge independently while unchanged content keeps its identity.
@@ -125,18 +140,82 @@ Copies are not replication and are never coordinated.
 
 Admission alone does not detect an unintended but valid store, or an older valid
 state of the intended one. Detecting either needs an expectation the caller
-supplies and keeps outside the checked state. `FilesystemStoreAdmission::reopen`,
-`FilesystemRetentionSnapshot::load`, `DurableSnapshot::open`, and
-`DurableStore::open` therefore require a `StoreExpectation`, with no default:
+supplies and keeps outside the checked state. Every normal open therefore
+requires a `StoreExpectation`, with no default:
+
+- `FilesystemStoreAdmission::reopen`, which compares `HEAD` under the writer
+  lock;
+- `FilesystemCatalogSnapshot::load`, which compares the snapshot it loaded
+  after that snapshot verifies, with no lock and no fence;
+- `FilesystemRetentionSnapshot::load` and `DurableSnapshot::open`, which
+  compare the collected view under the reader fence; and
+- `DurableStore::open`, which only records the choice: it checks nothing until
+  a snapshot is pinned, and every snapshot then compares as
+  `DurableSnapshot::open` does.
+
+The choice is one of:
 
 - `Catalog` names an exact catalog generation and digest, and any other published
   catalog, or none, refuses with the expected and observed values; and
 - `NoExpectation` accepts any valid store at the path, and says so at the call site.
 
-The writer compares under the writer lock and the reader compares its collected
-view under the fence. `Catalog` does not detect a rollback that leaves the catalog
-unchanged, such as restored retention state alone. Recovery and verification opens
-take no expectation: they examine whatever state the path holds.
+`Catalog` does not detect a rollback that leaves the catalog unchanged, such
+as restored retention state alone. Two stores that publish the same catalog
+bytes are indistinguishable, and "expected to have published nothing" has no
+representation.
+
+These routes take no expectation, so a caller of them does not get this check:
+
+- the recovery tools (`FilesystemRecoveryAdmission::reopen` and the
+  constructors that consume it, and `FilesystemRecoveryInventoryReader::open`);
+- verification loads (`FilesystemCatalogSnapshot::load_for_verification` and
+  `FilesystemRetentionSnapshot::load_for_verification`), which examine
+  whatever state the path holds;
+- `FilesystemStoreAdmission::initialize`, including when it resumes a
+  marker-linked root that already holds published state
+  ([States and results](initialization.md#states-and-results)); and
+- the repository-task entry point
+  `FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks`, which
+  exists only under the `repository-tasks` feature.
+
+### Keeping an expectation
+
+Keep stores nothing for the caller. `ExpectedCatalog` is the caller's claim,
+not a verified digest. Within one process, `ExpectedCatalog::new` takes the
+generation and digest that a publication receipt or a pinned view reports. To
+carry it into a later process, the caller records the generation as its `u64`
+and the 32 digest bytes from `ExpectedCatalog::digest_bytes`, and rebuilds the
+value with `ExpectedCatalog::from_recorded`. Where that record lives, and how
+it is protected, is the caller's responsibility: a record an attacker can
+rewrite protects nothing.
+`an_expectation_rebuilt_from_recorded_values_admits_and_refuses_as_the_original`
+shows that the rebuilt value admits and refuses exactly as the original does.
+
+### Recovering a stale expectation
+
+An expectation names one catalog, so the caller must record the new generation
+and digest after every publication. Publication and that record are two steps.
+A process that dies between them, or after gated next-head finalization moved
+`HEAD`, leaves the store at the successor while the caller still holds the
+predecessor. Every normal open then refuses at its expectation boundary with
+a `StoreExpectationMismatch`. That refusal is the expected result, not damage.
+
+The mismatch reports the expected catalog and, as `ObservedCatalog`, what the
+store publishes now. Keep cannot tell the caller's own successor from a
+different store through this interface: both are a valid store that publishes
+another catalog. Recording what the mismatch observed, or opening with
+`NoExpectation`, is therefore an explicit trust decision that the caller makes
+with evidence from outside the store. Keep never makes it, and no open accepts
+a successor on its own. An expectation that also accepts the direct successor
+of the recorded catalog is not implemented.
+
+The crash matrix pins this for the gated writer. In every `retained-catalog`
+case (`KEEP-CRASH-074` to `-077`), restart builds the generation-one catalog a
+caller would have recorded before the interrupted publication
+(`xtask/src/durability_crash_matrix/restart/recorded_catalog.rs`). In the
+cases that recover by republication, `HEAD` still names generation one, and
+the load under that expectation is admitted. In every case, once `HEAD` names
+generation two, the same expectation must refuse and report generation two.
 
 ### Root identity across restart
 

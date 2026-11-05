@@ -1,7 +1,7 @@
 # ADR-0010: One Current Storage Format
 
 - Status: Accepted
-- Date: 2026-10-27; amended 2026-11-04
+- Date: 2026-10-27; amended 2026-11-04 and 2026-11-05
 - Owners: Keep format, initialization, publication, recovery, and retention
   boundaries
 - Related issue:
@@ -73,8 +73,9 @@ version-2 record set and namespace without migration artifacts:
   ADR-0005 and the version-1 pages define them;
 - `FORMAT`, `reader.lock`, retention records, GC records, and
   recovery-disposition records, as the version-2 pages define them;
-- no `migration.intent`, `migration.receipt`, their `.next` stages, or
-  `FORMAT.next`.
+- no `migration.intent`, `migration.receipt`, or their `.next` stages; and
+- no `FORMAT.next` in a committed store. `FORMAT.next` exists only as direct
+  initialization's stage, and normal opening refuses a root that still holds it.
 
 Its documentation is consolidated into one normative set of pages for the
 Keep store format.
@@ -154,8 +155,24 @@ the caller passes the state it expects, and a mismatch refuses, or the caller
 explicitly states that it has no expectation. Neither is a default, so removing
 the binding never silently removes the question. Keep does not store the
 expectation. An expected state names an exact catalog generation and digest, so it
-does not detect a rollback that leaves the catalog unchanged. Recovery and
-verification take no expectation, because they examine whatever state is there.
+does not detect a rollback that leaves the catalog unchanged.
+
+The choice is required by the writer's reopen
+(`FilesystemStoreAdmission::reopen`), the catalog snapshot load
+(`FilesystemCatalogSnapshot::load`), the fenced retention snapshot load
+(`FilesystemRetentionSnapshot::load`), and both durable readers
+(`DurableSnapshot::open` and `DurableStore::open`, which checks when a snapshot
+is pinned). Four routes take no expectation, so their callers do not get this
+check:
+
+- recovery tools, because they examine whatever state is there;
+- verification loads, for the same reason;
+- initialization, including a call that resumes an interrupted one. Its
+  marker-linked state admits a populated committed namespace
+  ([initialization](../formats/store/initialization.md)), so that call can finish
+  the cleanup of a store that already holds content; and
+- the repository-task reopen, which is compiled only for tests and the
+  `repository-tasks` feature and also skips platform admission.
 
 Keep persists no store identifier. The only one, the content-derived
 identifier in the migration records, is deleted with migration, and
@@ -188,6 +205,22 @@ everything they do today. The order, tracked in #198, is:
    identities name, and an older valid snapshot refuses when the caller passes
    newer expected state.
 5. Version-1 admission is deleted and the format pages are consolidated.
+
+One departure from this order is recorded. Step 2's stage recovery reserved two
+process-death rows that are not implemented: `KEEP-CRASH-079`, death during
+recovery's stage-completion link, and `KEEP-CRASH-080`, death during gated
+finalization's `HEAD` replacement. The order placed them before step 5, and
+version 1 was deleted without them. The owner accepted that on 2026-11-05: the
+rows never existed on `main`, nothing is released, and both routes refuse when
+their state is ambiguous. Until they land, process death during recovery, and
+the gate running again when a finalization is retried after one, are untested.
+[#221](https://github.com/flyingrobots/keep/issues/221) tracks the rows and must
+close before the first release, as #205 must.
+
+Step 4's torn-copy law is met narrowly. The laws enumerate every mix of two
+quiescent published states, and a half-length copy of any one file over the
+newer state. A copy that holds a writer's in-flight stage, a file cut at another
+length, and a tear over the older state are untested.
 
 Retired requirement and crash identifiers are never reused. A retirement
 ledger maps each one to its last evidence and states whether its obligation
@@ -329,4 +362,4 @@ lands rather than specified here:
 - Security: removing a persistent binding does not widen filesystem
   authority. All access stays capability-relative and no-follow. The stronger
   wrong-store and rollback claims hold only for a caller that passes expected
-  state, and every caller must choose whether to.
+  state, and every caller of an open that takes the choice must make it.

@@ -25,8 +25,10 @@ initialization](initialization.md).
 
 ## Authority
 
-`FilesystemStoreAdmission::reopen` admits the root and acquires the writer
-lock. `FilesystemCatalogPublisher::open` consumes that admission. It
+`FilesystemStoreAdmission::reopen` admits the root, acquires the writer
+lock, and compares the caller's `StoreExpectation` with `HEAD` under it
+([Portable stores](recovery.md#portable-stores)).
+`FilesystemCatalogPublisher::open` consumes that admission. It
 pins the store root, `staging`, `segments`, `catalogs`, `retention`,
 `retention/roots`, and `retention/manifests`. A bare writer lock cannot open
 it.
@@ -139,6 +141,28 @@ the gate's exact refusal, and `head.next`, the pools, and `HEAD` stay
 unchanged. A retained retention stage, or a retention head absent while the
 pools hold artifacts, refuses in the same way.
 
+The gate runs at three entries: the first verification, the verification that
+ends candidate synchronization, and the verification inside `HEAD`
+replacement. When `HEAD` already names the target and no `head.next` remains,
+finalization reports `AlreadyFinalized`: it runs no gate, moves nothing, and
+only synchronizes the root.
+
+The laws hold these entries in place unevenly:
+
+- the first entry refuses a candidate that would lose retained content, with
+  the store unchanged
+  (`recovery_refuses_a_staged_head_that_would_lose_retained_content` in
+  `tests/catalog_writer.rs`);
+- the entry inside replacement is the same verification, and
+  `changed_candidate_is_refused_at_the_replacement_boundary` fails if it is
+  removed, because a `head.next` changed after the first verification must
+  refuse there; and
+- no law changes the retention head or its roots between candidate
+  synchronization and replacement, so that the last entry refuses for a
+  retained closure specifically is established by reading the shared
+  verification, not by a test. Process death at this boundary is
+  `KEEP-CRASH-080`, which is planned.
+
 ## Roots without the marker
 
 - Writer admission, recovery admission, the recovery inventory, catalog
@@ -171,14 +195,27 @@ recovery tools, retains the ingested blob, and reads both blobs through
 | `KEEP-CRASH-076` | `head.next` synchronization | before, during, after | complete `head.next`; gated finalization | Implemented |
 | `KEEP-CRASH-077` | `HEAD` replacement | before, during, after | complete `head.next` and gated finalization before; generation two published otherwise | Implemented |
 | `KEEP-CRASH-078` | recovery stage removal under recovery admission | before, during, after | covered by `KEEP-CRASH-027`–`030`, which now run under recovery admission | Retired (#198) |
-| `KEEP-CRASH-079` | recovery stage completion link | before, during, after | the completion executor's law under recovery admission | Planned |
-| `KEEP-CRASH-080` | gated finalization replacement | before, during, after | finalized or retryable `head.next`; the gate reruns on retry | Planned |
+| `KEEP-CRASH-079` | recovery stage completion link | before, during, after | the completion executor's law under recovery admission | Planned in [#221](https://github.com/flyingrobots/keep/issues/221); not implemented |
+| `KEEP-CRASH-080` | gated finalization replacement | before, during, after | finalized or retryable `head.next`; the gate reruns on retry | Planned in [#221](https://github.com/flyingrobots/keep/issues/221); not implemented |
 
 <!-- markdownlint-enable MD013 -->
 
 The implemented rows are 12 cases. CI runs them with the complete matrix in
 debug and release builds. They establish recovery after process death; they do
-not simulate power loss. In-process laws add an injected storage-port failure
+not simulate power loss. Restart also holds the generation-one catalog a
+caller would have recorded before the publication. In the cases that recover
+by republication it must admit while `HEAD` names generation one, and in every
+case it must refuse, reporting generation two, once `HEAD` names generation
+two
+([Recovering a stale expectation](recovery.md#recovering-a-stale-expectation)).
+
+`KEEP-CRASH-079` and `-080` have no implementation. The plan placed them
+before version 1 was deleted; the owner accepted on 2026-11-05 that they
+follow that deletion, and
+[#221](https://github.com/flyingrobots/keep/issues/221) blocks the first
+release on them. Until then, process death during recovery's completion link
+and during gated `HEAD` replacement, and the gate rerunning on a retry after
+such a death, are unproven. In-process laws add an injected storage-port failure
 after segment link, catalog-stage creation, and `head.next` synchronization
 (`filesystem_catalog_recovery_tests`), plus hand-staged complete
 `head.next` candidates that preserve or drop retained content

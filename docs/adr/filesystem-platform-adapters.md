@@ -79,7 +79,10 @@ of descriptors and filesystem-library types. Adding an OS entails one adapter,
 one selector entry, and its conformance evidence, rather than changing every
 durability protocol. Filesystem support stays explicit and fail-closed.
 
-Existing Linux wire bytes remain unchanged. Native coordinates are live observations
+This decision changed no wire bytes and no golden fixture.
+[ADR-0010](0010-one-storage-format.md) separately changed the format-definition
+digest and the `FORMAT` marker fixture and deleted the migration fixtures, on
+every platform alike. Native coordinates are live observations
 that keep every protocol directory on the root's device and mount within one
 operation, and nothing persists them. Darwin uses `st_dev` as both device and mount,
 because each mounted APFS volume has its own `st_dev`. Darwin renumbers `st_dev` when

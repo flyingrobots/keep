@@ -27,7 +27,8 @@ recovery/dispositions/
 Catalog `HEAD` is absent until the first catalog is published. Each directory
 is empty, and `writer.lock` and `reader.lock` are zero-length regular files.
 Nothing in the store records the root directory's device, inode, mount, or
-path, so a quiescent copy of a committed store is the same store; see
+path, so a quiescent copy of a committed store opens and holds the same
+content, and it is a second, independent store; see
 [Portable stores](recovery.md#portable-stores).
 
 A committed store with no catalog `HEAD` is a defined state, not an inferred
@@ -82,6 +83,28 @@ root that holds `FORMAT.next`. `FORMAT.next` is removed only after the commit
 synchronization returned, so a root holding `FORMAT` without `FORMAT.next` can
 be observed only after the commit is durable. Initialization returns writer
 authority only after `SynchronizeRootAfterCleanup`.
+
+What the laws witness is the order of requests, not durability. The four
+root-synchronization phases call one synchronizer, which
+`initialization_commit_tests` substitutes:
+
+- `the_commit_synchronization_runs_after_the_link_and_before_stage_removal`
+  requires the commit synchronization to be requested after `LinkMarker`
+  returned and before `RemoveMarkerStage` begins, while both `FORMAT` and
+  `FORMAT.next` exist; and
+- `a_failed_commit_synchronization_leaves_an_unadmitted_resumable_store` fails
+  that request and requires `StoreInitializationError::Io` at
+  `SynchronizeRootAfterMarker`, no later phase, an admission refusal as
+  `InitializationIncomplete`, and a retry that resumes from the marker-linked
+  state.
+
+That the production synchronizer makes the root durable is established by
+reading it, not by a test. A synchronizer changed to do nothing passed the
+complete native test suite when tried against `fb355d66`. The process-death
+matrix was not run against it and is not expected to expose it either, because
+the page cache survives process death. No power-loss test exists. The
+[mutation record](../../testing-evidence/single-format-mutants.md) holds both
+runs.
 
 ## States and results
 
