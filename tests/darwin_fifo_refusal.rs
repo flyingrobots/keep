@@ -7,9 +7,15 @@
 
 #![cfg(all(feature = "repository-tasks", target_os = "macos"))]
 
-#[allow(dead_code, reason = "this law uses only the migrated-store fixture")]
+#[allow(dead_code, reason = "this law uses only the initialized-store fixture")]
 #[path = "reader_fence_process/fixture.rs"]
 pub mod fixture;
+#[allow(
+    dead_code,
+    reason = "this uses only the fixture's subset of the builder"
+)]
+#[path = "support/populated_store.rs"]
+pub mod populated_store;
 #[allow(dead_code, reason = "this law uses Drop cleanup")]
 #[path = "segment_filesystem_stage/sandbox.rs"]
 pub mod sandbox;
@@ -25,7 +31,7 @@ const DEADLINE: Duration = Duration::from_secs(20);
 
 #[test]
 fn a_fifo_at_the_head_refuses_without_blocking_the_reader() -> Result<(), Box<dyn Error>> {
-    let (store, writer) = fixture::migrated("darwin-fifo-head")?;
+    let (store, writer) = fixture::initialized("darwin-fifo-head")?;
     drop(writer);
     let head = store.path().join("HEAD");
     fs::remove_file(&head)?;

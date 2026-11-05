@@ -1,7 +1,7 @@
 //! Reader platform admission at the public snapshot boundaries.
 //!
-//! Size: medium. Oracle: production readers require the existing writable,
-//! case-sensitive local ext4 profile, independently of valid migration bytes.
+//! Size: medium. Oracle: on Linux, production readers require the writable,
+//! case-sensitive local ext4 profile, independently of valid store bytes.
 //! The negative fixture deliberately uses test-only writer admission on tmpfs.
 //! Delete when the supported reader profile changes or stronger public laws subsume it.
 
@@ -10,12 +10,11 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 
-use super::filesystem_retention_test_fixture::{CATALOG_NAME, SEGMENT_NAME, fixture};
+use super::filesystem_retention_test_fixture::{initialized_store, populate_bundle};
 use crate::{
     CatalogRestartByteLimit, CatalogRestartPolicy, DurableSnapshot, DurableStoreError,
-    FilesystemPlatformAdmission, FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError,
-    FilesystemStoreMigrationAuthority, ReaderAttemptLimit, SegmentReadPolicy,
-    execute_store_migration,
+    FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError, FilesystemWriterLock,
+    ReaderAttemptLimit, SegmentReadPolicy,
 };
 
 #[test]
@@ -24,7 +23,7 @@ fn a_canonical_tmpfs_store_refuses_the_public_reader_profile() -> Result<(), Box
     let refusal =
         FilesystemRetentionSnapshot::load(&store.0, policy()?, ReaderAttemptLimit::DEFAULT)
             .err()
-            .ok_or("valid migration bytes admitted an unsupported reader filesystem")?;
+            .ok_or("valid store bytes admitted an unsupported reader filesystem")?;
     assert!(
         matches!(&refusal, FilesystemRetentionSnapshotError::Admission { source }
         if source.kind() == io::ErrorKind::Unsupported),
@@ -78,27 +77,7 @@ impl TmpfsStore {
             "negative profile requires Linux tmpfs"
         );
         let store = Self::reserve(name)?;
-        let admission = FilesystemPlatformAdmission::initialize_unchecked_for_tests(&store.0)?;
-        for (name, encoded) in [
-            (
-                format!("segments/{SEGMENT_NAME}"),
-                include_str!("../../../conformance/segment-store/v1/one-zero-bundle-segment.hex"),
-            ),
-            (
-                format!("catalogs/{CATALOG_NAME}"),
-                include_str!("../../../conformance/segment-store/v1/one-zero-bundle-catalog.hex"),
-            ),
-            (
-                "HEAD".into(),
-                include_str!("../../../conformance/segment-store/v1/one-zero-bundle-head.hex"),
-            ),
-        ] {
-            fs::write(store.0.join(name), fixture(encoded)?)?;
-        }
-        let mut authority =
-            FilesystemStoreMigrationAuthority::open(admission, SegmentReadPolicy::MAXIMUM)?;
-        let intent = authority.observe_intent()?;
-        let _receipt = execute_store_migration(&mut authority, &intent)?;
+        populate_bundle(&store.0)?;
         Ok(store)
     }
 }

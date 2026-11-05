@@ -19,16 +19,16 @@ mod transition_laws;
 
 const ADR_INDEX: &str = include_str!("../../docs/adr/README.md");
 const ADR: &str = include_str!("../../docs/adr/0005-durable-segment-store-protocol.md");
-const SPECIFICATION_INDEX: &str = include_str!("../../docs/formats/segment-store-v1/README.md");
+const SPECIFICATION_INDEX: &str = include_str!("../../docs/formats/store/README.md");
 const SPECIFICATION: &str = concat!(
-    include_str!("../../docs/formats/segment-store-v1/README.md"),
-    include_str!("../../docs/formats/segment-store-v1/segment.md"),
-    include_str!("../../docs/formats/segment-store-v1/catalog.md"),
-    include_str!("../../docs/formats/segment-store-v1/publication.md"),
-    include_str!("../../docs/formats/segment-store-v1/recovery.md"),
-    include_str!("../../docs/formats/segment-store-v1/requirements.md"),
+    include_str!("../../docs/formats/store/README.md"),
+    include_str!("../../docs/formats/store/segment.md"),
+    include_str!("../../docs/formats/store/catalog.md"),
+    include_str!("../../docs/formats/store/publication.md"),
+    include_str!("../../docs/formats/store/stage-recovery.md"),
+    include_str!("../../docs/formats/store/catalog-protocol-requirements.md"),
 );
-const RATIONALE: &str = include_str!("../../docs/formats/segment-store-v1/rationale.md");
+const RATIONALE: &str = include_str!("../../docs/formats/store/catalog-protocol-rationale.md");
 const CONFORMANCE_GUIDE: &str = include_str!("../../conformance/segment-store/v1/README.md");
 const CONFORMANCE_ORIGIN: &str = include_str!("../../conformance/segment-store/v1/ORIGIN.md");
 const TRANSITIONS: &str = include_str!("../../conformance/segment-store/v1/transitions.tsv");
@@ -36,13 +36,13 @@ const CONTRACT_SOURCE: &str = include_str!("segment_store_protocol_contract.rs")
 
 const REQUIRED_PROTOCOL_PAGES: &[&str] = &[
     "docs/adr/0005-durable-segment-store-protocol.md",
-    "docs/formats/segment-store-v1/README.md",
-    "docs/formats/segment-store-v1/segment.md",
-    "docs/formats/segment-store-v1/catalog.md",
-    "docs/formats/segment-store-v1/publication.md",
-    "docs/formats/segment-store-v1/recovery.md",
-    "docs/formats/segment-store-v1/requirements.md",
-    "docs/formats/segment-store-v1/rationale.md",
+    "docs/formats/store/README.md",
+    "docs/formats/store/segment.md",
+    "docs/formats/store/catalog.md",
+    "docs/formats/store/publication.md",
+    "docs/formats/store/stage-recovery.md",
+    "docs/formats/store/catalog-protocol-requirements.md",
+    "docs/formats/store/catalog-protocol-rationale.md",
     "conformance/segment-store/v1/README.md",
     "conformance/segment-store/v1/ORIGIN.md",
 ];

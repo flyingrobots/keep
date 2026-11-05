@@ -31,10 +31,6 @@ const fn atomic(point: DurabilityCrashPoint) -> bool {
             | DurabilityCrashPoint::ReplaceHead
             | DurabilityCrashPoint::RemoveRecoveryStage
             | DurabilityCrashPoint::RemoveRecoveryHead
-            | DurabilityCrashPoint::OpenAndLockWriterFile
-            | DurabilityCrashPoint::CreateStagingDirectory
-            | DurabilityCrashPoint::CreateSegmentPoolDirectory
-            | DurabilityCrashPoint::CreateCatalogPoolDirectory
     )
 }
 
@@ -119,19 +115,6 @@ pub(super) fn head_step(point: DurabilityCrashPoint) -> Result<usize, Durability
         DurabilityCrashPoint::SynchronizeHead,
         DurabilityCrashPoint::ReplaceHead,
         DurabilityCrashPoint::SynchronizeRootAfterHead,
-    ];
-    step(POINTS, point)
-}
-
-pub(super) fn initialization_step(
-    point: DurabilityCrashPoint,
-) -> Result<usize, DurabilityCrashMatrixError> {
-    const POINTS: [DurabilityCrashPoint; 5] = [
-        DurabilityCrashPoint::OpenAndLockWriterFile,
-        DurabilityCrashPoint::CreateStagingDirectory,
-        DurabilityCrashPoint::CreateSegmentPoolDirectory,
-        DurabilityCrashPoint::CreateCatalogPoolDirectory,
-        DurabilityCrashPoint::SynchronizeRootAfterInitialization,
     ];
     step(POINTS, point)
 }

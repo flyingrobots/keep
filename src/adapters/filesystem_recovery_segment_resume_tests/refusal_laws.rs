@@ -58,11 +58,12 @@ fn changed_stage_is_refused_before_a_write() -> Result<(), Box<dyn Error>> {
 fn symbolic_stage_is_never_followed() -> Result<(), Box<dyn Error>> {
     let fixture = ResumeFixture::new("filesystem-segment-resume-link")?;
     let prefix = reusable_prefix()?;
+    let resumer = fixture.resumer()?;
     let target = fixture.root().join("target.seg");
     fs::write(&target, &prefix)?;
     symlink(&target, fixture.stage_path())?;
 
-    let error = execute_recovery_segment_resume(fixture.resumer()?, resume_request(&prefix)?)
+    let error = execute_recovery_segment_resume(resumer, resume_request(&prefix)?)
         .err()
         .ok_or("symbolic stage unexpectedly resumed")?;
 

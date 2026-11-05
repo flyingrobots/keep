@@ -8,7 +8,6 @@ use cap_std::{ambient_authority, fs::OpenOptions};
 use super::DarwinFilesystem;
 use crate::adapters::filesystem_directory::FilesystemDirectory;
 use crate::adapters::filesystem_entry_spelling::EntrySpellingMismatch;
-use crate::adapters::filesystem_root_identity::{DARWIN_COORDINATE_DOMAIN, restart_stable_device};
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
 use crate::adapters::platform_filesystem::PlatformFilesystem;
 
@@ -51,16 +50,14 @@ fn assert_alias_refused(result: io::Result<cap_std::fs::File>, expected: &str) {
 }
 
 #[test]
-fn apfs_root_coordinates_bind_the_opened_directory() -> Result<(), Box<dyn Error>> {
+fn apfs_coordinates_describe_the_opened_directory() -> Result<(), Box<dyn Error>> {
     let sandbox = TestDirectory::create("darwin-root-coordinate")?;
     let path = fs::canonicalize(sandbox.path())?;
     let directory = DarwinFilesystem.open_root(&path)?;
-    let identity = DarwinFilesystem.admit_directory(&directory)?;
+    let coordinate = DarwinFilesystem.admit_directory(&directory)?;
     let metadata = directory.dir_metadata()?;
-    assert_eq!(identity.file(), metadata.ino());
-    assert_eq!(identity.device(), DARWIN_COORDINATE_DOMAIN | metadata.dev());
-    assert_eq!(identity.mount(), identity.device());
-    assert_eq!(identity, DarwinFilesystem.root_identity(&directory)?);
+    assert_eq!(coordinate.device(), metadata.dev());
+    assert_eq!(coordinate.mount(), coordinate.device());
     Ok(())
 }
 
@@ -193,16 +190,4 @@ fn read_only_apfs_volumes_are_refused() -> Result<(), Box<dyn Error>> {
     let refusal = DarwinFilesystem.admit_directory(&directory);
     assert!(matches!(refusal, Err(source) if source.kind() == io::ErrorKind::Unsupported));
     Ok(())
-}
-
-#[test]
-fn a_renumbered_volume_keeps_its_restart_coordinate_but_another_os_does_not() {
-    let first = DARWIN_COORDINATE_DOMAIN | 0x0100_0023;
-    let reattached = DARWIN_COORDINATE_DOMAIN | 0x0100_0027;
-    let linux = 0x0100_0023;
-    assert_eq!(
-        restart_stable_device(first),
-        restart_stable_device(reattached)
-    );
-    assert_ne!(restart_stable_device(first), restart_stable_device(linux));
 }

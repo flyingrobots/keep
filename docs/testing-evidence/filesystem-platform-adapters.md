@@ -10,7 +10,7 @@ decision in [filesystem platform adapters](../adr/filesystem-platform-adapters.m
   Process-death evidence below. No power-loss experiment has been run on APFS.
 - Linux ext4 admission, authority, and durability laws survive extraction of the
   native boundary: established by the Linux CI jobs on the merge candidate.
-- No format change: no golden fixture changed, and Linux coordinates are untouched.
+- The platform work changed no format and no golden fixture.
 - No unsafe code and no new dependency: `Cargo.toml` and `Cargo.lock` are unchanged.
 
 ## Native execution
@@ -53,13 +53,10 @@ Calibration with the check disabled, on default APFS:
 
 Darwin assigns `st_dev` per mount and reuses a freed number. Mounting another
 volume in the gap moved a volume from 16777251 to 16777255, with its root inode
-unchanged. Comparing the full device coordinate therefore refused a migrated store
-for good, with `RootIdentityChanged`. `tests/darwin_volume_reattach.rs` reproduces
-this: it fails when the full coordinate is compared and passes with the fix.
-
-The restart check on Darwin now compares only the coordinate domain and the inode.
-This is weaker than on Linux: a migrated store moved to another volume at the same
-inode number is admitted. Reboot itself has not been exercised.
+unchanged. No record names that number, since
+[ADR-0010](../adr/0010-one-storage-format.md) removed the persisted root binding.
+`tests/darwin_volume_reattach.rs` still forces the renumbering on a real volume and
+requires the store to reopen. Reboot itself has not been exercised.
 
 ## Laws that remain Linux-only, and why
 

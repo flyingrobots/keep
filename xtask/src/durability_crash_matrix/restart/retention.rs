@@ -1,6 +1,6 @@
 //! This module owns post-process-death verification of retention publication.
 //!
-//! After the child dies at its coordinate, restart reopens the migrated store
+//! After the child dies at its coordinate, restart reopens the initialized store
 //! through the same admission a production caller would use, runs retention
 //! recovery, and requires the documented steps and outcome for that exact
 //! prefix; then it independently reads the persistent snapshot before requiring
@@ -95,10 +95,9 @@ fn mismatch(message: String) -> DurabilityCrashMatrixError {
 /// The number of completed publication phases and any truncated stage the
 /// coordinate leaves behind.
 fn prefix(case: DurabilityCrashCase) -> (usize, Option<Step>) {
-    let index = DurabilityCrashPoint::ALL
-        .iter()
-        .position(|point| *point == case.point())
-        .and_then(|index| index.checked_sub(35))
+    let index = ordinal(case.point())
+        .zip(ordinal(DurabilityCrashPoint::WriteRootStage))
+        .and_then(|(point, first)| point.checked_sub(first))
         .unwrap_or(0);
     // Phase 1 is current-state verification; point n is phase n + 2.
     let phase = index.saturating_add(2);
@@ -116,6 +115,13 @@ fn prefix(case: DurabilityCrashCase) -> (usize, Option<Step>) {
             (phase.saturating_sub(1), None)
         }
     }
+}
+
+/// The position of `point` in stable protocol order.
+fn ordinal(point: DurabilityCrashPoint) -> Option<usize> {
+    DurabilityCrashPoint::ALL
+        .iter()
+        .position(|candidate| *candidate == point)
 }
 
 const fn atomic(point: DurabilityCrashPoint) -> bool {

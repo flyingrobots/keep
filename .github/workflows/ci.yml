@@ -134,7 +134,7 @@ jobs:
       - name: Test debug profile on case-sensitive APFS
         run: KEEP_TEST_SCRATCH_ROOT="$RUNNER_TEMP/keep-cs" KEEP_TEST_EXPECT_APFS_VARIANT=case-sensitive cargo test --all-features --locked
 
-      - name: Reopen a migrated store after reattaching its volume
+      - name: Reopen a store after reattaching its volume
         run: |
           hdiutil create -size 16m -type SPARSE -fs APFS -volname keep-occupier "$RUNNER_TEMP/keep-occupier.sparseimage"
           mkdir "$RUNNER_TEMP/keep-occupier"

@@ -21,8 +21,8 @@ impl DurabilityCrashCase {
     /// Returns [`DurabilityCrashCaseError::MissingOccurrence`] when a repeated
     /// transition lacks an occurrence, or
     /// [`DurabilityCrashCaseError::UnexpectedOccurrence`] when a non-repeated
-    /// transition receives one. Namespace admission also returns
-    /// [`DurabilityCrashCaseError::OccurrenceOutOfRange`] outside its six
+    /// transition receives one. Initialization directory admission also returns
+    /// [`DurabilityCrashCaseError::OccurrenceOutOfRange`] outside its nine
     /// `during` occurrences or sole `before` and `after` occurrences.
     pub const fn new(
         point: DurabilityCrashPoint,
@@ -119,7 +119,7 @@ const fn validate_fixed_range(
     position: DurabilityCrashPosition,
     observed: DurabilityCrashOccurrence,
 ) -> Result<(), DurabilityCrashCaseError> {
-    if !matches!(point, DurabilityCrashPoint::MigrationAdmitNamespacePrefix) {
+    if !matches!(point, DurabilityCrashPoint::InitializeAdmitDirectory) {
         return Ok(());
     }
     let exclusive_limit = if matches!(position, DurabilityCrashPosition::During) {

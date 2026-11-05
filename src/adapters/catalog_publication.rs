@@ -5,8 +5,8 @@ use super::catalog_transition;
 use super::{
     AdmittedCatalog, AdmittedSegment, CanonicalCatalog, CanonicalPublicationHead,
     CatalogPublicationError, CatalogPublicationExpectation, CatalogPublicationReadiness,
-    CatalogPublicationReceipt, CatalogPublicationStorage, ChecksummedPublicationHead,
-    SegmentPublication, catalog_publication_execution,
+    CatalogPublicationReceipt, CatalogPublicationStorage, CatalogSnapshot, ChecksummedCatalog,
+    ChecksummedPublicationHead, SegmentPublication, catalog_publication_execution,
 };
 
 /// Publishes one fully admitted canonical catalog generation.
@@ -29,20 +29,10 @@ pub fn publish_catalog_generation(
     catalog: &CanonicalCatalog,
     segments: &[AdmittedSegment<'_>],
 ) -> Result<CatalogPublicationReceipt, CatalogPublicationError> {
-    validate_staged_segment(&segment, segments)?;
     let checksummed = catalog.checksummed();
-    let admitted = checksummed.admit(segments).map_err(|source| {
-        CatalogPublicationError::CatalogAdmission {
-            source: Box::new(source),
-        }
-    })?;
-    validate_transition(expectation, &admitted)?;
+    let admitted = admit_candidate(expectation, &segment, checksummed, segments)?;
     let head = CanonicalPublicationHead::for_catalog(checksummed);
-    let checked_head = ChecksummedPublicationHead::decode(head.encoded())
-        .map_err(|source| CatalogPublicationError::HeadVerification { source })?;
-    let snapshot = checked_head
-        .admit(admitted)
-        .map_err(|source| CatalogPublicationError::SnapshotAdmission { source })?;
+    let snapshot = admit_snapshot(&head, admitted)?;
     let readiness =
         catalog_publication_execution::execute_current(storage, expectation, &snapshot, &segment)?;
     if readiness == CatalogPublicationReadiness::AlreadyPublished {
@@ -60,6 +50,38 @@ pub fn publish_catalog_generation(
         snapshot.generation(),
         snapshot.catalog_digest(),
     ))
+}
+
+/// Admits the complete candidate catalog and its successor relationship.
+///
+/// This pure preflight performs no I/O. Every catalog publication route runs
+/// it before its first storage call.
+pub(super) fn admit_candidate<'catalog, 'records>(
+    expectation: CatalogPublicationExpectation,
+    segment: &SegmentPublication<'_, '_>,
+    checksummed: ChecksummedCatalog<'catalog>,
+    segments: &'records [AdmittedSegment<'records>],
+) -> Result<AdmittedCatalog<'catalog, 'records>, CatalogPublicationError> {
+    validate_staged_segment(segment, segments)?;
+    let admitted = checksummed.admit(segments).map_err(|source| {
+        CatalogPublicationError::CatalogAdmission {
+            source: Box::new(source),
+        }
+    })?;
+    validate_transition(expectation, &admitted)?;
+    Ok(admitted)
+}
+
+/// Binds generated next-head bytes to the admitted candidate catalog.
+pub(super) fn admit_snapshot<'head, 'catalog, 'records>(
+    head: &'head CanonicalPublicationHead,
+    admitted: AdmittedCatalog<'catalog, 'records>,
+) -> Result<CatalogSnapshot<'head, 'catalog, 'records>, CatalogPublicationError> {
+    let checked_head = ChecksummedPublicationHead::decode(head.encoded())
+        .map_err(|source| CatalogPublicationError::HeadVerification { source })?;
+    checked_head
+        .admit(admitted)
+        .map_err(|source| CatalogPublicationError::SnapshotAdmission { source })
 }
 
 fn validate_transition(

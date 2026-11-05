@@ -13,8 +13,9 @@ implementations share concrete Linux assumptions without one native mechanism
 boundary. Adding macOS separately to initialization, publication, retention,
 migration, and recovery would duplicate authority and durability decisions.
 
-The design baseline is main `3887f2a`, including its existing distinction
-between live mount identity and restart device/inode coordinates.
+The design baseline was main `3887f2a`, which still bound a migrated store to
+restart device and inode coordinates. [ADR-0010](0010-one-storage-format.md) has
+since removed that binding.
 
 ## Decision
 
@@ -78,12 +79,12 @@ of descriptors and filesystem-library types. Adding an OS entails one adapter,
 one selector entry, and its conformance evidence, rather than changing every
 durability protocol. Filesystem support stays explicit and fail-closed.
 
-Existing Linux wire bytes remain unchanged. Darwin recovery coordinates set the
-top device bit and store `st_dev` as both device and mount, because each mounted
-APFS volume has its own `st_dev`. Darwin renumbers `st_dev` when a volume is
-reattached, so its restart check compares only that top bit and the inode: a record
-from another OS still refuses, but a store moved to another volume at the same inode
-number is admitted. Logical content identity does not incorporate native metadata.
+Existing Linux wire bytes remain unchanged. Native coordinates are live observations
+that keep every protocol directory on the root's device and mount within one
+operation, and nothing persists them. Darwin uses `st_dev` as both device and mount,
+because each mounted APFS volume has its own `st_dev`. Darwin renumbers `st_dev` when
+a volume is reattached, which cannot affect a store because no record names the old
+number. Logical content identity does not incorporate native metadata.
 
 Finder metadata such as `.DS_Store` in a store root refuses admission, like any
 other entry the namespace cannot account for.

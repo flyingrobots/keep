@@ -1,30 +1,29 @@
 //! Device and mount separation laws, independent of the host operating system.
 //!
-//! The oracle is the platform contract's single-device/single-mount rule;
-//! child inode identity is deliberately not required to equal the root inode.
+//! The oracle is the platform contract's single-device/single-mount rule.
 
 use std::{error::Error, fs, io, path::Path};
 
 use cap_std::fs::Dir;
 
 use super::{admit_child_identity, open_profile};
+use crate::adapters::filesystem_directory_coordinate::FilesystemDirectoryCoordinate;
 use crate::adapters::filesystem_mount_refusal::FilesystemMountRefusal;
-use crate::adapters::filesystem_root_identity::FilesystemRootIdentity;
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
 use crate::adapters::platform_filesystem::PlatformFilesystem;
 
 #[test]
-fn a_distinct_child_inode_on_the_same_mount_is_admitted() -> Result<(), Box<dyn Error>> {
-    let root = FilesystemRootIdentity::new(8, 41, 73);
-    let child = FilesystemRootIdentity::new(8, 41, 74);
+fn a_child_on_the_same_device_and_mount_is_admitted() -> Result<(), Box<dyn Error>> {
+    let root = FilesystemDirectoryCoordinate::new(8, 41);
+    let child = FilesystemDirectoryCoordinate::new(8, 41);
     admit_child_identity(root, child)?;
     Ok(())
 }
 
 #[test]
 fn a_child_on_another_device_is_refused() {
-    let root = FilesystemRootIdentity::new(8, 41, 73);
-    let child = FilesystemRootIdentity::new(9, 41, 74);
+    let root = FilesystemDirectoryCoordinate::new(8, 41);
+    let child = FilesystemDirectoryCoordinate::new(9, 41);
     assert_refusal(
         admit_child_identity(root, child),
         FilesystemMountRefusal::Device {
@@ -36,8 +35,8 @@ fn a_child_on_another_device_is_refused() {
 
 #[test]
 fn a_child_on_another_mount_of_the_same_device_is_refused() {
-    let root = FilesystemRootIdentity::new(8, 41, 73);
-    let child = FilesystemRootIdentity::new(8, 42, 74);
+    let root = FilesystemDirectoryCoordinate::new(8, 41);
+    let child = FilesystemDirectoryCoordinate::new(8, 42);
     assert_refusal(
         admit_child_identity(root, child),
         FilesystemMountRefusal::Mount {
@@ -63,19 +62,11 @@ impl PlatformFilesystem for RefusesChildren {
         Dir::open_ambient_dir(path, cap_std::ambient_authority())
     }
 
-    fn admit_directory(&self, directory: &Dir) -> io::Result<FilesystemRootIdentity> {
+    fn admit_directory(&self, _directory: &Dir) -> io::Result<FilesystemDirectoryCoordinate> {
         if self.0.replace(true) {
             return Err(io::Error::from(io::ErrorKind::Unsupported));
         }
-        self.root_identity(directory)
-    }
-
-    fn root_identity(&self, _directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-        Ok(FilesystemRootIdentity::new(8, 41, 73))
-    }
-
-    fn repository_identity(&self, directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-        self.root_identity(directory)
+        Ok(FilesystemDirectoryCoordinate::new(8, 41))
     }
 }
 

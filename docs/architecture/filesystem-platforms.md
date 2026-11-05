@@ -9,10 +9,10 @@ exclusive-writer, immutable-publication, and recovery contracts. It also defines
 the boundary for admitting additional Linux filesystems without copying every
 storage protocol. Windows and network filesystems are outside this work.
 
-## The boundary to introduce
+## The boundary
 
 Keep has several storage **capabilities**, not four competing storage engines.
-Initialization, catalog publication, retention publication, and migration each
+Initialization, catalog publication, retention publication, and recovery each
 need a different subset of operations and a different authority state. Keep
 those focused ports. Implement them over one admitted filesystem session.
 
@@ -53,10 +53,9 @@ diverge. It would also duplicate the operating-system work in four adapters.
 
 Use one admitted root and retained writer authority as the construction root.
 An initialization or reopen operation establishes that authority; subsequent
-protocol adapters consume it or borrow it exclusively. Migration changes the
-permitted session state. It does not mint another independent writer.
+protocol adapters consume it or borrow it exclusively.
 
-Keep's existing `FilesystemPlatformAdmission` and version-two admission values
+Keep's existing `FilesystemStoreAdmission` values
 already establish much of this ownership discipline. Preserve those public
 entry points during the implementation. A convenience `FilesystemStore` facade
 is justified only if it removes repeated consumer orchestration; it must not
@@ -64,7 +63,7 @@ be required merely to select Linux versus macOS.
 
 Backend selection occurs once through a native-platform alias. Adding a new
 OS requires a platform implementation, its selection entry, and conformance
-evidence. It must not require another catalog, retention, migration, or
+evidence. It must not require another catalog, retention, or
 recovery state machine. Adding another filesystem on the same OS ordinarily
 requires a profile and its evidence, not another implementation of every port.
 
@@ -185,23 +184,17 @@ repeats `st_dev` beside the filesystem type, so it is not read.
 Content identities, canonical segment/catalog bytes, and storage profiles do
 not depend on the OS. Existing Linux bytes and golden fixtures remain stable.
 
-Physical recovery coordinates are separate from logical content identity.
-The current migration record stores device, mount, and file coordinates as
-three big-endian `u64` values. Current main treats mount identity as live
-same-process evidence and compares device/inode for restart. Preserve that
-distinction; never replace a persisted intent merely because a mount number
-changed after restart.
+Physical coordinates are separate from logical content identity, and a store
+persists none of them ([ADR-0010](../adr/0010-one-storage-format.md)). They exist
+only within one operation, to keep every protocol directory on the root's device
+and mount.
 
-The Darwin mapping sets the top bit of the device coordinate over the checked
-32-bit `st_dev`, uses that value for both device and mount, and stores the inode
-unchanged. A negative `st_dev` refuses instead of being truncated. The top bit
-keeps Darwin coordinates apart from Linux ones without changing the wire grammar.
-Darwin renumbers `st_dev` on reattach, so the restart check compares only that bit
-and the inode. Live same-process checks still compare the full coordinate.
+The Darwin mapping uses the checked 32-bit `st_dev` for both device and mount. A
+negative `st_dev` refuses instead of being truncated. Darwin renumbers `st_dev` on
+reattach, which cannot refuse a store because nothing records the old number.
 
-Cross-OS movement of a physical store is not ordinary reopen. A store whose
-recovery evidence binds it to another physical root must refuse. Logical
-content export/import remains independent of those coordinates.
+A store has no OS-specific bytes, but moving one between operating systems has not
+been exercised. Only same-OS copies have evidence.
 
 ## Failure model
 
@@ -254,7 +247,6 @@ usage, free space, lock, enforced limits, timeout, and descendant cleanup.
 - [Hexagonal boundaries](https://github.com/flyingrobots/keep/blob/3887f2a/docs/adr/0004-hexagonal-boundary-architecture.md).
 - [Platform adapter decision](../adr/filesystem-platform-adapters.md).
 - [Current filesystem contract](https://github.com/flyingrobots/keep/blob/3887f2a/docs/formats/segment-store-v1/recovery.md#platform-contract).
-- [Migration recovery](https://github.com/flyingrobots/keep/blob/3887f2a/docs/formats/segment-store-v2/migration-recovery.md).
 - [Apple APFS naming variants](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/APFS_Guide/FAQ/FAQ.html).
 - [Apple file synchronization](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/fsync.2.html).
 - [Apple descriptor controls](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/fcntl.2.html).

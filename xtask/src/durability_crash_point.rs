@@ -11,12 +11,14 @@ pub enum DurabilityCrashSequence {
     Head,
     /// Explicit discard of fingerprint-bound recovery evidence.
     RecoveryDiscard,
-    /// Writer-locked store initialization.
-    Initialization,
-    /// Version-two retention publication, `KEEP-CRASH-036` through `052`.
+    /// Retention publication, `KEEP-CRASH-036` through `052`.
     Retention,
-    /// One-way version-1 to version-2 store migration.
-    Migration,
+    /// Direct initialization and its recovery, `KEEP-CRASH-081`
+    /// through `091`.
+    Initialization,
+    /// Catalog publication and its stage recovery, `KEEP-CRASH-074`
+    /// through `077`.
+    RetainedCatalog,
 }
 
 impl DurabilityCrashSequence {
@@ -26,9 +28,9 @@ impl DurabilityCrashSequence {
         Self::Catalog,
         Self::Head,
         Self::RecoveryDiscard,
-        Self::Initialization,
         Self::Retention,
-        Self::Migration,
+        Self::RetainedCatalog,
+        Self::Initialization,
     ];
 
     /// Returns the stable identifier used by the crash-matrix command line.
@@ -39,9 +41,9 @@ impl DurabilityCrashSequence {
             Self::Catalog => "catalog",
             Self::Head => "head",
             Self::RecoveryDiscard => "recovery-discard",
-            Self::Initialization => "initialization",
             Self::Retention => "retention",
-            Self::Migration => "migration",
+            Self::RetainedCatalog => "retained-catalog",
+            Self::Initialization => "initialization",
         }
     }
 
@@ -117,16 +119,6 @@ pub enum DurabilityCrashPoint {
     RemoveRecoveryHead,
     /// Synchronize the store root after recovery-head removal.
     SynchronizeRootAfterRecovery,
-    /// Create or reopen `writer.lock`, then acquire writer authority.
-    OpenAndLockWriterFile,
-    /// Create or verify the staging directory.
-    CreateStagingDirectory,
-    /// Create or verify the segment-pool directory.
-    CreateSegmentPoolDirectory,
-    /// Create or verify the catalog-pool directory.
-    CreateCatalogPoolDirectory,
-    /// Synchronize the store root after initialization.
-    SynchronizeRootAfterInitialization,
     /// Retention root stage write.
     WriteRootStage,
     /// Retention root stage synchronization.
@@ -161,54 +153,44 @@ pub enum DurabilityCrashPoint {
     RemoveManifestStage,
     /// Retention cleanup synchronization.
     SynchronizeRetentionCleanup,
-    /// Write the complete canonical `migration.intent.next`.
-    MigrationWriteIntentStage,
-    /// Synchronize `migration.intent.next`.
-    MigrationSynchronizeIntentStage,
-    /// Link the synchronized intent stage to `migration.intent`.
-    MigrationLinkIntent,
-    /// Synchronize the store root after the intent link.
-    MigrationSynchronizeRootAfterIntent,
-    /// Remove the retained `migration.intent.next`.
-    MigrationRemoveIntentStage,
-    /// Synchronize the store root after intent-stage cleanup.
-    MigrationSynchronizeRootAfterIntentCleanup,
-    /// Create or exactly admit the persistent reader fence.
-    MigrationAdmitReaderFence,
-    /// Create or exactly admit the canonical version-2 directory prefix; the
-    /// occurrence names the directory-prefix length reached.
-    MigrationAdmitNamespacePrefix,
-    /// Synchronize the store root after namespace admission.
-    MigrationSynchronizeRootAfterNamespace,
-    /// Write the complete canonical `FORMAT.next`.
-    MigrationWriteMarkerStage,
+    /// Link the writer's sealed segment into the immutable pool.
+    RetainedLinkSegment,
+    /// Exclusively create the writer's `staging/current.cat`.
+    RetainedCreateCatalogStage,
+    /// Synchronize the writer's complete `head.next`.
+    RetainedSynchronizeHead,
+    /// Replace `HEAD` after the retained-closure revalidation.
+    RetainedReplaceHead,
+    /// Create or open `writer.lock`, lock it, and synchronize it and the root.
+    InitializeOpenAndLockWriterFile,
+    /// Exclusively create `FORMAT.next` and write the canonical marker; the
+    /// `during` case leaves a strict prefix.
+    InitializeWriteMarkerStage,
     /// Synchronize `FORMAT.next`.
-    MigrationSynchronizeMarkerStage,
-    /// Link the synchronized marker stage to `FORMAT`.
-    MigrationLinkMarker,
-    /// Synchronize the store root after the marker link.
-    MigrationSynchronizeRootAfterMarker,
-    /// Remove the retained `FORMAT.next`.
-    MigrationRemoveMarkerStage,
-    /// Synchronize the store root after marker-stage cleanup.
-    MigrationSynchronizeRootAfterMarkerCleanup,
-    /// Write the complete canonical `migration.receipt.next`.
-    MigrationWriteReceiptStage,
-    /// Synchronize `migration.receipt.next`.
-    MigrationSynchronizeReceiptStage,
-    /// Link the synchronized receipt stage to `migration.receipt`.
-    MigrationLinkReceipt,
-    /// Synchronize the store root after the receipt link.
-    MigrationSynchronizeRootAfterReceipt,
-    /// Remove the retained `migration.receipt.next`.
-    MigrationRemoveReceiptStage,
-    /// Synchronize the store root after receipt-stage cleanup.
-    MigrationSynchronizeRootAfterReceiptCleanup,
+    InitializeSynchronizeMarkerStage,
+    /// Synchronize the root after the marker stage.
+    InitializeSynchronizeRootAfterMarkerStage,
+    /// Create or admit `reader.lock` and synchronize the root.
+    InitializeAdmitReaderFence,
+    /// Create or admit one protocol directory and synchronize its parent; the
+    /// occurrence names the directory reached.
+    InitializeAdmitDirectory,
+    /// Link `FORMAT.next` to `FORMAT` without replacement.
+    InitializeLinkMarker,
+    /// Synchronize the root after the link: the commit point.
+    InitializeSynchronizeRootAfterMarker,
+    /// Remove `FORMAT.next` after the commit.
+    InitializeRemoveMarkerStage,
+    /// Synchronize the root after stage removal.
+    InitializeSynchronizeRootAfterCleanup,
+    /// Discard an incomplete `FORMAT.next` while recovering an interrupted
+    /// initialization.
+    InitializeDiscardIncompleteMarkerStage,
 }
 
 impl DurabilityCrashPoint {
     /// Every crash boundary in stable protocol order.
-    pub const ALL: [Self; 73] = [
+    pub const ALL: [Self; 62] = [
         Self::CreateSegmentStage,
         Self::WriteSegmentHeader,
         Self::AppendSegmentRecord,
@@ -239,11 +221,6 @@ impl DurabilityCrashPoint {
         Self::SynchronizeStagingAfterRecovery,
         Self::RemoveRecoveryHead,
         Self::SynchronizeRootAfterRecovery,
-        Self::OpenAndLockWriterFile,
-        Self::CreateStagingDirectory,
-        Self::CreateSegmentPoolDirectory,
-        Self::CreateCatalogPoolDirectory,
-        Self::SynchronizeRootAfterInitialization,
         Self::WriteRootStage,
         Self::SynchronizeRootStage,
         Self::AdmitRootNamespace,
@@ -261,58 +238,26 @@ impl DurabilityCrashPoint {
         Self::RemoveRootStage,
         Self::RemoveManifestStage,
         Self::SynchronizeRetentionCleanup,
-        Self::MigrationWriteIntentStage,
-        Self::MigrationSynchronizeIntentStage,
-        Self::MigrationLinkIntent,
-        Self::MigrationSynchronizeRootAfterIntent,
-        Self::MigrationRemoveIntentStage,
-        Self::MigrationSynchronizeRootAfterIntentCleanup,
-        Self::MigrationAdmitReaderFence,
-        Self::MigrationAdmitNamespacePrefix,
-        Self::MigrationSynchronizeRootAfterNamespace,
-        Self::MigrationWriteMarkerStage,
-        Self::MigrationSynchronizeMarkerStage,
-        Self::MigrationLinkMarker,
-        Self::MigrationSynchronizeRootAfterMarker,
-        Self::MigrationRemoveMarkerStage,
-        Self::MigrationSynchronizeRootAfterMarkerCleanup,
-        Self::MigrationWriteReceiptStage,
-        Self::MigrationSynchronizeReceiptStage,
-        Self::MigrationLinkReceipt,
-        Self::MigrationSynchronizeRootAfterReceipt,
-        Self::MigrationRemoveReceiptStage,
-        Self::MigrationSynchronizeRootAfterReceiptCleanup,
+        Self::RetainedLinkSegment,
+        Self::RetainedCreateCatalogStage,
+        Self::RetainedSynchronizeHead,
+        Self::RetainedReplaceHead,
+        Self::InitializeOpenAndLockWriterFile,
+        Self::InitializeWriteMarkerStage,
+        Self::InitializeSynchronizeMarkerStage,
+        Self::InitializeSynchronizeRootAfterMarkerStage,
+        Self::InitializeAdmitReaderFence,
+        Self::InitializeAdmitDirectory,
+        Self::InitializeLinkMarker,
+        Self::InitializeSynchronizeRootAfterMarker,
+        Self::InitializeRemoveMarkerStage,
+        Self::InitializeSynchronizeRootAfterCleanup,
+        Self::InitializeDiscardIncompleteMarkerStage,
     ];
 
-    /// The migration boundaries in `StoreMigrationPhase::ALL` order.
-    pub const MIGRATION: [Self; 21] = [
-        Self::MigrationWriteIntentStage,
-        Self::MigrationSynchronizeIntentStage,
-        Self::MigrationLinkIntent,
-        Self::MigrationSynchronizeRootAfterIntent,
-        Self::MigrationRemoveIntentStage,
-        Self::MigrationSynchronizeRootAfterIntentCleanup,
-        Self::MigrationAdmitReaderFence,
-        Self::MigrationAdmitNamespacePrefix,
-        Self::MigrationSynchronizeRootAfterNamespace,
-        Self::MigrationWriteMarkerStage,
-        Self::MigrationSynchronizeMarkerStage,
-        Self::MigrationLinkMarker,
-        Self::MigrationSynchronizeRootAfterMarker,
-        Self::MigrationRemoveMarkerStage,
-        Self::MigrationSynchronizeRootAfterMarkerCleanup,
-        Self::MigrationWriteReceiptStage,
-        Self::MigrationSynchronizeReceiptStage,
-        Self::MigrationLinkReceipt,
-        Self::MigrationSynchronizeRootAfterReceipt,
-        Self::MigrationRemoveReceiptStage,
-        Self::MigrationSynchronizeRootAfterReceiptCleanup,
-    ];
-
-    /// The number of directories the migration namespace prefix admits; each
-    /// is one `during` occurrence of
-    /// [`Self::MigrationAdmitNamespacePrefix`].
-    pub const NAMESPACE_PREFIX_DIRECTORIES: u32 = 6;
+    /// The number of protocol directories initialization creates; each is one
+    /// `during` occurrence of [`Self::InitializeAdmitDirectory`].
+    pub const INITIALIZATION_DIRECTORIES: u32 = 9;
 
     /// Parses one exact stable crash identifier.
     #[must_use]
@@ -356,11 +301,6 @@ impl DurabilityCrashPoint {
             | Self::SynchronizeStagingAfterRecovery
             | Self::RemoveRecoveryHead
             | Self::SynchronizeRootAfterRecovery => DurabilityCrashSequence::RecoveryDiscard,
-            Self::OpenAndLockWriterFile
-            | Self::CreateStagingDirectory
-            | Self::CreateSegmentPoolDirectory
-            | Self::CreateCatalogPoolDirectory
-            | Self::SynchronizeRootAfterInitialization => DurabilityCrashSequence::Initialization,
             Self::WriteRootStage
             | Self::SynchronizeRootStage
             | Self::AdmitRootNamespace
@@ -378,29 +318,23 @@ impl DurabilityCrashPoint {
             | Self::RemoveRootStage
             | Self::RemoveManifestStage
             | Self::SynchronizeRetentionCleanup => DurabilityCrashSequence::Retention,
-            Self::MigrationWriteIntentStage
-            | Self::MigrationSynchronizeIntentStage
-            | Self::MigrationLinkIntent
-            | Self::MigrationSynchronizeRootAfterIntent
-            | Self::MigrationRemoveIntentStage
-            | Self::MigrationSynchronizeRootAfterIntentCleanup
-            | Self::MigrationAdmitReaderFence
-            | Self::MigrationAdmitNamespacePrefix
-            | Self::MigrationSynchronizeRootAfterNamespace
-            | Self::MigrationWriteMarkerStage
-            | Self::MigrationSynchronizeMarkerStage
-            | Self::MigrationLinkMarker
-            | Self::MigrationSynchronizeRootAfterMarker
-            | Self::MigrationRemoveMarkerStage
-            | Self::MigrationSynchronizeRootAfterMarkerCleanup
-            | Self::MigrationWriteReceiptStage
-            | Self::MigrationSynchronizeReceiptStage
-            | Self::MigrationLinkReceipt
-            | Self::MigrationSynchronizeRootAfterReceipt
-            | Self::MigrationRemoveReceiptStage
-            | Self::MigrationSynchronizeRootAfterReceiptCleanup => {
-                DurabilityCrashSequence::Migration
+            Self::InitializeOpenAndLockWriterFile
+            | Self::InitializeWriteMarkerStage
+            | Self::InitializeSynchronizeMarkerStage
+            | Self::InitializeSynchronizeRootAfterMarkerStage
+            | Self::InitializeAdmitReaderFence
+            | Self::InitializeAdmitDirectory
+            | Self::InitializeLinkMarker
+            | Self::InitializeSynchronizeRootAfterMarker
+            | Self::InitializeRemoveMarkerStage
+            | Self::InitializeSynchronizeRootAfterCleanup
+            | Self::InitializeDiscardIncompleteMarkerStage => {
+                DurabilityCrashSequence::Initialization
             }
+            Self::RetainedLinkSegment
+            | Self::RetainedCreateCatalogStage
+            | Self::RetainedSynchronizeHead
+            | Self::RetainedReplaceHead => DurabilityCrashSequence::RetainedCatalog,
         }
     }
 
@@ -409,17 +343,17 @@ impl DurabilityCrashPoint {
     pub const fn occurrence_counted(self) -> bool {
         matches!(
             self,
-            Self::AppendSegmentRecord | Self::MigrationAdmitNamespacePrefix
+            Self::AppendSegmentRecord | Self::InitializeAdmitDirectory
         )
     }
 
     /// Returns how many distinct `during` occurrences the canonical matrix
-    /// runs for this boundary: one directory-prefix length per occurrence
-    /// for the migration namespace prefix, otherwise exactly one.
+    /// runs for this boundary: one directory per occurrence for initialization
+    /// directory admission, otherwise exactly one.
     #[must_use]
     pub const fn during_occurrences(self) -> u32 {
         match self {
-            Self::MigrationAdmitNamespacePrefix => Self::NAMESPACE_PREFIX_DIRECTORIES,
+            Self::InitializeAdmitDirectory => Self::INITIALIZATION_DIRECTORIES,
             _ => 1,
         }
     }

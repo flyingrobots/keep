@@ -378,7 +378,7 @@ fn verify(store: &Store, model: &Model, schedule: [Operation; 3]) -> Result<(), 
 }
 
 /// Runs every three-operation sequence that starts with `first` in a fresh
-/// migrated store each, checking the fenced view against the model after
+/// initialized store each, checking the fenced view against the model after
 /// every step.
 fn run_sequences(first: Operation, label: &str) -> Result<(), Box<dyn Error>> {
     let template = fixture(ROOT_HEX)?;

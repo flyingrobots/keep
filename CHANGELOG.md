@@ -25,6 +25,14 @@ after its public API and format compatibility policies are established.
 - Add field-mutation laws for selected version-2 retention root, manifest, and head fields: rows mutate the frozen corpus record, reseal every digest and checksum they did not target, and assert the named refusal variant. KEEP-RETENTION-003 remains in progress (#212). Salvaged from the closed #107 branch; tests and ledger only.
 
 - ADR-0010 commits Keep to one current storage format: direct initialization replaces version-1 initialization plus migration, complete stores become portable while live authority checks remain, opening requires an explicit expected-state choice before the first release, and after it Keep reads released sealed segments while writing only the current format, with explicit metadata upgrades and optional, resumable segment rewriting. Main's behavior is unchanged until the units tracked in #198 land (#198).
+- Version 1 is deleted: every open path refuses a root without the `FORMAT` marker, `KEEP-CRASH-001`–`030` run on initialized stores, `KEEP-CRASH-031`–`035` are retired, the `VersionTwo*` types take format-neutral names (`FilesystemStoreAdmission`, `FilesystemCatalogPublisher`, `StoreInitialization`, `classify_recovery_names`), and the format pages are one set under `docs/formats/store/` (#198).
+
+- Keep has one storage format: `FilesystemVersionTwoAdmission::initialize` creates a store directly through a recoverable protocol with one durable commit point and a 41-case crash matrix (`KEEP-CRASH-081`–`091`), migration and its public API, records, golden fixtures, and crash rows `KEEP-CRASH-053`–`073` are deleted, the persisted root device-and-inode binding is removed so quiescent copies and backups open, and the format-definition digest changes to `f1a0ce10…361d` (#198).
+
+- Version-2 stores can ingest: `FilesystemVersionTwoCatalogPublisher` stages one segment and publishes a catalog successor through the retained-closure gate, version-2 catalog-stage recovery classifies version-2 roots and finalizes a staged head only after the same gate admits it, and `KEEP-CRASH-074` through `077` cover writer process death (#198).
+
+- Version-2 catalog publication can refuse candidates that lose retained content: `publish_retained_catalog_generation` verifies every current retained closure against the candidate before any catalog mutation and revalidates the retention head before `HEAD` replacement (#125).
+
 - Update the repository-only serde_json parser to 1.0.154 in both locked workspaces and refresh its dependency admission; the resolved transitive graph, features, license and MSRV are unchanged (#186).
 
 - Update the in-process BLAKE3 dependency to 1.8.7 in both locked workspaces, remove the unused arrayref license exception and renew its admission while retaining the external b3sum oracle and version-one identity contract (#94).

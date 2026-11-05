@@ -1,0 +1,73 @@
+# Retention Publication
+
+This page owns closure admission and the generation transition for
+`keep.segment-store/v2`. The record grammars it publishes are owned by
+[Retention records](retention.md); restart behaviour for a retained stage is
+owned by [Retention publication recovery](retention-recovery.md).
+
+## Closure admission
+
+Before publication, Keep pins one completely verified catalog generation and
+applies the exact deterministic traversal, counter units, failure order,
+authenticated reconstruction, and canonical digest defined by
+[Closure verification](closure.md). Any closure failure refuses the entire
+transition. Keep never omits one failed member and continues with a smaller
+live set.
+
+Preflight verifies steps 3 and 4 without I/O; preparation binds that proof to
+the current manifest and derives exact canonical successors.
+`execute_retention_publication` revalidates current authority, executes all 17
+ordered durability phases, and returns the complete receipt only after cleanup;
+exact already-committed retry revalidates authority and performs no mutation.
+
+Catalog publication must hold the same writer authority and prove every current retained closure against its candidate catalog before replacing the catalog `HEAD`.
+
+`publish_retained_catalog_generation` implements that gate over the `RetainedCatalogPublicationStorage` port ([#125](https://github.com/flyingrobots/keep/issues/125)). Under writer authority, before its first catalog storage call, it:
+
+1. admits the current retention head, the manifest that head names, and every root that manifest names;
+2. cross-checks each record against the record that selected it; and
+3. verifies each root's closure against the candidate catalog with that root's profile and limits.
+
+After `head.next` verification, it rereads the retention head and refuses `HEAD` replacement if the head changed. Its receipt binds the preserved manifest generation and digest. The [format rationale](rationale.md#gate-catalog-publication-on-every-retained-closure) records the crash states and the recovery obligation.
+
+`FilesystemCatalogPublisher` publishes through the gate, and next-head finalization runs the same retained-closure admission against a staged candidate ([#198](https://github.com/flyingrobots/keep/issues/198)). [Catalog publication and stage recovery](catalog-publication.md) owns that writer and its recovery. Retention publication and complete-stage retention recovery separately reverify a new root's closure against the current catalog.
+
+## Generation transition
+
+A transition supplies a namespace, an expected state of absent or one exact
+`RootGeneration`, a complete canonical anchor set, the exact realization
+profile coordinate, and admitted limits.
+
+Under exclusive writer authority, publication:
+
+1. completes recovery of every fixed retention stage;
+2. admits the current retention head, manifest, and selected namespace root;
+3. compares expected and observed generations;
+4. verifies the candidate closure against one pinned catalog;
+5. writes and synchronizes `retention/root.next`;
+6. for a new namespace, exclusively creates and verifies its exact digest-named
+   directory, then synchronizes `retention/roots`;
+7. links and verifies the root pool entry, then synchronizes its directory;
+8. writes and synchronizes `retention/manifest.next`;
+9. links and verifies the manifest pool entry and synchronizes its directory;
+10. writes and synchronizes `retention/head.next`;
+11. atomically replaces `retention/HEAD` and synchronizes `retention`;
+    `root.next` and `manifest.next` remain durable until the retention head
+    commits, then are removed and `retention` is synchronized again; and
+12. returns a consequential `#[must_use]` receipt.
+
+The receipt binds the namespace, expected and observed generations, committed
+root generation and digest, global manifest generation and digest, profile
+coordinate, anchor-set and closure digests, catalog generation and digest, and
+every durable publication outcome.
+
+A stale transition preserves expected and observed generations. A
+byte-identical retry returns **already committed** only while that exact root
+successor remains current; otherwise it returns the precise stale state.
+
+A reader holds one shared `ReaderFence` and double-collects the catalog and
+retention heads around complete transitive admission. It accepts only the same
+coordinates before and after for both heads. Any generation, length, digest, or
+checksum change discards the view and retries within a bounded attempt limit;
+exhaustion refuses. The accepted view observes one complete root generation for
+its snapshot lifetime.

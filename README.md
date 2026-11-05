@@ -56,31 +56,30 @@ Keep is required to refuse all three, before mutating anything.
   at 156 before/during/after coordinates (`KEEP-CRASH-001`–`052`) and
   verifies the store lands in exactly one documented lawful state each time,
   for version-1 publication and for version-2 retention publication.
-- **Version-2 retention and migration, forward path.** Explicit retention
-  roots, deterministic closure verification, a one-way 21-phase migration,
-  and a 17-phase retention publication — all with production filesystem
-  writers, all preserving every version-1 byte. Reopening a migrated store
-  jointly admits its marker, intent, and receipt, binds the root's device and
-  inode identity to the intent, and pins the directories it admitted. Mount
-  identity remains a check within the live migration process. Publication
+- **One store format, created directly.** `FilesystemStoreAdmission::initialize`
+  creates a version-2 store through a recoverable state machine with one
+  durable commit point; an interrupted call resumes, and any other nonempty
+  directory refuses before it is touched. A 41-case process-death matrix
+  (`KEEP-CRASH-081`–`091`) covers every boundary. Nothing persisted binds a
+  store to its directory: a quiescent copy or restored backup opens wherever
+  it is placed. There is no migration; see the
+  [retirement ledger](docs/formats/store/retired-identifiers.md).
+- **Version-2 retention, forward path.** Explicit retention roots,
+  deterministic closure verification, the gated segment and catalog writer,
+  and a 17-phase retention publication, all with production filesystem
+  writers. Reopening a store admits its namespace and marker and pins the
+  directories it admitted. Publication
   binds this store's own catalog head and the catalog it selects, and refuses
   retained stages, superseded candidates, substituted
   files, replaced protocol directories, and every namespace or capacity
   violation before it writes anything. Each refusal is a typed value, not a
   string.
-- **Migration restart recovery.** Recovery verifies current authority,
-  classifies the observed prefix, and resumes an exact persisted migration
-  intent through the remaining phases. An incomplete pre-effect intent stage
-  is discarded and rebuilt from freshly verified current intent. Its crash
-  matrix kills real writer processes
-  at 68 before/during/after coordinates (`KEEP-CRASH-053`–`073`), preserving
-  every version-1 byte. The [restart matrix](docs/testing-evidence/migration-restart-matrix.md) records additional hostile-prefix evidence and its limits.
 
 Version-2 complete-stage retention recovery, fenced retention snapshots and model-based transitions are implemented on main through [PR #99](https://github.com/flyingrobots/keep/pull/99).
 
 The retention process-death sequence checks the recovered head generation and exact selected-root bytes before retry; its [evidence receipt](docs/testing-evidence/retention-crash-reader-oracle.md) bounds that claim to the declared initial-publication crash coordinates.
 
-Recovery failures retain their typed cause and report known effects separately from uncertain effects or durability under the [approved recovery contract](docs/formats/segment-store-v2/retention-recovery.md).
+Recovery failures retain their typed cause and report known effects separately from uncertain effects or durability under the [approved recovery contract](docs/formats/store/retention-recovery.md).
 
 Writer authority coordinates cooperating writers in a managed namespace; it does not isolate arbitrary concurrent out-of-band filesystem mutation.
 
@@ -96,9 +95,7 @@ Incomplete retention stages are preserved and block publication pending explicit
 
 Complete orphans remain recovery-protected until explicit disposition lands with garbage collection (#21).
 
-Migration restart recovery is implemented and does not grant retention authority.
-
-A version-1 store stays admitted until its owner migrates it.
+Version-1 admission is deleted ([#198](https://github.com/flyingrobots/keep/issues/198)); every open path refuses a root without the `FORMAT` marker, and no conversion from version 1 exists.
 
 | Gap | Tracked |
 | --- | --- |
@@ -204,10 +201,10 @@ assert_eq!(output, b"exact bytes, or nothing");
 # Ok::<(), Box<dyn std::error::Error>>(())
 ```
 
-On Linux with the admitted ext4 profile, read an existing migrated version-two store whose retention roots anchor the requested blob. The following example is also compiled in the `DurableStore` API documentation. Its 16 MiB limit applies to aggregate catalog-selected segment bytes; catalog bytes and decoded metadata allocate separately.
+On an admitted Linux ext4 or macOS APFS volume, read an initialized store whose retention roots anchor the requested blob. The following example is also compiled in the `DurableStore` API documentation. Its 16 MiB limit applies to aggregate catalog-selected segment bytes; catalog bytes and decoded metadata allocate separately.
 
 ```rust
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 fn copy_retained_blob(
     root: &std::path::Path,
     target: keep::BlobId,
@@ -247,9 +244,9 @@ Select a crash campaign with `--sequence NAME` using these exact CLI names:
 | `catalog` | Catalog publication |
 | `head` | Publication-head replacement |
 | `recovery-discard` | Explicit recovery evidence discard |
-| `initialization` | Writer-locked initialization |
 | `retention` | Retention root, manifest, and head publication |
-| `migration` | Version-one to version-two migration |
+| `retained-catalog` | Successor catalog publication beside a retained root, and its stage recovery |
+| `initialization` | Direct initialization and its recovery |
 
 ```bash
 cargo xtask durability-crash-matrix --sequence retention
@@ -288,8 +285,8 @@ has one job; this one is the front door.
 | Understand what is proved and what is not | [`docs/invariants/`](docs/invariants/) |
 | Read the byte-level formats | [`docs/formats/`](docs/formats/) |
 | See the architecture and port boundaries | [`docs/architecture/`](docs/architecture/) |
-| Follow the crash and recovery rules | [`segment-store-v1/recovery.md`](docs/formats/segment-store-v1/recovery.md) · [`segment-store-v2/recovery.md`](docs/formats/segment-store-v2/recovery.md) · [`segment-store-v2/migration-recovery.md`](docs/formats/segment-store-v2/migration-recovery.md) |
-| See how a retention generation is published | [`segment-store-v2/retention-publication.md`](docs/formats/segment-store-v2/retention-publication.md) |
+| Follow the crash and recovery rules | [`store/stage-recovery.md`](docs/formats/store/stage-recovery.md) · [`store/recovery.md`](docs/formats/store/recovery.md) · [`store/initialization.md`](docs/formats/store/initialization.md) |
+| See how a retention generation is published | [`store/retention-publication.md`](docs/formats/store/retention-publication.md) |
 | Check reproducible performance evidence | [`docs/benchmarks/`](docs/benchmarks/) |
 | Run the language-neutral corpora | [`conformance/`](conformance/) |
 | See planned features and their tasks | [`ROADMAP.md`](ROADMAP.md) |
@@ -307,4 +304,4 @@ plaintext content, keys, or sensitive paths in a public issue.
 Licensed under the [Apache License 2.0](LICENSE).
 
 [reconstruction]: docs/invariants/authenticated-reconstruction/README.md
-[ledger]: docs/formats/segment-store-v2/requirements.md
+[ledger]: docs/formats/store/requirements.md

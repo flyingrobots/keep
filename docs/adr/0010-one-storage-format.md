@@ -11,7 +11,7 @@
   entry into version 2)
 - Supersedes: the restart root-identity requirement in
   [Retention reader root identity](retention-reader-root-identity.md) and
-  [Root identity across restart](../formats/segment-store-v2/recovery.md#root-identity-across-restart)
+  [Root identity across restart](../formats/store/recovery.md#root-identity-across-restart)
 
 ## Context
 
@@ -297,9 +297,8 @@ lands rather than specified here:
 
 - The definition digest changes when initialization replaces migration and
   the migration rows are removed. Golden fixtures are regenerated then.
-- Until the units in #198 land, main still enforces the persistent root
-  binding and still creates version-2 stores only by migration. This ADR is a
-  protocol commitment, not evidence that the change has shipped.
+- The units in #198 land as one integration. Its laws and evidence, not this
+  record, establish that they shipped.
 - Removing the binding relaxes `RootIdentityChanged` on reopen and on fenced
   snapshots. Live replacement checks keep their existing refusals.
 - Portability is accepted through these laws:

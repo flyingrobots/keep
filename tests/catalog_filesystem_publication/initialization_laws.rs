@@ -6,11 +6,11 @@ use std::io;
 
 use crate::{
     CanonicalCatalog, CatalogGeneration, CatalogPublicationError, CatalogPublicationExpectation,
-    CatalogPublicationPhase, FilesystemCatalogPublicationError, FilesystemCatalogPublisher,
-    FilesystemWriterLock, SegmentPublication, publish_catalog_generation,
+    CatalogPublicationPhase, FilesystemCatalogPublicationError, SegmentPublication,
+    publish_retained_catalog_generation,
 };
 
-use super::{CATALOG_HEX, SEGMENT_HEX, StoreFixture, fixture, restart_policy};
+use super::{CATALOG_HEX, SEGMENT_HEX, StoreFixture, catalog_refusal, fixture, open_publisher};
 
 #[test]
 fn absent_head_refuses_a_retained_segment() -> Result<(), Box<dyn Error>> {
@@ -27,11 +27,9 @@ fn require_empty_durable_pools(pool: DurablePool) -> Result<(), Box<dyn Error>> 
     let artifact = pool.write(&store)?;
     let segments = [];
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
-    let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher =
-        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
+    let mut publisher = open_publisher(&store)?;
 
-    let Err(error) = publish_catalog_generation(
+    let Err(error) = publish_retained_catalog_generation(
         &mut publisher,
         CatalogPublicationExpectation::uninitialized(),
         SegmentPublication::none(),
@@ -40,7 +38,7 @@ fn require_empty_durable_pools(pool: DurablePool) -> Result<(), Box<dyn Error>> 
     ) else {
         return Err(format!("absent HEAD admitted retained {} bytes", pool.name()).into());
     };
-    let CatalogPublicationError::Storage { phase, source } = error else {
+    let CatalogPublicationError::Storage { phase, source } = catalog_refusal(error)? else {
         return Err("retained pool artifact reached the wrong refusal boundary".into());
     };
 

@@ -12,10 +12,10 @@ fn crash_children_execute_every_claimed_production_protocol() -> Result<(), Box<
     let child = fs::read_to_string(source_root.join("durability_crash_matrix/child.rs"))?;
     let protocol = [
         "durability_crash_matrix/production_protocol.rs",
-        "durability_crash_matrix/production_protocol/initialization.rs",
         "durability_crash_matrix/production_protocol/publication.rs",
         "durability_crash_matrix/production_protocol/recovery.rs",
-        "durability_crash_matrix/production_protocol/migration.rs",
+        "durability_crash_matrix/production_protocol/initialization.rs",
+        "durability_crash_matrix/production_protocol/retained_catalog.rs",
     ]
     .into_iter()
     .map(|path| fs::read_to_string(source_root.join(path)))
@@ -25,10 +25,9 @@ fn crash_children_execute_every_claimed_production_protocol() -> Result<(), Box<
     assert!(!child.contains("state::prepare("));
     for required in [
         "StagedSegment::begin(",
-        "publish_catalog_generation(",
-        "initialize_store(",
         "execute_recovery_stage_discard(",
-        "execute_store_migration(",
+        "initialize_observed_for_repository_tasks(",
+        "publish_retained_catalog_generation(",
     ] {
         assert!(
             protocol.contains(required),

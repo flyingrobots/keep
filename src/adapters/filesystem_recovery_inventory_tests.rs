@@ -9,14 +9,13 @@ use std::os::unix::ffi::OsStringExt;
 
 use super::filesystem_test_sandbox::TestDirectory;
 use super::{
-    FilesystemRecoveryInventoryReader, RecoveryInventoryError, RecoveryInventoryLimit,
-    RecoveryInventoryOperation, RecoveryNamespace,
+    FilesystemEntryKind, FilesystemNamespaceRefusal, FilesystemRecoveryInventoryReader,
+    FilesystemStoreAdmission, FilesystemStoreAdmissionError, RecoveryInventoryError,
+    RecoveryInventoryLimit, RecoveryInventoryOperation, RecoveryNamespace,
 };
 
-const LOCK_NAME: &str = "writer.lock";
 const STAGING_NAME: &str = "staging";
 const SEGMENTS_NAME: &str = "segments";
-const CATALOGS_NAME: &str = "catalogs";
 
 #[test]
 fn filesystem_inventory_returns_deterministic_name_order() -> Result<(), Box<dyn Error>> {
@@ -26,7 +25,7 @@ fn filesystem_inventory_returns_deterministic_name_order() -> Result<(), Box<dyn
         sandbox.path().join(SEGMENTS_NAME).join("segment-z"),
         b"retained evidence",
     )?;
-    let mut reader = FilesystemRecoveryInventoryReader::open_unchecked_for_tests(sandbox.path())?;
+    let mut reader = open_reader(&sandbox)?;
 
     let inventory = reader.read(RecoveryInventoryLimit::protocol_maximum())?;
 
@@ -60,7 +59,7 @@ fn filesystem_inventory_preserves_raw_linux_name_bytes() -> Result<(), Box<dyn E
             .join(OsString::from_vec(raw_name.clone())),
         [],
     )?;
-    let mut reader = FilesystemRecoveryInventoryReader::open_unchecked_for_tests(sandbox.path())?;
+    let mut reader = open_reader(&sandbox)?;
 
     let inventory = reader.read(RecoveryInventoryLimit::protocol_maximum())?;
 
@@ -76,7 +75,7 @@ fn filesystem_inventory_preserves_raw_linux_name_bytes() -> Result<(), Box<dyn E
 fn filesystem_count_stops_at_the_first_global_excess_entry() -> Result<(), Box<dyn Error>> {
     let sandbox = initialized_namespace("recovery-inventory-limit")?;
     fs::write(sandbox.path().join(SEGMENTS_NAME).join("one"), [])?;
-    let mut reader = FilesystemRecoveryInventoryReader::open_unchecked_for_tests(sandbox.path())?;
+    let mut reader = open_reader(&sandbox)?;
     let Err(error) = reader.read(RecoveryInventoryLimit::new(4)?) else {
         return Err("filesystem inventory exceeded the global entry ceiling".into());
     };
@@ -98,24 +97,32 @@ fn filesystem_inventory_never_follows_protocol_directory_links() -> Result<(), B
     use std::os::unix::fs::symlink;
 
     let sandbox = TestDirectory::create("recovery-inventory-symlink")?;
-    fs::write(sandbox.path().join(LOCK_NAME), [])?;
+    let store = sandbox.path().join("store");
+    fs::create_dir(&store)?;
+    drop(FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(&store)?);
     fs::create_dir(sandbox.path().join("target"))?;
-    symlink("target", sandbox.path().join(STAGING_NAME))?;
-    fs::create_dir(sandbox.path().join(SEGMENTS_NAME))?;
-    fs::create_dir(sandbox.path().join(CATALOGS_NAME))?;
+    fs::remove_dir(store.join(STAGING_NAME))?;
+    symlink("../target", store.join(STAGING_NAME))?;
 
-    let Err(error) = FilesystemRecoveryInventoryReader::open_unchecked_for_tests(sandbox.path())
+    let Err(error) = FilesystemRecoveryInventoryReader::open_unchecked_for_repository_tasks(&store)
     else {
         return Err("filesystem inventory followed a staging-directory link".into());
     };
-    assert!(matches!(
-        error,
-        RecoveryInventoryError::Io {
-            namespace: RecoveryNamespace::Staging,
-            operation: RecoveryInventoryOperation::OpenNamespace,
-            ..
-        }
-    ));
+    let RecoveryInventoryError::Io {
+        namespace: RecoveryNamespace::Root,
+        operation: RecoveryInventoryOperation::OpenNamespace,
+        source,
+    } = error
+    else {
+        return Err(format!("unexpected inventory refusal {error:?}").into());
+    };
+    assert_eq!(
+        namespace_refusal(&source),
+        Some(FilesystemNamespaceRefusal::WrongKind {
+            expected: FilesystemEntryKind::Directory,
+            observed: FilesystemEntryKind::Symlink,
+        })
+    );
     sandbox.remove()?;
     Ok(())
 }
@@ -123,7 +130,7 @@ fn filesystem_inventory_never_follows_protocol_directory_links() -> Result<(), B
 #[test]
 fn replaced_protocol_directory_refuses_the_pinned_inventory() -> Result<(), Box<dyn Error>> {
     let sandbox = initialized_namespace("recovery-inventory-replacement")?;
-    let mut reader = FilesystemRecoveryInventoryReader::open_unchecked_for_tests(sandbox.path())?;
+    let mut reader = open_reader(&sandbox)?;
     fs::rename(
         sandbox.path().join(STAGING_NAME),
         sandbox.path().join("displaced-staging"),
@@ -146,11 +153,29 @@ fn replaced_protocol_directory_refuses_the_pinned_inventory() -> Result<(), Box<
     Ok(())
 }
 
+/// A store committed by direct initialization.
 fn initialized_namespace(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
     let sandbox = TestDirectory::create(name)?;
-    fs::write(sandbox.path().join(LOCK_NAME), [])?;
-    fs::create_dir(sandbox.path().join(STAGING_NAME))?;
-    fs::create_dir(sandbox.path().join(SEGMENTS_NAME))?;
-    fs::create_dir(sandbox.path().join(CATALOGS_NAME))?;
+    drop(FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(sandbox.path())?);
     Ok(sandbox)
+}
+
+fn open_reader(
+    sandbox: &TestDirectory,
+) -> Result<FilesystemRecoveryInventoryReader, RecoveryInventoryError> {
+    FilesystemRecoveryInventoryReader::open_unchecked_for_repository_tasks(sandbox.path())
+}
+
+/// The namespace refusal one root admission failure carries, if any.
+fn namespace_refusal(source: &std::io::Error) -> Option<FilesystemNamespaceRefusal> {
+    let admission = source
+        .get_ref()?
+        .downcast_ref::<FilesystemStoreAdmissionError>()?;
+    let FilesystemStoreAdmissionError::Namespace { source } = admission else {
+        return None;
+    };
+    source
+        .get_ref()?
+        .downcast_ref::<FilesystemNamespaceRefusal>()
+        .copied()
 }

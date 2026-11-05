@@ -152,9 +152,10 @@ mod tests {
     use std::io;
     use std::path::Path;
 
+    use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
     use cap_fs_ext::{FollowSymlinks, OpenOptionsFollowExt, OpenOptionsSyncExt};
+    use cap_std::ambient_authority;
     use cap_std::fs::OpenOptions;
-    use cap_std::{ambient_authority, fs::Dir};
 
     use super::*;
     use crate::adapters::filesystem_test_sandbox::TestDirectory;

@@ -48,6 +48,13 @@ mod durable_refusal_laws;
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 #[path = "../segment_filesystem_stage/sandbox.rs"]
 mod durable_sandbox;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[path = "../support/populated_store.rs"]
+#[allow(
+    dead_code,
+    reason = "each consumer uses a subset of the shared builder; none reads every receipt"
+)]
+mod populated_store;
 
 use std::error::Error;
 use std::io::ErrorKind;

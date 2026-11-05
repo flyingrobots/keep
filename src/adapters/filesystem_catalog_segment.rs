@@ -2,51 +2,49 @@
 
 use std::io;
 
-use super::{
-    AdmittedSegment, FilesystemCatalogPublisher, filesystem_catalog_artifact,
-    filesystem_catalog_publisher, physical_pool_name,
-};
+use super::filesystem_catalog_stages::{self, FilesystemCatalogStages};
+use super::{AdmittedSegment, filesystem_catalog_artifact, physical_pool_name};
 
 pub(super) fn link(
-    publisher: &FilesystemCatalogPublisher,
+    stages: &FilesystemCatalogStages,
     segment: &AdmittedSegment<'_>,
 ) -> io::Result<()> {
     filesystem_catalog_artifact::verify_segment(
-        &publisher.staging,
-        filesystem_catalog_publisher::CURRENT_SEGMENT,
+        &stages.staging,
+        filesystem_catalog_stages::CURRENT_SEGMENT,
         segment,
-        publisher.policy.segment_read(),
+        stages.policy.segment_read(),
     )?;
     super::filesystem_exact_record::link_without_replacement(
-        &publisher.staging,
-        filesystem_catalog_publisher::CURRENT_SEGMENT,
-        &publisher.segments,
+        &stages.staging,
+        filesystem_catalog_stages::CURRENT_SEGMENT,
+        &stages.segments,
         &physical_pool_name::segment(segment.digest()),
     )
 }
 
 pub(super) fn verify_pool(
-    publisher: &FilesystemCatalogPublisher,
+    stages: &FilesystemCatalogStages,
     segment: &AdmittedSegment<'_>,
 ) -> io::Result<()> {
     filesystem_catalog_artifact::verify_segment(
-        &publisher.segments,
+        &stages.segments,
         &physical_pool_name::segment(segment.digest()),
         segment,
-        publisher.policy.segment_read(),
+        stages.policy.segment_read(),
     )
 }
 
-pub(super) fn synchronize_pool(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
-    filesystem_catalog_artifact::synchronize_directory(&publisher.segments)
+pub(super) fn synchronize_pool(stages: &FilesystemCatalogStages) -> io::Result<()> {
+    filesystem_catalog_artifact::synchronize_directory(&stages.segments)
 }
 
-pub(super) fn remove_stage(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
-    publisher
+pub(super) fn remove_stage(stages: &FilesystemCatalogStages) -> io::Result<()> {
+    stages
         .staging
-        .remove_file(filesystem_catalog_publisher::CURRENT_SEGMENT)
+        .remove_file(filesystem_catalog_stages::CURRENT_SEGMENT)
 }
 
-pub(super) fn synchronize_staging(publisher: &FilesystemCatalogPublisher) -> io::Result<()> {
-    filesystem_catalog_artifact::synchronize_directory(&publisher.staging)
+pub(super) fn synchronize_staging(stages: &FilesystemCatalogStages) -> io::Result<()> {
+    filesystem_catalog_artifact::synchronize_directory(&stages.staging)
 }
