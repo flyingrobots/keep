@@ -1,6 +1,6 @@
 //! This module owns writer-locked filesystem migration pool inventory.
 
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use super::filesystem_inventory_catalogs;
 use super::filesystem_inventory_catalogs::FilesystemMigrationCatalogInventory;

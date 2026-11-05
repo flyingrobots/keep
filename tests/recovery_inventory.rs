@@ -4,19 +4,19 @@
 pub mod inventory_double;
 #[path = "recovery_inventory/refusal_laws.rs"]
 mod refusal_laws;
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 #[path = "segment_filesystem_stage/sandbox.rs"]
 pub mod sandbox;
 
 use std::error::Error;
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 use std::fs;
 
 use inventory_double::{InventoryCall, InventoryDouble};
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 use keep::{FilesystemRecoveryInventoryReader, RecoveryInventoryError, RecoveryInventoryOperation};
 use keep::{RecoveryEntryName, RecoveryInventoryLimit, RecoveryNamespace, read_recovery_inventory};
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 use sandbox::TestDirectory;
 
 #[test]
@@ -61,7 +61,7 @@ fn every_count_precedes_name_retention_in_fixed_namespace_order() -> Result<(), 
     Ok(())
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 #[test]
 fn unsupported_platform_refuses_before_filesystem_inventory_mutation() -> Result<(), Box<dyn Error>>
 {

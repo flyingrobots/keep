@@ -2,8 +2,7 @@
 
 use std::io;
 
-use cap_fs_ext::DirExt;
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use super::filesystem_retention_attempt::{self as attempt, PublicationAttempt};
 use super::filesystem_retention_authority::FilesystemRetentionPublicationAuthority;

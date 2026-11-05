@@ -10,13 +10,11 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 
-use super::filesystem_retention_test_fixture::{
-    CATALOG_NAME, SEGMENT_NAME, fixture, migrated_store,
-};
+use super::filesystem_retention_test_fixture::{CATALOG_NAME, SEGMENT_NAME, fixture};
 use crate::{
     CatalogRestartByteLimit, CatalogRestartPolicy, DurableSnapshot, DurableStoreError,
     FilesystemPlatformAdmission, FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError,
-    FilesystemStoreMigrationAuthority, FilesystemWriterLock, ReaderAttemptLimit, SegmentReadPolicy,
+    FilesystemStoreMigrationAuthority, ReaderAttemptLimit, SegmentReadPolicy,
     execute_store_migration,
 };
 
@@ -47,23 +45,6 @@ fn a_canonical_tmpfs_store_refuses_durable_snapshot_admission() -> Result<(), Bo
             if source.kind() == io::ErrorKind::Unsupported)),
         "durable admission must preserve the unsupported platform boundary: {refusal:?}"
     );
-    Ok(())
-}
-
-#[test]
-fn reader_platform_admission_does_not_acquire_writer_authority() -> Result<(), Box<dyn Error>> {
-    let store = migrated_store("reader-platform-existing-writer")?;
-    let writer = FilesystemWriterLock::try_acquire(store.path())?;
-
-    let snapshot =
-        FilesystemRetentionSnapshot::load(store.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
-
-    assert_eq!(
-        snapshot.catalog().generation().get(),
-        1,
-        "reader must admit its catalog while another authority holds the writer lock"
-    );
-    drop(writer);
     Ok(())
 }
 

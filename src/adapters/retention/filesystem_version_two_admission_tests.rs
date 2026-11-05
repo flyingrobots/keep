@@ -95,7 +95,7 @@ fn version_two_reopen_admits_exact_migration_records() -> Result<(), Box<dyn Err
     Ok(())
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[test]
 fn production_version_two_reopen_refuses_an_aliased_protocol_directory()
 -> Result<(), Box<dyn Error>> {
@@ -116,7 +116,7 @@ fn production_version_two_reopen_refuses_an_aliased_protocol_directory()
     Ok(())
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 #[test]
 fn production_version_two_reopen_admits_an_exact_migrated_store() -> Result<(), Box<dyn Error>> {
     let sandbox = migrated_store("version-two-admission-production-exact")?;
@@ -147,13 +147,15 @@ fn reopen_admits_a_remounted_root_and_refuses_a_moved_one() {
             observed: 4,
         })
     ));
+    // Only the top bit of a device coordinate survives a restart on Darwin.
+    let foreign_device = 1 | (1 << 63);
     assert!(matches!(
-        require_root_identity(bound, FilesystemRootIdentity::new(9, 2, 3)),
+        require_root_identity(bound, FilesystemRootIdentity::new(foreign_device, 2, 3)),
         Err(FilesystemPlatformAdmissionError::RootIdentityChanged {
             coordinate: StoreRootIdentityCoordinate::Device,
             expected: 1,
-            observed: 9,
-        })
+            observed,
+        }) if observed == foreign_device
     ));
 }
 

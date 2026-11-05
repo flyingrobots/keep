@@ -9,7 +9,7 @@
 use std::io;
 use std::path::Path;
 
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use super::filesystem_migration_authority::MigrationNamespacePolicy;
 use super::filesystem_migration_authority_error::FilesystemMigrationAuthorityError as Error;

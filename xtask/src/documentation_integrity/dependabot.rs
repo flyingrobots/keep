@@ -1,6 +1,7 @@
 //! This module owns Dependabot manifest coverage and maintenance policy.
 
 mod manifest;
+mod workspace_members;
 
 use std::collections::BTreeSet;
 
@@ -11,6 +12,7 @@ use crate::repository_file::{RepositoryProcessDirectory, RepositoryRoot};
 use super::error::DocumentationError;
 use super::repository_text::{self, RepositoryText};
 use manifest::tracked_scopes;
+use workspace_members::ROOT_MANIFEST_PATH;
 
 const DEPENDABOT_PATH: &str = ".github/dependabot.yml";
 
@@ -20,18 +22,36 @@ struct DependencyScope {
     directory: String,
 }
 
+/// Separates scopes Dependabot must update from workspace members it must not name.
+/// Dependabot refuses to update from inside a member, and the job for the workspace
+/// root already updates member manifests.
+struct ScopeContract {
+    required: BTreeSet<DependencyScope>,
+    members: BTreeSet<DependencyScope>,
+}
+
+impl ScopeContract {
+    fn new(tracked: &BTreeSet<DependencyScope>, members: BTreeSet<DependencyScope>) -> Self {
+        let required = tracked.difference(&members).cloned().collect();
+        Self { required, members }
+    }
+}
+
 pub(super) fn check(
     repository_root: &RepositoryRoot,
     process_directory: &RepositoryProcessDirectory,
 ) -> Result<RepositoryText, DocumentationError> {
     let raw = repository_text::read(repository_root, DEPENDABOT_PATH)?;
-    let required = tracked_scopes(process_directory)?;
-    admit(raw.as_str(), &required)?;
+    let manifest = repository_text::read(repository_root, ROOT_MANIFEST_PATH)?;
+    let members = workspace_members::admit(manifest.as_str())?;
+    let scopes = ScopeContract::new(&tracked_scopes(process_directory)?, members);
+    admit(raw.as_str(), &scopes)?;
+    manifest.verify(repository_root)?;
     raw.verify(repository_root)?;
     Ok(raw)
 }
 
-fn admit(raw: &str, required: &BTreeSet<DependencyScope>) -> Result<(), DocumentationError> {
+fn admit(raw: &str, scopes: &ScopeContract) -> Result<(), DocumentationError> {
     let documents =
         YamlLoader::load_from_str(raw).map_err(|source| DocumentationError::RepositoryYaml {
             path: DEPENDABOT_PATH,
@@ -62,7 +82,13 @@ fn admit(raw: &str, required: &BTreeSet<DependencyScope>) -> Result<(), Document
             }
         }
     }
-    if let Some(missing) = required.difference(&configured).next() {
+    if let Some(member) = scopes.members.intersection(&configured).next() {
+        return Err(contract_at(
+            member.diagnostic(),
+            "workspace member is updated through its workspace root",
+        ));
+    }
+    if let Some(missing) = scopes.required.difference(&configured).next() {
         return Err(contract_at(
             missing.diagnostic(),
             "tracked dependency scope has an update policy",

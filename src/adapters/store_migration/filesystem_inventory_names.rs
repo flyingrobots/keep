@@ -1,6 +1,6 @@
 //! This module owns deterministic bounded migration pool-name scans.
 
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use super::filesystem_inventory_error::{
     FilesystemMigrationInventoryError, FilesystemMigrationInventoryOperation,

@@ -2,7 +2,7 @@
 
 use std::io;
 
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use super::filesystem_retention_current::{verify_committed, verify_predecessor};
 use super::{RetentionRecoveryEvidence, RetentionStageAssessment};

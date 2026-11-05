@@ -43,9 +43,7 @@ fn run_isolated(law: &str, operation: fn() -> TestResult) -> Result<(), Box<dyn 
     {
         return operation();
     }
-    let output = Command::new("timeout")
-        .arg("20s")
-        .arg(std::env::current_exe()?)
+    let output = watchdog_command()?
         .args(child_arguments)
         .env(CHILD, law)
         .output()?;
@@ -57,6 +55,24 @@ fn run_isolated(law: &str, operation: fn() -> TestResult) -> Result<(), Box<dyn 
         String::from_utf8_lossy(&output.stderr)
     );
     Ok(())
+}
+
+// GNU timeout bounds wall-clock time on Linux. macOS ships no equivalent, so its
+// child gets a CPU ceiling inside the native runner's whole-command deadline.
+#[cfg(target_os = "linux")]
+fn watchdog_command() -> Result<Command, Box<dyn Error>> {
+    let mut command = Command::new("timeout");
+    command.arg("20s").arg(std::env::current_exe()?);
+    Ok(command)
+}
+
+#[cfg(target_os = "macos")]
+fn watchdog_command() -> Result<Command, Box<dyn Error>> {
+    let mut command = Command::new("/bin/sh");
+    command
+        .args(["-c", "ulimit -t 20; exec \"$@\"", "locator-law"])
+        .arg(std::env::current_exe()?);
+    Ok(command)
 }
 
 fn deleted_current_directory() -> Result<(), Box<dyn Error>> {

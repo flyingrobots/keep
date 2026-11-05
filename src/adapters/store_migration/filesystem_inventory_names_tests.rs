@@ -3,8 +3,8 @@
 use std::error::Error;
 use std::fs;
 
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 use cap_std::ambient_authority;
-use cap_std::fs::Dir;
 
 use super::filesystem_inventory_error::{
     FilesystemMigrationInventoryError, MigrationInventoryPool,

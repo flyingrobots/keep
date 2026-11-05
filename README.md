@@ -50,7 +50,8 @@ Keep is required to refuse all three, before mutating anything.
   complete framing, checksum, and identity verification. Immutable segments,
   generation-versioned catalogs, and a fixed-width `HEAD` are published
   through an ordered protocol whose every step is a named crash point.
-  Platform admission is Linux ext4, non-casefolded, one writer.
+  Platform admission is non-casefolded Linux ext4 or local writable macOS APFS,
+  one writer.
 - **Process-death recovery evidence.** The crash matrix kills real writer processes
   at 156 before/during/after coordinates (`KEEP-CRASH-001`–`052`) and
   verifies the store lands in exactly one documented lawful state each time,
@@ -169,6 +170,12 @@ transition, so a substituted byte-identical file refuses.
 The core holds no clock, no caller identity, no paths, and no application
 policy. Retention proves a *physical reconstruction* claim only — never what
 the content means, who owns it, or whether deleting it is legally safe.
+
+The [filesystem platform design](docs/architecture/filesystem-platforms.md)
+defines the shared Linux/macOS adapter boundary. Both APFS naming variants are
+admitted; the [evidence record](docs/testing-evidence/filesystem-platform-adapters.md)
+states what has been exercised, and process-death evidence is not power-loss
+evidence.
 
 ## Try it
 

@@ -2,8 +2,9 @@
 
 use std::io::{Seek, SeekFrom};
 
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 use cap_fs_ext::{FollowSymlinks, MetadataExt, OpenOptionsFollowExt, OpenOptionsSyncExt};
-use cap_std::fs::{Dir, File, Metadata, OpenOptions};
+use cap_std::fs::{File, Metadata, OpenOptions};
 
 use super::{
     FilesystemRecoveryStageError, RecoveryStage, RecoveryStageEvidence, RecoveryStageLength,

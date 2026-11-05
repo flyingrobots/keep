@@ -34,7 +34,7 @@ use crate::{BlobId, ByteRange, LayoutId};
 /// catalog bytes and decoded metadata allocate separately.
 ///
 /// ```no_run
-/// #[cfg(target_os = "linux")]
+/// #[cfg(any(target_os = "linux", target_os = "macos"))]
 /// fn copy_retained_blob(
 ///     root: &std::path::Path,
 ///     target: keep::BlobId,

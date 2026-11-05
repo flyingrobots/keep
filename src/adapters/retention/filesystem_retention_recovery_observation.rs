@@ -2,8 +2,7 @@
 
 use std::io::{self, Read};
 
-use cap_fs_ext::DirExt;
-use cap_std::fs::Dir;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
 use super::filesystem_retention_current::{self, ObservedRetentionState};
 use super::filesystem_retention_pool_name as pool_name;

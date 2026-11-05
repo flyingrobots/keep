@@ -2,7 +2,8 @@
 
 use std::io::{self, Write};
 
-use cap_std::fs::{Dir, File};
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
+use cap_std::fs::File;
 
 use super::filesystem_migration_recovery_refusal::{
     FilesystemMigrationRecoveryRefusal as Refusal, invalid,

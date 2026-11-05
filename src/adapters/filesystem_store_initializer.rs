@@ -3,9 +3,9 @@
 use std::path::Path;
 
 #[cfg(test)]
-use cap_std::ambient_authority;
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 #[cfg(test)]
-use cap_std::fs::Dir;
+use cap_std::ambient_authority;
 
 use super::filesystem_initialization_storage::FilesystemInitializationStorage;
 use super::{
@@ -17,8 +17,8 @@ use super::{
 impl FilesystemPlatformAdmission {
     /// Initializes or resumes one admitted filesystem store root.
     ///
-    /// The production adapter currently admits only a writable,
-    /// case-sensitive Linux ext4 root opened without symbolic links. It
+    /// The production adapter admits only a writable, case-sensitive Linux ext4
+    /// root or a writable local macOS APFS root, opened without symbolic links. It
     /// validates an empty or partial canonical namespace before mutation,
     /// retains the exclusive writer lock, and returns only after synchronizing
     /// the complete root namespace. The call is synchronous, allocates no
@@ -97,14 +97,16 @@ fn initialize_storage(
 }
 
 fn reopen_root(
-    root: cap_std::fs::Dir,
+    root: crate::adapters::filesystem_directory::FilesystemDirectory,
 ) -> Result<FilesystemPlatformAdmission, FilesystemPlatformAdmissionError> {
     admit_reopened(root, filesystem_initialization_namespace::admit_published)
 }
 
 fn admit_reopened(
-    root: cap_std::fs::Dir,
-    admit_namespace: fn(&cap_std::fs::Dir) -> std::io::Result<()>,
+    root: crate::adapters::filesystem_directory::FilesystemDirectory,
+    admit_namespace: fn(
+        &crate::adapters::filesystem_directory::FilesystemDirectory,
+    ) -> std::io::Result<()>,
 ) -> Result<FilesystemPlatformAdmission, FilesystemPlatformAdmissionError> {
     let lock = FilesystemWriterLock::try_acquire_in(root)
         .map_err(|source| FilesystemPlatformAdmissionError::WriterLock { source })?;

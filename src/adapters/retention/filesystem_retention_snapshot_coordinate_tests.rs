@@ -6,6 +6,7 @@ use std::io;
 use std::num::NonZeroU32;
 
 use super::{Source, collect_retention_view, pool_name};
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 use crate::adapters::retention::filesystem_retention_test_fixture::migrated_store;
 use crate::adapters::retention::{
     ReaderAttemptLimit, ReaderFence, RetentionViewCoordinates, RetentionViewError,
@@ -15,8 +16,6 @@ use crate::adapters::{
     CatalogRestartByteLimit, CatalogRestartPolicy, ChecksummedPublicationHead, SegmentReadPolicy,
     publication_head_decoder,
 };
-use cap_fs_ext::DirExt;
-use cap_std::fs::Dir;
 
 struct RewriteHead<F> {
     source: Source,

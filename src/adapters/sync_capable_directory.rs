@@ -2,10 +2,11 @@
 
 use std::io;
 
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 use cap_fs_ext::{
     FollowSymlinks, OpenOptionsFollowExt, OpenOptionsMaybeDirExt, OpenOptionsSyncExt,
 };
-use cap_std::fs::{Dir, OpenOptions};
+use cap_std::fs::OpenOptions;
 
 pub(super) fn open(parent: &Dir, name: &str) -> io::Result<Dir> {
     let mut options = OpenOptions::new();
