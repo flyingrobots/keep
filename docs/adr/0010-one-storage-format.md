@@ -1,7 +1,7 @@
-# ADR-0010: One Storage Format
+# ADR-0010: One Current Storage Format
 
 - Status: Accepted
-- Date: 2026-10-27
+- Date: 2026-10-27; amended 2026-11-04
 - Owners: Keep format, initialization, publication, recovery, and retention
   boundaries
 - Related issue:
@@ -63,8 +63,10 @@ been read as:
 
 ### One supported format
 
-Keep admits, writes, and recovers exactly one storage format. The codebase
-never carries a second runtime format alongside it. The format is the
+Keep writes and recovers exactly one storage format, the current format. The
+codebase never carries a second writer. Until the first release that is also the
+only format Keep reads. After it, Keep also reads released sealed segments, as
+[Future format changes](#future-format-changes) defines. The format is the
 version-2 record set and namespace without migration artifacts:
 
 - the segment, catalog, and publication-head grammars, byte-for-byte as
@@ -84,9 +86,12 @@ the format contract, not the software release that wrote a store. Normal
 opening refuses every other marker, and refuses a root without a marker once
 version-1 admission is removed.
 
-Every grammar change changes the definition digest. Before the first release,
-such a change regenerates the affected golden fixtures and needs no
-conversion. After the first release, it follows [Future format
+Every grammar change must change the definition digest. Today the digest does
+not cover the segment, catalog, and head grammars
+([#205](https://github.com/flyingrobots/keep/issues/205)), so this is a
+requirement rather than a current property, and #205 must close before the first
+release. Before the first release, a grammar change regenerates the affected
+golden fixtures and needs no conversion. After the first release, it follows [Future format
 changes](#future-format-changes).
 
 ### Direct initialization
@@ -138,12 +143,17 @@ This is not permission to copy a live store, to repair a store silently, or
 to admit an incomplete store. A copy that is corrupt or incomplete refuses
 exactly as the original would.
 
-Keep does not claim that admission detects an unintended but valid store, or
-an older valid state. Detecting either requires an expectation the caller
-supplies and keeps outside the state being checked, such as an exact catalog
-generation and digest or a retention head digest. A record restored alongside
-everything else cannot show that newer history existed. Keep may later offer
-such an expected-state check, but only as an explicit caller input.
+Admission alone does not detect an unintended but valid store, or an older valid
+state. Detecting either requires an expectation the caller supplies and keeps
+outside the state being checked, such as an exact catalog generation and digest
+or a retention head digest. A record restored alongside everything else cannot
+show that newer history existed.
+
+Before the first release, opening a store therefore requires a typed choice:
+the caller passes the state it expects, and a mismatch refuses, or the caller
+explicitly states that it has no expectation. Neither is a default, so removing
+the binding never silently removes the question. Keep does not store the
+expectation.
 
 Keep persists no store identifier. The only one, the content-derived
 identifier in the migration records, is deleted with migration, and
@@ -171,7 +181,10 @@ everything they do today. The order, tracked in #198, is:
    reconstruct exact bytes, retain, publish a second catalog, interrupt
    publication, recover, and read both retained contents. The sequence also
    includes a candidate catalog that would lose retained content, which must
-   refuse with its evidence intact.
+   refuse with its evidence intact. The change also carries laws for two copies:
+   a copy torn by a concurrent writer never returns bytes other than those its
+   identities name, and an older valid snapshot refuses when the caller passes
+   newer expected state.
 5. Version-1 admission is deleted and the format pages are consolidated.
 
 Retired requirement and crash identifiers are never reused. A retirement
@@ -180,31 +193,61 @@ disappeared with migration or moved to the single format.
 
 ### Future format changes
 
-After the first release, a release that changes the format ships a separately
-invoked upgrade tool. Normal opening never converts a store.
+After the first release, Keep reads old data and writes the current format. No
+format change requires rewriting a store's segments, except a change forced by
+a broken integrity primitive, which needs its own decision.
 
-Each upgrade tool converts exactly one step: from the format of the previous
-format-changing release to the current one. It reads the source store with
-that release's code, pinned to its tag, and writes a new store with the
-current code. It never modifies the source. It checks every content identity
-and every retention root against the source. The destination does not admit
-until the tool's completion record is durable. The tool's crash protocol is
-defined with it.
+Sealed segments are immutable, and each records its own magic and
+`format_version`. Keep therefore retains a frozen decoder for every released
+segment format and selects it per segment. Each frozen decoder keeps its golden
+fixtures and fuzz targets in every release. An unknown or unlisted version is
+still refused. New data is always written in the current format. Released
+segment formats stay readable indefinitely. A support window that retires a
+decoder would need a later decision, because it could strand a store that has
+not been rewritten.
 
-The tool needs one consistent view of its source, and per-item identity checks
-do not provide one. It holds the source's writer lock from before its first
-read until the destination's completion record is durable, and refuses if the
-lock is held or cannot be taken. So no publication can begin during the run,
-and a long upgrade blocks writers by design. Taking the lock does not modify
-stored content. Existing readers may continue, because they don't change the
-source. The tool does not take a filesystem copy of a live store as its source;
-a copy qualifies only under the quiescence rule above.
+Catalog, publication-head, retention, and other mutable metadata has one
+current version. A release that changes it, or that changes the definition
+digest, ships a separately invoked metadata upgrade, which also rewrites the
+`FORMAT` marker. Normal opening never converts a store, and it refuses a marker
+other than the current one until that upgrade has run.
 
-A store several format changes behind upgrades through a chain: the tool of
-each intermediate format-changing release, run in order. Each step reads its
-source marker and refuses any other, so a step cannot be skipped or run out of
-order. Released tools stay available, and every release tests the full chain
-from a fixture store of each prior format to the current one.
+Reads never upgrade. A read holds no writer authority, must behave the same on
+a full disk or a read-only mount, and must not change bytes that backups and
+synchronization observe. It would also leave unread data behind, so it could
+not retire a decoder.
+
+Rewriting old segments into the current format is optional. It is one explicit
+operation under writer authority that is resumable, can be limited by bytes or
+time, and verifies every content identity before an old segment becomes
+removable. The operator chooses when it runs, including never. Keep stores no
+per-store upgrade policy. An application may schedule the operation, for
+example as a background job, through a public interface that reports progress
+and accepts cancellation. Keep owns no scheduler or user interface.
+
+Keep reports how many segments and bytes each format holds, so an application
+can show that state to an operator. Format is physical layout, so it is not
+reported per content identity and is not a warning about content. Content in a
+frozen format returns exactly the same bytes as content in the current format.
+
+These principles bind every future upgrade:
+
+- content identity never depends on the format that stores it;
+- every crash leaves a store that admits or refuses, never one that silently
+  loses content;
+- a store can be read throughout segment rewriting; and
+- old segments are removed only through GC's exclusive reader fence.
+
+Open questions, to be answered by a minimal upgrade tool built after #198
+lands rather than specified here:
+
+- how long a metadata upgrade takes and how much space it needs for a store
+  with many files, since catalog size grows with the number of files;
+- whether a metadata upgrade writes a new store or converts in place, and what
+  crash matrix that choice requires;
+- what the operation's resume state is, and where it lives; and
+- whether operators want a stored schedule or a recorded order, such as most
+  read segments first. Any such hint must not make a read write to the store.
 
 ## Alternatives considered
 
@@ -229,14 +272,18 @@ from a fixture store of each prior format to the current one.
 - **Bind the store to the filesystem UUID instead of the device number.**
   Rejected. It survives renumbering but still refuses backups and copies, and
   it has the same limits for an intended or current store.
-- **Upgrade in place, as the migration does.** Rejected for future format
-  changes. In-place conversion needs a crash matrix over every partial prefix.
-  Copying into a new store leaves the source intact at every crash point, at
-  the cost of space for two stores during the upgrade.
-- **One upgrade tool that embeds a reader for every prior format.** Rejected.
-  The tool would accumulate every retired format's code, which is the
-  multi-format codebase this decision forbids. A chain of one-step tools keeps
-  each retired reader in its own released tag.
+- **Copy the whole store for every format change.** Rejected. Every byte is read,
+  hashed, and rewritten, the store needs space for two copies, and writers stay
+  blocked throughout. That cost grows with the store for a change that sealed
+  segments do not need.
+- **Read and write every released format.** Rejected. Every write path and crash
+  matrix would multiply per format.
+- **Upgrade on read.** Rejected. See [Future format
+  changes](#future-format-changes).
+- **A stored per-store upgrade policy.** Rejected for now. It would add states to
+  test without evidence that running an explicit operation is insufficient.
+- **Mark content stored in an older format.** Rejected. It would expose physical
+  layout as a property of content, and content can share or span segments.
 - **Self-describing records with tagged, skippable fields.** Rejected. They
   give up fixed offsets and bounds checked before allocation, and they
   conflict with refusing unknown and noncanonical content.
@@ -264,6 +311,12 @@ from a fixture store of each prior format to the current one.
 
   Independent copies are not replication and are never described as
   coordinated.
+- Frozen segment decoders stay in the codebase permanently. This narrows the
+  owner's original one-format policy of 2026-10-26, in exchange for upgrades that
+  do not rewrite a whole store. Each released segment format is a permanent
+  commitment, so a format ships only when Keep will support it indefinitely.
+- A broken integrity primitive still forces a rewrite, because a frozen decoder
+  cannot repair it.
 - #190 still applies: segment and catalog stage recovery moves to the single
   format rather than being deleted, and its recovery outcomes move with it.
   The typed migration refusals in #191 are deleted with migration.
@@ -272,5 +325,5 @@ from a fixture store of each prior format to the current one.
   ledger, not reused.
 - Security: removing a persistent binding does not widen filesystem
   authority. All access stays capability-relative and no-follow. The stronger
-  wrong-store and rollback claims are now stated as unsupported instead of
-  implied.
+  wrong-store and rollback claims hold only for a caller that passes expected
+  state, and every caller must choose whether to.
