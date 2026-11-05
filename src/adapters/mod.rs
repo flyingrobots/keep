@@ -88,7 +88,7 @@ mod filesystem_catalog_publisher;
 mod filesystem_catalog_publisher_storage;
 #[cfg(test)]
 mod filesystem_catalog_publisher_tests;
-#[cfg(all(test, target_os = "linux"))]
+#[cfg(test)]
 mod filesystem_catalog_recovery_tests;
 mod filesystem_catalog_segment;
 mod filesystem_catalog_snapshot;
