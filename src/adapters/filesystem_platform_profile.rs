@@ -4,13 +4,17 @@ use std::{io, path::Path};
 
 use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
+use super::filesystem_directory_coordinate::FilesystemDirectoryCoordinate;
 use super::filesystem_mount_refusal::FilesystemMountRefusal;
-use super::filesystem_root_identity::FilesystemRootIdentity;
 use super::native_filesystem::NativeFilesystem;
 use super::platform_filesystem::PlatformFilesystem;
 
-pub(super) const PROTOCOL_DIRECTORIES: [&str; 3] = ["staging", "segments", "catalogs"];
-pub(super) const VERSION_TWO_PROTOCOL_DIRECTORIES: [&str; 9] = [
+/// Every protocol directory, including nested immutable pools.
+///
+/// A store root receives writer authority only when each of these shares
+/// the root's filesystem type, device, and mount identity and satisfies the
+/// admitted platform profile.
+pub(super) const PROTOCOL_DIRECTORIES: [&str; 9] = [
     "staging",
     "segments",
     "catalogs",
@@ -22,31 +26,13 @@ pub(super) const VERSION_TWO_PROTOCOL_DIRECTORIES: [&str; 9] = [
     "recovery/dispositions",
 ];
 
+/// Opens one store root under the admitted native profile.
+///
+/// The root is opened without following links, and every protocol directory
+/// that exists must satisfy the same profile as the root and share its live
+/// device and mount; absence is left to namespace admission.
 pub(super) fn open(store_root: &Path) -> io::Result<Dir> {
     open_profile(&NativeFilesystem, store_root, &PROTOCOL_DIRECTORIES)
-}
-
-pub(super) fn open_version_two(store_root: &Path) -> io::Result<Dir> {
-    open_profile(
-        &NativeFilesystem,
-        store_root,
-        &VERSION_TWO_PROTOCOL_DIRECTORIES,
-    )
-}
-
-#[cfg(feature = "repository-tasks")]
-pub(super) fn admit_locked_root(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-    admit_profile(&NativeFilesystem, directory, &PROTOCOL_DIRECTORIES)?;
-    root_identity(directory)
-}
-
-pub(super) fn root_identity(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-    NativeFilesystem.root_identity(directory.raw())
-}
-
-#[cfg(any(test, feature = "repository-tasks"))]
-pub(super) fn root_identity_lenient(directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-    NativeFilesystem.repository_identity(directory.raw())
 }
 
 fn open_profile(
@@ -91,9 +77,9 @@ fn open_protocol_directory(root: &Dir, name: &str) -> io::Result<Dir> {
     Ok(current)
 }
 
-pub(super) fn admit_child_identity(
-    root: FilesystemRootIdentity,
-    child: FilesystemRootIdentity,
+fn admit_child_identity(
+    root: FilesystemDirectoryCoordinate,
+    child: FilesystemDirectoryCoordinate,
 ) -> io::Result<()> {
     if root.device() != child.device() {
         return Err(io::Error::new(

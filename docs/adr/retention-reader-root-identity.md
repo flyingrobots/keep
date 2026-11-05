@@ -1,8 +1,6 @@
 # Retention reader root identity
 
-Status: Accepted; the restart comparison is superseded by
-[ADR-0010](0010-one-storage-format.md), which makes complete stores portable.
-Main enforces this record until that change lands.
+Status: Superseded by [ADR-0010](0010-one-storage-format.md) (#198). The persisted binding this record relied on lived in `migration.intent`, which was deleted with migration; readers now admit the committed namespace and the `FORMAT` marker, and a store is portable. The live checks that remain are listed under [Portable stores](../formats/store/recovery.md#portable-stores). The text below is kept as the record of the retired decision.
 
 Joint admission of `FORMAT`, `migration.intent`, and `migration.receipt` establishes that those records agree with each other. It does not establish that the directory receiving the read request is the directory the migration intent names. Reader admission must compare the opened root's physical identity before accepting the version-two read capability.
 

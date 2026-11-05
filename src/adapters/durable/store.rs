@@ -1,4 +1,4 @@
-//! This boundary module owns the durable store handle: a version-two root
+//! This boundary module owns the durable store handle: a store root
 //! that pins snapshots on demand.
 
 use std::io::Write;
@@ -8,10 +8,10 @@ use super::{
     DurableRangeReadReceipt, DurableReadError, DurableReconstructionReceipt, DurableSnapshot,
     DurableStoreError,
 };
-use crate::adapters::{CatalogRestartPolicy, ReaderAttemptLimit};
+use crate::adapters::{CatalogRestartPolicy, ReaderAttemptLimit, StoreExpectation};
 use crate::{BlobId, ByteRange, LayoutId};
 
-/// One migrated version-two store to read from.
+/// One committed store to read from.
 ///
 /// The handle holds no fence and no view; every read pins a fresh
 /// [`DurableSnapshot`] unless the caller pins one with [`Self::snapshot`]
@@ -27,11 +27,13 @@ use crate::{BlobId, ByteRange, LayoutId};
 ///
 /// # Example
 ///
-/// On Linux, read an already migrated version-two store with a retained blob.
+/// On an admitted platform, read an initialized store with a retained blob.
 /// The caller owns output visibility: a failed write can leave an untrusted
 /// prefix. The receipt names the view; it does not extend retention after the
 /// snapshot is dropped. This example limits aggregate catalog-selected segment bytes;
-/// catalog bytes and decoded metadata allocate separately.
+/// catalog bytes and decoded metadata allocate separately. It names no
+/// expectation, which accepts any valid store at the path; a caller that has
+/// recorded a catalog names it instead, as [`StoreExpectation`] describes.
 ///
 /// ```no_run
 /// #[cfg(any(target_os = "linux", target_os = "macos"))]
@@ -42,14 +44,14 @@ use crate::{BlobId, ByteRange, LayoutId};
 /// ) -> Result<keep::DurableReconstructionReceipt, Box<dyn std::error::Error>> {
 ///     use keep::{
 ///         CatalogRestartByteLimit, CatalogRestartPolicy, DurableStore, LayoutEntryLimit,
-///         ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit,
+///         ReaderAttemptLimit, SegmentReadPolicy, SegmentRecordLimit, StoreExpectation,
 ///     };
 ///     // Limit catalog-selected segment bytes; catalog and metadata allocate separately.
 ///     let policy = CatalogRestartPolicy::new(
 ///         SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
 ///         CatalogRestartByteLimit::new(16_777_216)?,
 ///     );
-///     let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT)?;
+///     let store = DurableStore::open(root, policy, ReaderAttemptLimit::DEFAULT, StoreExpectation::NoExpectation)?;
 ///     let snapshot = store.snapshot()?;
 ///     Ok(snapshot.reconstruct(target, output)?)
 /// }
@@ -60,17 +62,21 @@ pub struct DurableStore {
     root: PathBuf,
     policy: CatalogRestartPolicy,
     limit: ReaderAttemptLimit,
+    expectation: StoreExpectation,
 }
 
 impl DurableStore {
-    /// Names the store at `root`, reading under `policy` and collecting a
-    /// consistent view within `limit` attempts.
+    /// Names the store at `root` without opening it: nothing, including
+    /// `expectation`, is checked until a snapshot is pinned.
     ///
-    /// Allocates an absolute locator and queries the current directory for a
+    /// Reads use `policy` and collect a consistent view within `limit`
+    /// attempts. Allocates an absolute locator and queries the current directory for a
     /// relative path. It does not open the store or prove that it exists.
     /// Later working-directory changes cannot retarget this handle. The path
     /// remains a locator, not a content identity or a pinned directory handle;
-    /// snapshot admission still checks the named store on every call.
+    /// snapshot admission still checks the named store on every call, including
+    /// `expectation`, so a handle expecting one catalog refuses once the store
+    /// publishes another.
     ///
     /// # Errors
     ///
@@ -81,6 +87,7 @@ impl DurableStore {
         root: &Path,
         policy: CatalogRestartPolicy,
         limit: ReaderAttemptLimit,
+        expectation: StoreExpectation,
     ) -> Result<Self, DurableStoreError> {
         let root =
             std::path::absolute(root).map_err(|source| DurableStoreError::Locator { source })?;
@@ -88,6 +95,7 @@ impl DurableStore {
             root,
             policy,
             limit,
+            expectation,
         })
     }
 
@@ -102,9 +110,9 @@ impl DurableStore {
     /// # Errors
     ///
     /// Returns [`DurableStoreError`] at the exact admission, fence,
-    /// collection, or retained-root refusal.
+    /// collection, expectation, or retained-root refusal.
     pub fn snapshot(&self) -> Result<DurableSnapshot, DurableStoreError> {
-        DurableSnapshot::open(&self.root, self.policy, self.limit)
+        DurableSnapshot::open(&self.root, self.policy, self.limit, self.expectation)
     }
 
     /// Whether some retained root anchors `target` in a fresh view.

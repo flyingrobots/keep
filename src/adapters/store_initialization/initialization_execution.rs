@@ -1,0 +1,174 @@
+//! This module owns the ordered execution of direct initialization from one observed prefix.
+//!
+//! Forward protocol, crash states, and recovery are specified in
+//! `docs/formats/store/initialization.md`. Every phase runs
+//! between two observer notifications, so the crash matrix kills the process
+//! at an exact boundary of this code rather than of a reimplementation.
+
+use std::io;
+
+use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
+
+use super::initialization_entries::{self as entries, MarkerStage};
+use super::initialization_reader_fence::admit_reader_fence;
+use super::{
+    StoreInitializationBoundary as Boundary, StoreInitializationDirectory as Directory,
+    StoreInitializationError as Error, StoreInitializationPhase as Phase,
+    StoreInitializationPrefix as Prefix, initialization_observation,
+};
+use crate::adapters::FilesystemWriterLock;
+
+/// Observer notified before and after every phase; an error fails that phase.
+pub(in crate::adapters) type PhaseObserver<'observer> =
+    &'observer mut dyn FnMut(Phase, Boundary) -> io::Result<()>;
+
+/// Synchronizes the store root.
+///
+/// Production binds [`entries::synchronize_root`]. A law substitutes a
+/// recording or failing one, because a real directory synchronization leaves
+/// nothing a test can observe short of power loss.
+pub(super) type RootSynchronizer<'synchronizer> =
+    &'synchronizer mut dyn FnMut(&Dir) -> io::Result<()>;
+
+/// Classifies, locks, reclassifies, and completes initialization of `root`.
+///
+/// Returns the retained writer lock and the state the call found. The first
+/// classification only prevents mutation of a refused root; the second, under
+/// writer authority, selects the resumed phases.
+///
+/// # Errors
+///
+/// Returns the first refusal, lock failure, or phase failure. Effects already
+/// made remain a recoverable prefix.
+pub(in crate::adapters) fn initialize(
+    root: &Dir,
+    observer: PhaseObserver<'_>,
+) -> Result<(FilesystemWriterLock, Prefix), Error> {
+    initialize_with(root, observer, &mut entries::synchronize_root)
+}
+
+/// Runs [`initialize`] with its four requested root synchronizations delegated to
+/// `synchronize_root`: the one in the lock phase and the three `SynchronizeRoot*` phases.
+///
+/// The reader fence, each directory admission, and the discard of an incomplete
+/// stage synchronize their parent directly and are not delegated.
+///
+/// # Errors
+///
+/// Returns exactly what [`initialize`] returns; a synchronizer error fails the
+/// phase that requested it.
+pub(super) fn initialize_with(
+    root: &Dir,
+    observer: PhaseObserver<'_>,
+    synchronize_root: RootSynchronizer<'_>,
+) -> Result<(FilesystemWriterLock, Prefix), Error> {
+    let unlocked = initialization_observation::observe(root)?;
+    let mut execution = Execution {
+        root,
+        observer,
+        synchronize_root,
+    };
+    let lock = execution.lock()?;
+    let locked = initialization_observation::observe(root)?;
+    execution.resume(locked)?;
+    let found = if unlocked == Prefix::Empty && locked == Prefix::Locked {
+        Prefix::Empty
+    } else {
+        locked
+    };
+    Ok((lock, found))
+}
+
+struct Execution<'root, 'observer, 'synchronizer> {
+    root: &'root Dir,
+    observer: PhaseObserver<'observer>,
+    synchronize_root: RootSynchronizer<'synchronizer>,
+}
+
+impl Execution<'_, '_, '_> {
+    fn phase<T>(
+        &mut self,
+        phase: Phase,
+        operation: impl FnOnce(&Dir) -> io::Result<T>,
+    ) -> Result<T, Error> {
+        (self.observer)(phase, Boundary::Before).map_err(|source| Error::io(phase, source))?;
+        let value = operation(self.root).map_err(|source| Error::io(phase, source))?;
+        (self.observer)(phase, Boundary::After).map_err(|source| Error::io(phase, source))?;
+        Ok(value)
+    }
+
+    /// Runs one root synchronization as its own observed phase.
+    fn synchronize(&mut self, phase: Phase) -> Result<(), Error> {
+        (self.observer)(phase, Boundary::Before).map_err(|source| Error::io(phase, source))?;
+        (self.synchronize_root)(self.root).map_err(|source| Error::io(phase, source))?;
+        (self.observer)(phase, Boundary::After).map_err(|source| Error::io(phase, source))
+    }
+
+    fn lock(&mut self) -> Result<FilesystemWriterLock, Error> {
+        let phase = Phase::OpenAndLockWriterFile;
+        (self.observer)(phase, Boundary::Before).map_err(|source| Error::io(phase, source))?;
+        let directory = self
+            .root
+            .try_clone()
+            .map_err(|source| Error::io(phase, source))?;
+        let lock = FilesystemWriterLock::initialize_in(directory)
+            .map_err(|source| Error::WriterLock { source })?;
+        (self.synchronize_root)(self.root).map_err(|source| Error::io(phase, source))?;
+        (self.observer)(phase, Boundary::After).map_err(|source| Error::io(phase, source))?;
+        Ok(lock)
+    }
+
+    fn resume(&mut self, prefix: Prefix) -> Result<(), Error> {
+        let stage = match prefix {
+            Prefix::Empty | Prefix::Locked => {
+                self.phase(Phase::WriteMarkerStage, MarkerStage::create)?
+            }
+            Prefix::IncompleteMarkerStage { .. } => {
+                self.phase(
+                    Phase::DiscardIncompleteMarkerStage,
+                    entries::discard_incomplete_stage,
+                )?;
+                self.phase(Phase::WriteMarkerStage, MarkerStage::create)?
+            }
+            Prefix::MarkerStaged | Prefix::ReaderFenced | Prefix::Directories { .. } => {
+                reopen(self.root)?
+            }
+            Prefix::MarkerLinked => {
+                let stage = reopen(self.root)?;
+                stage
+                    .verify_linked(self.root)
+                    .map_err(|source| Error::io(Phase::ObservePrefix, source))?;
+                return self.commit(stage);
+            }
+        };
+        self.build(&stage)?;
+        self.phase(Phase::LinkMarker, |root| stage.link(root))?;
+        self.commit(stage)
+    }
+
+    /// Makes the stage durable, then creates the fence and every directory.
+    fn build(&mut self, stage: &MarkerStage) -> Result<(), Error> {
+        self.phase(Phase::SynchronizeMarkerStage, |root| {
+            stage.synchronize(root)
+        })?;
+        self.synchronize(Phase::SynchronizeRootAfterMarkerStage)?;
+        self.phase(Phase::AdmitReaderFence, admit_reader_fence)?;
+        for directory in Directory::ALL {
+            self.phase(Phase::AdmitDirectory(directory), |root| {
+                entries::admit_directory(root, directory)
+            })?;
+        }
+        Ok(())
+    }
+
+    /// Commits with the root synchronization after the link, then removes the stage.
+    fn commit(&mut self, stage: MarkerStage) -> Result<(), Error> {
+        self.synchronize(Phase::SynchronizeRootAfterMarker)?;
+        self.phase(Phase::RemoveMarkerStage, |root| stage.remove(root))?;
+        self.synchronize(Phase::SynchronizeRootAfterCleanup)
+    }
+}
+
+fn reopen(root: &Dir) -> Result<MarkerStage, Error> {
+    MarkerStage::reopen(root).map_err(|source| Error::io(Phase::ObservePrefix, source))
+}

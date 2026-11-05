@@ -104,6 +104,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "format_marker"
+path = "fuzz_targets/format_marker.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "golden_protocol"
 path = "fuzz_targets/golden_protocol.rs"
 test = false
@@ -113,13 +120,6 @@ bench = false
 [[bin]]
 name = "layout_record"
 path = "fuzz_targets/layout_record.rs"
-test = false
-doc = false
-bench = false
-
-[[bin]]
-name = "migration_format"
-path = "fuzz_targets/migration_format.rs"
 test = false
 doc = false
 bench = false

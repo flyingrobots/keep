@@ -1,4 +1,6 @@
-//! Published catalog restart-loading laws.
+//! Published catalog restart-loading laws over a writer-published single-format store.
+
+#![cfg(any(target_os = "linux", target_os = "macos"))]
 
 #[path = "catalog_restart/refusal_laws.rs"]
 mod refusal_laws;
@@ -13,8 +15,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use keep::{
-    CatalogRestartByteLimit, CatalogRestartPolicy, ChunkId, FilesystemCatalogSnapshot,
-    LayoutEntryLimit, SegmentReadPolicy, SegmentRecordIdentity, SegmentRecordLimit,
+    AdmittedSegment, AdmittedSegmentRecord, CanonicalCatalog, CatalogGeneration,
+    CatalogPublicationExpectation, CatalogRestartByteLimit, CatalogRestartPolicy, ChunkId,
+    FilesystemCatalogPublisher, FilesystemCatalogSnapshot, FilesystemStoreAdmission,
+    LayoutEntryLimit, SegmentReadPolicy, SegmentRecordIdentity, SegmentRecordLimit, StagedSegment,
+    publish_retained_catalog_generation,
 };
 use sandbox::TestDirectory;
 use support::decode_hex;
@@ -29,7 +34,11 @@ const RETAINED_SEGMENT_LIMIT: u64 = 1_048_576;
 #[test]
 fn restart_reconstructs_the_exact_published_snapshot() -> Result<(), Box<dyn Error>> {
     let store = StoreFixture::create("restart-published")?;
-    let loaded = FilesystemCatalogSnapshot::load(store.path(), restart_policy()?)?;
+    let loaded = FilesystemCatalogSnapshot::load(
+        store.path(),
+        restart_policy()?,
+        keep::StoreExpectation::NoExpectation,
+    )?;
     let snapshot = loaded.snapshot()?;
     let identity = SegmentRecordIdentity::Chunk(ChunkId::hash_bytes(&[0])?);
 
@@ -52,17 +61,30 @@ struct StoreFixture {
 }
 
 impl StoreFixture {
+    /// Initializes a store and publishes the one-zero chunk through the writer.
+    ///
+    /// The published HEAD, catalog, and segment must equal the frozen one-zero
+    /// corpus bytes, so every law below reads exactly those artifacts.
     fn create(name: &str) -> Result<Self, Box<dyn Error>> {
         let sandbox = TestDirectory::create(name)?;
-        let catalogs = sandbox.path().join("catalogs");
-        let segments = sandbox.path().join("segments");
-        fs::create_dir(&catalogs)?;
-        fs::create_dir(&segments)?;
-        fs::write(sandbox.path().join("HEAD"), fixture(HEAD_HEX)?)?;
-        let catalog_path = catalogs.join(format!("0000000000000001-{CATALOG_DIGEST}.cat"));
-        let segment_path = segments.join(format!("{SEGMENT_DIGEST}.seg"));
-        fs::write(&catalog_path, fixture(CATALOG_HEX)?)?;
-        fs::write(&segment_path, fixture(SEGMENT_HEX)?)?;
+        publish_one_zero(sandbox.path())?;
+        let catalog_path = sandbox
+            .path()
+            .join(format!("catalogs/0000000000000001-{CATALOG_DIGEST}.cat"));
+        let segment_path = sandbox
+            .path()
+            .join(format!("segments/{SEGMENT_DIGEST}.seg"));
+        for (path, hex) in [
+            (sandbox.path().join("HEAD"), HEAD_HEX),
+            (catalog_path.clone(), CATALOG_HEX),
+            (segment_path.clone(), SEGMENT_HEX),
+        ] {
+            if fs::read(&path)? != fixture(hex)? {
+                return Err(
+                    format!("writer output {} differs from the corpus", path.display()).into(),
+                );
+            }
+        }
         Ok(Self {
             sandbox,
             catalog_path,
@@ -81,11 +103,39 @@ impl StoreFixture {
 
 fn restart_policy() -> Result<CatalogRestartPolicy, Box<dyn Error>> {
     Ok(CatalogRestartPolicy::new(
-        SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM),
+        segment_policy(),
         CatalogRestartByteLimit::new(RETAINED_SEGMENT_LIMIT)?,
     ))
 }
 
 fn fixture(hex: &str) -> Result<Vec<u8>, Box<dyn Error>> {
     decode_hex(hex.strip_suffix('\n').ok_or("fixture must end in one LF")?).map_err(Into::into)
+}
+
+/// Publishes generation one holding only the one-zero chunk record.
+fn publish_one_zero(root: &Path) -> Result<(), Box<dyn Error>> {
+    let admission = FilesystemStoreAdmission::initialize(root)?.into_admission();
+    let mut publisher = FilesystemCatalogPublisher::open(admission, restart_policy()?)?;
+    let sealed = StagedSegment::begin(
+        publisher.create_segment_stage()?,
+        SegmentRecordLimit::MAXIMUM,
+    )?
+    .append(AdmittedSegmentRecord::for_chunk(&[0])?)?
+    .seal()?;
+    let bytes = fs::read(root.join("staging/current.seg"))?;
+    let segments = [AdmittedSegment::decode(&bytes, segment_policy())?];
+    let selection = publisher.select_segment(sealed, &segments[0])?;
+    let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
+    let _receipt = publish_retained_catalog_generation(
+        &mut publisher,
+        CatalogPublicationExpectation::uninitialized(),
+        selection,
+        &catalog,
+        &segments,
+    )?;
+    Ok(())
+}
+
+const fn segment_policy() -> SegmentReadPolicy {
+    SegmentReadPolicy::new(SegmentRecordLimit::MAXIMUM, LayoutEntryLimit::MAXIMUM)
 }

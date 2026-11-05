@@ -4,8 +4,8 @@
 
 #[path = "retention_store_v2_protocol_contract/closure_contract_laws.rs"]
 mod closure_contract_laws;
-#[path = "retention_store_v2_protocol_contract/migration_contract_laws.rs"]
-mod migration_contract_laws;
+#[path = "retention_store_v2_protocol_contract/initialization_contract_laws.rs"]
+mod initialization_contract_laws;
 #[path = "retention_store_v2_protocol_contract/parser_fuzz_laws.rs"]
 mod parser_fuzz_laws;
 #[path = "retention_store_v2_protocol_contract/transition_laws.rs"]
@@ -15,7 +15,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-const FORMAT_ROOT: &str = "docs/formats/segment-store-v2";
+const FORMAT_ROOT: &str = "docs/formats/store";
 const DOCUMENT_REVIEW_LIMIT_LINES: usize = 300;
 
 fn repository_root() -> Result<PathBuf, io::Error> {
@@ -40,7 +40,7 @@ fn version_two_is_one_routed_protocol() -> Result<(), Box<dyn std::error::Error>
     let overview = normalized(&read(&format!("{FORMAT_ROOT}/README.md"))?);
 
     assert!(
-        format_index.contains("segment-store-v2/README.md"),
+        format_index.contains("store/README.md"),
         "format index does not route to segment-store v2"
     );
     assert!(
@@ -56,10 +56,8 @@ fn version_two_is_one_routed_protocol() -> Result<(), Box<dyn std::error::Error>
         "[Closure verification](closure.md)",
         "[Closure corruption boundary](closure-corruption.md)",
         "[GC and disposition records](gc.md)",
-        "[Migration and recovery](recovery.md)",
-        "[Migration protocol and recovery](migration-recovery.md)",
-        "[Migration crash points](migration-crash.md)",
-        "[Migration inventory](migration-inventory.md)",
+        "[Format, namespace, and portability](recovery.md)",
+        "[Direct initialization](initialization.md)",
         "[Requirements and evidence](requirements.md)",
         "[Format rationale](rationale.md)",
     ] {
@@ -145,10 +143,9 @@ fn version_two_pages_stay_within_the_review_threshold() -> Result<(), Box<dyn st
         "README.md",
         "closure-corruption.md",
         "closure.md",
+        "catalog-publication.md",
         "gc.md",
-        "migration-crash.md",
-        "migration-inventory.md",
-        "migration-recovery.md",
+        "initialization.md",
         "rationale.md",
         "recovery.md",
         "requirements.md",

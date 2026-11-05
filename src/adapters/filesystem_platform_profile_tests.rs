@@ -1,9 +1,7 @@
 //! Linux filesystem platform-profile laws.
 
-use super::{admit_linux_properties, linux_root_identity};
-use crate::adapters::filesystem_platform_profile::{
-    PROTOCOL_DIRECTORIES, VERSION_TWO_PROTOCOL_DIRECTORIES,
-};
+use super::{admit_linux_properties, linux_directory_coordinate};
+use crate::adapters::filesystem_platform_profile::PROTOCOL_DIRECTORIES;
 use rustix::fs::{NFS_SUPER_MAGIC, StatVfsMountFlags};
 
 const EXT4_SUPER_MAGIC: rustix::fs::FsWord = 0x0000_ef53;
@@ -38,11 +36,10 @@ fn only_writable_case_sensitive_ext4_is_admitted() {
 }
 
 #[test]
-fn root_identity_uses_linux_device_mount_and_inode_coordinates() {
-    let identity = linux_root_identity(8, 1, 41, 73);
+fn directory_coordinate_uses_linux_device_and_mount() {
+    let identity = linux_directory_coordinate(8, 1, 41);
     assert_eq!(identity.device(), rustix::fs::makedev(8, 1));
     assert_eq!(identity.mount(), 41);
-    assert_eq!(identity.file(), 73);
 }
 
 fn assert_unsupported(result: &std::io::Result<()>) {
@@ -56,9 +53,9 @@ fn assert_unsupported(result: &std::io::Result<()>) {
 }
 
 #[test]
-fn version_two_admission_covers_every_protocol_directory() {
+fn admission_covers_every_protocol_directory() {
     assert_eq!(
-        VERSION_TWO_PROTOCOL_DIRECTORIES,
+        PROTOCOL_DIRECTORIES,
         [
             "staging",
             "segments",
@@ -71,7 +68,4 @@ fn version_two_admission_covers_every_protocol_directory() {
             "recovery/dispositions",
         ]
     );
-    for name in PROTOCOL_DIRECTORIES {
-        assert!(VERSION_TWO_PROTOCOL_DIRECTORIES.contains(&name));
-    }
 }

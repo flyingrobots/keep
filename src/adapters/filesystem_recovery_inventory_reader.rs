@@ -4,17 +4,17 @@ use std::io;
 use std::path::Path;
 
 use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
-#[cfg(test)]
+#[cfg(any(test, feature = "repository-tasks"))]
 use cap_std::ambient_authority;
 
+use super::filesystem_store_admission::admit_root;
 use super::{
     FilesystemRecoveryStageError, RecoveryEntryName, RecoveryInventory, RecoveryInventoryError,
     RecoveryInventoryLimit, RecoveryInventoryOperation, RecoveryInventoryStorage,
     RecoveryNamespace, RecoveryStage, RecoveryStageCompletionPool, RecoveryStageEvidence,
-    RecoveryStageNamespacePhase, RecoveryStageParent, filesystem_initialization_namespace,
-    filesystem_platform_profile, filesystem_recovery_inventory_scan,
-    filesystem_recovery_namespace::PinnedRecoveryDirectory, filesystem_recovery_stage,
-    read_recovery_inventory,
+    RecoveryStageNamespacePhase, RecoveryStageParent, filesystem_platform_profile,
+    filesystem_recovery_inventory_scan, filesystem_recovery_namespace::PinnedRecoveryDirectory,
+    filesystem_recovery_stage, filesystem_store_namespace, read_recovery_inventory,
 };
 
 const STAGING_NAME: &str = "staging";
@@ -24,8 +24,9 @@ const CATALOGS_NAME: &str = "catalogs";
 /// A pinned, read-only view of the four recovery inventory namespaces.
 ///
 /// Opening performs no protocol mutation. The production constructor admits
-/// the same platform profile as store initialization and pins all three child
-/// directories without following symbolic links.
+/// the same platform profile, namespace, and `FORMAT` marker as recovery
+/// admission and pins all three child directories without following symbolic
+/// links.
 #[must_use]
 pub struct FilesystemRecoveryInventoryReader {
     root: Dir,
@@ -35,49 +36,60 @@ pub struct FilesystemRecoveryInventoryReader {
 }
 
 impl FilesystemRecoveryInventoryReader {
-    /// Opens one initialized store for read-only recovery inventory.
+    /// Opens one committed store for read-only stage inventory.
     ///
-    /// The call is synchronous, allocates no content-sized memory, and may
-    /// block on filesystem I/O.
+    /// Admission is the recovery law: the production platform for every
+    /// protocol directory, the exact namespace with an
+    /// optional retained catalog `head.next`, and the canonical `FORMAT` marker.
+    /// No writer lock is taken
+    /// and no protocol state is mutated. Classify the resulting inventory with
+    /// [`classify_recovery_names`](crate::classify_recovery_names).
     ///
     /// # Errors
     ///
-    /// Returns [`RecoveryInventoryError::Io`] with the exact namespace and
-    /// open phase for an unsupported platform or missing, replaced, linked, or
-    /// non-directory protocol namespace.
+    /// Returns [`RecoveryInventoryError::Io`] for the store root when platform
+    /// or store admission refuses; the source carries the exact
+    /// [`FilesystemStoreAdmissionError`](crate::FilesystemStoreAdmissionError).
+    /// A root without the `FORMAT` marker refuses.
     pub fn open(store_root: &Path) -> Result<Self, RecoveryInventoryError> {
-        let root = filesystem_platform_profile::open(store_root).map_err(|source| {
-            RecoveryInventoryError::io(
-                RecoveryNamespace::Root,
-                RecoveryInventoryOperation::OpenNamespace,
-                source,
-            )
-        })?;
-        Self::from_root(root)
+        let root = filesystem_platform_profile::open(store_root).map_err(root_error)?;
+        admit_root(
+            &root,
+            filesystem_store_namespace::admit_store_with_catalog_stage,
+        )
+        .map_err(|source| root_error(io::Error::new(io::ErrorKind::InvalidData, source)))?;
+        Self::pin(root)
     }
 
-    #[cfg(test)]
-    pub(super) fn open_unchecked_for_tests(
+    /// Opens a committed root without platform admission for repository tasks.
+    ///
+    /// Every namespace, record, and identity law of [`Self::open`]
+    /// still applies.
+    ///
+    /// # Errors
+    ///
+    /// As [`Self::open`] after platform admission.
+    #[cfg(any(test, feature = "repository-tasks"))]
+    #[doc(hidden)]
+    pub fn open_unchecked_for_repository_tasks(
         store_root: &Path,
     ) -> Result<Self, RecoveryInventoryError> {
-        let root = Dir::open_ambient_dir(store_root, ambient_authority()).map_err(|source| {
-            RecoveryInventoryError::io(
-                RecoveryNamespace::Root,
-                RecoveryInventoryOperation::OpenNamespace,
-                source,
-            )
-        })?;
-        Self::from_root(root)
+        let root = Dir::open_ambient_dir(store_root, ambient_authority()).map_err(root_error)?;
+        admit_root(
+            &root,
+            filesystem_store_namespace::admit_store_with_catalog_stage,
+        )
+        .map_err(|source| root_error(io::Error::new(io::ErrorKind::InvalidData, source)))?;
+        Self::pin(root)
     }
 
-    pub(super) fn from_root(root: Dir) -> Result<Self, RecoveryInventoryError> {
-        filesystem_initialization_namespace::admit_recoverable(&root).map_err(|source| {
-            RecoveryInventoryError::io(
-                RecoveryNamespace::Root,
-                RecoveryInventoryOperation::OpenNamespace,
-                source,
-            )
-        })?;
+    /// Pins an already admitted, writer-locked store root.
+    pub(super) fn from_admitted_root(root: Dir) -> Result<Self, RecoveryInventoryError> {
+        filesystem_store_namespace::admit_store_with_catalog_stage(&root).map_err(root_error)?;
+        Self::pin(root)
+    }
+
+    fn pin(root: Dir) -> Result<Self, RecoveryInventoryError> {
         let staging =
             PinnedRecoveryDirectory::open(&root, RecoveryNamespace::Staging, STAGING_NAME)?;
         let segments =
@@ -220,4 +232,12 @@ impl RecoveryInventoryStorage for FilesystemRecoveryInventoryReader {
             expected_count,
         )
     }
+}
+
+const fn root_error(source: io::Error) -> RecoveryInventoryError {
+    RecoveryInventoryError::io(
+        RecoveryNamespace::Root,
+        RecoveryInventoryOperation::OpenNamespace,
+        source,
+    )
 }

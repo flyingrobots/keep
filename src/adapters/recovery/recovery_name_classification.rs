@@ -6,11 +6,18 @@ use super::{
     recovery_pool_name,
 };
 
-/// Classifies one complete inventory without opening artifact bytes.
+/// Classifies one complete committed inventory without opening bytes.
 ///
 /// The operation preserves inventory order and allocates at most one manifest
-/// entry per inventory entry. It rejects unknown names, missing initialized
-/// root entries, noncanonical pool coordinates, and simultaneous fixed stages.
+/// entry per inventory entry. It rejects unknown names, missing root entries,
+/// noncanonical pool coordinates, and simultaneous fixed stages. The root
+/// entries `reader.lock`, `FORMAT`, `retention`, `gc`, and `recovery` are
+/// classified as known roles, never as unexpected or ignored. Each is required;
+/// catalog `HEAD` is not, because the first publication of an initialized
+/// store can be interrupted before it exists. `FORMAT.next` is unknown: a
+/// committed root never holds it.
+/// The contents of `retention`, `gc`, and `recovery` are not inventoried here;
+/// store admission and retention recovery own them.
 ///
 /// # Errors
 ///
@@ -79,6 +86,11 @@ fn classify_root(name: &RecoveryEntryName) -> Result<RecoveryEntryRole, NameFail
         b"catalogs" => Ok(RecoveryEntryRole::CatalogPoolDirectory),
         b"HEAD" => Ok(RecoveryEntryRole::CurrentHead),
         b"head.next" => Ok(RecoveryEntryRole::NextHeadStage),
+        b"reader.lock" => Ok(RecoveryEntryRole::ReaderFence),
+        b"FORMAT" => Ok(RecoveryEntryRole::FormatMarker),
+        b"retention" => Ok(RecoveryEntryRole::RetentionDirectory),
+        b"gc" => Ok(RecoveryEntryRole::GcDirectory),
+        b"recovery" => Ok(RecoveryEntryRole::RecoveryDirectory),
         _ => Err(NameFailure::Unexpected),
     }
 }
@@ -96,41 +108,64 @@ enum NameFailure {
     Pool(super::RecoveryPoolNameError),
 }
 
+/// Required root entries in report order.
+const REQUIRED: [RecoveryRequiredEntry; 9] = [
+    RecoveryRequiredEntry::WriterLock,
+    RecoveryRequiredEntry::StagingDirectory,
+    RecoveryRequiredEntry::SegmentPoolDirectory,
+    RecoveryRequiredEntry::CatalogPoolDirectory,
+    RecoveryRequiredEntry::ReaderFence,
+    RecoveryRequiredEntry::FormatMarker,
+    RecoveryRequiredEntry::RetentionDirectory,
+    RecoveryRequiredEntry::GcDirectory,
+    RecoveryRequiredEntry::RecoveryDirectory,
+];
+
 #[derive(Default)]
-struct RequiredEntries(u8);
+struct RequiredEntries {
+    observed: [bool; REQUIRED.len()],
+}
 
 impl RequiredEntries {
-    const WRITER_LOCK: u8 = 1 << 0;
-    const STAGING: u8 = 1 << 1;
-    const SEGMENTS: u8 = 1 << 2;
-    const CATALOGS: u8 = 1 << 3;
-
-    const fn observe(&mut self, role: RecoveryEntryRole) {
-        match role {
-            RecoveryEntryRole::WriterLock => self.0 |= Self::WRITER_LOCK,
-            RecoveryEntryRole::StagingDirectory => self.0 |= Self::STAGING,
-            RecoveryEntryRole::SegmentPoolDirectory => self.0 |= Self::SEGMENTS,
-            RecoveryEntryRole::CatalogPoolDirectory => self.0 |= Self::CATALOGS,
-            RecoveryEntryRole::CurrentHead
-            | RecoveryEntryRole::NextHeadStage
-            | RecoveryEntryRole::SegmentStage
-            | RecoveryEntryRole::CatalogStage
-            | RecoveryEntryRole::ImmutableSegment { .. }
-            | RecoveryEntryRole::ImmutableCatalog { .. } => {}
+    fn observe(&mut self, role: RecoveryEntryRole) {
+        let Some(required) = required_entry(role) else {
+            return;
+        };
+        for (seen, entry) in self.observed.iter_mut().zip(REQUIRED) {
+            if entry == required {
+                *seen = true;
+            }
         }
     }
 
-    const fn first_missing(&self) -> Option<RecoveryRequiredEntry> {
-        if self.0 & Self::WRITER_LOCK == 0 {
-            Some(RecoveryRequiredEntry::WriterLock)
-        } else if self.0 & Self::STAGING == 0 {
-            Some(RecoveryRequiredEntry::StagingDirectory)
-        } else if self.0 & Self::SEGMENTS == 0 {
+    fn first_missing(&self) -> Option<RecoveryRequiredEntry> {
+        REQUIRED
+            .into_iter()
+            .zip(self.observed)
+            .find_map(|(entry, seen)| (!seen).then_some(entry))
+    }
+}
+
+const fn required_entry(role: RecoveryEntryRole) -> Option<RecoveryRequiredEntry> {
+    match role {
+        RecoveryEntryRole::WriterLock => Some(RecoveryRequiredEntry::WriterLock),
+        RecoveryEntryRole::StagingDirectory => Some(RecoveryRequiredEntry::StagingDirectory),
+        RecoveryEntryRole::SegmentPoolDirectory => {
             Some(RecoveryRequiredEntry::SegmentPoolDirectory)
-        } else if self.0 & Self::CATALOGS == 0 {
-            Some(RecoveryRequiredEntry::CatalogPoolDirectory)
-        } else {
-            None
         }
+        RecoveryEntryRole::CatalogPoolDirectory => {
+            Some(RecoveryRequiredEntry::CatalogPoolDirectory)
+        }
+        RecoveryEntryRole::ReaderFence => Some(RecoveryRequiredEntry::ReaderFence),
+        RecoveryEntryRole::FormatMarker => Some(RecoveryRequiredEntry::FormatMarker),
+        RecoveryEntryRole::RetentionDirectory => Some(RecoveryRequiredEntry::RetentionDirectory),
+        RecoveryEntryRole::GcDirectory => Some(RecoveryRequiredEntry::GcDirectory),
+        RecoveryEntryRole::RecoveryDirectory => Some(RecoveryRequiredEntry::RecoveryDirectory),
+        RecoveryEntryRole::CurrentHead
+        | RecoveryEntryRole::NextHeadStage
+        | RecoveryEntryRole::SegmentStage
+        | RecoveryEntryRole::CatalogStage
+        | RecoveryEntryRole::ImmutableSegment { .. }
+        | RecoveryEntryRole::ImmutableCatalog { .. } => None,
     }
 }

@@ -1,53 +1,59 @@
 //! This module owns pinned writer authority for filesystem head finalization.
 
-use std::path::Path;
-
 use crate::adapters::filesystem_directory::FilesystemDirectory as Dir;
 
+use super::retention::FilesystemRetainedEvidence;
 use super::{
-    CatalogRestartPolicy, FilesystemRecoveryNextHeadFinalizationOpenError,
+    CatalogRestartPolicy, FilesystemRecoveryAdmission,
+    FilesystemRecoveryNextHeadFinalizationOpenError, FilesystemRecoveryStageDiscardOpenError,
     FilesystemRecoveryStageDiscarder, RecoveryStageParent,
 };
 
 /// Writer-authorized pinned filesystem adapter for exact next-head finalization.
 ///
-/// Opening proves the supported platform, pins and exclusively locks the store
-/// root and `writer.lock`, then pins all three protocol child directories
+/// Opening consumes recovery admission, which holds the exclusive writer lock
+/// over an admitted root, then pins all three protocol child directories
 /// without following links. The synchronous adapter may block on bounded
 /// filesystem I/O and retains writer authority until dropped.
+///
+/// The finalizer also retains the admitted retention capabilities and,
+/// immediately before every candidate verification that can precede `HEAD`
+/// replacement, verifies every current retained closure against the staged
+/// candidate with the same admission the forward catalog gate runs. A
+/// candidate that would lose retained content refuses and leaves `head.next`
+/// in place.
 #[must_use]
 pub struct FilesystemRecoveryNextHeadFinalizer {
     pub(super) discarder: FilesystemRecoveryStageDiscarder,
     pub(super) policy: CatalogRestartPolicy,
+    pub(super) retention: FilesystemRetainedEvidence,
 }
 
 impl FilesystemRecoveryNextHeadFinalizer {
-    /// Opens an initialized supported store for explicit head finalization.
+    /// Pins a committed store for gated head finalization.
     ///
-    /// The call performs no protocol mutation and does not read `HEAD` or
-    /// `head.next`.
+    /// The call performs no protocol mutation and reads no record. Execution
+    /// verifies every retained closure named by the current retention head
+    /// against the candidate before `HEAD` can change.
     ///
     /// # Errors
     ///
-    /// Returns [`FilesystemRecoveryNextHeadFinalizationOpenError`] on platform,
-    /// writer-authority, root-clone, or namespace admission failure.
+    /// Returns [`FilesystemRecoveryNextHeadFinalizationOpenError`] on root-clone
+    /// or namespace pinning failure.
     pub fn open(
-        store_root: &Path,
+        admission: FilesystemRecoveryAdmission,
         policy: CatalogRestartPolicy,
     ) -> Result<Self, FilesystemRecoveryNextHeadFinalizationOpenError> {
-        FilesystemRecoveryStageDiscarder::open(store_root)
-            .map(|discarder| Self { discarder, policy })
-            .map_err(Into::into)
-    }
-
-    #[cfg(test)]
-    pub(super) fn open_unchecked_for_tests(
-        store_root: &Path,
-        policy: CatalogRestartPolicy,
-    ) -> Result<Self, FilesystemRecoveryNextHeadFinalizationOpenError> {
-        FilesystemRecoveryStageDiscarder::open_unchecked_for_tests(store_root)
-            .map(|discarder| Self { discarder, policy })
-            .map_err(Into::into)
+        let (lock, retention, roots, manifests) = admission.into_parts();
+        let root = lock
+            .clone_directory()
+            .map_err(|source| FilesystemRecoveryStageDiscardOpenError::CloneRoot { source })?;
+        let discarder = FilesystemRecoveryStageDiscarder::from_lock(lock)?;
+        Ok(Self {
+            discarder,
+            policy,
+            retention: FilesystemRetainedEvidence::new(root, retention, roots, manifests),
+        })
     }
 
     pub(super) const fn root(&self) -> &Dir {

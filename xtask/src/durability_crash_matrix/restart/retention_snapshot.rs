@@ -22,8 +22,13 @@ pub(super) fn verify(
     let limit = CatalogRestartByteLimit::new(1_048_576)
         .map_err(|source| verification("bound recovered catalog read", source))?;
     let policy = CatalogRestartPolicy::new(SegmentReadPolicy::MAXIMUM, limit);
-    let view = FilesystemRetentionSnapshot::load(store_root, policy, ReaderAttemptLimit::DEFAULT)
-        .map_err(|source| verification("load recovered retention snapshot", source))?;
+    let view = FilesystemRetentionSnapshot::load(
+        store_root,
+        policy,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )
+    .map_err(|source| verification("load recovered retention snapshot", source))?;
     let observed_generation = view.retention_head().map(|head| head.generation().get());
     if observed_generation != expected_generation {
         return Err(verification(

@@ -5,7 +5,7 @@ use std::path::Path;
 use super::loaded_segment::LoadedSegment;
 use super::{
     AdmittedSegment, CatalogRestartError, CatalogRestartPolicy, CatalogSnapshot,
-    ChecksummedCatalog, ChecksummedPublicationHead, catalog_restart_loader,
+    ChecksummedCatalog, ChecksummedPublicationHead, StoreExpectation, catalog_restart_loader,
 };
 use crate::{CatalogDigest, CatalogGeneration};
 
@@ -25,18 +25,35 @@ pub struct FilesystemCatalogSnapshot {
 }
 
 impl FilesystemCatalogSnapshot {
-    /// Loads and admits the exact snapshot selected by `HEAD`.
+    /// Admits `root` as a committed store, then loads the exact snapshot selected by `HEAD`.
     ///
-    /// The returned owner retains bounded segment bytes so every later logical
-    /// lookup remains pinned to this immutable generation.
+    /// Admission requires the exact store namespace, which may hold an in-flight
+    /// `head.next`, and the canonical `FORMAT` marker; it takes no lock and no
+    /// reader fence, and it does not admit a platform profile. The returned
+    /// owner retains bounded segment bytes so every later logical lookup remains
+    /// pinned to this immutable generation. `expectation` is compared with the
+    /// generation and digest the checksummed `HEAD` names, before the catalog
+    /// or any segment is read.
     ///
     /// # Errors
     ///
-    /// Returns [`CatalogRestartError`] for filesystem refusal, malformed or
+    /// Returns [`CatalogRestartError::Admission`] for a root that is not a
+    /// committed store, including one without `FORMAT`;
+    /// [`CatalogRestartError::Expectation`] when the store publishes another
+    /// catalog than [`StoreExpectation::Catalog`] names, or none; and otherwise
+    /// [`CatalogRestartError`] for filesystem refusal, malformed or
     /// noncanonical bytes, coordinate disagreement, resource-limit refusal, or
-    /// failed catalog-to-record admission.
-    pub fn load(root: &Path, policy: CatalogRestartPolicy) -> Result<Self, CatalogRestartError> {
-        catalog_restart_loader::load(root, policy)
+    /// failed catalog-to-record admission. A damaged `HEAD` refuses at its own
+    /// boundary before the expectation is compared. A mismatch refuses before
+    /// anything `HEAD` selects is opened, so it is reported whatever the
+    /// catalog and segments hold, and an absent `HEAD` is a mismatch with
+    /// nothing observed.
+    pub fn load(
+        root: &Path,
+        policy: CatalogRestartPolicy,
+        expectation: StoreExpectation,
+    ) -> Result<Self, CatalogRestartError> {
+        catalog_restart_loader::load(root, policy, expectation)
     }
 
     /// Returns the exact generation selected during restart.

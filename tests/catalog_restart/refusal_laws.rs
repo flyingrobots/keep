@@ -26,7 +26,11 @@ fn corrupt_and_unsupported_heads_refuse_at_the_head_boundary() -> Result<(), Box
     *bytes.last_mut().ok_or("head fixture is empty")? ^= 1;
     fs::write(corrupt.path().join("HEAD"), bytes)?;
     let error = require_error(
-        FilesystemCatalogSnapshot::load(corrupt.path(), restart_policy()?),
+        FilesystemCatalogSnapshot::load(
+            corrupt.path(),
+            restart_policy()?,
+            keep::StoreExpectation::NoExpectation,
+        ),
         "corrupt head was loaded",
     )?;
     assert!(matches!(
@@ -44,7 +48,11 @@ fn corrupt_and_unsupported_heads_refuse_at_the_head_boundary() -> Result<(), Box
         .ok_or("head lacks version field")? = 2;
     fs::write(unsupported.path().join("HEAD"), bytes)?;
     let error = require_error(
-        FilesystemCatalogSnapshot::load(unsupported.path(), restart_policy()?),
+        FilesystemCatalogSnapshot::load(
+            unsupported.path(),
+            restart_policy()?,
+            keep::StoreExpectation::NoExpectation,
+        ),
         "unsupported head was loaded",
     )?;
     assert!(matches!(
@@ -65,7 +73,11 @@ fn noncanonical_catalog_refuses_before_segment_loading() -> Result<(), Box<dyn E
         .ok_or("catalog lacks flags field")? = 1;
     fs::write(&store.catalog_path, bytes)?;
     let error = require_error(
-        FilesystemCatalogSnapshot::load(store.path(), restart_policy()?),
+        FilesystemCatalogSnapshot::load(
+            store.path(),
+            restart_policy()?,
+            keep::StoreExpectation::NoExpectation,
+        ),
         "noncanonical catalog was loaded",
     )?;
 
@@ -83,7 +95,11 @@ fn dangling_catalog_and_segment_paths_refuse_exactly() -> Result<(), Box<dyn Err
     let missing_catalog = StoreFixture::create("restart-missing-catalog")?;
     fs::remove_file(&missing_catalog.catalog_path)?;
     let error = require_error(
-        FilesystemCatalogSnapshot::load(missing_catalog.path(), restart_policy()?),
+        FilesystemCatalogSnapshot::load(
+            missing_catalog.path(),
+            restart_policy()?,
+            keep::StoreExpectation::NoExpectation,
+        ),
         "missing catalog was loaded",
     )?;
     assert!(matches!(
@@ -98,7 +114,11 @@ fn dangling_catalog_and_segment_paths_refuse_exactly() -> Result<(), Box<dyn Err
     let missing_segment = StoreFixture::create("restart-missing-segment")?;
     fs::remove_file(&missing_segment.segment_path)?;
     let error = require_error(
-        FilesystemCatalogSnapshot::load(missing_segment.path(), restart_policy()?),
+        FilesystemCatalogSnapshot::load(
+            missing_segment.path(),
+            restart_policy()?,
+            keep::StoreExpectation::NoExpectation,
+        ),
         "missing segment was loaded",
     )?;
     assert!(matches!(
@@ -116,7 +136,11 @@ fn physical_name_content_conflicts_are_never_substituted() -> Result<(), Box<dyn
     let catalog = StoreFixture::create("restart-conflicting-catalog")?;
     fs::write(&catalog.catalog_path, fixture(BUNDLE_CATALOG_HEX)?)?;
     let error = require_error(
-        FilesystemCatalogSnapshot::load(catalog.path(), restart_policy()?),
+        FilesystemCatalogSnapshot::load(
+            catalog.path(),
+            restart_policy()?,
+            keep::StoreExpectation::NoExpectation,
+        ),
         "wrong catalog bytes were substituted under the selected name",
     )?;
     assert!(matches!(
@@ -128,7 +152,11 @@ fn physical_name_content_conflicts_are_never_substituted() -> Result<(), Box<dyn
     let segment = StoreFixture::create("restart-conflicting-segment")?;
     fs::write(&segment.segment_path, fixture(EMPTY_SEGMENT_HEX)?)?;
     let error = require_error(
-        FilesystemCatalogSnapshot::load(segment.path(), restart_policy()?),
+        FilesystemCatalogSnapshot::load(
+            segment.path(),
+            restart_policy()?,
+            keep::StoreExpectation::NoExpectation,
+        ),
         "wrong segment bytes were substituted under the selected name",
     )?;
     assert!(matches!(

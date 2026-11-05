@@ -5,7 +5,7 @@
 
 use std::error::Error;
 
-use super::filesystem_retention_test_fixture::migrated_store;
+use super::filesystem_retention_test_fixture::initialized_store;
 use crate::{
     CatalogRestartByteLimit, CatalogRestartPolicy, FilesystemRetentionSnapshot,
     FilesystemWriterLock, ReaderAttemptLimit, SegmentReadPolicy,
@@ -13,15 +13,19 @@ use crate::{
 
 #[test]
 fn reader_platform_admission_does_not_acquire_writer_authority() -> Result<(), Box<dyn Error>> {
-    let store = migrated_store("reader-platform-existing-writer")?;
+    let store = initialized_store("reader-platform-existing-writer")?;
     let writer = FilesystemWriterLock::try_acquire(store.path())?;
     let policy = CatalogRestartPolicy::new(
         SegmentReadPolicy::MAXIMUM,
         CatalogRestartByteLimit::new(1_048_576)?,
     );
 
-    let snapshot =
-        FilesystemRetentionSnapshot::load(store.path(), policy, ReaderAttemptLimit::DEFAULT)?;
+    let snapshot = FilesystemRetentionSnapshot::load(
+        store.path(),
+        policy,
+        ReaderAttemptLimit::DEFAULT,
+        crate::StoreExpectation::NoExpectation,
+    )?;
 
     assert_eq!(
         snapshot.catalog().generation().get(),

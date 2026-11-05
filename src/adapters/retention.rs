@@ -17,8 +17,7 @@ mod closure_verifier;
 mod durable_read_law_tests;
 #[cfg(test)]
 mod durable_view_law_tests;
-#[cfg(test)]
-mod filesystem_recovery_admission_tests;
+mod filesystem_retained_evidence;
 #[cfg(test)]
 mod filesystem_retention_anchor_order_prefix_tests;
 mod filesystem_retention_attempt;
@@ -118,8 +117,6 @@ mod filesystem_retention_snapshot_error;
 #[cfg(test)]
 mod filesystem_retention_snapshot_error_tests;
 #[cfg(test)]
-mod filesystem_retention_snapshot_identity_tests;
-#[cfg(test)]
 mod filesystem_retention_snapshot_tests;
 mod filesystem_retention_stage;
 mod filesystem_retention_storage;
@@ -131,9 +128,9 @@ mod filesystem_retention_successor_tests;
 mod filesystem_retention_test_fixture;
 mod filesystem_retention_verification;
 #[cfg(test)]
-mod filesystem_verification_law_tests;
+mod filesystem_store_admission_tests;
 #[cfg(test)]
-mod filesystem_version_two_admission_tests;
+mod filesystem_verification_law_tests;
 mod head_decode_error;
 mod head_decode_error_display;
 mod head_decoder;
@@ -244,6 +241,7 @@ pub use canonical_root::CanonicalRetentionRoot;
 pub use checksummed_head::ChecksummedRetentionHead;
 pub use closure_error::RetentionClosureVerificationError;
 pub use closure_verifier::verify_retention_closure;
+pub(in crate::adapters) use filesystem_retained_evidence::FilesystemRetainedEvidence;
 pub use filesystem_retention_authority::FilesystemRetentionPublicationAuthority;
 pub use filesystem_retention_authority_error::{
     FilesystemRetentionAuthorityError, RetentionAuthorityDirectory,
@@ -306,6 +304,3 @@ pub use verified_closure::VerifiedRetentionClosure;
 pub(super) use closure_profile_error::map as profile_verification_refusal;
 
 pub use verification_view_collector::collect_verification_view;
-
-#[cfg(all(test, feature = "repository-tasks"))]
-mod filesystem_retention_migration_completion_tests;

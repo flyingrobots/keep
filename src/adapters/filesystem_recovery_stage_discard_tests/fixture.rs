@@ -1,14 +1,14 @@
 //! Deterministic initialized-store fixture for filesystem stage discard.
 
 use std::error::Error;
-use std::fs;
 
 use crate::LayoutEntryLimit;
 
 use super::super::{
-    FilesystemRecoveryStageDiscardOpenError, FilesystemRecoveryStageDiscarder, RecoveryStage,
-    RecoveryStageDiscardRequest, RecoveryStageEvidence, RecoveryStageMetadata, SegmentReadPolicy,
-    SegmentRecordLimit, admit_recovery_stage_bytes, assess_recovery_stage, catalog_decoder,
+    FilesystemRecoveryAdmission, FilesystemRecoveryStageDiscarder, FilesystemStoreAdmission,
+    FilesystemStoreAdmissionError, RecoveryStage, RecoveryStageDiscardRequest,
+    RecoveryStageEvidence, RecoveryStageMetadata, SegmentReadPolicy, SegmentRecordLimit,
+    admit_recovery_stage_bytes, assess_recovery_stage, catalog_decoder,
     filesystem_test_sandbox::TestDirectory, fingerprint_recovery_stage,
     plan_recovery_stage_discard, publication_head_decoder, segment_header,
 };
@@ -60,10 +60,9 @@ pub(super) struct DiscardFixture {
 impl DiscardFixture {
     pub(super) fn new(name: &str) -> Result<Self, Box<dyn Error>> {
         let directory = TestDirectory::create(name)?;
-        fs::write(directory.path().join("writer.lock"), [])?;
-        for name in ["staging", "segments", "catalogs"] {
-            fs::create_dir(directory.path().join(name))?;
-        }
+        drop(
+            FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(directory.path())?,
+        );
         Ok(Self { directory })
     }
 
@@ -79,10 +78,17 @@ impl DiscardFixture {
         }
     }
 
-    pub(super) fn discarder(
+    /// Acquires single-format recovery admission, the writer authority discard runs under.
+    pub(super) fn recovery_admission(
         &self,
-    ) -> Result<FilesystemRecoveryStageDiscarder, FilesystemRecoveryStageDiscardOpenError> {
-        FilesystemRecoveryStageDiscarder::open_unchecked_for_tests(self.root())
+    ) -> Result<FilesystemRecoveryAdmission, FilesystemStoreAdmissionError> {
+        FilesystemRecoveryAdmission::reopen_unchecked_for_repository_tasks(self.root())
+    }
+
+    pub(super) fn discarder(&self) -> Result<FilesystemRecoveryStageDiscarder, Box<dyn Error>> {
+        Ok(FilesystemRecoveryStageDiscarder::open(
+            self.recovery_admission()?,
+        )?)
     }
 
     pub(super) fn remove(self) -> std::io::Result<()> {

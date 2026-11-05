@@ -101,6 +101,16 @@ pub(super) fn execute_head(
     head: &CanonicalPublicationHead,
     snapshot: &CatalogSnapshot<'_, '_, '_>,
 ) -> Result<(), CatalogPublicationError> {
+    execute_head_stage(storage, head, snapshot)?;
+    execute_head_replacement(storage)
+}
+
+/// Stages, synchronizes, and verifies `head.next` without replacing `HEAD`.
+pub(super) fn execute_head_stage(
+    storage: &mut impl CatalogPublicationStorage,
+    head: &CanonicalPublicationHead,
+    snapshot: &CatalogSnapshot<'_, '_, '_>,
+) -> Result<(), CatalogPublicationError> {
     phase(
         CatalogPublicationPhase::CreateHeadStage,
         storage.create_head_stage(),
@@ -114,7 +124,13 @@ pub(super) fn execute_head(
     phase(
         CatalogPublicationPhase::VerifyHeadView,
         storage.verify_head_view(head, snapshot),
-    )?;
+    )
+}
+
+/// Atomically replaces `HEAD` with the verified stage and synchronizes the root.
+pub(super) fn execute_head_replacement(
+    storage: &mut impl CatalogPublicationStorage,
+) -> Result<(), CatalogPublicationError> {
     phase(CatalogPublicationPhase::ReplaceHead, storage.replace_head())?;
     phase(
         CatalogPublicationPhase::SynchronizeRoot,

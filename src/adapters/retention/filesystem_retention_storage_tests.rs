@@ -13,17 +13,17 @@ use super::{RetentionPublicationError, RetentionPublicationOutcome, RetentionPub
 use crate::execute_retention_publication;
 
 #[test]
-fn complete_publication_preserves_migrated_bytes_and_publishes_exact_retention_prefix()
+fn complete_publication_preserves_committed_bytes_and_publishes_exact_retention_prefix()
 -> Result<(), Box<dyn Error>> {
     let (sandbox, mut authority) = open_authority("filesystem-retention-complete")?;
-    let before = migrated_witness(sandbox.path())?;
+    let before = committed_witness(sandbox.path())?;
     let root_bytes = fixture(ROOT_HEX)?;
     let preparation = initial_preparation(&root_bytes)?;
 
     let receipt = execute_retention_publication(&mut authority, &preparation)?;
 
     assert_eq!(receipt.outcome(), RetentionPublicationOutcome::Published);
-    assert_eq!(migrated_witness(sandbox.path())?, before);
+    assert_eq!(committed_witness(sandbox.path())?, before);
     assert_eq!(fs::read(head_path(sandbox.path()))?, fixture(HEAD_HEX)?);
     assert_eq!(
         fs::read(root_pool_path(sandbox.path(), preparation.candidate()))?,
@@ -142,9 +142,9 @@ fn assert_stages_absent(root: &Path) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn migrated_witness(root: &Path) -> io::Result<Vec<(PathBuf, Vec<u8>)>> {
+fn committed_witness(root: &Path) -> io::Result<Vec<(PathBuf, Vec<u8>)>> {
     let mut witness = Vec::new();
-    for name in ["HEAD", "FORMAT", "migration.intent", "migration.receipt"] {
+    for name in ["HEAD", "FORMAT"] {
         witness.push((PathBuf::from(name), fs::read(root.join(name))?));
     }
     for pool in ["segments", "catalogs"] {

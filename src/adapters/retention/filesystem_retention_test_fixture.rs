@@ -1,4 +1,4 @@
-//! This test module owns one migrated version-2 retention publication fixture.
+//! This test module owns one initialized version-2 retention publication fixture.
 
 use std::collections::BTreeSet;
 use std::error::Error;
@@ -16,16 +16,15 @@ use super::{
 use super::{RetentionPublicationPhase as Phase, RetentionPublicationStorage};
 use crate::LayoutEntryLimit;
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
+use crate::adapters::populated_store::{self, FirstCatalogRecords, StoreAdmission};
 use crate::adapters::test_support::decode_hex;
 use crate::adapters::{
     AdmittedCatalog, AdmittedSegment, CatalogSnapshot, ChecksummedCatalog,
-    ChecksummedPublicationHead, FilesystemPlatformAdmission, FilesystemStoreMigrationAuthority,
-    FilesystemVersionTwoAdmission, SegmentReadPolicy, SegmentRecordLimit,
+    ChecksummedPublicationHead, FilesystemStoreAdmission, SegmentReadPolicy, SegmentRecordLimit,
 };
 use crate::{
     RetentionGenerationExpectation, RetentionNamespace, RetentionPolicy, RetentionRoot,
-    RootGeneration, execute_store_migration, preflight_retention_transition,
-    prepare_retention_publication,
+    RootGeneration, preflight_retention_transition, prepare_retention_publication,
 };
 
 /// Frozen canonical generation-one root.
@@ -50,17 +49,17 @@ pub(super) const SEGMENT_NAME: &str =
 pub(super) const CATALOG_NAME: &str =
     "0000000000000001-0b7cad1b6de663d34beacbc214db7497f2e36ab6b08dfbd5febbc8d06a418811.cat";
 
-/// Builds one migrated version-2 store and pins its retention authority.
+/// Builds one initialized version-2 store and pins its retention authority.
 ///
-/// The fixture publishes the exact bundle version-1 corpus, executes the
-/// complete forward migration, releases writer authority, then reopens the
-/// admitted root for retention publication.
+/// The fixture initializes the store, publishes the exact bundle corpus as
+/// its first catalog through the writer, releases writer
+/// authority, then reopens the admitted root for retention publication.
 pub(super) fn open_authority(
     name: &str,
 ) -> Result<(TestDirectory, FilesystemRetentionPublicationAuthority), Box<dyn Error>> {
-    let sandbox = migrated_store(name)?;
+    let sandbox = initialized_store(name)?;
     let admission =
-        FilesystemVersionTwoAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
+        FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?;
     let authority = FilesystemRetentionPublicationAuthority::open(admission)?;
     Ok((sandbox, authority))
 }
@@ -243,29 +242,38 @@ fn hex(bytes: &[u8; 32]) -> String {
     })
 }
 
-/// Builds one completely migrated version-2 store with writer authority released.
-pub(super) fn migrated_store(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
+/// The shared builder's route on hosts outside the admitted platform profile.
+const UNCHECKED: StoreAdmission = StoreAdmission {
+    initialize: |root| {
+        Ok(
+            FilesystemStoreAdmission::initialize_unchecked_for_repository_tasks(root)?
+                .into_admission(),
+        )
+    },
+    reopen: |root| Ok(FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks(root)?),
+};
+
+/// Builds one version-2 store holding the frozen bundle, with writer authority released.
+pub(super) fn initialized_store(name: &str) -> Result<TestDirectory, Box<dyn Error>> {
     let sandbox = TestDirectory::create(name)?;
-    let admission = FilesystemPlatformAdmission::initialize_unchecked_for_tests(sandbox.path())?;
-    write_version_one(&sandbox)?;
-    let mut authority = FilesystemStoreMigrationAuthority::open(admission, maximum_policy())?;
-    let intent = authority.observe_intent()?;
-    let _receipt = execute_store_migration(&mut authority, &intent)?;
-    drop(authority);
+    populate_bundle(sandbox.path())?;
     Ok(sandbox)
 }
 
-fn write_version_one(sandbox: &TestDirectory) -> Result<(), Box<dyn Error>> {
-    fs::write(
-        sandbox.path().join("segments").join(SEGMENT_NAME),
-        fixture(SEGMENT_HEX)?,
-    )?;
-    fs::write(
-        sandbox.path().join("catalogs").join(CATALOG_NAME),
-        fixture(CATALOG_HEX)?,
-    )?;
-    fs::write(sandbox.path().join("HEAD"), fixture(CATALOG_HEAD_HEX)?)?;
-    Ok(())
+/// Creates the one-zero blob's store at the empty directory `root`.
+///
+/// The shared builder ingests the blob through the public writer. These laws
+/// prepare against the frozen bundle snapshot and root, so the pools must hold
+/// exactly the frozen bundle bytes; any other bytes refuse here.
+pub(super) fn populate_bundle(root: &Path) -> Result<(), Box<dyn Error>> {
+    let _created =
+        populated_store::create(root, UNCHECKED, &[&[0]], FirstCatalogRecords::Complete)?;
+    populated_store::require_first_catalog(
+        root,
+        &fixture(SEGMENT_HEX)?,
+        &fixture(CATALOG_HEX)?,
+        &fixture(CATALOG_HEAD_HEX)?,
+    )
 }
 
 const fn maximum_policy() -> SegmentReadPolicy {

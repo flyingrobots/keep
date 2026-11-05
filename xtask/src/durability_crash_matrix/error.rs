@@ -7,7 +7,7 @@ use std::error::Error;
 use std::io;
 use std::time::Duration;
 
-use keep::StoreMigrationRecoveryPlan;
+use keep::StoreInitializationPrefix;
 use xtask::protocol_admission::HexError;
 use xtask::{
     DurabilityCrashCase, DurabilityCrashCaseError, DurabilityCrashOccurrence, DurabilityCrashPoint,
@@ -83,9 +83,9 @@ pub(crate) enum DurabilityCrashMatrixError {
     PointSequenceMismatch {
         point: DurabilityCrashPoint,
     },
-    RecoveryPlanMismatch {
-        expected: StoreMigrationRecoveryPlan,
-        observed: StoreMigrationRecoveryPlan,
+    InitializationPrefixMismatch {
+        expected: Option<StoreInitializationPrefix>,
+        observed: Option<StoreInitializationPrefix>,
     },
     RepeatedInventoryPath {
         path: String,
@@ -169,7 +169,7 @@ impl Error for DurabilityCrashMatrixError {
             | Self::MissingVisibleRecord { .. }
             | Self::NonUnicodeStatePath
             | Self::PointSequenceMismatch { .. }
-            | Self::RecoveryPlanMismatch { .. }
+            | Self::InitializationPrefixMismatch { .. }
             | Self::RepeatedInventoryPath { .. }
             | Self::SnapshotGenerationMismatch { .. }
             | Self::Timeout { .. }

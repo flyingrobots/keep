@@ -1,4 +1,4 @@
-//! Reader fence and fenced snapshot laws over migrated stores.
+//! Reader fence and fenced snapshot laws over initialized stores.
 
 use std::error::Error;
 use std::fs;
@@ -8,7 +8,7 @@ use rustix::fs::{FlockOperation, flock};
 use rustix::io::Errno;
 
 use super::filesystem_retention_test_fixture::{
-    ROOT_HEX, fixture, initial_preparation, migrated_store, open_authority,
+    ROOT_HEX, fixture, initial_preparation, initialized_store, open_authority,
 };
 use super::{
     AdmittedRetentionRoot, FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError,
@@ -27,11 +27,15 @@ fn policy() -> Result<CatalogRestartPolicy, Box<dyn Error>> {
 }
 
 #[test]
-fn a_migrated_store_snapshot_binds_the_catalog_and_no_retention_head() -> Result<(), Box<dyn Error>>
-{
-    let sandbox = migrated_store("filesystem-retention-snapshot-empty")?;
-    let snapshot =
-        FilesystemRetentionSnapshot::load(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
+fn an_initialized_store_snapshot_binds_the_catalog_and_no_retention_head()
+-> Result<(), Box<dyn Error>> {
+    let sandbox = initialized_store("filesystem-retention-snapshot-empty")?;
+    let snapshot = FilesystemRetentionSnapshot::load(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        crate::StoreExpectation::NoExpectation,
+    )?;
     assert_eq!(snapshot.catalog().generation().get(), 1);
     assert!(snapshot.retention_head().is_none());
     assert!(snapshot.manifest().is_none());
@@ -48,8 +52,12 @@ fn a_published_generation_is_read_and_its_root_verified() -> Result<(), Box<dyn 
     let candidate = AdmittedRetentionRoot::decode(&root_bytes)?;
     let namespace = candidate.root().namespace().digest();
 
-    let snapshot =
-        FilesystemRetentionSnapshot::load(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
+    let snapshot = FilesystemRetentionSnapshot::load(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        crate::StoreExpectation::NoExpectation,
+    )?;
 
     let head = snapshot
         .retention_head()
@@ -86,8 +94,12 @@ fn root_checksum_damage_reports_its_exact_mismatch() -> Result<(), Box<dyn Error
         .try_into()?;
     fs::write(&path, &corrupt)?;
 
-    let snapshot =
-        FilesystemRetentionSnapshot::load(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
+    let snapshot = FilesystemRetentionSnapshot::load(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        crate::StoreExpectation::NoExpectation,
+    )?;
     let error = snapshot
         .retained_root(candidate.root().namespace().digest())
         .err()
@@ -112,7 +124,7 @@ fn root_checksum_damage_reports_its_exact_mismatch() -> Result<(), Box<dyn Error
 // Delete when reader fencing is removed or stronger lifetime evidence subsumes this law.
 fn readers_share_the_fence_and_collection_cannot_take_it_exclusively() -> Result<(), Box<dyn Error>>
 {
-    let sandbox = migrated_store("filesystem-retention-snapshot-fence")?;
+    let sandbox = initialized_store("filesystem-retention-snapshot-fence")?;
     let root = Dir::open_ambient_dir(sandbox.path(), cap_std::ambient_authority())?;
     let first = ReaderFence::acquire(&root)?;
     let second = ReaderFence::acquire(&root)?;
@@ -135,12 +147,16 @@ fn readers_share_the_fence_and_collection_cannot_take_it_exclusively() -> Result
 // Size: medium. Oracle: the reader.lock protocol requires an empty regular file.
 // Delete when that protocol is removed or a stronger public-reader law subsumes this case.
 fn a_non_empty_reader_lock_refuses_the_fence() -> Result<(), Box<dyn Error>> {
-    let sandbox = migrated_store("filesystem-retention-snapshot-bad-fence")?;
+    let sandbox = initialized_store("filesystem-retention-snapshot-bad-fence")?;
     fs::write(sandbox.path().join("reader.lock"), b"not empty")?;
-    let error =
-        FilesystemRetentionSnapshot::load(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)
-            .err()
-            .ok_or("a non-empty reader.lock was accepted as the fence")?;
+    let error = FilesystemRetentionSnapshot::load(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        crate::StoreExpectation::NoExpectation,
+    )
+    .err()
+    .ok_or("a non-empty reader.lock was accepted as the fence")?;
     assert!(
         matches!(&error, FilesystemRetentionSnapshotError::Fence { source }
             if source.kind() == std::io::ErrorKind::InvalidData),

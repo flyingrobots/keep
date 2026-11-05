@@ -4,7 +4,7 @@ use std::error::Error;
 use std::fs;
 
 use super::{
-    FilesystemRecoveryStageCompletionOpenError, RecoveryStage, RecoveryStageDiscardOutcome,
+    FilesystemStoreAdmissionError, RecoveryStage, RecoveryStageDiscardOutcome,
     RecoveryStagePoolOutcome, RecoveryStageSynchronizationOutcome, WriterLockAcquireError,
     execute_recovery_stage_completion,
 };
@@ -83,13 +83,13 @@ fn retained_completer_authority_excludes_a_second_writer() -> Result<(), Box<dyn
     let first = fixture.completer()?;
 
     let error = fixture
-        .completer()
+        .recovery_admission()
         .err()
         .ok_or("second recovery writer acquired authority")?;
 
     assert!(matches!(
         error,
-        FilesystemRecoveryStageCompletionOpenError::WriterLock {
+        FilesystemStoreAdmissionError::WriterLock {
             source: WriterLockAcquireError::Busy,
         }
     ));

@@ -22,25 +22,13 @@ fn golden_artifacts_match_the_independent_oracle() -> Result<(), String> {
 }
 
 #[test]
-fn definition_profile_and_migration_sources_match_the_oracle() -> Result<(), String> {
+fn definition_and_profile_digests_match_the_oracle() -> Result<(), String> {
     let corpus = build_corpus()?;
     let profile_hex = encode_digest(&corpus.profile_digest)?;
     let definition_hex = encode_digest(&corpus.definition_digest)?;
     assert!(
         FORMAT_DEFINITION.contains(&format!("retention.profile.digest\t{profile_hex}")),
         "format definition does not bind the exact profile digest"
-    );
-    assert_eq!(
-        corpus.definition_digest, corpus.migration.definition_digest,
-        "migration source does not bind the exact format definition"
-    );
-    assert_eq!(
-        read_corpus_file("inventory.tsv").map_err(|error| error.to_string())?,
-        inventory_table(&corpus.inventory)?
-    );
-    assert_eq!(
-        read_corpus_file("migration-source.tsv").map_err(|error| error.to_string())?,
-        migration_source_table(&corpus.migration)?
     );
     for documentation in ["README.md", "ORIGIN.md"] {
         assert!(
@@ -148,50 +136,6 @@ fn artifacts_table(artifacts: &[Artifact]) -> Result<String, String> {
     Ok(table)
 }
 
-fn inventory_table(inventory: &Inventory) -> Result<String, String> {
-    let mut table = String::from(
-        "keep.segment-store-v2.inventory/v1\n\
-         kind\tgeneration\tbyte_length\tartifact_digest_hex\tsource_fixture\n",
-    );
-    for row in &inventory.rows {
-        writeln!(
-            table,
-            "{}\t{}\t{}\t{}\t{}",
-            row.kind,
-            row.generation,
-            row.byte_length,
-            encode_digest(&row.artifact_digest)?,
-            row.source_fixture
-        )
-        .map_err(|_| "inventory table formatting failed".to_owned())?;
-    }
-    Ok(table)
-}
-
-fn migration_source_table(source: &MigrationSource) -> Result<String, String> {
-    let mut table = String::from(
-        "keep.segment-store-v2.migration-source/v1\n\
-         case\tcatalog_generation\tcatalog_length\tcatalog_digest_hex\t\
-         predecessor_digest_hex\tinventory_digest_hex\tdefinition_digest_hex\t\
-         store_id_hex\troot_device\troot_mount\troot_file\n",
-    );
-    writeln!(
-        table,
-        "one-zero\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
-        source.catalog_generation,
-        source.catalog_length,
-        encode_digest(&source.catalog_digest)?,
-        encode_digest(&source.predecessor_digest)?,
-        encode_digest(&source.inventory_digest)?,
-        encode_digest(&source.definition_digest)?,
-        encode_digest(&source.store_id)?,
-        source.root_device,
-        source.root_mount,
-        source.root_file
-    )
-    .map_err(|_| "migration-source table formatting failed".to_owned())?;
-    Ok(table)
-}
 
 fn encode_digest(digest: &[u8; 32]) -> Result<String, String> {
     encode_hex(digest).map(|encoded| encoded.trim_end().to_owned())

@@ -8,9 +8,9 @@ use cap_std::{ambient_authority, fs::OpenOptions};
 use super::DarwinFilesystem;
 use crate::adapters::filesystem_directory::FilesystemDirectory;
 use crate::adapters::filesystem_entry_spelling::EntrySpellingMismatch;
-use crate::adapters::filesystem_root_identity::{DARWIN_COORDINATE_DOMAIN, restart_stable_device};
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
 use crate::adapters::platform_filesystem::PlatformFilesystem;
+use crate::adapters::{catalog_restart_loader, filesystem_format_marker, sync_capable_directory};
 
 fn open(path: &Path) -> io::Result<FilesystemDirectory> {
     FilesystemDirectory::open_ambient_dir(path, ambient_authority())
@@ -51,16 +51,14 @@ fn assert_alias_refused(result: io::Result<cap_std::fs::File>, expected: &str) {
 }
 
 #[test]
-fn apfs_root_coordinates_bind_the_opened_directory() -> Result<(), Box<dyn Error>> {
+fn apfs_coordinates_describe_the_opened_directory() -> Result<(), Box<dyn Error>> {
     let sandbox = TestDirectory::create("darwin-root-coordinate")?;
     let path = fs::canonicalize(sandbox.path())?;
     let directory = DarwinFilesystem.open_root(&path)?;
-    let identity = DarwinFilesystem.admit_directory(&directory)?;
+    let coordinate = DarwinFilesystem.admit_directory(&directory)?;
     let metadata = directory.dir_metadata()?;
-    assert_eq!(identity.file(), metadata.ino());
-    assert_eq!(identity.device(), DARWIN_COORDINATE_DOMAIN | metadata.dev());
-    assert_eq!(identity.mount(), identity.device());
-    assert_eq!(identity, DarwinFilesystem.root_identity(&directory)?);
+    assert_eq!(coordinate.device(), metadata.dev());
+    assert_eq!(coordinate.mount(), coordinate.device());
     Ok(())
 }
 
@@ -195,14 +193,78 @@ fn read_only_apfs_volumes_are_refused() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-#[test]
-fn a_renumbered_volume_keeps_its_restart_coordinate_but_another_os_does_not() {
-    let first = DARWIN_COORDINATE_DOMAIN | 0x0100_0023;
-    let reattached = DARWIN_COORDINATE_DOMAIN | 0x0100_0027;
-    let linux = 0x0100_0023;
+/// These protocol lookups run below namespace admission, so only the per-lookup
+/// check can refuse a foreign spelling here.
+fn spelling_refusal<'a>(source: &'a (dyn Error + 'static)) -> Option<&'a EntrySpellingMismatch> {
+    let mut cause = Some(source);
+    while let Some(current) = cause {
+        let inner = current
+            .downcast_ref::<io::Error>()
+            .and_then(io::Error::get_ref)
+            .and_then(|inner| inner.downcast_ref::<EntrySpellingMismatch>());
+        if inner.is_some() {
+            return inner;
+        }
+        cause = current.source();
+    }
+    None
+}
+
+fn assert_spelling_source(source: &(dyn Error + 'static), expected: &str) {
     assert_eq!(
-        restart_stable_device(first),
-        restart_stable_device(reattached)
+        spelling_refusal(source),
+        Some(&EntrySpellingMismatch {
+            expected: expected.into()
+        })
     );
-    assert_ne!(restart_stable_device(first), restart_stable_device(linux));
+}
+
+#[test]
+fn the_format_marker_lookup_never_accepts_a_foreign_spelling() -> Result<(), Box<dyn Error>> {
+    let sandbox = TestDirectory::create("darwin-marker-alias")?;
+    let folds = folds_case(sandbox.path())?;
+    fs::write(sandbox.path().join("format"), b"foreign")?;
+    let directory = open(sandbox.path())?;
+    let refusal = filesystem_format_marker::admit(&directory)
+        .err()
+        .ok_or("a foreign marker spelling admitted")?;
+    if folds {
+        assert_spelling_source(&refusal, "FORMAT");
+    } else {
+        assert_eq!(refusal.kind(), io::ErrorKind::NotFound);
+    }
+    Ok(())
+}
+
+#[test]
+fn the_expected_catalog_lookup_never_accepts_a_foreign_spelling() -> Result<(), Box<dyn Error>> {
+    let sandbox = TestDirectory::create("darwin-head-alias")?;
+    let folds = folds_case(sandbox.path())?;
+    fs::write(sandbox.path().join("head"), [0_u8; 128])?;
+    let directory = open(sandbox.path())?;
+    let observed = catalog_restart_loader::observe_published_catalog(&directory);
+    if folds {
+        let refusal = observed.err().ok_or("a foreign head spelling admitted")?;
+        assert_spelling_source(&refusal, "HEAD");
+    } else {
+        assert!(matches!(observed, Ok(None)));
+    }
+    Ok(())
+}
+
+#[test]
+fn a_protocol_directory_lookup_never_accepts_a_foreign_spelling() -> Result<(), Box<dyn Error>> {
+    let sandbox = TestDirectory::create("darwin-directory-alias")?;
+    let folds = folds_case(sandbox.path())?;
+    fs::create_dir(sandbox.path().join("Staging"))?;
+    let directory = open(sandbox.path())?;
+    let refusal = sync_capable_directory::open(&directory, "staging")
+        .err()
+        .ok_or("a foreign directory spelling opened")?;
+    if folds {
+        assert_spelling_source(&refusal, "staging");
+    } else {
+        assert_eq!(refusal.kind(), io::ErrorKind::NotFound);
+    }
+    Ok(())
 }

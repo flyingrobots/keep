@@ -10,7 +10,7 @@
 
 ## Admitted use
 
-Keep admits the `blake3` crate at locked version 1.8.7 for the 32-byte `BlobId` and `ChunkId` version-1 digests and the existing domain-separated segment, catalog, layout, retention and migration hashes. No dependency-owned type appears in Keep's public API.
+Keep admits the `blake3` crate at locked version 1.8.7 for the 32-byte `BlobId` and `ChunkId` version-1 digests and the existing domain-separated segment, catalog, layout, retention and format-marker hashes. No dependency-owned type appears in Keep's public API.
 
 The private `xtask` crate also uses the same pinned implementation to recompute Golden File Worldline digest witnesses directly from corpus source bytes and to name deterministic fuzz seeds. The oracle does not import Keep production types or hashing wrappers. This separation independently checks preimage framing, length encoding, canonical text and binary encodings, mutation semantics, and committed witness bytes. For every identity and content mutation, the repository checker also streams the canonical preimage through external `b3sum`; a mismatch with the in-process result is a refusal. Golden File Worldline and protocol conformance share one deadline-bounded process adapter, but retain separate preimage construction. The [Golden File Worldline reference model](../conformance/golden-file-worldline.md#reference-model) records the process-adapter contract. The checked-in vectors and runtime cross-check therefore cover the algorithm boundary without claiming that the Rust path independently implements the BLAKE3 compression function.
 

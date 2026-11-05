@@ -1,12 +1,14 @@
 //! This module owns independent post-process-death store verification.
 
 mod expectation;
-mod migration;
-mod migration_expectation;
+mod initialization;
+mod recorded_catalog;
+mod retained_catalog;
 mod retention;
 mod retention_incomplete;
 mod retention_snapshot;
 mod semantic;
+mod stage_recovery;
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -14,8 +16,7 @@ use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
 use super::DurabilityCrashMatrixError;
-use super::production_protocol::fixture::GoldenFixture;
-use expectation::ExpectedStoreState;
+use expectation::{ArtifactFixtures, ExpectedStoreState};
 use xtask::{DurabilityCrashCase, DurabilityCrashSequence};
 
 pub(super) fn verify(
@@ -25,8 +26,11 @@ pub(super) fn verify(
     if case.point().sequence() == xtask::DurabilityCrashSequence::Retention {
         return retention::verify(store_root, case);
     }
-    if case.point().sequence() == DurabilityCrashSequence::Migration {
-        return migration::verify(store_root, case);
+    if case.point().sequence() == DurabilityCrashSequence::Initialization {
+        return initialization::verify(store_root, case);
+    }
+    if case.point().sequence() == DurabilityCrashSequence::RetainedCatalog {
+        return retained_catalog::verify(store_root, case);
     }
     let expected = ExpectedStoreState::for_case(case)?;
     let observed_paths = inventory(store_root)?;
@@ -36,13 +40,11 @@ pub(super) fn verify(
             observed: observed_paths,
         });
     }
-    let segment = GoldenFixture::segment()?;
-    let catalog = GoldenFixture::catalog()?;
-    let head = GoldenFixture::head()?;
+    let fixtures = ArtifactFixtures::load()?;
     for (relative, bytes) in expected.artifacts() {
         let observed = fs::read(store_root.join(relative))
             .map_err(|source| DurabilityCrashMatrixError::io("read crash artifact", source))?;
-        let expected_bytes = bytes.resolve(&segment, &catalog, &head)?;
+        let expected_bytes = bytes.resolve(&fixtures)?;
         if observed != expected_bytes {
             return Err(DurabilityCrashMatrixError::artifact_bytes(
                 relative,

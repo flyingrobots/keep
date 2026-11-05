@@ -9,10 +9,10 @@ use super::{AdmittedRetentionRoot, RetentionSelectedRootRefusal};
 use crate::adapters::filesystem_exact_record::ExactRecordError;
 use crate::adapters::{verification_admission, verification_ingress};
 use crate::{
-    CatalogRestartPolicy, FilesystemPlatformAdmissionError, FilesystemRetentionSnapshot,
-    FilesystemRetentionSnapshotError, ReaderAttemptLimit, RetentionNamespaceDigest,
-    RetentionRootDecodeError, VerificationDepth, VerificationError, VerificationRefusal,
-    VerificationReport, VerificationSource, VerificationSubject, VersionTwoRecordRefusal,
+    CatalogRestartPolicy, FilesystemRetentionSnapshot, FilesystemRetentionSnapshotError,
+    ReaderAttemptLimit, RetentionNamespaceDigest, RetentionRootDecodeError, StoreRecordRefusal,
+    VerificationDepth, VerificationError, VerificationRefusal, VerificationReport,
+    VerificationSource, VerificationSubject,
 };
 use std::io;
 
@@ -36,10 +36,16 @@ impl FilesystemRetentionSnapshot {
         policy: CatalogRestartPolicy,
         limit: ReaderAttemptLimit,
     ) -> Result<Self, VerificationError> {
-        Self::load_with(root, policy, limit, |source, limit| {
-            super::collect_verification_view(source, limit)?
-                .map_err(verification_ingress::catalog_error)
-        })
+        Self::load_with(
+            root,
+            policy,
+            limit,
+            crate::StoreExpectation::NoExpectation,
+            |source, limit| {
+                super::collect_verification_view(source, limit)?
+                    .map_err(verification_ingress::catalog_error)
+            },
+        )
     }
 
     /// Verifies the exact root selected for `namespace` in this fenced view.
@@ -115,6 +121,14 @@ fn view_error(source: FilesystemRetentionSnapshotError) -> VerificationError {
     if let FilesystemRetentionSnapshotError::Catalog { source } = source {
         return verification_ingress::catalog_error(source);
     }
+    if matches!(source, FilesystemRetentionSnapshotError::Unpublished) {
+        return VerificationError::Refused {
+            refusal: VerificationRefusal::Missing {
+                subject: VerificationSubject::PublishedView,
+            },
+            source: Some(Box::new(VerificationSource::Retention(source))),
+        };
+    }
     if matches!(&source, FilesystemRetentionSnapshotError::Admission { source } if admission_is_corrupt(source))
     {
         return VerificationError::Refused {
@@ -137,26 +151,15 @@ fn admission_is_corrupt(error: &io::Error) -> bool {
     {
         return true;
     }
-    if let Some(record) = source.downcast_ref::<VersionTwoRecordRefusal>() {
+    if let Some(record) = source.downcast_ref::<StoreRecordRefusal>() {
         return match record {
-            VersionTwoRecordRefusal::LengthOverflow { .. } => false,
-            VersionTwoRecordRefusal::KindOrLength { .. }
-            | VersionTwoRecordRefusal::TrailingBytes { .. }
-            | VersionTwoRecordRefusal::Marker { .. }
-            | VersionTwoRecordRefusal::Intent { .. }
-            | VersionTwoRecordRefusal::Receipt { .. } => true,
+            StoreRecordRefusal::LengthOverflow { .. } => false,
+            StoreRecordRefusal::KindOrLength { .. }
+            | StoreRecordRefusal::TrailingBytes { .. }
+            | StoreRecordRefusal::Marker { .. } => true,
         };
     }
-    match source.downcast_ref::<FilesystemPlatformAdmissionError>() {
-        Some(FilesystemPlatformAdmissionError::RootIdentityChanged { .. }) => true,
-        Some(
-            FilesystemPlatformAdmissionError::Platform { .. }
-            | FilesystemPlatformAdmissionError::WriterLock { .. }
-            | FilesystemPlatformAdmissionError::Namespace { .. }
-            | FilesystemPlatformAdmissionError::MigrationRecord { .. },
-        )
-        | None => false,
-    }
+    false
 }
 
 fn root_error(

@@ -3,7 +3,7 @@
 use std::io;
 
 use super::{
-    CatalogRestartError, CatalogRestartPhase, FilesystemRecoveryNextHeadFinalizer,
+    CatalogRestartError, FilesystemRecoveryNextHeadFinalizer,
     RecoveryNextHeadFinalizationReadiness, RecoveryNextHeadFinalizationRequest,
     RecoveryNextHeadFinalizationStorage, RecoveryNextHeadFinalizationStorageError,
     RecoveryNextHeadFinalizationTarget, RecoveryStageNamespacePhase, catalog_restart_loader,
@@ -91,7 +91,7 @@ fn current_readiness(
                 })
             }
         }
-        Err(source) if missing_head(&source) => {
+        Err(source) if catalog_restart_loader::missing_head(&source) => {
             if request.expectation().current_generation().is_none() {
                 Ok(RecoveryNextHeadFinalizationReadiness::Ready)
             } else {
@@ -103,16 +103,6 @@ fn current_readiness(
         }
         Err(source) => Err(current_view(source)),
     }
-}
-
-fn missing_head(error: &CatalogRestartError) -> bool {
-    matches!(
-        error,
-        CatalogRestartError::Io {
-            phase: CatalogRestartPhase::OpenHead,
-            source,
-        } if source.kind() == io::ErrorKind::NotFound
-    )
 }
 
 fn current_view(source: CatalogRestartError) -> RecoveryNextHeadFinalizationStorageError {

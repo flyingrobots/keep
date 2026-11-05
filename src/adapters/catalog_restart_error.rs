@@ -7,13 +7,20 @@ use std::io;
 
 use super::{
     CatalogAdmissionError, CatalogDecodeError, CatalogRestartArtifact, CatalogRestartPhase,
-    CatalogSnapshotError, PublicationHeadDecodeError, SegmentDigest, SegmentReadError,
+    CatalogSnapshotError, FilesystemStoreAdmissionError, PublicationHeadDecodeError, SegmentDigest,
+    SegmentReadError, StoreExpectationMismatch,
 };
 use crate::{CatalogDigest, CatalogGeneration, CatalogLength};
 
 /// Failure to reconstruct one exact published catalog snapshot.
 #[derive(Debug)]
 pub enum CatalogRestartError {
+    /// The root is not an admitted committed store: its namespace or `FORMAT`
+    /// marker refused before any catalog artifact was opened.
+    Admission {
+        /// Preserved namespace or format-marker refusal.
+        source: Box<FilesystemStoreAdmissionError>,
+    },
     /// One capability-relative filesystem operation failed.
     Io {
         /// Exact operation that failed.
@@ -134,6 +141,11 @@ pub enum CatalogRestartError {
         /// Preserved snapshot refusal.
         source: CatalogSnapshotError,
     },
+    /// The loaded store does not hold the catalog its caller expected.
+    Expectation {
+        /// The expected and observed published catalogs.
+        source: StoreExpectationMismatch,
+    },
 }
 
 impl CatalogRestartError {
@@ -156,6 +168,7 @@ impl CatalogRestartError {
 impl fmt::Display for CatalogRestartError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Admission { .. } => formatter.write_str("catalog restart store admission failed"),
             Self::Io { phase, .. } | Self::SegmentIo { phase, .. } => {
                 write!(formatter, "catalog restart {phase} failed")
             }
@@ -188,6 +201,9 @@ impl fmt::Display for CatalogRestartError {
             }
             Self::CatalogAdmission { .. } => formatter.write_str("catalog record binding failed"),
             Self::Snapshot { .. } => formatter.write_str("restart snapshot binding failed"),
+            Self::Expectation { .. } => {
+                formatter.write_str("the store does not hold the expected published catalog")
+            }
         }
     }
 }
@@ -201,11 +217,13 @@ impl Error for CatalogRestartError {
                 ..
             }
             | Self::SegmentIndexAllocation { source, .. } => Some(source),
+            Self::Admission { source } => Some(source),
             Self::Head { source } => Some(source),
             Self::Catalog { source } => Some(source),
             Self::Segment { source, .. } => Some(source),
             Self::CatalogAdmission { source } => Some(source),
             Self::Snapshot { source } => Some(source),
+            Self::Expectation { source } => Some(source),
             Self::NotRegular { .. }
             | Self::Length { .. }
             | Self::LengthArithmetic { .. }

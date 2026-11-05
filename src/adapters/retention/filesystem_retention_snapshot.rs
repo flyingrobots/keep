@@ -1,4 +1,4 @@
-//! This module owns one fenced, double-collected reader view of a version-two store.
+//! This module owns one fenced, double-collected reader view of a store.
 
 use std::io;
 use std::path::Path;
@@ -15,12 +15,10 @@ use super::{
 use crate::adapters::filesystem_exact_record::{
     self as exact_record, ExactRecordError, ExactRecordRefusal,
 };
-use crate::adapters::filesystem_platform_profile::root_identity;
-use crate::adapters::filesystem_version_two_admission::require_root_identity;
 use crate::adapters::{
     CatalogRestartError, CatalogRestartPolicy, ChecksummedPublicationHead,
-    FilesystemCatalogSnapshot, filesystem_initialization_namespace, filesystem_platform_profile,
-    filesystem_version_two_records, publication_head_decoder,
+    FilesystemCatalogSnapshot, ObservedCatalog, StoreExpectation, filesystem_format_marker,
+    filesystem_platform_profile, filesystem_store_namespace, publication_head_decoder,
 };
 use crate::{RetentionHead, RetentionManifest, RetentionNamespaceDigest};
 
@@ -106,32 +104,38 @@ impl RetentionViewSource for Source {
 }
 
 impl FilesystemRetentionSnapshot {
-    /// Admits the production filesystem profile and version-two root, acquires the reader fence, and
+    /// Admits the production filesystem profile and store root, acquires the reader fence, and
     /// double-collects one consistent view within `limit` attempts.
-    /// Admission requires the opened directory's restart-stable device and
-    /// inode to match the jointly admitted migration records before fencing.
+    /// Admission requires the committed namespace and the canonical `FORMAT`
+    /// marker before fencing; nothing binds the store to the directory it is in.
     ///
     /// The call takes no writer authority and performs no namespace writes.
     /// Platform admission synchronizes the opened root directory; failure is
     /// returned as `Admission` with the original I/O cause. It may also block
     /// while collection holds the fence exclusively.
     /// Platform admission requires an admitted local writable Linux ext4 or
-    /// macOS APFS profile across every present version-two protocol directory.
-    /// The same opened root capability is retained through namespace, migration
-    /// identity, fence, and coordinate admission; the ambient path is not reopened.
+    /// macOS APFS profile across every present protocol directory.
+    /// The same opened root capability is retained through namespace, marker,
+    /// fence, and coordinate admission; the ambient path is not reopened. A
+    /// committed store with no catalog `HEAD` refuses as `Unpublished` once the
+    /// fence is held.
+    /// A retained or in-flight catalog `head.next` is admitted and ignored: the
+    /// view selects only `HEAD`, so catalog publication runs beside readers.
+    /// `expectation` is compared with the collected view under the fence.
     ///
     /// # Errors
     ///
     /// Returns [`FilesystemRetentionSnapshotError`](super::FilesystemRetentionSnapshotError)
-    /// at the exact admission, fence, collection, or catalog refusal.
+    /// at the exact admission, fence, collection, catalog, or expectation refusal.
     /// A catalog admission result is returned only after both coordinate
     /// reads agree; a moving head discards that result and retries.
     pub fn load(
         store_root: &Path,
         policy: CatalogRestartPolicy,
         limit: ReaderAttemptLimit,
+        expectation: StoreExpectation,
     ) -> Result<Self, Error> {
-        Self::load_with(store_root, policy, limit, |source, limit| {
+        Self::load_with(store_root, policy, limit, expectation, |source, limit| {
             collect_retention_view(source, limit)
                 .map_err(|source| Error::View { source })?
                 .map_err(|source| Error::Catalog { source })
@@ -142,19 +146,16 @@ impl FilesystemRetentionSnapshot {
         store_root: &Path,
         policy: CatalogRestartPolicy,
         limit: ReaderAttemptLimit,
+        expectation: StoreExpectation,
         collect: impl FnOnce(&mut Source, ReaderAttemptLimit) -> Result<View, E>,
     ) -> Result<Self, E> {
-        let root = filesystem_platform_profile::open_version_two(store_root)
+        let root = filesystem_platform_profile::open(store_root)
             .map_err(|source| Error::Admission { source })?;
-        filesystem_initialization_namespace::admit_version_two(&root)
+        filesystem_store_namespace::admit_store_with_catalog_stage(&root)
             .map_err(|source| Error::Admission { source })?;
-        let bound = filesystem_version_two_records::admit(&root)
-            .map_err(|source| Error::Admission { source })?;
-        let observed = root_identity(&root).map_err(|source| Error::Admission { source })?;
-        require_root_identity(bound, observed).map_err(|source| Error::Admission {
-            source: io::Error::new(io::ErrorKind::InvalidData, source),
-        })?;
+        filesystem_format_marker::admit(&root).map_err(|source| Error::Admission { source })?;
         let fence = ReaderFence::acquire(&root).map_err(|source| Error::Fence { source })?;
+        require_published(&root, expectation)?;
         let retention = root
             .open_dir_nofollow(pool_name::RETENTION)
             .map_err(|source| Error::Admission { source })?;
@@ -171,6 +172,12 @@ impl FilesystemRetentionSnapshot {
             policy,
         };
         let view = collect(&mut source, limit)?;
+        expectation
+            .require(Some(ObservedCatalog::new(
+                view.catalog.generation(),
+                view.catalog.catalog_digest(),
+            )))
+            .map_err(|source| Error::Expectation { source })?;
         Ok(Self {
             _fence: fence,
             roots,
@@ -317,4 +324,21 @@ fn selected_namespace_directory(
     let name = pool_name::namespace(namespace);
     crate::adapters::filesystem_namespace_refusal::require_directory(roots, &name)?;
     roots.open_dir_nofollow(name)
+}
+
+/// Refuses a committed store that has not published its first catalog.
+///
+/// Checked under the fence, after admission: absence of `HEAD` is a defined
+/// state of an initialized store, reported as such instead of as a failed read.
+fn require_published(root: &Dir, expectation: StoreExpectation) -> Result<(), Error> {
+    match root.symlink_metadata(HEAD_NAME) {
+        Ok(_) => Ok(()),
+        Err(source) if source.kind() == io::ErrorKind::NotFound => {
+            expectation
+                .require(None)
+                .map_err(|source| Error::Expectation { source })?;
+            Err(Error::Unpublished)
+        }
+        Err(source) => Err(Error::Admission { source }),
+    }
 }

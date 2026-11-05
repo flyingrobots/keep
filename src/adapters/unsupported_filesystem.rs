@@ -4,7 +4,7 @@ use std::{io, path::Path};
 
 use cap_std::fs::Dir;
 
-use super::filesystem_root_identity::FilesystemRootIdentity;
+use super::filesystem_directory_coordinate::FilesystemDirectoryCoordinate;
 use super::platform_filesystem::PlatformFilesystem;
 
 pub(super) struct UnsupportedFilesystem;
@@ -14,31 +14,8 @@ impl PlatformFilesystem for UnsupportedFilesystem {
         Err(unsupported())
     }
 
-    fn admit_directory(&self, _directory: &Dir) -> io::Result<FilesystemRootIdentity> {
+    fn admit_directory(&self, _directory: &Dir) -> io::Result<FilesystemDirectoryCoordinate> {
         Err(unsupported())
-    }
-
-    fn root_identity(&self, directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-        #[cfg(any(test, feature = "repository-tasks"))]
-        return self.repository_identity(directory);
-
-        #[cfg(not(any(test, feature = "repository-tasks")))]
-        {
-            let _ = directory;
-            Err(unsupported())
-        }
-    }
-
-    #[cfg(any(test, feature = "repository-tasks"))]
-    fn repository_identity(&self, directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-        use cap_fs_ext::MetadataExt;
-
-        let metadata = directory.dir_metadata()?;
-        Ok(FilesystemRootIdentity::new(
-            metadata.dev(),
-            metadata.dev(),
-            metadata.ino(),
-        ))
     }
 }
 

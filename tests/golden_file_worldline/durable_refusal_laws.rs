@@ -1,6 +1,6 @@
 //! Evidenced logical absence through a completely admitted durable catalog.
 //!
-//! Size: medium; production publication and migration in an owned ext4 namespace.
+//! Size: medium; production initialization and publication in an owned ext4 namespace.
 //! Oracle: a published layout names the exact missing chunk; no output is permitted.
 //! Delete when durable exact-layout reads are removed or stronger refusal evidence subsumes these laws.
 
@@ -23,8 +23,13 @@ fn a_durable_layout_naming_an_absent_chunk_refuses_before_reconstruction_output(
         .first()
         .ok_or("nonempty input has no chunk")?
         .id();
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let mut output = vec![0xAB];
     let failure = snapshot
         .reconstruct_layout(expected.record.id(), &mut output)
@@ -54,8 +59,13 @@ fn a_durable_range_naming_an_absent_chunk_refuses_before_output() -> Result<(), 
         .first()
         .ok_or("nonempty input has no chunk")?
         .id();
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let requested = ByteRange::new(ByteOffset::new(1), ByteLength::new(3))?;
     let mut output = vec![0xAB];
     let failure = snapshot
@@ -78,8 +88,13 @@ fn an_out_of_bounds_durable_range_refuses_the_exact_requested_coordinates()
     let bytes = b"one";
     let sandbox = build("durable-range-outside", &[bytes])?;
     let expected = identify(bytes)?;
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let requested = ByteRange::new(ByteOffset::new(2), ByteLength::new(2))?;
     let mut output = vec![0xAB];
     let failure = snapshot
@@ -101,8 +116,13 @@ fn an_absent_durable_blob_refuses_range_output_with_its_exact_identity()
 -> Result<(), Box<dyn Error>> {
     let sandbox = build("durable-absent-blob", &[b"present"])?;
     let absent = identify(b"absent")?;
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let requested = ByteRange::new(ByteOffset::new(0), ByteLength::new(1))?;
     let mut output = vec![0xAB];
     let failure = snapshot
@@ -120,8 +140,13 @@ fn an_absent_durable_blob_refuses_range_output_with_its_exact_identity()
 fn an_absent_durable_layout_refuses_before_reconstruction_output() -> Result<(), Box<dyn Error>> {
     let sandbox = build("durable-absent-layout", &[b"present"])?;
     let absent = identify(b"absent")?;
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let mut output = vec![0xAB];
     let failure = snapshot
         .reconstruct_layout(absent.record.id(), &mut output)

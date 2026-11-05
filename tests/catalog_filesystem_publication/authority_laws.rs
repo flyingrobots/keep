@@ -5,12 +5,13 @@ use std::io::{self, Write};
 use crate::{
     AdmittedSegment, CanonicalCatalog, CatalogGeneration, CatalogPublicationError,
     CatalogPublicationExpectation, CatalogPublicationPhase, FilesystemCatalogPublicationError,
-    FilesystemCatalogPublisher, FilesystemWriterLock, SegmentPublication, SegmentRecordLimit,
-    SegmentStage, StagedSegment, publish_catalog_generation,
+    SegmentPublication, SegmentRecordLimit, SegmentStage, StagedSegment,
+    publish_retained_catalog_generation,
 };
 
 use super::{
-    SEGMENT_HEX, StoreFixture, fixture, maximum_segment_policy, restart_policy, stage_one_zero,
+    SEGMENT_HEX, StoreFixture, catalog_refusal, fixture, maximum_segment_policy, open_publisher,
+    stage_one_zero,
 };
 
 #[test]
@@ -26,11 +27,9 @@ fn metadata_equivalent_external_stage_cannot_authorize_publication() -> Result<(
     let segments = [segment];
     let selection = SegmentPublication::one(staged.seal()?.close(), &segments[0])?;
     let catalog = CanonicalCatalog::from_segments(CatalogGeneration::new(1)?, None, &segments)?;
-    let lock = FilesystemWriterLock::try_acquire(store.path())?;
-    let mut publisher =
-        FilesystemCatalogPublisher::open_unchecked_for_tests(lock, restart_policy()?)?;
+    let mut publisher = open_publisher(&store)?;
 
-    let Err(error) = publish_catalog_generation(
+    let Err(error) = publish_retained_catalog_generation(
         &mut publisher,
         CatalogPublicationExpectation::uninitialized(),
         selection,
@@ -39,7 +38,7 @@ fn metadata_equivalent_external_stage_cannot_authorize_publication() -> Result<(
     ) else {
         return Err("external closed-stage metadata authorized publication".into());
     };
-    let CatalogPublicationError::Storage { phase, source } = error else {
+    let CatalogPublicationError::Storage { phase, source } = catalog_refusal(error)? else {
         return Err("external stage reached the wrong refusal boundary".into());
     };
 
@@ -59,12 +58,8 @@ fn metadata_equivalent_external_stage_cannot_authorize_publication() -> Result<(
 fn one_publisher_cannot_select_another_publishers_stage() -> Result<(), Box<dyn Error>> {
     let first_store = StoreFixture::create("catalog-filesystem-stage-owner")?;
     let second_store = StoreFixture::create("catalog-filesystem-stage-substitute")?;
-    let first_lock = FilesystemWriterLock::try_acquire(first_store.path())?;
-    let first_publisher =
-        FilesystemCatalogPublisher::open_unchecked_for_tests(first_lock, restart_policy()?)?;
-    let second_lock = FilesystemWriterLock::try_acquire(second_store.path())?;
-    let second_publisher =
-        FilesystemCatalogPublisher::open_unchecked_for_tests(second_lock, restart_policy()?)?;
+    let first_publisher = open_publisher(&first_store)?;
+    let second_publisher = open_publisher(&second_store)?;
     let (sealed, segment_bytes) = stage_one_zero(&first_publisher, &first_store)?;
     let segment = AdmittedSegment::decode(&segment_bytes, maximum_segment_policy())?;
 

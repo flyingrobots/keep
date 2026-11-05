@@ -17,8 +17,13 @@ use keep::{
 fn every_short_durable_range_equals_its_source_slice() -> Result<(), Box<dyn Error>> {
     let source = (0_u8..64).collect::<Vec<_>>();
     let sandbox = build("durable-all-short-ranges", &[&source])?;
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let target = BlobId::hash_bytes(&source)?;
     let size = u64::try_from(source.len())?;
     for length in 0..=size {
@@ -39,8 +44,13 @@ fn multichunk_durable_boundary_ranges_equal_the_frozen_worldline_source()
     let case = find_case("large-ramp")?;
     let source = case.bytes()?;
     let sandbox = build("durable-multichunk-boundaries", &[&source])?;
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let size = u64::try_from(source.len())?;
     let positions = [
         0,
@@ -99,8 +109,13 @@ fn generated_multichunk_durable_ranges_equal_the_reference_domain() -> Result<()
         source.push(u8::try_from(value)?);
     }
     let sandbox = build("durable-reference-range-domain", &[&source])?;
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let target = BlobId::hash_bytes(&source)?;
     let coordinate_count = u64::try_from(source.len())?
         .checked_add(1)
@@ -142,8 +157,13 @@ fn a_durable_range_needs_no_nonoverlapping_chunk_records() -> Result<(), Box<dyn
     let identified = super::durable_fixture::identify(&source)?;
     let selected = identified.spans.get(1).ok_or("interior chunk absent")?;
     let sandbox = super::durable_fixture::build_selected_chunk("durable-only-overlap", &source, 1)?;
-    let snapshot =
-        DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?.snapshot()?;
+    let snapshot = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?
+    .snapshot()?;
     let start = selected
         .offset()
         .get()

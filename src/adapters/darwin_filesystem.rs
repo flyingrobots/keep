@@ -10,7 +10,7 @@ use cap_fs_ext::MetadataExt;
 use cap_std::fs::Dir;
 use rustix::fs::{CWD, Mode, OFlags, fstatfs, openat};
 
-use super::filesystem_root_identity::{DARWIN_COORDINATE_DOMAIN, FilesystemRootIdentity};
+use super::filesystem_directory_coordinate::FilesystemDirectoryCoordinate;
 use super::platform_filesystem::PlatformFilesystem;
 
 pub(super) struct DarwinFilesystem;
@@ -34,7 +34,7 @@ impl PlatformFilesystem for DarwinFilesystem {
         Ok(Dir::from_std_file(File::from(current)))
     }
 
-    fn admit_directory(&self, directory: &Dir) -> io::Result<FilesystemRootIdentity> {
+    fn admit_directory(&self, directory: &Dir) -> io::Result<FilesystemDirectoryCoordinate> {
         // Darwin's public mount flags. Native APFS admission excludes snapshots
         // mounted read-only and network filesystems even if a name resembles APFS.
         const READ_ONLY: u32 = 0x0000_0001;
@@ -50,22 +50,13 @@ impl PlatformFilesystem for DarwinFilesystem {
                 "directory is not on a writable local APFS volume",
             ));
         }
-        self.root_identity(directory)
-    }
-
-    fn root_identity(&self, directory: &Dir) -> io::Result<FilesystemRootIdentity> {
         let metadata = directory.dir_metadata()?;
         let device = u32::try_from(metadata.dev())
             .map_err(|source| io::Error::new(io::ErrorKind::Unsupported, source))?;
         // Each mounted APFS volume has its own st_dev, and fsid only repeats it
         // beside the filesystem type, so one observation serves both coordinates.
-        let device = DARWIN_COORDINATE_DOMAIN | u64::from(device);
-        Ok(FilesystemRootIdentity::new(device, device, metadata.ino()))
-    }
-
-    #[cfg(any(test, feature = "repository-tasks"))]
-    fn repository_identity(&self, directory: &Dir) -> io::Result<FilesystemRootIdentity> {
-        self.root_identity(directory)
+        let device = u64::from(device);
+        Ok(FilesystemDirectoryCoordinate::new(device, device))
     }
 }
 

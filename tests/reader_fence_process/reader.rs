@@ -34,11 +34,16 @@ pub(super) fn serve() -> Result<(), Box<dyn Error>> {
         SegmentReadPolicy::MAXIMUM,
         CatalogRestartByteLimit::new(1_048_576)?,
     );
-    let snapshot = FilesystemRetentionSnapshot::load(&root, policy, ReaderAttemptLimit::DEFAULT)?;
+    let snapshot = FilesystemRetentionSnapshot::load(
+        &root,
+        policy,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?;
     assert_eq!(
         snapshot.catalog().generation().get(),
         1,
-        "child must load the golden migrated catalog"
+        "child must load the golden first catalog"
     );
     channel.write_all(b"R")?;
     let mut stop = [0];

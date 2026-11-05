@@ -9,10 +9,10 @@ exclusive-writer, immutable-publication, and recovery contracts. It also defines
 the boundary for admitting additional Linux filesystems without copying every
 storage protocol. Windows and network filesystems are outside this work.
 
-## The boundary to introduce
+## The boundary
 
 Keep has several storage **capabilities**, not four competing storage engines.
-Initialization, catalog publication, retention publication, and migration each
+Initialization, catalog publication, retention publication, and recovery each
 need a different subset of operations and a different authority state. Keep
 those focused ports. Implement them over one admitted filesystem session.
 
@@ -36,7 +36,7 @@ The two boundaries have different purposes:
 | --- | --- | --- |
 | Semantic protocol ports | Required effects, ordering obligations, typed outcomes | OS selection, descriptors, filesystem detection |
 | Common filesystem adapters | Canonical namespace, pinned authority, exact verification, protocol effects | Linux or Darwin syscall policy |
-| `PlatformFilesystem` | Root traversal, descriptor observations, durability, native locking semantics | Catalog generations, retention policy, codecs, recovery decisions |
+| `PlatformFilesystem` | Root traversal; the profile and live coordinates of an opened directory | Catalog generations, retention policy, codecs, recovery decisions |
 | Filesystem profile admission | Which observed configurations satisfy the supported contract | Caller-selected claims of safety, best-effort fallback |
 
 The platform boundary is an internal infrastructure interface, not a domain
@@ -53,10 +53,9 @@ diverge. It would also duplicate the operating-system work in four adapters.
 
 Use one admitted root and retained writer authority as the construction root.
 An initialization or reopen operation establishes that authority; subsequent
-protocol adapters consume it or borrow it exclusively. Migration changes the
-permitted session state. It does not mint another independent writer.
+protocol adapters consume it or borrow it exclusively.
 
-Keep's existing `FilesystemPlatformAdmission` and version-two admission values
+Keep's existing `FilesystemStoreAdmission` values
 already establish much of this ownership discipline. Preserve those public
 entry points during the implementation. A convenience `FilesystemStore` facade
 is justified only if it removes repeated consumer orchestration; it must not
@@ -64,29 +63,37 @@ be required merely to select Linux versus macOS.
 
 Backend selection occurs once through a native-platform alias. Adding a new
 OS requires a platform implementation, its selection entry, and conformance
-evidence. It must not require another catalog, retention, migration, or
+evidence. It must not require another catalog, retention, or
 recovery state machine. Adding another filesystem on the same OS ordinarily
 requires a profile and its evidence, not another implementation of every port.
 
 ## Platform interface
 
 The implementation separates shared profile admission from native observations.
-The interface has these semantic responsibilities; final Rust names may be
-refined without changing the contract:
+The `PlatformFilesystem` trait has two operations:
 
 | Operation | Required result |
 | --- | --- |
-| Open a selected root | Pinned readable directory, no symlink traversal |
-| Observe a directory | Filesystem kind, writable/local observations, naming behavior, device/mount/object coordinates |
-| Observe an existing object | Exact descriptor-bound identity; no path reopening as a substitute |
-| Synchronize a regular file | All prior writes reach the platform's documented durable boundary, or an exact error |
-| Synchronize a directory | Prior namespace effects reach that boundary, or an exact error |
-| Acquire a native lock | Nonblocking kernel exclusion tied to the retained handle; typed contention |
-| Validate entry spelling where necessary | The actual namespace entry has the exact protocol spelling |
+| Open a selected root (`open_root`) | Pinned readable directory, no symlink traversal |
+| Admit a directory (`admit_directory`) | A supported writable local profile, or refusal; the directory's live device and mount coordinates |
 
-Use concrete observation records, checked constructors, and explicit enums for
-naming and mount behavior. No `supports_durability: bool` supplied by a caller,
-no catch-all string capability map, and no public boolean parameters.
+The coordinates carry no object identity. Nothing persists them, and common code
+compares them only within one operation.
+
+These obligations hold on every platform but are not trait operations, because
+one shared implementation serves both platforms:
+
+| Obligation | Required result | Where it lives |
+| --- | --- | --- |
+| Observe an existing object | Exact descriptor-bound identity; no path reopening as a substitute | Common exact-record and lock code |
+| Synchronize a regular file | All prior writes reach the platform's documented durable boundary, or an exact error | The standard library's `sync_all` on the retained handle |
+| Synchronize a directory | Prior namespace effects reach that boundary, or an exact error | The same call on a directory handle |
+| Acquire a native lock | Nonblocking kernel exclusion tied to the retained handle; typed contention | Common writer-lock and reader-fence code |
+| Validate entry spelling | The actual namespace entry has the exact protocol spelling | The common directory wrapper; the check is compiled on macOS only |
+
+Use concrete observation records, checked constructors, and typed refusals. No
+`supports_durability: bool` supplied by a caller, no catch-all string capability
+map, and no public boolean parameters.
 
 Common code owns the protocol-directory list, checks every existing child,
 and compares its device and mount with the root. Native implementations own
@@ -101,7 +108,11 @@ allocation, or reference-counted writer authority is needed for OS selection.
 
 ## Admission and continued authority
 
-Admission is ordered as follows:
+Platform admission covers the routes that admit a profile:
+`FilesystemStoreAdmission::initialize` and `reopen`,
+`FilesystemRetentionSnapshot::load` and the durable readers built on it, and
+recovery admission and inventory. On those routes admission is ordered as
+follows:
 
 1. Pin the root through a no-follow traversal.
 2. Observe its supported filesystem profile and every existing protocol child.
@@ -115,6 +126,14 @@ Admission is ordered as follows:
 Subsequent protocol admission must not revert to ambient path lookup. Newly
 created children are verified through retained parent capabilities before use.
 Existing substitution and uncertain-recovery refusals remain mandatory.
+
+Three public routes admit no profile. `FilesystemCatalogSnapshot::load`,
+`FilesystemCatalogSnapshot::load_for_verification`, and
+`FilesystemWriterLock::try_acquire` open the selected path ambiently, so they
+apply no filesystem-kind check and do not refuse a symbolic link in that path.
+Every lookup beneath the opened root is still capability-relative, and the
+exact-name check still applies to it. The repository-task entry points, compiled
+only for tests and the `repository-tasks` feature, skip the profile by design.
 
 An adapter's successful admission does not prove that the operator has not
 shared a block device with another host, or that hardware honestly implements
@@ -150,10 +169,11 @@ case-insensitive variant and case-sensitive APFS. HFS+ and other filesystems
 remain explicit future profiles. APFS snapshots and read-only mounts refuse
 writer admission.
 
-Root traversal uses descriptor-relative, no-follow component opens. Handle
+On the routes that admit a profile, root traversal uses descriptor-relative,
+no-follow component opens. Handle
 identity uses Darwin observations; it must not pretend that device identity
 is independently observed mount identity. Symbolic links in the selected path
-remain a refusal. The documentation must explain that `/tmp` on macOS is a
+remain a refusal on those routes. The documentation must explain that `/tmp` on macOS is a
 symlink and use the actual selected directory instead of silently resolving it.
 
 Finder can write `.DS_Store` into a folder it displays. That entry refuses admission
@@ -183,25 +203,23 @@ repeats `st_dev` beside the filesystem type, so it is not read.
 ## Physical coordinates and durable compatibility
 
 Content identities, canonical segment/catalog bytes, and storage profiles do
-not depend on the OS. Existing Linux bytes and golden fixtures remain stable.
+not depend on the OS. The platform work changed no bytes and no golden fixture.
+[ADR-0010](../adr/0010-one-storage-format.md) did, on every platform alike: it
+changed the format-definition digest and the `FORMAT` marker fixture and deleted
+the migration fixtures. The segment, catalog, and publication-head bytes are
+unchanged.
 
-Physical recovery coordinates are separate from logical content identity.
-The current migration record stores device, mount, and file coordinates as
-three big-endian `u64` values. Current main treats mount identity as live
-same-process evidence and compares device/inode for restart. Preserve that
-distinction; never replace a persisted intent merely because a mount number
-changed after restart.
+Physical coordinates are separate from logical content identity, and a store
+persists none of them ([ADR-0010](../adr/0010-one-storage-format.md)). They exist
+only within one operation, to keep every protocol directory on the root's device
+and mount.
 
-The Darwin mapping sets the top bit of the device coordinate over the checked
-32-bit `st_dev`, uses that value for both device and mount, and stores the inode
-unchanged. A negative `st_dev` refuses instead of being truncated. The top bit
-keeps Darwin coordinates apart from Linux ones without changing the wire grammar.
-Darwin renumbers `st_dev` on reattach, so the restart check compares only that bit
-and the inode. Live same-process checks still compare the full coordinate.
+The Darwin mapping uses the checked 32-bit `st_dev` for both device and mount. A
+negative `st_dev` refuses instead of being truncated. Darwin renumbers `st_dev` on
+reattach, which cannot refuse a store because nothing records the old number.
 
-Cross-OS movement of a physical store is not ordinary reopen. A store whose
-recovery evidence binds it to another physical root must refuse. Logical
-content export/import remains independent of those coordinates.
+A store has no OS-specific bytes, but moving one between operating systems has not
+been exercised. Only same-OS copies have evidence.
 
 ## Failure model
 
@@ -239,8 +257,9 @@ an unfinished backend in production:
 An independently useful new adapter must pass the same semantic conformance
 laws. Test both success and the boundary failures: symlinked roots/children,
 case aliases, missing fields, read-only mounts, foreign devices/mounts,
-replaced lock files, copied roots, failed file/directory synchronization, and
-each affected crash/recovery prefix. Calibrate refusal assertions against
+replaced lock files, failed file/directory synchronization, and
+each affected crash/recovery prefix. A quiescent copy of a complete root is not
+a failure: since ADR-0010 it must open. Calibrate refusal assertions against
 deliberately weakened evidence, separately from product execution results.
 
 Build output is bounded within the aggregate 20 GiB Keep budget. Test stores,
@@ -253,8 +272,9 @@ usage, free space, lock, enforced limits, timeout, and descendant cleanup.
 
 - [Hexagonal boundaries](https://github.com/flyingrobots/keep/blob/3887f2a/docs/adr/0004-hexagonal-boundary-architecture.md).
 - [Platform adapter decision](../adr/filesystem-platform-adapters.md).
-- [Current filesystem contract](https://github.com/flyingrobots/keep/blob/3887f2a/docs/formats/segment-store-v1/recovery.md#platform-contract).
-- [Migration recovery](https://github.com/flyingrobots/keep/blob/3887f2a/docs/formats/segment-store-v2/migration-recovery.md).
+- [Current filesystem contract](../formats/store/stage-recovery.md#platform-contract).
+- [Filesystem contract at the design baseline](https://github.com/flyingrobots/keep/blob/3887f2a/docs/formats/segment-store-v1/recovery.md#platform-contract),
+  on a page that has since been deleted.
 - [Apple APFS naming variants](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/APFS_Guide/FAQ/FAQ.html).
 - [Apple file synchronization](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/fsync.2.html).
 - [Apple descriptor controls](https://developer.apple.com/library/archive/documentation/System/Conceptual/ManPages_iPhoneOS/man2/fcntl.2.html).

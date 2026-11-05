@@ -25,8 +25,12 @@ use super::durable_fixture::{build, identify, policy};
 fn a_selected_root_from_another_namespace_refuses_direct_read() -> Result<(), Box<dyn Error>> {
     let sandbox = build("durable-direct-foreign-root", &[b"namespace-bound"])?;
     let namespace = install_foreign_selection(sandbox.path())?;
-    let snapshot =
-        FilesystemRetentionSnapshot::load(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
+    let snapshot = FilesystemRetentionSnapshot::load(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?;
 
     let refusal = snapshot
         .retained_root(namespace)
@@ -42,7 +46,12 @@ fn a_foreign_retained_namespace_refuses_durable_output() -> Result<(), Box<dyn E
     let bytes = b"namespace-bound";
     let sandbox = build("durable-foreign-root-output", &[bytes])?;
     let namespace = install_foreign_selection(sandbox.path())?;
-    let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
+    let store = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?;
     let refusal = store
         .snapshot()
         .err()
@@ -84,7 +93,12 @@ fn assert_root_refusal(
 }
 
 fn install_foreign_selection(path: &Path) -> Result<RetentionNamespaceDigest, Box<dyn Error>> {
-    let view = FilesystemRetentionSnapshot::load(path, policy()?, ReaderAttemptLimit::DEFAULT)?;
+    let view = FilesystemRetentionSnapshot::load(
+        path,
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?;
     let selected = view
         .manifest()
         .ok_or("manifest absent")?

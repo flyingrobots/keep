@@ -81,7 +81,12 @@ fn deleted_current_directory() -> Result<(), Box<dyn Error>> {
     std::env::set_current_dir(sandbox.path())?;
     std::fs::remove_dir(sandbox.path())?;
 
-    let result = DurableStore::open(Path::new("."), policy()?, ReaderAttemptLimit::DEFAULT);
+    let result = DurableStore::open(
+        Path::new("."),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    );
 
     restore.restore()?;
     let refusal = result
@@ -111,7 +116,12 @@ fn change_directory_after_open() -> Result<(), Box<dyn Error>> {
     let second_blob = identify(b"second store")?.target;
     let restore = WorkingDirectory(std::env::current_dir()?);
     std::env::set_current_dir(first.path())?;
-    let store = DurableStore::open(Path::new("."), policy()?, ReaderAttemptLimit::DEFAULT)?;
+    let store = DurableStore::open(
+        Path::new("."),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?;
     assert!(
         store.contains_blob(first_blob)?,
         "initial store must contain its own blob"

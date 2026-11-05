@@ -13,7 +13,12 @@ use std::error::Error;
 fn durable_whole_failure_renders_each_boundary_once() -> Result<(), Box<dyn Error>> {
     let bytes = b"diagnostic whole output";
     let sandbox = build("durable-whole-diagnostic", &[bytes])?;
-    let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
+    let store = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?;
     let failure = store
         .reconstruct(identify(bytes)?.target, &mut ZeroWriter)
         .err()
@@ -35,7 +40,12 @@ fn durable_whole_failure_renders_each_boundary_once() -> Result<(), Box<dyn Erro
 fn durable_range_failure_renders_each_boundary_once() -> Result<(), Box<dyn Error>> {
     let bytes = b"diagnostic range output";
     let sandbox = build("durable-range-diagnostic", &[bytes])?;
-    let store = DurableStore::open(sandbox.path(), policy()?, ReaderAttemptLimit::DEFAULT)?;
+    let store = DurableStore::open(
+        sandbox.path(),
+        policy()?,
+        ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
+    )?;
     let range = ByteRange::new(ByteOffset::new(0), ByteLength::new(1))?;
     let failure = store
         .read_range(identify(bytes)?.target, range, &mut ZeroWriter)
@@ -62,6 +72,7 @@ fn durable_admission_failure_renders_its_boundary_once() -> Result<(), Box<dyn E
         &sandbox.path().join("absent"),
         policy()?,
         ReaderAttemptLimit::DEFAULT,
+        keep::StoreExpectation::NoExpectation,
     )?;
     let failure = store
         .reconstruct(identify(bytes)?.target, &mut Vec::new())

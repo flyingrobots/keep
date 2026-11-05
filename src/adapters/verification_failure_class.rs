@@ -1,8 +1,8 @@
 //! This module owns resource-versus-content classification at durable ingress.
 
 use crate::{
-    CatalogAdmissionError, CatalogRestartError, LayoutDecodeError, SegmentReadError,
-    SegmentRecordAdmissionError,
+    CatalogAdmissionError, CatalogRestartError, FilesystemStoreAdmissionError, LayoutDecodeError,
+    SegmentReadError, SegmentRecordAdmissionError,
 };
 
 #[derive(Clone, Copy)]
@@ -87,7 +87,11 @@ pub(super) fn catalog_class(error: &CatalogRestartError) -> FailureClass {
         | CatalogRestartError::SegmentIndexLength
         | CatalogRestartError::SegmentIndexAllocation { .. }
         | CatalogRestartError::RetainedSegmentBytes { .. }
-        | CatalogRestartError::RetainedSegmentByteArithmetic { .. } => FailureClass::Operational,
+        | CatalogRestartError::RetainedSegmentByteArithmetic { .. }
+        // Verification loads name no expectation, so this cannot arise from one. A
+        // mismatch is in any case not evidence of damage.
+        | CatalogRestartError::Expectation { .. } => FailureClass::Operational,
+        CatalogRestartError::Admission { source } => store_admission_class(source),
         CatalogRestartError::Segment { source, .. } => segment_class(source),
         CatalogRestartError::CatalogAdmission { source } => admission_class(source),
         CatalogRestartError::NotRegular { .. }
@@ -113,5 +117,19 @@ fn admission_class(error: &CatalogAdmissionError) -> FailureClass {
         | CatalogAdmissionError::LocationNotTopLevel { .. }
         | CatalogAdmissionError::RecordIdentityMismatch { .. }
         | CatalogAdmissionError::RecordChecksumMismatch { .. } => FailureClass::Corrupt,
+    }
+}
+
+/// A namespace or marker refusal is demonstrated corruption; anything else
+/// that stopped admission is an operational failure.
+fn store_admission_class(error: &FilesystemStoreAdmissionError) -> FailureClass {
+    match error {
+        FilesystemStoreAdmissionError::Namespace { source }
+        | FilesystemStoreAdmissionError::FormatMarker { source }
+            if source.kind() == std::io::ErrorKind::InvalidData =>
+        {
+            FailureClass::Corrupt
+        }
+        _ => FailureClass::Operational,
     }
 }
