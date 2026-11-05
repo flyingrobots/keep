@@ -58,10 +58,12 @@ fn spawn_ready_descendant(
 #[test]
 fn terminal_interrupt_terminates_the_isolated_descendant_group()
 -> Result<(), Box<dyn std::error::Error>> {
-    let directory = TestDirectory::create("process-group-interrupt")?;
-    let ready = directory.path().join("ready");
-    let child_ready = directory.path().join("child-ready");
-    let socket = directory.path().join("descendant.sock");
+    // Short names keep the socket path under the 104-byte `sun_path` bound on
+    // macOS when the temporary directory is itself a long path.
+    let directory = TestDirectory::create("pi")?;
+    let ready = directory.path().join("r");
+    let child_ready = directory.path().join("cr");
+    let socket = directory.path().join("d");
     let listener = readiness_listener(&ready)?;
     let executable = env::current_exe()?;
     let mut supervisor = Command::new(executable)
@@ -121,10 +123,11 @@ fn inherited_descendant_pipe_obeys_the_process_deadline() -> Result<(), Box<dyn 
 
 #[test]
 fn cleanup_terminates_the_entire_child_process_group() -> Result<(), Box<dyn std::error::Error>> {
-    let directory = TestDirectory::create("process-group-cleanup")?;
-    let ready = directory.path().join("ready");
-    let child_ready = directory.path().join("child-ready");
-    let socket = directory.path().join("descendant.sock");
+    // Short names for the `sun_path` bound, as above.
+    let directory = TestDirectory::create("pc")?;
+    let ready = directory.path().join("r");
+    let child_ready = directory.path().join("cr");
+    let socket = directory.path().join("d");
     let listener = readiness_listener(&ready)?;
     let executable = env::current_exe()?;
     let mut command = Command::new(executable);
