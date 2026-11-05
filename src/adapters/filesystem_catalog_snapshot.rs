@@ -32,7 +32,8 @@ impl FilesystemCatalogSnapshot {
     /// reader fence, and it does not admit a platform profile. The returned
     /// owner retains bounded segment bytes so every later logical lookup remains
     /// pinned to this immutable generation. `expectation` is compared with the
-    /// loaded generation and digest after the snapshot verifies.
+    /// generation and digest the checksummed `HEAD` names, before the catalog
+    /// or any segment is read.
     ///
     /// # Errors
     ///
@@ -42,8 +43,11 @@ impl FilesystemCatalogSnapshot {
     /// catalog than [`StoreExpectation::Catalog`] names, or none; and otherwise
     /// [`CatalogRestartError`] for filesystem refusal, malformed or
     /// noncanonical bytes, coordinate disagreement, resource-limit refusal, or
-    /// failed catalog-to-record admission. A damaged store refuses at its own
-    /// boundary before the expectation is compared.
+    /// failed catalog-to-record admission. A damaged `HEAD` refuses at its own
+    /// boundary before the expectation is compared. A mismatch refuses before
+    /// anything `HEAD` selects is opened, so it is reported whatever the
+    /// catalog and segments hold, and an absent `HEAD` is a mismatch with
+    /// nothing observed.
     pub fn load(
         root: &Path,
         policy: CatalogRestartPolicy,

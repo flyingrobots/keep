@@ -21,7 +21,7 @@ const HEAD_LENGTH: u64 = 128;
 /// Admission is the reader law: the exact namespace, which may hold an
 /// in-flight `head.next`, and the canonical `FORMAT` marker. A root without the
 /// marker refuses before any catalog artifact is opened. `expectation` is
-/// compared with the loaded snapshot, or with the absence of `HEAD`.
+/// compared with what the checksummed `HEAD` names, or with its absence.
 pub(super) fn load(
     root: &Path,
     policy: CatalogRestartPolicy,
@@ -35,18 +35,12 @@ pub(super) fn load(
     .map_err(|source| CatalogRestartError::Admission {
         source: Box::new(source),
     })?;
-    match load_from_directory(&directory, HEAD_NAME, policy) {
-        Ok(snapshot) => {
-            let observed = ObservedCatalog::new(snapshot.generation(), snapshot.catalog_digest());
-            require(expectation, Some(observed))?;
-            Ok(snapshot)
-        }
-        Err(source) => {
-            if missing_head(&source) {
-                require(expectation, None)?;
-            }
+    match load_expected(&directory, HEAD_NAME, policy, expectation) {
+        Err(source) if missing_head(&source) => {
+            require(expectation, None)?;
             Err(source)
         }
+        loaded => loaded,
     }
 }
 
@@ -126,9 +120,31 @@ pub(super) fn load_from_directory(
     head_name: &str,
     policy: CatalogRestartPolicy,
 ) -> Result<FilesystemCatalogSnapshot, CatalogRestartError> {
+    load_expected(
+        directory,
+        head_name,
+        policy,
+        StoreExpectation::NoExpectation,
+    )
+}
+
+/// Loads the snapshot `head_name` selects, comparing `expectation` with the head first.
+///
+/// The comparison runs on the checksummed head, before the catalog or any
+/// segment is read. A store that publishes another catalog therefore refuses as
+/// a mismatch whatever its catalog and segments hold, and a damaged head
+/// refuses at its own boundary before the comparison.
+fn load_expected(
+    directory: &crate::adapters::filesystem_directory::FilesystemDirectory,
+    head_name: &str,
+    policy: CatalogRestartPolicy,
+    expectation: StoreExpectation,
+) -> Result<FilesystemCatalogSnapshot, CatalogRestartError> {
     let head_bytes = read_head_bytes(directory, head_name)?;
     let head = ChecksummedPublicationHead::decode(&head_bytes)
         .map_err(|source| CatalogRestartError::Head { source })?;
+    let observed = ObservedCatalog::new(head.generation(), head.catalog_digest());
+    require(expectation, Some(observed))?;
     let catalogs = directory
         .open_dir_nofollow(CATALOGS_NAME)
         .map_err(|source| {

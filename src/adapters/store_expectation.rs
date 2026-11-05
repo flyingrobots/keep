@@ -92,7 +92,10 @@ impl ObservedCatalog {
         self.generation
     }
 
-    /// The published catalog digest.
+    /// The published catalog digest, as `HEAD` names it.
+    ///
+    /// The comparison reads `HEAD` only, so the catalog this names may not
+    /// have been opened or verified when a mismatch is reported.
     pub const fn digest(self) -> CatalogDigest {
         self.digest
     }

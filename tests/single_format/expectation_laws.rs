@@ -10,8 +10,8 @@ use std::fs;
 use std::path::Path;
 
 use keep::{
-    CatalogGeneration, CatalogRestartError, DurableSnapshot, DurableStore, DurableStoreError,
-    ExpectedCatalog, FilesystemCatalogSnapshot, FilesystemRetentionSnapshot,
+    CatalogGeneration, CatalogRestartError, CatalogRestartPhase, DurableSnapshot, DurableStore,
+    DurableStoreError, ExpectedCatalog, FilesystemCatalogSnapshot, FilesystemRetentionSnapshot,
     FilesystemRetentionSnapshotError, FilesystemStoreAdmission, FilesystemStoreAdmissionError,
     ReaderAttemptLimit, StoreExpectation, StoreExpectationMismatch,
 };
@@ -179,7 +179,8 @@ fn a_store_with_no_catalog_refuses_an_expected_catalog() -> TestResult<()> {
             populated_store::policy()?,
             StoreExpectation::NoExpectation,
         ),
-        Err(CatalogRestartError::Io { source, .. }) if source.kind() == std::io::ErrorKind::NotFound
+        Err(CatalogRestartError::Io { phase: CatalogRestartPhase::OpenHead, source })
+            if source.kind() == std::io::ErrorKind::NotFound
     ));
     drop(FilesystemStoreAdmission::reopen(
         empty.path(),
@@ -245,8 +246,40 @@ fn an_expectation_rebuilt_from_recorded_values_admits_and_refuses_as_the_origina
     publish_second(store.path())?;
     let successor = published(store.path())?;
     every_open_refuses(store.path(), rebuilt, Some(successor))?;
-    let mut damaged = recorded.1;
-    *damaged.first_mut().ok_or("empty digest")? ^= 1;
-    let wrong = ExpectedCatalog::from_recorded(successor.generation(), damaged);
+    // The right generation with one digest bit wrong must refuse too.
+    let mut near = successor.digest_bytes();
+    *near.first_mut().ok_or("empty digest")? ^= 1;
+    let wrong = ExpectedCatalog::from_recorded(successor.generation(), near);
     every_open_refuses(store.path(), wrong, Some(successor))
+}
+
+/// The catalog snapshot compares `HEAD` before it opens what `HEAD` selects, so
+/// a store that publishes another catalog refuses as a mismatch even when that
+/// catalog is absent, exactly as the writer does.
+#[test]
+fn a_mismatch_refuses_the_catalog_snapshot_before_its_catalog_is_read() -> TestResult<()> {
+    let intended = durable_fixture::build("expected-precedence-intended", &[&first_blob()])?;
+    let other = durable_fixture::build("expected-precedence-other", &[&second_blob()])?;
+    let wanted = published(intended.path())?;
+    let found = published(other.path())?;
+    for entry in fs::read_dir(other.path().join("catalogs"))? {
+        fs::remove_file(entry?.path())?;
+    }
+    let policy = populated_store::policy()?;
+
+    let mismatched =
+        FilesystemCatalogSnapshot::load(other.path(), policy, StoreExpectation::Catalog(wanted));
+    let unchecked =
+        FilesystemCatalogSnapshot::load(other.path(), policy, StoreExpectation::NoExpectation);
+
+    let Err(CatalogRestartError::Expectation { source }) = mismatched else {
+        return Err("a mismatch was not reported before the absent catalog".into());
+    };
+    require_mismatch(source, wanted, Some(found));
+    assert!(matches!(
+        unchecked,
+        Err(CatalogRestartError::Io { phase: CatalogRestartPhase::OpenCatalog, source })
+            if source.kind() == std::io::ErrorKind::NotFound
+    ));
+    Ok(())
 }
