@@ -7,6 +7,8 @@
 //! The protocol, its states, and its crash matrix are specified in
 //! `docs/formats/store/initialization.md`.
 
+#[cfg(test)]
+mod initialization_commit_tests;
 mod initialization_entries;
 mod initialization_error;
 mod initialization_execution;

@@ -4,6 +4,7 @@ use std::fs;
 use std::sync::mpsc;
 use std::thread;
 
+use super::initialization_commit_tests::require_incomplete;
 use super::initialization_test_fixture::{
     COMMITTED, TestResult, initialize, initialize_until, inventory, recorded_boundaries,
     require_refusal,
@@ -16,8 +17,7 @@ use super::{
 };
 use crate::adapters::filesystem_test_sandbox::TestDirectory;
 use crate::adapters::{
-    CanonicalStoreFormatMarker, FilesystemStoreAdmission, FilesystemStoreAdmissionError,
-    WriterLockAcquireError,
+    CanonicalStoreFormatMarker, FilesystemStoreAdmission, WriterLockAcquireError,
 };
 
 /// The state a root holds after exactly `completed` phases, by the protocol table.
@@ -113,12 +113,16 @@ fn an_incomplete_marker_stage_is_discarded_and_rewritten() -> TestResult<()> {
     Ok(())
 }
 
+/// The observer fails before the commit synchronization is requested, so this
+/// witnesses the linked prefix. The synchronization's own failure is witnessed
+/// in `initialization_commit_tests`.
 #[test]
-fn a_failed_commit_synchronization_leaves_an_unadmitted_resumable_store() -> TestResult<()> {
-    let sandbox = TestDirectory::create("initialization-commit-sync-failure")?;
+fn an_interruption_before_the_commit_synchronization_leaves_an_unadmitted_resumable_store()
+-> TestResult<()> {
+    let sandbox = TestDirectory::create("initialization-commit-interrupted")?;
     let observer: StoreInitializationObserver = Box::new(|phase, boundary| {
         if phase == Phase::SynchronizeRootAfterMarker && boundary == Boundary::Before {
-            Err(std::io::Error::other("injected synchronization failure"))
+            Err(std::io::Error::other("injected interruption"))
         } else {
             Ok(())
         }
@@ -136,11 +140,7 @@ fn a_failed_commit_synchronization_leaves_an_unadmitted_resumable_store() -> Tes
             ..
         })
     ));
-    let refused = FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks(sandbox.path());
-    assert!(matches!(
-        refused,
-        Err(FilesystemStoreAdmissionError::Namespace { .. })
-    ));
+    require_incomplete(sandbox.path())?;
     assert_eq!(initialize(sandbox.path())?.found(), Prefix::MarkerLinked);
     drop(FilesystemStoreAdmission::reopen_unchecked_for_repository_tasks(sandbox.path())?);
     Ok(())

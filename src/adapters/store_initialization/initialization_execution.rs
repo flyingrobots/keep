@@ -22,6 +22,14 @@ use crate::adapters::FilesystemWriterLock;
 pub(in crate::adapters) type PhaseObserver<'observer> =
     &'observer mut dyn FnMut(Phase, Boundary) -> io::Result<()>;
 
+/// Synchronizes the store root.
+///
+/// Production binds [`entries::synchronize_root`]. A law substitutes a
+/// recording or failing one, because a real directory synchronization leaves
+/// nothing a test can observe short of power loss.
+pub(super) type RootSynchronizer<'synchronizer> =
+    &'synchronizer mut dyn FnMut(&Dir) -> io::Result<()>;
+
 /// Classifies, locks, reclassifies, and completes initialization of `root`.
 ///
 /// Returns the retained writer lock and the state the call found. The first
@@ -36,8 +44,26 @@ pub(in crate::adapters) fn initialize(
     root: &Dir,
     observer: PhaseObserver<'_>,
 ) -> Result<(FilesystemWriterLock, Prefix), Error> {
+    initialize_with(root, observer, &mut entries::synchronize_root)
+}
+
+/// Runs [`initialize`] with every root synchronization delegated to `synchronize_root`.
+///
+/// # Errors
+///
+/// Returns exactly what [`initialize`] returns; a synchronizer error fails the
+/// phase that requested it.
+pub(super) fn initialize_with(
+    root: &Dir,
+    observer: PhaseObserver<'_>,
+    synchronize_root: RootSynchronizer<'_>,
+) -> Result<(FilesystemWriterLock, Prefix), Error> {
     let unlocked = initialization_observation::observe(root)?;
-    let mut execution = Execution { root, observer };
+    let mut execution = Execution {
+        root,
+        observer,
+        synchronize_root,
+    };
     let lock = execution.lock()?;
     let locked = initialization_observation::observe(root)?;
     execution.resume(locked)?;
@@ -49,12 +75,13 @@ pub(in crate::adapters) fn initialize(
     Ok((lock, found))
 }
 
-struct Execution<'root, 'observer> {
+struct Execution<'root, 'observer, 'synchronizer> {
     root: &'root Dir,
     observer: PhaseObserver<'observer>,
+    synchronize_root: RootSynchronizer<'synchronizer>,
 }
 
-impl Execution<'_, '_> {
+impl Execution<'_, '_, '_> {
     fn phase<T>(
         &mut self,
         phase: Phase,
@@ -66,6 +93,13 @@ impl Execution<'_, '_> {
         Ok(value)
     }
 
+    /// Runs one root synchronization as its own observed phase.
+    fn synchronize(&mut self, phase: Phase) -> Result<(), Error> {
+        (self.observer)(phase, Boundary::Before).map_err(|source| Error::io(phase, source))?;
+        (self.synchronize_root)(self.root).map_err(|source| Error::io(phase, source))?;
+        (self.observer)(phase, Boundary::After).map_err(|source| Error::io(phase, source))
+    }
+
     fn lock(&mut self) -> Result<FilesystemWriterLock, Error> {
         let phase = Phase::OpenAndLockWriterFile;
         (self.observer)(phase, Boundary::Before).map_err(|source| Error::io(phase, source))?;
@@ -75,7 +109,7 @@ impl Execution<'_, '_> {
             .map_err(|source| Error::io(phase, source))?;
         let lock = FilesystemWriterLock::initialize_in(directory)
             .map_err(|source| Error::WriterLock { source })?;
-        entries::synchronize_root(self.root).map_err(|source| Error::io(phase, source))?;
+        (self.synchronize_root)(self.root).map_err(|source| Error::io(phase, source))?;
         (self.observer)(phase, Boundary::After).map_err(|source| Error::io(phase, source))?;
         Ok(lock)
     }
@@ -113,10 +147,7 @@ impl Execution<'_, '_> {
         self.phase(Phase::SynchronizeMarkerStage, |root| {
             stage.synchronize(root)
         })?;
-        self.phase(
-            Phase::SynchronizeRootAfterMarkerStage,
-            entries::synchronize_root,
-        )?;
+        self.synchronize(Phase::SynchronizeRootAfterMarkerStage)?;
         self.phase(Phase::AdmitReaderFence, admit_reader_fence)?;
         for directory in Directory::ALL {
             self.phase(Phase::AdmitDirectory(directory), |root| {
@@ -128,12 +159,9 @@ impl Execution<'_, '_> {
 
     /// Commits with the root synchronization after the link, then removes the stage.
     fn commit(&mut self, stage: MarkerStage) -> Result<(), Error> {
-        self.phase(Phase::SynchronizeRootAfterMarker, entries::synchronize_root)?;
+        self.synchronize(Phase::SynchronizeRootAfterMarker)?;
         self.phase(Phase::RemoveMarkerStage, |root| stage.remove(root))?;
-        self.phase(
-            Phase::SynchronizeRootAfterCleanup,
-            entries::synchronize_root,
-        )
+        self.synchronize(Phase::SynchronizeRootAfterCleanup)
     }
 }
 
