@@ -32,7 +32,7 @@ jobs:
           strace --version
 
       - name: Install independent vector tool
-        uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: b3sum@1.8.5
 
@@ -238,7 +238,7 @@ jobs:
         run: rustup show
 
       - name: Install dependency policy tools
-        uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
         with:
           tool: cargo-deny@0.18.9,cargo-audit@0.22.0
 
