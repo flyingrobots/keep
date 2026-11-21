@@ -1,0 +1,8 @@
+markdownlint-cli2 v0.23.3 (markdownlint v0.41.1)
+Finding: CHANGELOG.md compaction.md rationale.md
+Linting: 3 files
+Summary: 4 issues in 1 file
+compaction.md:96:81 error MD013/line-length Line length [Expected: 80; Actual: 376]
+compaction.md:98:81 error MD013/line-length Line length [Expected: 80; Actual: 212]
+compaction.md:100:81 error MD013/line-length Line length [Expected: 80; Actual: 393]
+compaction.md:104:81 error MD013/line-length Line length [Expected: 80; Actual: 425]

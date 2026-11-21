@@ -1,0 +1,19 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.43s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 1 test
+Error: "pre-effect refusal is unreported"
+test adapters::gc::filesystem_gc_tests::effect_tests::candidate_verification_refusal_reports_no_removal ... FAILED
+
+failures:
+
+failures:
+    adapters::gc::filesystem_gc_tests::effect_tests::candidate_verification_refusal_reports_no_removal
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 506 filtered out; finished in 0.08s
+
+error: test failed, to rerun pass `--lib`
+
+Guarded command exit: 101

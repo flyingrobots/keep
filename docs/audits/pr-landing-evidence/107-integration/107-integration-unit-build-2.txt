@@ -1,0 +1,3 @@
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.00s
+  Executable unittests src/lib.rs (/build/keep107-coordinate-target/debug/deps/keep-d7b438b48cea5d61)

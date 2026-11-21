@@ -1,0 +1,25 @@
+    Checking keep v0.0.0 (/build/keep107-integration-round2)
+error: unnecessary `Debug` formatting in `assert_eq!` args
+   --> tests/compaction_recovery_preflight.rs:127:43
+    |
+127 |             "refusal changed evidence at {path:?}"
+    |                                           ^^^^
+    |
+    = help: use `Display` formatting and change this to `path.display()`
+    = note: switching to `Display` formatting will change how the value is shown; escaped characters will no longer be escaped and surrounding quotes will be removed
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#unnecessary_debug_formatting
+    = note: `-D clippy::unnecessary-debug-formatting` implied by `-D clippy::pedantic`
+    = help: to override `-D clippy::pedantic` add `#[allow(clippy::unnecessary_debug_formatting)]`
+
+error: very complex type used. Consider factoring parts into `type` definitions
+   --> tests/compaction_recovery_preflight.rs:153:28
+    |
+153 | fn witness(root: &Path) -> Result<BTreeMap<PathBuf, Vec<u8>>, Box<dyn Error>> {
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#type_complexity
+    = note: `-D clippy::type-complexity` implied by `-D clippy::all`
+    = help: to override `-D clippy::all` add `#[allow(clippy::type_complexity)]`
+
+error: could not compile `keep` (test "compaction_recovery_preflight") due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...

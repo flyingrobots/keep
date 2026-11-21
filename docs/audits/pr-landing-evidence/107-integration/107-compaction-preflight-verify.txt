@@ -1,0 +1,57 @@
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `release` profile [optimized] target(s) in 3.07s
+     Running tests/compaction_recovery_preflight.rs (/build/keep107-coordinate-target/release/deps/compaction_recovery_preflight-a4b407a1fb548515)
+
+running 2 tests
+test corrupt_later_head_preserves_earlier_discardable_stages ... ok
+test corrupt_current_head_is_not_reinterpreted_as_an_uninitialized_store ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.24s
+
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `release` profile [optimized] target(s) in 5.48s
+     Running unittests src/lib.rs (/build/keep107-coordinate-target/release/deps/keep-8ca1b588e6dfe3ea)
+
+running 5 tests
+test adapters::compaction::filesystem_tests::recovery_over_an_untouched_store_is_idle ... ok
+test adapters::compaction::filesystem_tests::a_mixed_segment_plans_its_live_records_for_copy_and_the_rest_for_omission ... ok
+test adapters::compaction::filesystem_tests::compaction_preserves_every_identity_and_closure_and_frees_the_mixed_segment ... ok
+test adapters::compaction::filesystem_tests::refusals_happen_before_any_stage_is_written ... ok
+test adapters::compaction::interruption_tests::every_interrupted_publication_phase_recovers_to_one_lawful_state ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 469 filtered out; finished in 1.42s
+
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.01s
+     Running unittests src/lib.rs (/build/keep107-coordinate-target/debug/deps/keep-d7b438b48cea5d61)
+
+running 5 tests
+test adapters::durable::writer_tests::limit_and_identity_refusals_leave_nothing_visible ... ok
+test adapters::durable::writer_tests::an_interrupted_source_leaves_a_stage_that_recovery_discards ... ok
+test adapters::durable::writer_tests::one_pass_commits_a_blob_readable_by_layout_then_by_anchor ... ok
+test adapters::durable::writer_tests::an_anchored_ingest_satisfies_the_port_laws_beside_the_fixture_store ... ok
+test adapters::durable::writer_tests::nearby_content_reuses_every_unchanged_chunk_and_an_exact_re_ingest_publishes_nothing ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 469 filtered out; finished in 1.18s
+
+    Checking keep v0.0.0 (/build/keep107-integration-round2)
+error: consider adding a `;` to the last statement for consistent formatting
+   --> src/adapters/compaction/recovery_preflight.rs:130:17
+    |
+130 |                 require_derivable_segment(discarder, segment, policy)?
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: add a `;` here: `require_derivable_segment(discarder, segment, policy)?;`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#semicolon_if_nothing_returned
+    = note: `-D clippy::semicolon-if-nothing-returned` implied by `-D clippy::pedantic`
+    = help: to override `-D clippy::pedantic` add `#[allow(clippy::semicolon_if_nothing_returned)]`
+
+error: consider adding a `;` to the last statement for consistent formatting
+   --> src/adapters/compaction/recovery_preflight.rs:133:17
+    |
+133 |                 require_unpublished_segment(discarder, segment, policy)?
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: add a `;` here: `require_unpublished_segment(discarder, segment, policy)?;`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.96.0/index.html#semicolon_if_nothing_returned
+
+error: could not compile `keep` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `keep` (lib test) due to 2 previous errors

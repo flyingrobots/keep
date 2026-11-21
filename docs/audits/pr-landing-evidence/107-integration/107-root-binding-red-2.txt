@@ -1,0 +1,23 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.02s
+     Running tests/gc_authority_root.rs (/build/keep107-root-binding-parent-target/debug/deps/gc_authority_root-77a332d5e3506dac)
+
+running 2 tests
+test compaction_refuses_an_observation_locator_for_another_store ... FAILED
+test gc_refuses_an_observation_locator_for_another_store ... FAILED
+
+failures:
+
+---- compaction_refuses_an_observation_locator_for_another_store stdout ----
+Error: "compaction must refuse mixed authority and observation roots before effects"
+
+---- gc_refuses_an_observation_locator_for_another_store stdout ----
+Error: "GC must refuse mixed authority and observation roots before effects"
+
+
+failures:
+    compaction_refuses_an_observation_locator_for_another_store
+    gc_refuses_an_observation_locator_for_another_store
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.71s
+
+error: test failed, to rerun pass `--test gc_authority_root`

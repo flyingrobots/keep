@@ -1,0 +1,22 @@
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.05s
+     Running tests/compaction_recovery_preflight.rs (/build/keep107-coordinate-target/debug/deps/compaction_recovery_preflight-f85ca969011c3959)
+
+running 2 tests
+test corrupt_later_head_preserves_earlier_discardable_stages ... ok
+test corrupt_current_head_is_not_reinterpreted_as_an_uninitialized_store ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
+
+   Compiling keep v0.0.0 (/build/keep107-integration-round2)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.01s
+     Running unittests src/lib.rs (/build/keep107-coordinate-target/debug/deps/keep-d7b438b48cea5d61)
+
+running 5 tests
+test adapters::compaction::filesystem_tests::recovery_over_an_untouched_store_is_idle ... ok
+test adapters::compaction::filesystem_tests::a_mixed_segment_plans_its_live_records_for_copy_and_the_rest_for_omission ... ok
+test adapters::compaction::filesystem_tests::compaction_preserves_every_identity_and_closure_and_frees_the_mixed_segment ... ok
+test adapters::compaction::filesystem_tests::refusals_happen_before_any_stage_is_written ... ok
+test adapters::compaction::interruption_tests::every_interrupted_publication_phase_recovers_to_one_lawful_state ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 469 filtered out; finished in 4.04s

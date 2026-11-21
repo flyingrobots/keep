@@ -1,0 +1,25 @@
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+   Compiling keep v0.0.0 (/keep-validation-cache/source)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.40s
+     Running unittests src/lib.rs (/keep-validation-cache/target/debug/deps/keep-d7b438b48cea5d61)
+
+running 1 test
+test adapters::retention::verification_record_refusal_tests::a_truncated_retention_head_remains_corruption_after_typed_error_conversion ... FAILED
+
+failures:
+
+---- adapters::retention::verification_record_refusal_tests::a_truncated_retention_head_remains_corruption_after_typed_error_conversion stdout ----
+
+thread 'adapters::retention::verification_record_refusal_tests::a_truncated_retention_head_remains_corruption_after_typed_error_conversion' (3397) panicked at src/adapters/retention/verification_record_refusal_tests.rs:57:5:
+the original typed record refusal must survive: Custom { kind: Other, error: "calibration: erased exact-record cause" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    adapters::retention::verification_record_refusal_tests::a_truncated_retention_head_remains_corruption_after_typed_error_conversion
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 492 filtered out; finished in 0.05s
+
+error: test failed, to rerun pass `--lib`
+
+Guarded command exit: 101
